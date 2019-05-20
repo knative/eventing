@@ -187,22 +187,22 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 func (r *Reconciler) reconcileServiceAccountAndRoleBinding(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName string) error {
 	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
 	if err != nil {
-		return fmt.Errorf("service account: %v", err)
+		return fmt.Errorf("service account '%s': %v", saName, err)
 	}
 
 	// Tell tracker to reconcile this namespace whenever the Service Account changes.
 	if err = r.tracker.Track(utils.ObjectRef(sa, serviceAccountGVK), ns); err != nil {
-		return fmt.Errorf("track service account: %v", err)
+		return fmt.Errorf("track service account '%s': %v", sa.Name, err)
 	}
 
 	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, sa, clusterRoleName))
 	if err != nil {
-		return fmt.Errorf("role binding: %v", err)
+		return fmt.Errorf("role binding '%s': %v", rbName, err)
 	}
 
 	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
 	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
-		return fmt.Errorf("track role binding: %v", err)
+		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
 	}
 
 	return nil

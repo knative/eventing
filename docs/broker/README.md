@@ -275,9 +275,9 @@ spec:
 
 Broker and Trigger are intended to be black boxes. How they are implemented
 should not matter to the end user. This section describes the specific
-implementation that is currently in the repository. However, **the implmentation
+implementation that is currently in the repository. However, **the implementation
 may change at any time, absolutely no guarantees are made about the
-implmentation**.
+implementation**.
 
 ### Namespace
 
@@ -287,6 +287,10 @@ Namespaces are reconciled by the
 `knative-eventing-injection: enabled`. If that label is present, then the
 `Namespace Reconciler` reconciles:
 
+1. Creates the Broker Ingress' `ServiceAccount`, `eventing-ingress-filter`.
+1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
+   the [`eventing-broker-ingress`](../../config/200-broker-clusterrole.yaml)
+   `Role`.
 1. Creates the Broker Filter's `ServiceAccount`, `eventing-broker-filter`.
 1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
    the [`eventing-broker-filter`](../../config/200-broker-clusterrole.yaml)
