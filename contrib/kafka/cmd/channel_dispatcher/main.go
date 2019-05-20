@@ -1,1 +1,1 @@
-package channel_dispatcher
+package main

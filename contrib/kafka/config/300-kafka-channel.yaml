@@ -52,11 +52,26 @@ spec:
       properties:
         spec:
           properties:
+            bootstrapServers:
+              type: string
+              description: "Comma-separated list of the Broker URL of the Kafka cluster, which is in the format of `my-cluster-kafka-bootstrap.my-kafka-namespace:9092`."
+              minLength: 1
+            consumerMode:
+              type: string
+              description: "Mode used to dispatch events from different partitions in parallel. `multiplex` and `partitions` are valid values. If not set, `multiplex` is used."
+              minLength: 1
+            numPartitions:
+              type: int32
+              description: "Number of partitions of a Kafka topic."
+            replicationFactor:
+              type: int16
+              description: "Replication factor of a Kafka topic."
             subscribable:
               type: object
               properties:
                 subscribers:
                   type: array
+                  description: "The list of subscribers that have expressed interest in receiving events from this channel."
                   items:
                     required:
                       - uid
@@ -90,3 +105,6 @@ spec:
                       replyURI:
                         type: string
                         minLength: 1
+            required:
+              - bootstrapServers
+              - consumerMode
