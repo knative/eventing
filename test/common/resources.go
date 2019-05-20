@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,91 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package test
-
-// crd contains functions that construct boilerplate CRD definitions.
+package common
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
-
-const (
-	eventsAPIVersion = "eventing.knative.dev/v1alpha1"
-)
-
-// ClusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
-func ClusterChannelProvisioner(name string) *corev1.ObjectReference {
-	if name == "" {
-		return nil
-	}
-	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventsAPIVersion, name)
-}
-
-// ChannelRef returns an ObjectReference for a given Channel Name.
-func ChannelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference("Channel", eventsAPIVersion, name)
-}
-
-// Channel returns a Channel with the specified provisioner.
-func Channel(name string, namespace string, provisioner *corev1.ObjectReference) *v1alpha1.Channel {
-	return &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: v1alpha1.ChannelSpec{
-			Provisioner: provisioner,
-		},
-	}
-}
-
-// SubscriberSpecForService returns a SubscriberSpec for a given Knative Service.
-func SubscriberSpecForService(name string) *v1alpha1.SubscriberSpec {
-	return &v1alpha1.SubscriberSpec{
-		Ref: pkgTest.CoreV1ObjectReference("Service", "v1", name),
-	}
-}
-
-// ReplyStrategyForChannel returns a ReplyStrategy for a given Channel.
-func ReplyStrategyForChannel(name string) *v1alpha1.ReplyStrategy {
-	return &v1alpha1.ReplyStrategy{
-		Channel: pkgTest.CoreV1ObjectReference("Channel", eventsAPIVersion, name),
-	}
-}
-
-// Subscription returns a Subscription.
-func Subscription(name string, namespace string, channel *corev1.ObjectReference, subscriber *v1alpha1.SubscriberSpec, reply *v1alpha1.ReplyStrategy) *v1alpha1.Subscription {
-	return &v1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: v1alpha1.SubscriptionSpec{
-			Channel:    *channel,
-			Subscriber: subscriber,
-			Reply:      reply,
-		},
-	}
-}
-
-// Broker returns a Broker.
-func Broker(name, namespace string, provisioner *corev1.ObjectReference) *v1alpha1.Broker {
-	return &v1alpha1.Broker{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: v1alpha1.BrokerSpec{
-			ChannelTemplate: &v1alpha1.ChannelSpec{
-				Provisioner: provisioner,
-			},
-		},
-	}
-}
 
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
 // binary.
@@ -139,7 +62,7 @@ func EventSenderPod(name string, namespace string, sink string, event *CloudEven
 			Containers: []corev1.Container{{
 				Name:            "sendevent",
 				Image:           pkgTest.ImagePath("sendevent"),
-				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				ImagePullPolicy: corev1.PullAlways,
 				Args: []string{
 					"-event-id",
 					event.ID,
@@ -173,7 +96,7 @@ func EventLoggerPod(name string, namespace string, selector map[string]string) *
 			Containers: []corev1.Container{{
 				Name:            "logevents",
 				Image:           pkgTest.ImagePath("logevents"),
-				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				ImagePullPolicy: corev1.PullAlways,
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
@@ -192,7 +115,7 @@ func EventTransformationPod(name string, namespace string, selector map[string]s
 			Containers: []corev1.Container{{
 				Name:            "transformevents",
 				Image:           pkgTest.ImagePath("transformevents"),
-				ImagePullPolicy: corev1.PullAlways, // TODO: this might not be wanted for local.
+				ImagePullPolicy: corev1.PullAlways,
 				Args: []string{
 					"-event-type",
 					event.Type,

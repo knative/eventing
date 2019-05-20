@@ -211,6 +211,6 @@ function dump_extra_cluster_state() {
 
 initialize $@ --skip-istio-addon
 
-go_test_e2e -timeout=20m ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory,natss,kafka || fail_test
+go_test_e2e -timeout=20m ./test/e2e -clusterChannelProvisioners=in-memory,natss,kafka || fail_test
 
 success

@@ -14,13 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package test
+package base
 
 import (
-	"log"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // IsChannelReady will check the status conditions of the Channel and return true
@@ -29,16 +26,49 @@ func IsChannelReady(c *eventingv1alpha1.Channel) (bool, error) {
 	return c.Status.IsReady(), nil
 }
 
+// ChannelsReady will check the status conditions of the channel list and return true
+// if all channels are Ready.
+func ChannelsReady(channelList *eventingv1alpha1.ChannelList) (bool, error) {
+	for _, channel := range channelList.Items {
+		if isReady, _ := IsChannelReady(&channel); !isReady {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // IsSubscriptionReady will check the status conditions of the Subscription and
 // return true if the Subscription is ready.
 func IsSubscriptionReady(s *eventingv1alpha1.Subscription) (bool, error) {
 	return s.Status.IsReady(), nil
 }
 
+// SubscriptionsReady will check the status conditions of the subscription list and return true
+// if all subscriptions are Ready.
+func SubscriptionsReady(subscriptionList *eventingv1alpha1.SubscriptionList) (bool, error) {
+	for _, subscription := range subscriptionList.Items {
+		if isReady, _ := IsSubscriptionReady(&subscription); !isReady {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // IsBrokerReady will check the status conditions of the Broker and return true
 // if the Broker is ready.
 func IsBrokerReady(b *eventingv1alpha1.Broker) (bool, error) {
 	return b.Status.IsReady(), nil
+}
+
+// BrokersReady will check the status conditions of the broker list and return true
+// if all brokers are Ready.
+func BrokersReady(brokerList *eventingv1alpha1.BrokerList) (bool, error) {
+	for _, broker := range brokerList.Items {
+		if isReady, _ := IsBrokerReady(&broker); !isReady {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // IsTriggerReady will check the status conditions of the Trigger and
@@ -50,29 +80,8 @@ func IsTriggerReady(t *eventingv1alpha1.Trigger) (bool, error) {
 // TriggersReady will check the status conditions of the trigger list and return true
 // if all triggers are Ready.
 func TriggersReady(triggerList *eventingv1alpha1.TriggerList) (bool, error) {
-	var names []string
-	for _, t := range triggerList.Items {
-		names = append(names, t.Name)
-	}
-	log.Printf("Checking triggers: %v", names)
 	for _, trigger := range triggerList.Items {
-		if !trigger.Status.IsReady() {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-// PodsRunning will check the status conditions of the pod list and return true
-// if all pods are Running.
-func PodsRunning(podList *corev1.PodList) (bool, error) {
-	var names []string
-	for _, p := range podList.Items {
-		names = append(names, p.Name)
-	}
-	log.Printf("Checking pods: %v", names)
-	for _, pod := range podList.Items {
-		if pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodSucceeded {
+		if isReady, _ := IsTriggerReady(&trigger); !isReady {
 			return false, nil
 		}
 	}

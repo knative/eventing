@@ -14,7 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package test
+package common
+
+// ValidProvisioners is a list of provisioners that Eventing currently support.
+var ValidProvisioners = []string{
+	InMemoryProvisioner,
+	GCPPubSubProvisioner,
+	KafkaProvisioner,
+	NatssProvisioner,
+}
+
+// FeatureMap saves the feature-provisioners mapping.
+// Each pair means the provisioners support this feature.
+var FeatureMap = map[Feature][]string{
+	FeatureBasic:       ValidProvisioners,
+	FeatureRedelivery:  []string{GCPPubSubProvisioner, KafkaProvisioner, NatssProvisioner},
+	FeaturePersistence: []string{GCPPubSubProvisioner, KafkaProvisioner, NatssProvisioner},
+}
 
 const (
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
@@ -32,10 +48,15 @@ const (
 	NatssProvisioner = "natss"
 )
 
-// validProvisioners is a list of provisioners that Eventing currently support.
-var validProvisioners = []string{
-	InMemoryProvisioner,
-	GCPPubSubProvisioner,
-	KafkaProvisioner,
-	NatssProvisioner,
-}
+// Feature is the feature supported by the Channel provisioner.
+type Feature string
+
+const (
+	// FeatureBasic is the feature that should be supported by all Channel provisioners
+	FeatureBasic Feature = "basic"
+	// FeatureRedelivery means if downstream rejects an event, that request will be attempted again.
+	FeatureRedelivery Feature = "redelivery"
+	// FeaturePersistence means if Channel's Pod goes down, all events already ACKed by the Channel
+	// will persist and be retransmitted when the Pod restarts.
+	FeaturePersistence Feature = "persistence"
+)

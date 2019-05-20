@@ -17,7 +17,7 @@ limitations under the License.
 // crdpolling contains functions which poll Knative Serving CRDs until they
 // get into the state desired by the caller or time out.
 
-package test
+package base
 
 import (
 	"context"
@@ -33,6 +33,7 @@ import (
 )
 
 const (
+	// The interval and timeout used for polling in checking resource states.
 	interval = 1 * time.Second
 	timeout  = 4 * time.Minute
 )
@@ -41,17 +42,35 @@ const (
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
-func WaitForChannelState(client eventingclient.ChannelInterface, name string, inState func(r *eventingv1alpha1.Channel) (bool, error), desc string) error {
+func WaitForChannelState(client eventingclient.ChannelInterface, name string, inState func(c *eventingv1alpha1.Channel) (bool, error), desc string) error {
 	metricName := fmt.Sprintf("WaitForChannelState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		r, err := client.Get(name, metav1.GetOptions{})
+		c, err := client.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return true, err
 		}
-		return inState(r)
+		return inState(c)
+	})
+}
+
+// WaitForChannelListState polls the status of the ChannelList
+// from client every interval until inState returns `true` indicating it
+// is done, returns an error or timeout. desc will be used to name the metric
+// that is emitted to track how long it took to get into the state checked by inState.
+func WaitForChannelListState(client eventingclient.ChannelInterface, inState func(cl *eventingv1alpha1.ChannelList) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForChannelListState/%s", desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		cl, err := client.List(metav1.ListOptions{})
+		if err != nil {
+			return true, err
+		}
+		return inState(cl)
 	})
 }
 
@@ -60,17 +79,35 @@ func WaitForChannelState(client eventingclient.ChannelInterface, name string, in
 // done, returns an error or timeout. desc will be used to name the metric that
 // is emitted to track how long it took for name to get into the state checked
 // by inState.
-func WaitForSubscriptionState(client eventingclient.SubscriptionInterface, name string, inState func(r *eventingv1alpha1.Subscription) (bool, error), desc string) error {
+func WaitForSubscriptionState(client eventingclient.SubscriptionInterface, name string, inState func(s *eventingv1alpha1.Subscription) (bool, error), desc string) error {
 	metricName := fmt.Sprintf("WaitForSubscriptionState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		r, err := client.Get(name, metav1.GetOptions{})
+		s, err := client.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return true, err
 		}
-		return inState(r)
+		return inState(s)
+	})
+}
+
+// WaitForSubscriptionListState polls the status of the SubscriptionList
+// from client every interval until inState returns `true` indicating it
+// is done, returns an error or timeout. desc will be used to name the metric
+// that is emitted to track how long it took to get into the state checked by inState.
+func WaitForSubscriptionListState(client eventingclient.SubscriptionInterface, inState func(sl *eventingv1alpha1.SubscriptionList) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForSubscriptionListState/%s", desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		sl, err := client.List(metav1.ListOptions{})
+		if err != nil {
+			return true, err
+		}
+		return inState(sl)
 	})
 }
 
@@ -78,13 +115,13 @@ func WaitForSubscriptionState(client eventingclient.SubscriptionInterface, name 
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
-func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inState func(r *eventingv1alpha1.Broker) (bool, error), desc string) error {
+func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inState func(b *eventingv1alpha1.Broker) (bool, error), desc string) error {
 	metricName := fmt.Sprintf("WaitForBrokerState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		r, err := client.Get(name, metav1.GetOptions{})
+		b, err := client.Get(name, metav1.GetOptions{})
 		if k8serrors.IsNotFound(err) {
 			// Return false as we are not done yet.
 			// We swallow the error to keep on polling
@@ -93,7 +130,25 @@ func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inSt
 			// Return true to stop and return the error.
 			return true, err
 		}
-		return inState(r)
+		return inState(b)
+	})
+}
+
+// WaitForBrokerListState polls the status of the BrokerList
+// from client every interval until inState returns `true` indicating it
+// is done, returns an error or timeout. desc will be used to name the metric
+// that is emitted to track how long it took to get into the state checked by inState.
+func WaitForBrokerListState(client eventingclient.BrokerInterface, inState func(bl *eventingv1alpha1.BrokerList) (bool, error), desc string) error {
+	metricName := fmt.Sprintf("WaitForBrokerListState/%s", desc)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		bl, err := client.List(metav1.ListOptions{})
+		if err != nil {
+			return true, err
+		}
+		return inState(bl)
 	})
 }
 
@@ -101,34 +156,34 @@ func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inSt
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
-func WaitForTriggerState(client eventingclient.TriggerInterface, name string, inState func(r *eventingv1alpha1.Trigger) (bool, error), desc string) error {
+func WaitForTriggerState(client eventingclient.TriggerInterface, name string, inState func(t *eventingv1alpha1.Trigger) (bool, error), desc string) error {
 	metricName := fmt.Sprintf("WaitForTriggerState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		r, err := client.Get(name, metav1.GetOptions{})
+		t, err := client.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return true, err
 		}
-		return inState(r)
+		return inState(t)
 	})
 }
 
-// WaitForTriggersListState polls the status of the TriggerList
+// WaitForTriggerListState polls the status of the TriggerList
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForTriggersListState(clients eventingclient.TriggerInterface, inState func(t *eventingv1alpha1.TriggerList) (bool, error), desc string) error {
+func WaitForTriggerListState(client eventingclient.TriggerInterface, inState func(tl *eventingv1alpha1.TriggerList) (bool, error), desc string) error {
 	metricName := fmt.Sprintf("WaitForTriggerListState/%s", desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		t, err := clients.List(metav1.ListOptions{})
+		tl, err := client.List(metav1.ListOptions{})
 		if err != nil {
 			return true, err
 		}
-		return inState(t)
+		return inState(tl)
 	})
 }

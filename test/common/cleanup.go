@@ -17,7 +17,7 @@ limitations under the License.
 // cleanup allows you to define a cleanup function that will be executed
 // if your test is interrupted.
 
-package test
+package common
 
 import (
 	"encoding/json"
