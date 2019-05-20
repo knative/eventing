@@ -34,13 +34,13 @@ all users of Knative Eventing. Some users will want fine grained permissions. In
 addition, the Knative team can do most of the work necessary for these
 permissions so that users don't need to think about them.
 
-The following pieces are all considered part of the 'core': 
-- Eventing Controller 
-    - Broker Controller 
-    - Default Channel Controller 
-    - Subscription Controller 
-    - Trigger Controller 
-- Eventing Webhook 
+The following pieces are all considered part of the 'core':
+- Eventing Controller
+    - Broker Controller
+    - Default Channel Controller
+    - Subscription Controller
+    - Trigger Controller
+- Eventing Webhook
 - Broker `Deployments` (both Ingress and Filter)
 
 ## Channels
