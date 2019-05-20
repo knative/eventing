@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:db869c62fa91adbbbdb2f442b0731efe87446ba47e7be41a5e13bdaf3bd8c283"
+  digest = "1:62329ec5d7b0f50402eda5519d77d67c5ae42e61ad8329fc9dfacabe81483e53"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -481,7 +481,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "5e4512dcb2cafff2779e6b1ba5091c642b4df2e1"
+  revision = "7b196cff4669dbd6d31b83bdeb72fbaafd7f8993"
 
 [[projects]]
   branch = "master"
