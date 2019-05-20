@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -9,6 +25,7 @@ import (
 
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
+	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
@@ -24,7 +41,7 @@ import (
 type SchemeFunc func(*runtime.Scheme) error
 
 // ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(mgr manager.Manager, config *provisionerController.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
+type ProvideFunc func(mgr manager.Manager, config *KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
 
 func main() {
 	os.Exit(_main())

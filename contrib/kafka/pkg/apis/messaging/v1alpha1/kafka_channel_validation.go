@@ -35,11 +35,22 @@ func (cs *KafkaChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("bootstrapServers")
 		errs = errs.Also(fe)
 	}
+
 	if cs.ConsumerMode == "" {
 		fe := apis.ErrMissingField("consumerMode")
 		errs = errs.Also(fe)
 	} else if cs.ConsumerMode != ConsumerModePartitionConsumerValue && cs.ConsumerMode != ConsumerModeMultiplexConsumerValue {
 		fe := apis.ErrInvalidValue(cs.ConsumerMode, "consumerMode")
+		errs = errs.Also(fe)
+	}
+
+	if cs.NumPartitions < 0 {
+		fe := apis.ErrInvalidValue(cs.NumPartitions, "numPartitions")
+		errs = errs.Also(fe)
+	}
+
+	if cs.ReplicationFactor < 0 {
+		fe := apis.ErrInvalidValue(cs.ReplicationFactor, "replicationFactor")
 		errs = errs.Also(fe)
 	}
 

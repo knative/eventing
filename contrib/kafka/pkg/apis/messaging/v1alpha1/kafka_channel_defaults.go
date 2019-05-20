@@ -29,10 +29,10 @@ func (cs *KafkaChannelSpec) SetDefaults(ctx context.Context) {
 	if cs.ConsumerMode == "" {
 		cs.ConsumerMode = ConsumerModeMultiplexConsumerValue
 	}
-	if cs.NumPartitions == 0 {
+	if cs.NumPartitions <= 0 {
 		cs.NumPartitions = DefaultNumPartitions
 	}
-	if cs.ReplicationFactor == 0 {
+	if cs.ReplicationFactor <= 0 {
 		cs.ReplicationFactor = DefaultReplicationFactor
 	}
 }
