@@ -112,9 +112,10 @@ kubectl -n default get broker default
 #### Manual Setup
 
 In order to setup a `Broker` manually, we must first create the required
-`ServiceAccount`s and give them the proper RBAC permissions. This setup is required
-once per namespace. These instructions will use the `default` namespace, but you
-can replace it with any namespace you want to install a `Broker` into.
+`ServiceAccount`s and give them the proper RBAC permissions. This setup is
+required once per namespace. These instructions will use the `default`
+namespace, but you can replace it with any namespace you want to install a
+`Broker` into.
 
 Create the `ServiceAccount`.
 
@@ -135,7 +136,8 @@ kubectl -n default create rolebinding eventing-broker-filter \
 ```
 
 Note that the previous commands uses three different objects, all named
-`eventing-broker-ingress` or `eventing-broker-filter`. The `ClusterRole` is installed with Knative Eventing
+`eventing-broker-ingress` or `eventing-broker-filter`. The `ClusterRole` is
+installed with Knative Eventing
 [here](../../config/200-broker-clusterrole.yaml). The `ServiceAccount` was
 created two commands prior. The `RoleBinding` is created with this command.
 
@@ -275,9 +277,9 @@ spec:
 
 Broker and Trigger are intended to be black boxes. How they are implemented
 should not matter to the end user. This section describes the specific
-implementation that is currently in the repository. However, **the implementation
-may change at any time, absolutely no guarantees are made about the
-implementation**.
+implementation that is currently in the repository. However, **the
+implementation may change at any time, absolutely no guarantees are made about
+the implementation**.
 
 ### Namespace
 
