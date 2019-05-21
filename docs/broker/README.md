@@ -112,26 +112,30 @@ kubectl -n default get broker default
 #### Manual Setup
 
 In order to setup a `Broker` manually, we must first create the required
-`ServiceAccount` and give it the proper RBAC permissions. This setup is required
+`ServiceAccount`s and give them the proper RBAC permissions. This setup is required
 once per namespace. These instructions will use the `default` namespace, but you
 can replace it with any namespace you want to install a `Broker` into.
 
 Create the `ServiceAccount`.
 
 ```shell
+kubectl -n default create serviceaccount eventing-broker-ingress
 kubectl -n default create serviceaccount eventing-broker-filter
 ```
 
 Then give it the needed RBAC permissions:
 
 ```shell
+kubectl -n default create rolebinding eventing-broker-ingress \
+  --clusterrole=eventing-broker-ingress \
+  --user=eventing-broker-ingress
 kubectl -n default create rolebinding eventing-broker-filter \
   --clusterrole=eventing-broker-filter \
   --user=eventing-broker-filter
 ```
 
 Note that the previous commands uses three different objects, all named
-`eventing-broker-filter`. The `ClusterRole` is installed with Knative Eventing
+`eventing-broker-ingress` or `eventing-broker-filter`. The `ClusterRole` is installed with Knative Eventing
 [here](../../config/200-broker-clusterrole.yaml). The `ServiceAccount` was
 created two commands prior. The `RoleBinding` is created with this command.
 
@@ -271,9 +275,9 @@ spec:
 
 Broker and Trigger are intended to be black boxes. How they are implemented
 should not matter to the end user. This section describes the specific
-implementation that is currently in the repository. However, **the implmentation
+implementation that is currently in the repository. However, **the implementation
 may change at any time, absolutely no guarantees are made about the
-implmentation**.
+implementation**.
 
 ### Namespace
 
@@ -283,6 +287,10 @@ Namespaces are reconciled by the
 `knative-eventing-injection: enabled`. If that label is present, then the
 `Namespace Reconciler` reconciles:
 
+1. Creates the Broker Ingress' `ServiceAccount`, `eventing-ingress-filter`.
+1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
+   the [`eventing-broker-ingress`](../../config/200-broker-clusterrole.yaml)
+   `Role`.
 1. Creates the Broker Filter's `ServiceAccount`, `eventing-broker-filter`.
 1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
    the [`eventing-broker-filter`](../../config/200-broker-clusterrole.yaml)
