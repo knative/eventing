@@ -19,6 +19,10 @@ package tracing
 import (
 	"fmt"
 
+	configmap2 "github.com/knative/eventing/pkg/configmap"
+	v1 "k8s.io/api/core/v1"
+	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/tracing"
 	tracingconfig "github.com/knative/pkg/tracing/config"
@@ -44,6 +48,18 @@ var (
 		Debug:          false,
 		SampleRate:     0,
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	}
+
+	EnableZeroSamplingCM = v1.ConfigMap{
+		ObjectMeta: v12.ObjectMeta{
+			Name: tracingconfig.ConfigName,
+		},
+		Data: map[string]string{
+			"enable":         "True",
+			"Debug":          "False",
+			"SampleRate":     "0",
+			"ZipkinEndpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+		},
 	}
 )
 
@@ -100,14 +116,12 @@ func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher co
 		}
 	}
 
-	configMapWatcher.WatchWithDefault(defaultCM, tracerUpdater)
-
 	// Set up our config store.
-	configStore := configmap.NewUntypedStore(
+	configStore := configmap2.NewDefaultUntypedStore(
 		"tracing-config",
 		logger,
-		configmap.Constructors{
-			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
+		configmap2.DefaultConstructors{
+			EnableZeroSamplingCM: tracingconfig.NewTracingConfigFromConfigMap,
 		},
 		tracerUpdater)
 	configStore.WatchConfigs(configMapWatcher)
