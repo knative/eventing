@@ -18,13 +18,19 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/knative/eventing/pkg/reconciler/names"
 	"reflect"
+	"strings"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
@@ -32,6 +38,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
@@ -62,6 +71,10 @@ type Reconciler struct {
 	dispatcherNamespace      string
 	dispatcherDeploymentName string
 	dispatcherServiceName    string
+
+	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
+	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
+	kafkaClusterAdmin sarama.ClusterAdmin
 
 	eventingClientSet    *versioned.Clientset
 	kafkachannelLister   listers.KafkaChannelLister
@@ -193,12 +206,56 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) error {
+	logger := logging.FromContext(ctx)
+
 	kc.Status.InitializeConditions()
 
+	kafkaClusterAdmin, err := r.createClient(ctx, kc)
+	if err != nil {
+		logger.Error("Unable to build kafka admin client", zap.String("channel", kc.Name), zap.Error(err))
+		return err
+	}
+
+	// See if the channel has been deleted.
 	if kc.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
+		if err := r.deleteTopic(ctx, kc, kafkaClusterAdmin); err != nil {
+			return err
+		}
+		removeFinalizer(kc)
 		return nil
 	}
+
+	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
+	// before manipulating Kafka.
+	if err := r.ensureFinalizer(kc); err != nil {
+		return err
+	}
+
+	if err := r.createTopic(ctx, kc, kafkaClusterAdmin); err != nil {
+		// kc.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
+		return err
+	}
+
+	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
+	// ExternalName
+	svc, err := r.reconcileChannelService(ctx, kc)
+	if err != nil {
+		kc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+		return err
+	}
+	kc.Status.MarkChannelServiceTrue()
+	kc.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+
+	// close the connection
+	err = kafkaClusterAdmin.Close()
+	if err != nil {
+		logger.Error("Error closing the connection", zap.Error(err))
+		return err
+	}
+
+	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
+	// dispatcher watches the Channel and where it needs to dispatch events to.
+	return nil
 
 	// We reconcile the status of the Channel by looking at:
 	// 1. Dispatcher Deployment for it's readiness.
@@ -271,37 +328,37 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 	return nil
 }
 
-//func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
-//	// Get the  Service and propagate the status to the Channel in case it does not exist.
-//	// We don't do anything with the service because it's status contains nothing useful, so just do
-//	// an existence check. Then below we check the endpoints targeting it.
-//	// We may change this name later, so we have to ensure we use proper addressable when resolving these.
-//	svc, err := r.serviceLister.Services(imc.Namespace).Get(fmt.Sprintf("%s-kn-channel", imc.Name))
-//	if err != nil {
-//		if apierrs.IsNotFound(err) {
-//			svc, err = resources.NewK8sService(imc, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
-//			if err != nil {
-//				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
-//				return nil, err
-//			}
-//			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(svc)
-//			if err != nil {
-//				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
-//				return nil, err
-//			}
-//			return svc, nil
-//		} else {
-//			logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
-//		}
-//		return nil, err
-//	}
-//
-//	// Check to make sure that our IMC owns this service and if not, complain.
-//	if !metav1.IsControlledBy(svc, imc) {
-//		return nil, fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
-//	}
-//	return svc, nil
-//}
+func (r *Reconciler) reconcileChannelService(ctx context.Context, channel *v1alpha1.KafkaChannel) (*corev1.Service, error) {
+	logger := logging.FromContext(ctx)
+	// Get the  Service and propagate the status to the Channel in case it does not exist.
+	// We don't do anything with the service because it's status contains nothing useful, so just do
+	// an existence check. Then below we check the endpoints targeting it.
+	// We may change this name later, so we have to ensure we use proper addressable when resolving these.
+	svc, err := r.serviceLister.Services(channel.Namespace).Get(resources.MakeChannelServiceName(channel.Name))
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			svc, err = resources.MakeService(channel, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
+			if err != nil {
+				logger.Error("Failed to create the channel service object", zap.Error(err))
+				return nil, err
+			}
+			svc, err = r.KubeClientSet.CoreV1().Services(channel.Namespace).Create(svc)
+			if err != nil {
+				logger.Error("Failed to create the channel service", zap.Error(err))
+				return nil, err
+			}
+			return svc, nil
+		} else {
+			logger.Error("Unable to get the channel service", zap.Error(err))
+		}
+		return nil, err
+	}
+	// Check to make sure that the KafkaChannel owns this service and if not, complain.
+	if !metav1.IsControlledBy(svc, channel) {
+		return nil, fmt.Errorf("kafkachannel: %s/%s does not own Service: %q", channel.Namespace, channel.Name, svc.Name)
+	}
+	return svc, nil
+}
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.KafkaChannel) (*v1alpha1.KafkaChannel, error) {
 	kc, err := r.kafkachannelLister.KafkaChannels(desired.Namespace).Get(desired.Name)
@@ -327,4 +384,87 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.KafkaCh
 	}
 
 	return new, err
+}
+
+func (r *Reconciler) createClient(ctx context.Context, kc *v1alpha1.KafkaChannel) (sarama.ClusterAdmin, error) {
+	// We don't currently initialize r.kafkaClusterAdmin, hence we end up creating the cluster admin client every time.
+	// This is because of an issue with Shopify/sarama. See https://github.com/Shopify/sarama/issues/1162.
+	// Once the issue is fixed we should use a shared cluster admin client. Also, r.kafkaClusterAdmin is currently
+	// used to pass a fake admin client in the tests.
+	kafkaClusterAdmin := r.kafkaClusterAdmin
+	if kafkaClusterAdmin == nil {
+		var err error
+		args := &resources.ClientArgs{
+			ClientID:         controllerAgentName,
+			BootstrapServers: strings.Split(kc.Spec.BootstrapServers, ","),
+		}
+		kafkaClusterAdmin, err = resources.MakeClient(args)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return kafkaClusterAdmin, nil
+}
+
+func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
+	logger := logging.FromContext(ctx)
+	topicName := resources.MakeTopicName(channel)
+	logger.Info("Creating topic on Kafka cluster", zap.String("topic", topicName))
+
+	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
+		ReplicationFactor: channel.Spec.ReplicationFactor,
+		NumPartitions:     channel.Spec.NumPartitions,
+	}, false)
+	if err == sarama.ErrTopicAlreadyExists {
+		return nil
+	} else if err != nil {
+		logger.Error("Error creating topic", zap.String("topic", topicName), zap.Error(err))
+	} else {
+		logger.Info("Successfully created topic", zap.String("topic", topicName))
+	}
+	return err
+}
+
+func (r *Reconciler) deleteTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
+	logger := logging.FromContext(ctx)
+
+	topicName := resources.MakeTopicName(channel)
+	logger.Info("Deleting topic on Kafka Cluster", zap.String("topic", topicName))
+	err := kafkaClusterAdmin.DeleteTopic(topicName)
+	if err == sarama.ErrUnknownTopicOrPartition {
+		return nil
+	} else if err != nil {
+		logger.Error("Error deleting topic", zap.String("topic", topicName), zap.Error(err))
+	} else {
+		logger.Info("Successfully deleted topic", zap.String("topic", topicName))
+	}
+	return err
+}
+
+func (r *Reconciler) ensureFinalizer(channel *v1alpha1.KafkaChannel) error {
+	finalizers := sets.NewString(channel.Finalizers...)
+	if finalizers.Has(finalizerName) {
+		return nil
+	}
+
+	mergePatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"finalizers":      append(channel.Finalizers, finalizerName),
+			"resourceVersion": channel.ResourceVersion,
+		},
+	}
+
+	patch, err := json.Marshal(mergePatch)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.eventingClientSet.MessagingV1alpha1().KafkaChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
+	return err
+}
+
+func removeFinalizer(channel *v1alpha1.KafkaChannel) {
+	finalizers := sets.NewString(channel.Finalizers...)
+	finalizers.Delete(finalizerName)
+	channel.Finalizers = finalizers.List()
 }
