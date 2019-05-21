@@ -325,6 +325,7 @@ func (in *CronJobSourceSpec) DeepCopyInto(out *CronJobSourceSpec) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
+	in.Resources.DeepCopyInto(&out.Resources)
 	return
 }
 

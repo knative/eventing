@@ -23,6 +23,7 @@ import (
 
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
@@ -41,6 +42,34 @@ type ReceiveAdapterArgs struct {
 // Cron Job Sources.
 func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	replicas := int32(1)
+	RequestResourceCPU, specified := args.Source.Spec.Resources.Requests[corev1.ResourceCPU]
+	if !specified {
+		RequestResourceCPU = resource.MustParse("250m")
+	}
+	RequestResourceMemory, specified := args.Source.Spec.Resources.Requests[corev1.ResourceMemory]
+	if !specified {
+		RequestResourceMemory = resource.MustParse("512Mi")
+	}
+	LimitResourceCPU, specified := args.Source.Spec.Resources.Limits[corev1.ResourceCPU]
+	if !specified {
+		LimitResourceCPU = resource.MustParse("250m")
+	}
+	LimitResourceMemory, specified := args.Source.Spec.Resources.Limits[corev1.ResourceCPU]
+	if !specified {
+		LimitResourceMemory = resource.MustParse("512Mi")
+	}
+
+	res := corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    RequestResourceCPU,
+			corev1.ResourceMemory: RequestResourceMemory,
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    LimitResourceCPU,
+			corev1.ResourceMemory: LimitResourceMemory,
+		},
+	}
+
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    args.Source.Namespace,
@@ -87,6 +116,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 									Value: args.Source.Namespace,
 								},
 							},
+							Resources: res,
 						},
 					},
 				},

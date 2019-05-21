@@ -76,6 +76,9 @@ type CronJobSourceSpec struct {
 	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
 	// Adapter Deployment.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// Resource limits and Request specifications of the Receive Adapter Deployment
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.

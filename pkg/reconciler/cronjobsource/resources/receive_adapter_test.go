@@ -21,10 +21,11 @@ import (
 
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/pkg/kmp"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
@@ -111,6 +112,16 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Value: "source-namespace",
 								},
 							},
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("250m"),
+									corev1.ResourceMemory: resource.MustParse("512Mi"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("250m"),
+									corev1.ResourceMemory: resource.MustParse("512Mi"),
+								},
+							},
 						},
 					},
 				},
@@ -118,7 +129,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 	}
 
-	if diff := cmp.Diff(want, got); diff != "" {
+	if diff, err := kmp.SafeDiff(want, got); err != nil {
 		t.Errorf("unexpected cron job (-want, +got) = %v", diff)
 	}
 }
