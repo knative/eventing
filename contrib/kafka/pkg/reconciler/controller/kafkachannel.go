@@ -226,7 +226,8 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 			return err
 		}
 		removeFinalizer(kc)
-		return nil
+		_, err := r.eventingClientSet.MessagingV1alpha1().KafkaChannels(kc.Namespace).Update(kc)
+		return err
 	}
 
 	// If we are adding the finalizer for the first time, then ensure that finalizer is persisted
