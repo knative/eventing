@@ -27,6 +27,7 @@ rules:
       - list
       - watch
       - update
+      - patch
   - apiGroups:
       - "" # Core API group.
     resources:
