@@ -36,13 +36,43 @@ func TestKafkaChannelValidation(t *testing.T) {
 				Spec: KafkaChannelSpec{},
 			},
 			want: func() *apis.FieldError {
-				fe := apis.ErrMissingField("spec.bootstrapServers, spec.consumerMode")
+				var errs *apis.FieldError
+				fe := apis.ErrInvalidValue(0, "spec.numPartitions")
+				errs = errs.Also(fe)
+				fe = apis.ErrInvalidValue(0, "spec.replicationFactor")
+				errs = errs.Also(fe)
+				return errs
+			}(),
+		},
+		"negative numPartitions": {
+			cr: &KafkaChannel{
+				Spec: KafkaChannelSpec{
+					NumPartitions:     -10,
+					ReplicationFactor: 1,
+				},
+			},
+			want: func() *apis.FieldError {
+				fe := apis.ErrInvalidValue(-10, "spec.numPartitions")
+				return fe
+			}(),
+		},
+		"negative replicationFactor": {
+			cr: &KafkaChannel{
+				Spec: KafkaChannelSpec{
+					NumPartitions:     1,
+					ReplicationFactor: -10,
+				},
+			},
+			want: func() *apis.FieldError {
+				fe := apis.ErrInvalidValue(-10, "spec.replicationFactor")
 				return fe
 			}(),
 		},
 		"valid subscribers array": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{
+					NumPartitions:     1,
+					ReplicationFactor: 1,
 					Subscribable: &eventingduck.Subscribable{
 						Subscribers: []eventingduck.ChannelSubscriberSpec{{
 							SubscriberURI: "subscriberendpoint",
@@ -55,6 +85,8 @@ func TestKafkaChannelValidation(t *testing.T) {
 		"empty subscriber at index 1": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{
+					NumPartitions:     1,
+					ReplicationFactor: 1,
 					Subscribable: &eventingduck.Subscribable{
 						Subscribers: []eventingduck.ChannelSubscriberSpec{{
 							SubscriberURI: "subscriberendpoint",
@@ -71,6 +103,8 @@ func TestKafkaChannelValidation(t *testing.T) {
 		"two empty subscribers": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{
+					NumPartitions:     1,
+					ReplicationFactor: 1,
 					Subscribable: &eventingduck.Subscribable{
 						Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
 					},

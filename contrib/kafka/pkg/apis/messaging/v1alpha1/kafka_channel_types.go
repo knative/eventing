@@ -52,6 +52,12 @@ var _ webhook.GenericCRD = (*KafkaChannel)(nil)
 
 // KafkaChannelSpec defines the specification for a KafkaChannel.
 type KafkaChannelSpec struct {
+	// NumPartitions is the number of partitions of a Kafka topic. By default, it is set to 1.
+	NumPartitions int32 `json:"numPartitions"`
+
+	// ReplicationFactor is the replication factor of a Kafka topic. By default, it is set to 1.
+	ReplicationFactor int16 `json:"replicationFactor"`
+
 	// KafkaChannel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }

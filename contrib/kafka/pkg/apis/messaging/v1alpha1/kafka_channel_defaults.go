@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 )
 
 func (c *KafkaChannel) SetDefaults(ctx context.Context) {
@@ -25,5 +26,10 @@ func (c *KafkaChannel) SetDefaults(ctx context.Context) {
 }
 
 func (cs *KafkaChannelSpec) SetDefaults(ctx context.Context) {
-	// TODO: Nothing to default here...
+	if cs.NumPartitions <= 0 {
+		cs.NumPartitions = utils.DefaultNumPartitions
+	}
+	if cs.ReplicationFactor <= 0 {
+		cs.ReplicationFactor = utils.DefaultReplicationFactor
+	}
 }

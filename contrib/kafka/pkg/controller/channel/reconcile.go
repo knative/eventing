@@ -39,12 +39,6 @@ import (
 const (
 	finalizerName = controllerAgentName
 
-	// DefaultNumPartitions defines the default number of partitions
-	DefaultNumPartitions = 1
-
-	// DefaultReplicationFactor defines the default number of replications
-	DefaultReplicationFactor = 1
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
 	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
@@ -200,11 +194,11 @@ func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaCl
 	}
 
 	if arguments.NumPartitions == 0 {
-		arguments.NumPartitions = DefaultNumPartitions
+		arguments.NumPartitions = utils.DefaultNumPartitions
 	}
 
 	if arguments.ReplicationFactor == 0 {
-		arguments.ReplicationFactor = DefaultReplicationFactor
+		arguments.ReplicationFactor = utils.DefaultReplicationFactor
 	}
 
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{

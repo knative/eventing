@@ -29,6 +29,16 @@ func (c *KafkaChannel) Validate(ctx context.Context) *apis.FieldError {
 func (cs *KafkaChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
+	if cs.NumPartitions <= 0 {
+		fe := apis.ErrInvalidValue(cs.NumPartitions, "numPartitions")
+		errs = errs.Also(fe)
+	}
+
+	if cs.ReplicationFactor <= 0 {
+		fe := apis.ErrInvalidValue(cs.ReplicationFactor, "replicationFactor")
+		errs = errs.Also(fe)
+	}
+
 	if cs.Subscribable != nil {
 		for i, subscriber := range cs.Subscribable.Subscribers {
 			if subscriber.ReplyURI == "" && subscriber.SubscriberURI == "" {
