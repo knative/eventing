@@ -23,13 +23,12 @@ import (
 
 	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/controller"
-	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
 	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
@@ -38,6 +37,12 @@ import (
 
 const (
 	finalizerName = controllerAgentName
+
+	// DefaultNumPartitions defines the default number of partitions
+	DefaultNumPartitions = 1
+
+	// DefaultReplicationFactor defines the default number of replications
+	DefaultReplicationFactor = 1
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
@@ -241,7 +246,7 @@ func (r *reconciler) getClusterChannelProvisioner() (*eventingv1alpha1.ClusterCh
 	return clusterChannelProvisioner, nil
 }
 
-func createKafkaAdminClient(config *KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {
+func createKafkaAdminClient(config *controller.KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {
 	saramaConf := sarama.NewConfig()
 	saramaConf.Version = sarama.V1_1_0_0
 	saramaConf.ClientID = controllerAgentName
