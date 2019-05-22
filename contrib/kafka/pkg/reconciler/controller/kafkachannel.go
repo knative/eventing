@@ -383,11 +383,7 @@ func (r *Reconciler) createClient(ctx context.Context, kc *v1alpha1.KafkaChannel
 	kafkaClusterAdmin := r.kafkaClusterAdmin
 	if kafkaClusterAdmin == nil {
 		var err error
-		args := &resources.ClientArgs{
-			ClientID:         controllerAgentName,
-			BootstrapServers: r.kafkaConfig.Brokers,
-		}
-		kafkaClusterAdmin, err = resources.MakeClient(args)
+		kafkaClusterAdmin, err = resources.MakeClient(controllerAgentName, r.kafkaConfig.Brokers)
 		if err != nil {
 			return nil, err
 		}

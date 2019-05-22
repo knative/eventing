@@ -20,14 +20,9 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-type ClientArgs struct {
-	ClientID         string
-	BootstrapServers []string
-}
-
-func MakeClient(args *ClientArgs) (sarama.ClusterAdmin, error) {
+func MakeClient(clientID string, bootstrapServers []string) (sarama.ClusterAdmin, error) {
 	saramaConf := sarama.NewConfig()
 	saramaConf.Version = sarama.V1_1_0_0
-	saramaConf.ClientID = args.ClientID
-	return sarama.NewClusterAdmin(args.BootstrapServers, saramaConf)
+	saramaConf.ClientID = clientID
+	return sarama.NewClusterAdmin(bootstrapServers, saramaConf)
 }
