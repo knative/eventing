@@ -38,7 +38,7 @@ type KafkaChannel struct {
 	// Spec defines the desired state of the Channel.
 	Spec KafkaChannelSpec `json:"spec,omitempty"`
 
-	// Status represents the current state of the Channel. This data may be out of
+	// Status represents the current state of the KafkaChannel. This data may be out of
 	// date.
 	// +optional
 	Status KafkaChannelStatus `json:"status,omitempty"`
@@ -64,14 +64,14 @@ type KafkaChannelSpec struct {
 	// NumPartitions is the number of partitions of a Kafka topic. By default, it is set to 1.
 	NumPartitions int32 `json:"numPartitions"`
 
-	//ReplicationFactor is the replication factor of a Kafka topic. By default, it is set to 1.
+	// ReplicationFactor is the replication factor of a Kafka topic. By default, it is set to 1.
 	ReplicationFactor int16 `json:"replicationFactor"`
 
-	// Channel conforms to Duck type Subscribable.
+	// KafkaChannel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }
 
-// ChannelStatus represents the current state of a Channel.
+// KafkaChannelStatus represents the current state of a KafkaChannel.
 type KafkaChannelStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.

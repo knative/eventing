@@ -51,6 +51,11 @@ var condDispatcherEndpointsReady = duckv1alpha1.Condition{
 	Status: corev1.ConditionTrue,
 }
 
+var condTopicReady = duckv1alpha1.Condition{
+	Type:   KafkaChannelConditionTopicReady,
+	Status: corev1.ConditionTrue,
+}
+
 var condDispatcherAddressable = duckv1alpha1.Condition{
 	Type:   KafkaChannelConditionAddressable,
 	Status: corev1.ConditionTrue,
@@ -143,6 +148,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 				}, {
 					Type:   KafkaChannelConditionServiceReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   KafkaChannelConditionTopicReady,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -175,6 +183,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   KafkaChannelConditionServiceReady,
+					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   KafkaChannelConditionTopicReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
@@ -209,6 +220,9 @@ func TestChannelInitializeConditions(t *testing.T) {
 				}, {
 					Type:   KafkaChannelConditionServiceReady,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   KafkaChannelConditionTopicReady,
+					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
@@ -231,6 +245,7 @@ func TestChannelIsReady(t *testing.T) {
 		markChannelServiceReady bool
 		setAddress              bool
 		markEndpointsReady      bool
+		markTopicReady          bool
 		wantReady               bool
 		dispatcherStatus        *appsv1.DeploymentStatus
 	}{{
@@ -240,6 +255,7 @@ func TestChannelIsReady(t *testing.T) {
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
+		markTopicReady:          true,
 		wantReady:               true,
 	}, {
 		name:                    "service not ready",
@@ -248,6 +264,7 @@ func TestChannelIsReady(t *testing.T) {
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
+		markTopicReady:          true,
 		wantReady:               false,
 	}, {
 		name:                    "endpoints not ready",
@@ -256,6 +273,7 @@ func TestChannelIsReady(t *testing.T) {
 		markEndpointsReady:      false,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
+		markTopicReady:          true,
 		wantReady:               false,
 	}, {
 		name:                    "deployment not ready",
@@ -264,6 +282,7 @@ func TestChannelIsReady(t *testing.T) {
 		markChannelServiceReady: false,
 		dispatcherStatus:        deploymentStatusNotReady,
 		setAddress:              true,
+		markTopicReady:          true,
 		wantReady:               false,
 	}, {
 		name:                    "address not set",
@@ -272,6 +291,7 @@ func TestChannelIsReady(t *testing.T) {
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              false,
+		markTopicReady:          true,
 		wantReady:               false,
 	}, {
 		name:                    "channel service not ready",
@@ -280,6 +300,16 @@ func TestChannelIsReady(t *testing.T) {
 		markEndpointsReady:      true,
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
+		markTopicReady:          true,
+		wantReady:               false,
+	}, {
+		name:                    "topic not ready",
+		markServiceReady:        true,
+		markChannelServiceReady: true,
+		markEndpointsReady:      true,
+		dispatcherStatus:        deploymentStatusReady,
+		setAddress:              true,
+		markTopicReady:          false,
 		wantReady:               false,
 	}}
 	for _, test := range tests {
@@ -308,6 +338,11 @@ func TestChannelIsReady(t *testing.T) {
 				cs.PropagateDispatcherStatus(test.dispatcherStatus)
 			} else {
 				cs.MarkDispatcherFailed("NotReadyDispatcher", "testing")
+			}
+			if test.markTopicReady {
+				cs.MarkTopicTrue()
+			} else {
+				cs.MarkTopicFailed("NotReadyTopic", "testing")
 			}
 			got := cs.IsReady()
 			if test.wantReady != got {

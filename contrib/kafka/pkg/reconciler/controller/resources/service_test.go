@@ -43,7 +43,7 @@ func TestMakeExternalServiceAddress(t *testing.T) {
 }
 
 func TestMakeChannelServiceAddress(t *testing.T) {
-	if want, got := "my-test-imc-kn-channel", MakeChannelServiceName(kcName); want != got {
+	if want, got := "my-test-kc-kn-channel", MakeChannelServiceName(kcName); want != got {
 		t.Errorf("Want: %q got %q", want, got)
 	}
 }
@@ -73,15 +73,15 @@ func TestMakeService(t *testing.T) {
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name:     PortName,
+					Name:     portName,
 					Protocol: corev1.ProtocolTCP,
-					Port:     PortNumber,
+					Port:     portNumber,
 				},
 			},
 		},
 	}
 
-	got, err := MakeService(imc)
+	got, err := MakeK8sService(imc)
 	if err != nil {
 		t.Fatalf("Failed to create new service: %s", err)
 	}
@@ -119,7 +119,7 @@ func TestMakeServiceWithExternal(t *testing.T) {
 		},
 	}
 
-	got, err := MakeService(imc, ExternalService(dispatcherNS, dispatcherName))
+	got, err := MakeK8sService(imc, ExternalService(dispatcherNS, dispatcherName))
 	if err != nil {
 		t.Fatalf("Failed to create new service: %s", err)
 	}
@@ -136,7 +136,7 @@ func TestMakeServiceWithFailingOption(t *testing.T) {
 			Namespace: testNS,
 		},
 	}
-	_, err := MakeService(imc, func(svc *corev1.Service) error { return errors.New("test-induced failure") })
+	_, err := MakeK8sService(imc, func(svc *corev1.Service) error { return errors.New("test-induced failure") })
 	if err == nil {
 		t.Fatalf("Expcted error from new service but got none")
 	}

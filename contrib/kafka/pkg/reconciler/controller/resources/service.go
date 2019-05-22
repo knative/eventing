@@ -27,13 +27,13 @@ import (
 )
 
 const (
-	PortName           = "http"
-	PortNumber         = 80
+	portName           = "http"
+	portNumber         = 80
 	MessagingRoleLabel = "messaging.knative.dev/role"
 	MessagingRole      = "kafka-channel"
 )
 
-// ServiceOption can be used to optionally modify the K8s service in MakeService.
+// ServiceOption can be used to optionally modify the K8s service in MakeK8sService.
 type ServiceOption func(*corev1.Service) error
 
 func MakeExternalServiceAddress(namespace, service string) string {
@@ -44,7 +44,7 @@ func MakeChannelServiceName(name string) string {
 	return fmt.Sprintf("%s-kn-channel", name)
 }
 
-// ExternalService is a functional option for MakeService to create a K8s service of type ExternalName
+// ExternalService is a functional option for MakeK8sService to create a K8s service of type ExternalName
 // pointing to the specified service in a namespace.
 func ExternalService(namespace, service string) ServiceOption {
 	return func(svc *corev1.Service) error {
@@ -56,10 +56,10 @@ func ExternalService(namespace, service string) ServiceOption {
 	}
 }
 
-// MakeService creates a new K8s Service for a Channel resource. It also sets the appropriate
+// MakeK8sService creates a new K8s Service for a Channel resource. It also sets the appropriate
 // OwnerReferences on the resource so handleObject can discover the Channel resource that 'owns' it.
 // As well as being garbage collected when the Channel is deleted.
-func MakeService(kc *v1alpha1.KafkaChannel, opts ...ServiceOption) (*corev1.Service, error) {
+func MakeK8sService(kc *v1alpha1.KafkaChannel, opts ...ServiceOption) (*corev1.Service, error) {
 	// Add annotations
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -79,9 +79,9 @@ func MakeService(kc *v1alpha1.KafkaChannel, opts ...ServiceOption) (*corev1.Serv
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
-					Name:     PortName,
+					Name:     portName,
 					Protocol: corev1.ProtocolTCP,
-					Port:     PortNumber,
+					Port:     portNumber,
 				},
 			},
 		},

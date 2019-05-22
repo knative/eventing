@@ -231,13 +231,67 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		return err
 	}
 
+	// We reconcile the status of the Channel by looking at:
+	// 1. Kafka topic used by the channel.
+	// 2. Dispatcher Deployment for it's readiness.
+	// 3. Dispatcher k8s Service for it's existence.
+	// 4. Dispatcher endpoints to ensure that there's something backing the Service.
+	// 5. K8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service.
+
 	if err := r.createTopic(ctx, kc, kafkaClusterAdmin); err != nil {
-		// kc.Status.MarkNotProvisioned("NotProvisioned", "error while provisioning: %s", err)
+		kc.Status.MarkTopicFailed("TopicCreateFailed", "error while creating topic: %s", err)
 		return err
 	}
 
-	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
-	// ExternalName
+	// Get the Dispatcher Deployment and propagate the status to the Channel
+	d, err := r.deploymentLister.Deployments(r.dispatcherNamespace).Get(r.dispatcherDeploymentName)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			kc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
+		} else {
+			logger.Error("Unable to get the dispatcher Deployment", zap.Error(err))
+			kc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
+		}
+		return err
+	}
+	kc.Status.PropagateDispatcherStatus(&d.Status)
+
+	// Get the Dispatcher Service and propagate the status to the Channel in case it does not exist.
+	// We don't do anything with the service because it's status contains nothing useful, so just do
+	// an existence check. Then below we check the endpoints targeting it.
+	_, err = r.serviceLister.Services(r.dispatcherNamespace).Get(r.dispatcherServiceName)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			kc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
+		} else {
+			logger.Error("Unable to get the dispatcher service", zap.Error(err))
+			kc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+		}
+		return err
+	}
+	kc.Status.MarkServiceTrue()
+
+	// Get the Dispatcher Service Endpoints and propagate the status to the Channel
+	// endpoints has the same name as the service, so not a bug.
+	e, err := r.endpointsLister.Endpoints(r.dispatcherNamespace).Get(r.dispatcherServiceName)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			kc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
+		} else {
+			logger.Error("Unable to get the dispatcher endpoints", zap.Error(err))
+			kc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
+		}
+		return err
+	}
+
+	if len(e.Subsets) == 0 {
+		logger.Error("No endpoints found for Dispatcher service", zap.Error(err))
+		kc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service")
+		return fmt.Errorf("there are no endpoints ready for Dispatcher service %s", r.dispatcherServiceName)
+	}
+	kc.Status.MarkEndpointsTrue()
+
+	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via ExternalName
 	svc, err := r.reconcileChannelService(ctx, kc)
 	if err != nil {
 		kc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
@@ -256,76 +310,6 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
 	return nil
-
-	// We reconcile the status of the Channel by looking at:
-	// 1. Dispatcher Deployment for it's readiness.
-	// 2. Dispatcher k8s Service for it's existence.
-	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
-	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
-
-	// Get the Dispatcher Deployment and propagate the status to the Channel
-	//d, err := r.deploymentLister.Deployments(r.dispatcherNamespace).Get(r.dispatcherDeploymentName)
-	//if err != nil {
-	//	if apierrs.IsNotFound(err) {
-	//		imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
-	//	} else {
-	//		logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
-	//		imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
-	//	}
-	//	return err
-	//}
-	//imc.Status.PropagateDispatcherStatus(&d.Status)
-	//
-	//// Get the Dispatcher Service and propagate the status to the Channel in case it does not exist.
-	//// We don't do anything with the service because it's status contains nothing useful, so just do
-	//// an existence check. Then below we check the endpoints targeting it.
-	//_, err = r.serviceLister.Services(r.dispatcherNamespace).Get(r.dispatcherServiceName)
-	//if err != nil {
-	//	if apierrs.IsNotFound(err) {
-	//		imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
-	//	} else {
-	//		logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
-	//		imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
-	//	}
-	//	return err
-	//}
-	//
-	//imc.Status.MarkServiceTrue()
-	//
-	//// Get the Dispatcher Service Endpoints and propagate the status to the Channel
-	//// endpoints has the same name as the service, so not a bug.
-	//e, err := r.endpointsLister.Endpoints(r.dispatcherNamespace).Get(r.dispatcherServiceName)
-	//if err != nil {
-	//	if apierrs.IsNotFound(err) {
-	//		imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
-	//	} else {
-	//		logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
-	//		imc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
-	//	}
-	//	return err
-	//}
-	//
-	//if len(e.Subsets) == 0 {
-	//	logging.FromContext(ctx).Error("No endpoints found for Dispatcher service", zap.Error(err))
-	//	imc.Status.MarkEndpointsFailed("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service")
-	//	return errors.New("there are no endpoints ready for Dispatcher service")
-	//}
-	//
-	//imc.Status.MarkEndpointsTrue()
-	//
-	//// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
-	//// ExternalName
-	//svc, err := r.reconcileChannelService(ctx, imc)
-	//if err != nil {
-	//	imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
-	//	return err
-	//}
-	//imc.Status.MarkChannelServiceTrue()
-	//imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()))
-
-	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
-	// dispatcher watches the Channel and where it needs to dispatch events to.
-	return nil
 }
 
 func (r *Reconciler) reconcileChannelService(ctx context.Context, channel *v1alpha1.KafkaChannel) (*corev1.Service, error) {
@@ -337,7 +321,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, channel *v1alp
 	svc, err := r.serviceLister.Services(channel.Namespace).Get(resources.MakeChannelServiceName(channel.Name))
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			svc, err = resources.MakeService(channel, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
+			svc, err = resources.MakeK8sService(channel, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
 			if err != nil {
 				logger.Error("Failed to create the channel service object", zap.Error(err))
 				return nil, err
@@ -380,9 +364,10 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.KafkaCh
 	if err == nil && becomesReady {
 		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("KafkaChannel %q became ready after %v", kc.Name, duration)
-		// TODO: stats
+		if err := r.StatsReporter.ReportReady("Channel", kc.Namespace, kc.Name, duration); err != nil {
+			r.Logger.Infof("Failed to record ready for KafkaChannel %q: %v", kc.Name, err)
+		}
 	}
-
 	return new, err
 }
 
@@ -408,9 +393,9 @@ func (r *Reconciler) createClient(ctx context.Context, kc *v1alpha1.KafkaChannel
 
 func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	logger := logging.FromContext(ctx)
+
 	topicName := resources.MakeTopicName(channel)
 	logger.Info("Creating topic on Kafka cluster", zap.String("topic", topicName))
-
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
 		ReplicationFactor: channel.Spec.ReplicationFactor,
 		NumPartitions:     channel.Spec.NumPartitions,

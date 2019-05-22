@@ -23,6 +23,7 @@ import (
 )
 
 var kc = duckv1alpha1.NewLivingConditionSet(
+	KafkaChannelConditionTopicReady,
 	KafkaChannelConditionDispatcherReady,
 	KafkaChannelConditionServiceReady,
 	KafkaChannelConditionEndpointsReady,
@@ -54,6 +55,9 @@ const (
 	// KafkaChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
 	// Because this uses ExternalName, there are no endpoints to check.
 	KafkaChannelConditionChannelServiceReady duckv1alpha1.ConditionType = "ChannelServiceReady"
+
+	// KafkaChannelConditionTopicReady has status True when the Kafka topic to use by the channel exists.
+	KafkaChannelConditionTopicReady duckv1alpha1.ConditionType = "TopicReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -120,4 +124,12 @@ func (cs *KafkaChannelStatus) MarkEndpointsFailed(reason, messageFormat string, 
 
 func (cs *KafkaChannelStatus) MarkEndpointsTrue() {
 	kc.Manage(cs).MarkTrue(KafkaChannelConditionEndpointsReady)
+}
+
+func (cs *KafkaChannelStatus) MarkTopicTrue() {
+	kc.Manage(cs).MarkTrue(KafkaChannelConditionTopicReady)
+}
+
+func (cs *KafkaChannelStatus) MarkTopicFailed(reason, messageFormat string, messageA ...interface{}) {
+	kc.Manage(cs).MarkFalse(KafkaChannelConditionTopicReady, reason, messageFormat, messageA...)
 }
