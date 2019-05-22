@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 )
 
 func (c *KafkaChannel) SetDefaults(ctx context.Context) {
@@ -26,13 +25,5 @@ func (c *KafkaChannel) SetDefaults(ctx context.Context) {
 }
 
 func (cs *KafkaChannelSpec) SetDefaults(ctx context.Context) {
-	if cs.ConsumerMode == "" {
-		cs.ConsumerMode = ConsumerModeMultiplexConsumerValue
-	}
-	if cs.NumPartitions <= 0 {
-		cs.NumPartitions = DefaultNumPartitions
-	}
-	if cs.ReplicationFactor <= 0 {
-		cs.ReplicationFactor = DefaultReplicationFactor
-	}
+	// TODO: Nothing to default here...
 }

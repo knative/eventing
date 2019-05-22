@@ -52,21 +52,6 @@ var _ webhook.GenericCRD = (*KafkaChannel)(nil)
 
 // KafkaChannelSpec defines the specification for a KafkaChannel.
 type KafkaChannelSpec struct {
-	// Comma-separated list of the Broker URL of the Kafka cluster, which is in the format
-	// of my-cluster-kafka-bootstrap.my-kafka-namespace:9092.
-	BootstrapServers string `json:"bootstrapServers"`
-
-	// ConsumerMode is the mode used to dispatch events from different partitions in parallel.
-	// By default, partitions are multiplexed with a single go channel (multiplex).
-	// `multiplex` and `partitions` are valid values.
-	ConsumerMode string `json:"consumerMode"`
-
-	// NumPartitions is the number of partitions of a Kafka topic. By default, it is set to 1.
-	NumPartitions int32 `json:"numPartitions"`
-
-	// ReplicationFactor is the replication factor of a Kafka topic. By default, it is set to 1.
-	ReplicationFactor int16 `json:"replicationFactor"`
-
 	// KafkaChannel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }

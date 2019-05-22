@@ -14,20 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package reconciler
+package controller
 
-import "github.com/bsm/sarama-cluster"
-
-const (
-	ConsumerModePartitionConsumerValue = "partitions"
-	ConsumerModeMultiplexConsumerValue = "multiplex"
-
-	// DefaultNumPartitions defines the default number of partitions
-	DefaultNumPartitions = 1
-
-	// DefaultReplicationFactor defines the default number of replications
-	DefaultReplicationFactor = 1
-)
+import cluster "github.com/bsm/sarama-cluster"
 
 type KafkaProvisionerConfig struct {
 	Brokers      []string

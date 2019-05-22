@@ -19,9 +19,6 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
-	"strings"
-
 	"github.com/knative/pkg/apis"
 )
 
@@ -31,37 +28,6 @@ func (c *KafkaChannel) Validate(ctx context.Context) *apis.FieldError {
 
 func (cs *KafkaChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-
-	if cs.BootstrapServers == "" {
-		fe := apis.ErrMissingField("bootstrapServers")
-		errs = errs.Also(fe)
-	} else {
-		bootstrapServers := strings.Split(cs.BootstrapServers, ",")
-		for i, s := range bootstrapServers {
-			if len(s) == 0 {
-				fe := apis.ErrMissingField(fmt.Sprintf("bootstrapServers[%d]", i))
-				errs = errs.Also(fe)
-			}
-		}
-	}
-
-	if cs.ConsumerMode == "" {
-		fe := apis.ErrMissingField("consumerMode")
-		errs = errs.Also(fe)
-	} else if cs.ConsumerMode != ConsumerModePartitionConsumerValue && cs.ConsumerMode != ConsumerModeMultiplexConsumerValue {
-		fe := apis.ErrInvalidValue(cs.ConsumerMode, "consumerMode")
-		errs = errs.Also(fe)
-	}
-
-	if cs.NumPartitions < 0 {
-		fe := apis.ErrInvalidValue(cs.NumPartitions, "numPartitions")
-		errs = errs.Also(fe)
-	}
-
-	if cs.ReplicationFactor < 0 {
-		fe := apis.ErrInvalidValue(cs.ReplicationFactor, "replicationFactor")
-		errs = errs.Also(fe)
-	}
 
 	if cs.Subscribable != nil {
 		for i, subscriber := range cs.Subscribable.Subscribers {

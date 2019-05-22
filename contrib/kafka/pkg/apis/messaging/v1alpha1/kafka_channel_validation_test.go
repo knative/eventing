@@ -40,83 +40,9 @@ func TestKafkaChannelValidation(t *testing.T) {
 				return fe
 			}(),
 		},
-		"empty bootstrapServers": {
-			cr: &KafkaChannel{
-				Spec: KafkaChannelSpec{
-					ConsumerMode: "multiplex",
-				},
-			},
-			want: func() *apis.FieldError {
-				fe := apis.ErrMissingField("spec.bootstrapServers")
-				return fe
-			}(),
-		},
-		"empty bootstrapServer at index 1": {
-			cr: &KafkaChannel{
-				Spec: KafkaChannelSpec{
-					BootstrapServers: "bootstrap_srvs,",
-					ConsumerMode:     "multiplex",
-				},
-			},
-			want: func() *apis.FieldError {
-				fe := apis.ErrMissingField("spec.bootstrapServers[1]")
-				return fe
-			}(),
-		},
-		"empty consumerMode": {
-			cr: &KafkaChannel{
-				Spec: KafkaChannelSpec{
-					BootstrapServers: "bootstrap_srvs",
-				},
-			},
-			want: func() *apis.FieldError {
-				fe := apis.ErrMissingField("spec.consumerMode")
-				return fe
-			}(),
-		},
-		"invalid consumerMode": {
-			cr: &KafkaChannel{
-				Spec: KafkaChannelSpec{
-					ConsumerMode:     "invalid_value",
-					BootstrapServers: "bootstrap_srvs",
-				},
-			},
-			want: func() *apis.FieldError {
-				fe := apis.ErrInvalidValue("invalid_value", "spec.consumerMode")
-				return fe
-			}(),
-		},
-		"negative numPartitions": {
-			cr: &KafkaChannel{
-				Spec: KafkaChannelSpec{
-					ConsumerMode:     "multiplex",
-					BootstrapServers: "bootstrap_srvs",
-					NumPartitions:    -10,
-				},
-			},
-			want: func() *apis.FieldError {
-				fe := apis.ErrInvalidValue(-10, "spec.numPartitions")
-				return fe
-			}(),
-		},
-		"negative replicationFactor": {
-			cr: &KafkaChannel{
-				Spec: KafkaChannelSpec{
-					ConsumerMode:      "multiplex",
-					BootstrapServers:  "bootstrap_srvs",
-					ReplicationFactor: -10,
-				},
-			},
-			want: func() *apis.FieldError {
-				fe := apis.ErrInvalidValue(-10, "spec.replicationFactor")
-				return fe
-			}(),
-		},
 		"valid subscribers array": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{
-					ConsumerMode:     "multiplex",
-					BootstrapServers: "bootstrap_srvs",
 					Subscribable: &eventingduck.Subscribable{
 						Subscribers: []eventingduck.ChannelSubscriberSpec{{
 							SubscriberURI: "subscriberendpoint",
@@ -129,8 +55,6 @@ func TestKafkaChannelValidation(t *testing.T) {
 		"empty subscriber at index 1": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{
-					ConsumerMode:     "multiplex",
-					BootstrapServers: "bootstrap_srvs",
 					Subscribable: &eventingduck.Subscribable{
 						Subscribers: []eventingduck.ChannelSubscriberSpec{{
 							SubscriberURI: "subscriberendpoint",
@@ -147,8 +71,6 @@ func TestKafkaChannelValidation(t *testing.T) {
 		"two empty subscribers": {
 			cr: &KafkaChannel{
 				Spec: KafkaChannelSpec{
-					ConsumerMode:     "multiplex",
-					BootstrapServers: "bootstrap_srvs",
 					Subscribable: &eventingduck.Subscribable{
 						Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
 					},
