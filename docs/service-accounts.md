@@ -58,7 +58,7 @@ scoped to the exact set of permissions required.
 ## Sources
 
 Sources are different, because unlike [Core](#core) and
-[Channels](#channels) event consumers are expected to both manage and have many
+[Channels](#channels) event consumers are expected to both create and manage many
 different Sources. So the cost of distinct `ServiceAccounts` is more pronounced.
 
 Most Event Source CRDs have two components: control plane and data plane.
