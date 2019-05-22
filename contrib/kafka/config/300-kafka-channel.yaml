@@ -53,10 +53,12 @@ spec:
         spec:
           properties:
             numPartitions:
-              type: int
+              format: int32
+              type: integer
               description: "Number of partitions of a Kafka topic."
             replicationFactor:
-              type: int
+              format: int16
+              type: integer
               description: "Replication factor of a Kafka topic."
             subscribable:
               type: object

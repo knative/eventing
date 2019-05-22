@@ -246,6 +246,7 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		kc.Status.MarkTopicFailed("TopicCreateFailed", "error while creating topic: %s", err)
 		return err
 	}
+	kc.Status.MarkTopicTrue()
 
 	// Get the Dispatcher Deployment and propagate the status to the Channel
 	d, err := r.deploymentLister.Deployments(r.dispatcherNamespace).Get(r.dispatcherDeploymentName)
@@ -397,8 +398,8 @@ func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaCha
 	topicName := resources.MakeTopicName(channel)
 	logger.Info("Creating topic on Kafka cluster", zap.String("topic", topicName))
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
-		ReplicationFactor: int16(channel.Spec.ReplicationFactor),
-		NumPartitions:     int32(channel.Spec.NumPartitions),
+		ReplicationFactor: channel.Spec.ReplicationFactor,
+		NumPartitions:     channel.Spec.NumPartitions,
 	}, false)
 	if err == sarama.ErrTopicAlreadyExists {
 		return nil
