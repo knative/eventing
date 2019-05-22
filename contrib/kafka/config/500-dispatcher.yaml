@@ -30,16 +30,16 @@ spec:
       serviceAccountName: kafka-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/contrib/kafka/cmd/dispatcher
+          image: github.com/knative/eventing/contrib/kafka/cmd/channel_dispatcher
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
           volumeMounts:
-            - name: kafka-config
-              mountPath: /etc/config-provisioner
+            - name: config-kafka
+              mountPath: /etc/config-kafka
       volumes:
-        - name: kafka-config
+        - name: config-kafka
           configMap:
-            name: kafka-config
+            name: config-kafka
