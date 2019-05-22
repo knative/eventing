@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,28 +35,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+// TODO update the dispatcher in follow up PR.
 func main() {
 	flag.Parse()
 	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("unable to create logger: %v", err)
+		log.Fatalf("Unable to create logger: %v", err)
 	}
-	provisionerConfig, err := utils.GetKafkaConfig("/etc/config-provisioner")
+	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
 	if err != nil {
-		logger.Fatal("unable to load provisioner config", zap.Error(err))
+		logger.Fatal("Unable to load provisioner config", zap.Error(err))
 	}
 
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
-		logger.Fatal("unable to create manager.", zap.Error(err))
+		logger.Fatal("Unable to create manager.", zap.Error(err))
 	}
 
-	kafkaDispatcher, err := dispatcher.NewDispatcher(provisionerConfig.Brokers, provisionerConfig.ConsumerMode, logger)
+	kafkaDispatcher, err := dispatcher.NewDispatcher(kafkaConfig.Brokers, kafkaConfig.ConsumerMode, logger)
 	if err != nil {
-		logger.Fatal("unable to create kafka dispatcher.", zap.Error(err))
+		logger.Fatal("Unable to create kafka dispatcher", zap.Error(err))
 	}
 	if err = mgr.Add(kafkaDispatcher); err != nil {
-		logger.Fatal("Unable to add kafkaDispatcher", zap.Error(err))
+		logger.Fatal("Unable to add the kafka dispatcher", zap.Error(err))
 	}
 
 	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
@@ -66,7 +67,7 @@ func main() {
 	// Zipkin tracing.
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, "kafka-dispatcher"); err != nil {
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, "kafka-ch-dispatcher"); err != nil {
 		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
