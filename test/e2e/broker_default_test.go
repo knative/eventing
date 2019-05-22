@@ -34,7 +34,6 @@ import (
 )
 
 const (
-	brokerName              = common.DefaultBrokerName
 	waitForFilterPodRunning = 30 * time.Second
 	selectorKey             = "end2end-test-broker-trigger"
 
@@ -48,7 +47,7 @@ const (
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
-	typeAndSource common.TypeAndSource
+	typeAndSource base.TypeAndSource
 	selector      map[string]string
 }
 
@@ -68,24 +67,25 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 	// Wait for default broker ready.
 	t.Logf("Waiting for default broker to be ready")
-	if err := client.WaitForBrokerReady(brokerName); err != nil {
+	if err := client.WaitForBrokerReady(common.DefaultBrokerName); err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
 	// These are the event types and sources that triggers will listen to, as well as the selectors
 	// to set  in the subscriber and services pods.
 	eventsToReceive := []eventReceiver{
-		{common.TypeAndSource{Type: any, Source: any}, newSelector()},
-		{common.TypeAndSource{Type: eventType1, Source: any}, newSelector()},
-		{common.TypeAndSource{Type: any, Source: eventSource1}, newSelector()},
-		{common.TypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
+		{base.TypeAndSource{Type: any, Source: any}, newSelector()},
+		{base.TypeAndSource{Type: eventType1, Source: any}, newSelector()},
+		{base.TypeAndSource{Type: any, Source: eventSource1}, newSelector()},
+		{base.TypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
 	}
 
 	// Create subscribers.
 	t.Logf("Creating Subscribers")
 	for _, event := range eventsToReceive {
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		if err := client.CreateLoggerService(subscriberName); err != nil {
+		pod := base.EventLoggerPod(subscriberName)
+		if err := client.CreatePod(pod, common.WithService(subscriberName)); err != nil {
 			t.Fatalf("Failed to create the subscriber %q: %v", subscriberName, err)
 		}
 	}
@@ -95,14 +95,15 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	for _, event := range eventsToReceive {
 		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		triggerFilter := base.TriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type)
-		if err := client.CreateTrigger(triggerName, brokerName, triggerFilter, subscriberName); err != nil {
+		if err := client.CreateTrigger(triggerName,
+			base.WithSubscriberForTrigger(subscriberName),
+			base.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type)); err != nil {
 			t.Fatalf("Failed to create the trigger %q: %v", triggerName, err)
 		}
 	}
 
 	// These are the event types and sources that will be send.
-	eventsToSend := []common.TypeAndSource{
+	eventsToSend := []base.TypeAndSource{
 		{eventType1, eventSource1},
 		{eventType1, eventSource2},
 		{eventType2, eventSource1},
@@ -121,14 +122,14 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		// Create cloud event.
 		// Using event type and source as part of the body for easier debugging.
 		body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
-		cloudEvent := &common.CloudEvent{
+		cloudEvent := &base.CloudEvent{
 			Source: eventToSend.Source,
 			Type:   eventToSend.Type,
 			Data:   fmt.Sprintf(`{"msg":%q}`, body),
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		if err := client.SendFakeEventToBroker(senderPodName, brokerName, cloudEvent); err != nil {
+		if err := client.SendFakeEventToBroker(senderPodName, common.DefaultBrokerName, cloudEvent); err != nil {
 			t.Fatalf("Error send cloud event to broker: %v", err)
 		}
 
@@ -188,7 +189,7 @@ func newSelector() map[string]string {
 }
 
 // Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.
-func shouldExpectEvent(eventToSend *common.TypeAndSource, receiver *eventReceiver, logf logging.FormatLogger) bool {
+func shouldExpectEvent(eventToSend *base.TypeAndSource, receiver *eventReceiver, logf logging.FormatLogger) bool {
 	if receiver.typeAndSource.Type != any && receiver.typeAndSource.Type != eventToSend.Type {
 		logf("Event types mismatch, receive %s, send %s", receiver.typeAndSource.Type, eventToSend.Type)
 		return false

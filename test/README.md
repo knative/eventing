@@ -81,7 +81,7 @@ to specify the build tag `e2e`.
 go test -v -tags=e2e -count=1 ./test/e2e
 ```
 
-By default, it will run all applicable tests against the default
+By default, it will run all applicable tests against the cluster's default
 `ClusterChannelProvisioner`.
 
 If you want to run tests against other `ClusterChannelProvisioners`, you can

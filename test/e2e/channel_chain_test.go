@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -57,16 +58,17 @@ func testChannelChain(t *testing.T, provisioner string) {
 	client.WaitForChannelsReady()
 
 	// create loggerPod and expose it as a service
-	if err := client.CreateLoggerService(loggerPodName); err != nil {
+	pod := base.EventLoggerPod(loggerPodName)
+	if err := client.CreatePod(pod, common.WithService(loggerPodName)); err != nil {
 		t.Fatalf("Failed to create logger service: %v", err)
 	}
 
 	// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-	if err := client.CreateSubscriptions(subscriptionNames1, channelNames[0], "", channelNames[1]); err != nil {
+	if err := client.CreateSubscriptions(subscriptionNames1, channelNames[0], base.WithReply(channelNames[1])); err != nil {
 		t.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames1, channelNames[0], err)
 	}
 	// create subscriptions that subscribe the second channel, and call the logging service
-	if err := client.CreateSubscriptions(subscriptionNames2, channelNames[1], loggerPodName, ""); err != nil {
+	if err := client.CreateSubscriptions(subscriptionNames2, channelNames[1], base.WithSubscriberForSubscription(loggerPodName)); err != nil {
 		t.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames2, channelNames[1], err)
 	}
 
@@ -75,11 +77,11 @@ func testChannelChain(t *testing.T, provisioner string) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
-	event := &common.CloudEvent{
+	event := &base.CloudEvent{
 		Source:   senderName,
-		Type:     common.CloudEventDefaultType,
+		Type:     base.CloudEventDefaultType,
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: common.CloudEventDefaultEncoding,
+		Encoding: base.CloudEventDefaultEncoding,
 	}
 	if err := client.SendFakeEventToChannel(senderName, channelNames[0], event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])

@@ -89,32 +89,38 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 
 	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-	eventAfterTransformation := &common.CloudEvent{
+	eventAfterTransformation := &base.CloudEvent{
 		Source:   eventSource2,
 		Type:     eventType2,
 		Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-		Encoding: common.CloudEventDefaultEncoding,
+		Encoding: base.CloudEventDefaultEncoding,
 	}
 
 	// create the transformation service
-	if err := client.CreateTransformationService(transformationPodName, eventAfterTransformation); err != nil {
+	transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
+	if err := client.CreatePod(transformationPod, common.WithService(transformationPodName)); err != nil {
 		t.Fatalf("Failed to create transformation service %q: %v", transformationPodName, err)
 	}
 
 	// create trigger1 for event transformation
-	triggerFilter1 := base.TriggerFilter(eventSource1, eventType1)
-	if err := client.CreateTrigger(triggerName1, brokerName, triggerFilter1, transformationPodName); err != nil {
+	if err := client.CreateTrigger(triggerName1,
+		base.WithBroker(brokerName),
+		base.WithTriggerFilter(eventSource1, eventType1),
+		base.WithSubscriberForTrigger(transformationPodName)); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName1, err)
 	}
 
-	// create logger service to receive events for validation
-	if err := client.CreateLoggerService(loggerPodName); err != nil {
+	// create logger pod and service
+	loggerPod := base.EventLoggerPod(loggerPodName)
+	if err := client.CreatePod(loggerPod, common.WithService(loggerPodName)); err != nil {
 		t.Fatalf("Failed to create logger service %q: %v", loggerPodName, err)
 	}
 
 	// create trigger2 for event receiving
-	triggerFilter2 := base.TriggerFilter(eventSource2, eventType2)
-	if err := client.CreateTrigger(triggerName2, brokerName, triggerFilter2, loggerPodName); err != nil {
+	if err := client.CreateTrigger(triggerName2,
+		base.WithBroker(brokerName),
+		base.WithTriggerFilter(eventSource2, eventType2),
+		base.WithSubscriberForTrigger(loggerPodName)); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
 	}
 
@@ -122,11 +128,11 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	client.WaitForAllTestResourcesReady()
 
 	// send fake CloudEvent to the broker
-	eventToSend := &common.CloudEvent{
+	eventToSend := &base.CloudEvent{
 		Source:   eventSource1,
 		Type:     eventType1,
 		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-		Encoding: common.CloudEventDefaultEncoding,
+		Encoding: base.CloudEventDefaultEncoding,
 	}
 	if err := client.SendFakeEventToBroker(senderName, brokerName, eventToSend); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)

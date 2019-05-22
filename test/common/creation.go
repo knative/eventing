@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 var eventingAPIGroup = v1alpha1.SchemeGroupVersion.Group
@@ -37,10 +36,9 @@ var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 // CreateChannel will create a Channel Resource in Eventing.
 func (client *Client) CreateChannel(name, provisonerName string) error {
 	namespace := client.Namespace
-	provisioner := base.ClusterChannelProvisioner(provisonerName)
-	channel := base.Channel(name, namespace, provisioner)
-	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
+	channel := base.Channel(name, provisonerName)
 
+	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
 	_, err := channels.Create(channel)
 	if err != nil {
 		return err
@@ -60,12 +58,10 @@ func (client *Client) CreateChannels(names []string, provisionerName string) err
 }
 
 // CreateSubscription will create a Subscription.
-func (client *Client) CreateSubscription(name, channelName, subscriberName, replyName string) error {
+func (client *Client) CreateSubscription(name, channelName string, options ...func(*v1alpha1.Subscription)) error {
 	namespace := client.Namespace
-	channel := base.ChannelRef(channelName)
-	subscriber := base.SubscriberSpecForService(subscriberName)
-	reply := base.ReplyStrategyForChannel(replyName)
-	subscription := base.Subscription(name, namespace, channel, subscriber, reply)
+	subscription := base.Subscription(name, channelName, options...)
+
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
 	_, err := subscriptions.Create(subscription)
 	if err != nil {
@@ -76,9 +72,9 @@ func (client *Client) CreateSubscription(name, channelName, subscriberName, repl
 }
 
 // CreateSubscriptions will create a list of Subscriptions.
-func (client *Client) CreateSubscriptions(names []string, channelName, subscriberName, replyName string) error {
+func (client *Client) CreateSubscriptions(names []string, channelName string, options ...func(*v1alpha1.Subscription)) error {
 	for _, name := range names {
-		if err := client.CreateSubscription(name, channelName, subscriberName, replyName); err != nil {
+		if err := client.CreateSubscription(name, channelName, options...); err != nil {
 			return err
 		}
 	}
@@ -88,8 +84,8 @@ func (client *Client) CreateSubscriptions(names []string, channelName, subscribe
 // CreateBroker will create a Broker.
 func (client *Client) CreateBroker(name, provisionerName string) error {
 	namespace := client.Namespace
-	provisioner := base.ClusterChannelProvisioner(provisionerName)
-	broker := base.Broker(name, namespace, provisioner)
+	broker := base.Broker(name, provisionerName)
+
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
 	_, err := brokers.Create(broker)
 	if err != nil {
@@ -110,11 +106,10 @@ func (client *Client) CreateBrokers(names []string, provisionerName string) erro
 }
 
 // CreateTrigger will create a Trigger.
-// TODO(Fredy-Z): do not directly use TriggerFilter defined in eventing API
-func (client *Client) CreateTrigger(name, brokerName string, filter *v1alpha1.TriggerFilter, subscriberName string) error {
+func (client *Client) CreateTrigger(name string, options ...func(*v1alpha1.Trigger)) error {
 	namespace := client.Namespace
-	subscriber := base.SubscriberSpecForService(subscriberName)
-	trigger := base.Trigger(name, namespace, brokerName, filter, subscriber)
+	trigger := base.Trigger(name, options...)
+
 	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
 	_, err := triggers.Create(trigger)
 	if err != nil {
@@ -124,12 +119,13 @@ func (client *Client) CreateTrigger(name, brokerName string, filter *v1alpha1.Tr
 	return nil
 }
 
+/*
 // CreateTransformationService will create an event transformation Service.
-// It can receive the clould events, and reply with the transformed events.
-func (client *Client) CreateTransformationService(name string, event *CloudEvent) error {
+// It can receive the cloud events, and reply with the transformed events.
+func (client *Client) CreateTransformationService(name string, event *base.CloudEvent) error {
 	namespace := client.Namespace
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	eventTransformationPod := EventTransformationPod(name, namespace, selector, event)
+	eventTransformationPod := base.EventTransformationPod(name, namespace, selector, event)
 	if err := client.createPod(eventTransformationPod); err != nil {
 		return err
 	}
@@ -144,7 +140,7 @@ func (client *Client) CreateTransformationService(name string, event *CloudEvent
 func (client *Client) CreateLoggerService(name string) error {
 	namespace := client.Namespace
 	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	eventLoggerPod := EventLoggerPod(name, namespace, selector)
+	eventLoggerPod := base.EventLoggerPod(name, namespace, selector)
 	if err := client.createPod(eventLoggerPod); err != nil {
 		return err
 	}
@@ -156,16 +152,17 @@ func (client *Client) CreateLoggerService(name string) error {
 
 // CreateSenderPod will create an event sender Pod.
 // It can send the given cloud event to the given sink.
-func (client *Client) createSenderPod(name, sink string, event *CloudEvent) error {
+func (client *Client) createSenderPod(name, sink string, event *base.CloudEvent) error {
 	namespace := client.Namespace
-	eventSenderPod := EventSenderPod(name, namespace, sink, event)
+	eventSenderPod := base.EventSenderPod(name, namespace, sink, event)
 	return client.createPod(eventSenderPod)
 }
 
 // CreateService will create a Service.
 func (client *Client) createService(name string, selector map[string]string) error {
 	namespace := client.Namespace
-	svc := Service(name, namespace, selector)
+	svc := base.Service(name, selector)
+
 	svcs := client.Kube.Kube.CoreV1().Services(namespace)
 	_, err := svcs.Create(svc)
 	if err != nil {
@@ -173,39 +170,39 @@ func (client *Client) createService(name string, selector map[string]string) err
 	}
 	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
 	return nil
+} */
+
+// WithService returns an option that creates a Service binded with the given pod.
+func WithService(name string) func(*corev1.Pod, *Client) error {
+	return func(pod *corev1.Pod, client *Client) error {
+		namespace := pod.Namespace
+		svc := base.Service(name, pod.Labels)
+
+		svcs := client.Kube.Kube.CoreV1().Services(namespace)
+		_, err := svcs.Create(svc)
+		if err != nil {
+			return err
+		}
+		client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
+		return nil
+	}
 }
 
 // CreatePod will create a Pod.
-func (client *Client) createPod(pod *corev1.Pod) error {
+func (client *Client) CreatePod(pod *corev1.Pod, options ...func(*corev1.Pod, *Client) error) error {
 	namespace := client.Namespace
+	pod.Namespace = namespace
 	_, err := client.Kube.CreatePod(pod)
 	if err != nil {
 		return err
 	}
 	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
-	return nil
-}
 
-// createServiceAccount will create a service account.
-func (client *Client) createServiceAccount(sa *corev1.ServiceAccount) error {
-	namespace := client.Namespace
-	sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
-	_, err := sas.Create(sa)
-	if err != nil {
-		return err
+	for _, option := range options {
+		if err := option(pod, client); err != nil {
+			return err
+		}
 	}
-	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, sa.Name)
-	return nil
-}
-
-// createClusterRoleBinding will create a service account binding.
-func (client *Client) createClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) error {
-	clusterRoleBindings := client.Kube.Kube.RbacV1().ClusterRoleBindings()
-	_, err := clusterRoleBindings.Create(crb)
-	if err != nil {
-		return err
-	}
-	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.Name)
 	return nil
 }
 
@@ -244,5 +241,28 @@ func (client *Client) CreateServiceAccountAndBinding(saName, crName string) erro
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// createServiceAccount will create a service account.
+func (client *Client) createServiceAccount(sa *corev1.ServiceAccount) error {
+	namespace := client.Namespace
+	sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
+	_, err := sas.Create(sa)
+	if err != nil {
+		return err
+	}
+	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, sa.Name)
+	return nil
+}
+
+// createClusterRoleBinding will create a service account binding.
+func (client *Client) createClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) error {
+	clusterRoleBindings := client.Kube.Kube.RbacV1().ClusterRoleBindings()
+	_, err := clusterRoleBindings.Create(crb)
+	if err != nil {
+		return err
+	}
+	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.Name)
 	return nil
 }

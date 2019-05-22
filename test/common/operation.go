@@ -44,7 +44,7 @@ func (client *Client) LabelNamespace(labels map[string]string) error {
 }
 
 // SendFakeEventToChannel will send the given event to the given channel.
-func (client *Client) SendFakeEventToChannel(senderName, channelName string, event *CloudEvent) error {
+func (client *Client) SendFakeEventToChannel(senderName, channelName string, event *base.CloudEvent) error {
 	namespace := client.Namespace
 	channel, err := client.Eventing.EventingV1alpha1().Channels(namespace).Get(channelName, metav1.GetOptions{})
 	if err != nil {
@@ -55,7 +55,7 @@ func (client *Client) SendFakeEventToChannel(senderName, channelName string, eve
 }
 
 // SendFakeEventToBroker will send the given event to the given broker.
-func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event *CloudEvent) error {
+func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event *base.CloudEvent) error {
 	namespace := client.Namespace
 	broker, err := client.Eventing.EventingV1alpha1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
 	if err != nil {
@@ -66,19 +66,16 @@ func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event
 }
 
 // SendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
-func (client *Client) SendFakeEventToAddress(senderName, url string, event *CloudEvent) error {
+func (client *Client) SendFakeEventToAddress(senderName, url string, event *base.CloudEvent) error {
 	namespace := client.Namespace
-	logf := client.Logf
-	logf("Sending fake CloudEvent")
-	logf("Creating event sender pod %q", senderName)
-
-	if err := client.createSenderPod(senderName, url, event); err != nil {
+	client.Logf("Sending fake CloudEvent")
+	pod := base.EventSenderPod(senderName, url, event)
+	if err := client.CreatePod(pod); err != nil {
 		return err
 	}
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
 		return err
 	}
-	logf("Sender pod starts running")
 	return nil
 }
 

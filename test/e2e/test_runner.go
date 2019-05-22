@@ -42,7 +42,7 @@ import (
 )
 
 // RunTests will use all provisioners that support the given feature, to run
-// a test for the test_func.
+// a test for the testFunc.
 func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string)) {
 	t.Parallel()
 	supportedProvisioners := common.FeatureMap[feature]
@@ -53,8 +53,6 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 			})
 		}
 	}
-	// We do not want to show the parent test in the test result, so skip it after all is done.
-	t.Skip()
 }
 
 // Setup creates the client objects needed in the e2e tests,

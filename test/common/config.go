@@ -16,6 +16,8 @@ limitations under the License.
 
 package common
 
+import "github.com/knative/eventing/pkg/reconciler/namespace/resources"
+
 // ValidProvisioners is a list of provisioners that Eventing currently support.
 var ValidProvisioners = []string{
 	InMemoryProvisioner,
@@ -34,7 +36,7 @@ var FeatureMap = map[Feature][]string{
 
 const (
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
-	DefaultBrokerName = "default"
+	DefaultBrokerName = resources.DefaultBrokerName
 	// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
 	DefaultClusterChannelProvisioner = InMemoryProvisioner
 

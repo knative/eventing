@@ -18,7 +18,15 @@ package base
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
+
+// IsStatusReady will check if the ReadyCondition is set to True.
+// TODO(Fredy-Z): we probably don't want this.
+func IsStatusReady(status duckv1alpha1.Status) (bool, error) {
+	condSet := duckv1alpha1.NewLivingConditionSet()
+	return condSet.Manage(status).IsHappy(), nil
+}
 
 // IsChannelReady will check the status conditions of the Channel and return true
 // if the Channel is ready.

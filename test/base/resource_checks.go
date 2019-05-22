@@ -42,7 +42,12 @@ const (
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
-func WaitForChannelState(client eventingclient.ChannelInterface, name string, inState func(c *eventingv1alpha1.Channel) (bool, error), desc string) error {
+func WaitForChannelState(
+	client eventingclient.ChannelInterface,
+	name string,
+	inState func(c *eventingv1alpha1.Channel) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForChannelState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -60,7 +65,11 @@ func WaitForChannelState(client eventingclient.ChannelInterface, name string, in
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForChannelListState(client eventingclient.ChannelInterface, inState func(cl *eventingv1alpha1.ChannelList) (bool, error), desc string) error {
+func WaitForChannelListState(
+	client eventingclient.ChannelInterface,
+	inState func(cl *eventingv1alpha1.ChannelList) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForChannelListState/%s", desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -79,7 +88,12 @@ func WaitForChannelListState(client eventingclient.ChannelInterface, inState fun
 // done, returns an error or timeout. desc will be used to name the metric that
 // is emitted to track how long it took for name to get into the state checked
 // by inState.
-func WaitForSubscriptionState(client eventingclient.SubscriptionInterface, name string, inState func(s *eventingv1alpha1.Subscription) (bool, error), desc string) error {
+func WaitForSubscriptionState(
+	client eventingclient.SubscriptionInterface,
+	name string,
+	inState func(s *eventingv1alpha1.Subscription) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForSubscriptionState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -97,7 +111,11 @@ func WaitForSubscriptionState(client eventingclient.SubscriptionInterface, name 
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForSubscriptionListState(client eventingclient.SubscriptionInterface, inState func(sl *eventingv1alpha1.SubscriptionList) (bool, error), desc string) error {
+func WaitForSubscriptionListState(
+	client eventingclient.SubscriptionInterface,
+	inState func(sl *eventingv1alpha1.SubscriptionList) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForSubscriptionListState/%s", desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -115,7 +133,12 @@ func WaitForSubscriptionListState(client eventingclient.SubscriptionInterface, i
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
-func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inState func(b *eventingv1alpha1.Broker) (bool, error), desc string) error {
+func WaitForBrokerState(
+	client eventingclient.BrokerInterface,
+	name string,
+	inState func(b *eventingv1alpha1.Broker) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForBrokerState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -138,7 +161,11 @@ func WaitForBrokerState(client eventingclient.BrokerInterface, name string, inSt
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForBrokerListState(client eventingclient.BrokerInterface, inState func(bl *eventingv1alpha1.BrokerList) (bool, error), desc string) error {
+func WaitForBrokerListState(
+	client eventingclient.BrokerInterface,
+	inState func(bl *eventingv1alpha1.BrokerList) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForBrokerListState/%s", desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -156,7 +183,12 @@ func WaitForBrokerListState(client eventingclient.BrokerInterface, inState func(
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
-func WaitForTriggerState(client eventingclient.TriggerInterface, name string, inState func(t *eventingv1alpha1.Trigger) (bool, error), desc string) error {
+func WaitForTriggerState(
+	client eventingclient.TriggerInterface,
+	name string,
+	inState func(t *eventingv1alpha1.Trigger) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForTriggerState/%s/%s", name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -174,7 +206,11 @@ func WaitForTriggerState(client eventingclient.TriggerInterface, name string, in
 // from client every interval until inState returns `true` indicating it
 // is done, returns an error or timeout. desc will be used to name the metric
 // that is emitted to track how long it took to get into the state checked by inState.
-func WaitForTriggerListState(client eventingclient.TriggerInterface, inState func(tl *eventingv1alpha1.TriggerList) (bool, error), desc string) error {
+func WaitForTriggerListState(
+	client eventingclient.TriggerInterface,
+	inState func(tl *eventingv1alpha1.TriggerList) (bool, error),
+	desc string,
+) error {
 	metricName := fmt.Sprintf("WaitForTriggerListState/%s", desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
