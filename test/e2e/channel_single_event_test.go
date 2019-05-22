@@ -49,7 +49,7 @@ func singleEvent(t *testing.T, encoding string) {
 
 	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
 		st.Logf("Run test with provisioner %q", provisioner)
-		client := Setup(st, provisioner, true, st.Logf)
+		client := Setup(st, provisioner, true)
 		defer TearDown(client)
 
 		// create channel
@@ -84,7 +84,7 @@ func singleEvent(t *testing.T, encoding string) {
 		}
 
 		// verify the logger service receives the event
-		if err := client.CheckLogContent(loggerPodName, body); err != nil {
+		if err := client.CheckLog(loggerPodName, common.Contains(body)); err != nil {
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
 	})

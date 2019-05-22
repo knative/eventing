@@ -70,7 +70,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		loggerPodName         = "logger-pod"
 	)
 
-	client := Setup(t, provisioner, true, t.Logf)
+	client := Setup(t, provisioner, true)
 	defer TearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
@@ -139,7 +139,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	}
 
 	// check if the logging service receives the correct event
-	if err := client.CheckLogContent(loggerPodName, transformedEventBody); err != nil {
+	if err := client.CheckLog(loggerPodName, common.Contains(transformedEventBody)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName, err)
 	}
 }

@@ -49,7 +49,7 @@ func TestEventTransformationForSubscriptiop(t *testing.T) {
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
 	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
-		client := Setup(st, provisioner, true, st.Logf)
+		client := Setup(st, provisioner, true)
 		defer TearDown(client)
 
 		// create channels
@@ -108,7 +108,7 @@ func TestEventTransformationForSubscriptiop(t *testing.T) {
 
 		// check if the logging service receives the correct number of event messages
 		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-		if err := client.CheckLogContentCount(loggerPodName, transformedEventBody, expectedContentCount); err != nil {
+		if err := client.CheckLog(loggerPodName, common.ContainsCount(transformedEventBody, expectedContentCount)); err != nil {
 			st.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", transformedEventBody, expectedContentCount, loggerPodName, err)
 		}
 	})

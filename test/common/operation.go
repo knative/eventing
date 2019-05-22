@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/test/base"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,8 +51,7 @@ func (client *Client) SendFakeEventToChannel(senderName, channelName string, eve
 	if err != nil {
 		return err
 	}
-	url := fmt.Sprintf("http://%s", channel.Status.Address.Hostname)
-	return client.SendFakeEventToAddress(senderName, url, event)
+	return client.sendFakeEventToAddressable(senderName, channel.Status.Address, event)
 }
 
 // SendFakeEventToBroker will send the given event to the given broker.
@@ -61,13 +61,13 @@ func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event
 	if err != nil {
 		return err
 	}
-	url := fmt.Sprintf("http://%s", broker.Status.Address.Hostname)
-	return client.SendFakeEventToAddress(senderName, url, event)
+	return client.sendFakeEventToAddressable(senderName, broker.Status.Address, event)
 }
 
-// SendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
-func (client *Client) SendFakeEventToAddress(senderName, url string, event *base.CloudEvent) error {
+// sendFakeEventToAddressable will create a sender pod, which will send the given event to the given url.
+func (client *Client) sendFakeEventToAddressable(senderName string, addr duckv1alpha1.Addressable, event *base.CloudEvent) error {
 	namespace := client.Namespace
+	url := fmt.Sprintf("http://%s", addr.Hostname)
 	client.Logf("Sending fake CloudEvent")
 	pod := base.EventSenderPod(senderName, url, event)
 	if err := client.CreatePod(pod); err != nil {

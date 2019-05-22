@@ -48,7 +48,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 
-	client := Setup(t, provisioner, true, t.Logf)
+	client := Setup(t, provisioner, true)
 	defer TearDown(client)
 
 	// create channels
@@ -89,7 +89,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 
 	// check if the logging service receives the correct number of event messages
 	expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-	if err := client.CheckLogContentCount(loggerPodName, body, expectedContentCount); err != nil {
+	if err := client.CheckLog(loggerPodName, common.ContainsCount(body, expectedContentCount)); err != nil {
 		t.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", body, expectedContentCount, loggerPodName, err)
 	}
 }

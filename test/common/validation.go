@@ -30,9 +30,9 @@ const (
 	timeout  = 2 * time.Minute
 )
 
-// CheckLogContent waits until logs for the logger Pod include the given content.
-// If the content is not present within timeout it returns error.
-func (client *Client) CheckLogContent(podName, content string) error {
+// CheckLog waits until logs for the logger Pod satisfy the checker.
+// If the checker does not pass within timeout it returns error.
+func (client *Client) CheckLog(podName string, checker func(string) bool) error {
 	namespace := client.Namespace
 	containerName, err := client.getContainerName(podName, namespace)
 	if err != nil {
@@ -43,48 +43,34 @@ func (client *Client) CheckLogContent(podName, content string) error {
 		if err != nil {
 			return true, err
 		}
-		return strings.Contains(string(logs), content), nil
+		return checker(string(logs)), nil
 	})
 }
 
-// CheckLogContents waits until logs for the logger Pod include the given contents.
-// If the contents are not present within timeout it returns error.
-func (client *Client) CheckLogContents(podName string, contents []string) error {
-	namespace := client.Namespace
-	containerName, err := client.getContainerName(podName, namespace)
-	if err != nil {
-		return err
+// Contains returns a function to check if the log contains the given content.
+func Contains(content string) func(string) bool {
+	return func(log string) bool {
+		return strings.Contains(log, content)
 	}
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := client.Kube.PodLogs(podName, containerName, namespace)
-		if err != nil {
-			return true, err
-		}
+}
+
+// ContainsAll returns a function to check if the log contains all the given contents.
+func ContainsAll(contents []string) func(string) bool {
+	return func(log string) bool {
 		for _, content := range contents {
-			if !strings.Contains(string(logs), content) {
-				return false, nil
+			if !strings.Contains(log, content) {
+				return false
 			}
 		}
-		return true, nil
-	})
+		return true
+	}
 }
 
-// CheckLogContentCount checks if the number of substr occur times equals the given number.
-// If the content does not appear the given times it returns error.
-func (client *Client) CheckLogContentCount(podName, content string, appearTimes int) error {
-	namespace := client.Namespace
-	containerName, err := client.getContainerName(podName, namespace)
-	if err != nil {
-		return err
+// ContainsCount returns a functions to check if the log contains the count number of given content.
+func ContainsCount(content string, count int) func(string) bool {
+	return func(log string) bool {
+		return strings.Count(log, content) == count
 	}
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := client.Kube.PodLogs(podName, containerName, namespace)
-		if err != nil {
-			return true, err
-		}
-
-		return strings.Count(string(logs), content) == appearTimes, nil
-	})
 }
 
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
@@ -101,7 +87,6 @@ func (client *Client) FindAnyLogContents(podName string, contents []string) (boo
 	}
 	for _, content := range contents {
 		if strings.Contains(string(logs), content) {
-			client.Logf("Found content %q for %s/%s.", content, podName, containerName)
 			return true, nil
 		}
 	}

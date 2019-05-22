@@ -119,59 +119,6 @@ func (client *Client) CreateTrigger(name string, options ...func(*v1alpha1.Trigg
 	return nil
 }
 
-/*
-// CreateTransformationService will create an event transformation Service.
-// It can receive the cloud events, and reply with the transformed events.
-func (client *Client) CreateTransformationService(name string, event *base.CloudEvent) error {
-	namespace := client.Namespace
-	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	eventTransformationPod := base.EventTransformationPod(name, namespace, selector, event)
-	if err := client.createPod(eventTransformationPod); err != nil {
-		return err
-	}
-	if err := client.createService(name, selector); err != nil {
-		return err
-	}
-	return nil
-}
-
-// CreateLoggerService will create an event logger Service.
-// It can receive the cloud events, and add the content into its own log for further validation.
-func (client *Client) CreateLoggerService(name string) error {
-	namespace := client.Namespace
-	selector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	eventLoggerPod := base.EventLoggerPod(name, namespace, selector)
-	if err := client.createPod(eventLoggerPod); err != nil {
-		return err
-	}
-	if err := client.createService(name, selector); err != nil {
-		return err
-	}
-	return nil
-}
-
-// CreateSenderPod will create an event sender Pod.
-// It can send the given cloud event to the given sink.
-func (client *Client) createSenderPod(name, sink string, event *base.CloudEvent) error {
-	namespace := client.Namespace
-	eventSenderPod := base.EventSenderPod(name, namespace, sink, event)
-	return client.createPod(eventSenderPod)
-}
-
-// CreateService will create a Service.
-func (client *Client) createService(name string, selector map[string]string) error {
-	namespace := client.Namespace
-	svc := base.Service(name, selector)
-
-	svcs := client.Kube.Kube.CoreV1().Services(namespace)
-	_, err := svcs.Create(svc)
-	if err != nil {
-		return err
-	}
-	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
-	return nil
-} */
-
 // WithService returns an option that creates a Service binded with the given pod.
 func WithService(name string) func(*corev1.Pod, *Client) error {
 	return func(pod *corev1.Pod, client *Client) error {

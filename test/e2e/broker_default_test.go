@@ -56,7 +56,7 @@ type eventReceiver struct {
 // and sends different events to the broker's address. Finally, it verifies that only
 // the appropriate events are routed to the subscribers.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	client := Setup(t, common.DefaultClusterChannelProvisioner, true, t.Logf)
+	client := Setup(t, common.DefaultClusterChannelProvisioner, true)
 	defer TearDown(client)
 
 	// Label namespace so that it creates the default broker.
@@ -156,7 +156,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	for _, event := range eventsToReceive {
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		t.Logf("Dumper %q expecting %q", subscriberName, strings.Join(expectedEvents[subscriberName], ","))
-		if err := client.CheckLogContents(subscriberName, expectedEvents[subscriberName]); err != nil {
+		if err := client.CheckLog(subscriberName, common.ContainsAll(expectedEvents[subscriberName])); err != nil {
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 		}
 		// At this point all the events should have been received in the pod.

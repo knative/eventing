@@ -29,7 +29,6 @@ import (
 	"github.com/knative/eventing/test"
 	"github.com/knative/eventing/test/common"
 	pkgTest "github.com/knative/pkg/test"
-	"github.com/knative/pkg/test/logging"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,17 +56,17 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, run the test case in parallel, etc.
-func Setup(t *testing.T, provisioner string, runInParallel bool, logf logging.FormatLogger) *common.Client {
+func Setup(t *testing.T, provisioner string, runInParallel bool) *common.Client {
 	// Create a new namespace to run this test case.
 	// Combine the test name and CCP to avoid duplication.
-	baseFuncName := GetBaseFuncName(t.Name())
+	baseFuncName := getBaseFuncName(t.Name())
 	namespace := makeK8sNamePrefix(baseFuncName) + "-" + provisioner
 	t.Logf("namespace is : %q", namespace)
 	client, err := common.NewClient(
 		pkgTest.Flags.Kubeconfig,
 		pkgTest.Flags.Cluster,
 		namespace,
-		logf)
+		t.Logf)
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
@@ -123,15 +122,15 @@ func CreateNamespaceIfNeeded(t *testing.T, client *common.Client, namespace stri
 
 		// https://github.com/kubernetes/kubernetes/issues/66689
 		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
-		err = WaitForServiceAccountExists(t, client, "default", namespace)
+		err = waitForServiceAccountExists(t, client, "default", namespace)
 		if err != nil {
 			t.Fatalf("The default ServiceAccount was not created for the Namespace: %s", namespace)
 		}
 	}
 }
 
-// WaitForServiceAccountExists waits until the ServiceAccount exists.
-func WaitForServiceAccountExists(t *testing.T, client *common.Client, name, namespace string) error {
+// waitForServiceAccountExists waits until the ServiceAccount exists.
+func waitForServiceAccountExists(t *testing.T, client *common.Client, name, namespace string) error {
 	return wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
 		sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
 		if _, err := sas.Get(name, metav1.GetOptions{}); err == nil {
@@ -161,10 +160,10 @@ func makeK8sNamePrefix(s string) string {
 	return sb.String()
 }
 
-// GetBaseFuncName returns the baseFuncName parsed from the fullFuncName.
+// getBaseFuncName returns the baseFuncName parsed from the fullFuncName.
 // eg. test/e2e.TestMain will return TestMain.
 // TODO(Fredy-Z): many functions in this file can be moved to knative/pkg/test to make it cleaner.
-func GetBaseFuncName(fullFuncName string) string {
+func getBaseFuncName(fullFuncName string) string {
 	baseFuncName := fullFuncName[strings.LastIndex(fullFuncName, "/")+1:]
 	baseFuncName = baseFuncName[strings.LastIndex(baseFuncName, ".")+1:]
 	return baseFuncName
