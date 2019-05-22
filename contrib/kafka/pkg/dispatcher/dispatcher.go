@@ -18,6 +18,7 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"sync"
 	"sync/atomic"
 
@@ -198,7 +199,7 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
-	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
+	topicName := topicUtils.TopicName(utils.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
 
 	group := fmt.Sprintf("%s.%s", controller.Name, sub.UID)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
@@ -362,7 +363,7 @@ func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *provisioners.Messag
 
 func toKafkaMessage(channel provisioners.ChannelReference, message *provisioners.Message) *sarama.ProducerMessage {
 	kafkaMessage := sarama.ProducerMessage{
-		Topic: topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name),
+		Topic: topicUtils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name),
 		Value: sarama.ByteEncoder(message.Payload),
 	}
 	for h, v := range message.Headers {

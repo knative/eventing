@@ -64,7 +64,7 @@ func TestMakeService(t *testing.T) {
 			Name:      fmt.Sprintf("%s-kn-channel", kcName),
 			Namespace: testNS,
 			Labels: map[string]string{
-				MessagingRoleLabel: MessagingRole,
+				EventingRoleLabel: EventingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(imc),
@@ -107,7 +107,7 @@ func TestMakeServiceWithExternal(t *testing.T) {
 			Name:      fmt.Sprintf("%s-kn-channel", kcName),
 			Namespace: testNS,
 			Labels: map[string]string{
-				MessagingRoleLabel: MessagingRole,
+				EventingRoleLabel: EventingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(imc),

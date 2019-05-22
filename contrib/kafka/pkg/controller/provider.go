@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -45,14 +46,14 @@ type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *zap.Logger
-	config   *KafkaProvisionerConfig
+	config   *utils.KafkaConfig
 }
 
 // Verify the struct implements reconcile.Reconciler
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Provisioner controller.
-func ProvideController(mgr manager.Manager, config *KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, config *utils.KafkaConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Provisioners.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{

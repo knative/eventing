@@ -27,10 +27,11 @@ import (
 )
 
 const (
-	portName           = "http"
-	portNumber         = 80
-	MessagingRoleLabel = "messaging.knative.dev/role"
-	MessagingRole      = "kafka-channel"
+	portName   = "http"
+	portNumber = 80
+	// TODO messaging instead?
+	EventingRoleLabel = "eventing.knative.dev/role"
+	EventingRole      = "kafka-channel"
 )
 
 // ServiceOption can be used to optionally modify the K8s service in MakeK8sService.
@@ -70,7 +71,7 @@ func MakeK8sService(kc *v1alpha1.KafkaChannel, opts ...ServiceOption) (*corev1.S
 			Name:      MakeChannelServiceName(kc.ObjectMeta.Name),
 			Namespace: kc.Namespace,
 			Labels: map[string]string{
-				MessagingRoleLabel: MessagingRole,
+				EventingRoleLabel: EventingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(kc),

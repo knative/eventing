@@ -20,9 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -72,6 +72,8 @@ type Reconciler struct {
 	dispatcherDeploymentName string
 	dispatcherServiceName    string
 
+	kafkaConfig *utils.KafkaConfig
+
 	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
 	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
 	kafkaClusterAdmin sarama.ClusterAdmin
@@ -101,6 +103,7 @@ var _ cache.ResourceEventHandler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	eventingClientSet *versioned.Clientset,
+	kafkaConfig *utils.KafkaConfig,
 	dispatcherNamespace string,
 	dispatcherDeploymentName string,
 	dispatcherServiceName string,
@@ -115,6 +118,7 @@ func NewController(
 		dispatcherNamespace:      dispatcherNamespace,
 		dispatcherDeploymentName: dispatcherDeploymentName,
 		dispatcherServiceName:    dispatcherServiceName,
+		kafkaConfig:              kafkaConfig,
 		eventingClientSet:        eventingClientSet,
 		kafkachannelLister:       kafkachannelInformer.Lister(),
 		kafkachannelInformer:     kafkachannelInformer.Informer(),
@@ -381,7 +385,7 @@ func (r *Reconciler) createClient(ctx context.Context, kc *v1alpha1.KafkaChannel
 		var err error
 		args := &resources.ClientArgs{
 			ClientID:         controllerAgentName,
-			BootstrapServers: strings.Split(kc.Spec.BootstrapServers, ","),
+			BootstrapServers: r.kafkaConfig.Brokers,
 		}
 		kafkaClusterAdmin, err = resources.MakeClient(args)
 		if err != nil {

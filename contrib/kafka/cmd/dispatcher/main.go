@@ -18,10 +18,10 @@ package main
 
 import (
 	"flag"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"log"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/controller"
-	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)
 	}
-	provisionerConfig, err := provisionerController.GetProvisionerConfig("/etc/config-provisioner")
+	provisionerConfig, err := utils.GetKafkaConfig("/etc/config-provisioner")
 	if err != nil {
 		logger.Fatal("unable to load provisioner config", zap.Error(err))
 	}

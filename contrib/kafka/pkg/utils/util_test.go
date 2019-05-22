@@ -1,4 +1,20 @@
-package controller
+/*
+Copyright 2019 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package utils
 
 import (
 	"io/ioutil"
@@ -12,14 +28,14 @@ import (
 	_ "github.com/knative/pkg/system/testing"
 )
 
-func TestGetProvisionerConfigBrokers(t *testing.T) {
+func TestGetKafkaConfig(t *testing.T) {
 
 	testCases := []struct {
 		name     string
 		data     map[string]string
 		path     string
 		getError string
-		expected *KafkaProvisionerConfig
+		expected *KafkaConfig
 	}{
 		{
 			name:     "invalid config path",
@@ -44,21 +60,21 @@ func TestGetProvisionerConfigBrokers(t *testing.T) {
 		{
 			name: "single bootstrap_servers",
 			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092"},
-			expected: &KafkaProvisionerConfig{
+			expected: &KafkaConfig{
 				Brokers: []string{"kafkabroker.kafka:9092"},
 			},
 		},
 		{
 			name: "multiple bootstrap_servers",
 			data: map[string]string{"bootstrap_servers": "kafkabroker1.kafka:9092,kafkabroker2.kafka:9092"},
-			expected: &KafkaProvisionerConfig{
+			expected: &KafkaConfig{
 				Brokers: []string{"kafkabroker1.kafka:9092", "kafkabroker2.kafka:9092"},
 			},
 		},
 		{
 			name: "partition consumer",
 			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "partitions"},
-			expected: &KafkaProvisionerConfig{
+			expected: &KafkaConfig{
 				Brokers:      []string{"kafkabroker.kafka:9092"},
 				ConsumerMode: cluster.ConsumerModePartitions,
 			},
@@ -66,7 +82,7 @@ func TestGetProvisionerConfigBrokers(t *testing.T) {
 		{
 			name: "default multiplex",
 			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "multiplex"},
-			expected: &KafkaProvisionerConfig{
+			expected: &KafkaConfig{
 				Brokers:      []string{"kafkabroker.kafka:9092"},
 				ConsumerMode: cluster.ConsumerModeMultiplex,
 			},
@@ -74,7 +90,7 @@ func TestGetProvisionerConfigBrokers(t *testing.T) {
 		{
 			name: "default multiplex from invalid consumer_mode",
 			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "foo"},
-			expected: &KafkaProvisionerConfig{
+			expected: &KafkaConfig{
 				Brokers:      []string{"kafkabroker.kafka:9092"},
 				ConsumerMode: cluster.ConsumerModeMultiplex,
 			},
@@ -103,7 +119,7 @@ func TestGetProvisionerConfigBrokers(t *testing.T) {
 
 				tc.path = dir
 			}
-			got, err := GetProvisionerConfig(tc.path)
+			got, err := GetKafkaConfig(tc.path)
 
 			if tc.getError != "" {
 				if err == nil {
