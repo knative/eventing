@@ -56,7 +56,7 @@ rules:
       - "" # Core API Group.
     resources:
       - events
-    verbs: 
+    verbs:
       - create
       - patch
       - update
