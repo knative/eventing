@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// TODO the underlying config map needs to be watched and the config should be reloaded if there is a change.
-	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-provisioner")
+	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
 	if err != nil {
 		logger.Fatalw("Error loading kafka config", zap.Error(err))
 	}

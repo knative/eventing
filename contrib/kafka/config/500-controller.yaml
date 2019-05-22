@@ -41,12 +41,12 @@ spec:
           volumeMounts:
             - name: config-logging
               mountPath: /etc/config-logging
-            - name: config-channel
-              mountPath: /etc/config-channel
+            - name: config-kafka
+              mountPath: /etc/config-kafka
       volumes:
         - name: config-logging
           configMap:
             name: config-logging
-        - name: config-channel
+        - name: config-kafka
           configMap:
-            name: kafka-channel-config
+            name: config-kafka

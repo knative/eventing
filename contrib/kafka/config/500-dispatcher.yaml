@@ -37,9 +37,9 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           volumeMounts:
-            - name: kafka-channel-controller-config
+            - name: kafka-config
               mountPath: /etc/config-provisioner
       volumes:
-        - name: kafka-channel-controller-config
+        - name: kafka-config
           configMap:
-            name: kafka-channel-controller-config
+            name: kafka-config
