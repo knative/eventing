@@ -5,7 +5,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-type DefaultConstructors map[v1.ConfigMap]interface{}
+type DefaultConstructors map[*v1.ConfigMap]interface{}
 
 type DefaultUntypedStore struct {
 	store      *configmap.UntypedStore
@@ -21,7 +21,7 @@ func NewDefaultUntypedStore(
 	defaultCMs := make([]v1.ConfigMap, 0, len(defaultConstructors))
 	for cm, ctor := range defaultConstructors {
 		constructors[cm.Name] = ctor
-		defaultCMs = append(defaultCMs, cm)
+		defaultCMs = append(defaultCMs, *cm)
 	}
 	return &DefaultUntypedStore{
 		store:      configmap.NewUntypedStore(name, logger, constructors, onAfterStore...),

@@ -50,7 +50,7 @@ var (
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
 	}
 
-	EnableZeroSamplingCM = v1.ConfigMap{
+	EnableZeroSamplingCM = &v1.ConfigMap{
 		ObjectMeta: v12.ObjectMeta{
 			Name: tracingconfig.ConfigName,
 		},
