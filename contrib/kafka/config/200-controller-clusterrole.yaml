@@ -49,7 +49,7 @@ rules:
     resources:
       - configmaps
     resourceNames:
-      - kafka-dispatcher
+      - kafka-ch-dispatcher
     verbs:
       - update
   - apiGroups:

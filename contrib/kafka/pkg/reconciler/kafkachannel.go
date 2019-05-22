@@ -54,7 +54,7 @@ const (
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "kafka-controller"
+	controllerAgentName = "kafka-ch-controller"
 
 	finalizerName = controllerAgentName
 
