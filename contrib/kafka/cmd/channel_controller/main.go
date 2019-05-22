@@ -41,7 +41,9 @@ import (
 
 const (
 	dispatcherDeploymentName = "kafka-dispatcher"
-	dispatcherServiceName    = "kafka-dispatcher"
+	// The dispatcher service name used with the provisioner model is kafka-dispatcher, thus we change
+	// it to be kafka-channel-dispatcher for CRDs.
+	dispatcherServiceName = "kafka-channel-dispatcher"
 )
 
 var (
