@@ -26,10 +26,10 @@ func (c *KafkaChannel) SetDefaults(ctx context.Context) {
 }
 
 func (cs *KafkaChannelSpec) SetDefaults(ctx context.Context) {
-	if cs.NumPartitions <= 0 {
+	if cs.NumPartitions == 0 {
 		cs.NumPartitions = utils.DefaultNumPartitions
 	}
-	if cs.ReplicationFactor <= 0 {
+	if cs.ReplicationFactor == 0 {
 		cs.ReplicationFactor = utils.DefaultReplicationFactor
 	}
 }

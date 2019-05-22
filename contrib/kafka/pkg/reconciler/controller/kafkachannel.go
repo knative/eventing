@@ -397,8 +397,8 @@ func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaCha
 	topicName := resources.MakeTopicName(channel)
 	logger.Info("Creating topic on Kafka cluster", zap.String("topic", topicName))
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
-		ReplicationFactor: channel.Spec.ReplicationFactor,
-		NumPartitions:     channel.Spec.NumPartitions,
+		ReplicationFactor: int16(channel.Spec.ReplicationFactor),
+		NumPartitions:     int32(channel.Spec.NumPartitions),
 	}, false)
 	if err == sarama.ErrTopicAlreadyExists {
 		return nil

@@ -53,38 +53,10 @@ func TestKafkaChannelDefaults(t *testing.T) {
 				},
 			},
 		},
-		"numPartitions negative": {
-			initial: KafkaChannel{
-				Spec: KafkaChannelSpec{
-					NumPartitions:     -10,
-					ReplicationFactor: testReplicationFactor,
-				},
-			},
-			expected: KafkaChannel{
-				Spec: KafkaChannelSpec{
-					NumPartitions:     utils.DefaultNumPartitions,
-					ReplicationFactor: testReplicationFactor,
-				},
-			},
-		},
 		"replicationFactor not set": {
 			initial: KafkaChannel{
 				Spec: KafkaChannelSpec{
 					NumPartitions: testNumPartitions,
-				},
-			},
-			expected: KafkaChannel{
-				Spec: KafkaChannelSpec{
-					NumPartitions:     testNumPartitions,
-					ReplicationFactor: utils.DefaultReplicationFactor,
-				},
-			},
-		},
-		"replicationFactor negative": {
-			initial: KafkaChannel{
-				Spec: KafkaChannelSpec{
-					NumPartitions:     testNumPartitions,
-					ReplicationFactor: -10,
 				},
 			},
 			expected: KafkaChannel{
