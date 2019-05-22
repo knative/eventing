@@ -25,7 +25,6 @@ import (
 
 	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/controller/channel"
-	. "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	eventingv1alpha "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
@@ -41,7 +40,7 @@ import (
 type SchemeFunc func(*runtime.Scheme) error
 
 // ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(mgr manager.Manager, config *KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
+type ProvideFunc func(mgr manager.Manager, config *provisionerController.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
 
 func main() {
 	os.Exit(_main())
