@@ -122,6 +122,9 @@ func main() {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
 
+	logger.Info("Starting dispatcher.")
+	go kafkaDispatcher.Start(stopCh)
+
 	logger.Info("Starting controllers.")
 	kncontroller.StartAll(stopCh, controllers[:]...)
 }

@@ -32,14 +32,21 @@ spec:
         - name: dispatcher
           image: github.com/knative/eventing/contrib/kafka/cmd/channel_dispatcher
           env:
-          - name: SYSTEM_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           volumeMounts:
+            - name: config-logging
+              mountPath: /etc/config-logging
             - name: config-kafka
               mountPath: /etc/config-kafka
       volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging
         - name: config-kafka
           configMap:
             name: config-kafka
