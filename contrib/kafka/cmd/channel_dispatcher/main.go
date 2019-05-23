@@ -20,21 +20,17 @@ import (
 	"flag"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"log"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
-	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
+	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -66,25 +62,16 @@ func main() {
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the Kafka dispatcher")
 
-	systemNS := system.Namespace()
-
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
 	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
 	eventingClientSet := clientset.NewForConfigOrDie(cfg)
-
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
 	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
 
 	// Messaging
 	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
-
-	// Kube
-	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	endpointsInformer := kubeInformerFactory.Core().V1().Endpoints()
-	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -94,13 +81,7 @@ func main() {
 			opt,
 			eventingClientSet,
 			kafkaConfig,
-			systemNS,
-			dispatcherDeploymentName,
-			dispatcherServiceName,
 			kafkaChannelInformer,
-			deploymentInformer,
-			serviceInformer,
-			endpointsInformer,
 		),
 	}
 	// This line asserts at compile time that the length of controllers is equal to numControllers.
@@ -124,11 +105,6 @@ func main() {
 		stopCh,
 		// Messaging
 		kafkaChannelInformer.Informer(),
-
-		// Kube
-		serviceInformer.Informer(),
-		deploymentInformer.Informer(),
-		endpointsInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
