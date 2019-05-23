@@ -76,8 +76,6 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Kind must be "Channel" and APIVersion must be
-	// "eventing.knative.dev/v1alpha1"
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
@@ -159,8 +157,6 @@ type ReplyStrategy struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Kind must be "Channel" and APIVersion must be
-	// "eventing.knative.dev/v1alpha1"
 	// +optional
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
