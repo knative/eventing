@@ -165,10 +165,6 @@ type ReplyStrategy struct {
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
-// subCondSet is a condition set with Ready as the happy condition and
-// ReferencesResolved and ChannelReady as the dependent conditions.
-var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionChannelReady)
-
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
