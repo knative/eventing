@@ -143,6 +143,12 @@ func MarkSubscriptionReady(s *v1alpha1.Subscription) {
 	s.Status.MarkReferencesResolved()
 }
 
+func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.MarkReferencesNotResolved(reason, msg)
+	}
+}
+
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &v1alpha1.ReplyStrategy{

@@ -99,6 +99,7 @@ func NewController(
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	// TODO further analyze if this informer can be removed.
 	channelInformer.Informer().AddEventHandler(reconciler.Handler(
 		// Call the tracker's OnChanged method, but we've seen the objects coming through this path
 		// missing TypeMeta, so ensure it is properly populated.
@@ -185,6 +186,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
 		return err
 	}
 
@@ -200,6 +202,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("subscriber", subscription.Spec.Subscriber))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
+		subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return err
 	}
 
@@ -212,6 +215,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("reply", subscription.Spec.Reply))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
+		subscription.Status.MarkReferencesNotResolved(resultResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return err
 	}
 
@@ -230,6 +234,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	if err := r.syncPhysicalChannel(ctx, subscription, false); err != nil {
 		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
+		subscription.Status.MarkChannelNotReady(physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified
