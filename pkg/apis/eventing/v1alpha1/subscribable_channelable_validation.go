@@ -40,7 +40,7 @@ func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
 	if !strings.HasSuffix(f.Kind, "Channel") {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
-		fe.Details = "only '*Channel' kind is allowed"
+		fe.Details = "only 'Channel$' kind is allowed"
 		errs = errs.Also(fe)
 	}
 	if f.APIVersion != "eventing.knative.dev/v1alpha1" && f.APIVersion != "messaging.knative.dev/v1alpha1" {

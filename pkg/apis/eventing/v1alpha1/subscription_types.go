@@ -76,8 +76,8 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Kind must be "Channel" and APIVersion must be
-	// "eventing.knative.dev/v1alpha1"
+	// Kind must end in "Channel". E.g., "Channel", "InMemoryChannel", etc.
+	// APIVersion must be "eventing.knative.dev/v1alpha1" or "messaging.knative.dev/v1alpha1".
 	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from

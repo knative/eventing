@@ -39,7 +39,7 @@ var validationTests = []struct {
 		want: &apis.FieldError{
 			Message: "invalid value: Strait",
 			Paths:   []string{"kind"},
-			Details: "only '*Channel' kind is allowed",
+			Details: "only 'Channel$' kind is allowed",
 		},
 	},
 	{
