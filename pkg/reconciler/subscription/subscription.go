@@ -99,6 +99,7 @@ func NewController(
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	// TODO further analyze if this informer can be removed.
 	channelInformer.Informer().AddEventHandler(reconciler.Handler(
 		// Call the tracker's OnChanged method, but we've seen the objects coming through this path
 		// missing TypeMeta, so ensure it is properly populated.
