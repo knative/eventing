@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package reconciler
+package controller
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/resources"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"

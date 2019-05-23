@@ -25,7 +25,7 @@ import (
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
-	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler"
+	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
