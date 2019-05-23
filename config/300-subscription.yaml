@@ -62,6 +62,7 @@ spec:
                   minLength: 1
                 kind:
                   type: string
+                  # TODO remove this once we check for subscribable type.
                   # Ending with Channel. E.g., Channel, InMemoryChannel, etc.
                   pattern: "Channel$"
                 name:

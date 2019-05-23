@@ -37,6 +37,7 @@ func isChannelEmpty(f corev1.ObjectReference) bool {
 func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
 
+	// TODO check whether is subscribable instead of doing this suffix match.
 	if !strings.HasSuffix(f.Kind, "Channel") {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
