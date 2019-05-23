@@ -83,7 +83,12 @@ func (client *Client) sendFakeEventToAddressable(senderName string, addr duckv1a
 func (client *Client) WaitForBrokerReady(name string) error {
 	namespace := client.Namespace
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
-	if err := base.WaitForBrokerState(brokers, name, base.IsBrokerReady, "BrokerIsReady"); err != nil {
+	if err := base.WaitForBrokerState(
+		brokers,
+		base.ResourceReadyChecker(client.Dynamic),
+		name,
+		"BrokerIsReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -93,7 +98,11 @@ func (client *Client) WaitForBrokerReady(name string) error {
 func (client *Client) WaitForBrokersReady() error {
 	namespace := client.Namespace
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
-	if err := base.WaitForBrokerListState(brokers, base.BrokersReady, "BrokersAreReady"); err != nil {
+	if err := base.WaitForBrokerListState(
+		brokers,
+		base.AllResourcesReadyChecker(client.Dynamic),
+		"BrokersAreReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -103,7 +112,12 @@ func (client *Client) WaitForBrokersReady() error {
 func (client *Client) WaitForTriggerReady(name string) error {
 	namespace := client.Namespace
 	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
-	if err := base.WaitForTriggerState(triggers, name, base.IsTriggerReady, "TriggerIsReady"); err != nil {
+	if err := base.WaitForTriggerState(
+		triggers,
+		base.ResourceReadyChecker(client.Dynamic),
+		name,
+		"TriggerIsReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -113,7 +127,11 @@ func (client *Client) WaitForTriggerReady(name string) error {
 func (client *Client) WaitForTriggersReady() error {
 	namespace := client.Namespace
 	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
-	if err := base.WaitForTriggerListState(triggers, base.TriggersReady, "TriggersAreReady"); err != nil {
+	if err := base.WaitForTriggerListState(
+		triggers,
+		base.AllResourcesReadyChecker(client.Dynamic),
+		"TriggersAreReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -123,7 +141,12 @@ func (client *Client) WaitForTriggersReady() error {
 func (client *Client) WaitForChannelReady(name string) error {
 	namespace := client.Namespace
 	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	if err := base.WaitForChannelState(channels, name, base.IsChannelReady, "ChannelIsReady"); err != nil {
+	if err := base.WaitForChannelState(
+		channels,
+		base.ResourceReadyChecker(client.Dynamic),
+		name,
+		"ChannelIsReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -133,7 +156,11 @@ func (client *Client) WaitForChannelReady(name string) error {
 func (client *Client) WaitForChannelsReady() error {
 	namespace := client.Namespace
 	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	if err := base.WaitForChannelListState(channels, base.ChannelsReady, "ChannelsAreReady"); err != nil {
+	if err := base.WaitForChannelListState(
+		channels,
+		base.AllResourcesReadyChecker(client.Dynamic),
+		"ChannelsAreReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -143,7 +170,12 @@ func (client *Client) WaitForChannelsReady() error {
 func (client *Client) WaitForSubscriptionReady(name string) error {
 	namespace := client.Namespace
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
-	if err := base.WaitForSubscriptionState(subscriptions, name, base.IsSubscriptionReady, "SubscriptionIsReady"); err != nil {
+	if err := base.WaitForSubscriptionState(
+		subscriptions,
+		base.ResourceReadyChecker(client.Dynamic),
+		name,
+		"SubscriptionIsReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -153,7 +185,11 @@ func (client *Client) WaitForSubscriptionReady(name string) error {
 func (client *Client) WaitForSubscriptionsReady() error {
 	namespace := client.Namespace
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
-	if err := base.WaitForSubscriptionListState(subscriptions, base.SubscriptionsReady, "SubscriptionsAreReady"); err != nil {
+	if err := base.WaitForSubscriptionListState(
+		subscriptions,
+		base.AllResourcesReadyChecker(client.Dynamic),
+		"SubscriptionsAreReady",
+	); err != nil {
 		return err
 	}
 	return nil
@@ -178,7 +214,8 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err
 	}
-	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness. Will delete it after we find the root cause and fix.
+	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness.
+	// Will delete it after we find the root cause and fix.
 	time.Sleep(10 * time.Second)
 	return nil
 }

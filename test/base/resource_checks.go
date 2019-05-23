@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"time"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingclient "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
+	"github.com/knative/pkg/kmeta"
 	"go.opencensus.io/trace"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,8 +44,8 @@ const (
 // track how long it took for name to get into the state checked by inState.
 func WaitForChannelState(
 	client eventingclient.ChannelInterface,
+	inState func(kmeta.OwnerRefable) (bool, error),
 	name string,
-	inState func(c *eventingv1alpha1.Channel) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForChannelState/%s/%s", name, desc)
@@ -67,7 +67,7 @@ func WaitForChannelState(
 // that is emitted to track how long it took to get into the state checked by inState.
 func WaitForChannelListState(
 	client eventingclient.ChannelInterface,
-	inState func(cl *eventingv1alpha1.ChannelList) (bool, error),
+	allInState func([]kmeta.OwnerRefable) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForChannelListState/%s", desc)
@@ -79,7 +79,11 @@ func WaitForChannelListState(
 		if err != nil {
 			return true, err
 		}
-		return inState(cl)
+		objs := make([]kmeta.OwnerRefable, len(cl.Items))
+		for i := 0; i < len(cl.Items); i++ {
+			objs[i] = &cl.Items[i]
+		}
+		return allInState(objs)
 	})
 }
 
@@ -90,8 +94,8 @@ func WaitForChannelListState(
 // by inState.
 func WaitForSubscriptionState(
 	client eventingclient.SubscriptionInterface,
+	inState func(kmeta.OwnerRefable) (bool, error),
 	name string,
-	inState func(s *eventingv1alpha1.Subscription) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForSubscriptionState/%s/%s", name, desc)
@@ -99,11 +103,11 @@ func WaitForSubscriptionState(
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		s, err := client.Get(name, metav1.GetOptions{})
+		c, err := client.Get(name, metav1.GetOptions{})
 		if err != nil {
 			return true, err
 		}
-		return inState(s)
+		return inState(c)
 	})
 }
 
@@ -113,7 +117,7 @@ func WaitForSubscriptionState(
 // that is emitted to track how long it took to get into the state checked by inState.
 func WaitForSubscriptionListState(
 	client eventingclient.SubscriptionInterface,
-	inState func(sl *eventingv1alpha1.SubscriptionList) (bool, error),
+	allInState func([]kmeta.OwnerRefable) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForSubscriptionListState/%s", desc)
@@ -125,7 +129,11 @@ func WaitForSubscriptionListState(
 		if err != nil {
 			return true, err
 		}
-		return inState(sl)
+		objs := make([]kmeta.OwnerRefable, len(sl.Items))
+		for i := 0; i < len(sl.Items); i++ {
+			objs[i] = &sl.Items[i]
+		}
+		return allInState(objs)
 	})
 }
 
@@ -135,8 +143,8 @@ func WaitForSubscriptionListState(
 // track how long it took for name to get into the state checked by inState.
 func WaitForBrokerState(
 	client eventingclient.BrokerInterface,
+	inState func(kmeta.OwnerRefable) (bool, error),
 	name string,
-	inState func(b *eventingv1alpha1.Broker) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForBrokerState/%s/%s", name, desc)
@@ -163,7 +171,7 @@ func WaitForBrokerState(
 // that is emitted to track how long it took to get into the state checked by inState.
 func WaitForBrokerListState(
 	client eventingclient.BrokerInterface,
-	inState func(bl *eventingv1alpha1.BrokerList) (bool, error),
+	allInState func([]kmeta.OwnerRefable) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForBrokerListState/%s", desc)
@@ -175,7 +183,11 @@ func WaitForBrokerListState(
 		if err != nil {
 			return true, err
 		}
-		return inState(bl)
+		objs := make([]kmeta.OwnerRefable, len(bl.Items))
+		for i := 0; i < len(bl.Items); i++ {
+			objs[i] = &bl.Items[i]
+		}
+		return allInState(objs)
 	})
 }
 
@@ -185,8 +197,8 @@ func WaitForBrokerListState(
 // track how long it took for name to get into the state checked by inState.
 func WaitForTriggerState(
 	client eventingclient.TriggerInterface,
+	inState func(kmeta.OwnerRefable) (bool, error),
 	name string,
-	inState func(t *eventingv1alpha1.Trigger) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForTriggerState/%s/%s", name, desc)
@@ -208,7 +220,7 @@ func WaitForTriggerState(
 // that is emitted to track how long it took to get into the state checked by inState.
 func WaitForTriggerListState(
 	client eventingclient.TriggerInterface,
-	inState func(tl *eventingv1alpha1.TriggerList) (bool, error),
+	allInState func([]kmeta.OwnerRefable) (bool, error),
 	desc string,
 ) error {
 	metricName := fmt.Sprintf("WaitForTriggerListState/%s", desc)
@@ -220,6 +232,10 @@ func WaitForTriggerListState(
 		if err != nil {
 			return true, err
 		}
-		return inState(tl)
+		objs := make([]kmeta.OwnerRefable, len(tl.Items))
+		for i := 0; i < len(tl.Items); i++ {
+			objs[i] = &tl.Items[i]
+		}
+		return allInState(objs)
 	})
 }
