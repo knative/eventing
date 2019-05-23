@@ -23,6 +23,7 @@ import (
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
@@ -59,6 +60,18 @@ func main() {
 		logger.Fatalw("Error loading kafka config", zap.Error(err))
 	}
 
+	args := &dispatcher.KafkaDispatcherArgs{
+		ClientID:     "kafka-ch-dispatcher",
+		Brokers:      kafkaConfig.Brokers,
+		ConsumerMode: kafkaConfig.ConsumerMode,
+		TopicFunc:    utils.TopicName,
+		Logger:       logger.Desugar(),
+	}
+	kafkaDispatcher, err := dispatcher.NewDispatcher(args)
+	if err != nil {
+		logger.Fatalw("Unable to create kafka dispatcher", zap.Error(err))
+	}
+
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the Kafka dispatcher")
 
@@ -80,7 +93,7 @@ func main() {
 		kafkachannel.NewController(
 			opt,
 			eventingClientSet,
-			kafkaConfig,
+			kafkaDispatcher,
 			kafkaChannelInformer,
 		),
 	}

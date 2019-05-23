@@ -21,7 +21,7 @@ import (
 	"log"
 	"strings"
 
-	cluster "github.com/bsm/sarama-cluster"
+	"github.com/bsm/sarama-cluster"
 
 	"github.com/knative/pkg/configmap"
 )
@@ -38,6 +38,8 @@ const (
 
 	// DefaultReplicationFactor defines the default number of replications
 	DefaultReplicationFactor = 1
+
+	knativeKafkaTopicPrefix = "knative-messaging-kafka"
 )
 
 type KafkaConfig struct {
@@ -83,4 +85,9 @@ func GetKafkaConfig(path string) (*KafkaConfig, error) {
 		}
 	}
 	return config, nil
+}
+
+func TopicName(separator, namespace, name string) string {
+	topic := []string{knativeKafkaTopicPrefix, namespace, name}
+	return strings.Join(topic, separator)
 }

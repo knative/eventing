@@ -401,7 +401,7 @@ func (r *Reconciler) createClient(ctx context.Context, kc *v1alpha1.KafkaChannel
 func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	logger := logging.FromContext(ctx)
 
-	topicName := resources.MakeTopicName(channel)
+	topicName := utils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	logger.Info("Creating topic on Kafka cluster", zap.String("topic", topicName))
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
 		ReplicationFactor: channel.Spec.ReplicationFactor,
@@ -420,7 +420,7 @@ func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaCha
 func (r *Reconciler) deleteTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	logger := logging.FromContext(ctx)
 
-	topicName := resources.MakeTopicName(channel)
+	topicName := utils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	logger.Info("Deleting topic on Kafka Cluster", zap.String("topic", topicName))
 	err := kafkaClusterAdmin.DeleteTopic(topicName)
 	if err == sarama.ErrUnknownTopicOrPartition {
