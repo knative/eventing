@@ -656,13 +656,12 @@ func TestNew(t *testing.T) {
 	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
 
 	subscriptionInformer := eventingInformer.Eventing().V1alpha1().Subscriptions()
-	channelInformer := eventingInformer.Eventing().V1alpha1().Channels()
 	addressableInformer := &fakeAddressableInformer{}
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingClient,
 		Logger:            logtesting.TestLogger(t),
-	}, subscriptionInformer, channelInformer, addressableInformer)
+	}, subscriptionInformer, addressableInformer)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
