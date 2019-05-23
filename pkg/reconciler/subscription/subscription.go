@@ -82,6 +82,7 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
+	channelInformer eventinginformers.ChannelInformer,
 	addressableInformer eventingduck.AddressableInformer,
 ) *controller.Impl {
 
@@ -98,6 +99,14 @@ func NewController(
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	channelInformer.Informer().AddEventHandler(reconciler.Handler(
+		// Call the tracker's OnChanged method, but we've seen the objects coming through this path
+		// missing TypeMeta, so ensure it is properly populated.
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			v1alpha1.SchemeGroupVersion.WithKind("Channel"),
+		),
+	))
 
 	return impl
 }

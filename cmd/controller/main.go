@@ -106,6 +106,7 @@ func main() {
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
+			channelInformer,
 			addressableInformer,
 		),
 		namespace.NewController(
