@@ -82,7 +82,6 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
-	channelInformer eventinginformers.ChannelInformer,
 	addressableInformer eventingduck.AddressableInformer,
 ) *controller.Impl {
 
@@ -99,15 +98,6 @@ func NewController(
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	// TODO further analyze if this informer can be removed.
-	channelInformer.Informer().AddEventHandler(reconciler.Handler(
-		// Call the tracker's OnChanged method, but we've seen the objects coming through this path
-		// missing TypeMeta, so ensure it is properly populated.
-		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Channel"),
-		),
-	))
 
 	return impl
 }
@@ -180,6 +170,16 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
+	// Track the channel using the addressableInformer.
+	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
+	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
+	// subscription controller will reconcile upon a `channel` change.
+	track := r.addressableInformer.TrackInNamespace(r.tracker, subscription)
+	if err := track(subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
+		return err
+	}
+
 	// Verify that `channel` exists.
 	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
@@ -187,12 +187,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Any("channel", subscription.Spec.Channel))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
 		subscription.Status.MarkReferencesNotResolved(channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
-		return err
-	}
-
-	track := r.addressableInformer.TrackInNamespace(r.tracker, subscription)
-	if err := track(subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
 		return err
 	}
 
