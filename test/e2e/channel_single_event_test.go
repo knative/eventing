@@ -84,7 +84,7 @@ func singleEvent(t *testing.T, encoding string) {
 		}
 
 		// verify the logger service receives the event
-		if err := client.CheckLog(loggerPodName, common.Contains(body)); err != nil {
+		if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
 	})

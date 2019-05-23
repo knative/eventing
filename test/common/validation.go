@@ -47,15 +47,15 @@ func (client *Client) CheckLog(podName string, checker func(string) bool) error 
 	})
 }
 
-// Contains returns a function to check if the log contains the given content.
-func Contains(content string) func(string) bool {
+// CheckerContains returns a checker function to check if the log contains the given content.
+func CheckerContains(content string) func(string) bool {
 	return func(log string) bool {
 		return strings.Contains(log, content)
 	}
 }
 
-// ContainsAll returns a function to check if the log contains all the given contents.
-func ContainsAll(contents []string) func(string) bool {
+// CheckerContainsAll returns a checker function to check if the log contains all the given contents.
+func CheckerContainsAll(contents []string) func(string) bool {
 	return func(log string) bool {
 		for _, content := range contents {
 			if !strings.Contains(log, content) {
@@ -66,8 +66,8 @@ func ContainsAll(contents []string) func(string) bool {
 	}
 }
 
-// ContainsCount returns a functions to check if the log contains the count number of given content.
-func ContainsCount(content string, count int) func(string) bool {
+// CheckerContainsCount returns a checker functions to check if the log contains the count number of given content.
+func CheckerContainsCount(content string, count int) func(string) bool {
 	return func(log string) bool {
 		return strings.Count(log, content) == count
 	}

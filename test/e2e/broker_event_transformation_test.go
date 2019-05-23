@@ -143,7 +143,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	}
 
 	// check if the logging service receives the correct event
-	if err := client.CheckLog(loggerPodName, common.Contains(transformedEventBody)); err != nil {
+	if err := client.CheckLog(loggerPodName, common.CheckerContains(transformedEventBody)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName, err)
 	}
 }
