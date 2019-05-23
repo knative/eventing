@@ -62,7 +62,8 @@ spec:
                   minLength: 1
                 kind:
                   type: string
-                  pattern: "^Channel$"
+                  # Ending with Channel. E.g., Channel, InMemoryChannel, etc.
+                  pattern: "Channel$"
                 name:
                   type: string
                   minLength: 1
