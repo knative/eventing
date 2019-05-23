@@ -78,16 +78,20 @@ func TestEventTransformationForSubscriptiop(t *testing.T) {
 		}
 
 		// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
-		if err := client.CreateSubscriptions(subscriptionNames1,
+		if err := client.CreateSubscriptions(
+			subscriptionNames1,
 			channelNames[0],
 			base.WithSubscriberForSubscription(transformationPodName),
-			base.WithReply(channelNames[1])); err != nil {
+			base.WithReply(channelNames[1]),
+		); err != nil {
 			st.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames1, channelNames[0], err)
 		}
 		// create subscriptions that subscribe the second channel, and forward the received events to the logger service
-		if err := client.CreateSubscriptions(subscriptionNames2,
+		if err := client.CreateSubscriptions(
+			subscriptionNames2,
 			channelNames[1],
-			base.WithSubscriberForSubscription(loggerPodName)); err != nil {
+			base.WithSubscriberForSubscription(loggerPodName),
+		); err != nil {
 			st.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames2, channelNames[1], err)
 		}
 

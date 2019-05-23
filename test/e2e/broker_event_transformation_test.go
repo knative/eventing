@@ -103,10 +103,12 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	}
 
 	// create trigger1 for event transformation
-	if err := client.CreateTrigger(triggerName1,
+	if err := client.CreateTrigger(
+		triggerName1,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(eventSource1, eventType1),
-		base.WithSubscriberForTrigger(transformationPodName)); err != nil {
+		base.WithSubscriberForTrigger(transformationPodName),
+	); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName1, err)
 	}
 
@@ -117,10 +119,12 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 	}
 
 	// create trigger2 for event receiving
-	if err := client.CreateTrigger(triggerName2,
+	if err := client.CreateTrigger(
+		triggerName2,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(eventSource2, eventType2),
-		base.WithSubscriberForTrigger(loggerPodName)); err != nil {
+		base.WithSubscriberForTrigger(loggerPodName),
+	); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
 	}
 
