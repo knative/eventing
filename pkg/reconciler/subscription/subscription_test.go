@@ -114,6 +114,31 @@ func TestAllCases(t *testing.T) {
 			//		Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
 			//	},
 		}, {
+			Name: "subscription, but channel does not exist",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: channels.eventing.knative.dev %q not found", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFetchFailed, fmt.Sprintf("Failed to validate spec.channel exists: channels.eventing.knative.dev %q not found", channelName)),
+				),
+			}},
+		}, {
 			Name: "subscription, but subscriber is not addressable",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -139,6 +164,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: status does not contain address"),
 				),
 			}},
 		}, {
@@ -166,6 +192,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, fmt.Sprintf("Failed to resolve spec.subscriber: subscribers.eventing.knative.dev %q not found", subscriberName)),
 				),
 			}},
 		}, {
@@ -198,6 +225,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionReferencesNotResolved(resultResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName)),
 				),
 			}},
 		}, {
@@ -472,6 +500,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, fmt.Sprintf("Failed to resolve spec.subscriber: services %q not found", serviceName)),
 				),
 			}},
 		}, {
