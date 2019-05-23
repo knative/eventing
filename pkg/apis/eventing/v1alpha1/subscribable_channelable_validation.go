@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/knative/pkg/apis"
@@ -30,21 +31,21 @@ func isChannelEmpty(f corev1.ObjectReference) bool {
 }
 
 // Valid from only contains the following fields:
-// - Kind       == 'Channel'
-// - APIVersion == 'eventing.knative.dev/v1alpha1'
+// - Kind       ends in 'Channel', e.g., 'Channel', 'InMemoryChannel', etc.
+// - APIVersion == 'eventing.knative.dev/v1alpha1' || 'messaging.knative.dev/v1alpha1'
 // - Name       == not empty
 func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
 
-	if f.Kind != "Channel" {
+	if !strings.HasSuffix(f.Kind, "Channel") {
 		fe := apis.ErrInvalidValue(f.Kind, "kind")
 		fe.Paths = []string{"kind"}
-		fe.Details = "only 'Channel' kind is allowed"
+		fe.Details = "only '*Channel' kind is allowed"
 		errs = errs.Also(fe)
 	}
-	if f.APIVersion != "eventing.knative.dev/v1alpha1" {
+	if f.APIVersion != "eventing.knative.dev/v1alpha1" && f.APIVersion != "messaging.knative.dev/v1alpha1" {
 		fe := apis.ErrInvalidValue(f.APIVersion, "apiVersion")
-		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
+		fe.Details = "only eventing.knative.dev/v1alpha1 or messaging.knative.dev/v1alpha1 are allowed for apiVersion"
 		errs = errs.Also(fe)
 	}
 	return errs

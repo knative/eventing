@@ -39,7 +39,7 @@ var validationTests = []struct {
 		want: &apis.FieldError{
 			Message: "invalid value: Strait",
 			Paths:   []string{"kind"},
-			Details: "only 'Channel' kind is allowed",
+			Details: "only '*Channel' kind is allowed",
 		},
 	},
 	{
@@ -52,8 +52,8 @@ var validationTests = []struct {
 		want: &apis.FieldError{
 			Message: `invalid value: eventing.knative.dev/v1alpha2`,
 			Paths:   []string{"apiVersion"},
-			Details: "only eventing.knative.dev/v1alpha1 " +
-				"is allowed for apiVersion",
+			Details: "only eventing.knative.dev/v1alpha1 or messaging.knative.dev/v1alpha1 " +
+				"are allowed for apiVersion",
 		},
 	},
 	{
@@ -62,6 +62,15 @@ var validationTests = []struct {
 			Name:       "boaty-mcboatface",
 			APIVersion: "eventing.knative.dev/v1alpha1",
 			Kind:       "Channel",
+		},
+		want: nil,
+	},
+	{
+		name: "valid channel messaging",
+		ref: corev1.ObjectReference{
+			Name:       "boaty-mcboatface",
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "InMemoryChannel",
 		},
 		want: nil,
 	},
