@@ -200,7 +200,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
-		logging.FromContext(ctx).Error("Failed to update GoogleCloudPubSubChannel status", zap.Error(updateStatusErr))
+		logging.FromContext(ctx).Error("Failed to update KafkaChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update KafkaChannel's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
