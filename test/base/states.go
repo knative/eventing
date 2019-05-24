@@ -25,22 +25,20 @@ import (
 )
 
 // ResourceReadyChecker returns a checker function that can check if the given resource is ready.
-func ResourceReadyChecker(dynamicClient dynamic.Interface) func(kmeta.OwnerRefable) (bool, error) {
-	return func(obj kmeta.OwnerRefable) (bool, error) {
-		return isResourceReady(dynamicClient, obj)
-	}
-}
-
-// AllResourcesReadyChecker returns a checker function that can check if the given resources are ready.
-func AllResourcesReadyChecker(dynamicClient dynamic.Interface) func([]kmeta.OwnerRefable) (bool, error) {
-	return func(objs []kmeta.OwnerRefable) (bool, error) {
-		return resourcesReady(dynamicClient, objs)
+func ResourceReadyChecker(dynamicClient dynamic.Interface) func(...kmeta.OwnerRefable) (bool, error) {
+	return func(objs ...kmeta.OwnerRefable) (bool, error) {
+		for _, o := range objs {
+			if isReady, err := isResourceReady(dynamicClient, o); !isReady || err != nil {
+				return isReady, err
+			}
+		}
+		return true, nil
 	}
 }
 
 // isResourceReady is a generic method to check if the resource that implements KResource duck is ready.
 func isResourceReady(dynamicClient dynamic.Interface, obj kmeta.OwnerRefable) (bool, error) {
-	// get the resource's name, namespace and gvk
+	// get the resource's name, namespace and gvr
 	name := obj.GetObjectMeta().GetName()
 	namespace := obj.GetObjectMeta().GetNamespace()
 	gvk := obj.GetGroupVersionKind()
@@ -57,14 +55,4 @@ func isResourceReady(dynamicClient dynamic.Interface, obj kmeta.OwnerRefable) (b
 	}
 	kr := untyped.(*duckv1alpha1.KResource)
 	return kr.Status.GetCondition(duckv1alpha1.ConditionReady).IsTrue(), nil
-}
-
-// resourcesReady is a generic method to check if the resources that implement KResource duck is ready.
-func resourcesReady(dynamicClient dynamic.Interface, objs []kmeta.OwnerRefable) (bool, error) {
-	for _, obj := range objs {
-		if isReady, _ := isResourceReady(dynamicClient, obj); !isReady {
-			return false, nil
-		}
-	}
-	return true, nil
 }

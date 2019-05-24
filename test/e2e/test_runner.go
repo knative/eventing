@@ -44,9 +44,9 @@ import (
 // a test for the testFunc.
 func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string)) {
 	t.Parallel()
-	supportedProvisioners := common.FeatureMap[feature]
 	for _, provisioner := range test.EventingFlags.Provisioners {
-		if contains(supportedProvisioners, provisioner) {
+		supportedFeatures := common.ValidProvisionersMap[provisioner]
+		if contains(supportedFeatures, feature) {
 			t.Run(t.Name()+"-"+provisioner, func(st *testing.T) {
 				testFunc(st, provisioner)
 			})
@@ -99,9 +99,9 @@ func TearDown(client *common.Client) {
 	}
 }
 
-func contains(strs []string, str string) bool {
-	for _, s := range strs {
-		if s == str {
+func contains(features []common.Feature, feature common.Feature) bool {
+	for _, f := range features {
+		if f == feature {
 			return true
 		}
 	}

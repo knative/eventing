@@ -73,7 +73,9 @@ func testChannelChain(t *testing.T, provisioner string) {
 	}
 
 	// wait for all test resources to be ready, so that we can start sending events
-	client.WaitForAllTestResourcesReady()
+	if err := client.WaitForAllTestResourcesReady(); err != nil {
+		t.Fatalf("Failed to get all test resources ready: %v", err)
+	}
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())

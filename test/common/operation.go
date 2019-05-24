@@ -23,7 +23,6 @@ import (
 	"github.com/knative/eventing/test/base"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,7 +30,7 @@ import (
 func (client *Client) LabelNamespace(labels map[string]string) error {
 	namespace := client.Namespace
 	nsSpec, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil {
 		return err
 	}
 	if nsSpec.Labels == nil {
@@ -97,13 +96,14 @@ func (client *Client) WaitForBrokerReady(name string) error {
 // WaitForBrokersReady waits until all brokers in the namespace are Ready.
 func (client *Client) WaitForBrokersReady() error {
 	namespace := client.Namespace
-	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
-	if err := base.WaitForBrokerListState(
-		brokers,
-		base.AllResourcesReadyChecker(client.Dynamic),
-		"BrokersAreReady",
-	); err != nil {
+	brokers, err := client.Eventing.EventingV1alpha1().Brokers(namespace).List(metav1.ListOptions{})
+	if err != nil {
 		return err
+	}
+	for _, broker := range brokers.Items {
+		if err := client.WaitForBrokerReady(broker.Name); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -126,13 +126,14 @@ func (client *Client) WaitForTriggerReady(name string) error {
 // WaitForTriggersReady waits until all triggers in the namespace are Ready.
 func (client *Client) WaitForTriggersReady() error {
 	namespace := client.Namespace
-	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
-	if err := base.WaitForTriggerListState(
-		triggers,
-		base.AllResourcesReadyChecker(client.Dynamic),
-		"TriggersAreReady",
-	); err != nil {
+	triggers, err := client.Eventing.EventingV1alpha1().Triggers(namespace).List(metav1.ListOptions{})
+	if err != nil {
 		return err
+	}
+	for _, trigger := range triggers.Items {
+		if err := client.WaitForTriggerReady(trigger.Name); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -155,13 +156,14 @@ func (client *Client) WaitForChannelReady(name string) error {
 // WaitForChannelsReady waits until all channels in the namespace are Ready.
 func (client *Client) WaitForChannelsReady() error {
 	namespace := client.Namespace
-	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	if err := base.WaitForChannelListState(
-		channels,
-		base.AllResourcesReadyChecker(client.Dynamic),
-		"ChannelsAreReady",
-	); err != nil {
+	channels, err := client.Eventing.EventingV1alpha1().Channels(namespace).List(metav1.ListOptions{})
+	if err != nil {
 		return err
+	}
+	for _, channel := range channels.Items {
+		if err := client.WaitForChannelReady(channel.Name); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -184,13 +186,14 @@ func (client *Client) WaitForSubscriptionReady(name string) error {
 // WaitForSubscriptionsReady waits until all subscriptions in the namespace are Ready.
 func (client *Client) WaitForSubscriptionsReady() error {
 	namespace := client.Namespace
-	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
-	if err := base.WaitForSubscriptionListState(
-		subscriptions,
-		base.AllResourcesReadyChecker(client.Dynamic),
-		"SubscriptionsAreReady",
-	); err != nil {
+	subscriptions, err := client.Eventing.EventingV1alpha1().Subscriptions(namespace).List(metav1.ListOptions{})
+	if err != nil {
 		return err
+	}
+	for _, subscription := range subscriptions.Items {
+		if err := client.WaitForSubscriptionReady(subscription.Name); err != nil {
+			return err
+		}
 	}
 	return nil
 }

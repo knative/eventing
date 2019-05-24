@@ -18,20 +18,13 @@ package common
 
 import "github.com/knative/eventing/pkg/reconciler/namespace/resources"
 
-// ValidProvisioners is a list of provisioners that Eventing currently support.
-var ValidProvisioners = []string{
-	InMemoryProvisioner,
-	GCPPubSubProvisioner,
-	KafkaProvisioner,
-	NatssProvisioner,
-}
-
-// FeatureMap saves the feature-provisioners mapping.
-// Each pair means the provisioners support this feature.
-var FeatureMap = map[Feature][]string{
-	FeatureBasic:       ValidProvisioners,
-	FeatureRedelivery:  []string{GCPPubSubProvisioner, KafkaProvisioner, NatssProvisioner},
-	FeaturePersistence: []string{GCPPubSubProvisioner, KafkaProvisioner, NatssProvisioner},
+// ValidProvisionersMap saves the provisioner-features mapping.
+// Each pair means the provisioner support the list of features.
+var ValidProvisionersMap = map[string][]Feature{
+	InMemoryProvisioner:  []Feature{FeatureBasic},
+	GCPPubSubProvisioner: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	KafkaProvisioner:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	NatssProvisioner:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 }
 
 const (

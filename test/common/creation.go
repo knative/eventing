@@ -39,11 +39,10 @@ func (client *Client) CreateChannel(name, provisonerName string) error {
 	channel := base.Channel(name, provisonerName)
 
 	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	_, err := channels.Create(channel)
-	if err != nil {
+	if _, err := channels.Create(channel); err != nil {
 		return err
 	}
-	client.Cleaner.Add(eventingAPIGroup, eventingAPIVersion, "channels", namespace, name)
+	client.Cleaner.AddObj(channel)
 	return nil
 }
 
@@ -63,11 +62,10 @@ func (client *Client) CreateSubscription(name, channelName string, options ...fu
 	subscription := base.Subscription(name, channelName, options...)
 
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
-	_, err := subscriptions.Create(subscription)
-	if err != nil {
+	if _, err := subscriptions.Create(subscription); err != nil {
 		return err
 	}
-	client.Cleaner.Add(eventingAPIGroup, eventingAPIVersion, "subscriptions", namespace, name)
+	client.Cleaner.AddObj(subscription)
 	return nil
 }
 
@@ -87,11 +85,10 @@ func (client *Client) CreateBroker(name, provisionerName string) error {
 	broker := base.Broker(name, provisionerName)
 
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
-	_, err := brokers.Create(broker)
-	if err != nil {
+	if _, err := brokers.Create(broker); err != nil {
 		return err
 	}
-	client.Cleaner.Add(eventingAPIGroup, eventingAPIVersion, "brokers", namespace, name)
+	client.Cleaner.AddObj(broker)
 	return nil
 }
 
@@ -111,11 +108,10 @@ func (client *Client) CreateTrigger(name string, options ...func(*v1alpha1.Trigg
 	trigger := base.Trigger(name, options...)
 
 	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
-	_, err := triggers.Create(trigger)
-	if err != nil {
+	if _, err := triggers.Create(trigger); err != nil {
 		return err
 	}
-	client.Cleaner.Add(eventingAPIGroup, eventingAPIVersion, "triggers", namespace, name)
+	client.Cleaner.AddObj(trigger)
 	return nil
 }
 
@@ -126,8 +122,7 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 		svc := base.Service(name, pod.Labels)
 
 		svcs := client.Kube.Kube.CoreV1().Services(namespace)
-		_, err := svcs.Create(svc)
-		if err != nil {
+		if _, err := svcs.Create(svc); err != nil {
 			return err
 		}
 		client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
@@ -137,19 +132,19 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 
 // CreatePod will create a Pod.
 func (client *Client) CreatePod(pod *corev1.Pod, options ...func(*corev1.Pod, *Client) error) error {
+	// set namespace for the pod in case it's empty
 	namespace := client.Namespace
 	pod.Namespace = namespace
-	_, err := client.Kube.CreatePod(pod)
-	if err != nil {
-		return err
-	}
-	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
-
+	// apply options on the pod before creation
 	for _, option := range options {
 		if err := option(pod, client); err != nil {
 			return err
 		}
 	}
+	if _, err := client.Kube.CreatePod(pod); err != nil {
+		return err
+	}
+	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
 	return nil
 }
 
@@ -163,8 +158,7 @@ func (client *Client) CreateServiceAccountAndBinding(saName, crName string) erro
 			Namespace: namespace,
 		},
 	}
-	err := client.createServiceAccount(sa)
-	if err != nil {
+	if err := client.createServiceAccount(sa); err != nil {
 		return err
 	}
 	crb := &rbacv1.ClusterRoleBinding{
@@ -184,19 +178,14 @@ func (client *Client) CreateServiceAccountAndBinding(saName, crName string) erro
 			APIGroup: rbacAPIGroup,
 		},
 	}
-	err = client.createClusterRoleBinding(crb)
-	if err != nil {
-		return err
-	}
-	return nil
+	return client.createClusterRoleBinding(crb)
 }
 
 // createServiceAccount will create a service account.
 func (client *Client) createServiceAccount(sa *corev1.ServiceAccount) error {
 	namespace := client.Namespace
 	sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
-	_, err := sas.Create(sa)
-	if err != nil {
+	if _, err := sas.Create(sa); err != nil {
 		return err
 	}
 	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, sa.Name)
@@ -206,8 +195,7 @@ func (client *Client) createServiceAccount(sa *corev1.ServiceAccount) error {
 // createClusterRoleBinding will create a service account binding.
 func (client *Client) createClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) error {
 	clusterRoleBindings := client.Kube.Kube.RbacV1().ClusterRoleBindings()
-	_, err := clusterRoleBindings.Create(crb)
-	if err != nil {
+	if _, err := clusterRoleBindings.Create(crb); err != nil {
 		return err
 	}
 	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.Name)

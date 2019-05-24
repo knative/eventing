@@ -44,7 +44,7 @@ const (
 // track how long it took for name to get into the state checked by inState.
 func WaitForChannelState(
 	client eventingclient.ChannelInterface,
-	inState func(kmeta.OwnerRefable) (bool, error),
+	inState func(...kmeta.OwnerRefable) (bool, error),
 	name string,
 	desc string,
 ) error {
@@ -61,32 +61,6 @@ func WaitForChannelState(
 	})
 }
 
-// WaitForChannelListState polls the status of the ChannelList
-// from client every interval until inState returns `true` indicating it
-// is done, returns an error or timeout. desc will be used to name the metric
-// that is emitted to track how long it took to get into the state checked by inState.
-func WaitForChannelListState(
-	client eventingclient.ChannelInterface,
-	allInState func([]kmeta.OwnerRefable) (bool, error),
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForChannelListState/%s", desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		cl, err := client.List(metav1.ListOptions{})
-		if err != nil {
-			return true, err
-		}
-		objs := make([]kmeta.OwnerRefable, len(cl.Items))
-		for i := 0; i < len(cl.Items); i++ {
-			objs[i] = &cl.Items[i]
-		}
-		return allInState(objs)
-	})
-}
-
 // WaitForSubscriptionState polls the status of the Subscription called name
 // from client every interval until inState returns `true` indicating it is
 // done, returns an error or timeout. desc will be used to name the metric that
@@ -94,7 +68,7 @@ func WaitForChannelListState(
 // by inState.
 func WaitForSubscriptionState(
 	client eventingclient.SubscriptionInterface,
-	inState func(kmeta.OwnerRefable) (bool, error),
+	inState func(...kmeta.OwnerRefable) (bool, error),
 	name string,
 	desc string,
 ) error {
@@ -111,39 +85,13 @@ func WaitForSubscriptionState(
 	})
 }
 
-// WaitForSubscriptionListState polls the status of the SubscriptionList
-// from client every interval until inState returns `true` indicating it
-// is done, returns an error or timeout. desc will be used to name the metric
-// that is emitted to track how long it took to get into the state checked by inState.
-func WaitForSubscriptionListState(
-	client eventingclient.SubscriptionInterface,
-	allInState func([]kmeta.OwnerRefable) (bool, error),
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForSubscriptionListState/%s", desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		sl, err := client.List(metav1.ListOptions{})
-		if err != nil {
-			return true, err
-		}
-		objs := make([]kmeta.OwnerRefable, len(sl.Items))
-		for i := 0; i < len(sl.Items); i++ {
-			objs[i] = &sl.Items[i]
-		}
-		return allInState(objs)
-	})
-}
-
 // WaitForBrokerState polls the status of the Broker called name from client
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
 func WaitForBrokerState(
 	client eventingclient.BrokerInterface,
-	inState func(kmeta.OwnerRefable) (bool, error),
+	inState func(...kmeta.OwnerRefable) (bool, error),
 	name string,
 	desc string,
 ) error {
@@ -165,39 +113,13 @@ func WaitForBrokerState(
 	})
 }
 
-// WaitForBrokerListState polls the status of the BrokerList
-// from client every interval until inState returns `true` indicating it
-// is done, returns an error or timeout. desc will be used to name the metric
-// that is emitted to track how long it took to get into the state checked by inState.
-func WaitForBrokerListState(
-	client eventingclient.BrokerInterface,
-	allInState func([]kmeta.OwnerRefable) (bool, error),
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForBrokerListState/%s", desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		bl, err := client.List(metav1.ListOptions{})
-		if err != nil {
-			return true, err
-		}
-		objs := make([]kmeta.OwnerRefable, len(bl.Items))
-		for i := 0; i < len(bl.Items); i++ {
-			objs[i] = &bl.Items[i]
-		}
-		return allInState(objs)
-	})
-}
-
 // WaitForTriggerState polls the status of the Trigger called name from client
 // every interval until inState returns `true` indicating it is done, returns an
 // error or timeout. desc will be used to name the metric that is emitted to
 // track how long it took for name to get into the state checked by inState.
 func WaitForTriggerState(
 	client eventingclient.TriggerInterface,
-	inState func(kmeta.OwnerRefable) (bool, error),
+	inState func(...kmeta.OwnerRefable) (bool, error),
 	name string,
 	desc string,
 ) error {
@@ -211,31 +133,5 @@ func WaitForTriggerState(
 			return true, err
 		}
 		return inState(t)
-	})
-}
-
-// WaitForTriggerListState polls the status of the TriggerList
-// from client every interval until inState returns `true` indicating it
-// is done, returns an error or timeout. desc will be used to name the metric
-// that is emitted to track how long it took to get into the state checked by inState.
-func WaitForTriggerListState(
-	client eventingclient.TriggerInterface,
-	allInState func([]kmeta.OwnerRefable) (bool, error),
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForTriggerListState/%s", desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		tl, err := client.List(metav1.ListOptions{})
-		if err != nil {
-			return true, err
-		}
-		objs := make([]kmeta.OwnerRefable, len(tl.Items))
-		for i := 0; i < len(tl.Items); i++ {
-			objs[i] = &tl.Items[i]
-		}
-		return allInState(objs)
 	})
 }

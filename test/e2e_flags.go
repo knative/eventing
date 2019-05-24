@@ -46,7 +46,7 @@ func (ps *Provisioners) String() string {
 func (ps *Provisioners) Set(value string) error {
 	// We'll test against all valid provisioners if we pass "all" through the flag.
 	if value == "all" {
-		for _, provisioner := range common.ValidProvisioners {
+		for provisioner := range common.ValidProvisionersMap {
 			*ps = append(*ps, provisioner)
 		}
 		return nil
@@ -65,10 +65,8 @@ func (ps *Provisioners) Set(value string) error {
 
 // Check if the provisioner is a valid one.
 func isValid(provisioner string) bool {
-	for i := range common.ValidProvisioners {
-		if provisioner == common.ValidProvisioners[i] {
-			return true
-		}
+	if _, ok := common.ValidProvisionersMap[provisioner]; ok {
+		return true
 	}
 	return false
 }

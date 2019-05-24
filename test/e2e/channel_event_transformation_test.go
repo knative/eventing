@@ -38,7 +38,7 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    |  ---------
                                    -----------> Service(Transformation)
 */
-func TestEventTransformationForSubscriptiop(t *testing.T) {
+func TestEventTransformationForSubscription(t *testing.T) {
 	senderName := "e2e-eventtransformation-sender"
 	channelNames := []string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
 	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
@@ -96,7 +96,9 @@ func TestEventTransformationForSubscriptiop(t *testing.T) {
 		}
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReady()
+		if err := client.WaitForAllTestResourcesReady(); err != nil {
+			st.Fatalf("Failed to get all test resources ready: %v", err)
+		}
 
 		// send fake CloudEvent to the first channel
 		eventBody := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())

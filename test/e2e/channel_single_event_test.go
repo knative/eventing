@@ -69,7 +69,9 @@ func singleEvent(t *testing.T, encoding string) {
 		}
 
 		// wait for all test resources to be ready, so that we can start sending events
-		client.WaitForAllTestResourcesReady()
+		if err := client.WaitForAllTestResourcesReady(); err != nil {
+			st.Fatalf("Failed to get all test resources ready: %v", err)
+		}
 
 		// send fake CloudEvent to the channel
 		body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())

@@ -28,7 +28,6 @@ import (
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/common"
 
-	pkgTest "github.com/knative/pkg/test"
 	"github.com/knative/pkg/test/logging"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -60,13 +59,11 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	defer TearDown(client)
 
 	// Label namespace so that it creates the default broker.
-	t.Logf("Labeling namespace %s", client.Namespace)
 	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
 		t.Fatalf("Error annotating namespace: %v", err)
 	}
 
 	// Wait for default broker ready.
-	t.Logf("Waiting for default broker to be ready")
 	if err := client.WaitForBrokerReady(common.DefaultBrokerName); err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
@@ -81,7 +78,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	// Create subscribers.
-	t.Logf("Creating Subscribers")
 	for _, event := range eventsToReceive {
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		pod := base.EventLoggerPod(subscriberName)
@@ -91,15 +87,20 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	// Create triggers.
-	t.Logf("Creating Triggers")
 	for _, event := range eventsToReceive {
 		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		if err := client.CreateTrigger(triggerName,
 			base.WithSubscriberForTrigger(subscriberName),
-			base.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type)); err != nil {
+			base.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
+		); err != nil {
 			t.Fatalf("Failed to create the trigger %q: %v", triggerName, err)
 		}
+	}
+
+	// Wait for all test resources to become ready before sending the events.
+	if err := client.WaitForAllTestResourcesReady(); err != nil {
+		t.Fatalf("Failed to get all test resources ready: %v", err)
 	}
 
 	// These are the event types and sources that will be send.
@@ -109,11 +110,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		{eventType2, eventSource1},
 		{eventType2, eventSource2},
 	}
-
-	// Wait for all test resources to become ready before sending the events.
-	client.WaitForAllTestResourcesReady()
-
-	t.Logf("Creating event sender pods")
 	// Map to save the expected events per dumper so that we can verify the delivery.
 	expectedEvents := make(map[string][]string)
 	// Map to save the unexpected events per dumper so that we can verify that they weren't delivered.
@@ -145,17 +141,8 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 	}
 
-	// Wait for all of them to be running.
-	t.Logf("Event sender pods created. Waiting for them to be running")
-	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
-		t.Fatalf("Error waiting for event sender pod to become running: %v", err)
-	}
-
-	t.Logf("Event sender pods running. Verifying events delivered to appropriate dumpers")
-
 	for _, event := range eventsToReceive {
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		t.Logf("Dumper %q expecting %q", subscriberName, strings.Join(expectedEvents[subscriberName], ","))
 		if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
 			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 		}
@@ -191,11 +178,9 @@ func newSelector() map[string]string {
 // Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.
 func shouldExpectEvent(eventToSend *base.TypeAndSource, receiver *eventReceiver, logf logging.FormatLogger) bool {
 	if receiver.typeAndSource.Type != any && receiver.typeAndSource.Type != eventToSend.Type {
-		logf("Event types mismatch, receive %s, send %s", receiver.typeAndSource.Type, eventToSend.Type)
 		return false
 	}
 	if receiver.typeAndSource.Source != any && receiver.typeAndSource.Source != eventToSend.Source {
-		logf("Event sources mismatch, receive %s, send %s", receiver.typeAndSource.Source, eventToSend.Source)
 		return false
 	}
 	return true
