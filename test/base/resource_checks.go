@@ -86,6 +86,7 @@ func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, 
 	tif := &duck.TypedInformerFactory{Client: dynamicClient, Type: &duckv1alpha1.KResource{}}
 	_, lister, err := tif.Get(gvr)
 	if err != nil {
+		// Return error to stop the polling.
 		return false, err
 	}
 	untyped, err := lister.ByNamespace(namespace).Get(name)
@@ -95,8 +96,8 @@ func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, 
 		// It should only happen if we wait for the auto-created resources, like default Broker.
 		return false, nil
 	} else if err != nil {
-		// Return true to stop and return the error.
-		return true, err
+		// Return error to stop the polling.
+		return false, err
 	}
 	kr := untyped.(*duckv1alpha1.KResource)
 	return kr.Status.GetCondition(duckv1alpha1.ConditionReady).IsTrue(), nil
