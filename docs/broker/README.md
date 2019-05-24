@@ -3,7 +3,6 @@
 The `Broker` and `Trigger` CRDs are documented in the
 [docs repo](https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md).
 
-
 ## Implementation
 
 Broker and Trigger are intended to be black boxes. How they are implemented

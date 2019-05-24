@@ -18,6 +18,10 @@ package v1alpha1
 
 import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 
+// subCondSet is a condition set with Ready as the happy condition and
+// ReferencesResolved and ChannelReady as the dependent conditions.
+var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionChannelReady)
+
 const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
 	SubscriptionConditionReady = duckv1alpha1.ConditionReady
@@ -53,4 +57,14 @@ func (ss *SubscriptionStatus) MarkReferencesResolved() {
 // MarkChannelReady sets the ChannelReady condition to True state.
 func (ss *SubscriptionStatus) MarkChannelReady() {
 	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionChannelReady)
+}
+
+// MarkReferencesNotResolved sets the ReferencesResolved condition to False state.
+func (ss *SubscriptionStatus) MarkReferencesNotResolved(reason, messageFormat string, messageA ...interface{}) {
+	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionReferencesResolved, reason, messageFormat, messageA...)
+}
+
+// MarkChannelNotReady sets the ChannelReady condition to False state.
+func (ss *SubscriptionStatus) MarkChannelNotReady(reason, messageFormat string, messageA ...interface{}) {
+	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
 }
