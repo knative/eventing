@@ -34,24 +34,38 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+// MetaResource includes necessary meta data to retrieve the duck-type KResource.
+type MetaResource struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+}
+
+// Meta returns a MetaResource built from the given name, namespace and kind.
+func Meta(name, namespace, kind string) *MetaResource {
+	return &MetaResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       kind,
+			APIVersion: EventingAPIVersion,
+		},
+	}
+}
+
 const (
 	// The interval and timeout used for polling in checking resource states.
 	interval = 1 * time.Second
 	timeout  = 4 * time.Minute
 )
 
-// MetaObj includes necessary meta data to retrieve the duck-type KResource.
-type MetaObj struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-}
-
-// WaitForResourceReady polls the status of the MetaObj from client
+// WaitForResourceReady polls the status of the MetaResource from client
 // every interval until isResourceReady returns `true` indicating
 // it is done, returns an error or timeout. desc will be used to
 // name the metric that is emitted to track how long it took for
 // the resource to get into the state checked by isResourceReady.
-func WaitForResourceReady(dynamicClient dynamic.Interface, obj MetaObj) error {
+func WaitForResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) error {
 	metricName := fmt.Sprintf("WaitForResourceReady/%s", obj.Name)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -61,8 +75,8 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj MetaObj) error {
 	})
 }
 
-// isResourceReady leverage duck-type to check if the given MetaObj is in ready state
-func isResourceReady(dynamicClient dynamic.Interface, obj MetaObj) (bool, error) {
+// isResourceReady leverage duck-type to check if the given MetaResource is in ready state
+func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, error) {
 	// get the resource's name, namespace and gvr
 	name := obj.Name
 	namespace := obj.Namespace
@@ -77,7 +91,8 @@ func isResourceReady(dynamicClient dynamic.Interface, obj MetaObj) (bool, error)
 	untyped, err := lister.ByNamespace(namespace).Get(name)
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
-		// We swallow the error to keep on polling
+		// We swallow the error to keep on polling.
+		// It should only happen if we wait for the auto-created resources, like default Broker.
 		return false, nil
 	} else if err != nil {
 		// Return true to stop and return the error.

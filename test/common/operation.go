@@ -85,16 +85,7 @@ func (client *Client) sendFakeEventToAddressable(
 // WaitForBrokerReady waits until the broker is Ready.
 func (client *Client) WaitForBrokerReady(name string) error {
 	namespace := client.Namespace
-	brokerMeta := base.MetaObj{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Broker",
-			APIVersion: base.EventingAPIVersion,
-		},
-	}
+	brokerMeta := base.Meta(name, namespace, "Broker")
 	if err := base.WaitForResourceReady(client.Dynamic, brokerMeta); err != nil {
 		return err
 	}
@@ -119,16 +110,7 @@ func (client *Client) WaitForBrokersReady() error {
 // WaitForTriggerReady waits until the trigger is Ready.
 func (client *Client) WaitForTriggerReady(name string) error {
 	namespace := client.Namespace
-	triggerMeta := base.MetaObj{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Trigger",
-			APIVersion: base.EventingAPIVersion,
-		},
-	}
+	triggerMeta := base.Meta(name, namespace, "Trigger")
 	if err := base.WaitForResourceReady(client.Dynamic, triggerMeta); err != nil {
 		return err
 	}
@@ -153,16 +135,7 @@ func (client *Client) WaitForTriggersReady() error {
 // WaitForChannelReady waits until the channel is Ready.
 func (client *Client) WaitForChannelReady(name string) error {
 	namespace := client.Namespace
-	channelMeta := base.MetaObj{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Channel",
-			APIVersion: base.EventingAPIVersion,
-		},
-	}
+	channelMeta := base.Meta(name, namespace, "Channel")
 	if err := base.WaitForResourceReady(client.Dynamic, channelMeta); err != nil {
 		return err
 	}
@@ -187,16 +160,7 @@ func (client *Client) WaitForChannelsReady() error {
 // WaitForSubscriptionReady waits until the subscription is Ready.
 func (client *Client) WaitForSubscriptionReady(name string) error {
 	namespace := client.Namespace
-	subscriptionMeta := base.MetaObj{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Subscription",
-			APIVersion: base.EventingAPIVersion,
-		},
-	}
+	subscriptionMeta := base.Meta(name, namespace, "Subscription")
 	if err := base.WaitForResourceReady(client.Dynamic, subscriptionMeta); err != nil {
 		return err
 	}
