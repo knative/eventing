@@ -27,11 +27,10 @@ import (
 )
 
 const (
-	portName   = "http"
-	portNumber = 80
-	// TODO messaging instead?
-	EventingRoleLabel = "eventing.knative.dev/role"
-	EventingRole      = "kafka-channel"
+	portName           = "http"
+	portNumber         = 80
+	MessagingRoleLabel = "messaging.knative.dev/role"
+	MessagingRole      = "kafka-channel"
 )
 
 // ServiceOption can be used to optionally modify the K8s service in MakeK8sService.
@@ -49,6 +48,7 @@ func MakeChannelServiceName(name string) string {
 // pointing to the specified service in a namespace.
 func ExternalService(namespace, service string) ServiceOption {
 	return func(svc *corev1.Service) error {
+		// TODO this overrides the current serviceSpec. Is this correct?
 		svc.Spec = corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
 			ExternalName: MakeExternalServiceAddress(namespace, service),
@@ -71,7 +71,7 @@ func MakeK8sService(kc *v1alpha1.KafkaChannel, opts ...ServiceOption) (*corev1.S
 			Name:      MakeChannelServiceName(kc.ObjectMeta.Name),
 			Namespace: kc.Namespace,
 			Labels: map[string]string{
-				EventingRoleLabel: EventingRole,
+				MessagingRoleLabel: MessagingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(kc),

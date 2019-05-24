@@ -15,7 +15,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kafka-controller
+  name: kafka-ch-controller
 rules:
   - apiGroups:
       - messaging.knative.dev
@@ -49,14 +49,14 @@ rules:
     resources:
       - configmaps
     resourceNames:
-      - kafka-dispatcher
+      - kafka-ch-dispatcher
     verbs:
       - update
   - apiGroups:
       - "" # Core API Group.
     resources:
       - events
-    verbs: 
+    verbs:
       - create
       - patch
       - update

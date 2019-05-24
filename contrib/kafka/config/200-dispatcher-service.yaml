@@ -15,9 +15,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  # The dispatcher service name used with the provisioner model is kafka-dispatcher, thus we change
-  #	it to be kafka-channel-dispatcher for CRDs.
-  name: kafka-channel-dispatcher
+  name: kafka-ch-dispatcher
   namespace: knative-eventing
   labels:
       messaging.knative.dev/channel: kafka-channel

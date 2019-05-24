@@ -54,7 +54,7 @@ const (
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "kafka-controller"
+	controllerAgentName = "kafka-ch-controller"
 
 	finalizerName = controllerAgentName
 
@@ -200,7 +200,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
-		logging.FromContext(ctx).Error("Failed to update GoogleCloudPubSubChannel status", zap.Error(updateStatusErr))
+		logging.FromContext(ctx).Error("Failed to update KafkaChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update KafkaChannel's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
@@ -210,9 +210,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) error {
-	logger := logging.FromContext(ctx)
-
 	kc.Status.InitializeConditions()
+
+	logger := logging.FromContext(ctx)
+	// Verify channel is valid.
+	if err := kc.Validate(ctx); err != nil {
+		logger.Error("Invalid kafka channel", zap.String("channel", kc.Name), zap.Error(err))
+		return err
+	}
 
 	kafkaClusterAdmin, err := r.createClient(ctx, kc)
 	if err != nil {
@@ -396,7 +401,7 @@ func (r *Reconciler) createClient(ctx context.Context, kc *v1alpha1.KafkaChannel
 func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	logger := logging.FromContext(ctx)
 
-	topicName := resources.MakeTopicName(channel)
+	topicName := utils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	logger.Info("Creating topic on Kafka cluster", zap.String("topic", topicName))
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
 		ReplicationFactor: channel.Spec.ReplicationFactor,
@@ -415,7 +420,7 @@ func (r *Reconciler) createTopic(ctx context.Context, channel *v1alpha1.KafkaCha
 func (r *Reconciler) deleteTopic(ctx context.Context, channel *v1alpha1.KafkaChannel, kafkaClusterAdmin sarama.ClusterAdmin) error {
 	logger := logging.FromContext(ctx)
 
-	topicName := resources.MakeTopicName(channel)
+	topicName := utils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	logger.Info("Deleting topic on Kafka Cluster", zap.String("topic", topicName))
 	err := kafkaClusterAdmin.DeleteTopic(topicName)
 	if err == sarama.ErrUnknownTopicOrPartition {

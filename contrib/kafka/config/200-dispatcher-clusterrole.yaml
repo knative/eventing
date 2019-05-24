@@ -15,7 +15,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kafka-dispatcher
+  name: kafka-ch-dispatcher
 rules:
   - apiGroups:
       - messaging.knative.dev

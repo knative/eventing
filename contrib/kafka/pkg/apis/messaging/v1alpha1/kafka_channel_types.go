@@ -84,7 +84,7 @@ type KafkaChannelList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []KafkaChannelSpec `json:"items"`
+	Items           []KafkaChannel `json:"items"`
 }
 
 // GetGroupVersionKind returns GroupVersionKind for KafkaChannels

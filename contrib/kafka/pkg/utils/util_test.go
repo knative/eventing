@@ -40,22 +40,22 @@ func TestGetKafkaConfig(t *testing.T) {
 		{
 			name:     "invalid config path",
 			path:     "/tmp/does_not_exist",
-			getError: "error loading provisioner configuration: lstat /tmp/does_not_exist: no such file or directory",
+			getError: "error loading configuration: lstat /tmp/does_not_exist: no such file or directory",
 		},
 		{
 			name:     "configmap with no data",
 			data:     map[string]string{},
-			getError: "missing provisioner configuration",
+			getError: "missing configuration",
 		},
 		{
 			name:     "configmap with no bootstrap_servers key",
 			data:     map[string]string{"key": "value"},
-			getError: "missing key bootstrap_servers in provisioner configuration",
+			getError: "missing key bootstrap_servers in configuration",
 		},
 		{
 			name:     "configmap with empty bootstrap_servers value",
 			data:     map[string]string{"bootstrap_servers": ""},
-			getError: "empty bootstrap_servers value in provisioner configuration",
+			getError: "empty bootstrap_servers value in configuration",
 		},
 		{
 			name: "single bootstrap_servers",

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,77 +21,154 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"log"
 
-	"github.com/knative/eventing/contrib/kafka/pkg/controller"
+	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
+	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/channelwatcher"
-	"github.com/knative/eventing/pkg/tracing"
+	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
+	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+var (
+	hardcodedLoggingConfig = flag.Bool("hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
+	masterURL              = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig             = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
 func main() {
 	flag.Parse()
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Fatalf("Unable to create logger: %v", err)
-	}
-	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
-	if err != nil {
-		logger.Fatal("Unable to load provisioner config", zap.Error(err))
-	}
-
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
-	if err != nil {
-		logger.Fatal("Unable to create manager.", zap.Error(err))
-	}
-
-	kafkaDispatcher, err := dispatcher.NewDispatcher(kafkaConfig.Brokers, kafkaConfig.ConsumerMode, logger)
-	if err != nil {
-		logger.Fatal("Unable to create kafka dispatcher", zap.Error(err))
-	}
-	if err = mgr.Add(kafkaDispatcher); err != nil {
-		logger.Fatal("Unable to add kafkaDispatcher", zap.Error(err))
-	}
-
-	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		logger.Fatal("Unable to add scheme for eventing apis.", zap.Error(err))
-	}
-
-	// Zipkin tracing.
-	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, "kafka-dispatcher"); err != nil {
-		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
-	}
-
-	if err = channelwatcher.New(mgr, logger, channelwatcher.UpdateConfigWatchHandler(kafkaDispatcher.UpdateConfig, shouldWatch)); err != nil {
-		logger.Fatal("Unable to create channel watcher.", zap.Error(err))
-	}
+	logger, atomicLevel := setupLogger()
+	defer logger.Sync()
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	// configMapWatcher does not block, so start it first.
-	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
+	if err != nil {
+		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
-	// Start blocks forever.
-	err = mgr.Start(stopCh)
+	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
 	if err != nil {
-		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
+		logger.Fatalw("Error loading kafka config", zap.Error(err))
 	}
-	logger.Info("Exiting...")
+
+	args := &dispatcher.KafkaDispatcherArgs{
+		ClientID:     "kafka-ch-dispatcher",
+		Brokers:      kafkaConfig.Brokers,
+		ConsumerMode: kafkaConfig.ConsumerMode,
+		TopicFunc:    utils.TopicName,
+		Logger:       logger.Desugar(),
+	}
+	kafkaDispatcher, err := dispatcher.NewDispatcher(args)
+	if err != nil {
+		logger.Fatalw("Unable to create kafka dispatcher", zap.Error(err))
+	}
+
+	logger = logger.With(zap.String("controller/impl", "pkg"))
+	logger.Info("Starting the Kafka dispatcher")
+
+	const numControllers = 1
+	cfg.QPS = numControllers * rest.DefaultQPS
+	cfg.Burst = numControllers * rest.DefaultBurst
+	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
+	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
+	eventingClientSet := clientset.NewForConfigOrDie(cfg)
+	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
+
+	// Messaging
+	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
+
+	// Build all of our controllers, with the clients constructed above.
+	// Add new controllers to this array.
+	// You also need to modify numControllers above to match this.
+	controllers := [...]*kncontroller.Impl{
+		kafkachannel.NewController(
+			opt,
+			eventingClientSet,
+			kafkaDispatcher,
+			kafkaChannelInformer,
+		),
+	}
+	// This line asserts at compile time that the length of controllers is equal to numControllers.
+	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
+	// var _ [N-M]int
+	// asserts at compile time that N >= M, which we can use to establish equality of N and M:
+	// (N >= M) && (M >= N) => (N == M)
+	var _ [numControllers - len(controllers)][len(controllers) - numControllers]int
+
+	// Watch the logging config map and dynamically update logging levels.
+	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
+	// TODO: Watch the observability config map and dynamically update metrics exporter.
+	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
+	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
+		logger.Fatalw("failed to start configuration manager", zap.Error(err))
+	}
+
+	// Start all of the informers and wait for them to sync.
+	logger.Info("Starting informers.")
+	if err := kncontroller.StartInformers(
+		stopCh,
+		// Messaging
+		kafkaChannelInformer.Informer(),
+	); err != nil {
+		logger.Fatalf("Failed to start informers: %v", err)
+	}
+
+	logger.Info("Starting dispatcher.")
+	go kafkaDispatcher.Start(stopCh)
+
+	logger.Info("Starting controllers.")
+	kncontroller.StartAll(stopCh, controllers[:]...)
 }
 
-func shouldWatch(ch *v1alpha1.Channel) bool {
-	return ch.Spec.Provisioner != nil &&
-		ch.Spec.Provisioner.Namespace == "" &&
-		ch.Spec.Provisioner.Name == controller.Name
+func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
+	// Set up our logger.
+	loggingConfigMap := getLoggingConfigOrDie()
+	loggingConfig, err := logging.NewConfigFromMap(loggingConfigMap)
+	if err != nil {
+		log.Fatalf("Error parsing logging configuration: %v", err)
+	}
+	return logging.NewLoggerFromConfig(loggingConfig, logconfig.Controller)
+}
+
+func getLoggingConfigOrDie() map[string]string {
+	if hardcodedLoggingConfig != nil && *hardcodedLoggingConfig {
+		return map[string]string{
+			"loglevel.controller": "info",
+			"zap-logger-config": `
+				{
+					"level": "info",
+					"development": false,
+					"outputPaths": ["stdout"],
+					"errorOutputPaths": ["stderr"],
+					"encoding": "json",
+					"encoderConfig": {
+					"timeKey": "ts",
+					"levelKey": "level",
+					"nameKey": "logger",
+					"callerKey": "caller",
+					"messageKey": "msg",
+					"stacktraceKey": "stacktrace",
+					"lineEnding": "",
+					"levelEncoder": "",
+					"timeEncoder": "iso8601",
+					"durationEncoder": "",
+					"callerEncoder": ""
+				}`,
+		}
+	} else {
+		cm, err := configmap.Load("/etc/config-logging")
+		if err != nil {
+			log.Fatalf("Error loading logging configuration: %v", err)
+		}
+		return cm
+	}
 }

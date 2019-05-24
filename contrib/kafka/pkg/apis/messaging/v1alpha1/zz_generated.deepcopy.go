@@ -60,7 +60,7 @@ func (in *KafkaChannelList) DeepCopyInto(out *KafkaChannelList) {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]KafkaChannelSpec, len(*in))
+		*out = make([]KafkaChannel, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

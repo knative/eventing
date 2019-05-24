@@ -15,14 +15,14 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kafka-controller
+  name: kafka-ch-controller
 subjects:
   - kind: ServiceAccount
-    name: kafka-controller
+    name: kafka-ch-controller
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: kafka-controller
+  name: kafka-ch-controller
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -30,14 +30,14 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kafka-dispatcher
+  name: kafka-ch-dispatcher
   namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
-    name: kafka-dispatcher
+    name: kafka-ch-dispatcher
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: kafka-dispatcher
+  name: kafka-ch-dispatcher
   apiGroup: rbac.authorization.k8s.io
 

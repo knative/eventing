@@ -20,12 +20,10 @@ import (
 	"flag"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"log"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
+	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -40,10 +38,8 @@ import (
 )
 
 const (
-	dispatcherDeploymentName = "kafka-dispatcher"
-	// The dispatcher service name used with the provisioner model is kafka-dispatcher, thus we change
-	// it to be kafka-channel-dispatcher for CRDs.
-	dispatcherServiceName = "kafka-channel-dispatcher"
+	dispatcherDeploymentName = "kafka-ch-dispatcher"
+	dispatcherServiceName    = "kafka-ch-dispatcher"
 )
 
 var (
@@ -98,7 +94,7 @@ func main() {
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
 	controllers := [...]*kncontroller.Impl{
-		controller.NewController(
+		kafkachannel.NewController(
 			opt,
 			eventingClientSet,
 			kafkaConfig,
