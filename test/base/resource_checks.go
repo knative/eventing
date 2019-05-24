@@ -51,12 +51,8 @@ type MetaObj struct {
 // it is done, returns an error or timeout. desc will be used to
 // name the metric that is emitted to track how long it took for
 // the resource to get into the state checked by isResourceReady.
-func WaitForResourceReady(
-	dynamicClient dynamic.Interface,
-	obj MetaObj,
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForResourceState/%s/%s", obj.Name, desc)
+func WaitForResourceReady(dynamicClient dynamic.Interface, obj MetaObj) error {
+	metricName := fmt.Sprintf("WaitForResourceReady/%s", obj.Name)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 

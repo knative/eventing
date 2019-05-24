@@ -30,19 +30,19 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-const eventingAPIVersion = "eventing.knative.dev/v1alpha1"
+const EventingAPIVersion = "eventing.knative.dev/v1alpha1"
 
 // clusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 	if name == "" {
 		return nil
 	}
-	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", EventingAPIVersion, name)
 }
 
 // channelRef returns an ObjectReference for a given Channel Name.
 func channelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference("Channel", eventingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference("Channel", EventingAPIVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner.
@@ -73,7 +73,7 @@ func WithReply(name string) func(*v1alpha1.Subscription) {
 	return func(s *v1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &v1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference("Channel", eventingAPIVersion, name),
+				Channel: pkgTest.CoreV1ObjectReference("Channel", EventingAPIVersion, name),
 			}
 		}
 	}

@@ -92,14 +92,10 @@ func (client *Client) WaitForBrokerReady(name string) error {
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Broker",
-			APIVersion: eventingAPIVersion,
+			APIVersion: base.EventingAPIVersion,
 		},
 	}
-	if err := base.WaitForResourceReady(
-		client.Dynamic,
-		brokerMeta,
-		"BrokerIsReady",
-	); err != nil {
+	if err := base.WaitForResourceReady(client.Dynamic, brokerMeta); err != nil {
 		return err
 	}
 	return nil
@@ -130,14 +126,10 @@ func (client *Client) WaitForTriggerReady(name string) error {
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Trigger",
-			APIVersion: eventingAPIVersion,
+			APIVersion: base.EventingAPIVersion,
 		},
 	}
-	if err := base.WaitForResourceReady(
-		client.Dynamic,
-		triggerMeta,
-		"TriggerIsReady",
-	); err != nil {
+	if err := base.WaitForResourceReady(client.Dynamic, triggerMeta); err != nil {
 		return err
 	}
 	return nil
@@ -168,14 +160,10 @@ func (client *Client) WaitForChannelReady(name string) error {
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Channel",
-			APIVersion: eventingAPIVersion,
+			APIVersion: base.EventingAPIVersion,
 		},
 	}
-	if err := base.WaitForResourceReady(
-		client.Dynamic,
-		channelMeta,
-		"ChannelIsReady",
-	); err != nil {
+	if err := base.WaitForResourceReady(client.Dynamic, channelMeta); err != nil {
 		return err
 	}
 	return nil
@@ -206,14 +194,10 @@ func (client *Client) WaitForSubscriptionReady(name string) error {
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
-			APIVersion: eventingAPIVersion,
+			APIVersion: base.EventingAPIVersion,
 		},
 	}
-	if err := base.WaitForResourceReady(
-		client.Dynamic,
-		subscriptionMeta,
-		"SubscriptionIsReady",
-	); err != nil {
+	if err := base.WaitForResourceReady(client.Dynamic, subscriptionMeta); err != nil {
 		return err
 	}
 	return nil

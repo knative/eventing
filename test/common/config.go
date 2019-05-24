@@ -18,8 +18,6 @@ package common
 
 import "github.com/knative/eventing/pkg/reconciler/namespace/resources"
 
-const eventingAPIVersion = "eventing.knative.dev/v1alpha1"
-
 // ValidProvisionersMap saves the provisioner-features mapping.
 // Each pair means the provisioner support the list of features.
 var ValidProvisionersMap = map[string][]Feature{

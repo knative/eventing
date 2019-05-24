@@ -153,7 +153,7 @@ func (client *Client) CreatePod(pod *corev1.Pod, options ...func(*corev1.Pod, *C
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role.
-func (client *Client) CreateServiceAccountAndBinding(saName, crbName string) error {
+func (client *Client) CreateServiceAccountAndBinding(saName, crName string) error {
 	namespace := client.Namespace
 	sa := base.ServiceAccount(saName, namespace)
 	sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
@@ -162,11 +162,11 @@ func (client *Client) CreateServiceAccountAndBinding(saName, crbName string) err
 	}
 	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
 
-	crb := base.ClusterRoleBinding(saName, crbName, namespace)
+	crb := base.ClusterRoleBinding(saName, crName, namespace)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
 	if _, err := crbs.Create(crb); err != nil {
 		return err
 	}
-	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crbName)
+	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
 	return nil
 }
