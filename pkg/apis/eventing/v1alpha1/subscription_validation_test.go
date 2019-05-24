@@ -421,7 +421,7 @@ func TestValidChannel(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("", "apiVersion")
-			fe.Details = "only eventing.knative.dev/v1alpha1 or messaging.knative.dev/v1alpha1 are allowed for apiVersion"
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return apis.ErrMissingField("apiVersion").Also(fe)
 		}(),
 	}, {
@@ -432,7 +432,7 @@ func TestValidChannel(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("", "kind")
-			fe.Details = "only 'Channel$' kind is allowed"
+			fe.Details = "only 'Channel' kind is allowed"
 			return apis.ErrMissingField("kind").Also(fe)
 		}(),
 	}, {
@@ -444,7 +444,7 @@ func TestValidChannel(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("subscription", "kind")
-			fe.Details = "only 'Channel$' kind is allowed"
+			fe.Details = "only 'Channel' kind is allowed"
 			return fe
 		}(),
 	}, {
@@ -456,7 +456,7 @@ func TestValidChannel(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrInvalidValue("wrongapiversion", "apiVersion")
-			fe.Details = "only eventing.knative.dev/v1alpha1 or messaging.knative.dev/v1alpha1 are allowed for apiVersion"
+			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return fe
 		}(),
 	}, {
