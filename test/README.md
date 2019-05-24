@@ -78,17 +78,17 @@ environment that meets
 to specify the build tag `e2e`.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestMain$ -runFromMain=true
+go test -v -tags=e2e -count=1 ./test/e2e
 ```
 
-By default, it will run all tests configured for the default
-`ClusterChannelProvisioner` in `main_test.go`.
+By default, it will run all applicable tests against the cluster's default
+`ClusterChannelProvisioner`.
 
 If you want to run tests against other `ClusterChannelProvisioners`, you can
 specify them through `-clusterChannelProvisioners`.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestMain$ -runFromMain=true -clusterChannelProvisioners=in-memory,gcp-pubsub
+go test -v -tags=e2e -count=1 ./test/e2e -clusterChannelProvisioners=in-memory,gcp-pubsub
 ```
 
 #### One test case
@@ -104,8 +104,7 @@ By default, it will run the test against the default
 `ClusterChannelProvisioner`.
 
 If you want to run it against another `ClusterChannelProvisioner`, you can
-specify it through `-clusterChannelProvisioners`. Note that you can only specify
-one `ClusterChannelProvisioner` if you are not running from `TestMain`.
+specify it through `-clusterChannelProvisioners`.
 
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners=in-memory
@@ -155,4 +154,4 @@ uploading test images, `ko` will build an image from this folder.
 ## Flags
 
 Flags are similar to those in
-[`Knative Serving`](https://github.com/knative/serving/blob/master/test/README.md#flags-1)
+[`Knative Serving`](https://github.com/knative/serving/blob/master/test/README.md#flags-1).

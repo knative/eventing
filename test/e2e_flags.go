@@ -20,17 +20,16 @@ limitations under the License.
 package test
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"strings"
 
-	"github.com/knative/pkg/logging"
+	"log"
+
+	"github.com/knative/eventing/test/common"
 	pkgTest "github.com/knative/pkg/test"
 	testLogging "github.com/knative/pkg/test/logging"
 )
-
-var logger = logging.FromContext(context.Background()).Named("eventing-e2e-testing")
 
 // EventingFlags holds the command line flags specific to knative/eventing.
 var EventingFlags = initializeEventingFlags()
@@ -47,7 +46,7 @@ func (ps *Provisioners) String() string {
 func (ps *Provisioners) Set(value string) error {
 	// We'll test against all valid provisioners if we pass "all" through the flag.
 	if value == "all" {
-		for _, provisioner := range validProvisioners {
+		for provisioner := range common.ValidProvisionersMap {
 			*ps = append(*ps, provisioner)
 		}
 		return nil
@@ -56,7 +55,7 @@ func (ps *Provisioners) Set(value string) error {
 	for _, provisioner := range strings.Split(value, ",") {
 		provisioner := strings.TrimSpace(provisioner)
 		if !isValid(provisioner) {
-			logger.Fatalf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
+			log.Fatalf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
 		}
 
 		*ps = append(*ps, provisioner)
@@ -66,10 +65,8 @@ func (ps *Provisioners) Set(value string) error {
 
 // Check if the provisioner is a valid one.
 func isValid(provisioner string) bool {
-	for i := range validProvisioners {
-		if provisioner == validProvisioners[i] {
-			return true
-		}
+	if _, ok := common.ValidProvisionersMap[provisioner]; ok {
+		return true
 	}
 	return false
 }
@@ -77,25 +74,18 @@ func isValid(provisioner string) bool {
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
 type EventingEnvironmentFlags struct {
 	Provisioners
-	RunFromMain bool
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
 	f := EventingEnvironmentFlags{}
 
 	flag.Var(&f.Provisioners, "clusterChannelProvisioners", "The names of the Channel's clusterChannelProvisioners, which are separated by comma.")
-	flag.BoolVar(&f.RunFromMain, "runFromMain", false, "If runFromMain is set to false, the TestMain will be skipped when we run tests.")
 
 	flag.Parse()
 
 	// If no provisioner is passed through the flag, initialize it as the DefaultClusterChannelProvisioner.
 	if f.Provisioners == nil || len(f.Provisioners) == 0 {
-		f.Provisioners = []string{DefaultClusterChannelProvisioner}
-	}
-
-	// If we are not running from TestMain, only one single provisioner can be specified.
-	if !f.RunFromMain && len(f.Provisioners) != 1 {
-		logger.Fatal("Only one single provisioner can be specified if you are not running from TestMain.")
+		f.Provisioners = []string{common.DefaultClusterChannelProvisioner}
 	}
 
 	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)
