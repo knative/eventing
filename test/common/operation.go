@@ -64,7 +64,11 @@ func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event
 }
 
 // sendFakeEventToAddressable will create a sender pod, which will send the given event to the given url.
-func (client *Client) sendFakeEventToAddressable(senderName string, addr duckv1alpha1.Addressable, event *base.CloudEvent) error {
+func (client *Client) sendFakeEventToAddressable(
+	senderName string,
+	addr duckv1alpha1.Addressable,
+	event *base.CloudEvent,
+) error {
 	namespace := client.Namespace
 	url := fmt.Sprintf("http://%s", addr.Hostname)
 	client.Logf("Sending fake CloudEvent")
@@ -81,11 +85,19 @@ func (client *Client) sendFakeEventToAddressable(senderName string, addr duckv1a
 // WaitForBrokerReady waits until the broker is Ready.
 func (client *Client) WaitForBrokerReady(name string) error {
 	namespace := client.Namespace
-	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
-	if err := base.WaitForBrokerState(
-		brokers,
-		base.ResourceReadyChecker(client.Dynamic),
-		name,
+	brokerMeta := base.MetaObj{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Broker",
+			APIVersion: eventingAPIVersion,
+		},
+	}
+	if err := base.WaitForResourceReady(
+		client.Dynamic,
+		brokerMeta,
 		"BrokerIsReady",
 	); err != nil {
 		return err
@@ -111,11 +123,19 @@ func (client *Client) WaitForBrokersReady() error {
 // WaitForTriggerReady waits until the trigger is Ready.
 func (client *Client) WaitForTriggerReady(name string) error {
 	namespace := client.Namespace
-	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
-	if err := base.WaitForTriggerState(
-		triggers,
-		base.ResourceReadyChecker(client.Dynamic),
-		name,
+	triggerMeta := base.MetaObj{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Trigger",
+			APIVersion: eventingAPIVersion,
+		},
+	}
+	if err := base.WaitForResourceReady(
+		client.Dynamic,
+		triggerMeta,
 		"TriggerIsReady",
 	); err != nil {
 		return err
@@ -141,11 +161,19 @@ func (client *Client) WaitForTriggersReady() error {
 // WaitForChannelReady waits until the channel is Ready.
 func (client *Client) WaitForChannelReady(name string) error {
 	namespace := client.Namespace
-	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	if err := base.WaitForChannelState(
-		channels,
-		base.ResourceReadyChecker(client.Dynamic),
-		name,
+	channelMeta := base.MetaObj{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Channel",
+			APIVersion: eventingAPIVersion,
+		},
+	}
+	if err := base.WaitForResourceReady(
+		client.Dynamic,
+		channelMeta,
 		"ChannelIsReady",
 	); err != nil {
 		return err
@@ -171,11 +199,19 @@ func (client *Client) WaitForChannelsReady() error {
 // WaitForSubscriptionReady waits until the subscription is Ready.
 func (client *Client) WaitForSubscriptionReady(name string) error {
 	namespace := client.Namespace
-	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
-	if err := base.WaitForSubscriptionState(
-		subscriptions,
-		base.ResourceReadyChecker(client.Dynamic),
-		name,
+	subscriptionMeta := base.MetaObj{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Subscription",
+			APIVersion: eventingAPIVersion,
+		},
+	}
+	if err := base.WaitForResourceReady(
+		client.Dynamic,
+		subscriptionMeta,
 		"SubscriptionIsReady",
 	); err != nil {
 		return err

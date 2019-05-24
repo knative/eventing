@@ -64,7 +64,11 @@ func singleEvent(t *testing.T, encoding string) {
 		}
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
-		if err := client.CreateSubscription(subscriptionName, channelName, base.WithSubscriberForSubscription(loggerPodName)); err != nil {
+		if err := client.CreateSubscription(
+			subscriptionName,
+			channelName,
+			base.WithSubscriberForSubscription(loggerPodName),
+		); err != nil {
 			st.Fatalf("Failed to create subscription: %v", err)
 		}
 

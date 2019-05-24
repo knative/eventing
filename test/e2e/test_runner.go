@@ -60,7 +60,7 @@ func Setup(t *testing.T, provisioner string, runInParallel bool) *common.Client 
 	// Create a new namespace to run this test case.
 	// Combine the test name and CCP to avoid duplication.
 	baseFuncName := getBaseFuncName(t.Name())
-	namespace := makeK8sNamePrefix(baseFuncName) + "-" + provisioner
+	namespace := makeK8sNamePrefix(baseFuncName)
 	t.Logf("namespace is : %q", namespace)
 	client, err := common.NewClient(
 		pkgTest.Flags.Kubeconfig,

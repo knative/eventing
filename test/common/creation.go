@@ -17,17 +17,12 @@ limitations under the License.
 package common
 
 import (
-	"fmt"
-
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test/base"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var eventingAPIGroup = v1alpha1.SchemeGroupVersion.Group
-var eventingAPIVersion = v1alpha1.SchemeGroupVersion.Version
 var coreAPIGroup = corev1.SchemeGroupVersion.Group
 var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
@@ -39,7 +34,9 @@ func (client *Client) CreateChannel(name, provisonerName string) error {
 	channel := base.Channel(name, provisonerName)
 
 	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	if _, err := channels.Create(channel); err != nil {
+	// update channel with the new reference
+	channel, err := channels.Create(channel)
+	if err != nil {
 		return err
 	}
 	client.Cleaner.AddObj(channel)
@@ -62,7 +59,9 @@ func (client *Client) CreateSubscription(name, channelName string, options ...fu
 	subscription := base.Subscription(name, channelName, options...)
 
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
-	if _, err := subscriptions.Create(subscription); err != nil {
+	// update subscription with the new reference
+	subscription, err := subscriptions.Create(subscription)
+	if err != nil {
 		return err
 	}
 	client.Cleaner.AddObj(subscription)
@@ -85,7 +84,9 @@ func (client *Client) CreateBroker(name, provisionerName string) error {
 	broker := base.Broker(name, provisionerName)
 
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
-	if _, err := brokers.Create(broker); err != nil {
+	// update broker with the new reference
+	broker, err := brokers.Create(broker)
+	if err != nil {
 		return err
 	}
 	client.Cleaner.AddObj(broker)
@@ -108,7 +109,9 @@ func (client *Client) CreateTrigger(name string, options ...func(*v1alpha1.Trigg
 	trigger := base.Trigger(name, options...)
 
 	triggers := client.Eventing.EventingV1alpha1().Triggers(namespace)
-	if _, err := triggers.Create(trigger); err != nil {
+	// update trigger with the new reference
+	trigger, err := triggers.Create(trigger)
+	if err != nil {
 		return err
 	}
 	client.Cleaner.AddObj(trigger)
@@ -150,54 +153,20 @@ func (client *Client) CreatePod(pod *corev1.Pod, options ...func(*corev1.Pod, *C
 
 // CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role.
-func (client *Client) CreateServiceAccountAndBinding(saName, crName string) error {
+func (client *Client) CreateServiceAccountAndBinding(saName, crbName string) error {
 	namespace := client.Namespace
-	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
-			Namespace: namespace,
-		},
-	}
-	if err := client.createServiceAccount(sa); err != nil {
-		return err
-	}
-	crb := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s-admin", sa.Name, sa.Namespace),
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     crName,
-			APIGroup: rbacAPIGroup,
-		},
-	}
-	return client.createClusterRoleBinding(crb)
-}
-
-// createServiceAccount will create a service account.
-func (client *Client) createServiceAccount(sa *corev1.ServiceAccount) error {
-	namespace := client.Namespace
+	sa := base.ServiceAccount(saName, namespace)
 	sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
 	if _, err := sas.Create(sa); err != nil {
 		return err
 	}
-	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, sa.Name)
-	return nil
-}
+	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
 
-// createClusterRoleBinding will create a service account binding.
-func (client *Client) createClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) error {
-	clusterRoleBindings := client.Kube.Kube.RbacV1().ClusterRoleBindings()
-	if _, err := clusterRoleBindings.Create(crb); err != nil {
+	crb := base.ClusterRoleBinding(saName, crbName, namespace)
+	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
+	if _, err := crbs.Create(crb); err != nil {
 		return err
 	}
-	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.Name)
+	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crbName)
 	return nil
 }

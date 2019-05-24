@@ -19,9 +19,12 @@ package base
 // resources contains functions that construct Eventing CRs and other Kubernetes resources.
 
 import (
+	"fmt"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -268,6 +271,37 @@ func Service(name string, selector map[string]string) *corev1.Service {
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8080),
 			}},
+		},
+	}
+}
+
+// ServiceAccount creates a Kubernetes ServiceAccount with the given name and namespace.
+func ServiceAccount(name, namespace string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name, ClusterRole name and namespace.
+func ClusterRoleBinding(saName, crName, namespace string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s-%s-admin", saName, namespace),
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      saName,
+				Namespace: namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     crName,
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
 		},
 	}
 }

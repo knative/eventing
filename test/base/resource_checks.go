@@ -24,12 +24,14 @@ import (
 	"fmt"
 	"time"
 
-	eventingclient "github.com/knative/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
-	"github.com/knative/pkg/kmeta"
+	"github.com/knative/pkg/apis/duck"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.opencensus.io/trace"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
 )
 
 const (
@@ -38,100 +40,53 @@ const (
 	timeout  = 4 * time.Minute
 )
 
-// WaitForChannelState polls the status of the Channel called name from client
-// every interval until inState returns `true` indicating it is done, returns an
-// error or timeout. desc will be used to name the metric that is emitted to
-// track how long it took for name to get into the state checked by inState.
-func WaitForChannelState(
-	client eventingclient.ChannelInterface,
-	inState func(...kmeta.OwnerRefable) (bool, error),
-	name string,
+// MetaObj includes necessary meta data to retrieve the duck-type KResource.
+type MetaObj struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+}
+
+// WaitForResourceReady polls the status of the MetaObj from client
+// every interval until isResourceReady returns `true` indicating
+// it is done, returns an error or timeout. desc will be used to
+// name the metric that is emitted to track how long it took for
+// the resource to get into the state checked by isResourceReady.
+func WaitForResourceReady(
+	dynamicClient dynamic.Interface,
+	obj MetaObj,
 	desc string,
 ) error {
-	metricName := fmt.Sprintf("WaitForChannelState/%s/%s", name, desc)
+	metricName := fmt.Sprintf("WaitForResourceState/%s/%s", obj.Name, desc)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		c, err := client.Get(name, metav1.GetOptions{})
-		if err != nil {
-			return true, err
-		}
-		return inState(c)
+		return isResourceReady(dynamicClient, obj)
 	})
 }
 
-// WaitForSubscriptionState polls the status of the Subscription called name
-// from client every interval until inState returns `true` indicating it is
-// done, returns an error or timeout. desc will be used to name the metric that
-// is emitted to track how long it took for name to get into the state checked
-// by inState.
-func WaitForSubscriptionState(
-	client eventingclient.SubscriptionInterface,
-	inState func(...kmeta.OwnerRefable) (bool, error),
-	name string,
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForSubscriptionState/%s/%s", name, desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		c, err := client.Get(name, metav1.GetOptions{})
-		if err != nil {
-			return true, err
-		}
-		return inState(c)
-	})
-}
-
-// WaitForBrokerState polls the status of the Broker called name from client
-// every interval until inState returns `true` indicating it is done, returns an
-// error or timeout. desc will be used to name the metric that is emitted to
-// track how long it took for name to get into the state checked by inState.
-func WaitForBrokerState(
-	client eventingclient.BrokerInterface,
-	inState func(...kmeta.OwnerRefable) (bool, error),
-	name string,
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForBrokerState/%s/%s", name, desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		b, err := client.Get(name, metav1.GetOptions{})
-		if k8serrors.IsNotFound(err) {
-			// Return false as we are not done yet.
-			// We swallow the error to keep on polling
-			return false, nil
-		} else if err != nil {
-			// Return true to stop and return the error.
-			return true, err
-		}
-		return inState(b)
-	})
-}
-
-// WaitForTriggerState polls the status of the Trigger called name from client
-// every interval until inState returns `true` indicating it is done, returns an
-// error or timeout. desc will be used to name the metric that is emitted to
-// track how long it took for name to get into the state checked by inState.
-func WaitForTriggerState(
-	client eventingclient.TriggerInterface,
-	inState func(...kmeta.OwnerRefable) (bool, error),
-	name string,
-	desc string,
-) error {
-	metricName := fmt.Sprintf("WaitForTriggerState/%s/%s", name, desc)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		t, err := client.Get(name, metav1.GetOptions{})
-		if err != nil {
-			return true, err
-		}
-		return inState(t)
-	})
+// isResourceReady leverage duck-type to check if the given MetaObj is in ready state
+func isResourceReady(dynamicClient dynamic.Interface, obj MetaObj) (bool, error) {
+	// get the resource's name, namespace and gvr
+	name := obj.Name
+	namespace := obj.Namespace
+	gvk := obj.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	// use the helper functions to convert the resource to a KResource duck
+	tif := &duck.TypedInformerFactory{Client: dynamicClient, Type: &duckv1alpha1.KResource{}}
+	_, lister, err := tif.Get(gvr)
+	if err != nil {
+		return false, err
+	}
+	untyped, err := lister.ByNamespace(namespace).Get(name)
+	if k8serrors.IsNotFound(err) {
+		// Return false as we are not done yet.
+		// We swallow the error to keep on polling
+		return false, nil
+	} else if err != nil {
+		// Return true to stop and return the error.
+		return true, err
+	}
+	kr := untyped.(*duckv1alpha1.KResource)
+	return kr.Status.GetCondition(duckv1alpha1.ConditionReady).IsTrue(), nil
 }

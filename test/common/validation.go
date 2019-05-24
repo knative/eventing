@@ -94,6 +94,7 @@ func (client *Client) FindAnyLogContents(podName string, contents []string) (boo
 }
 
 // getContainerName gets name of the first container of the given pod.
+// Now our logger pod only contains one single container, and is only used for receiving events and validation.
 func (client *Client) getContainerName(podName, namespace string) (string, error) {
 	pod, err := client.Kube.Kube.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
