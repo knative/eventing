@@ -60,18 +60,19 @@ const (
 	subscriptionReadinessChanged   = "SubscriptionReadinessChanged"
 	subscriptionUpdateStatusFailed = "SubscriptionUpdateStatusFailed"
 	physicalChannelSyncFailed      = "PhysicalChannelSyncFailed"
-	channelReferenceFetchFailed    = "ChannelReferenceFetchFailed"
+	channelReferenceFailed         = "ChannelReferenceFailed"
 	subscriberResolveFailed        = "SubscriberResolveFailed"
-	resultResolveFailed            = "ResultResolveFailed"
+	replyResolveFailed             = "ReplyResolveFailed"
 )
 
 type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	subscriptionLister  listers.SubscriptionLister
-	addressableInformer eventingduck.AddressableInformer
-	tracker             tracker.Interface
+	subscriptionLister   listers.SubscriptionLister
+	addressableInformer  eventingduck.AddressableInformer
+	subscribableInformer eventingduck.SubscribableInformer
+	tracker              tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -83,12 +84,14 @@ func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	addressableInformer eventingduck.AddressableInformer,
+	subscribableInformer eventingduck.SubscribableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		addressableInformer: addressableInformer,
+		Base:                 reconciler.NewBase(opt, controllerAgentName),
+		subscriptionLister:   subscriptionInformer.Lister(),
+		addressableInformer:  addressableInformer,
+		subscribableInformer: subscribableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -180,13 +183,13 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	// Verify that `channel` exists.
-	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
+	// Verify the subscription has a valid `channel`, i.e., it exists and is Subscribable.
+	if err := r.validateChannel(ctx, subscription.Namespace, subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
-		subscription.Status.MarkReferencesNotResolved(channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: %v", err)
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to validate spec.channel: %v", err)
 		return err
 	}
 
@@ -208,8 +211,8 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Warn("Failed to resolve reply",
 			zap.Error(err),
 			zap.Any("reply", subscription.Spec.Reply))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
-		subscription.Status.MarkReferencesNotResolved(resultResolveFailed, "Failed to resolve spec.reply: %v", err)
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %v", err)
+		subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return err
 	}
 
@@ -238,6 +241,23 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
+}
+
+func (r *Reconciler) validateChannel(ctx context.Context, namespace string, channel corev1.ObjectReference) error {
+	// Validate that channel exists.
+	_, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, &channel)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to fetch Channel", zap.Error(err), zap.Any("channel", channel))
+		return err
+	}
+	// Verify is a Subscribable.
+	err = r.subscribableInformer.VerifyType(&channel)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to verify Subscribable type", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
@@ -311,6 +331,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 			zap.Any("replyStrategy", replyStrategy))
 		return "", err
 	}
+	// TODO should probably add a method to the addressable informer to verify the Addressable type.
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {

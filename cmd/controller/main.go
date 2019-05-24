@@ -98,6 +98,7 @@ func main() {
 
 	// Duck
 	addressableInformer := duck.NewAddressableInformer(opt)
+	subscribableInformer := duck.NewSubscribableInformer(opt)
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -107,6 +108,7 @@ func main() {
 			opt,
 			subscriptionInformer,
 			addressableInformer,
+			subscribableInformer,
 		),
 		namespace.NewController(
 			opt,
