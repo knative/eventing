@@ -14,45 +14,54 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This file contains an object which encapsulates k8s clients which are useful for e2e tests.
+// This file contains an object which encapsulates k8s clients and other info which are useful for e2e tests.
+// Each test case will need to create its own client.
 
-package test
+package common
 
 import (
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"github.com/knative/pkg/test"
+	"github.com/knative/pkg/test/logging"
 	"k8s.io/client-go/dynamic"
 )
 
-// Clients holds instances of interfaces for making requests to Knative.
-type Clients struct {
+// Client holds instances of interfaces for making requests to Knative.
+type Client struct {
 	Kube     *test.KubeClient
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
+
+	Namespace string
+	Logf      logging.FormatLogger
+	Cleaner   *Cleaner
 }
 
-// NewClients instantiates and returns several clientsets required for making request to the
+// NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
-func NewClients(configPath string, clusterName string) (*Clients, error) {
-	clients := &Clients{}
+func NewClient(configPath string, clusterName string, namespace string, logger logging.FormatLogger) (*Client, error) {
+	client := &Client{}
 	cfg, err := test.BuildClientConfig(configPath, clusterName)
 	if err != nil {
 		return nil, err
 	}
-	clients.Kube, err = test.NewKubeClient(configPath, clusterName)
+	client.Kube, err = test.NewKubeClient(configPath, clusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	clients.Eventing, err = eventing.NewForConfig(cfg)
+	client.Eventing, err = eventing.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	clients.Dynamic, err = dynamic.NewForConfig(cfg)
+	client.Dynamic, err = dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return clients, nil
+	client.Namespace = namespace
+	client.Logf = logger
+	client.Cleaner = NewCleaner(logger, client.Dynamic)
+	return client, nil
 }
