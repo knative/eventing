@@ -210,7 +210,6 @@ func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, su
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
 	topicName := d.topicFunc(utils.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
-	// TODO check whether group can be the same for provisioner and CRD impl?
 	group := fmt.Sprintf("%s.%s", controller.Name, sub.UID)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
 
