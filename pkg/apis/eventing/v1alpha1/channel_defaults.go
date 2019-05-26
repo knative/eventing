@@ -19,10 +19,6 @@ package v1alpha1
 import (
 	"context"
 
-	"github.com/knative/eventing/pkg/apis/eventing"
-	"github.com/knative/pkg/apis"
-	"k8s.io/apimachinery/pkg/api/equality"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -52,25 +48,7 @@ func (c *Channel) SetDefaults(ctx context.Context) {
 		}
 	}
 	c.Spec.SetDefaults(ctx)
-
-	if ui := apis.GetUserInfo(ctx); ui != nil {
-		ans := c.GetAnnotations()
-		if ans == nil {
-			ans = map[string]string{}
-			defer c.SetAnnotations(ans)
-		}
-
-		if apis.IsInUpdate(ctx) {
-			old := apis.GetBaseline(ctx).(*Channel)
-			if equality.Semantic.DeepEqual(old.Spec, c.Spec) {
-				return
-			}
-			ans[eventing.UpdaterAnnotation] = ui.Username
-		} else {
-			ans[eventing.CreatorAnnotation] = ui.Username
-			ans[eventing.UpdaterAnnotation] = ui.Username
-		}
-	}
+	setUserInfoAnnotations(c, ctx)
 }
 
 func (cs *ChannelSpec) SetDefaults(ctx context.Context) {}

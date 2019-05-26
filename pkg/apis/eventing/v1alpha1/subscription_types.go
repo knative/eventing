@@ -200,3 +200,8 @@ type SubscriptionList struct {
 func (t *Subscription) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Subscription")
 }
+
+// GetSpec returns the spec of the Subscription.
+func (s *Subscription) GetSpec() interface{} {
+	return s.Spec
+}

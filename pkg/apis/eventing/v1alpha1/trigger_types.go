@@ -108,3 +108,8 @@ type TriggerList struct {
 func (t *Trigger) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Trigger")
 }
+
+// GetSpec returns the spec of the Trigger.
+func (t *Trigger) GetSpec() interface{} {
+	return t.Spec
+}
