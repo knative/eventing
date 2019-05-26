@@ -62,7 +62,6 @@ spec:
                   minLength: 1
                 kind:
                   type: string
-                  pattern: "^Channel$"
                 name:
                   type: string
                   minLength: 1
@@ -106,7 +105,6 @@ spec:
                       minLength: 1
                     kind:
                       type: string
-                      pattern: "^Channel$"
                     name:
                       type: string
                       minLength: 1
