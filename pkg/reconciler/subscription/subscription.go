@@ -184,7 +184,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	// Verify the subscription has a valid `channel`, i.e., it exists and is Subscribable.
-	if err := r.validateChannel(ctx, subscription.Namespace, &subscription.Spec.Channel); err != nil {
+	if err := r.validateChannel(ctx, subscription.Namespace, subscription.Spec.Channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
@@ -243,15 +243,20 @@ func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
 }
 
-func (r *Reconciler) validateChannel(ctx context.Context, namespace string, channel *corev1.ObjectReference) error {
+func (r *Reconciler) validateChannel(ctx context.Context, namespace string, channel corev1.ObjectReference) error {
 	// Validate that channel exists.
-	_, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, channel)
+	_, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, &channel)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to fetch Channel", zap.Error(err), zap.Any("channel", channel))
 		return err
 	}
+
+	if channel.Namespace == "" {
+		channel.Namespace = namespace
+	}
+
 	// Verify is a Subscribable.
-	err = r.subscribableInformer.VerifyType(channel)
+	err = r.subscribableInformer.VerifyType(&channel)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to verify Subscribable type", zap.Error(err))
 		return err
@@ -331,7 +336,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 			zap.Any("replyStrategy", replyStrategy))
 		return "", err
 	}
-	// TODO should probably add a method to the addressable informer to verify the Addressable type.
+	// TODO add a method to the addressable informer to verify the Addressable type.
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
