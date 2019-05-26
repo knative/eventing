@@ -29,6 +29,12 @@ rules:
       - update
       - patch
   - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - kafkachannels/finalizers
+    verbs:
+      - update
+  - apiGroups:
       - "" # Core API group.
     resources:
       - services
