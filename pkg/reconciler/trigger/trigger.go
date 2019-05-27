@@ -113,12 +113,12 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	triggerInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		// Call the tracker's OnChanged method, but we've seen the objects
 		// coming through this path missing TypeMeta, so ensure it is properly
 		// populated.
@@ -130,7 +130,7 @@ func NewController(
 
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 	return impl
 }

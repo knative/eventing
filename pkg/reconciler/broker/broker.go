@@ -117,21 +117,21 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	brokerInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl
