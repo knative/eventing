@@ -9,11 +9,11 @@ Knative Eventing e2e tests
 to verify the behavior of this specific implementation.
 
 If you want to add tests for a new `ClusterChannelProvisioner` and reuse
-existing tests for it, please look into [config.go](../common/config.go)
-and make corresponding changes.
+existing tests for it, please look into [config.go](../common/config.go) and
+make corresponding changes.
 
-If you want to add a new test case, please add one new test file under
-[e2e](.) and use the `RunTests` function to run against multiple
+If you want to add a new test case, please add one new test file under [e2e](.)
+and use the `RunTests` function to run against multiple
 `ClusterChannelProvisioners` that have the feature you want to test.
 
 ### Requirements
