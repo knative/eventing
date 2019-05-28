@@ -19,7 +19,7 @@ package controller
 import (
 	"context"
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
-	"github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
+	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
@@ -47,7 +47,7 @@ type Reconciler struct {
 
 	kafkaDispatcher *dispatcher.KafkaDispatcher
 
-	eventingClientSet    *versioned.Clientset
+	eventingClientSet    clientset.Interface
 	kafkachannelLister   listers.KafkaChannelLister
 	kafkachannelInformer cache.SharedIndexInformer
 	impl                 *controller.Impl
@@ -60,7 +60,7 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet *versioned.Clientset,
+	eventingClientSet clientset.Interface,
 	kafkaDispatcher *dispatcher.KafkaDispatcher,
 	kafkachannelInformer messaginginformers.KafkaChannelInformer,
 ) *controller.Impl {

@@ -27,7 +27,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
-	"github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
+	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller/resources"
@@ -78,7 +78,7 @@ type Reconciler struct {
 	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
 	kafkaClusterAdmin sarama.ClusterAdmin
 
-	eventingClientSet    *versioned.Clientset
+	eventingClientSet    clientset.Interface
 	kafkachannelLister   listers.KafkaChannelLister
 	kafkachannelInformer cache.SharedIndexInformer
 	deploymentLister     appsv1listers.DeploymentLister
@@ -102,7 +102,7 @@ var _ cache.ResourceEventHandler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet *versioned.Clientset,
+	eventingClientSet clientset.Interface,
 	kafkaConfig *utils.KafkaConfig,
 	dispatcherNamespace string,
 	dispatcherDeploymentName string,
