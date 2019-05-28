@@ -17,11 +17,9 @@ limitations under the License.
 package common
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/knative/eventing/test/base"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -45,32 +43,43 @@ func (client *Client) LabelNamespace(labels map[string]string) error {
 
 // SendFakeEventToChannel will send the given event to the given channel.
 func (client *Client) SendFakeEventToChannel(senderName, channelName string, event *base.CloudEvent) error {
-	namespace := client.Namespace
-	channel, err := client.Eventing.EventingV1alpha1().Channels(namespace).Get(channelName, metav1.GetOptions{})
+	url, err := client.GetChannelURL(channelName)
 	if err != nil {
 		return err
 	}
-	return client.sendFakeEventToAddressable(senderName, channel.Status.Address, event)
+	return client.sendFakeEventToAddress(senderName, url, event)
+}
+
+// GetChannelURL will return the url for the given channel.
+func (client *Client) GetChannelURL(name string) (string, error) {
+	namespace := client.Namespace
+	channelMeta := base.Meta(name, namespace, "Channel")
+	return base.GetAddressableURI(client.Dynamic, channelMeta)
 }
 
 // SendFakeEventToBroker will send the given event to the given broker.
 func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event *base.CloudEvent) error {
-	namespace := client.Namespace
-	broker, err := client.Eventing.EventingV1alpha1().Brokers(namespace).Get(brokerName, metav1.GetOptions{})
+	url, err := client.GetBrokerURL(brokerName)
 	if err != nil {
 		return err
 	}
-	return client.sendFakeEventToAddressable(senderName, broker.Status.Address, event)
+	return client.sendFakeEventToAddress(senderName, url, event)
 }
 
-// sendFakeEventToAddressable will create a sender pod, which will send the given event to the given url.
-func (client *Client) sendFakeEventToAddressable(
+// GetBrokerURL will return the url for the given broker.
+func (client *Client) GetBrokerURL(name string) (string, error) {
+	namespace := client.Namespace
+	brokerMeta := base.Meta(name, namespace, "Broker")
+	return base.GetAddressableURI(client.Dynamic, brokerMeta)
+}
+
+// sendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
+func (client *Client) sendFakeEventToAddress(
 	senderName string,
-	addr duckv1alpha1.Addressable,
+	url string,
 	event *base.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	url := fmt.Sprintf("http://%s", addr.Hostname)
 	client.Logf("Sending fake CloudEvent")
 	pod := base.EventSenderPod(senderName, url, event)
 	if err := client.CreatePod(pod); err != nil {

@@ -140,6 +140,15 @@ func WithSubscriberForTrigger(name string) func(*v1alpha1.Trigger) {
 	}
 }
 
+// WithURIForTrigger returns an option that adds a uri for the given Trigger.
+func WithURIForTrigger(uri string) func(*v1alpha1.Trigger) {
+	return func(t *v1alpha1.Trigger) {
+		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+			URI: &uri,
+		}
+	}
+}
+
 // Trigger returns a Trigger.
 func Trigger(name string, options ...func(*v1alpha1.Trigger)) *v1alpha1.Trigger {
 	trigger := &v1alpha1.Trigger{
