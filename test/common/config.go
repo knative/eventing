@@ -21,10 +21,10 @@ import "github.com/knative/eventing/pkg/reconciler/namespace/resources"
 // ValidProvisionersMap saves the provisioner-features mapping.
 // Each pair means the provisioner support the list of features.
 var ValidProvisionersMap = map[string][]Feature{
-	InMemoryProvisioner:  []Feature{FeatureBasic},
-	GCPPubSubProvisioner: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	KafkaProvisioner:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	NatssProvisioner:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	InMemoryProvisioner:  {FeatureBasic},
+	GCPPubSubProvisioner: {FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	KafkaProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	NatssProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
 }
 
 const (
