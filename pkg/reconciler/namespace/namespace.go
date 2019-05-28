@@ -94,7 +94,7 @@ func NewController(
 		Base:            reconciler.NewBase(opt, controllerAgentName),
 		namespaceLister: namespaceInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
 	r.Logger.Info("Setting up event handlers")
