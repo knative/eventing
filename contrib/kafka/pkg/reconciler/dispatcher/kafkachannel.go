@@ -72,7 +72,7 @@ func NewController(
 		kafkachannelLister:   kafkachannelInformer.Lister(),
 		kafkachannelInformer: kafkachannelInformer.Informer(),
 	}
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 

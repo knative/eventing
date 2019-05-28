@@ -126,7 +126,7 @@ func NewController(
 		serviceLister:            serviceInformer.Lister(),
 		endpointsLister:          endpointsInformer.Lister(),
 	}
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	kafkachannelInformer.Informer().AddEventHandler(reconciler.Handler(r.impl.Enqueue))
