@@ -132,7 +132,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName),
+				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: channels.eventing.knative.dev %q not found", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -141,33 +141,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName)),
-				),
-			}},
-		}, {
-			Name: "subscription, but channel is not subscribable",
-			Objects: []runtime.Object{
-				NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(nonAddressableGVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-				),
-				NewUnstructured(subscriberGVK, subscriberName, testNS),
-				NewTrigger(channelName, testNS, "broker"),
-			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: true,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: not subscribable"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(nonAddressableGVK, channelName),
-					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-					// The first reconciliation will initialize the status conditions.
-					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: not subscribable")),
+					WithSubscriptionReferencesNotResolved(channelReferenceFetchFailed, fmt.Sprintf("Failed to validate spec.channel exists: channels.eventing.knative.dev %q not found", channelName)),
 				),
 			}},
 		}, {
@@ -187,7 +161,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: status does not contain address"),
+				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: status does not contain address"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -673,11 +647,10 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:                 reconciler.NewBase(opt, controllerAgentName),
-			subscriptionLister:   listers.GetSubscriptionLister(),
-			tracker:              tracker.New(func(string) {}, 0),
-			addressableInformer:  &fakeAddressableInformer{},
-			subscribableInformer: &fakeSubscribableInformer{},
+			Base:                reconciler.NewBase(opt, controllerAgentName),
+			subscriptionLister:  listers.GetSubscriptionLister(),
+			tracker:             tracker.New(func(string) {}, 0),
+			addressableInformer: &fakeAddressableInformer{},
 		}
 	},
 		false,
@@ -692,12 +665,11 @@ func TestNew(t *testing.T) {
 
 	subscriptionInformer := eventingInformer.Eventing().V1alpha1().Subscriptions()
 	addressableInformer := &fakeAddressableInformer{}
-	subscribableInformer := &fakeSubscribableInformer{}
 	c := NewController(reconciler.Options{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingClient,
 		Logger:            logtesting.TestLogger(t),
-	}, subscriptionInformer, addressableInformer, subscribableInformer)
+	}, subscriptionInformer, addressableInformer)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
@@ -708,16 +680,6 @@ type fakeAddressableInformer struct{}
 
 func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
 	return func(corev1.ObjectReference) error { return nil }
-}
-
-type fakeSubscribableInformer struct{}
-
-func (*fakeSubscribableInformer) VerifyType(objRef *corev1.ObjectReference) error {
-	// TODO allow to mock responses.
-	if objRef == nil || objRef.Kind != "Channel" {
-		return fmt.Errorf("not subscribable")
-	}
-	return nil
 }
 
 func TestFinalizers(t *testing.T) {

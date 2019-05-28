@@ -60,7 +60,7 @@ const (
 	subscriptionReadinessChanged   = "SubscriptionReadinessChanged"
 	subscriptionUpdateStatusFailed = "SubscriptionUpdateStatusFailed"
 	physicalChannelSyncFailed      = "PhysicalChannelSyncFailed"
-	channelReferenceFailed         = "ChannelReferenceFailed"
+	channelReferenceFetchFailed    = "ChannelReferenceFetchFailed"
 	subscriberResolveFailed        = "SubscriberResolveFailed"
 	replyResolveFailed             = "ReplyResolveFailed"
 )
@@ -69,10 +69,9 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	subscriptionLister   listers.SubscriptionLister
-	addressableInformer  eventingduck.AddressableInformer
-	subscribableInformer eventingduck.SubscribableInformer
-	tracker              tracker.Interface
+	subscriptionLister  listers.SubscriptionLister
+	addressableInformer eventingduck.AddressableInformer
+	tracker             tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -84,14 +83,12 @@ func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	addressableInformer eventingduck.AddressableInformer,
-	subscribableInformer eventingduck.SubscribableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:                 reconciler.NewBase(opt, controllerAgentName),
-		subscriptionLister:   subscriptionInformer.Lister(),
-		addressableInformer:  addressableInformer,
-		subscribableInformer: subscribableInformer,
+		Base:                reconciler.NewBase(opt, controllerAgentName),
+		subscriptionLister:  subscriptionInformer.Lister(),
+		addressableInformer: addressableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
 
@@ -183,13 +180,13 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	// Verify the subscription has a valid `channel`, i.e., it exists and is Subscribable.
-	if err := r.validateChannel(ctx, subscription.Namespace, subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Warn("Failed to validate Channel",
+	// Verify that `channel` exists.
+	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: %v", err)
-		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to validate spec.channel: %v", err)
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
 		return err
 	}
 
@@ -241,28 +238,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
-}
-
-func (r *Reconciler) validateChannel(ctx context.Context, namespace string, channel corev1.ObjectReference) error {
-	// Validate that channel exists.
-	_, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, &channel)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to fetch Channel", zap.Error(err), zap.Any("channel", channel))
-		return err
-	}
-
-	if channel.Namespace == "" {
-		channel.Namespace = namespace
-	}
-
-	// Verify is a Subscribable.
-	err = r.subscribableInformer.VerifyType(&channel)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to verify Subscribable type", zap.Error(err))
-		return err
-	}
-
-	return nil
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
