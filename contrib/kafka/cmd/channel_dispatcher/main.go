@@ -22,6 +22,7 @@ import (
 	"log"
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
+	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
@@ -32,6 +33,7 @@ import (
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -85,6 +87,9 @@ func main() {
 
 	// Messaging
 	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
+
+	// Adding the scheme.
+	eventingScheme.AddToScheme(scheme.Scheme)
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
