@@ -36,15 +36,15 @@ TestEventTransformationForTrigger tests the following topology:
 EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
                    |
                    |
-				   |-------> Trigger2 -------> Service(Logger)
-				   |
-				   |
-				   |-------> Trigger3 -------> Channel --------> Subscription --------> Service(Logger)
+                   |-------> Trigger2 -------> Service(Logger1)
+                   |
+                   |
+                   |-------> Trigger3 -------> Channel --------> Subscription --------> Service(Logger2)
 
 Explanation:
 Trigger1 filters the orignal event and tranforms it to a new event,
-Trigger2 filters all events,
-Trigger3 filters the transformed event and send it to Channel.
+Trigger2 logs all events,
+Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlow(t *testing.T) {
