@@ -18,19 +18,25 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
+	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -40,9 +46,9 @@ const (
 	// itself when creating events.
 	controllerAgentName = "pipeline-controller"
 
-	pipelineReconciled         = "PipelineReconciled"
-	pipelineReconcileFailed    = "PipelineReconcileFailed"
-	pipelineUpdateStatusFailed = "PipelineUpdateStatusFailed"
+	reconciled         = "Reconciled"
+	reconcileFailed    = "ReconcileFailed"
+	updateStatusFailed = "UpdateStatusFailed"
 )
 
 type Reconciler struct {
@@ -50,8 +56,8 @@ type Reconciler struct {
 
 	// listers index properties about resources
 	pipelineLister     listers.PipelineLister
-	channelLister      listers.ChannelLister
-	subscriptionLister listers.SubscriptionLister
+	channelLister      eventinglisters.ChannelLister
+	subscriptionLister eventinglisters.SubscriptionLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -61,7 +67,7 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events
 func NewController(
 	opt reconciler.Options,
-	pipelineInformer eventinginformers.PipelineInformer,
+	pipelineInformer informers.PipelineInformer,
 	channelInformer eventinginformers.ChannelInformer,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 ) *controller.Impl {
@@ -80,7 +86,7 @@ func NewController(
 
 	// Register handlers for Channel/Subscriptions that are owned by Pipeline, so that
 	// we get notified if they change.
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Channel")),
 		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
 	})
@@ -92,9 +98,11 @@ func NewController(
 	return impl
 }
 
-// Reconcile will check if the channel is being watched by provisioner's channel controller
-// This will improve UX. See https://github.com/knative/eventing/issues/779
+// Reconcile compares the actual state with the desired, and attempts to
+// reconcile the two. It then updates the Status block of the Pipeline resource
+// with the current Status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
+	logging.FromContext(ctx).Error("reconciling", zap.String("key", key))
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -112,11 +120,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	// Delete is a no-op.
-	if original.DeletionTimestamp != nil {
-		return nil
-	}
-
 	// Don't modify the informers copy
 	pipeline := original.DeepCopy()
 
@@ -125,14 +128,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	reconcileErr := r.reconcile(ctx, pipeline)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Pipeline", zap.Error(reconcileErr))
+		r.Recorder.Eventf(pipeline, corev1.EventTypeWarning, reconcileFailed, "Pipeline reconciliation failed: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Successfully reconciled Pipeline")
-		r.Recorder.Eventf(pipeline, corev1.EventTypeNormal, pipelineReconciled, "Pipeline reconciled: %s", key)
+		r.Recorder.Eventf(pipeline, corev1.EventTypeNormal, reconciled, "Pipeline reconciled")
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, pipeline.DeepCopy()); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Pipeline status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(pipeline, corev1.EventTypeWarning, pipelineUpdateStatusFailed, "Failed to update pipeline status: %s", key)
+		r.Recorder.Eventf(pipeline, corev1.EventTypeWarning, updateStatusFailed, "Failed to update pipeline status: %s", key)
 		return updateStatusErr
 	}
 
@@ -140,47 +144,69 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return reconcileErr
 }
 
+func pipelineChannelName(pipelineName string, step int) string {
+	return fmt.Sprintf("%s-kn-pipeline-%d", pipelineName, step)
+}
+
 func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error {
 	p.Status.InitializeConditions()
 
-	// Do not Initialize() Status in pipeline-default-controller. It will set ChannelConditionProvisionerInstalled=True
-	// Directly call GetCondition(). If the Status was never initialized then GetCondition() will return nil and
-	// IsUnknown() will return true
-	c := ch.Status.GetCondition(v1alpha1.ChannelConditionProvisionerInstalled)
-
-	if c == nil || c.IsUnknown() {
-
-		var proName string
-		var proKind string
-		if ch.Spec.Provisioner != nil {
-			proName = ch.Spec.Provisioner.Name
-			proKind = ch.Spec.Provisioner.Kind
-		}
-
-		ch.Status.MarkProvisionerNotInstalled(
-			"Provisioner not found.",
-			"Specified provisioner [Name:%s Kind:%s] is not installed or not controlling the channel.",
-			proName,
-			proKind,
-		)
+	// Reconciling pipeline is pretty straightforward, it does the following things:
+	// 1. Create a channel fronting the whole pipeline
+	// 2. For each of the Steps, create a Subscription to the previous Channel
+	//    (hence the first step above for the first step in the "steps"), where the Subscriber points to the
+	//    Step, and create intermediate channel for feeding the Reply to (if we allow Reply to be something else
+	//    than channel, we could just (optionally) feed it directly to the following subscription.
+	// 3. Rinse and repeat step #2 above for each Step in the list
+	// 4. If there's a Reply, then the last Subscription will be configured to send the reply to that.
+	if p.DeletionTimestamp != nil {
+		// Everything is cleaned up by the garbage collector.
+		return nil
 	}
+
+	channelResourceInterface, err := duck.ResourceInterface(r.DynamicClientSet, p.Namespace, &p.Spec.ChannelTemplate.ChannelCRD)
+	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate.ChannelCRD), zap.Error(err))
+		return err
+	}
+
+	ingressChannelName := pipelineChannelName(p.Name, 0)
+
+	// Use the duck typed one here instead of this Get.
+	c, err := channelResourceInterface.Get(ingressChannelName, metav1.GetOptions{})
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			newChannel := resources.NewChannel(ingressChannelName, &p.Spec.ChannelTemplate)
+			channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+				return err
+			}
+			logging.FromContext(ctx).Error(fmt.Sprintf("Created Channel: %s/%s", p.Namespace, ingressChannelName), zap.Any("NewChannel", zap.Any("NewChannel", newChannel)))
+		} else {
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+			return err
+		}
+	}
+	logging.FromContext(ctx).Error(fmt.Sprintf("Found Channel: %s/%s", p.Namespace, ingressChannelName), zap.Any("NewChannel", c))
+
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel) (*v1alpha1.Channel, error) {
-	channel, err := r.channelLister.Channels(desired.Namespace).Get(desired.Name)
+func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Pipeline) (*v1alpha1.Pipeline, error) {
+	p, err := r.pipelineLister.Pipelines(desired.Namespace).Get(desired.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	// If there's nothing to update, just return.
-	if reflect.DeepEqual(channel.Status, desired.Status) {
-		return channel, nil
+	if reflect.DeepEqual(p.Status, desired.Status) {
+		return p, nil
 	}
 
 	// Don't modify the informers copy.
-	existing := channel.DeepCopy()
+	existing := p.DeepCopy()
 	existing.Status = desired.Status
 
-	return r.EventingClientSet.EventingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
+	return r.EventingClientSet.MessagingV1alpha1().Pipelines(desired.Namespace).UpdateStatus(existing)
 }

@@ -136,6 +136,10 @@ func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
 
+func (l *Listers) GetPipelineLister() messaginglisters.PipelineLister {
+	return messaginglisters.NewPipelineLister(l.indexerFor(&messagingv1alpha1.Pipeline{}))
+}
+
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {
 	return sourcelisters.NewCronJobSourceLister(l.indexerFor(&sourcesv1alpha1.CronJobSource{}))
 }

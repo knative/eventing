@@ -18,6 +18,8 @@ package v1alpha1
 
 import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 
+var pCondSet = duckv1alpha1.NewLivingConditionSet(PipelineConditionReferencesResolved)
+
 const (
 	// PipelineConditionReady has status True when all subconditions below have been set to True.
 	PipelineConditionReady = duckv1alpha1.ConditionReady
@@ -33,25 +35,25 @@ const (
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ss *PipelineStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return subCondSet.Manage(ss).GetCondition(t)
+	return pCondSet.Manage(ss).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
 func (ss *PipelineStatus) IsReady() bool {
-	return subCondSet.Manage(ss).IsHappy()
+	return pCondSet.Manage(ss).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ss *PipelineStatus) InitializeConditions() {
-	subCondSet.Manage(ss).InitializeConditions()
+	pCondSet.Manage(ss).InitializeConditions()
 }
 
 // MarkReferencesResolved sets the ReferencesResolved condition to True state.
 func (ss *PipelineStatus) MarkReferencesResolved() {
-	subCondSet.Manage(ss).MarkTrue(PipelineConditionReferencesResolved)
+	pCondSet.Manage(ss).MarkTrue(PipelineConditionReferencesResolved)
 }
 
 // MarkChannelReady sets the ChannelReady condition to True state.
 func (ss *PipelineStatus) MarkChannelReady() {
-	subCondSet.Manage(ss).MarkTrue(PipelineConditionChannelReady)
+	pCondSet.Manage(ss).MarkTrue(PipelineConditionChannelReady)
 }

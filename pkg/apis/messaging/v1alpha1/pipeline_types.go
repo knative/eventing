@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -46,7 +47,9 @@ type Pipeline struct {
 // Check that Pipeline can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*Pipeline)(nil)
 var _ apis.Defaultable = (*Pipeline)(nil)
-var _ apis.Immutable = (*Pipeline)(nil)
+
+// TOOD: make appropriate fields immutable.
+//var _ apis.Immutable = (*Pipeline)(nil)
 var _ runtime.Object = (*Pipeline)(nil)
 var _ webhook.GenericCRD = (*Pipeline)(nil)
 
@@ -129,6 +132,6 @@ type PipelineList struct {
 }
 
 // GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
-func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
+func (p *Pipeline) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("InMemoryChannel")
 }
