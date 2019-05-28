@@ -30,10 +30,9 @@ func isChannelEmpty(f corev1.ObjectReference) bool {
 }
 
 // Valid if it is a valid object reference.
-// The ideal thing would be to check whether is a Subscribable, but that
-// requires an API server call.
 func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
 	errs := isValidObjectReference(f)
+	// TODO get the CRD and check for a channel label or annotation.
 	return errs
 }
 

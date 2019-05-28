@@ -311,7 +311,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 			zap.Any("replyStrategy", replyStrategy))
 		return "", err
 	}
-	// TODO add a method to the addressable informer to verify the Addressable type.
+
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
