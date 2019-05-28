@@ -67,7 +67,7 @@ func NewController(
 		Base:          reconciler.NewBase(opt, controllerAgentName),
 		channelLister: channelInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	channelInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))

@@ -106,7 +106,7 @@ func NewController(
 		deploymentLister:      deploymentInformer.Lister(),
 		source:                source,
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 

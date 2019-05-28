@@ -78,7 +78,7 @@ func NewController(
 		eventTypeLister: eventTypeInformer.Lister(),
 		brokerLister:    brokerInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	eventTypeInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
