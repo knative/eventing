@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-// MetaResource includes necessary meta data to retrieve the duck-type KResource.
+// MetaResource includes necessary meta data to retrieve the generic Kubernetes resource.
 type MetaResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,7 +53,7 @@ func GetGenericObject(dynamicClient dynamic.Interface, obj *MetaResource, rtype 
 	namespace := obj.Namespace
 	gvk := obj.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-	// use the helper functions to convert the resource to a KResource duck
+	// use the helper functions to convert the resource to the given duck-type
 	tif := &duck.TypedInformerFactory{Client: dynamicClient, Type: rtype}
 	_, lister, err := tif.Get(gvr)
 	if err != nil {

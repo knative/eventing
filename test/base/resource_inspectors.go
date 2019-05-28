@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-// GetAddressableURI returns the uri for the given resource that implements Addressable duck.
+// GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.
 func GetAddressableURI(dynamicClient dynamic.Interface, obj *MetaResource) (string, error) {
 	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1alpha1.AddressableType{})
 	if err != nil {
