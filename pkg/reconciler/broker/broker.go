@@ -113,7 +113,7 @@ func NewController(
 		filterImage:               args.FilterImage,
 		filterServiceAccountName:  args.FilterServiceAccountName,
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 

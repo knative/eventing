@@ -110,7 +110,7 @@ func NewController(
 		serviceLister:       serviceInformer.Lister(),
 		addressableInformer: addressableInformer,
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
