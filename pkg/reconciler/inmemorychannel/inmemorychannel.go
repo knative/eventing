@@ -110,7 +110,7 @@ func NewController(
 	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	inmemorychannelinformer.Informer().AddEventHandler(reconciler.Handler(r.impl.Enqueue))
+	inmemorychannelinformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
 
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause

@@ -70,7 +70,7 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	channelInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	return impl
 }

@@ -98,19 +98,19 @@ func NewController(
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
 	r.Logger.Info("Setting up event handlers")
-	namespaceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us the namespace's resources we need to reconcile.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
 
 	// Watch all the resources that this reconciler reconciles.
-	serviceAccountInformer.Informer().AddEventHandler(reconciler.Handler(
+	serviceAccountInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
 	))
-	roleBindingInformer.Informer().AddEventHandler(reconciler.Handler(
+	roleBindingInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
 	))
-	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
 	))
 
