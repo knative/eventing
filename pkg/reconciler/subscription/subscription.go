@@ -66,6 +66,10 @@ const (
 	channelReferenceFailed         = "ChannelReferenceFailed"
 	subscriberResolveFailed        = "SubscriberResolveFailed"
 	replyResolveFailed             = "ReplyResolveFailed"
+
+	// Label to specify valid subscribable channel CRDs.
+	channelCrdLabelKey   = "messaging,knative.dev/subscribable"
+	channelCrdLabelValue = "true"
 )
 
 type Reconciler struct {
@@ -248,7 +252,7 @@ func (r *Reconciler) validateChannel(ctx context.Context, namespace string, chan
 	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, channel); err != nil {
 		return err
 	}
-	// Special case for backwards compatibility, allow Channel COs.
+	// Special case for backwards compatibility, channel COs are valid channels.
 	if channel.Kind == "Channel" && channel.APIVersion == "eventing.knative.dev/v1alpha1" {
 		return nil
 	}
@@ -257,12 +261,14 @@ func (r *Reconciler) validateChannel(ctx context.Context, namespace string, chan
 	name := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
 	crd, err := r.ApiExtensionsClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
 	if err != nil {
+		logging.FromContext(ctx).Error("Unable to retrieve the CRD for the channel",
+			zap.Any("channel", channel), zap.String("crd", name), zap.Error(err))
 		return err
 	}
-	if val, ok := crd.Labels["label"]; !ok {
-		return fmt.Errorf("invalid channel, it does not contain mandatory label")
-	} else if val != "value" {
-		return fmt.Errorf("invalid label value %s", val)
+	if val, ok := crd.Labels[channelCrdLabelKey]; !ok {
+		return fmt.Errorf("invalid channel, it does not contain mandatory label %s", channelCrdLabelKey)
+	} else if val != channelCrdLabelValue {
+		return fmt.Errorf("invalid label value %s, it should be set to %s for valid channels", val, channelCrdLabelValue)
 	}
 	return nil
 }
