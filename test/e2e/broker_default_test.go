@@ -91,7 +91,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		if err := client.CreateTrigger(triggerName,
-			base.WithSubscriberForTrigger(subscriberName),
+			base.WithSubscriberRefForTrigger(subscriberName),
 			base.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
 		); err != nil {
 			t.Fatalf("Failed to create the trigger %q: %v", triggerName, err)

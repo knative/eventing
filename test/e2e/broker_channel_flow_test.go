@@ -28,27 +28,33 @@ import (
 )
 
 /*
-TestEventTransformationForTrigger tests the following scenario:
+TestEventTransformationForTrigger tests the following topology:
 
-                         5                 4
                    ------------- ----------------------
                    |           | |                    |
-             1     v	 2     | v        3           |
+                   v	       | v                    |
 EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
                    |
-                   | 6                   7
-                   |-------> Trigger2 -------> Service(Logger)
+                   |
+                   |-------> Trigger2 -------> Service(Logger1)
+                   |
+                   |
+                   |-------> Trigger3 -------> Channel --------> Subscription --------> Service(Logger2)
 
-Note: the number denotes the sequence of the event that flows in this test case.
+Explanation:
+Trigger1 filters the orignal event and tranforms it to a new event,
+Trigger2 logs all events,
+Trigger3 filters the transformed event and sends it to Channel.
+
 */
-func TestEventTransformationForTrigger(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testEventTransformationForTrigger)
+func TestBrokerChannelFlow(t *testing.T) {
+	RunTests(t, common.FeatureBasic, testBrokerChannelFlow)
 }
 
-func testEventTransformationForTrigger(t *testing.T, provisioner string) {
+func testBrokerChannelFlow(t *testing.T, provisioner string) {
 	const (
-		senderName    = "e2e-eventtransformation-sender"
-		brokerName    = "e2e-eventtransformation-broker"
+		senderName    = "e2e-brokerchannel-sender"
+		brokerName    = "e2e-brokerchannel-broker"
 		saIngressName = "eventing-broker-ingress"
 		saFilterName  = "eventing-broker-filter"
 
@@ -61,13 +67,18 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		eventType2   = "type2"
 		eventSource1 = "source1"
 		eventSource2 = "source2"
-		eventBody    = "e2e-eventtransformation-body"
+		eventBody    = "e2e-brokerchannel-body"
 
-		triggerName1 = "trigger1"
-		triggerName2 = "trigger2"
+		triggerName1 = "e2e-brokerchannel-trigger1"
+		triggerName2 = "e2e-brokerchannel-trigger2"
+		triggerName3 = "e2e-brokerchannel-trigger3"
 
-		transformationPodName = "trans-pod"
-		loggerPodName         = "logger-pod"
+		transformationPodName = "e2e-brokerchannel-trans-pod"
+		loggerPodName1        = "e2e-brokerchannel-logger-pod1"
+		loggerPodName2        = "e2e-brokerchannel-logger-pod2"
+
+		channelName      = "e2e-brokerchannel-channel"
+		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
 	client := Setup(t, provisioner, true)
@@ -96,13 +107,13 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		Encoding: base.CloudEventDefaultEncoding,
 	}
 
-	// create the transformation service
+	// create the transformation service for trigger1
 	transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
 	if err := client.CreatePod(transformationPod, common.WithService(transformationPodName)); err != nil {
 		t.Fatalf("Failed to create transformation service %q: %v", transformationPodName, err)
 	}
 
-	// create trigger1 for event transformation
+	// create trigger1 to receive the original event, and do event transformation
 	if err := client.CreateTrigger(
 		triggerName1,
 		base.WithBroker(brokerName),
@@ -112,20 +123,55 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		t.Fatalf("Error creating trigger %q: %v", triggerName1, err)
 	}
 
-	// create logger pod and service
-	loggerPod := base.EventLoggerPod(loggerPodName)
-	if err := client.CreatePod(loggerPod, common.WithService(loggerPodName)); err != nil {
-		t.Fatalf("Failed to create logger service %q: %v", loggerPodName, err)
+	// create logger pod and service for trigger2
+	loggerPod1 := base.EventLoggerPod(loggerPodName1)
+	if err := client.CreatePod(loggerPod1, common.WithService(loggerPodName1)); err != nil {
+		t.Fatalf("Failed to create logger service %q: %v", loggerPodName1, err)
 	}
 
-	// create trigger2 for event receiving
+	// create trigger2 to receive all the events
 	if err := client.CreateTrigger(
 		triggerName2,
 		base.WithBroker(brokerName),
-		base.WithTriggerFilter(eventSource2, eventType2),
-		base.WithSubscriberRefForTrigger(loggerPodName),
+		base.WithTriggerFilter(any, any),
+		base.WithSubscriberRefForTrigger(loggerPodName1),
 	); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
+	}
+
+	// create channel for trigger3
+	if err := client.CreateChannel(channelName, provisioner); err != nil {
+		t.Fatalf("Failed to create channel %q: %v", channelName, err)
+	}
+	client.WaitForChannelReady(channelName)
+
+	// create trigger3 to receive the transformed event, and send it to the channel
+	channelURL, err := client.GetChannelURL(channelName)
+	if err != nil {
+		t.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
+	}
+	if err := client.CreateTrigger(
+		triggerName3,
+		base.WithBroker(brokerName),
+		base.WithTriggerFilter(eventSource2, eventType2),
+		base.WithSubscriberURIForTrigger(channelURL),
+	); err != nil {
+		t.Fatalf("Error creating trigger %q: %v", triggerName3, err)
+	}
+
+	// create logger pod and service for subscription
+	loggerPod2 := base.EventLoggerPod(loggerPodName2)
+	if err := client.CreatePod(loggerPod2, common.WithService(loggerPodName2)); err != nil {
+		t.Fatalf("Failed to create logger service %q: %v", loggerPodName2, err)
+	}
+
+	// create subscription
+	if err := client.CreateSubscription(
+		subscriptionName,
+		channelName,
+		base.WithSubscriberForSubscription(loggerPodName2),
+	); err != nil {
+		t.Fatalf("Error creating subscription %q: %v", subscriptionName, err)
 	}
 
 	// wait for all test resources to be ready, so that we can start sending events
@@ -144,8 +190,14 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 	}
 
-	// check if the logging service receives the correct event
-	if err := client.CheckLog(loggerPodName, common.CheckerContains(transformedEventBody)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName, err)
+	// check if trigger2's logging service receives both events
+	eventBodies := []string{transformedEventBody, eventBody}
+	if err := client.CheckLog(loggerPodName1, common.CheckerContainsAll([]string{transformedEventBody, eventBody})); err != nil {
+		t.Fatalf("Strings %v not found in logs of logger pod %q: %v", eventBodies, loggerPodName1, err)
+	}
+
+	// check if subscription's logging service receives the transformed event
+	if err := client.CheckLog(loggerPodName2, common.CheckerContains(transformedEventBody)); err != nil {
+		t.Fatalf("Strings %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName2, err)
 	}
 }
