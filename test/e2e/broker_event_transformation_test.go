@@ -123,7 +123,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		triggerName2,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(eventSource2, eventType2),
-		base.WithSubscriberForTrigger(loggerPodName),
+		base.WithSubscriberRefForTrigger(loggerPodName),
 	); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
 	}
