@@ -31,9 +31,7 @@ func isChannelEmpty(f corev1.ObjectReference) bool {
 
 // Valid if it is a valid object reference.
 func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
-	errs := isValidObjectReference(f)
-	// TODO get the CRD and check for a channel label or annotation.
-	return errs
+	return isValidObjectReference(f)
 }
 
 func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
