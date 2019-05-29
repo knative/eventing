@@ -84,6 +84,14 @@ var (
 		Kind:    "Trigger",
 	}
 
+	nonSubscribableGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "EventType",
+	}
+
+	nonSubscribableCRDName = "eventtypes.eventing.knative.dev"
+
 	serviceGVK = metav1.GroupVersionKind{
 		Version: "v1",
 		Kind:    "Service",
@@ -146,6 +154,99 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName)),
+				),
+			}},
+		}, {
+			Name: "subscription, but channel crd does not exist",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(nonSubscribableGVK, channelName, testNS),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: customresourcedefinition.apiextensions.k8s.io %q not found", nonSubscribableCRDName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: customresourcedefinition.apiextensions.k8s.io %q not found", nonSubscribableCRDName)),
+				),
+			}},
+		}, {
+			Name: "subscription, but channel crd does not contain subscribable label",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(nonSubscribableGVK, channelName, testNS),
+				NewCustomResourceDefinition(nonSubscribableCRDName),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd %q does not contain mandatory label %s", nonSubscribableCRDName, channelCrdLabelKey),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd %q does not contain mandatory label %s", nonSubscribableCRDName, channelCrdLabelKey)),
+				),
+			}},
+		}, {
+			Name: "subscription, but channel crd contains invalid subscribable label value",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(nonSubscribableGVK, channelName, testNS),
+				NewCustomResourceDefinition(nonSubscribableCRDName,
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: "whatever"})),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd label %s has invalid value %s", channelCrdLabelKey, "whatever"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd label %s has invalid value %s", channelCrdLabelKey, "whatever")),
 				),
 			}},
 		}, {
@@ -651,10 +752,11 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(opt, controllerAgentName),
-			subscriptionLister:  listers.GetSubscriptionLister(),
-			tracker:             tracker.New(func(string) {}, 0),
-			addressableInformer: &fakeAddressableInformer{},
+			Base:                           reconciler.NewBase(opt, controllerAgentName),
+			subscriptionLister:             listers.GetSubscriptionLister(),
+			tracker:                        tracker.New(func(string) {}, 0),
+			addressableInformer:            &fakeAddressableInformer{},
+			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	},
 		false,

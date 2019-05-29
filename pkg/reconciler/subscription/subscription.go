@@ -258,17 +258,17 @@ func (r *Reconciler) validateChannel(ctx context.Context, namespace string, chan
 	}
 	// Check whether the CRD that has the label for channels.
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
-	name := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
-	crd, err := r.ApiExtensionsClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+	crdName := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
+	crd, err := r.customResourceDefinitionLister.Get(crdName)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to retrieve the CRD for the channel",
-			zap.Any("channel", channel), zap.String("crd", name), zap.Error(err))
+			zap.Any("channel", channel), zap.String("crd", crdName), zap.Error(err))
 		return err
 	}
 	if val, ok := crd.Labels[channelCrdLabelKey]; !ok {
-		return fmt.Errorf("invalid channel, it does not contain mandatory label %s", channelCrdLabelKey)
+		return fmt.Errorf("crd %q does not contain mandatory label %s", crdName, channelCrdLabelKey)
 	} else if val != channelCrdLabelValue {
-		return fmt.Errorf("invalid label value %s, it should be set to %s for valid channels", val, channelCrdLabelValue)
+		return fmt.Errorf("crd label %s has invalid value %s", channelCrdLabelKey, val)
 	}
 	return nil
 }
