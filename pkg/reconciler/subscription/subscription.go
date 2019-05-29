@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"reflect"
 	"time"
 
@@ -36,6 +37,8 @@ import (
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1"
+	apiextensionslisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -60,7 +63,7 @@ const (
 	subscriptionReadinessChanged   = "SubscriptionReadinessChanged"
 	subscriptionUpdateStatusFailed = "SubscriptionUpdateStatusFailed"
 	physicalChannelSyncFailed      = "PhysicalChannelSyncFailed"
-	channelReferenceFetchFailed    = "ChannelReferenceFetchFailed"
+	channelReferenceFailed         = "ChannelReferenceFailed"
 	subscriberResolveFailed        = "SubscriberResolveFailed"
 	replyResolveFailed             = "ReplyResolveFailed"
 )
@@ -69,9 +72,10 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	subscriptionLister  listers.SubscriptionLister
-	addressableInformer eventingduck.AddressableInformer
-	tracker             tracker.Interface
+	subscriptionLister             listers.SubscriptionLister
+	customResourceDefinitionLister apiextensionslisters.CustomResourceDefinitionLister
+	addressableInformer            eventingduck.AddressableInformer
+	tracker                        tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -83,12 +87,14 @@ func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	addressableInformer eventingduck.AddressableInformer,
+	customResourceDefinitionInformer apiextensionsinformers.CustomResourceDefinitionInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		addressableInformer: addressableInformer,
+		Base:                           reconciler.NewBase(opt, controllerAgentName),
+		subscriptionLister:             subscriptionInformer.Lister(),
+		customResourceDefinitionLister: customResourceDefinitionInformer.Lister(),
+		addressableInformer:            addressableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -180,15 +186,16 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	// Verify that `channel` exists.
-	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
+	if err := r.validateChannel(ctx, subscription.Namespace, &subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
-		subscription.Status.MarkReferencesNotResolved(channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: %v", err)
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to validate spec.channel: %v", err)
 		return err
 	}
+
+	// Verify that `channel` exists.
 
 	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber, track)
 	if err != nil {
@@ -233,6 +240,30 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 	// Everything went well, set the fact that subscriptions have been modified
 	subscription.Status.MarkChannelReady()
+	return nil
+}
+
+func (r *Reconciler) validateChannel(ctx context.Context, namespace string, channel *corev1.ObjectReference) error {
+	// Verify the channel exists.
+	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, channel); err != nil {
+		return err
+	}
+	// Special case for backwards compatibility, allow Channel COs.
+	if channel.Kind == "Channel" && channel.APIVersion == "eventing.knative.dev/v1alpha1" {
+		return nil
+	}
+	// Check whether the CRD that has the label for channels.
+	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
+	name := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
+	crd, err := r.ApiExtensionsClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if val, ok := crd.Labels["label"]; !ok {
+		return fmt.Errorf("invalid channel, it does not contain mandatory label")
+	} else if val != "value" {
+		return fmt.Errorf("invalid label value %s", val)
+	}
 	return nil
 }
 

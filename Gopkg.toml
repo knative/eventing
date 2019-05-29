@@ -51,6 +51,13 @@ required = [
 # GKE version as of 2019-01-24 is 1.11
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  version = "kubernetes-1.12.6"
+
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
+[[override]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.12.6"
 
