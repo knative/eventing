@@ -54,10 +54,10 @@ var (
 			Name: tracingconfig.ConfigName,
 		},
 		Data: map[string]string{
-			"enable":         "True",
-			"Debug":          "False",
-			"SampleRate":     "0",
-			"ZipkinEndpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+			"enable":          "True",
+			"debug":           "False",
+			"sample-rate":     "0",
+			"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
 		},
 	}
 )
