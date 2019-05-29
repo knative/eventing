@@ -205,7 +205,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd %q does not contain mandatory label %s", nonSubscribableCRDName, channelCrdLabelKey),
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd %q does not contain mandatory label %q", nonSubscribableCRDName, channelCrdLabelKey),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -214,7 +214,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd %q does not contain mandatory label %s", nonSubscribableCRDName, channelCrdLabelKey)),
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd %q does not contain mandatory label %q", nonSubscribableCRDName, channelCrdLabelKey)),
 				),
 			}},
 		}, {
@@ -237,7 +237,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd label %s has invalid value %s", channelCrdLabelKey, "whatever"),
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd label %s has invalid value %q", channelCrdLabelKey, "whatever"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -246,7 +246,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd label %s has invalid value %s", channelCrdLabelKey, "whatever")),
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd label %s has invalid value %q", channelCrdLabelKey, "whatever")),
 				),
 			}},
 		}, {
