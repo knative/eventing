@@ -76,6 +76,16 @@ rules:
     verbs:
       - "update"
 
+  # Our own resources and statuses we care about.
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "pipelines"
+      - "pipelines/status"
+      - "inmemorychannels"
+      - "inmemorychannels/status"
+    verbs: *everything
+
   # Source resources and statuses we care about.
   - apiGroups:
       - "sources.eventing.knative.dev"

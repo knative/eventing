@@ -97,7 +97,9 @@ func main() {
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
 	eventTypeInformer := eventingInformerFactory.Eventing().V1alpha1().EventTypes()
-	pipelineInformer := eventingInformerFactory.Eventing().V1alpha1().Pipelines()
+
+	// Messaging
+	pipelineInformer := eventingInformerFactory.Messaging().V1alpha1().Pipelines()
 
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
