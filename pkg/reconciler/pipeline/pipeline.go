@@ -80,7 +80,7 @@ func NewController(
 		channelLister:      channelInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 
