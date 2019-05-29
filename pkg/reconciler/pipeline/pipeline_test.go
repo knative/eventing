@@ -17,16 +17,17 @@ limitations under the License.
 package pipeline
 
 import (
-	//	"fmt"
+	"fmt"
 	//	"net/url"
 	"testing"
 
-	//	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
-	//	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
+	//	"github.com/knative/pkg/kmeta"
+	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 	//	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -112,7 +113,17 @@ func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructur
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
 				"namespace":         testNS,
-				"name":              pipelineChannelName(pipelineName, stepNumber),
+				"name":              resources.PipelineChannelName(pipelineName, stepNumber),
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "messaging.knative.dev/v1alpha1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "InMemoryChannel",
+						"name":               pipelineName,
+						"uid":                "",
+					},
+				},
 			},
 			"spec": map[string]interface{}{},
 			//			"spec": map[string]interface{}{
@@ -121,6 +132,13 @@ func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructur
 		},
 	}
 
+}
+
+func createSubscriber(stepNumber int) eventingv1alpha1.SubscriberSpec {
+	uriString := fmt.Sprintf("http://example.com/%d", stepNumber)
+	return eventingv1alpha1.SubscriberSpec{
+		URI: &uriString,
+	}
 }
 
 func TestAllCases(t *testing.T) {
@@ -176,12 +194,13 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
 			},
 		}, {
-			Name: "channelworks",
+			Name: "singlestep",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewPipeline(pipelineName, testNS,
 					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc))},
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),

@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	//	appsv1 "k8s.io/api/apps/v1"
 	//	corev1 "k8s.io/api/core/v1"
@@ -61,11 +62,17 @@ func WithPipelineChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) PipelineO
 	}
 }
 
+func WithPipelineSteps(steps []eventingv1alpha1.SubscriberSpec) PipelineOption {
+	return func(p *v1alpha1.Pipeline) {
+		p.Spec.Steps = steps
+	}
+}
+
 /*
 func WithPipelineDeploymentNotReady(reason, message string) PipelineOption {
 	return func(p *v1alpha1.Pipeline) {
 		p.Status.MarkDispatcherFailed(reason, message)
-	}
+	}2
 }
 
 func WithPipelineDeploymentReady() PipelineOption {

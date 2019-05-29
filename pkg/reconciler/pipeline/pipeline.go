@@ -26,11 +26,14 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/dynamic"
 	//	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -146,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return reconcileErr
 }
 
-func pipelineChannelName(pipelineName string, step int) string {
+func pipelineSubscriptionName(pipelineName string, step int) string {
 	return fmt.Sprintf("%s-kn-pipeline-%d", pipelineName, step)
 }
 
@@ -170,7 +173,6 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 
 	obj := p.Spec.ChannelTemplate.DeepCopyObject()
 
-	//	channelResourceInterface, err := duck.ResourceInterface(r.DynamicClientSet, p.Namespace, &p.Spec.ChannelTemplate.ChannelCRD)
 	channelResourceInterface := r.DynamicClientSet.Resource(duckapis.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
 
 	if channelResourceInterface == nil {
@@ -179,30 +181,31 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 		errors.New(msg)
 	}
 
-	ingressChannelName := pipelineChannelName(p.Name, 0)
-
-	// Use the duck typed one here instead of this Get.
-	c, err := channelResourceInterface.Get(ingressChannelName, metav1.GetOptions{})
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			newChannel, err := resources.NewChannel(ingressChannelName, p)
-			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
-			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
-				return err
-			}
-			channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
-			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
-				return err
-			}
-			logging.FromContext(ctx).Error(fmt.Sprintf("Created Channel: %s/%s", p.Namespace, ingressChannelName), zap.Any("NewChannel", zap.Any("NewChannel", newChannel)))
-		} else {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
-			return err
+	for i := 0; i < len(p.Spec.Steps); i++ {
+		ingressChannelName := resources.PipelineChannelName(p.Name, i)
+		// Use the duck typed one here instead of this Get.
+		c, err := r.reconcileChannel(ctx, ingressChannelName, channelResourceInterface, p)
+		if err != nil {
+			// TODO: Propagate Status through...
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+			// TODO: Bail on first error?
+			continue
 		}
+		// TODO: Propagate Status through...
+		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, ingressChannelName, c))
 	}
-	logging.FromContext(ctx).Error(fmt.Sprintf("Found Channel: %s/%s", p.Namespace, ingressChannelName), zap.Any("NewChannel", c))
+
+	for i := 0; i < len(p.Spec.Steps); i++ {
+		s, err := r.reconcileSubscription(ctx, i, p)
+		if err != nil {
+			// TODO: Propagate Status through...
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Subscription Object for step: %d", i), zap.Error(err))
+			// TODO: Bail on first error?
+			continue
+		}
+		// TODO: Propagate Status through...
+		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Subscription Object for step: %d: %+v", i, s))
+	}
 
 	return nil
 }
@@ -223,4 +226,55 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Pipelin
 	existing.Status = desired.Status
 
 	return r.EventingClientSet.MessagingV1alpha1().Pipelines(desired.Namespace).UpdateStatus(existing)
+}
+
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Pipeline) (*unstructured.Unstructured, error) {
+	// Use the duck typed one here instead of this Get.
+	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			newChannel, err := resources.NewChannel(channelName, p)
+			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
+			if err != nil {
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", p.Namespace, channelName), zap.Error(err))
+				return nil, err
+			}
+			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
+				return nil, err
+			}
+			logging.FromContext(ctx).Error(fmt.Sprintf("Created Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", zap.Any("NewChannel", newChannel)))
+			return created, nil
+		} else {
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
+			return nil, err
+		}
+	}
+	logging.FromContext(ctx).Error(fmt.Sprintf("Found Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", c))
+	return c, nil
+}
+
+func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1alpha1.Pipeline) (*eventingv1alpha1.Subscription, error) {
+	expected := resources.NewSubscription(step, p)
+
+	subName := resources.PipelineSubscriptionName(p.Name, step)
+	sub, err := r.subscriptionLister.Subscriptions(p.Namespace).Get(subName)
+
+	// If the resource doesn't exist, we'll create it.
+	if apierrs.IsNotFound(err) {
+		sub = expected
+		logging.FromContext(ctx).Info("Creating subscription")
+		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
+		if err != nil {
+			//			r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipeline's subscription failed: %v", err)
+			return nil, err
+		}
+		return newSub, nil
+	} else if err != nil {
+		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
+		//		r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipelines's subscription failed: %v", err)
+		return nil, err
+	}
+	return sub, nil
 }
