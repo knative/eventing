@@ -219,7 +219,7 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewInMemoryChannel(imcName, testNS),
 			},
 			WantErr: false,
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -304,7 +304,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelChannelServicetNotReady("ChannelServiceFailed", "Channel Service failed: inducing failure for create services"),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 			},
 			WantEvents: []string{

@@ -122,7 +122,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannelProvisioner(channelProvisioner("my-provisioner")),
 					WithInitBrokerConditions),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewChannel("", testNS,
 					WithChannelGenerateName(channelGenerateName),
 					WithChannelLabels(TriggerChannelLabels(brokerName)),
@@ -183,7 +183,7 @@ func TestReconcile(t *testing.T) {
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "deployments"),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -267,7 +267,7 @@ func TestReconcile(t *testing.T) {
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "services"),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
@@ -357,7 +357,7 @@ func TestReconcile(t *testing.T) {
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "deployments"),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -462,7 +462,7 @@ func TestReconcile(t *testing.T) {
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "services"),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
@@ -572,7 +572,7 @@ func TestReconcile(t *testing.T) {
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "channels"),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewChannel("", testNS,
 					WithChannelGenerateName(channelGenerateName),
 					WithChannelLabels(IngressChannelLabels(brokerName)),
@@ -636,7 +636,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelReady,
 					WithChannelAddress(ingressChannelHostname)),
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewSubscription("", testNS,
 					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
 					WithSubscriptionOwnerReferences(ownerReferences()),
@@ -787,7 +787,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: "subs",
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewSubscription("", testNS,
 					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
 					WithSubscriptionOwnerReferences(ownerReferences()),

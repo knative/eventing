@@ -159,7 +159,7 @@ func TestAllCases(t *testing.T) {
 			brokerEvent,
 			nsEvent,
 		},
-		WantCreates: []metav1.Object{
+		WantCreates: []runtime.Object{
 			broker,
 			saIngress,
 			rbIngress,
@@ -184,7 +184,7 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			nsEvent,
 		},
-		WantCreates: []metav1.Object{
+		WantCreates: []runtime.Object{
 			saIngress,
 			rbIngress,
 			saFilter,
@@ -224,7 +224,7 @@ func TestAllCases(t *testing.T) {
 			brokerEvent,
 			nsEvent,
 		},
-		WantCreates: []metav1.Object{
+		WantCreates: []runtime.Object{
 			broker,
 			rbIngress,
 			saFilter,
@@ -248,7 +248,7 @@ func TestAllCases(t *testing.T) {
 			brokerEvent,
 			nsEvent,
 		},
-		WantCreates: []metav1.Object{
+		WantCreates: []runtime.Object{
 			broker,
 			saIngress,
 			saFilter,
@@ -272,7 +272,7 @@ func TestAllCases(t *testing.T) {
 			brokerEvent,
 			nsEvent,
 		},
-		WantCreates: []metav1.Object{
+		WantCreates: []runtime.Object{
 			broker,
 			saIngress,
 			rbIngress,
@@ -296,7 +296,7 @@ func TestAllCases(t *testing.T) {
 			brokerEvent,
 			nsEvent,
 		},
-		WantCreates: []metav1.Object{
+		WantCreates: []runtime.Object{
 			broker,
 			saIngress,
 			rbIngress,

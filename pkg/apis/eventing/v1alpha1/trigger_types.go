@@ -29,6 +29,8 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Trigger represents a request to have events delivered to a consumer from a
+// Broker's event pool.
 type Trigger struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

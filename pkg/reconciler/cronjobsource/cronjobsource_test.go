@@ -187,7 +187,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceEventType,
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeReceiveAdapter(),
 			},
 		}, {
@@ -225,7 +225,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSink(sinkURI),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewEventType("", testNS,
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
@@ -279,7 +279,7 @@ func TestAllCases(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: "name-1",
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewEventType("", testNS,
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),

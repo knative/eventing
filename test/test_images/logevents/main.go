@@ -24,7 +24,11 @@ import (
 )
 
 func handler(event cloudevents.Event) {
-	log.Printf("%s", event.String())
+	if err := event.Validate(); err == nil {
+		log.Printf("%s", event.Data.([]byte))
+	} else {
+		log.Printf("error validating the event: %v", err)
+	}
 }
 
 func main() {
@@ -33,6 +37,5 @@ func main() {
 		log.Fatalf("failed to create client, %v", err)
 	}
 
-	log.Printf("will listen on :8080\n")
 	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), handler))
 }

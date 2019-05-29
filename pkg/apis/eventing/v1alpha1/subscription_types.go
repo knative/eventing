@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // +genclient
@@ -165,10 +166,6 @@ type ReplyStrategy struct {
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
-// subCondSet is a condition set with Ready as the happy condition and
-// ReferencesResolved and ChannelReady as the dependent conditions.
-var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionChannelReady)
-
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
@@ -197,4 +194,9 @@ type SubscriptionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []Subscription `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for Subscriptions
+func (t *Subscription) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("Subscription")
 }

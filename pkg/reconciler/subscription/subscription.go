@@ -82,7 +82,6 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
-	channelInformer eventinginformers.ChannelInformer,
 	addressableInformer eventingduck.AddressableInformer,
 ) *controller.Impl {
 
@@ -91,22 +90,14 @@ func NewController(
 		subscriptionLister:  subscriptionInformer.Lister(),
 		addressableInformer: addressableInformer,
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	subscriptionInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	channelInformer.Informer().AddEventHandler(reconciler.Handler(
-		// Call the tracker's OnChanged method, but we've seen the objects coming through this path
-		// missing TypeMeta, so ensure it is properly populated.
-		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Channel"),
-		),
-	))
 
 	return impl
 }
@@ -179,18 +170,23 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
+	// Track the channel using the addressableInformer.
+	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
+	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
+	// subscription controller will reconcile upon a `channel` change.
+	track := r.addressableInformer.TrackInNamespace(r.tracker, subscription)
+	if err := track(subscription.Spec.Channel); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
+		return err
+	}
+
 	// Verify that `channel` exists.
 	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, &subscription.Spec.Channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel exists",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
-		return err
-	}
-
-	track := r.addressableInformer.TrackInNamespace(r.tracker, subscription)
-	if err := track(subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFetchFailed, "Failed to validate spec.channel exists: %v", err)
 		return err
 	}
 
@@ -200,6 +196,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("subscriber", subscription.Spec.Subscriber))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
+		subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 		return err
 	}
 
@@ -212,6 +209,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("reply", subscription.Spec.Reply))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, resultResolveFailed, "Failed to resolve spec.reply: %v", err)
+		subscription.Status.MarkReferencesNotResolved(resultResolveFailed, "Failed to resolve spec.reply: %v", err)
 		return err
 	}
 
@@ -230,6 +228,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	if err := r.syncPhysicalChannel(ctx, subscription, false); err != nil {
 		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
+		subscription.Status.MarkChannelNotReady(physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		return err
 	}
 	// Everything went well, set the fact that subscriptions have been modified

@@ -17,11 +17,13 @@ limitations under the License.
 // cleanup allows you to define a cleanup function that will be executed
 // if your test is interrupted.
 
-package test
+package common
 
 import (
 	"encoding/json"
 
+	"github.com/knative/pkg/kmeta"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -61,7 +63,7 @@ func NewCleaner(log logging.FormatLogger, client dynamic.Interface) *Cleaner {
 // * resource's plural (e.g. routes)
 // * namespace (use "" if the resource is not tied to any namespace)
 // * actual name of the resource (e.g. myroute)
-func (c *Cleaner) Add(group string, version string, resource string, namespace string, name string) error {
+func (c *Cleaner) Add(group string, version string, resource string, namespace string, name string) {
 	gvr := schema.GroupVersionResource{
 		Group:    group,
 		Version:  version,
@@ -79,7 +81,16 @@ func (c *Cleaner) Add(group string, version string, resource string, namespace s
 	}
 	//this is actually a prepend, we want to delete resources in reverse order
 	c.resourcesToClean = append([]ResourceDeleter{res}, c.resourcesToClean...)
-	return nil
+}
+
+// AddObj will register a resource that implments OwnerRefable interface to be cleaned by the Clean function
+func (c *Cleaner) AddObj(obj kmeta.OwnerRefable) {
+	// get the resource's name, namespace and gvr
+	name := obj.GetObjectMeta().GetName()
+	namespace := obj.GetObjectMeta().GetNamespace()
+	gvk := obj.GetGroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	c.Add(gvr.Group, gvr.Version, gvr.Resource, namespace, name)
 }
 
 // Clean will delete all registered resources
