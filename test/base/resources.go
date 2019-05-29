@@ -129,13 +129,22 @@ func WithBroker(brokerName string) func(*v1alpha1.Trigger) {
 	}
 }
 
-// WithSubscriberForTrigger returns an option that adds a Subscriber for the given Trigger.
-func WithSubscriberForTrigger(name string) func(*v1alpha1.Trigger) {
+// WithSubscriberRefForTrigger returns an option that adds a Subscriber Ref for the given Trigger.
+func WithSubscriberRefForTrigger(name string) func(*v1alpha1.Trigger) {
 	return func(t *v1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
 				Ref: pkgTest.CoreV1ObjectReference("Service", "v1", name),
 			}
+		}
+	}
+}
+
+// WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
+func WithSubscriberURIForTrigger(uri string) func(*v1alpha1.Trigger) {
+	return func(t *v1alpha1.Trigger) {
+		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+			URI: &uri,
 		}
 	}
 }
