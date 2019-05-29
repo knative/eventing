@@ -93,7 +93,7 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	subscriptionInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
