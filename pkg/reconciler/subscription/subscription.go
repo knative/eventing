@@ -37,6 +37,7 @@ import (
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1"
 	apiextensionslisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -84,6 +85,8 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
+
+var customResourceDefinitionGVK = apiextensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -190,7 +193,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	if err := r.validateChannel(ctx, subscription.Namespace, &subscription.Spec.Channel); err != nil {
+	if err := r.validateChannel(ctx, subscription); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
@@ -247,15 +250,17 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	return nil
 }
 
-func (r *Reconciler) validateChannel(ctx context.Context, namespace string, channel *corev1.ObjectReference) error {
+func (r *Reconciler) validateChannel(ctx context.Context, subscription *v1alpha1.Subscription) error {
 	// Verify the channel exists.
-	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, channel); err != nil {
+	channel := &subscription.Spec.Channel
+	if _, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.Namespace, channel); err != nil {
 		return err
 	}
 	// Special case for backwards compatibility, channel COs are valid channels.
 	if channel.Kind == "Channel" && channel.APIVersion == "eventing.knative.dev/v1alpha1" {
 		return nil
 	}
+
 	// Check whether the CRD that has the label for channels.
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	crdName := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
@@ -265,6 +270,13 @@ func (r *Reconciler) validateChannel(ctx context.Context, namespace string, chan
 			zap.Any("channel", channel), zap.String("crd", crdName), zap.Error(err))
 		return err
 	}
+
+	// TODO uncomment this once we have a cluster-level tracker. As of now, it needs a namespace.
+	// Tell tracker to reconcile this Subscription whenever its Channel CRD changes.
+	//if err := r.tracker.Track(utils.ObjectRef(crd, customResourceDefinitionGVK), subscription); err != nil {
+	//	return fmt.Errorf("error tracking channel crd '%s': %v", crd.Name, err)
+	//}
+
 	if val, ok := crd.Labels[channelCrdLabelKey]; !ok {
 		return fmt.Errorf("crd %q does not contain mandatory label %q", crdName, channelCrdLabelKey)
 	} else if val != channelCrdLabelValue {
