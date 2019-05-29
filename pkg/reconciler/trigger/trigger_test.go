@@ -302,7 +302,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
 			},
 		}, {
@@ -381,7 +381,7 @@ func TestAllCases(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: "",
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
 			},
 		}, {
@@ -419,7 +419,7 @@ func TestAllCases(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: "",
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
 			},
 		}, {
@@ -451,7 +451,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
 			},
 		}, {
