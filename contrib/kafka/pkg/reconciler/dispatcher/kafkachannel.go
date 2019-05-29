@@ -77,7 +77,7 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 
 	// Watch for kafka channels.
-	kafkachannelInformer.Informer().AddEventHandler(reconciler.Handler(r.impl.Enqueue))
+	kafkachannelInformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
 
 	return r.impl
 }
