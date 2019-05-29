@@ -25,8 +25,10 @@ cd ${REPO_ROOT_DIR}
 # Ensure we have everything we need under vendor/
 dep ensure
 
+rm -rf $(find vendor/ -name 'OWNERS')
 rm -rf $(find vendor/ -name 'BUILD')
 rm -rf $(find vendor/ -name 'BUILD.bazel')
+rm -rf vendor/github.com/knative/test-infra/devstats
 
 update_licenses third_party/VENDOR-LICENSE \
   $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)
