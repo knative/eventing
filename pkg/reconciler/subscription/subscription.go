@@ -261,7 +261,7 @@ func (r *Reconciler) validateChannel(ctx context.Context, subscription *v1alpha1
 		return nil
 	}
 
-	// Check whether the CRD that has the label for channels.
+	// Check whether the CRD has the label for channels.
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	crdName := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
 	crd, err := r.customResourceDefinitionLister.Get(crdName)
@@ -360,7 +360,6 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 			zap.Any("replyStrategy", replyStrategy))
 		return "", err
 	}
-
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
