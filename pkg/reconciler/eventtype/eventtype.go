@@ -81,12 +81,12 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	eventTypeInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	eventTypeInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that a EventType's Broker has changed so that
 	// we can reconcile.
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	brokerInformer.Informer().AddEventHandler(reconciler.Handler(
+	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(
 			r.tracker.OnChanged,
 			v1alpha1.SchemeGroupVersion.WithKind("Broker"),

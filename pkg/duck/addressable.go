@@ -107,7 +107,7 @@ func (i *addressableInformer) ensureInformer(tracker tracker.Interface, ref core
 	if err != nil {
 		return err
 	}
-	informer.AddEventHandler(reconciler.Handler(
+	informer.AddEventHandler(controller.HandleAll(
 		// Call the tracker's OnChanged method, but we've seen the objects coming through
 		// this path missing TypeMeta, so ensure it is properly populated.
 		controller.EnsureTypeMeta(
