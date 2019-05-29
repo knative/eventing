@@ -134,7 +134,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 		triggerName2,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(any, any),
-		base.WithSubscriberForTrigger(loggerPodName1),
+		base.WithSubscriberRefForTrigger(loggerPodName1),
 	); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
 	}
@@ -154,7 +154,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 		triggerName3,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(eventSource2, eventType2),
-		base.WithURIForTrigger(channelURL),
+		base.WithSubscriberURIForTrigger(channelURL),
 	); err != nil {
 		t.Fatalf("Error creating trigger %q: %v", triggerName3, err)
 	}
