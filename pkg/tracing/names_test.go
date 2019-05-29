@@ -29,3 +29,15 @@ func TestBrokerIngressName(t *testing.T) {
 		t.Errorf("BrokerIngressName = %q, want %q", got, want)
 	}
 }
+
+func TestBrokerFilterName(t *testing.T) {
+	const testNS = "test-namespace"
+	const broker = "my-broker"
+	args := BrokerFilterNameArgs{
+		Namespace:  testNS,
+		BrokerName: broker,
+	}
+	if got, want := BrokerFilterName(args), "my-broker-broker-filter.test-namespace"; got != want {
+		t.Errorf("BrokerFilterName = %q, want %q", got, want)
+	}
+}

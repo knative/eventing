@@ -29,3 +29,14 @@ type BrokerIngressNameArgs struct {
 func BrokerIngressName(args BrokerIngressNameArgs) string {
 	return fmt.Sprintf("%s-broker-ingress.%s", args.BrokerName, args.Namespace)
 }
+
+// BrokerFilterNameArgs are the arguments needed to generate the BrokerFilterName.
+type BrokerFilterNameArgs struct {
+	Namespace  string
+	BrokerName string
+}
+
+// BrokerFilterName creates the service name for Broker Filters to use when writing Zipkin traces.
+func BrokerFilterName(args BrokerFilterNameArgs) string {
+	return fmt.Sprintf("%s-broker-filter.%s", args.BrokerName, args.Namespace)
+}
