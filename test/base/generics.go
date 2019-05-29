@@ -54,7 +54,10 @@ func GetGenericObject(dynamicClient dynamic.Interface, obj *MetaResource, rtype 
 	gvk := obj.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 	// use the helper functions to convert the resource to the given duck-type
-	tif := &duck.TypedInformerFactory{Client: dynamicClient, Type: rtype}
+	stopChannel := make(chan struct{})
+	tif := &duck.TypedInformerFactory{Client: dynamicClient, Type: rtype, StopChannel: stopChannel}
+	// defer close the stopChannel to stop the informer created in tif.Get(gvr)
+	defer close(stopChannel)
 	_, lister, err := tif.Get(gvr)
 	if err != nil {
 		return nil, err
