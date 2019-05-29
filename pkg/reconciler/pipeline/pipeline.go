@@ -171,7 +171,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	obj := p.Spec.ChannelTemplate.DeepCopyObject()
 
 	//	channelResourceInterface, err := duck.ResourceInterface(r.DynamicClientSet, p.Namespace, &p.Spec.ChannelTemplate.ChannelCRD)
-	channelResourceInterface := r.DynamicClientSet.Resource(duckapis.KindToResource(obj.GetObjectKind().GroupVersionKind()))
+	channelResourceInterface := r.DynamicClientSet.Resource(duckapis.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
 
 	if channelResourceInterface == nil {
 		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
