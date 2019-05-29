@@ -115,17 +115,6 @@ func isValidReply(r ReplyStrategy) *apis.FieldError {
 	if fe := isValidObjectReference(*r.Channel); fe != nil {
 		return fe.ViaField("channel")
 	}
-	if r.Channel.Kind != "Channel" {
-		fe := apis.ErrInvalidValue(r.Channel.Kind, "kind")
-		fe.Paths = []string{"kind"}
-		fe.Details = "only 'Channel' kind is allowed"
-		return fe
-	}
-	if r.Channel.APIVersion != "eventing.knative.dev/v1alpha1" {
-		fe := apis.ErrInvalidValue(r.Channel.APIVersion, "apiVersion")
-		fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
-		return fe
-	}
 	return nil
 }
 

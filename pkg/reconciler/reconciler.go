@@ -26,6 +26,7 @@ import (
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -42,7 +43,8 @@ type Options struct {
 	KubeClientSet    kubernetes.Interface
 	DynamicClientSet dynamic.Interface
 
-	EventingClientSet clientset.Interface
+	EventingClientSet      clientset.Interface
+	ApiExtensionsClientSet apiextensionsclientset.Interface
 	//CachingClientSet cachingclientset.Interface
 
 	Recorder      record.EventRecorder
@@ -59,17 +61,19 @@ func NewOptionsOrDie(cfg *rest.Config, logger *zap.SugaredLogger, stopCh <-chan 
 	kubeClient := kubernetes.NewForConfigOrDie(cfg)
 	eventingClient := clientset.NewForConfigOrDie(cfg)
 	dynamicClient := dynamic.NewForConfigOrDie(cfg)
+	apiExtensionsClient := apiextensionsclientset.NewForConfigOrDie(cfg)
 
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
 	return Options{
-		KubeClientSet:     kubeClient,
-		DynamicClientSet:  dynamicClient,
-		EventingClientSet: eventingClient,
-		ConfigMapWatcher:  configMapWatcher,
-		Logger:            logger,
-		ResyncPeriod:      10 * time.Hour, // Based on controller-runtime default.
-		StopChannel:       stopCh,
+		KubeClientSet:          kubeClient,
+		DynamicClientSet:       dynamicClient,
+		EventingClientSet:      eventingClient,
+		ApiExtensionsClientSet: apiExtensionsClient,
+		ConfigMapWatcher:       configMapWatcher,
+		Logger:                 logger,
+		ResyncPeriod:           10 * time.Hour, // Based on controller-runtime default.
+		StopChannel:            stopCh,
 	}
 }
 
@@ -88,6 +92,9 @@ type Base struct {
 
 	// EventingClientSet allows us to configure Eventing objects
 	EventingClientSet clientset.Interface
+
+	// ApiExtensionsClientSet allows us to configure k8s API extension objects.
+	ApiExtensionsClientSet apiextensionsclientset.Interface
 
 	// DynamicClientSet allows us to configure pluggable Build objects
 	DynamicClientSet dynamic.Interface
@@ -147,13 +154,14 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 	}
 
 	base := &Base{
-		KubeClientSet:     opt.KubeClientSet,
-		EventingClientSet: opt.EventingClientSet,
-		DynamicClientSet:  opt.DynamicClientSet,
-		ConfigMapWatcher:  opt.ConfigMapWatcher,
-		Recorder:          recorder,
-		StatsReporter:     statsReporter,
-		Logger:            logger,
+		KubeClientSet:          opt.KubeClientSet,
+		EventingClientSet:      opt.EventingClientSet,
+		ApiExtensionsClientSet: opt.ApiExtensionsClientSet,
+		DynamicClientSet:       opt.DynamicClientSet,
+		ConfigMapWatcher:       opt.ConfigMapWatcher,
+		Recorder:               recorder,
+		StatsReporter:          statsReporter,
+		Logger:                 logger,
 	}
 
 	return base
