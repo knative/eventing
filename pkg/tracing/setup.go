@@ -97,7 +97,7 @@ func SetupStaticZipkinPublishing(serviceName string, cfg *tracingconfig.Config) 
 // just ensures that if generated, they are collected appropriately. This is normally done by using
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
-func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher configmap.DefaultingWatcher, serviceName string) error {
+func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, cmNamespace string, configMapWatcher configmap.DefaultingWatcher, serviceName string) error {
 	oct, err := setupZipkinPublishing(serviceName)
 	if err != nil {
 		return err
@@ -115,13 +115,18 @@ func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher co
 		}
 	}
 
+	// The Store will ignore ConfigMaps not in the correct namespace. Alter the default to be in the
+	// namespace.
+	defCM := enableZeroSamplingCM.DeepCopy()
+	defCM.Namespace = cmNamespace
+
 	// Set up our config store.
 	configStore := eventingconfigmap.NewDefaultUntypedStore(
 		"tracing-config",
 		logger,
 		[]eventingconfigmap.DefaultConstructor{
 			{
-				Default:     enableZeroSamplingCM,
+				Default:     *defCM,
 				Constructor: tracingconfig.NewTracingConfigFromConfigMap,
 			},
 		},
