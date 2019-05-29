@@ -54,16 +54,17 @@ var _ runtime.Object = (*Pipeline)(nil)
 var _ webhook.GenericCRD = (*Pipeline)(nil)
 
 // This should be duck so that Broker can also use this
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ChannelTemplateSpec struct {
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	ChannelCRD corev1.ObjectReference `json:"channelCRD,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the Spec to use for each channel created. Passed
 	// in verbatim to the Channel CRD as Spec section.
 	// +optional
-	Spec *runtime.RawExtension `json:"spec,omitempty"`
+	Spec runtime.RawExtension `json:"spec"`
 }
 
 type PipelineSpec struct {

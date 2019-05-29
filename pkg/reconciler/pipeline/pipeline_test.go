@@ -36,7 +36,7 @@ import (
 	//	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	//	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
@@ -104,9 +104,47 @@ func TestNewController(t *testing.T) {
 	}
 }
 
+func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "messaging.knative.dev/v1alpha1",
+			"kind":       "inmemorychannel",
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         testNS,
+				"name":              pipelineChannelName(pipelineName, stepNumber),
+			},
+			"spec": map[string]interface{}{},
+			//			"spec": map[string]interface{}{
+			//				"something": "foo",
+			//			},
+		},
+	}
+
+}
+
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + pipelineName
-	imc := metav1.GroupVersionKind{Group: "messaging.knative.dev", Version: "v1alpha1", Kind: "inmemorychannel"}
+	imc := v1alpha1.ChannelTemplateSpec{
+		metav1.TypeMeta{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+		},
+		metav1.ObjectMeta{},
+		runtime.RawExtension{Raw: []byte("{}")},
+	}
+
+	/*
+		imcWithSpec := v1alpha1.ChannelTemplateSpec{
+			metav1.TypeMeta{
+				APIVersion: "messaging.knative.dev/v1alpha1",
+				Kind:       "inmemorychannel",
+			},
+			metav1.ObjectMeta{},
+			runtime.RawExtension{Raw: []byte("{}")},
+		}
+	*/
+
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -143,10 +181,13 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				reconciletesting.NewPipeline(pipelineName, testNS,
 					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpecCRD(imc))},
+					reconciletesting.WithPipelineChannelTemplateSpec(imc))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(pipelineName, 0),
 			},
 		},
 	}

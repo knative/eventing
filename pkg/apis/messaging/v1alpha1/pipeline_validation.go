@@ -50,10 +50,6 @@ func (ps *PipelineSpec) Validate(ctx context.Context) *apis.FieldError {
 		return errs
 	}
 
-	if e := isValidObjectReferenceForChannelCRD(ps.ChannelTemplate.ChannelCRD); e != nil {
-		errs = errs.Also(e)
-	}
-
 	return errs
 }
 
@@ -130,53 +126,6 @@ func checkDisallowedObjectReferenceFieldsForSubscriber(f corev1.ObjectReference)
 	if len(disallowedFields) > 0 {
 		fe := apis.ErrDisallowedFields(disallowedFields...)
 		fe.Details = "only name, apiVersion and kind are supported fields"
-		return fe
-	}
-	return nil
-
-}
-
-func isValidObjectReferenceForChannelCRD(c corev1.ObjectReference) *apis.FieldError {
-	return checkRequiredObjectReferenceFieldsForChannelCRD(c).
-		Also(checkDisallowedObjectReferenceFieldsForChannelCRD(c))
-}
-
-// Check the corev1.ObjectReference to make sure it has the required fields. They
-// are not checked for anything more except that they are set.
-func checkRequiredObjectReferenceFieldsForChannelCRD(c corev1.ObjectReference) *apis.FieldError {
-	var errs *apis.FieldError
-	if c.APIVersion == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-	}
-	if c.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-	return errs
-}
-
-// Check the corev1.ObjectReference to make sure it only has the following fields set:
-// Kind, APIVersion
-// If any other fields are set and is not the Zero value, returns an apis.FieldError
-// with the fieldpaths for all those fields.
-func checkDisallowedObjectReferenceFieldsForChannelCRD(c corev1.ObjectReference) *apis.FieldError {
-	disallowedFields := []string{}
-	// See if there are any fields that have been set that should not be.
-	// TODO: Hoist this kind of stuff into pkg repository.
-	s := reflect.ValueOf(c)
-	typeOf := s.Type()
-	for i := 0; i < s.NumField(); i++ {
-		field := s.Field(i)
-		fieldName := typeOf.Field(i).Name
-		if fieldName == "Kind" || fieldName == "APIVersion" {
-			continue
-		}
-		if !cmp.Equal(field.Interface(), reflect.Zero(field.Type()).Interface()) {
-			disallowedFields = append(disallowedFields, fieldName)
-		}
-	}
-	if len(disallowedFields) > 0 {
-		fe := apis.ErrDisallowedFields(disallowedFields...)
-		fe.Details = "only apiVersion and kind are supported fields"
 		return fe
 	}
 	return nil

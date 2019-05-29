@@ -18,6 +18,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -30,10 +31,11 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
+	//	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
+	duckapis "github.com/knative/pkg/apis"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -164,10 +166,17 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 		return nil
 	}
 
-	channelResourceInterface, err := duck.ResourceInterface(r.DynamicClientSet, p.Namespace, &p.Spec.ChannelTemplate.ChannelCRD)
-	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate.ChannelCRD), zap.Error(err))
-		return err
+	// Convert the object into runtime.Object so we can grab the schema.ObjectKind and create the correct interface client
+
+	obj := p.Spec.ChannelTemplate.DeepCopyObject()
+
+	//	channelResourceInterface, err := duck.ResourceInterface(r.DynamicClientSet, p.Namespace, &p.Spec.ChannelTemplate.ChannelCRD)
+	channelResourceInterface := r.DynamicClientSet.Resource(duckapis.KindToResource(obj.GetObjectKind().GroupVersionKind()))
+
+	if channelResourceInterface == nil {
+		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
+		logging.FromContext(ctx).Error(msg)
+		errors.New(msg)
 	}
 
 	ingressChannelName := pipelineChannelName(p.Name, 0)
@@ -176,7 +185,11 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	c, err := channelResourceInterface.Get(ingressChannelName, metav1.GetOptions{})
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newChannel := resources.NewChannel(ingressChannelName, &p.Spec.ChannelTemplate)
+			newChannel, err := resources.NewChannel(ingressChannelName, p)
+			if err != nil {
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+				return err
+			}
 			channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))

@@ -22,7 +22,7 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	//	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	//	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//	"k8s.io/apimachinery/pkg/types"
 )
@@ -55,14 +55,9 @@ func WithPipelineDeleted(p *v1alpha1.Pipeline) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithPipelineChannelTemplateSpecCRD(gvk metav1.GroupVersionKind) PipelineOption {
+func WithPipelineChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) PipelineOption {
 	return func(p *v1alpha1.Pipeline) {
-		p.Spec.ChannelTemplate = v1alpha1.ChannelTemplateSpec{
-			ChannelCRD: corev1.ObjectReference{
-				APIVersion: apiVersion(gvk),
-				Kind:       gvk.Kind,
-			},
-		}
+		p.Spec.ChannelTemplate = cts
 	}
 }
 
