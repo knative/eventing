@@ -148,7 +148,7 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceEventTypes,
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeReceiveAdapter(),
 			},
 		},
@@ -198,7 +198,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: "name-1"},
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeReceiveAdapter(),
 			},
 		},
@@ -244,7 +244,7 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceEventTypes,
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
@@ -299,7 +299,7 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceEventTypes,
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
@@ -357,7 +357,7 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: "name-1"},
 			},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
