@@ -84,17 +84,17 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	pipelineInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	pipelineInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handlers for Channel/Subscriptions that are owned by Pipeline, so that
 	// we get notified if they change.
 	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Channel")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Subscription")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl
