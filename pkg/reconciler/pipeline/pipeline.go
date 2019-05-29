@@ -186,6 +186,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			newChannel, err := resources.NewChannel(ingressChannelName, p)
+			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
 			if err != nil {
 				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
 				return err
