@@ -18,6 +18,8 @@ import (
 	"os"
 )
 
+// GetRequiredEnvOrFatal gets the environment variable's value. If the environment variable is not
+// defined, then log.Fatal will be called, exiting the program.
 func GetRequiredEnvOrFatal(envKey string) string {
 	val, defined := os.LookupEnv(envKey)
 	if !defined {
