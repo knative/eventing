@@ -16,7 +16,7 @@ kind: CustomResourceDefinition
 metadata:
   name: eventtypes.eventing.knative.dev
   labels:
-    knative.dev/crd-install: "true"  
+    knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
   version: v1alpha1
