@@ -65,7 +65,7 @@ func TestGetSinkURI(t *testing.T) {
 			},
 			namespace: testNS,
 			ref:       getAddressableRef(),
-			want:      fmt.Sprintf("http://%s/", addressableDNS),
+			want:      fmt.Sprintf("http://%s", addressableDNS),
 		},
 		"nil hostname": {
 			objects: []runtime.Object{
@@ -105,6 +105,7 @@ func TestGetSinkURI(t *testing.T) {
 			wantErr:   fmt.Errorf(`Error fetching sink &ObjectReference{Kind:%s,Namespace:%s,Name:%s,UID:,APIVersion:%s,ResourceVersion:,FieldPath:,} for source "%s": %s "%s" not found`, unaddressableKind, testNS, unaddressableName, unaddressableAPIVersion, unaddressableName, unaddressableResource, unaddressableName),
 		},
 	}
+
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			sr := NewSinkReconciler(

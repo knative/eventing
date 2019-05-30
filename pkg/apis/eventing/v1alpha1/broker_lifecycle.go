@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/apps/v1"
 
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
@@ -150,11 +151,14 @@ func deploymentIsAvailable(d *v1.DeploymentStatus) bool {
 
 // SetAddress makes this Broker addressable by setting the hostname. It also
 // sets the BrokerConditionAddressable to true.
-func (bs *BrokerStatus) SetAddress(hostname string) {
-	bs.Address.Hostname = hostname
-	if hostname != "" {
+func (bs *BrokerStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		bs.Address.Hostname = url.Host
+		bs.Address.URL = url
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
 	} else {
+		bs.Address.Hostname = ""
+		bs.Address.URL = nil
 		brokerCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -537,7 +538,10 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 	}
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(hostname)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   hostname,
+	})
 	c.Status.MarkProvisioned()
 	pcs := &util.GcpPubSubChannelStatus{
 		GCPProject: gcpProject,

@@ -31,6 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
@@ -783,7 +784,10 @@ func makeChannelWithFinalizerAndPCSAndAddress() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
-	c.Status.SetAddress(fmt.Sprintf(".%s.svc.%s", c.Namespace, utils.GetClusterDomainName()))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf(".%s.svc.%s", c.Namespace, utils.GetClusterDomainName()),
+	})
 	return c
 }
 

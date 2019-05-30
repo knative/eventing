@@ -33,6 +33,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
@@ -468,7 +469,10 @@ func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1
 func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(serviceAddress)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   serviceAddress,
+	})
 	c.Status.MarkProvisioned()
 	c.Finalizers = []string{finalizerName}
 	return c

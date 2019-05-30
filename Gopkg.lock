@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:a759cce98b97e3fecea0a9ff2bf06600136f8a8d25bbac26863e628f0a1e42de"
+  digest = "1:ddedfe0babdfcd5068e0088d26aea020bc09e2be3d1c3fe3196e95d854490899"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -481,7 +481,7 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "15b1aa79be0b927a9e62d1738b03ef3efb2745f3"
+  revision = "5fe2b490af198572a89d128259f25e4aa4f16123"
 
 [[projects]]
   branch = "master"
@@ -1428,6 +1428,7 @@
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
+    "github.com/knative/pkg/apis/duck/v1beta1",
     "github.com/knative/pkg/client/clientset/versioned/fake",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/configmap/testing",

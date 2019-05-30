@@ -31,6 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
@@ -205,7 +206,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
 		return err
-	} else if triggerChan.Status.Address.Hostname == "" {
+	} else if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
 		// We check the trigger Channel's address here because it is needed to create the Ingress
 		// Deployment.
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
@@ -242,7 +243,10 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return err
 	}
 	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
-	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	b.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	ingressChan, err := r.reconcileIngressChannel(ctx, b)
 	if err != nil {
@@ -462,7 +466,7 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
-		ChannelAddress:     c.Status.Address.Hostname,
+		ChannelAddress:     c.Status.Address.GetURL().Host,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	"github.com/knative/pkg/apis"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,6 +106,9 @@ func WithInMemoryChannelEndpointsReady() InMemoryChannelOption {
 
 func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
-		imc.Status.SetAddress(a)
+		imc.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   a,
+		})
 	}
 }
