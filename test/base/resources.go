@@ -204,6 +204,54 @@ func CronJobSource(
 	return cronJobSource
 }
 
+// WithArgsForContainerSource returns an option that adds args for the given ContainerSource.
+func WithArgsForContainerSource(args []string) func(*sourcesv1alpha1.ContainerSource) {
+	return func(cs *sourcesv1alpha1.ContainerSource) {
+		cs.Spec.Args = args
+	}
+}
+
+// WithEnvVarsForContainerSource returns an option that adds environment vars for the given ContainerSource.
+func WithEnvVarsForContainerSource(envVars []corev1.EnvVar) func(*sourcesv1alpha1.ContainerSource) {
+	return func(cs *sourcesv1alpha1.ContainerSource) {
+		cs.Spec.Env = envVars
+	}
+}
+
+// WithServiceAccountForContainerSource returns an option that adds a ServiceAccount for the given ContainerSource.
+func WithServiceAccountForContainerSource(saName string) func(*sourcesv1alpha1.ContainerSource) {
+	return func(cs *sourcesv1alpha1.ContainerSource) {
+		cs.Spec.ServiceAccountName = saName
+	}
+}
+
+// WithSinkServiceForContainerSource returns an option that adds a Kubernetes Service sink for the given ContainerSource.
+func WithSinkServiceForContainerSource(name string) func(*sourcesv1alpha1.ContainerSource) {
+	return func(cs *sourcesv1alpha1.ContainerSource) {
+		cs.Spec.Sink = pkgTest.CoreV1ObjectReference("Service", "v1", name)
+	}
+}
+
+// ContainerSource returns a Container EventSource.
+func ContainerSource(
+	name,
+	imageName string,
+	options ...func(*sourcesv1alpha1.ContainerSource),
+) *sourcesv1alpha1.ContainerSource {
+	containerSource := &sourcesv1alpha1.ContainerSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: sourcesv1alpha1.ContainerSourceSpec{
+			Image: pkgTest.ImagePath(imageName),
+		},
+	}
+	for _, option := range options {
+		option(containerSource)
+	}
+	return containerSource
+}
+
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
 // binary.
 type CloudEvent struct {

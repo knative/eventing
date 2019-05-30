@@ -214,6 +214,31 @@ func (client *Client) WaitForCronJobSourcesReady() error {
 	return nil
 }
 
+// WaitForContainerSourceReady waits until the containersource is Ready.
+func (client *Client) WaitForContainerSourceReady(name string) error {
+	namespace := client.Namespace
+	containerSourceMeta := base.MetaSource(name, namespace, "ContainerSource")
+	if err := base.WaitForResourceReady(client.Dynamic, containerSourceMeta); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WaitForContainerSourcesReady waits until all containersources in the namespace are Ready.
+func (client *Client) WaitForContainerSourcesReady() error {
+	namespace := client.Namespace
+	containerSources, err := client.Eventing.SourcesV1alpha1().ContainerSources(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, containerSource := range containerSources.Items {
+		if err := client.WaitForContainerSourceReady(containerSource.Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
 // Currently the test resources include Pod, Channel, Subscription, Broker and Trigger.
 // If there are new resources, this function needs to be changed.
@@ -231,6 +256,9 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 		return err
 	}
 	if err := client.WaitForCronJobSourcesReady(); err != nil {
+		return err
+	}
+	if err := client.WaitForContainerSourcesReady(); err != nil {
 		return err
 	}
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {

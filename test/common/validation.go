@@ -73,6 +73,13 @@ func CheckerContainsCount(content string, count int) func(string) bool {
 	}
 }
 
+// CheckerContainsAtLeast returns a checker function to check if the log contains at least the count number of given content.
+func CheckerContainsAtLeast(content string, count int) func(string) bool {
+	return func(log string) bool {
+		return strings.Count(log, content) >= count
+	}
+}
+
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
 func (client *Client) FindAnyLogContents(podName string, contents []string) (bool, error) {
