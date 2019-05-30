@@ -207,6 +207,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantCreates: []runtime.Object{
 				createChannel(pipelineName, 0),
+				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
 		},
 	}
