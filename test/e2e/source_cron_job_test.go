@@ -33,15 +33,10 @@ func TestCronJobSource(t *testing.T) {
 		schedule = "*/1 * * * *"
 
 		loggerPodName = "e2e-cron-job-source-logger-pod"
-		saIngressName = "eventing-broker-ingress"
-		crIngressName = "eventing-broker-ingress"
 	)
 
 	client := Setup(t, true)
 	defer TearDown(client)
-
-	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
 
 	// create event logger pod and service
 	loggerPod := base.EventLoggerPod(loggerPodName)
@@ -50,7 +45,7 @@ func TestCronJobSource(t *testing.T) {
 	// create cron job source
 	data := fmt.Sprintf("TestCronJobSource %s", uuid.NewUUID())
 	sinkOption := base.WithSinkServiceForCronJobSource(loggerPodName)
-	client.CreateCronJobSourceOrFail(cronJobSourceName, schedule, data, saIngressName, sinkOption)
+	client.CreateCronJobSourceOrFail(cronJobSourceName, schedule, data, sinkOption)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
