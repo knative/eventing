@@ -18,4 +18,12 @@ package eventing
 
 const (
 	GroupName = "eventing.knative.dev"
+
+	// CreatorAnnotation is the annotation key to describe the user that
+	// created the resource.
+	CreatorAnnotation = GroupName + "/creator"
+
+	// UpdaterAnnotation is the annotation key to describe the user that
+	// last updated the resource.
+	UpdaterAnnotation = GroupName + "/lastModifier"
 )

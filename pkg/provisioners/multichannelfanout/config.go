@@ -42,20 +42,11 @@ func NewConfigFromChannels(channels []v1alpha1.Channel) *Config {
 		channelConfig := ChannelConfig{
 			Namespace: c.Namespace,
 			Name:      c.Name,
-			HostName:  c.Status.Address.Hostname,
+			HostName:  c.Status.Address.GetURL().Host,
 		}
-
-		asyncHandler := true
-		// This is fairly hacky, but this is expected to change from a generic fanout sidecar to the
-		// in-memory dispatcher. And `in-memory-channel` is to be deleted in 0.7, so this shouldn't
-		// be here for long.
-		if c.Spec.Provisioner != nil && c.Spec.Provisioner.Name == "in-memory-channel" {
-			asyncHandler = false
-		}
-
 		if c.Spec.Subscribable != nil {
 			channelConfig.FanoutConfig = fanout.Config{
-				AsyncHandler:  asyncHandler,
+				AsyncHandler:  true,
 				Subscriptions: c.Spec.Subscribable.Subscribers,
 			}
 		}

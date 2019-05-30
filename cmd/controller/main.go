@@ -43,6 +43,7 @@ import (
 	pkgmetrics "github.com/knative/pkg/metrics"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
+	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 )
@@ -80,6 +81,7 @@ func main() {
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
+	apiExtensionsInformerFactory := apiextensionsinformers.NewSharedInformerFactory(opt.ApiExtensionsClientSet, opt.ResyncPeriod)
 
 	// Eventing
 	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
@@ -96,6 +98,9 @@ func main() {
 	serviceAccountInformer := kubeInformerFactory.Core().V1().ServiceAccounts()
 	roleBindingInformer := kubeInformerFactory.Rbac().V1().RoleBindings()
 
+	// Api Extensions
+	customResourceDefinitionInformer := apiExtensionsInformerFactory.Apiextensions().V1beta1().CustomResourceDefinitions()
+
 	// Duck
 	addressableInformer := duck.NewAddressableInformer(opt)
 
@@ -106,8 +111,8 @@ func main() {
 		subscription.NewController(
 			opt,
 			subscriptionInformer,
-			channelInformer,
 			addressableInformer,
+			customResourceDefinitionInformer,
 		),
 		namespace.NewController(
 			opt,
@@ -181,6 +186,8 @@ func main() {
 		deploymentInformer.Informer(),
 		serviceAccountInformer.Informer(),
 		roleBindingInformer.Informer(),
+		// Api Extensions
+		customResourceDefinitionInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}

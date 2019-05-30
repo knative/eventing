@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -106,8 +106,8 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		s         *ApiServerSourceStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name:      "uninitialized",
 		s:         &ApiServerSourceStatus{},
@@ -121,7 +121,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -134,7 +134,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -147,7 +147,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -161,7 +161,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -176,7 +176,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -185,7 +185,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.s.GetCondition(test.condQuery)
-			ignoreTime := cmpopts.IgnoreFields(duckv1alpha1.Condition{},
+			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)

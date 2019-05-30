@@ -27,6 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	corev1 "k8s.io/api/core/v1"
@@ -358,7 +359,10 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 		return nil, err
 	}
 
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 	return svc, nil
 }
 

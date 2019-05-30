@@ -20,14 +20,6 @@ spec: {}
 
 ---
 
-apiVersion: eventing.knative.dev/v1alpha1
-kind: ClusterChannelProvisioner
-metadata:
-  name: in-memory-channel
-spec: {}
-
----
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -69,14 +61,6 @@ rules:
       - list
       - watch
       - create
-  - apiGroups:
-        - "" # Core API group.
-    resources:
-      - services
-    resourceNames:
-      - in-memory-channel-clusterbus
-    verbs:
-      - delete
   - apiGroups:
       - "" # Core API group.
     resources:

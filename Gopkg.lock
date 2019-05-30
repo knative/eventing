@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:59c7473cb534fcc77eeb614ebdff78d0be3a50dad9beacb49123b1e2a0f480e8"
+  digest = "1:53455b555be78dbce89fdea13e4bf24e57ef3a0a8da5db9d7c8cedca68c94c07"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
@@ -17,8 +17,8 @@
     "trace/apiv2",
   ]
   pruneopts = "NUT"
-  revision = "0ebda48a7f143b1cce9eb37a8c1106ac762a3430"
-  version = "v0.34.0"
+  revision = "775730d6e48254a2430366162cf6298e5368833c"
+  version = "v0.39.0"
 
 [[projects]]
   digest = "1:43fbf05ea84c860a4e86b557d156b1e72511cd29375d3f71adb522362710aea7"
@@ -331,9 +331,9 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:fb9f5147a9d6fc69057d05b0739bcd79562c55db143c3bdacfe1c9c6129461f6"
+  digest = "1:0f5b7c22ec030b55dab3cd62dcec1ad8e79d38722b2c6339f059d85af914c231"
   name = "github.com/googleapis/gax-go"
-  packages = ["."]
+  packages = ["v2"]
   pruneopts = "NUT"
   revision = "b001040cd31805261cbd978842099e326dfa857b"
   version = "v2.0.2"
@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:5523a5fe9882dd9e3e40cdf8fd0f48f5fe79eee738ac1efe1212f0065b6c00f5"
+  digest = "1:ddedfe0babdfcd5068e0088d26aea020bc09e2be3d1c3fe3196e95d854490899"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -481,18 +481,18 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "c0f06c32f13373c6ab641d3c67815ac57704171e"
+  revision = "5fe2b490af198572a89d128259f25e4aa4f16123"
 
 [[projects]]
   branch = "master"
-  digest = "1:f27efa11fb1aec3e502e2ed95d9a1211a93f8a791b7da0a06fdade0d98de5008"
+  digest = "1:8cbd2b6c179d93c5cdc5f75c1acda0aa7ef7649cf9ca138e587d9ac98a137802"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "75f6ca1c4dc3b3ae5dc1a1a433753957a9340e83"
+  revision = "7d0c44fb03a996501f10e3af4a718fd008fe9bed"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1056,6 +1056,27 @@
   version = "kubernetes-1.12.6"
 
 [[projects]]
+  digest = "1:6def8acd040e85b3becb1dd73de1f22a787fd9776e32aa3bbac9cf9727b53d0d"
+  name = "k8s.io/apiextensions-apiserver"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset",
+    "pkg/client/clientset/clientset/fake",
+    "pkg/client/clientset/clientset/scheme",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1/fake",
+    "pkg/client/informers/externalversions",
+    "pkg/client/informers/externalversions/apiextensions",
+    "pkg/client/informers/externalversions/apiextensions/v1beta1",
+    "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/listers/apiextensions/v1beta1",
+  ]
+  pruneopts = "NUT"
+  revision = "bd0469a053ff88529a61145790499fe78a09a49d"
+  version = "kubernetes-1.12.6"
+
+[[projects]]
   digest = "1:58293c3a67fbca0336cd3cc2140dfe630545694452cf73980d2e4b6e6ce2660c"
   name = "k8s.io/apimachinery"
   packages = [
@@ -1407,6 +1428,7 @@
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
+    "github.com/knative/pkg/apis/duck/v1beta1",
     "github.com/knative/pkg/client/clientset/versioned/fake",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/configmap/testing",
@@ -1448,8 +1470,15 @@
     "google.golang.org/api/option",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
+    "k8s.io/api/authentication/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
+    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake",
+    "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions",
+    "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/equality",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/meta",

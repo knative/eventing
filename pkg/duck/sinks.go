@@ -24,6 +24,7 @@ import (
 
 	pkgapisduck "github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/controller"
 
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
@@ -50,7 +51,7 @@ func NewSinkReconciler(opt reconciler.Options, callback func(string)) *SinkRecon
 				ResyncPeriod: opt.ResyncPeriod,
 				StopChannel:  opt.StopChannel,
 			},
-			EventHandler: reconciler.Handler(ret.tracker.OnChanged),
+			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
 		},
 	}
 
@@ -92,9 +93,9 @@ func (r *SinkReconciler) GetSinkURI(sinkObjRef *corev1.ObjectReference, source i
 	if sink.Status.Address == nil {
 		return "", fmt.Errorf("sink %+v does not contain address", sinkObjRef)
 	}
-	if sink.Status.Address.Hostname == "" {
+	url := sink.Status.Address.GetURL()
+	if url.Host == "" {
 		return "", fmt.Errorf("sink %+v contains an empty hostname", sinkObjRef)
 	}
-
-	return fmt.Sprintf("http://%s/", sink.Status.Address.Hostname), nil
+	return url.String(), nil
 }

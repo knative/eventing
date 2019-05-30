@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,9 @@ type Subscribable struct {
 	// +patchStrategy=merge
 	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
+
+// Subscribable is an Implementable "duck type".
+var _ duck.Implementable = (*Subscribable)(nil)
 
 // ChannelSubscriberSpec defines a single subscriber to a Channel.
 // Ref is a reference to the Subscription this ChannelSubscriberSpec was created for
@@ -52,6 +56,9 @@ type ChannelSubscriberSpec struct {
 	ReplyURI string `json:"replyURI,omitempty"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // Channel is a skeleton type wrapping Subscribable in the manner we expect resource writers
 // defining compatible resources to embed it. We will typically use this type to deserialize
 // Channel ObjectReferences and access the Subscription data.  This is not a real resource.
@@ -68,6 +75,12 @@ type Channel struct {
 type ChannelSpec struct {
 	Subscribable *Subscribable `json:"subscribable,omitempty"`
 }
+
+var (
+	// Verify Channel resources meet duck contracts.
+	_ duck.Populatable = (*Channel)(nil)
+	_ apis.Listable    = (*Channel)(nil)
+)
 
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {

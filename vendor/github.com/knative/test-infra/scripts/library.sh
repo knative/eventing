@@ -18,17 +18,12 @@
 # to be used in test scripts and the like. It doesn't do anything when
 # called from command line.
 
+# GCP project where all tests related resources live
+readonly KNATIVE_TESTS_PROJECT=knative-tests
+
 # Default GKE version to be used with Knative Serving
 readonly SERVING_GKE_VERSION=gke-latest
 readonly SERVING_GKE_IMAGE=cos
-
-# Public latest stable nightly images and yaml files.
-readonly KNATIVE_BASE_YAML_SOURCE=https://storage.googleapis.com/knative-nightly/@/latest
-readonly KNATIVE_ISTIO_CRD_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio-crds.yaml
-readonly KNATIVE_ISTIO_YAML=${KNATIVE_BASE_YAML_SOURCE/@/serving}/istio.yaml
-readonly KNATIVE_SERVING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/serving}/serving.yaml
-readonly KNATIVE_BUILD_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/build}/build.yaml
-readonly KNATIVE_EVENTING_RELEASE=${KNATIVE_BASE_YAML_SOURCE/@/eventing}/release.yaml
 
 # Conveniently set GOPATH if unset
 if [[ -z "${GOPATH:-}" ]]; then
@@ -43,6 +38,20 @@ fi
 readonly IS_PROW
 readonly REPO_ROOT_DIR="$(git rev-parse --show-toplevel)"
 readonly REPO_NAME="$(basename ${REPO_ROOT_DIR})"
+
+# Useful flags about the current OS
+IS_LINUX=0
+IS_OSX=0
+IS_WINDOWS=0
+case "${OSTYPE}" in
+  darwin*) IS_OSX=1 ;;
+  linux*) IS_LINUX=1 ;;
+  msys*) IS_WINDOWS=1 ;;
+  *) echo "** Internal error in library.sh, unknown OS '${OSTYPE}'" ; exit 1 ;;
+esac
+readonly IS_LINUX
+readonly IS_OSX
+readonly IS_WINDOWS
 
 # Set ARTIFACTS to an empty temp dir if unset
 if [[ -z "${ARTIFACTS:-}" ]]; then
@@ -64,7 +73,7 @@ function abort() {
 #             $2 - banner message.
 function make_banner() {
     local msg="$1$1$1$1 $2 $1$1$1$1"
-    local border="${msg//[-0-9A-Za-z _.,\/()]/$1}"
+    local border="${msg//[-0-9A-Za-z _.,\/()\']/$1}"
     echo -e "${border}\n${msg}\n${border}"
 }
 
@@ -133,7 +142,7 @@ function wait_until_pods_running() {
         [[ ${status[0]} -lt 1 ]] && all_ready=0 && break
         [[ ${status[1]} -lt 1 ]] && all_ready=0 && break
         [[ ${status[0]} -ne ${status[1]} ]] && all_ready=0 && break
-      done <<< $(echo "${pods}" | grep -v Completed)
+      done <<< "$(echo "${pods}" | grep -v Completed)"
       if (( all_ready )); then
         echo -e "\nAll pods are up:\n${pods}"
         return 0
@@ -323,7 +332,16 @@ function start_latest_knative_serving() {
   header "Starting Knative Serving"
   subheader "Installing Knative Serving"
   echo "Installing Serving from ${KNATIVE_SERVING_RELEASE}"
-  kubectl apply -f ${KNATIVE_SERVING_RELEASE} || return 1
+  # Some CRDs defined in serving YAML are also referenced by other components in serving. As it takes
+  # time for CRDs to become effective, there is a race condition between when the CRDs are effective
+  # and when the resources that references those CRDs are created.
+  # The current workaround is to re-apply serving.yaml if it fails. Remove the retry logic after the
+  # race condition is fixed. (https://github.com/knative/serving/issues/4176)
+  if ! kubectl apply -f ${KNATIVE_SERVING_RELEASE}; then
+    echo "Install failed, waiting 60s and then retrying..."
+    sleep 60
+    kubectl apply -f ${KNATIVE_SERVING_RELEASE} || return 1
+  fi
   wait_until_pods_running knative-serving || return 1
 }
 
@@ -409,7 +427,20 @@ function is_int() {
 # Return whether the given parameter is the knative release/nightly GCF.
 # Parameters: $1 - full GCR name, e.g. gcr.io/knative-foo-bar
 function is_protected_gcr() {
-  [[ -n $1 && "$1" =~ "^gcr.io/knative-(releases|nightly)/?$" ]]
+  [[ -n $1 && $1 =~ ^gcr.io/knative-(releases|nightly)/?$ ]]
+}
+
+# Return whether the given parameter is any cluster under ${KNATIVE_TESTS_PROJECT}.
+# Parameters: $1 - Kubernetes cluster context (output of kubectl config current-context)
+function is_protected_cluster() {
+  # Example: gke_knative-tests_us-central1-f_prow
+  [[ -n $1 && $1 =~ ^gke_${KNATIVE_TESTS_PROJECT}_us\-[a-zA-Z0-9]+\-[a-z]+_[a-z0-9\-]+$ ]]
+}
+
+# Return whether the given parameter is ${KNATIVE_TESTS_PROJECT}.
+# Parameters: $1 - project name
+function is_protected_project() {
+  [[ -n $1 && "$1" == "${KNATIVE_TESTS_PROJECT}" ]]
 }
 
 # Remove symlinks in a path that are broken or lead outside the repo.
@@ -433,12 +464,6 @@ function remove_broken_symlinks() {
   done
 }
 
-# Return whether the given parameter is knative-tests.
-# Parameters: $1 - project name
-function is_protected_project() {
-  [[ -n "$1" && "$1" == "knative-tests" ]]
-}
-
 # Returns the canonical path of a filesystem object.
 # Parameters: $1 - path to return in canonical form
 #             $2 - base dir for relative links; optional, defaults to current
@@ -450,8 +475,31 @@ function get_canonical_path() {
   echo "$(cd ${path%/*} && echo $PWD/${path##*/})"
 }
 
+# Return the base url we use to build the actual knative yaml sources.
+function get_knative_base_yaml_source() {
+  local knative_base_yaml_source="https://storage.googleapis.com/knative-nightly/@/latest"
+  local branch_name=""
+  # Get the branch name from Prow's env var, see https://github.com/kubernetes/test-infra/blob/master/prow/jobs.md.
+  # Otherwise, try getting the current branch from git.
+  (( IS_PROW )) && branch_name="${PULL_BASE_REF:-}"
+  [[ -z "${branch_name}" ]] && branch_name="$(git rev-parse --abbrev-ref HEAD)"
+  # If it's a release branch, base URL should point to a specific version.
+  if [[ ${branch_name} =~ ^release-[0-9\.]+$ ]]; then
+    # Get the latest tag name for the current branch, which is likely formatted as v0.5.0
+    local tag_name="$(git describe --tags --abbrev=0)"
+    knative_base_yaml_source="https://storage.googleapis.com/knative-releases/@/previous/${tag_name}"
+  fi
+  echo "${knative_base_yaml_source}"
+}
+
 # Initializations that depend on previous functions.
 # These MUST come last.
 
 readonly _TEST_INFRA_SCRIPTS_DIR="$(dirname $(get_canonical_path ${BASH_SOURCE[0]}))"
 readonly REPO_NAME_FORMATTED="Knative $(capitalize ${REPO_NAME//-/})"
+
+# Public latest nightly or release yaml files.
+readonly KNATIVE_BASE_YAML_SOURCE="$(get_knative_base_yaml_source)"
+readonly KNATIVE_SERVING_RELEASE="${KNATIVE_BASE_YAML_SOURCE/@/serving}/serving.yaml"
+readonly KNATIVE_BUILD_RELEASE="${KNATIVE_BASE_YAML_SOURCE/@/build}/build.yaml"
+readonly KNATIVE_EVENTING_RELEASE="${KNATIVE_BASE_YAML_SOURCE/@/eventing}/release.yaml"

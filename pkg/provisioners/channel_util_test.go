@@ -72,7 +72,7 @@ func TestChannelUtils(t *testing.T) {
 			client := fake.NewFakeClient(oldChannel)
 
 			AddFinalizer(oldChannel, "test-finalizer")
-			oldChannel.Status.SetAddress("test-domain")
+			oldChannel.Status.SetAddress(&apis.URL{Scheme: "http", Host: "test-domain"})
 			UpdateChannel(context.TODO(), client, oldChannel)
 
 			got := &eventingv1alpha1.Channel{}
@@ -82,7 +82,10 @@ func TestChannelUtils(t *testing.T) {
 		want: func() metav1.Object {
 			channel := getNewChannel()
 			AddFinalizer(channel, "test-finalizer")
-			channel.Status.SetAddress("test-domain")
+			channel.Status.SetAddress(&apis.URL{
+				Scheme: "http",
+				Host:   "test-domain",
+			})
 			return channel
 		}(),
 	}}

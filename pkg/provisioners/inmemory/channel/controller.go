@@ -32,7 +32,7 @@ const (
 	controllerAgentName = "in-memory-channel-controller"
 )
 
-// ProvideController returns a Controller that represents the in-memory-channel Provisioner.
+// ProvideController returns a Controller that represents the in-memory Provisioner.
 func ProvideController(mgr manager.Manager, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channels that belong to this Cluster Provisioner
 	// (in-memory channels).

@@ -88,7 +88,7 @@ func main() {
 		DeploymentName: logconfig.WebhookName(),
 		Namespace:      system.Namespace(),
 		Port:           8443,
-		SecretName:     "webhook-certs",
+		SecretName:     "eventing-webhook-certs",
 		WebhookName:    "webhook.eventing.knative.dev",
 	}
 	controller := webhook.AdmissionController{

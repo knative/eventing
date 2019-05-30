@@ -17,53 +17,59 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
+
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 )
 
-var condReady = duckv1alpha1.Condition{
+var condReady = apis.Condition{
 	Type:   ChannelConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condUnprovisioned = duckv1alpha1.Condition{
+var condUnprovisioned = apis.Condition{
 	Type:   ChannelConditionProvisioned,
 	Status: corev1.ConditionFalse,
 }
 
 var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-	duckv1alpha1.Condition{},
+	apis.Condition{},
 	"LastTransitionTime", "Message", "Reason", "Severity")
 
-var ignoreLastTransitionTime = cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+var ignoreLastTransitionTime = cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime")
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		cs        *ChannelStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &condReady,
 	}, {
 		name: "multiple conditions",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 					condUnprovisioned,
 				},
@@ -74,14 +80,14 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 					condUnprovisioned,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -104,8 +110,8 @@ func TestChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &ChannelStatus{},
 		want: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -123,16 +129,16 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionProvisioned,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -150,16 +156,16 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionProvisioned,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -220,7 +226,7 @@ func TestChannelIsReady(t *testing.T) {
 				cs.MarkNotProvisioned("NotProvisioned", "testing")
 			}
 			if test.setAddress {
-				cs.SetAddress("foo.bar")
+				cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo.bar"})
 			}
 			if test.markDeprecated {
 				cs.MarkDeprecated("TestReason", "Test Message")
@@ -235,13 +241,13 @@ func TestChannelIsReady(t *testing.T) {
 
 func TestChannelStatus_SetAddressable(t *testing.T) {
 	testCases := map[string]struct {
-		domainInternal string
-		want           *ChannelStatus
+		url  *apis.URL
+		want *ChannelStatus
 	}{
 		"empty string": {
 			want: &ChannelStatus{
-				Status: duckv1alpha1.Status{
-					Conditions: []duckv1alpha1.Condition{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{
 						{
 							Type:   ChannelConditionAddressable,
 							Status: corev1.ConditionFalse,
@@ -257,13 +263,19 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 			},
 		},
 		"has domain": {
-			domainInternal: "test-domain",
+			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &ChannelStatus{
 				Address: duckv1alpha1.Addressable{
+					Addressable: duckv1beta1.Addressable{
+						URL: &apis.URL{
+							Scheme: "http",
+							Host:   "test-domain",
+						},
+					},
 					Hostname: "test-domain",
 				},
-				Status: duckv1alpha1.Status{
-					Conditions: []duckv1alpha1.Condition{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{
 						{
 							Type:   ChannelConditionAddressable,
 							Status: corev1.ConditionTrue,
@@ -276,7 +288,7 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
-			cs.SetAddress(tc.domainInternal)
+			cs.SetAddress(tc.url)
 			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}
@@ -306,15 +318,102 @@ func TestChannelStatus_MarkDeprecated(t *testing.T) {
 				t.Fatalf("Incorrect number of conditions. Expected 1, actually %v", cs)
 			}
 
-			expected := duckv1alpha1.Condition{
+			expected := apis.Condition{
 				Type:     "Deprecated",
 				Reason:   "Test",
 				Status:   v1.ConditionTrue,
-				Severity: duckv1alpha1.ConditionSeverityWarning,
+				Severity: apis.ConditionSeverityWarning,
 				Message:  "Test Message",
 			}
 			if diff := cmp.Diff(expected, cs.Conditions[0], ignoreLastTransitionTime); diff != "" {
 				t.Errorf("Condition incorrect (-want +got): %s", diff)
+			}
+		})
+	}
+}
+
+func TestChannelAnnotateUserInfo(t *testing.T) {
+	const (
+		u1 = "oveja@knative.dev"
+		u2 = "cabra@knative.dev"
+		u3 = "vaca@knative.dev"
+	)
+
+	withUserAnns := func(creator, updater string, c *Channel) *Channel {
+		a := c.GetAnnotations()
+		if a == nil {
+			a = map[string]string{}
+			defer c.SetAnnotations(a)
+		}
+
+		a[eventing.CreatorAnnotation] = creator
+		a[eventing.UpdaterAnnotation] = updater
+
+		return c
+	}
+
+	tests := []struct {
+		name       string
+		user       string
+		this       *Channel
+		prev       *Channel
+		wantedAnns map[string]string
+	}{{
+		"create new channel",
+		u1,
+		&Channel{},
+		nil,
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update channel which has no annotations without diff",
+		u1,
+		&Channel{},
+		&Channel{},
+		map[string]string{},
+	}, {
+		"update channel which has annotations without diff",
+		u2,
+		withUserAnns(u1, u1, &Channel{}),
+		withUserAnns(u1, u1, &Channel{}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u1,
+		},
+	}, {
+		"update channel which has no annotations with diff",
+		u2,
+		&Channel{Spec: ChannelSpec{DeprecatedGeneration: 1}},
+		&Channel{},
+		map[string]string{
+			eventing.UpdaterAnnotation: u2,
+		}}, {
+		"update channel which has annotations with diff",
+		u3,
+		withUserAnns(u1, u2, &Channel{Spec: ChannelSpec{DeprecatedGeneration: 1}}),
+		withUserAnns(u1, u2, &Channel{}),
+		map[string]string{
+			eventing.CreatorAnnotation: u1,
+			eventing.UpdaterAnnotation: u3,
+		},
+	}}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := apis.WithUserInfo(context.Background(), &authv1.UserInfo{
+				Username: test.user,
+			})
+			if test.prev != nil {
+				ctx = apis.WithinUpdate(ctx, test.prev)
+			}
+			test.this.SetDefaults(ctx)
+
+			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
+				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
 			}
 		})
 	}

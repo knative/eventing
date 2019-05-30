@@ -16,24 +16,26 @@
 
 package v1alpha1
 
-import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+import (
+	"github.com/knative/pkg/apis"
+)
 
-var triggerCondSet = duckv1alpha1.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
-	TriggerConditionReady = duckv1alpha1.ConditionReady
+	TriggerConditionReady = apis.ConditionReady
 
-	TriggerConditionBroker duckv1alpha1.ConditionType = "Broker"
+	TriggerConditionBroker apis.ConditionType = "Broker"
 
-	TriggerConditionSubscribed duckv1alpha1.ConditionType = "Subscribed"
+	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ts *TriggerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (ts *TriggerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return triggerCondSet.Manage(ts).GetCondition(t)
 }
 
