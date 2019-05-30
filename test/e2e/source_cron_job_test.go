@@ -29,8 +29,8 @@ import (
 func TestCronJobSource(t *testing.T) {
 	const (
 		cronJobSourceName = "e2e-cron-job-source"
-		// Every 10 seconds starting at :00 second after the minute
-		schedule = "0/10 * * * * ? *"
+		// Every 1 minute starting from now
+		schedule = "*/1 * * * *"
 
 		loggerPodName = "e2e-cron-job-source-logger-pod"
 		saIngressName = "eventing-broker-ingress"
@@ -58,7 +58,7 @@ func TestCronJobSource(t *testing.T) {
 	}
 
 	// verify the logger service receives the event
-	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, 2)); err != nil {
+	if err := client.CheckLog(loggerPodName, common.CheckerContains(data)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }
