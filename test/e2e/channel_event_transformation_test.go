@@ -49,13 +49,11 @@ func TestEventTransformationForSubscription(t *testing.T) {
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
 	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
-		client := Setup(st, provisioner, true)
+		client := Setup(st, true)
 		defer TearDown(client)
 
 		// create channels
-		if err := client.CreateChannels(channelNames, provisioner); err != nil {
-			st.Fatalf("Failed to create channels %q: %v", channelNames, err)
-		}
+		client.CreateChannelsOrFail(channelNames, provisioner)
 		client.WaitForChannelsReady()
 
 		// create transformation pod and service
@@ -67,33 +65,25 @@ func TestEventTransformationForSubscription(t *testing.T) {
 			Encoding: base.CloudEventDefaultEncoding,
 		}
 		transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
-		if err := client.CreatePod(transformationPod, common.WithService(transformationPodName)); err != nil {
-			st.Fatalf("Failed to create transformation service %q: %v", transformationPodName, err)
-		}
+		client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
 		// create logger pod and service
 		loggerPod := base.EventLoggerPod(loggerPodName)
-		if err := client.CreatePod(loggerPod, common.WithService(loggerPodName)); err != nil {
-			st.Fatalf("Failed to create logger service %q: %v", loggerPodName, err)
-		}
+		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 		// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
-		if err := client.CreateSubscriptions(
+		client.CreateSubscriptionsOrFail(
 			subscriptionNames1,
 			channelNames[0],
 			base.WithSubscriberForSubscription(transformationPodName),
 			base.WithReply(channelNames[1]),
-		); err != nil {
-			st.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames1, channelNames[0], err)
-		}
+		)
 		// create subscriptions that subscribe the second channel, and forward the received events to the logger service
-		if err := client.CreateSubscriptions(
+		client.CreateSubscriptionsOrFail(
 			subscriptionNames2,
 			channelNames[1],
 			base.WithSubscriberForSubscription(loggerPodName),
-		); err != nil {
-			st.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames2, channelNames[1], err)
-		}
+		)
 
 		// wait for all test resources to be ready, so that we can start sending events
 		if err := client.WaitForAllTestResourcesReady(); err != nil {
