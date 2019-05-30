@@ -56,7 +56,7 @@ var (
 	testLogger  *zap.Logger
 	s           *SubscriptionsSupervisor
 	subscribers = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				UID: "sub-uid1",
 			},

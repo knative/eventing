@@ -52,7 +52,7 @@ func TestChannelValidation(t *testing.T) {
 					Name: "foo",
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{{
+					Subscribers: []eventingduck.SubscriberSpec{{
 						SubscriberURI: "subscriberendpoint",
 						ReplyURI:      "resultendpoint",
 					}},
@@ -67,7 +67,7 @@ func TestChannelValidation(t *testing.T) {
 					Name: "foo",
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{{
+					Subscribers: []eventingduck.SubscriberSpec{{
 						SubscriberURI: "subscriberendpoint",
 						ReplyURI:      "replyendpoint",
 					}, {}},
@@ -86,7 +86,7 @@ func TestChannelValidation(t *testing.T) {
 					Name: "foo",
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
+					Subscribers: []eventingduck.SubscriberSpec{{}, {}},
 				},
 			},
 		},

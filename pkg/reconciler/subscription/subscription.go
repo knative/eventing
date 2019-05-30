@@ -425,7 +425,7 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	rv := &eventingduckv1alpha1.Subscribable{}
 	for _, sub := range subs {
 		if sub.Status.PhysicalSubscription.SubscriberURI != "" || sub.Status.PhysicalSubscription.ReplyURI != "" {
-			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.ChannelSubscriberSpec{
+			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					APIVersion: sub.APIVersion,
 					Kind:       sub.Kind,
@@ -448,7 +448,7 @@ func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, ph
 	if err != nil {
 		return err
 	}
-	original := eventingduckv1alpha1.Channel{}
+	original := eventingduckv1alpha1.SubscribableType{}
 	err = duck.FromUnstructured(s, &original)
 	if err != nil {
 		return err
