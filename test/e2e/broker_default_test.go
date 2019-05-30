@@ -81,21 +81,17 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	for _, event := range eventsToReceive {
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		pod := base.EventLoggerPod(subscriberName)
-		if err := client.CreatePod(pod, common.WithService(subscriberName)); err != nil {
-			t.Fatalf("Failed to create the subscriber %q: %v", subscriberName, err)
-		}
+		client.CreatePodOrFail(pod, common.WithService(subscriberName))
 	}
 
 	// Create triggers.
 	for _, event := range eventsToReceive {
 		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		if err := client.CreateTrigger(triggerName,
+		client.CreateTriggerOrFail(triggerName,
 			base.WithSubscriberRefForTrigger(subscriberName),
 			base.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
-		); err != nil {
-			t.Fatalf("Failed to create the trigger %q: %v", triggerName, err)
-		}
+		)
 	}
 
 	// Wait for all test resources to become ready before sending the events.
