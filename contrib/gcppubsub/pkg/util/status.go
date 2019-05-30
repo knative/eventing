@@ -50,7 +50,7 @@ type GcpPubSubChannelStatus struct {
 
 // GcpPubSubSubscriptionStatus represents the saved status of a gcp-pubsub Channel.
 type GcpPubSubSubscriptionStatus struct {
-	v1alpha1.ChannelSubscriberSpec
+	v1alpha1.SubscriberSpec
 
 	// Subscription is the name of the PubSub Subscription resource in GCP that represents this
 	// Knative Eventing Subscription.

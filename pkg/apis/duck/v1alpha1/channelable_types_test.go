@@ -17,35 +17,26 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis/duck/v1alpha1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestSubscribableGetFullType(t *testing.T) {
-	s := &Subscribable{}
-	switch s.GetFullType().(type) {
-	case *SubscribableType:
-		// expected
-	default:
-		t.Errorf("expected GetFullType to return *SubscribableType, got %T", s.GetFullType())
-	}
-}
-
-func TestSubscribableGetListType(t *testing.T) {
-	c := &SubscribableType{}
+func TestChannelableGetListType(t *testing.T) {
+	c := &Channelable{}
 	switch c.GetListType().(type) {
-	case *SubscribableTypeList:
+	case *ChannelableList:
 		// expected
 	default:
-		t.Errorf("expected GetListType to return *SubscribableTypeList, got %T", c.GetListType())
+		t.Errorf("expected GetListType to return *ChannelableList, got %T", c.GetListType())
 	}
 }
 
-func TestSubscribablePopulate(t *testing.T) {
-	got := &SubscribableType{}
+func TestChannelablePopulate(t *testing.T) {
+	got := &Channelable{}
 
-	want := &SubscribableType{
+	want := &Channelable{
 		Spec: SubscribableSpec{
 			Subscribable: &Subscribable{
 				Subscribers: []SubscriberSpec{{
@@ -57,6 +48,12 @@ func TestSubscribablePopulate(t *testing.T) {
 					SubscriberURI: "call2",
 					ReplyURI:      "sink2",
 				}},
+			},
+		},
+		Status: v1alpha1.AddressStatus{
+			Address: &v1alpha1.Addressable{
+				// Populate ALL fields
+				Hostname: "this is not empty",
 			},
 		},
 	}

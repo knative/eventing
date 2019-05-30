@@ -44,7 +44,7 @@ func TestGenerateTopicName(t *testing.T) {
 
 func TestGenerateSubName(t *testing.T) {
 	expected := "knative-eventing-channel_sub-name_sub-uid"
-	actual := generateSubName(&v1alpha1.ChannelSubscriberSpec{
+	actual := generateSubName(&v1alpha1.SubscriberSpec{
 		DeprecatedRef: &v1.ObjectReference{
 			Name: "sub-name",
 			UID:  "sub-uid",

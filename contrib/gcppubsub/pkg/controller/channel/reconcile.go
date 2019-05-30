@@ -324,7 +324,7 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 				subscription = generateSubName(&subscriber)
 			}
 			subsToSync.subsToCreate = append(subsToSync.subsToCreate, pubsubutil.GcpPubSubSubscriptionStatus{
-				ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				SubscriberSpec: v1alpha1.SubscriberSpec{
 					DeprecatedRef: subscriber.DeprecatedRef,
 					UID:           subscriber.UID,
 					SubscriberURI: subscriber.SubscriberURI,

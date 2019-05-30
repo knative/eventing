@@ -80,7 +80,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "subscriberdomain",
 						},
@@ -95,7 +95,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				Namespace: "default",
 				Name:      "somethingdifferent",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							ReplyURI: "replydomain",
 						},
@@ -133,7 +133,7 @@ func TestConfigDiff(t *testing.T) {
 				Namespace: "default",
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "subscriberdomain",
 						},
@@ -163,7 +163,7 @@ func TestConfigDiff(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									SubscriberURI: "different",
 								},
@@ -216,7 +216,7 @@ func TestServeHTTP(t *testing.T) {
 						Name:      "name",
 						HostName:  "first-channel.default",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									ReplyURI: replaceDomain,
 								},
@@ -238,7 +238,7 @@ func TestServeHTTP(t *testing.T) {
 						Name:      "name",
 						HostName:  "first-channel.default",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									ReplyURI: "first-to-domain",
 								},
@@ -250,7 +250,7 @@ func TestServeHTTP(t *testing.T) {
 						Name:      "second-channel",
 						HostName:  "second-channel.default",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									SubscriberURI: replaceDomain,
 								},
