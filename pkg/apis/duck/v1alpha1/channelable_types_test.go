@@ -50,11 +50,22 @@ func TestChannelablePopulate(t *testing.T) {
 				}},
 			},
 		},
-		Status: v1alpha1.AddressStatus{
-			Address: &v1alpha1.Addressable{
-				// Populate ALL fields
-				Hostname: "this is not empty",
+		Status: ChannelableStatus{
+			AddressStatus: v1alpha1.AddressStatus{
+				Address: &v1alpha1.Addressable{
+					// Populate ALL fields
+					Hostname: "this is not empty",
+				},
 			},
+			Subscribers: []Subscriber{{
+				UID:     "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+				Ready:   "True",
+				Message: "ready",
+			}, {
+				UID:     "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+				Ready:   "False",
+				Message: "not ready",
+			}},
 		},
 	}
 

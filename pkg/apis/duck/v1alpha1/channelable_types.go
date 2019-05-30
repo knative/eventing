@@ -20,8 +20,10 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // +genclient
@@ -37,8 +39,22 @@ type Channelable struct {
 	// Spec is the part where the Channelable fulfills the Subscribable contract.
 	Spec SubscribableSpec `json:"spec"`
 
-	// Status is the part where the Channelable fulfills the Addressable contract.
-	Status v1alpha1.AddressStatus `json:"status"`
+	Status ChannelableStatus `json:"status"`
+}
+
+// ChannelableStatus contains the Status of a Channelable object.
+type ChannelableStatus struct {
+	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
+	v1alpha1.AddressStatus `json:",inline"`
+	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
+	Subscribers []Subscriber `json:"subscribers,omitempty"`
+}
+
+// Subscriber contains the status of a Channelable's Subscriber.
+type Subscriber struct {
+	UID     types.UID          `json:"uid,omitempty"`
+	Ready   v1.ConditionStatus `json:"ready,omitempty"`
+	Message string             `json:"message,omitempty"`
 }
 
 var (
@@ -61,11 +77,22 @@ func (c *Channelable) Populate() {
 			ReplyURI:      "sink2",
 		}},
 	}
-	c.Status = v1alpha1.AddressStatus{
-		Address: &v1alpha1.Addressable{
-			// Populate ALL fields
-			Hostname: "this is not empty",
+	c.Status = ChannelableStatus{
+		AddressStatus: v1alpha1.AddressStatus{
+			Address: &v1alpha1.Addressable{
+				// Populate ALL fields
+				Hostname: "this is not empty",
+			},
 		},
+		Subscribers: []Subscriber{{
+			UID:     "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+			Ready:   "True",
+			Message: "ready",
+		}, {
+			UID:     "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+			Ready:   "False",
+			Message: "not ready",
+		}},
 	}
 }
 
