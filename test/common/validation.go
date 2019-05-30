@@ -66,10 +66,17 @@ func CheckerContainsAll(contents []string) func(string) bool {
 	}
 }
 
-// CheckerContainsCount returns a checker functions to check if the log contains the count number of given content.
+// CheckerContainsCount returns a checker function to check if the log contains the count number of given content.
 func CheckerContainsCount(content string, count int) func(string) bool {
 	return func(log string) bool {
 		return strings.Count(log, content) == count
+	}
+}
+
+// CheckerContainsAtLeast returns a checker function to check if the log contains at least the count number of given content.
+func CheckerContainsAtLeast(content string, count int) func(string) bool {
+	return func(log string) bool {
+		return strings.Count(log, content) >= count
 	}
 }
 

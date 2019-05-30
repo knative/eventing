@@ -32,6 +32,7 @@ import (
 )
 
 const eventingAPIVersion = "eventing.knative.dev/v1alpha1"
+const sourcesAPIVersion = "sources.eventing.knative.dev/v1alpha1"
 
 // clusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func clusterChannelProvisioner(name string) *corev1.ObjectReference {

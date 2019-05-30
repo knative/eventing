@@ -17,7 +17,8 @@ limitations under the License.
 package common
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/test/base"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -50,7 +51,7 @@ func (client *Client) CreateChannelsOrFail(names []string, provisionerName strin
 }
 
 // CreateSubscriptionOrFail will create a Subscription.
-func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...func(*v1alpha1.Subscription)) {
+func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...func(*eventingv1alpha1.Subscription)) {
 	namespace := client.Namespace
 	subscription := base.Subscription(name, channelName, options...)
 
@@ -64,7 +65,7 @@ func (client *Client) CreateSubscriptionOrFail(name, channelName string, options
 }
 
 // CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
-func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...func(*v1alpha1.Subscription)) {
+func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...func(*eventingv1alpha1.Subscription)) {
 	for _, name := range names {
 		client.CreateSubscriptionOrFail(name, channelName, options...)
 	}
@@ -92,7 +93,7 @@ func (client *Client) CreateBrokersOrFail(names []string, provisionerName string
 }
 
 // CreateTriggerOrFail will create a Trigger.
-func (client *Client) CreateTriggerOrFail(name string, options ...func(*v1alpha1.Trigger)) {
+func (client *Client) CreateTriggerOrFail(name string, options ...func(*eventingv1alpha1.Trigger)) {
 	namespace := client.Namespace
 	trigger := base.Trigger(name, options...)
 
@@ -103,6 +104,26 @@ func (client *Client) CreateTriggerOrFail(name string, options ...func(*v1alpha1
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(trigger)
+}
+
+// CreateCronJobSourceOrFail will create a CronJobSource.
+func (client *Client) CreateCronJobSourceOrFail(
+	name,
+	schedule,
+	data,
+	serviceAccountName string,
+	options ...func(*sourcesv1alpha1.CronJobSource),
+) {
+	namespace := client.Namespace
+	cronJobSource := base.CronJobSource(name, schedule, data, serviceAccountName, options...)
+
+	cronJobSources := client.Eventing.SourcesV1alpha1().CronJobSources(namespace)
+	// update cronJobSource with the new reference
+	cronJobSource, err := cronJobSources.Create(cronJobSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create cronjobsource %q: %v", name, err)
+	}
+	client.Cleaner.AddObj(cronJobSource)
 }
 
 // WithService returns an option that creates a Service binded with the given pod.
