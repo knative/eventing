@@ -195,17 +195,18 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, ingressChannelName, c))
 	}
 
+	subs := []*eventingv1alpha1.Subscription{}
 	for i := 0; i < len(p.Spec.Steps); i++ {
 		s, err := r.reconcileSubscription(ctx, i, p)
 		if err != nil {
 			// TODO: Propagate Status through...
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Subscription Object for step: %d", i), zap.Error(err))
-			// TODO: Bail on first error?
-			continue
+			return err
 		}
-		// TODO: Propagate Status through...
+		subs = append(subs, s)
 		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Subscription Object for step: %d: %+v", i, s))
 	}
+	p.Status.PropagateSubscriptionStatuses(subs)
 
 	return nil
 }

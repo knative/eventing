@@ -54,7 +54,7 @@ func (ps *PipelineStatus) InitializeConditions() {
 
 // PropagateSubscriptionStatuses sets the SubscriptionStatuses and PipelineSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []eventingv1alpha1.Subscription) {
+func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv1alpha1.Subscription) {
 	ps.SubscriptionStatuses = make([]PipelineSubscriptionStatus, len(subscriptions))
 	for i, s := range subscriptions {
 		ss := s.Status
@@ -64,7 +64,7 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []eventing
 				Kind:       s.Kind,
 				Name:       s.Name,
 			},
-			ReadyCondition: ss.GetCondition(eventingv1alpha1.SubscriptionConditionReady),
+			ReadyCondition: *ss.GetCondition(eventingv1alpha1.SubscriptionConditionReady),
 		}
 	}
 	pCondSet.Manage(ps).MarkTrue(PipelineSubscriptionsReady)
