@@ -366,8 +366,10 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
 		return "", err
 	}
-	if s.Status.Address != nil && s.Status.Address.Hostname != "" {
-		return eventingduck.DomainToURL(s.Status.Address.Hostname), nil
+	if s.Status.Address != nil {
+		if url := s.Status.Address.GetURL(); url.Host != "" {
+			return url.String(), nil
+		}
 	}
 	return "", fmt.Errorf("reply.status does not contain address")
 }

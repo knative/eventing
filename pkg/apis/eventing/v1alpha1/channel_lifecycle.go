@@ -106,11 +106,14 @@ func (cs *ChannelStatus) MarkDeprecated(reason, msg string) {
 
 // SetAddress makes this Channel addressable by setting the hostname. It also
 // sets the ChannelConditionAddressable to true.
-func (cs *ChannelStatus) SetAddress(hostname string) {
-	cs.Address.Hostname = hostname
-	if hostname != "" {
+func (cs *ChannelStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		cs.Address.Hostname = url.Host
+		cs.Address.URL = url
 		chanCondSet.Manage(cs).MarkTrue(ChannelConditionAddressable)
 	} else {
+		cs.Address.Hostname = ""
+		cs.Address.URL = nil
 		chanCondSet.Manage(cs).MarkFalse(ChannelConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }

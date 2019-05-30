@@ -17,9 +17,11 @@
 package v1alpha1
 
 import (
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/knative/pkg/apis"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable, InMemoryChannelConditionChannelServiceReady)
@@ -67,11 +69,14 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 }
 
 // TODO: Use the new beta duck types.
-func (imcs *InMemoryChannelStatus) SetAddress(hostname string) {
-	imcs.Address.Hostname = hostname
-	if hostname != "" {
+func (imcs *InMemoryChannelStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		imcs.Address.Hostname = url.Host
+		imcs.Address.URL = url
 		imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionAddressable)
 	} else {
+		imcs.Address.Hostname = ""
+		imcs.Address.URL = nil
 		imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }

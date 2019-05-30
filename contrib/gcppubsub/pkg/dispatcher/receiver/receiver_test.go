@@ -31,6 +31,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -248,7 +249,10 @@ func withStatusReady(hn string) option {
 		c.Status.InitializeConditions()
 		c.Status.MarkProvisioned()
 		c.Status.MarkProvisionerInstalled()
-		c.Status.SetAddress(hn)
+		c.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   hn,
+		})
 	}
 }
 

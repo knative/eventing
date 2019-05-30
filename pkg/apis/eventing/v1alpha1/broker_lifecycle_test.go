@@ -254,7 +254,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady      *bool
 		markIngressChannelReady      *bool
 		markFilterReady              *bool
-		address                      string
+		address                      *apis.URL
 		markIngressSubscriptionReady *bool
 		wantReady                    bool
 	}{{
@@ -263,7 +263,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		address:                      "hostname",
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    true,
 	}, {
@@ -272,7 +272,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		address:                      "hostname",
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
@@ -281,7 +281,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &falseVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		address:                      "hostname",
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
@@ -290,7 +290,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markIngressChannelReady:      &falseVal,
 		markFilterReady:              &trueVal,
-		address:                      "hostname",
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
@@ -299,7 +299,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
-		address:                      "hostname",
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
@@ -308,7 +308,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		address:                      "",
+		address:                      nil,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
@@ -317,7 +317,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &trueVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
-		address:                      "hostname",
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &falseVal,
 		wantReady:                    false,
 	}, {
@@ -326,10 +326,11 @@ func TestBrokerIsReady(t *testing.T) {
 		markTriggerChannelReady:      &falseVal,
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
-		address:                      "",
+		address:                      nil,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			bs := &BrokerStatus{}

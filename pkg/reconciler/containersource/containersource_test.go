@@ -65,7 +65,7 @@ var (
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS + "/"
+	sinkURI = "http://" + sinkDNS
 
 	// TODO: k8s service does not work, fix.
 	//serviceRef = corev1.ObjectReference{

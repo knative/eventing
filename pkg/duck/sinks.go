@@ -93,9 +93,9 @@ func (r *SinkReconciler) GetSinkURI(sinkObjRef *corev1.ObjectReference, source i
 	if sink.Status.Address == nil {
 		return "", fmt.Errorf("sink %+v does not contain address", sinkObjRef)
 	}
-	if sink.Status.Address.Hostname == "" {
+	url := sink.Status.Address.GetURL()
+	if url.Host == "" {
 		return "", fmt.Errorf("sink %+v contains an empty hostname", sinkObjRef)
 	}
-
-	return fmt.Sprintf("http://%s/", sink.Status.Address.Hostname), nil
+	return url.String(), nil
 }

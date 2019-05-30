@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -225,7 +226,7 @@ func TestChannelIsReady(t *testing.T) {
 				cs.MarkNotProvisioned("NotProvisioned", "testing")
 			}
 			if test.setAddress {
-				cs.SetAddress("foo.bar")
+				cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo.bar"})
 			}
 			if test.markDeprecated {
 				cs.MarkDeprecated("TestReason", "Test Message")
@@ -240,8 +241,8 @@ func TestChannelIsReady(t *testing.T) {
 
 func TestChannelStatus_SetAddressable(t *testing.T) {
 	testCases := map[string]struct {
-		domainInternal string
-		want           *ChannelStatus
+		url  *apis.URL
+		want *ChannelStatus
 	}{
 		"empty string": {
 			want: &ChannelStatus{
@@ -262,9 +263,15 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 			},
 		},
 		"has domain": {
-			domainInternal: "test-domain",
+			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &ChannelStatus{
 				Address: duckv1alpha1.Addressable{
+					Addressable: duckv1beta1.Addressable{
+						URL: &apis.URL{
+							Scheme: "http",
+							Host:   "test-domain",
+						},
+					},
 					Hostname: "test-domain",
 				},
 				Status: duckv1alpha1.Status{
@@ -281,7 +288,7 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
-			cs.SetAddress(tc.domainInternal)
+			cs.SetAddress(tc.url)
 			if diff := cmp.Diff(tc.want, cs, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v", diff)
 			}

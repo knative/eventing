@@ -61,16 +61,16 @@ const (
 
 var (
 	channelDNS = "channel.mynamespace.svc." + utils.GetClusterDomainName()
-	channelURI = "http://" + channelDNS + "/"
+	channelURI = "http://" + channelDNS
 
 	subscriberDNS = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
-	subscriberURI = "http://" + subscriberDNS + "/"
+	subscriberURI = "http://" + subscriberDNS
 
 	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
-	replyURI = "http://" + replyDNS + "/"
+	replyURI = "http://" + replyDNS
 
 	serviceDNS = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
-	serviceURI = "http://" + serviceDNS + "/"
+	serviceURI = "http://" + serviceDNS
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -644,12 +644,12 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI+"/"),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+					{UID: subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -690,13 +690,13 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI+"/"),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
 					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b_" + subscriptionName, Namespace: testNS, UID: "b_" + subscriptionUID}},
-					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "a_" + subscriptionName, Namespace: testNS, UID: "a_" + subscriptionUID}},
+					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: "a_" + subscriptionName, Namespace: testNS, UID: "a_" + subscriptionUID}},
 				}),
 				patchFinalizers(testNS, "a_"+subscriptionName),
 			},

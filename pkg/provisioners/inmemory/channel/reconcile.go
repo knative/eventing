@@ -30,6 +30,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 )
 
 const (
@@ -136,7 +137,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return err
 	}
 
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	c.Status.MarkProvisioned()
 	return nil

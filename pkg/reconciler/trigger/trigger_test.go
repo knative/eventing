@@ -29,7 +29,9 @@ import (
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
@@ -613,6 +615,12 @@ func newChannel(name string, labels map[string]string) *v1alpha1.Channel {
 		},
 		Status: v1alpha1.ChannelStatus{
 			Address: duckv1alpha1.Addressable{
+				Addressable: duckv1beta1.Addressable{
+					URL: &apis.URL{
+						Scheme: "http",
+						Host:   "any-non-empty-string",
+					},
+				},
 				Hostname: "any-non-empty-string",
 			},
 		},
