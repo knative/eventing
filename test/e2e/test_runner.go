@@ -56,9 +56,8 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, run the test case in parallel, etc.
-func Setup(t *testing.T, provisioner string, runInParallel bool) *common.Client {
+func Setup(t *testing.T, runInParallel bool) *common.Client {
 	// Create a new namespace to run this test case.
-	// Combine the test name and CCP to avoid duplication.
 	baseFuncName := getBaseFuncName(t.Name())
 	namespace := makeK8sNamePrefix(baseFuncName)
 	t.Logf("namespace is : %q", namespace)

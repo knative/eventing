@@ -81,7 +81,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
-	client := Setup(t, provisioner, true)
+	client := Setup(t, true)
 	defer TearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role

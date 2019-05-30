@@ -70,7 +70,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		loggerPodName         = "logger-pod"
 	)
 
-	client := Setup(t, provisioner, true)
+	client := Setup(t, true)
 	defer TearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role

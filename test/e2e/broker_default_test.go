@@ -55,7 +55,7 @@ type eventReceiver struct {
 // and sends different events to the broker's address. Finally, it verifies that only
 // the appropriate events are routed to the subscribers.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	client := Setup(t, common.DefaultClusterChannelProvisioner, true)
+	client := Setup(t, true)
 	defer TearDown(client)
 
 	// Label namespace so that it creates the default broker.

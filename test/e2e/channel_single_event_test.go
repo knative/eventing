@@ -49,7 +49,7 @@ func singleEvent(t *testing.T, encoding string) {
 
 	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
 		st.Logf("Run test with provisioner %q", provisioner)
-		client := Setup(st, provisioner, true)
+		client := Setup(st, true)
 		defer TearDown(client)
 
 		// create channel

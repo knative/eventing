@@ -48,7 +48,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 
-	client := Setup(t, provisioner, true)
+	client := Setup(t, true)
 	defer TearDown(client)
 
 	// create channels
