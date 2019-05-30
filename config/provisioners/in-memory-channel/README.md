@@ -1,7 +1,7 @@
 # In-Memory Channels
 
-> **NOTE:**: The _ClusterChannelProvisioner_ API is deprecated.
-> Please use the [_InMemoryChannel_](../../channels/in-memory-channel) CRD instead.
+> **NOTE:**: The _ClusterChannelProvisioner_ API is deprecated. Please use the
+> [_InMemoryChannel_](../../channels/in-memory-channel) CRD instead.
 
 In-memory channels are a best effort Channel. They should **NOT** be used in
 Production. They are useful for development.

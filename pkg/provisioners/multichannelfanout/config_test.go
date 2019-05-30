@@ -23,7 +23,9 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/fanout"
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -130,6 +132,12 @@ func makeChannel(name, namespace, hostname string, subscribable *eventingduck.Su
 		},
 		Status: v1alpha1.ChannelStatus{
 			Address: duckv1alpha1.Addressable{
+				Addressable: duckv1beta1.Addressable{
+					URL: &apis.URL{
+						Scheme: "http",
+						Host:   hostname,
+					},
+				},
 				Hostname: hostname,
 			},
 		},

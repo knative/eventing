@@ -16,18 +16,20 @@ limitations under the License.
 
 package v1alpha1
 
-import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+import (
+	"github.com/knative/pkg/apis"
+)
 
-var eventTypeCondSet = duckv1alpha1.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady)
+var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady)
 
 const (
-	EventTypeConditionReady                                   = duckv1alpha1.ConditionReady
-	EventTypeConditionBrokerExists duckv1alpha1.ConditionType = "BrokerExists"
-	EventTypeConditionBrokerReady  duckv1alpha1.ConditionType = "BrokerReady"
+	EventTypeConditionReady                           = apis.ConditionReady
+	EventTypeConditionBrokerExists apis.ConditionType = "BrokerExists"
+	EventTypeConditionBrokerReady  apis.ConditionType = "BrokerReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (et *EventTypeStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (et *EventTypeStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return eventTypeCondSet.Manage(et).GetCondition(t)
 }
 

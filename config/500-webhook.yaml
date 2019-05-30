@@ -15,10 +15,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webhook
+  name: eventing-webhook
   namespace: knative-eventing
 spec:
   replicas: 1
+  selector:
+    matchLabels: &labels
+      app: eventing-webhook
+      role: eventing-webhook
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels: *labels
+    spec:
+      serviceAccountName: eventing-webhook
+      containers:
+      - name: eventing-webhook
+        terminationMessagePolicy: FallbackToLogsOnError
+        # This is the Go import path for the binary that is containerized
+        # and substituted here.
+        image: github.com/knative/eventing/cmd/webhook
+        volumeMounts:
+        - name: config-logging
+          mountPath: /etc/config-logging
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_LOGGING_NAME
+          value: config-logging
+        - name: WEBHOOK_NAME
+          value: eventing-webhook
+        resources:
+          limits:
+            memory: 1000Mi   # An initial guess, but consistent with serving
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook
+  namespace: knative-eventing
+spec:
+  replicas: 0
   selector:
     matchLabels: &labels
       app: webhook

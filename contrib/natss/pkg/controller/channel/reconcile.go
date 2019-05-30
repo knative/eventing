@@ -22,6 +22,7 @@ import (
 
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
@@ -126,7 +127,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	c.Status.MarkProvisioned()
 	return nil

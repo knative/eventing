@@ -27,6 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/pkg/apis"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -173,7 +174,10 @@ func makeChannel(name string, namespace string, hostname string, subscribable *e
 	c.Status.InitializeConditions()
 	c.Status.MarkProvisioned()
 	c.Status.MarkProvisionerInstalled()
-	c.Status.SetAddress(hostname)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   hostname,
+	})
 	return &c
 }
 func makeSubscribable(subsriberSpec ...eventingduck.ChannelSubscriberSpec) *eventingduck.Subscribable {

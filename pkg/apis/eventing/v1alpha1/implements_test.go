@@ -18,6 +18,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 )
 
 func TestTypesImplements(t *testing.T) {
@@ -26,13 +27,13 @@ func TestTypesImplements(t *testing.T) {
 		iface    duck.Implementable
 	}{
 		// Channel
-		{instance: &Channel{}, iface: &duckv1alpha1.Conditions{}},
+		{instance: &Channel{}, iface: &duckv1beta1.Conditions{}},
 		{instance: &Channel{}, iface: &eventingduck.Subscribable{}},
 		{instance: &Channel{}, iface: &duckv1alpha1.Addressable{}},
 		// ClusterChannelProvisioner
-		{instance: &ClusterChannelProvisioner{}, iface: &duckv1alpha1.Conditions{}},
+		{instance: &ClusterChannelProvisioner{}, iface: &duckv1beta1.Conditions{}},
 		// Subscription
-		{instance: &Subscription{}, iface: &duckv1alpha1.Conditions{}},
+		{instance: &Subscription{}, iface: &duckv1beta1.Conditions{}},
 	}
 	for _, tc := range testCases {
 		if err := duck.VerifyType(tc.instance, tc.iface); err != nil {

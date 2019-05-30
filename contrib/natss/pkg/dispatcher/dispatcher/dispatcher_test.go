@@ -28,6 +28,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/pkg/apis"
 	_ "github.com/knative/pkg/system/testing"
 	"github.com/nats-io/nats-streaming-server/server"
 	"go.uber.org/zap"
@@ -259,7 +260,10 @@ func makechannel(name string, namespace string, hostname string) *eventingv1alph
 	c.Status.InitializeConditions()
 	c.Status.MarkProvisioned()
 	c.Status.MarkProvisionerInstalled()
-	c.Status.SetAddress(hostname)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   hostname,
+	})
 	return &c
 }
 

@@ -30,6 +30,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/resources"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -262,7 +263,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
-	imc.Status.SetAddress(fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()))
+	imc.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()),
+	})
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

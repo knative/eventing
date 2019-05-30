@@ -65,7 +65,7 @@ var (
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS + "/"
+	sinkURI = "http://" + sinkDNS
 
 	// TODO: k8s service does not work, fix.
 	//serviceRef = corev1.ObjectReference{
@@ -253,7 +253,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceDeploying(`Created deployment ""`),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						Image: image,
@@ -339,7 +339,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceDeploying(`Created deployment ""`),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						Image: image,
@@ -382,7 +382,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceDeployFailed(`Could not create deployment: inducing failure for create deployments`),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						Image: image,
@@ -420,7 +420,7 @@ func TestAllCases(t *testing.T) {
 		//			WithContainerSourceDeploying(`Created deployment ""`),
 		//		),
 		//	}},
-		//	WantCreates: []metav1.Object{
+		//	WantCreates: []runtime.Object{
 		//		makeDeployment(NewContainerSource(sourceName, testNS,
 		//			WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 		//				Image: image,

@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:0a8d273e9d38c7da3b2352a05f803b3bc543e7f0d8aefd5f0e913b3ec2a8c209"
+  digest = "1:ddedfe0babdfcd5068e0088d26aea020bc09e2be3d1c3fe3196e95d854490899"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -481,18 +481,18 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "985bff446d4e8da3ed9afaa2cefe9d91d03ae7e2"
+  revision = "5fe2b490af198572a89d128259f25e4aa4f16123"
 
 [[projects]]
   branch = "master"
-  digest = "1:1bfc083da5bbeb7abaac53c56890eb14eb11bac9ec985bfe338c4bbb0540c9ba"
+  digest = "1:8cbd2b6c179d93c5cdc5f75c1acda0aa7ef7649cf9ca138e587d9ac98a137802"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "1576da30069624094cf01719452da944b3046826"
+  revision = "7d0c44fb03a996501f10e3af4a718fd008fe9bed"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1056,6 +1056,27 @@
   version = "kubernetes-1.12.6"
 
 [[projects]]
+  digest = "1:6def8acd040e85b3becb1dd73de1f22a787fd9776e32aa3bbac9cf9727b53d0d"
+  name = "k8s.io/apiextensions-apiserver"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset",
+    "pkg/client/clientset/clientset/fake",
+    "pkg/client/clientset/clientset/scheme",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1/fake",
+    "pkg/client/informers/externalversions",
+    "pkg/client/informers/externalversions/apiextensions",
+    "pkg/client/informers/externalversions/apiextensions/v1beta1",
+    "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/listers/apiextensions/v1beta1",
+  ]
+  pruneopts = "NUT"
+  revision = "bd0469a053ff88529a61145790499fe78a09a49d"
+  version = "kubernetes-1.12.6"
+
+[[projects]]
   digest = "1:58293c3a67fbca0336cd3cc2140dfe630545694452cf73980d2e4b6e6ce2660c"
   name = "k8s.io/apimachinery"
   packages = [
@@ -1407,6 +1428,7 @@
     "github.com/knative/pkg/apis",
     "github.com/knative/pkg/apis/duck",
     "github.com/knative/pkg/apis/duck/v1alpha1",
+    "github.com/knative/pkg/apis/duck/v1beta1",
     "github.com/knative/pkg/client/clientset/versioned/fake",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/configmap/testing",
@@ -1451,6 +1473,12 @@
     "k8s.io/api/authentication/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
+    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake",
+    "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions",
+    "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/equality",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/meta",
