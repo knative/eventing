@@ -20,7 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -62,10 +63,12 @@ func TestClusterChannelProvisionerStatusIsReady(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ps: &ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{{
-				Type:   "foo",
-				Status: corev1.ConditionTrue,
-			}},
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
+					Type:   "foo",
+					Status: corev1.ConditionTrue,
+				}},
+			},
 		},
 		want: false,
 	}}
@@ -84,26 +87,30 @@ func TestClusterChannelProvisionerStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		ps        *ClusterChannelProvisionerStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		ps: &ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				condReady,
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
+					condReady,
+				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &condReady,
 	}, {
 		name: "unknown condition",
 		ps: &ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				condReady,
-				condUnprovisioned,
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
+					condReady,
+					condUnprovisioned,
+				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 

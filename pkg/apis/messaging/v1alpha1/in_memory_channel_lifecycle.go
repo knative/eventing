@@ -17,44 +17,42 @@
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
-var imcCondSet = duckv1alpha1.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable, InMemoryChannelConditionChannelServiceReady)
+var imcCondSet = apis.NewLivingConditionSet(InMemoryChannelConditionDispatcherReady, InMemoryChannelConditionServiceReady, InMemoryChannelConditionEndpointsReady, InMemoryChannelConditionAddressable, InMemoryChannelConditionChannelServiceReady)
 
 const (
 	// InMemoryChannelConditionReady has status True when all subconditions below have been set to True.
-	InMemoryChannelConditionReady = duckv1alpha1.ConditionReady
+	InMemoryChannelConditionReady = apis.ConditionReady
 
 	// InMemoryChannelConditionDispatcherReady has status True when a Dispatcher deployment is ready
 	// Keyed off appsv1.DeploymentAvaialble, which means minimum available replicas required are up
 	// and running for at least minReadySeconds.
-	InMemoryChannelConditionDispatcherReady duckv1alpha1.ConditionType = "DispatcherReady"
+	InMemoryChannelConditionDispatcherReady apis.ConditionType = "DispatcherReady"
 
 	// InMemoryChannelConditionServiceReady has status True when a k8s Service is ready. This
 	// basically just means it exists because there's no meaningful status in Service. See Endpoints
 	// below.
-	InMemoryChannelConditionServiceReady duckv1alpha1.ConditionType = "ServiceReady"
+	InMemoryChannelConditionServiceReady apis.ConditionType = "ServiceReady"
 
 	// InMemoryChannelConditionEndpointsReady has status True when a k8s Service Endpoints are backed
 	// by at least one endpoint.
-	InMemoryChannelConditionEndpointsReady duckv1alpha1.ConditionType = "EndpointsReady"
+	InMemoryChannelConditionEndpointsReady apis.ConditionType = "EndpointsReady"
 
 	// InMemoryChannelConditionAddressable has status true when this InMemoryChannel meets
 	// the Addressable contract and has a non-empty hostname.
-	InMemoryChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	InMemoryChannelConditionAddressable apis.ConditionType = "Addressable"
 
 	// InMemoryChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
 	// Because this uses ExternalName, there are no endpoints to check.
-	InMemoryChannelConditionChannelServiceReady duckv1alpha1.ConditionType = "ChannelServiceReady"
+	InMemoryChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (imcs *InMemoryChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (imcs *InMemoryChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return imcCondSet.Manage(imcs).GetCondition(t)
 }
 
