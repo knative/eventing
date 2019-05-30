@@ -32,44 +32,44 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-var condReady = duckv1alpha1.Condition{
+var condReady = apis.Condition{
 	Type:   ChannelConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condUnprovisioned = duckv1alpha1.Condition{
+var condUnprovisioned = apis.Condition{
 	Type:   ChannelConditionProvisioned,
 	Status: corev1.ConditionFalse,
 }
 
 var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-	duckv1alpha1.Condition{},
+	apis.Condition{},
 	"LastTransitionTime", "Message", "Reason", "Severity")
 
-var ignoreLastTransitionTime = cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+var ignoreLastTransitionTime = cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime")
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		cs        *ChannelStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &condReady,
 	}, {
 		name: "multiple conditions",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 					condUnprovisioned,
 				},
@@ -80,14 +80,14 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 					condUnprovisioned,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -110,8 +110,8 @@ func TestChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &ChannelStatus{},
 		want: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -129,16 +129,16 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionProvisioned,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -156,16 +156,16 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		cs: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionProvisioned,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -246,8 +246,8 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 	}{
 		"empty string": {
 			want: &ChannelStatus{
-				Status: duckv1alpha1.Status{
-					Conditions: []duckv1alpha1.Condition{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{
 						{
 							Type:   ChannelConditionAddressable,
 							Status: corev1.ConditionFalse,
@@ -274,8 +274,8 @@ func TestChannelStatus_SetAddressable(t *testing.T) {
 					},
 					Hostname: "test-domain",
 				},
-				Status: duckv1alpha1.Status{
-					Conditions: []duckv1alpha1.Condition{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{
 						{
 							Type:   ChannelConditionAddressable,
 							Status: corev1.ConditionTrue,
@@ -318,11 +318,11 @@ func TestChannelStatus_MarkDeprecated(t *testing.T) {
 				t.Fatalf("Incorrect number of conditions. Expected 1, actually %v", cs)
 			}
 
-			expected := duckv1alpha1.Condition{
+			expected := apis.Condition{
 				Type:     "Deprecated",
 				Reason:   "Test",
 				Status:   v1.ConditionTrue,
-				Severity: duckv1alpha1.ConditionSeverityWarning,
+				Severity: apis.ConditionSeverityWarning,
 				Message:  "Test Message",
 			}
 			if diff := cmp.Diff(expected, cs.Conditions[0], ignoreLastTransitionTime); diff != "" {

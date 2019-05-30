@@ -26,7 +26,7 @@ import (
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -59,61 +59,56 @@ func init() {
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-var testCases = []controllertesting.TestCase{
-	{
-		Name: "new channel with valid provisioner",
-		InitialState: []runtime.Object{
-			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
-			makeNewChannel(channelName, clusterChannelProvisionerName),
-		},
-		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
-		WantResult:   reconcile.Result{},
-		WantPresent: []runtime.Object{
-			makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
-			makeK8sService(channelName, clusterChannelProvisionerName),
-		},
-		IgnoreTimes: true,
+var testCases = []controllertesting.TestCase{{
+	Name: "new channel with valid provisioner",
+	InitialState: []runtime.Object{
+		makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
+		makeNewChannel(channelName, clusterChannelProvisionerName),
 	},
-	{
-		Name: "new channel with missing provisioner",
-		InitialState: []runtime.Object{
-			makeNewChannel(channelName, clusterChannelProvisionerName),
-		},
-		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
-		WantResult:   reconcile.Result{},
-		WantErrMsg:   "clusterchannelprovisioners.eventing.knative.dev " + "\"" + clusterChannelProvisionerName + "\"" + " not found",
-		IgnoreTimes:  true,
+	ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+	WantResult:   reconcile.Result{},
+	WantPresent: []runtime.Object{
+		makeNewChannelProvisionedStatus(channelName, clusterChannelProvisionerName),
+		makeK8sService(channelName, clusterChannelProvisionerName),
 	},
-	{
-		Name: "new channel with provisioner not managed by this controller",
-		InitialState: []runtime.Object{
-			makeNewChannel(channelName, "not-our-provisioner"),
-			makeNewClusterChannelProvisioner("not-our-provisioner", true),
-			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
-		},
-		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
-		WantResult:   reconcile.Result{},
-		WantPresent: []runtime.Object{
-			makeNewChannel(channelName, "not-our-provisioner"),
-		},
-		IgnoreTimes: true,
+	IgnoreTimes: true,
+}, {
+	Name: "new channel with missing provisioner",
+	InitialState: []runtime.Object{
+		makeNewChannel(channelName, clusterChannelProvisionerName),
 	},
-	{
-		Name: "new channel with provisioner not ready: error",
-		InitialState: []runtime.Object{
-			makeNewClusterChannelProvisioner(clusterChannelProvisionerName, false),
-			makeNewChannel(channelName, clusterChannelProvisionerName),
-		},
-		ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
-		WantResult:   reconcile.Result{},
-		WantErrMsg:   "ClusterChannelProvisioner " + clusterChannelProvisionerName + " is not ready",
-		WantPresent: []runtime.Object{
-			makeNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
-				"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
-		},
-		IgnoreTimes: true,
+	ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+	WantResult:   reconcile.Result{},
+	WantErrMsg:   "clusterchannelprovisioners.eventing.knative.dev " + "\"" + clusterChannelProvisionerName + "\"" + " not found",
+	IgnoreTimes:  true,
+}, {
+	Name: "new channel with provisioner not managed by this controller",
+	InitialState: []runtime.Object{
+		makeNewChannel(channelName, "not-our-provisioner"),
+		makeNewClusterChannelProvisioner("not-our-provisioner", true),
+		makeNewClusterChannelProvisioner(clusterChannelProvisionerName, true),
 	},
-}
+	ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+	WantResult:   reconcile.Result{},
+	WantPresent: []runtime.Object{
+		makeNewChannel(channelName, "not-our-provisioner"),
+	},
+	IgnoreTimes: true,
+}, {
+	Name: "new channel with provisioner not ready: error",
+	InitialState: []runtime.Object{
+		makeNewClusterChannelProvisioner(clusterChannelProvisionerName, false),
+		makeNewChannel(channelName, clusterChannelProvisionerName),
+	},
+	ReconcileKey: fmt.Sprintf("%s/%s", testNS, channelName),
+	WantResult:   reconcile.Result{},
+	WantErrMsg:   "ClusterChannelProvisioner " + clusterChannelProvisionerName + " is not ready",
+	WantPresent: []runtime.Object{
+		makeNewChannelNotProvisionedStatus(channelName, clusterChannelProvisionerName,
+			"ClusterChannelProvisioner "+clusterChannelProvisionerName+" is not ready"),
+	},
+	IgnoreTimes: true,
+}}
 
 func TestAllCases(t *testing.T) {
 
@@ -204,11 +199,11 @@ func makeNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alph
 		ObjectMeta: om("", name),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 		Status: eventingv1alpha1.ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
 					Status: condStatus,
-				},
+				}},
 			},
 		},
 	}

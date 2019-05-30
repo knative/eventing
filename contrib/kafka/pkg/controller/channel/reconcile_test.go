@@ -34,7 +34,7 @@ import (
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -513,11 +513,11 @@ func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha
 		ObjectMeta: om("", name),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 		Status: eventingv1alpha1.ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
 					Status: condStatus,
-				},
+				}},
 			},
 		},
 	}

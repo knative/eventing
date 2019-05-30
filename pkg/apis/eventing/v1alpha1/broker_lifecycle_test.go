@@ -22,9 +22,9 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing"
 	"github.com/knative/pkg/apis"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/apps/v1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,27 +36,27 @@ var (
 )
 
 var (
-	brokerConditionReady = duckv1alpha1.Condition{
+	brokerConditionReady = apis.Condition{
 		Type:   BrokerConditionReady,
 		Status: corev1.ConditionTrue,
 	}
 
-	brokerConditionIngress = duckv1alpha1.Condition{
+	brokerConditionIngress = apis.Condition{
 		Type:   BrokerConditionIngress,
 		Status: corev1.ConditionTrue,
 	}
 
-	brokerConditionTriggerChannel = duckv1alpha1.Condition{
+	brokerConditionTriggerChannel = apis.Condition{
 		Type:   BrokerConditionTriggerChannel,
 		Status: corev1.ConditionTrue,
 	}
 
-	brokerConditionFilter = duckv1alpha1.Condition{
+	brokerConditionFilter = apis.Condition{
 		Type:   BrokerConditionFilter,
 		Status: corev1.ConditionTrue,
 	}
 
-	brokerConditionAddressable = duckv1alpha1.Condition{
+	brokerConditionAddressable = apis.Condition{
 		Type:   BrokerConditionAddressable,
 		Status: corev1.ConditionFalse,
 	}
@@ -66,24 +66,24 @@ func TestBrokerGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		bs        *BrokerStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		bs: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					brokerConditionReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &brokerConditionReady,
 	}, {
 		name: "multiple conditions",
 		bs: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					brokerConditionIngress,
 					brokerConditionTriggerChannel,
 					brokerConditionFilter,
@@ -95,8 +95,8 @@ func TestBrokerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition false",
 		bs: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					brokerConditionTriggerChannel,
 					brokerConditionFilter,
 					brokerConditionAddressable,
@@ -108,14 +108,14 @@ func TestBrokerGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		bs: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					brokerConditionAddressable,
 					brokerConditionReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -138,8 +138,8 @@ func TestBrokerInitializeConditions(t *testing.T) {
 		name: "empty",
 		bs:   &BrokerStatus{},
 		want: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -166,16 +166,16 @@ func TestBrokerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		bs: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   BrokerConditionTriggerChannel,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -202,16 +202,16 @@ func TestBrokerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		bs: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &BrokerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   BrokerConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {

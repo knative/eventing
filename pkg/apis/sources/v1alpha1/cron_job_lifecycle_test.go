@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 )
 
 func TestCronJobSourceStatusIsReady(t *testing.T) {
@@ -199,8 +199,8 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		s         *v1alpha1.CronJobSourceStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name:      "uninitialized",
 		s:         &v1alpha1.CronJobSourceStatus{},
@@ -214,7 +214,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -227,7 +227,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -240,7 +240,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -253,7 +253,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -268,7 +268,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -284,7 +284,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -300,7 +300,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    v1alpha1.CronJobConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
@@ -318,7 +318,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    v1alpha1.CronJobConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
@@ -336,7 +336,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    v1alpha1.CronJobConditionReady,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "Testing",
@@ -354,7 +354,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    v1alpha1.CronJobConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
@@ -373,7 +373,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -390,7 +390,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -405,7 +405,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    v1alpha1.CronJobConditionReady,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "SinkEmpty",
@@ -423,7 +423,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: v1alpha1.CronJobConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   v1alpha1.CronJobConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -432,7 +432,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.s.GetCondition(test.condQuery)
-			ignoreTime := cmpopts.IgnoreFields(duckv1alpha1.Condition{},
+			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)

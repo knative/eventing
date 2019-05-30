@@ -20,10 +20,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
+var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionIngress,
 	BrokerConditionTriggerChannel,
 	BrokerConditionIngressChannel,
@@ -33,22 +32,22 @@ var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
 )
 
 const (
-	BrokerConditionReady                              = duckv1alpha1.ConditionReady
-	BrokerConditionIngress duckv1alpha1.ConditionType = "IngressReady"
+	BrokerConditionReady                      = apis.ConditionReady
+	BrokerConditionIngress apis.ConditionType = "IngressReady"
 
-	BrokerConditionTriggerChannel duckv1alpha1.ConditionType = "TriggerChannelReady"
+	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
 
-	BrokerConditionIngressChannel duckv1alpha1.ConditionType = "IngressChannelReady"
+	BrokerConditionIngressChannel apis.ConditionType = "IngressChannelReady"
 
-	BrokerConditionIngressSubscription duckv1alpha1.ConditionType = "IngressSubscriptionReady"
+	BrokerConditionIngressSubscription apis.ConditionType = "IngressSubscriptionReady"
 
-	BrokerConditionFilter duckv1alpha1.ConditionType = "FilterReady"
+	BrokerConditionFilter apis.ConditionType = "FilterReady"
 
-	BrokerConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	BrokerConditionAddressable apis.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (bs *BrokerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (bs *BrokerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return brokerCondSet.Manage(bs).GetCondition(t)
 }
 

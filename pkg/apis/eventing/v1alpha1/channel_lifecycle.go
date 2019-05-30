@@ -20,32 +20,31 @@ import (
 	"time"
 
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var chanCondSet = duckv1alpha1.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionAddressable, ChannelConditionProvisionerInstalled)
+var chanCondSet = apis.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionAddressable, ChannelConditionProvisionerInstalled)
 
 const (
 	// ChannelConditionReady has status True when the Channel is ready to
 	// accept traffic.
-	ChannelConditionReady = duckv1alpha1.ConditionReady
+	ChannelConditionReady = apis.ConditionReady
 	// ChannelConditionProvisioned has status True when the Channel's
 	// backing resources have been provisioned.
-	ChannelConditionProvisioned duckv1alpha1.ConditionType = "Provisioned"
+	ChannelConditionProvisioned apis.ConditionType = "Provisioned"
 
 	// ChannelConditionAddressable has status true when this Channel meets
 	// the Addressable contract and has a non-empty hostname.
-	ChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	ChannelConditionAddressable apis.ConditionType = "Addressable"
 
 	// ChannelConditionProvisionerInstalled has status true when the channel is being watched
 	// by the provisioner's channel controller (in other words, the provisioner is installed)
-	ChannelConditionProvisionerInstalled duckv1alpha1.ConditionType = "ProvisionerInstalled"
+	ChannelConditionProvisionerInstalled apis.ConditionType = "ProvisionerInstalled"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (cs *ChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (cs *ChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return chanCondSet.Manage(cs).GetCondition(t)
 }
 
@@ -87,11 +86,11 @@ func (cs *ChannelStatus) MarkProvisionerNotInstalled(reason, messageFormat strin
 // MarkDeprecated adds a warning condition that this Channel is deprecated and will stop working in
 // the future. Note that this does not affect the Ready condition.
 func (cs *ChannelStatus) MarkDeprecated(reason, msg string) {
-	dc := duckv1alpha1.Condition{
+	dc := apis.Condition{
 		Type:               "Deprecated",
 		Reason:             reason,
 		Status:             v1.ConditionTrue,
-		Severity:           duckv1alpha1.ConditionSeverityWarning,
+		Severity:           apis.ConditionSeverityWarning,
 		Message:            msg,
 		LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
 	}

@@ -17,27 +17,27 @@ limitations under the License.
 package v1alpha1
 
 import (
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 )
 
 const (
 	// ContainerSourceConditionReady has status True when the ContainerSource is ready to send events.
-	ContainerConditionReady = duckv1alpha1.ConditionReady
+	ContainerConditionReady = apis.ConditionReady
 
 	// ContainerConditionSinkProvided has status True when the ContainerSource has been configured with a sink target.
-	ContainerConditionSinkProvided duckv1alpha1.ConditionType = "SinkProvided"
+	ContainerConditionSinkProvided apis.ConditionType = "SinkProvided"
 
 	// ContainerConditionDeployed has status True when the ContainerSource has had it's deployment created.
-	ContainerConditionDeployed duckv1alpha1.ConditionType = "Deployed"
+	ContainerConditionDeployed apis.ConditionType = "Deployed"
 )
 
-var containerCondSet = duckv1alpha1.NewLivingConditionSet(
+var containerCondSet = apis.NewLivingConditionSet(
 	ContainerConditionSinkProvided,
 	ContainerConditionDeployed,
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (s *ContainerSourceStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (s *ContainerSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return containerCondSet.Manage(s).GetCondition(t)
 }
 

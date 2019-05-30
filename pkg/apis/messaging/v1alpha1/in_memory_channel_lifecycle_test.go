@@ -28,32 +28,32 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var condReady = duckv1alpha1.Condition{
+var condReady = apis.Condition{
 	Type:   InMemoryChannelConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condDispatcherReady = duckv1alpha1.Condition{
+var condDispatcherReady = apis.Condition{
 	Type:   InMemoryChannelConditionDispatcherReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condDispatcherNotReady = duckv1alpha1.Condition{
+var condDispatcherNotReady = apis.Condition{
 	Type:   InMemoryChannelConditionDispatcherReady,
 	Status: corev1.ConditionFalse,
 }
 
-var condDispatcherServiceReady = duckv1alpha1.Condition{
+var condDispatcherServiceReady = apis.Condition{
 	Type:   InMemoryChannelConditionServiceReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condDispatcherEndpointsReady = duckv1alpha1.Condition{
+var condDispatcherEndpointsReady = apis.Condition{
 	Type:   InMemoryChannelConditionEndpointsReady,
 	Status: corev1.ConditionTrue,
 }
 
-var condDispatcherAddressable = duckv1alpha1.Condition{
+var condDispatcherAddressable = apis.Condition{
 	Type:   InMemoryChannelConditionAddressable,
 	Status: corev1.ConditionTrue,
 }
@@ -72,39 +72,39 @@ var deploymentStatusReady = &appsv1.DeploymentStatus{Conditions: []appsv1.Deploy
 var deploymentStatusNotReady = &appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{deploymentConditionNotReady}}
 
 var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-	duckv1alpha1.Condition{},
+	apis.Condition{},
 	"LastTransitionTime", "Message", "Reason", "Severity")
 
-var ignoreLastTransitionTime = cmpopts.IgnoreFields(duckv1alpha1.Condition{}, "LastTransitionTime")
+var ignoreLastTransitionTime = cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime")
 
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		cs        *InMemoryChannelStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &condReady,
 	}, {
 		name: "unknown condition",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					condReady,
 					condDispatcherNotReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 	for _, test := range tests {
@@ -126,8 +126,8 @@ func TestChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &InMemoryChannelStatus{},
 		want: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   InMemoryChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -151,16 +151,16 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   InMemoryChannelConditionDispatcherReady,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   InMemoryChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -184,16 +184,16 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   InMemoryChannelConditionDispatcherReady,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &InMemoryChannelStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   InMemoryChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -326,8 +326,8 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 	}{
 		"empty string": {
 			want: &InMemoryChannelStatus{
-				Status: duckv1alpha1.Status{
-					Conditions: []duckv1alpha1.Condition{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{
 						{
 							Type:   InMemoryChannelConditionAddressable,
 							Status: corev1.ConditionFalse,
@@ -354,8 +354,8 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 					},
 					Hostname: "test-domain",
 				},
-				Status: duckv1alpha1.Status{
-					Conditions: []duckv1alpha1.Condition{{
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{
 						Type:   InMemoryChannelConditionAddressable,
 						Status: corev1.ConditionTrue,
 					}},
