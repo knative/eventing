@@ -233,7 +233,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -262,7 +262,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -279,7 +279,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-2",
 									SubscriberURI: "http://test/subscriber",
@@ -311,7 +311,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel-1",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -329,7 +329,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel-1",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -342,7 +342,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel-2",
 						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-3",
 									SubscriberURI: "http://test/subscriber",

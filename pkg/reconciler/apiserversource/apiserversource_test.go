@@ -60,7 +60,7 @@ var (
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS + "/"
+	sinkURI = "http://" + sinkDNS
 )
 
 const (

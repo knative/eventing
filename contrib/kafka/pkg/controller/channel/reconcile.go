@@ -33,6 +33,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	eventingNames "github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 )
 
 const (
@@ -167,7 +168,10 @@ func (r *reconciler) reconcile(ctx context.Context, channel *eventingv1alpha1.Ch
 		r.logger.Info("error creating the Channel's K8s Service", zap.Error(err))
 		return false, err
 	}
-	channel.Status.SetAddress(eventingNames.ServiceHostName(svc.Name, svc.Namespace))
+	channel.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   eventingNames.ServiceHostName(svc.Name, svc.Namespace),
+	})
 	channel.Status.MarkProvisioned()
 
 	// close the connection

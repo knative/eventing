@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
@@ -26,10 +27,10 @@ var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferen
 
 const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
-	SubscriptionConditionReady = duckv1alpha1.ConditionReady
+	SubscriptionConditionReady = apis.ConditionReady
 	// SubscriptionConditionReferencesResolved has status True when all the specified references have been successfully
 	// resolved.
-	SubscriptionConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
+	SubscriptionConditionReferencesResolved apis.ConditionType = "Resolved"
 
 	// SubscriptionConditionAddedToChannel has status True when controller has successfully added a
 	// subscription to the spec.channel resource.
@@ -40,7 +41,7 @@ const (
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ss *SubscriptionStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (ss *SubscriptionStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return subCondSet.Manage(ss).GetCondition(t)
 }
 

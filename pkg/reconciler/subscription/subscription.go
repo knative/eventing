@@ -428,8 +428,10 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
 		return "", err
 	}
-	if s.Status.Address != nil && s.Status.Address.Hostname != "" {
-		return eventingduck.DomainToURL(s.Status.Address.Hostname), nil
+	if s.Status.Address != nil {
+		if url := s.Status.Address.GetURL(); url.Host != "" {
+			return url.String(), nil
+		}
 	}
 	return "", fmt.Errorf("reply.status does not contain address")
 }
@@ -484,7 +486,7 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	rv := &eventingduckv1alpha1.Subscribable{}
 	for _, sub := range subs {
 		if sub.Status.AreReferencesResolved() {
-			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.ChannelSubscriberSpec{
+			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					APIVersion: sub.APIVersion,
 					Kind:       sub.Kind,

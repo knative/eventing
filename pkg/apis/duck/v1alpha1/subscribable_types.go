@@ -28,22 +28,21 @@ import (
 // Subscribable is the schema for the subscribable portion of the spec
 // section of the resource.
 type Subscribable struct {
-	// TODO: What is actually required here for Channel spec.
-	// This is the list of subscriptions for this channel.
+	// This is the list of subscriptions for this subscribable.
 	// +patchMergeKey=uid
 	// +patchStrategy=merge
-	Subscribers []ChannelSubscriberSpec `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
+	Subscribers []SubscriberSpec `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // Subscribable is an Implementable "duck type".
 var _ duck.Implementable = (*Subscribable)(nil)
 
-// ChannelSubscriberSpec defines a single subscriber to a Channel.
-// Ref (Deprecated) is a reference to the Subscription this ChannelSubscriberSpec was created for
+// SubscriberSpec defines a single subscriber to a Subscribable.
+// Ref is a reference to the Subscription this SubscriberSpec was created for
 // SubscriberURI is the endpoint for the subscriber
 // ReplyURI is the endpoint for the reply
 // At least one of SubscriberURI and ReplyURI must be present
-type ChannelSubscriberSpec struct {
+type SubscriberSpec struct {
 	// Deprecated: use UID.
 	// +optional
 	DeprecatedRef *corev1.ObjectReference `json:"ref,omitempty" yaml:"ref,omitempty"`
@@ -65,11 +64,11 @@ type SubscribableStatus struct {
 	// This is the list of subscription's statuses for this channel.
 	// +patchMergeKey=uid
 	// +patchStrategy=merge
-	Subscribers []ChannelSubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
+	Subscribers []SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // ChannelSubscriberStatus defines the status of a single subscriber to a Channel.
-type ChannelSubscriberStatus struct {
+type SubscriberStatus struct {
 	// UID is used to understand the origin of the subscriber.
 	// +optional
 	UID types.UID `json:"uid,omitempty"`
@@ -87,48 +86,48 @@ type ChannelSubscriberStatus struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel is a skeleton type wrapping Subscribable in the manner we expect resource writers
+// SubscribableType is a skeleton type wrapping Subscribable in the manner we expect resource writers
 // defining compatible resources to embed it. We will typically use this type to deserialize
-// Channel ObjectReferences and access the Subscription data.  This is not a real resource.
-type Channel struct {
+// SubscribableType ObjectReferences and access the Subscription data.  This is not a real resource.
+type SubscribableType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// ChannelSpec is the part where Subscribable object is
+	// SubscribableSpec is the part where Subscribable object is
 	// configured as to be compatible with Subscribable contract.
-	Spec ChannelSpec `json:"spec"`
+	Spec SubscribableTypeSpec `json:"spec"`
 
 	// ChannelStatus is the part where SubscribableStatus object is
 	// configured as to be compatible with Subscribable contract.
-	Status ChannelStatus `json:"status"`
+	Status SubscribableTypeStatus `json:"status"`
 }
 
-// ChannelSpec shows how we expect folks to embed Subscribable in their Spec field.
-type ChannelSpec struct {
+// SubscribableTypeSpec shows how we expect folks to embed Subscribable in their Spec field.
+type SubscribableTypeSpec struct {
 	Subscribable *Subscribable `json:"subscribable,omitempty"`
 }
 
-// ChannelStatus shows how we expect folks to embed SubscribableStatus in their Status field.
-type ChannelStatus struct {
-	SubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
+// SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
+type SubscribableTypeStatus struct {
+	SubscribableStatus *SubscribableStatus `json:"subscribable,omitempty"`
 }
 
 var (
-	// Verify Channel resources meet duck contracts.
-	_ duck.Populatable = (*Channel)(nil)
-	_ apis.Listable    = (*Channel)(nil)
+	// Verify SubscribableType resources meet duck contracts.
+	_ duck.Populatable = (*SubscribableType)(nil)
+	_ apis.Listable    = (*SubscribableType)(nil)
 )
 
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {
-	return &Channel{}
+	return &SubscribableType{}
 }
 
 // Populate implements duck.Populatable
-func (c *Channel) Populate() {
+func (c *SubscribableType) Populate() {
 	c.Spec.Subscribable = &Subscribable{
 		// Populate ALL fields
-		Subscribers: []ChannelSubscriberSpec{{
+		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			Generation:    1,
 			SubscriberURI: "call1",
@@ -157,16 +156,16 @@ func (c *Channel) Populate() {
 }
 
 // GetListType implements apis.Listable
-func (c *Channel) GetListType() runtime.Object {
-	return &ChannelList{}
+func (c *SubscribableType) GetListType() runtime.Object {
+	return &SubscribableTypeList{}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChannelList is a list of Channel resources
-type ChannelList struct {
+// SubscribableTypeList is a list of SubscribableType resources
+type SubscribableTypeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []Channel `json:"items"`
+	Items []SubscribableType `json:"items"`
 }

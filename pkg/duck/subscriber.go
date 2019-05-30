@@ -106,7 +106,8 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 	t := duckv1alpha1.AddressableType{}
 	if err = duck.FromUnstructured(obj, &t); err == nil {
 		if t.Status.Address != nil {
-			return DomainToURL(t.Status.Address.Hostname), nil
+			url := t.Status.Address.GetURL()
+			return url.String(), nil
 		}
 	}
 

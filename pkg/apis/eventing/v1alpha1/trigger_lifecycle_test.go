@@ -24,23 +24,23 @@ import (
 	"github.com/knative/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var (
-	triggerConditionReady = duckv1alpha1.Condition{
+	triggerConditionReady = apis.Condition{
 		Type:   TriggerConditionReady,
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionBroker = duckv1alpha1.Condition{
+	triggerConditionBroker = apis.Condition{
 		Type:   TriggerConditionBroker,
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionSubscribed = duckv1alpha1.Condition{
+	triggerConditionSubscribed = apis.Condition{
 		Type:   TriggerConditionSubscribed,
 		Status: corev1.ConditionFalse,
 	}
@@ -50,24 +50,24 @@ func TestTriggerGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		ts        *TriggerStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &triggerConditionReady,
 	}, {
 		name: "multiple conditions",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 				},
@@ -78,8 +78,8 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition false",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 				},
@@ -90,13 +90,13 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionSubscribed,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -119,8 +119,8 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		name: "empty",
 		ts:   &TriggerStatus{},
 		want: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -135,16 +135,16 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
 				}, {
@@ -159,16 +159,16 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
 				}, {

@@ -25,6 +25,7 @@ import (
 
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/pkg/apis"
 )
 
 // ChannelOption enables further configuration of a Channel.
@@ -92,7 +93,10 @@ func WithChannelProvisioner(gvk metav1.GroupVersionKind, name string) ChannelOpt
 
 func WithChannelAddress(hostname string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Status.SetAddress(hostname)
+		c.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   hostname,
+		})
 	}
 }
 
@@ -100,7 +104,7 @@ func WithChannelReady(c *v1alpha1.Channel) {
 	c.Status = *v1alpha1.TestHelper.ReadyChannelStatus()
 }
 
-func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) ChannelOption {
+func WithChannelSubscribers(subscribers []duckv1alpha1.SubscriberSpec) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
 			Subscribers: subscribers,

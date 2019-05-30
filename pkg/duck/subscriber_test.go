@@ -39,7 +39,7 @@ var (
 	uri = "http://example.com"
 
 	channelAddress = "test-channel.hostname"
-	channelURL     = fmt.Sprintf("http://%s/", channelAddress)
+	channelURL     = fmt.Sprintf("http://%s", channelAddress)
 
 	legacyCallableAddress = "legacy-callable.domain-internal"
 	legacyCallableURL     = fmt.Sprintf("http://%s/", legacyCallableAddress)

@@ -42,7 +42,7 @@ func NewConfigFromChannels(channels []v1alpha1.Channel) *Config {
 		channelConfig := ChannelConfig{
 			Namespace: c.Namespace,
 			Name:      c.Name,
-			HostName:  c.Status.Address.Hostname,
+			HostName:  c.Status.Address.GetURL().Host,
 		}
 		if c.Spec.Subscribable != nil {
 			channelConfig.FanoutConfig = fanout.Config{
