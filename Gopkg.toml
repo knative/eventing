@@ -51,6 +51,13 @@ required = [
 # GKE version as of 2019-01-24 is 1.11
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  version = "kubernetes-1.12.6"
+
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
+[[override]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.12.6"
 
@@ -73,8 +80,8 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-05-16
-  revision = "7b196cff4669dbd6d31b83bdeb72fbaafd7f8993"
+  # HEAD as of 2019-05-29
+  revision = "15b1aa79be0b927a9e62d1738b03ef3efb2745f3"
 
 # TODO why is this overridden?
 [[override]]

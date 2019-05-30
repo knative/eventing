@@ -83,15 +83,15 @@ func NewController(
 		containerSourceLister: containerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
-	containerSourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
+	containerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ContainerSource")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
 	return impl

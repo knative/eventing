@@ -32,6 +32,9 @@ import (
 	logtesting "github.com/knative/pkg/logging/testing"
 	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	fakeapiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
+	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -75,6 +78,20 @@ var (
 		Kind:    "Subscriber",
 	}
 
+	nonAddressableGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Trigger",
+	}
+
+	nonSubscribableGVK = metav1.GroupVersionKind{
+		Group:   "eventing.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "EventType",
+	}
+
+	nonSubscribableCRDName = "eventtypes.eventing.knative.dev"
+
 	serviceGVK = metav1.GroupVersionKind{
 		Version: "v1",
 		Kind:    "Service",
@@ -91,6 +108,7 @@ func init() {
 	// Add types to scheme
 	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
+	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestAllCases(t *testing.T) {
@@ -126,7 +144,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: channels.eventing.knative.dev %q not found", channelName),
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -135,7 +153,100 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFetchFailed, fmt.Sprintf("Failed to validate spec.channel exists: channels.eventing.knative.dev %q not found", channelName)),
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName)),
+				),
+			}},
+		}, {
+			Name: "subscription, but channel crd does not exist",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(nonSubscribableGVK, channelName, testNS),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: customresourcedefinition.apiextensions.k8s.io %q not found", nonSubscribableCRDName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: customresourcedefinition.apiextensions.k8s.io %q not found", nonSubscribableCRDName)),
+				),
+			}},
+		}, {
+			Name: "subscription, but channel crd does not contain subscribable label",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(nonSubscribableGVK, channelName, testNS),
+				NewCustomResourceDefinition(nonSubscribableCRDName),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd %q does not contain mandatory label %q", nonSubscribableCRDName, channelCrdLabelKey),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd %q does not contain mandatory label %q", nonSubscribableCRDName, channelCrdLabelKey)),
+				),
+			}},
+		}, {
+			Name: "subscription, but channel crd contains invalid subscribable label value",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+				NewUnstructured(nonSubscribableGVK, channelName, testNS),
+				NewCustomResourceDefinition(nonSubscribableCRDName,
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: "whatever"})),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: crd label %s has invalid value %q", channelCrdLabelKey, "whatever"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(nonSubscribableGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: crd label %s has invalid value %q", channelCrdLabelKey, "whatever")),
 				),
 			}},
 		}, {
@@ -214,7 +325,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ResultResolveFailed", "Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -225,7 +336,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(resultResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName)),
 				),
 			}},
 		}, {
@@ -235,7 +346,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-					WithSubscriptionReply(subscriberGVK, replyName), // reply will be a subscriberGVK for this test
+					WithSubscriptionReply(nonAddressableGVK, replyName), // reply will be a nonAddressableGVK for this test
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
 					WithUnstructuredAddressable(subscriberDNS),
@@ -244,21 +355,23 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 				),
-				NewUnstructured(subscriberGVK, replyName, testNS),
+				NewUnstructured(nonAddressableGVK, replyName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SubscriptionUpdateStatusFailed", "Failed to update Subscription's status: invalid value: Subscriber: spec.reply.kind\nonly 'Channel' kind is allowed"),
+				Eventf(corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: reply.status does not contain address"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-					WithSubscriptionReply(subscriberGVK, replyName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionReply(nonAddressableGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: reply.status does not contain address"),
 				),
 			}},
 		}, {
@@ -639,10 +752,11 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(opt, controllerAgentName),
-			subscriptionLister:  listers.GetSubscriptionLister(),
-			tracker:             tracker.New(func(string) {}, 0),
-			addressableInformer: &fakeAddressableInformer{},
+			Base:                           reconciler.NewBase(opt, controllerAgentName),
+			subscriptionLister:             listers.GetSubscriptionLister(),
+			tracker:                        tracker.New(func(string) {}, 0),
+			addressableInformer:            &fakeAddressableInformer{},
+			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	},
 		false,
@@ -653,15 +767,19 @@ func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
 	kubeClient := fakekubeclientset.NewSimpleClientset()
 	eventingClient := fakeclientset.NewSimpleClientset()
+	apiExtensionsClient := fakeapiextensionsclientset.NewSimpleClientset()
 	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
+	apiExtensionsInformer := apiextensionsinformers.NewSharedInformerFactory(apiExtensionsClient, 0)
 
 	subscriptionInformer := eventingInformer.Eventing().V1alpha1().Subscriptions()
+	customResourceDefinitionInformer := apiExtensionsInformer.Apiextensions().V1beta1().CustomResourceDefinitions()
 	addressableInformer := &fakeAddressableInformer{}
 	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	}, subscriptionInformer, addressableInformer)
+		KubeClientSet:          kubeClient,
+		EventingClientSet:      eventingClient,
+		ApiExtensionsClientSet: apiExtensionsClient,
+		Logger:                 logtesting.TestLogger(t),
+	}, subscriptionInformer, addressableInformer, customResourceDefinitionInformer)
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

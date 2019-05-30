@@ -30,40 +30,22 @@ var validationTests = []struct {
 	want *apis.FieldError
 }{
 	{
-		name: "invalid kind",
+		name: "valid object ref",
 		ref: corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
 			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Strait",
-		},
-		want: &apis.FieldError{
-			Message: "invalid value: Strait",
-			Paths:   []string{"kind"},
-			Details: "only 'Channel' kind is allowed",
-		},
-	},
-	{
-		name: "invalid api version",
-		ref: corev1.ObjectReference{
-			Name:       "boaty-mcboatface",
-			APIVersion: "eventing.knative.dev/v1alpha2",
-			Kind:       "Channel",
-		},
-		want: &apis.FieldError{
-			Message: `invalid value: eventing.knative.dev/v1alpha2`,
-			Paths:   []string{"apiVersion"},
-			Details: "only eventing.knative.dev/v1alpha1 " +
-				"is allowed for apiVersion",
-		},
-	},
-	{
-		name: "valid channel",
-		ref: corev1.ObjectReference{
-			Name:       "boaty-mcboatface",
-			APIVersion: "eventing.knative.dev/v1alpha1",
-			Kind:       "Channel",
+			Kind:       "MyChannel",
 		},
 		want: nil,
+	},
+	{
+		name: "invalid object ref",
+		ref: corev1.ObjectReference{
+			Name:       "boaty-mcboatface",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "",
+		},
+		want: apis.ErrMissingField("kind"),
 	},
 }
 

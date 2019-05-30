@@ -24,6 +24,7 @@ import (
 
 	pkgapisduck "github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/controller"
 
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
@@ -50,7 +51,7 @@ func NewSinkReconciler(opt reconciler.Options, callback func(string)) *SinkRecon
 				ResyncPeriod: opt.ResyncPeriod,
 				StopChannel:  opt.StopChannel,
 			},
-			EventHandler: reconciler.Handler(ret.tracker.OnChanged),
+			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
 		},
 	}
 
