@@ -48,7 +48,7 @@ type Pipeline struct {
 var _ apis.Validatable = (*Pipeline)(nil)
 var _ apis.Defaultable = (*Pipeline)(nil)
 
-// TOOD: make appropriate fields immutable.
+// TODO: make appropriate fields immutable.
 //var _ apis.Immutable = (*Pipeline)(nil)
 var _ runtime.Object = (*Pipeline)(nil)
 var _ webhook.GenericCRD = (*Pipeline)(nil)
