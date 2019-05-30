@@ -24,12 +24,12 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"sync"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -46,6 +46,11 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
+
+type envConfig struct {
+	Broker  string `envconfig:"BROKER" required:"true"`
+	Channel string `envconfig:"CHANNEL" required:"true"`
+}
 
 var (
 	defaultTTL = 255
@@ -76,11 +81,14 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	brokerName := getRequiredEnv("BROKER")
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   getRequiredEnv("CHANNEL"),
+		Host:   env.Channel,
 		Path:   "/",
 	}
 
@@ -92,7 +100,7 @@ func main() {
 		logger:     logger,
 		ceClient:   ceClient,
 		channelURI: channelURI,
-		brokerName: brokerName,
+		brokerName: env.Broker,
 	}
 
 	// Run the event handler with the manager.
@@ -144,14 +152,6 @@ func main() {
 	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }
 
 type handler struct {

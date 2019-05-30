@@ -19,13 +19,13 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 
 	"k8s.io/client-go/tools/clientcmd"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"github.com/kelseyhightower/envconfig"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logconfig"
@@ -51,6 +51,13 @@ import (
 const (
 	component = "controller"
 )
+
+type envConfig struct {
+	BrokerIngressImage          string `envconfig:"BROKER_INGRESS_IMAGE" required:"true"`
+	BrokerIngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
+	BrokerFilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
+	BrokerFilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
+}
 
 var (
 	hardcodedLoggingConfig = flag.Bool("hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
@@ -104,6 +111,11 @@ func main() {
 	// Duck
 	addressableInformer := duck.NewAddressableInformer(opt)
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
@@ -142,10 +154,10 @@ func main() {
 			serviceInformer,
 			deploymentInformer,
 			broker.ReconcilerArgs{
-				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
-				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
-				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
-				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+				IngressImage:              env.BrokerIngressImage,
+				IngressServiceAccountName: env.BrokerIngressServiceAccount,
+				FilterImage:               env.BrokerFilterImage,
+				FilterServiceAccountName:  env.BrokerFilterServiceAccount,
 			},
 		),
 		eventtype.NewController(
@@ -240,14 +252,6 @@ func getLoggingConfigOrDie() map[string]string {
 		}
 		return cm
 	}
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }
 
 func flush(logger *zap.SugaredLogger) {
