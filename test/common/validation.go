@@ -27,7 +27,7 @@ import (
 const (
 	// The interval and timeout used for polling pod logs.
 	interval = 1 * time.Second
-	timeout  = 2 * time.Minute
+	timeout  = 4 * time.Minute
 )
 
 // CheckLog waits until logs for the logger Pod satisfy the checker.
@@ -66,7 +66,7 @@ func CheckerContainsAll(contents []string) func(string) bool {
 	}
 }
 
-// CheckerContainsCount returns a checker functions to check if the log contains the count number of given content.
+// CheckerContainsCount returns a checker function to check if the log contains the count number of given content.
 func CheckerContainsCount(content string, count int) func(string) bool {
 	return func(log string) bool {
 		return strings.Count(log, content) == count
