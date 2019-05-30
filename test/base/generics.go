@@ -40,7 +40,7 @@ func Meta(name, namespace, kind string) *MetaResource {
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kind,
-			APIVersion: EventingAPIVersion,
+			APIVersion: eventingAPIVersion,
 		},
 	}
 }
