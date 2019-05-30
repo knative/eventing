@@ -55,7 +55,7 @@ var _ webhook.GenericCRD = (*InMemoryChannel)(nil)
 // arguments for a Channel.
 type InMemoryChannelSpec struct {
 	// Channel conforms to Duck type Subscribable.
-	Subscribers *eventingduck.Subscribable `json:"subscribers,omitempty"`
+	Subscribable *eventingduck.Subscribable `json:"Subscribable,omitempty"`
 }
 
 // ChannelStatus represents the current state of a Channel.
@@ -70,8 +70,8 @@ type InMemoryChannelStatus struct {
 	// provided targets from inside the cluster.
 	//
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	Address          duckv1alpha1.Addressable         `json:"address,omitempty"`
-	SubscriberStatus *eventingduck.SubscribableStatus `json:"subscribablestatus,omitempty"`
+	Address             duckv1alpha1.Addressable         `json:"address,omitempty"`
+	SubscribablerStatus *eventingduck.SubscribableStatus `json:"subscribablestatus,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

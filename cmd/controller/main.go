@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/duck"
@@ -32,12 +32,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/metrics"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/broker"
-	"github.com/knative/eventing/pkg/reconciler/channel"
-	"github.com/knative/eventing/pkg/reconciler/eventtype"
-	"github.com/knative/eventing/pkg/reconciler/namespace"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
-	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	pkgmetrics "github.com/knative/pkg/metrics"
@@ -74,7 +69,7 @@ func main() {
 
 	logger.Info("Starting the controller")
 
-	const numControllers = 6
+	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -114,45 +109,45 @@ func main() {
 			addressableInformer,
 			customResourceDefinitionInformer,
 		),
-		namespace.NewController(
-			opt,
-			namespaceInformer,
-			serviceAccountInformer,
-			roleBindingInformer,
-			brokerInformer,
-		),
-		channel.NewController(
-			opt,
-			channelInformer,
-		),
-		trigger.NewController(
-			opt,
-			triggerInformer,
-			channelInformer,
-			subscriptionInformer,
-			brokerInformer,
-			serviceInformer,
-			addressableInformer,
-		),
-		broker.NewController(
-			opt,
-			brokerInformer,
-			subscriptionInformer,
-			channelInformer,
-			serviceInformer,
-			deploymentInformer,
-			broker.ReconcilerArgs{
-				IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
-				IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
-				FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
-				FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
-			},
-		),
-		eventtype.NewController(
-			opt,
-			eventTypeInformer,
-			brokerInformer,
-		),
+		// namespace.NewController(
+		// 	opt,
+		// 	namespaceInformer,
+		// 	serviceAccountInformer,
+		// 	roleBindingInformer,
+		// 	brokerInformer,
+		// ),
+		// channel.NewController(
+		// 	opt,
+		// 	channelInformer,
+		// ),
+		// trigger.NewController(
+		// 	opt,
+		// 	triggerInformer,
+		// 	channelInformer,
+		// 	subscriptionInformer,
+		// 	brokerInformer,
+		// 	serviceInformer,
+		// 	addressableInformer,
+		// ),
+		// broker.NewController(
+		// 	opt,
+		// 	brokerInformer,
+		// 	subscriptionInformer,
+		// 	channelInformer,
+		// 	serviceInformer,
+		// 	deploymentInformer,
+		// 	broker.ReconcilerArgs{
+		// 		IngressImage:              getRequiredEnv("BROKER_INGRESS_IMAGE"),
+		// 		IngressServiceAccountName: getRequiredEnv("BROKER_INGRESS_SERVICE_ACCOUNT"),
+		// 		FilterImage:               getRequiredEnv("BROKER_FILTER_IMAGE"),
+		// 		FilterServiceAccountName:  getRequiredEnv("BROKER_FILTER_SERVICE_ACCOUNT"),
+		// 	},
+		// ),
+		// eventtype.NewController(
+		// 	opt,
+		// 	eventTypeInformer,
+		// 	brokerInformer,
+		// ),
 	}
 	// This line asserts at compile time that the length of controllers is equal to numControllers.
 	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
