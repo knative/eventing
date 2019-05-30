@@ -20,6 +20,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,15 +93,17 @@ type PipelineSpec struct {
 type PipelineChannelStatus struct {
 	// Channel is the reference to the underlying channel.
 	Channel corev1.ObjectReference `json:"channel"`
+
 	// ReadyCondition indicates whether the Channel is ready or not.
-	ReadyCondition duckv1alpha1.Condition `json:"ready"`
+	ReadyCondition apis.Condition `json:"ready"`
 }
 
 type PipelineSubscriptionStatus struct {
 	// Subscription is the reference to the underlying Subscription.
 	Subscription corev1.ObjectReference `json:"subscription"`
+
 	// ReadyCondition indicates whether the Subscription is ready or not.
-	ReadyCondition duckv1alpha1.Condition `json:"ready"`
+	ReadyCondition apis.Condition `json:"ready"`
 }
 
 // PipelineStatus represents the current state of a Pipeline.
@@ -108,7 +111,7 @@ type PipelineStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1alpha1.Status `json:",inline"`
+	duckv1beta1.Status `json:",inline"`
 
 	// SubscriptionStatuses is an array of corresponding Subscription statuses.
 	// Matches the Spec.Steps array in the order.

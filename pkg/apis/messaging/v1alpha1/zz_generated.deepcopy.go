@@ -186,7 +186,6 @@ func (in *Pipeline) DeepCopyObject() runtime.Object {
 func (in *PipelineChannelStatus) DeepCopyInto(out *PipelineChannelStatus) {
 	*out = *in
 	out.Channel = in.Channel
-	in.ReadyCondition.DeepCopyInto(&out.ReadyCondition)
 	return
 }
 
@@ -269,16 +268,12 @@ func (in *PipelineStatus) DeepCopyInto(out *PipelineStatus) {
 	if in.SubscriptionStatuses != nil {
 		in, out := &in.SubscriptionStatuses, &out.SubscriptionStatuses
 		*out = make([]PipelineSubscriptionStatus, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		copy(*out, *in)
 	}
 	if in.ChannelStatuses != nil {
 		in, out := &in.ChannelStatuses, &out.ChannelStatuses
 		*out = make([]PipelineChannelStatus, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		copy(*out, *in)
 	}
 	in.Address.DeepCopyInto(&out.Address)
 	return
@@ -298,7 +293,6 @@ func (in *PipelineStatus) DeepCopy() *PipelineStatus {
 func (in *PipelineSubscriptionStatus) DeepCopyInto(out *PipelineSubscriptionStatus) {
 	*out = *in
 	out.Subscription = in.Subscription
-	in.ReadyCondition.DeepCopyInto(&out.ReadyCondition)
 	return
 }
 

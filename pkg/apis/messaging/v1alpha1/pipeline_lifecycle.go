@@ -16,44 +16,63 @@
 
 package v1alpha1
 
-import duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+import (
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/pkg/apis"
+	corev1 "k8s.io/api/core/v1"
+)
 
-var pCondSet = duckv1alpha1.NewLivingConditionSet(PipelineConditionReferencesResolved)
+var pCondSet = apis.NewLivingConditionSet(PipelineConditionReady, PipelineChannelsReady, PipelineSubscriptionsReady)
 
 const (
 	// PipelineConditionReady has status True when all subconditions below have been set to True.
-	PipelineConditionReady = duckv1alpha1.ConditionReady
+	PipelineConditionReady = apis.ConditionReady
 
-	// PipelineConditionReferencesResolved has status True when all the specified references have been successfully
-	// resolved.
-	PipelineConditionReferencesResolved duckv1alpha1.ConditionType = "Resolved"
+	// PipelineChannelsReady has status True when all the channels created as part of
+	// this pipeline are ready.
+	PipelineChannelsReady apis.ConditionType = "ChannelsReady"
 
-	// PipelineConditionChannelReady has status True when controller has successfully added a
-	// pipeline to the spec.channel resource.
-	PipelineConditionChannelReady duckv1alpha1.ConditionType = "ChannelReady"
+	// PipelineSubscriptionsReady has status True when all the subscriptions created as part of
+	// this pipeline are ready.
+	PipelineSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ss *PipelineStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
-	return pCondSet.Manage(ss).GetCondition(t)
+func (ps *PipelineStatus) GetCondition(t apis.ConditionType) *apis.Condition {
+	return pCondSet.Manage(ps).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
-func (ss *PipelineStatus) IsReady() bool {
-	return pCondSet.Manage(ss).IsHappy()
+func (ps *PipelineStatus) IsReady() bool {
+	return pCondSet.Manage(ps).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
-func (ss *PipelineStatus) InitializeConditions() {
-	pCondSet.Manage(ss).InitializeConditions()
+func (ps *PipelineStatus) InitializeConditions() {
+	pCondSet.Manage(ps).InitializeConditions()
 }
 
-// MarkReferencesResolved sets the ReferencesResolved condition to True state.
-func (ss *PipelineStatus) MarkReferencesResolved() {
-	pCondSet.Manage(ss).MarkTrue(PipelineConditionReferencesResolved)
+// PropagateSubscriptionStatuses sets the SubscriptionStatuses and PipelineSubscriptionsReady based on
+// the status of the incoming subscriptions.
+func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []eventingv1alpha1.Subscription) {
+	ps.SubscriptionStatuses = make([]PipelineSubscriptionStatus, len(subscriptions))
+	for i, s := range subscriptions {
+		ss := s.Status
+		ps.SubscriptionStatuses[i] = PipelineSubscriptionStatus{
+			Subscription: corev1.ObjectReference{
+				APIVersion: s.APIVersion,
+				Kind:       s.Kind,
+				Name:       s.Name,
+			},
+			ReadyCondition: ss.GetCondition(eventingv1alpha1.SubscriptionConditionReady),
+		}
+	}
+	pCondSet.Manage(ps).MarkTrue(PipelineSubscriptionsReady)
 }
 
-// MarkChannelReady sets the ChannelReady condition to True state.
-func (ss *PipelineStatus) MarkChannelReady() {
-	pCondSet.Manage(ss).MarkTrue(PipelineConditionChannelReady)
+// PropagateChannelStatuses sets the ChannelStatuses and PipelineChannelsReady based on the
+// status of the incoming channels.
+func (ps *PipelineStatus) PropagateChannelStatuses() {
+	//	ps.SubscriptionStatuses = make([]PipelineSubscriptionStatus, len(subscriptions))
+	pCondSet.Manage(ps).MarkTrue(PipelineSubscriptionsReady)
 }
