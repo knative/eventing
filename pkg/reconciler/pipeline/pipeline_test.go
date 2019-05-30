@@ -209,6 +209,28 @@ func TestAllCases(t *testing.T) {
 				createChannel(pipelineName, 0),
 				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
+		}, {
+			Name: "threestep",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+						createSubscriber(0),
+						createSubscriber(1),
+						createSubscriber(2)}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(pipelineName, 0),
+				createChannel(pipelineName, 1),
+				createChannel(pipelineName, 2),
+				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(1, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(2, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
 		},
 	}
 
