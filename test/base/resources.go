@@ -175,12 +175,18 @@ func WithSinkServiceForCronJobSource(name string) func(*sourcesv1alpha1.CronJobS
 	}
 }
 
+// WithServiceAccountForCronJobSource returns an option that adds a ServiceAccount for the given CronJobSource.
+func WithServiceAccountForCronJobSource(saName string) func(*sourcesv1alpha1.CronJobSource) {
+	return func(cjs *sourcesv1alpha1.CronJobSource) {
+		cjs.Spec.ServiceAccountName = saName
+	}
+}
+
 // CronJobSource returns a CronJob EventSource.
 func CronJobSource(
 	name,
 	schedule,
-	data,
-	serviceAccountName string,
+	data string,
 	options ...func(*sourcesv1alpha1.CronJobSource),
 ) *sourcesv1alpha1.CronJobSource {
 	cronJobSource := &sourcesv1alpha1.CronJobSource{
@@ -188,9 +194,8 @@ func CronJobSource(
 			Name: name,
 		},
 		Spec: sourcesv1alpha1.CronJobSourceSpec{
-			Schedule:           schedule,
-			Data:               data,
-			ServiceAccountName: serviceAccountName,
+			Schedule: schedule,
+			Data:     data,
 		},
 	}
 	for _, option := range options {

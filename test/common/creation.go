@@ -110,12 +110,11 @@ func (client *Client) CreateTriggerOrFail(name string, options ...func(*eventing
 func (client *Client) CreateCronJobSourceOrFail(
 	name,
 	schedule,
-	data,
-	serviceAccountName string,
+	data string,
 	options ...func(*sourcesv1alpha1.CronJobSource),
 ) {
 	namespace := client.Namespace
-	cronJobSource := base.CronJobSource(name, schedule, data, serviceAccountName, options...)
+	cronJobSource := base.CronJobSource(name, schedule, data, options...)
 
 	cronJobSources := client.Eventing.SourcesV1alpha1().CronJobSources(namespace)
 	// update cronJobSource with the new reference
