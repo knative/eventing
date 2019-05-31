@@ -47,7 +47,7 @@ func TestSubscribablePopulate(t *testing.T) {
 	got := &SubscribableType{}
 
 	want := &SubscribableType{
-		Spec: SubscribableSpec{
+		Spec: SubscribableTypeSpec{
 			Subscribable: &Subscribable{
 				Subscribers: []SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -62,10 +62,10 @@ func TestSubscribablePopulate(t *testing.T) {
 				}},
 			},
 		},
-		Status: ChannelStatus{
+		Status: SubscribableTypeStatus{
 			SubscribableStatus: &SubscribableStatus{
 				// Populate ALL fields
-				Subscribers: []ChannelSubscriberStatus{{
+				Subscribers: []SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					ObservedGeneration: 1,
 					Ready:              corev1.ConditionTrue,

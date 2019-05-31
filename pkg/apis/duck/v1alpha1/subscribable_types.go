@@ -67,7 +67,7 @@ type SubscribableStatus struct {
 	Subscribers []SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
-// ChannelSubscriberStatus defines the status of a single subscriber to a Channel.
+// SubscriberStatus defines the status of a single subscriber to a Channel.
 type SubscriberStatus struct {
 	// UID is used to understand the origin of the subscriber.
 	// +optional
@@ -141,7 +141,7 @@ func (c *SubscribableType) Populate() {
 	}
 	c.Status.SubscribableStatus = &SubscribableStatus{
 		// Populate ALL fields
-		Subscribers: []ChannelSubscriberStatus{{
+		Subscribers: []SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
