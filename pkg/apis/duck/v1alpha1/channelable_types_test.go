@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis/duck/v1alpha1"
 	"testing"
+
+	"github.com/knative/pkg/apis/duck/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
 )

@@ -20,7 +20,7 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
