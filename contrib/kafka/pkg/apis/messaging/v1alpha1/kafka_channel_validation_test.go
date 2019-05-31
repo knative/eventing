@@ -74,7 +74,7 @@ func TestKafkaChannelValidation(t *testing.T) {
 					NumPartitions:     1,
 					ReplicationFactor: 1,
 					Subscribable: &eventingduck.Subscribable{
-						Subscribers: []eventingduck.ChannelSubscriberSpec{{
+						Subscribers: []eventingduck.SubscriberSpec{{
 							SubscriberURI: "subscriberendpoint",
 							ReplyURI:      "resultendpoint",
 						}},
@@ -88,7 +88,7 @@ func TestKafkaChannelValidation(t *testing.T) {
 					NumPartitions:     1,
 					ReplicationFactor: 1,
 					Subscribable: &eventingduck.Subscribable{
-						Subscribers: []eventingduck.ChannelSubscriberSpec{{
+						Subscribers: []eventingduck.SubscriberSpec{{
 							SubscriberURI: "subscriberendpoint",
 							ReplyURI:      "replyendpoint",
 						}, {}},
@@ -106,7 +106,7 @@ func TestKafkaChannelValidation(t *testing.T) {
 					NumPartitions:     1,
 					ReplicationFactor: 1,
 					Subscribable: &eventingduck.Subscribable{
-						Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
+						Subscribers: []eventingduck.SubscriberSpec{{}, {}},
 					},
 				},
 			},
