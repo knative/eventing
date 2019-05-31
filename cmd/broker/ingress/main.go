@@ -57,10 +57,6 @@ type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Channel   string `envconfig:"CHANNEL" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
-
-	// ZipkinServiceName is the name that this binary will use in Zipkin traces. It is normally
-	// '<broker-name>-broker.<broker-namespace>'.
-	ZipkinServiceName string `envconfig:"ZIPKIN_SERVICE_NAME" required:"true"`
 }
 
 var (
@@ -106,7 +102,8 @@ func main() {
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	configMapWatcher := configmap.NewInformedWatcher(kc, env.Namespace)
 
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, env.ZipkinServiceName); err != nil {
+	zipkinServiceName := fmt.Sprintf("%s-broker-ingress.%s", env.Broker, env.Namespace)
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
 		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}
 

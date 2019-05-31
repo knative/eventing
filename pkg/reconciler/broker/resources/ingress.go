@@ -83,10 +83,6 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 									Name:  "BROKER",
 									Value: args.Broker.Name,
 								},
-								{
-									Name:  "ZIPKIN_SERVICE_NAME",
-									Value: fmt.Sprintf("%s-broker-ingress.%s", args.Broker.Name, args.Broker.Namespace),
-								},
 							},
 							Ports: []corev1.ContainerPort{
 								{
