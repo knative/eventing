@@ -47,7 +47,7 @@ func TestCronJobSource(t *testing.T) {
 	sinkOption := base.WithSinkServiceForCronJobSource(loggerPodName)
 	client.CreateCronJobSourceOrFail(cronJobSourceName, schedule, data, sinkOption)
 
-	// wait for all test resources to be ready, so that we can start sending events
+	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
 		t.Fatalf("Failed to get all test resources ready: %v", err)
 	}
