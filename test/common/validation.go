@@ -17,7 +17,6 @@ limitations under the License.
 package common
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -44,7 +43,6 @@ func (client *Client) CheckLog(podName string, checker func(string) bool) error 
 		if err != nil {
 			return true, err
 		}
-		fmt.Println(string(logs))
 		return checker(string(logs)), nil
 	})
 }
