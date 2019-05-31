@@ -15,6 +15,8 @@ address a common need for cloud native development:
    - with the ability to select a specific subset of events from a particular
      producer.
 
+For the full mission of Knative Eventing see [docs/mission.md](./docs/mission.md).
+
 For complete Knative Eventing documentation, see
 [Knative eventing](https://www.knative.dev/docs/eventing/) or
 [Knative docs](https://www.knative.dev/docs/) to learn about Knative.
