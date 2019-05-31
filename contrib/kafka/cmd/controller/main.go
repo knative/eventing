@@ -1,7 +1,24 @@
+/*
+Copyright 2019 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
 	"flag"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"os"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
@@ -24,7 +41,7 @@ import (
 type SchemeFunc func(*runtime.Scheme) error
 
 // ProvideFunc adds a controller to a Manager.
-type ProvideFunc func(mgr manager.Manager, config *provisionerController.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error)
+type ProvideFunc func(mgr manager.Manager, config *utils.KafkaConfig, logger *zap.Logger) (controller.Controller, error)
 
 func main() {
 	os.Exit(_main())
@@ -60,7 +77,7 @@ func _main() int {
 	}
 
 	// TODO the underlying config map needs to be watched and the config should be reloaded if there is a change.
-	provisionerConfig, err := provisionerController.GetProvisionerConfig("/etc/config-provisioner")
+	provisionerConfig, err := utils.GetKafkaConfig("/etc/config-provisioner")
 
 	if err != nil {
 		logger.Error(err, "unable to run controller manager")

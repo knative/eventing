@@ -55,7 +55,7 @@ readonly STRIMZI_INSTALLATION_CONFIG="$(mktemp)"
 # Kafka cluster CR config file.
 readonly KAFKA_INSTALLATION_CONFIG="test/config/100-kafka-persistent-single-2.1.0.yaml"
 # Kafka provisioner config template.
-readonly KAFKA_CONFIG_TEMPLATE="contrib/kafka/config/kafka.yaml"
+readonly KAFKA_CONFIG_TEMPLATE="contrib/kafka/config/provisioner/kafka.yaml"
 # Real Kafka provisioner config, generated from the template.
 readonly KAFKA_CONFIG="$(mktemp)"
 # Kafka cluster URL for our installation

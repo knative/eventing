@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	common "github.com/knative/eventing/contrib/kafka/pkg/controller"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/system"
 )
@@ -51,7 +52,7 @@ type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *zap.Logger
-	config   *common.KafkaProvisionerConfig
+	config   *utils.KafkaConfig
 	// Using a shared kafkaClusterAdmin does not work currently because of an issue with
 	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
 	kafkaClusterAdmin sarama.ClusterAdmin
@@ -61,7 +62,7 @@ type reconciler struct {
 var _ reconcile.Reconciler = &reconciler{}
 
 // ProvideController returns a Channel controller.
-func ProvideController(mgr manager.Manager, config *common.KafkaProvisionerConfig, logger *zap.Logger) (controller.Controller, error) {
+func ProvideController(mgr manager.Manager, config *utils.KafkaConfig, logger *zap.Logger) (controller.Controller, error) {
 	// Setup a new controller to Reconcile Channel.
 	c, err := controller.New(controllerAgentName, mgr, controller.Options{
 		Reconciler: &reconciler{
