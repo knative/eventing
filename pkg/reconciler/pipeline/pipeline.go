@@ -26,22 +26,24 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 	//	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
-	duckapis "github.com/knative/pkg/apis"
+	duckroot "github.com/knative/pkg/apis"
+	duckapis "github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/dynamic"
 )
 
 const (
@@ -173,7 +175,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 
 	obj := p.Spec.ChannelTemplate.DeepCopyObject()
 
-	channelResourceInterface := r.DynamicClientSet.Resource(duckapis.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
+	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
 
 	if channelResourceInterface == nil {
 		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
@@ -181,30 +183,39 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 		errors.New(msg)
 	}
 
+	channels := []*duckv1alpha1.Channelable{}
 	for i := 0; i < len(p.Spec.Steps); i++ {
 		ingressChannelName := resources.PipelineChannelName(p.Name, i)
 		// Use the duck typed one here instead of this Get.
 		c, err := r.reconcileChannel(ctx, ingressChannelName, channelResourceInterface, p)
 		if err != nil {
-			// TODO: Propagate Status through...
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
-			// TODO: Bail on first error?
-			continue
+			return err
+
 		}
-		// TODO: Propagate Status through...
+		// Let's convert to Channel duck
+		channelable := &duckv1alpha1.Channelable{}
+		err = duckapis.FromUnstructured(c, channelable)
+		if err != nil {
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+			return err
+
+		}
+		channels = append(channels, channelable)
 		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, ingressChannelName, c))
 	}
+	p.Status.PropagateChannelStatuses(channels)
 
 	subs := []*eventingv1alpha1.Subscription{}
 	for i := 0; i < len(p.Spec.Steps); i++ {
-		s, err := r.reconcileSubscription(ctx, i, p)
+		sub, err := r.reconcileSubscription(ctx, i, p)
 		if err != nil {
 			// TODO: Propagate Status through...
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Subscription Object for step: %d", i), zap.Error(err))
 			return err
 		}
-		subs = append(subs, s)
-		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Subscription Object for step: %d: %+v", i, s))
+		subs = append(subs, sub)
+		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Subscription Object for step: %d: %+v", i, sub))
 	}
 	p.Status.PropagateSubscriptionStatuses(subs)
 
@@ -265,7 +276,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		sub = expected
-		logging.FromContext(ctx).Info("Creating subscription")
+		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v : SUBSCRIBERSPEC: %+v", sub, sub.Spec.Subscriber))
 		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
 			//			r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipeline's subscription failed: %v", err)

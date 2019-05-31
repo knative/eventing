@@ -20,11 +20,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/knative/pkg/apis"
-
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/knative/pkg/apis"
+	//	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestPipelineValidation(t *testing.T) {
@@ -32,7 +33,7 @@ func TestPipelineValidation(t *testing.T) {
 	pipeline := &Pipeline{Spec: PipelineSpec{}}
 
 	want := &apis.FieldError{
-		Paths:   []string{"spec.channelTemplate.channelCRD", "spec.steps"},
+		Paths:   []string{"spec.channelTemplate", "spec.steps"},
 		Message: "missing field(s)",
 	}
 
@@ -46,6 +47,13 @@ func TestPipelineValidation(t *testing.T) {
 
 func TestPipelineSpecValidation(t *testing.T) {
 	subscriberURI := "http://example.com"
+	validChannelTemplate := ChannelTemplateSpec{
+		metav1.TypeMeta{
+			Kind:       "mykind",
+			APIVersion: "myapiversion",
+		},
+		runtime.RawExtension{},
+	}
 	tests := []struct {
 		name string
 		ts   *PipelineSpec
@@ -54,13 +62,13 @@ func TestPipelineSpecValidation(t *testing.T) {
 		name: "invalid pipeline spec - empty",
 		ts:   &PipelineSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channelTemplate.channelCRD", "steps")
+			fe := apis.ErrMissingField("channelTemplate", "steps")
 			return fe
 		}(),
 	}, {
 		name: "invalid pipeline spec - empty steps",
 		ts: &PipelineSpec{
-			ChannelTemplate: ChannelTemplateSpec{ChannelCRD: corev1.ObjectReference{Kind: "mykind", APIVersion: "myapiversion"}},
+			ChannelTemplate: validChannelTemplate,
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("steps")
@@ -72,44 +80,33 @@ func TestPipelineSpecValidation(t *testing.T) {
 			Steps: []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channelTemplate.channelCRD")
+			fe := apis.ErrMissingField("channelTemplate")
 			return fe
 		}(),
 	}, {
-		name: "invalid channeltemplatespec has name",
+		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &PipelineSpec{
-			ChannelTemplate: ChannelTemplateSpec{ChannelCRD: corev1.ObjectReference{Kind: "mykind", APIVersion: "myapiversion", Name: "namehere"}},
+			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("Name")
-			fe.Details = "only apiVersion and kind are supported fields"
+			fe := apis.ErrMissingField("channelTemplate.apiVersion")
 			return fe
 		}(),
 	}, {
-		name: "invalid channeltemplatespec missing apiversion",
+		name: "invalid channeltemplatespec missing Kind",
 		ts: &PipelineSpec{
-			ChannelTemplate: ChannelTemplateSpec{ChannelCRD: corev1.ObjectReference{Kind: "mykind"}},
+			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("apiVersion")
-			return fe
-		}(),
-	}, {
-		name: "invalid channeltemplatespec missing kind",
-		ts: &PipelineSpec{
-			ChannelTemplate: ChannelTemplateSpec{ChannelCRD: corev1.ObjectReference{APIVersion: "myapiversion"}},
-			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("kind")
+			fe := apis.ErrMissingField("channelTemplate.kind")
 			return fe
 		}(),
 	}, {
 		name: "valid pipeline",
 		ts: &PipelineSpec{
-			ChannelTemplate: ChannelTemplateSpec{ChannelCRD: corev1.ObjectReference{Kind: "mykind", APIVersion: "myapiversion"}},
+			ChannelTemplate: validChannelTemplate,
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {

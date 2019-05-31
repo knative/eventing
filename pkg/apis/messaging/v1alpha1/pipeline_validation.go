@@ -20,12 +20,11 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/google/go-cmp/cmp"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	//	"github.com/knative/pkg/kmp"
-	"github.com/google/go-cmp/cmp"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 func (p *Pipeline) Validate(ctx context.Context) *apis.FieldError {
@@ -46,10 +45,17 @@ func (ps *PipelineSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if equality.Semantic.DeepEqual(ps.ChannelTemplate, ChannelTemplateSpec{}) {
-		errs = errs.Also(apis.ErrMissingField("channelTemplate.channelCRD"))
+		errs = errs.Also(apis.ErrMissingField("channelTemplate"))
 		return errs
 	}
 
+	if len(ps.ChannelTemplate.APIVersion) == 0 {
+		errs = errs.Also(apis.ErrMissingField("channelTemplate.apiVersion"))
+	}
+
+	if len(ps.ChannelTemplate.Kind) == 0 {
+		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
+	}
 	return errs
 }
 

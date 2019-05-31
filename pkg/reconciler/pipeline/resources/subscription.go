@@ -18,7 +18,6 @@ package resources
 
 import (
 	"fmt"
-	//	"net/url"
 
 	"github.com/knative/pkg/kmeta"
 
@@ -34,6 +33,10 @@ func PipelineSubscriptionName(pipelineName string, step int) string {
 
 func NewSubscription(stepNumber int, p *v1alpha1.Pipeline) *eventingv1alpha1.Subscription {
 	return &eventingv1alpha1.Subscription{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Subscription",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
 			Name:      PipelineSubscriptionName(p.Name, stepNumber),

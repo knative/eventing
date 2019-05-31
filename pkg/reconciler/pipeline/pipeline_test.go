@@ -42,7 +42,7 @@ import (
 	//	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	//	clientgotesting "k8s.io/client-go/testing"
+	clientgotesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -148,7 +148,6 @@ func TestAllCases(t *testing.T) {
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 		},
-		metav1.ObjectMeta{},
 		runtime.RawExtension{Raw: []byte("{}")},
 	}
 
@@ -209,6 +208,30 @@ func TestAllCases(t *testing.T) {
 				createChannel(pipelineName, 0),
 				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 0),
+							},
+						},
+					}),
+					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+							},
+						},
+					})),
+			}},
 		}, {
 			Name: "threestep",
 			Key:  pKey,
@@ -231,6 +254,62 @@ func TestAllCases(t *testing.T) {
 				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
 				resources.NewSubscription(1, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
 				resources.NewSubscription(2, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+						createSubscriber(0),
+						createSubscriber(1),
+						createSubscriber(2),
+					}),
+					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 0),
+							},
+						},
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 1),
+							},
+						},
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 2),
+							},
+						},
+					}),
+					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+							},
+						},
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 1),
+							},
+						},
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 2),
+							},
+						},
+					})),
+			}},
 		},
 	}
 

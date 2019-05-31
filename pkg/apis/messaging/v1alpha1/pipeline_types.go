@@ -30,7 +30,8 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// Pipeline defines a sequence of Subscribers that will be wired in
+// series through Channels and Subscriptions.
 type Pipeline struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -57,6 +58,18 @@ var _ webhook.GenericCRD = (*Pipeline)(nil)
 // This should be duck so that Broker can also use this
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ChannelTemplateSpec struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Spec defines the Spec to use for each channel created. Passed
+	// in verbatim to the Channel CRD as Spec section.
+	// +optional
+	Spec runtime.RawExtension `json:"spec"`
+}
+
+// Internal version of ChannelTemplateSpec that includes ObjectMeta so that
+// we can easily create new Channels off of it.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ChannelTemplateSpecInternal struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// +optional

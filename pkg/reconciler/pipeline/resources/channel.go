@@ -40,13 +40,26 @@ func PipelineChannelName(pipelineName string, step int) string {
 // for a given pipeline.
 func NewChannel(name string, p *v1alpha1.Pipeline) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	new := p.DeepCopy()
-	template := new.Spec.ChannelTemplate
-	template.Name = name
-	template.Namespace = p.Namespace
-	template.OwnerReferences = []metav1.OwnerReference{
-		*kmeta.NewControllerRef(p),
+	template := v1alpha1.ChannelTemplateSpecInternal{
+		metav1.TypeMeta{
+			Kind:       p.Spec.ChannelTemplate.Kind,
+			APIVersion: p.Spec.ChannelTemplate.APIVersion,
+		},
+		metav1.ObjectMeta{
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(p),
+			},
+			Name:      name,
+			Namespace: p.Namespace,
+		},
+		p.Spec.ChannelTemplate.Spec,
 	}
+	//	template := new.Spec.ChannelTemplate
+	//	template.Name = name
+	//	template.Namespace = p.Namespace
+	//	template.OwnerReferences = []metav1.OwnerReference{
+	//		*kmeta.NewControllerRef(p),
+	//	}
 	// TODO: Set the owner ref, etc.
 	raw, err := json.Marshal(template)
 	if err != nil {
