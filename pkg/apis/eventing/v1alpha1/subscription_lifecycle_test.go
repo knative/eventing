@@ -24,22 +24,22 @@ import (
 	"github.com/knative/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var subscriptionConditionReady = duckv1alpha1.Condition{
+var subscriptionConditionReady = apis.Condition{
 	Type:   SubscriptionConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var subscriptionConditionReferencesResolved = duckv1alpha1.Condition{
+var subscriptionConditionReferencesResolved = apis.Condition{
 	Type:   SubscriptionConditionReferencesResolved,
 	Status: corev1.ConditionFalse,
 }
 
-var subscriptionConditionChannelReady = duckv1alpha1.Condition{
+var subscriptionConditionChannelReady = apis.Condition{
 	Type:   SubscriptionConditionChannelReady,
 	Status: corev1.ConditionTrue,
 }
@@ -48,24 +48,24 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		ss        *SubscriptionStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		ss: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &subscriptionConditionReady,
 	}, {
 		name: "multiple conditions",
 		ss: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 					subscriptionConditionReferencesResolved,
 				},
@@ -76,8 +76,8 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition true",
 		ss: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 					subscriptionConditionChannelReady,
 				},
@@ -88,14 +88,14 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ss: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 					subscriptionConditionReferencesResolved,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -118,8 +118,8 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		name: "empty",
 		ss:   &SubscriptionStatus{},
 		want: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -134,16 +134,16 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ss: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionFalse,
 				}, {
@@ -158,16 +158,16 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ss: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionReferencesResolved,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &SubscriptionStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionUnknown,
 				}, {

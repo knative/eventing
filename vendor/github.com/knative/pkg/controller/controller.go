@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,6 +39,10 @@ import (
 const (
 	falseString = "false"
 	trueString  = "true"
+
+	// DefaultResyncPeriod is the default duration that is used when no
+	// resync period is associated with a controllers initialization context.
+	DefaultResyncPeriod = 10 * time.Hour
 )
 
 var (
@@ -60,6 +66,17 @@ type Reconciler interface {
 func PassNew(f func(interface{})) func(interface{}, interface{}) {
 	return func(first, second interface{}) {
 		f(second)
+	}
+}
+
+// HandleAll wraps the provided handler function into a cache.ResourceEventHandler
+// that sends all events to the given handler.  For Updates, only the new object
+// is forwarded.
+func HandleAll(h func(interface{})) cache.ResourceEventHandler {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc:    h,
+		UpdateFunc: PassNew(h),
+		DeleteFunc: h,
 	}
 }
 
@@ -117,7 +134,11 @@ type Impl struct {
 
 // NewImpl instantiates an instance of our controller that will feed work to the
 // provided Reconciler as it is enqueued.
-func NewImpl(r Reconciler, logger *zap.SugaredLogger, workQueueName string, reporter StatsReporter) *Impl {
+func NewImpl(r Reconciler, logger *zap.SugaredLogger, workQueueName string) *Impl {
+	return NewImplWithStats(r, logger, workQueueName, MustNewStatsReporter(workQueueName, logger))
+}
+
+func NewImplWithStats(r Reconciler, logger *zap.SugaredLogger, workQueueName string, reporter StatsReporter) *Impl {
 	return &Impl{
 		Reconciler: r,
 		WorkQueue: workqueue.NewNamedRateLimitingQueue(
@@ -300,7 +321,7 @@ func (c *Impl) processNextWorkItem() bool {
 
 	// Embed the key into the logger and attach that to the context we pass
 	// to the Reconciler.
-	logger := c.logger.With(zap.String(logkey.Key, key))
+	logger := c.logger.With(zap.String(logkey.TraceId, uuid.New().String()), zap.String(logkey.Key, key))
 	ctx := logging.WithLogger(context.TODO(), logger)
 
 	// Run Reconcile, passing it the namespace/name string of the
@@ -405,4 +426,29 @@ func StartAll(stopCh <-chan struct{}, controllers ...*Impl) {
 		}(ctrlr)
 	}
 	wg.Wait()
+}
+
+// This is attached to contexts passed to controller constructors to associate
+// a resync period.
+type resyncPeriodKey struct{}
+
+// WithResyncPeriod associates the given resync period with the given context in
+// the context that is returned.
+func WithResyncPeriod(ctx context.Context, resync time.Duration) context.Context {
+	return context.WithValue(ctx, resyncPeriodKey{}, resync)
+}
+
+// GetResyncPeriod returns the resync period associated with the given context.
+// When none is specified a default resync period is used.
+func GetResyncPeriod(ctx context.Context) time.Duration {
+	rp := ctx.Value(resyncPeriodKey{})
+	if rp == nil {
+		return DefaultResyncPeriod
+	}
+	return rp.(time.Duration)
+}
+
+// GetTrackerLease fetches the tracker lease from the controller context.
+func GetTrackerLease(ctx context.Context) time.Duration {
+	return 3 * GetResyncPeriod(ctx)
 }

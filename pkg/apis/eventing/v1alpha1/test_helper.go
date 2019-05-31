@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	v1 "k8s.io/api/apps/v1"
+
+	"github.com/knative/pkg/apis"
 )
 
 type testHelper struct{}
@@ -29,7 +31,7 @@ func (testHelper) ReadyChannelStatus() *ChannelStatus {
 	cs := &ChannelStatus{}
 	cs.MarkProvisionerInstalled()
 	cs.MarkProvisioned()
-	cs.SetAddress("foo")
+	cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
 	return cs
 }
 
@@ -59,7 +61,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
 	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
-	bs.SetAddress("foo")
+	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
 	return bs
 }
 

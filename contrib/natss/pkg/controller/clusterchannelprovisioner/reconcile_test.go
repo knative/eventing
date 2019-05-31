@@ -24,7 +24,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -222,10 +222,10 @@ func makeClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner
 
 func makeReadyClusterChannelProvisioner() *eventingv1alpha1.ClusterChannelProvisioner {
 	ccp := makeClusterChannelProvisioner()
-	ccp.Status.Conditions = []duckv1alpha1.Condition{{
-		Type:     duckv1alpha1.ConditionReady,
+	ccp.Status.Conditions = []apis.Condition{{
+		Type:     apis.ConditionReady,
 		Status:   corev1.ConditionTrue,
-		Severity: duckv1alpha1.ConditionSeverityError,
+		Severity: apis.ConditionSeverityError,
 	}}
 	return ccp
 }

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -65,7 +66,10 @@ func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOpt
 // WithBrokerAddress sets the Broker's address.
 func WithBrokerAddress(address string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.SetAddress(address)
+		b.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   address,
+		})
 	}
 }
 

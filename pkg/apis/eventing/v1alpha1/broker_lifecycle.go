@@ -19,10 +19,10 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/apps/v1"
 
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 )
 
-var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
+var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionIngress,
 	BrokerConditionTriggerChannel,
 	BrokerConditionIngressChannel,
@@ -32,22 +32,22 @@ var brokerCondSet = duckv1alpha1.NewLivingConditionSet(
 )
 
 const (
-	BrokerConditionReady                              = duckv1alpha1.ConditionReady
-	BrokerConditionIngress duckv1alpha1.ConditionType = "IngressReady"
+	BrokerConditionReady                      = apis.ConditionReady
+	BrokerConditionIngress apis.ConditionType = "IngressReady"
 
-	BrokerConditionTriggerChannel duckv1alpha1.ConditionType = "TriggerChannelReady"
+	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
 
-	BrokerConditionIngressChannel duckv1alpha1.ConditionType = "IngressChannelReady"
+	BrokerConditionIngressChannel apis.ConditionType = "IngressChannelReady"
 
-	BrokerConditionIngressSubscription duckv1alpha1.ConditionType = "IngressSubscriptionReady"
+	BrokerConditionIngressSubscription apis.ConditionType = "IngressSubscriptionReady"
 
-	BrokerConditionFilter duckv1alpha1.ConditionType = "FilterReady"
+	BrokerConditionFilter apis.ConditionType = "FilterReady"
 
-	BrokerConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	BrokerConditionAddressable apis.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (bs *BrokerStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (bs *BrokerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return brokerCondSet.Manage(bs).GetCondition(t)
 }
 
@@ -150,11 +150,14 @@ func deploymentIsAvailable(d *v1.DeploymentStatus) bool {
 
 // SetAddress makes this Broker addressable by setting the hostname. It also
 // sets the BrokerConditionAddressable to true.
-func (bs *BrokerStatus) SetAddress(hostname string) {
-	bs.Address.Hostname = hostname
-	if hostname != "" {
+func (bs *BrokerStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		bs.Address.Hostname = url.Host
+		bs.Address.URL = url
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionAddressable)
 	} else {
+		bs.Address.Hostname = ""
+		bs.Address.URL = nil
 		brokerCondSet.Manage(bs).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }

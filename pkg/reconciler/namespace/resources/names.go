@@ -17,8 +17,13 @@ limitations under the License.
 package resources
 
 const (
-	DefaultBrokerName  = "default"
-	ServiceAccountName = "eventing-broker-filter"
-	RoleBindingName    = "eventing-broker-filter"
-	ClusterRoleName    = "eventing-broker-filter"
+	DefaultBrokerName = "default"
+
+	FilterServiceAccountName = "eventing-broker-filter"
+	FilterRoleBindingName    = "eventing-broker-filter"
+	FilterClusterRoleName    = "eventing-broker-filter"
+
+	IngressServiceAccountName = "eventing-broker-ingress"
+	IngressRoleBindingName    = "eventing-broker-ingress"
+	IngressClusterRoleName    = "eventing-broker-ingress"
 )

@@ -39,7 +39,7 @@ const (
 
 // Config for a fanout.Handler.
 type Config struct {
-	Subscriptions []eventingduck.ChannelSubscriberSpec `json:"subscriptions"`
+	Subscriptions []eventingduck.SubscriberSpec `json:"subscriptions"`
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
@@ -109,7 +109,7 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *Handler) dispatch(msg *provisioners.Message) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
 	for _, sub := range f.config.Subscriptions {
-		go func(s eventingduck.ChannelSubscriberSpec) {
+		go func(s eventingduck.SubscriberSpec) {
 			errorCh <- f.makeFanoutRequest(*msg, s)
 		}(sub)
 	}
@@ -132,6 +132,6 @@ func (f *Handler) dispatch(msg *provisioners.Message) error {
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *Handler) makeFanoutRequest(m provisioners.Message, sub eventingduck.ChannelSubscriberSpec) error {
+func (f *Handler) makeFanoutRequest(m provisioners.Message, sub eventingduck.SubscriberSpec) error {
 	return f.dispatcher.DispatchMessage(&m, sub.SubscriberURI, sub.ReplyURI, provisioners.DispatchDefaults{})
 }

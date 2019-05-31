@@ -30,6 +30,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 )
 
 const (
@@ -128,10 +129,6 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 
 	c.Status.InitializeConditions()
 
-	if usesDeprecatedProvisioner(c) {
-		c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", "The `in-memory-channel` ClusterChannelProvisioner is deprecated and will be removed in 0.7. Recommended replacement is `in-memory`.")
-	}
-
 	// We are syncing K8s Service to talk to this Channel.
 	svc, err := util.CreateK8sService(ctx, r.client, c, util.ExternalService(c))
 	if err != nil {
@@ -140,14 +137,11 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		return err
 	}
 
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	c.Status.MarkProvisioned()
 	return nil
-}
-
-func usesDeprecatedProvisioner(c *eventingv1alpha1.Channel) bool {
-	return c.Spec.Provisioner != nil &&
-		c.Spec.Provisioner.Namespace == "" &&
-		c.Spec.Provisioner.Name == "in-memory-channel"
 }

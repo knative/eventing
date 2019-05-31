@@ -374,7 +374,7 @@ func toKafkaMessage(channel provisioners.ChannelReference, message *provisioners
 	return &kafkaMessage
 }
 
-func newSubscription(spec eventingduck.ChannelSubscriberSpec) subscription {
+func newSubscription(spec eventingduck.SubscriberSpec) subscription {
 	return subscription{
 		UID:           string(spec.UID),
 		SubscriberURI: spec.SubscriberURI,
