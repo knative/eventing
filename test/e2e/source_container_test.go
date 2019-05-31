@@ -37,12 +37,14 @@ func TestContainerSource(t *testing.T) {
 		saIngressName = "e2e-container-source-ingress"
 		crIngressName = "eventing-broker-ingress"
 	)
-	data := fmt.Sprintf("TestContainerSource %s", uuid.NewUUID())
+	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
 	// msg is an argument that is used in the heartbeats image
 	args := []string{"--msg=" + data}
 
 	client := Setup(t, true)
 	defer TearDown(client)
+
+	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
 
 	// create event logger pod and service
 	loggerPod := base.EventLoggerPod(loggerPodName)
@@ -51,7 +53,8 @@ func TestContainerSource(t *testing.T) {
 	// create container source
 	sinkOption := base.WithSinkServiceForContainerSource(loggerPodName)
 	argsOption := base.WithArgsForContainerSource(args)
-	client.CreateContainerSourceOrFail(containerSourceName, imageName, argsOption, sinkOption)
+	saOption := base.WithServiceAccountForContainerSource(saIngressName)
+	client.CreateContainerSourceOrFail(containerSourceName, imageName, argsOption, sinkOption, saOption)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -61,6 +64,6 @@ func TestContainerSource(t *testing.T) {
 	// verify the logger service receives the event
 	expectedCount := 2
 	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, expectedCount)); err != nil {
-		t.Fatalf("String %q does not appear at least %i times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
+		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }

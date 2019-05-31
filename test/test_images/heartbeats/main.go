@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -44,7 +43,6 @@ var (
 )
 
 func init() {
-	flag.StringVar(&sink, "sink", "", "the host url to heartbeat to")
 	flag.StringVar(&msg, "msg", "", "the data message")
 	flag.StringVar(&periodStr, "period", "5", "the number of seconds between heartbeats")
 }
@@ -52,12 +50,6 @@ func init() {
 type envConfig struct {
 	// Sink URL where to send heartbeat cloudevents
 	Sink string `envconfig:"SINK"`
-
-	// Name of this pod.
-	Name string `envconfig:"POD_NAME" required:"true"`
-
-	// Namespace this pod exists in.
-	Namespace string `envconfig:"POD_NAMESPACE" required:"true"`
 }
 
 func main() {
@@ -85,8 +77,7 @@ func main() {
 		period = time.Duration(p) * time.Second
 	}
 
-	source := types.ParseURLRef(
-		fmt.Sprintf("https://github.com/knative/eventing-sources/cmd/heartbeats/#%s/%s", env.Namespace, env.Name))
+	source := types.ParseURLRef("https://github.com/knative/eventing/test/test_images/heartbeats")
 	log.Printf("Heartbeats Source: %s", source)
 
 	hb := &Heartbeat{
@@ -110,6 +101,7 @@ func main() {
 			Data: hb,
 		}
 
+		log.Printf("sending cloudevent to %s", sink)
 		if _, err := c.Send(context.Background(), event); err != nil {
 			log.Printf("failed to send cloudevent: %s", err.Error())
 		}
