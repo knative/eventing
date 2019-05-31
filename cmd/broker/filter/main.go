@@ -18,9 +18,8 @@ package main
 
 import (
 	"flag"
-	"log"
-	"os"
 
+	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -31,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	NAMESPACE = "NAMESPACE"
-)
+type envConfig struct {
+	Namespace string `envconfig: "NAMESPACE" required:"true"`
+}
 
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
@@ -45,8 +44,13 @@ func main() {
 
 	logger.Info("Starting...")
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Namespace: getRequiredEnv(NAMESPACE),
+		Namespace: env.Namespace,
 	})
 	if err != nil {
 		logger.Fatal("Error starting up.", zap.Error(err))
@@ -77,12 +81,4 @@ func main() {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }

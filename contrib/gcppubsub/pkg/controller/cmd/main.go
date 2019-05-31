@@ -19,8 +19,8 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/channel"
 	"github.com/knative/eventing/contrib/gcppubsub/pkg/controller/clusterchannelprovisioner"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -32,13 +32,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	// These are Environment variable names.
-	defaultGcpProjectEnv      = "DEFAULT_GCP_PROJECT"
-	defaultSecretNamespaceEnv = "DEFAULT_SECRET_NAMESPACE"
-	defaultSecretNameEnv      = "DEFAULT_SECRET_NAME"
-	defaultSecretKeyEnv       = "DEFAULT_SECRET_KEY"
-)
+// These are Environment variable names.
+type envConfig struct {
+	DefaultGcpProject      string `envconfig: "DEFAULT_GCP_PROJECT" required: "true"`
+	DefaultSecretNamespace string `envconfig: "DEFAULT_SECRET_NAMESPACE" required: "true"`
+	DefaultSecretName      string `envconfig: "DEFAULT_SECRET_NAME" required: "true"`
+	DefaultSecretKey       string `envconfig: "DEFAULT_SECRET_KEY" required: "true"`
+}
 
 // This is the main method for the GCP PubSub Channel controller. It reconciles the
 // ClusterChannelProvisioner itself and Channels that use the 'gcp-pubsub' provisioner. It does not
@@ -68,15 +68,19 @@ func main() {
 		logger.Fatal("Unable to create Provisioner controller", zap.Error(err))
 	}
 
-	defaultGcpProject := getRequiredEnv(defaultGcpProjectEnv)
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	defaultSecret := v1.ObjectReference{
 		APIVersion: v1.SchemeGroupVersion.String(),
 		Kind:       "Secret",
-		Namespace:  getRequiredEnv(defaultSecretNamespaceEnv),
-		Name:       getRequiredEnv(defaultSecretNameEnv),
+		Namespace:  env.DefaultSecretNamespace,
+		Name:       env.DefaultSecretName,
 	}
-	defaultSecretKey := getRequiredEnv(defaultSecretKeyEnv)
-	_, err = channel.ProvideController(defaultGcpProject, &defaultSecret, defaultSecretKey)(mgr, logger.Desugar())
+	_, err = channel.ProvideController(
+		env.DefaultGcpProject, &defaultSecret, env.DefaultSecretKey)(mgr, logger.Desugar())
 	if err != nil {
 		logger.Fatal("Unable to create Channel controller", zap.Error(err))
 	}
@@ -88,12 +92,4 @@ func main() {
 	if err != nil {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }

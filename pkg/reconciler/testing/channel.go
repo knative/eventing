@@ -104,7 +104,7 @@ func WithChannelReady(c *v1alpha1.Channel) {
 	c.Status = *v1alpha1.TestHelper.ReadyChannelStatus()
 }
 
-func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) ChannelOption {
+func WithChannelSubscribers(subscribers []duckv1alpha1.SubscriberSpec) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
 			Subscribers: subscribers,

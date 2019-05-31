@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -408,7 +408,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -448,7 +448,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -494,7 +494,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -517,7 +517,7 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
-					WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
+					WithChannelSubscribers([]eventingduck.SubscriberSpec{
 						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 					}),
 				),
@@ -538,7 +538,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -558,7 +558,7 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
-					WithChannelSubscribers([]v1alpha1.ChannelSubscriberSpec{
+					WithChannelSubscribers([]eventingduck.SubscriberSpec{
 						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 					}),
 				),
@@ -583,7 +583,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -648,7 +648,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
@@ -694,7 +694,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []v1alpha1.ChannelSubscriberSpec{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b_" + subscriptionName, Namespace: testNS, UID: "b_" + subscriptionUID}},
 					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: "a_" + subscriptionName, Namespace: testNS, UID: "a_" + subscriptionUID}},
 				}),
@@ -854,7 +854,7 @@ func addFinalizer(sub *eventingv1alpha1.Subscription) {
 	sub.Finalizers = finalizers.List()
 }
 
-func patchSubscribers(namespace, name string, subscribers []v1alpha1.ChannelSubscriberSpec) clientgotesting.PatchActionImpl {
+func patchSubscribers(namespace, name string, subscribers []eventingduck.SubscriberSpec) clientgotesting.PatchActionImpl {
 	action := clientgotesting.PatchActionImpl{}
 	action.Name = name
 	action.Namespace = namespace

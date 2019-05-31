@@ -68,7 +68,7 @@ var (
 	truePointer = true
 
 	subscribers = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: "sub-name",
@@ -902,7 +902,7 @@ func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
 func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				UID:           "",
 				SubscriberURI: "http://foo/",
@@ -933,7 +933,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	}
 	for _, plannedSubUID := range plannedSubUIDs {
 		sub := pubsubutil.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: string(plannedSubUID),
 					UID:  plannedSubUID,
@@ -955,7 +955,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 
 	// Overwrite the spec subs.
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: "keep-sub",
@@ -984,7 +984,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	}
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				DeprecatedRef: sub.DeprecatedRef,
 				UID:           sub.UID,
 				ReplyURI:      sub.ReplyURI,

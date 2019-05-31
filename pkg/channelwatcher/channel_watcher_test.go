@@ -74,7 +74,7 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
 							AsyncHandler: true,
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								makeSubscriber("sub1"),
 								makeSubscriber("sub2"),
 							},
@@ -85,7 +85,7 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 						HostName:  "i.j.k.l",
 						FanoutConfig: fanout.Config{
 							AsyncHandler: true,
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								makeSubscriber("sub3"),
 								makeSubscriber("sub4"),
 							},
@@ -180,14 +180,14 @@ func makeChannel(name string, namespace string, hostname string, subscribable *e
 	})
 	return &c
 }
-func makeSubscribable(subsriberSpec ...eventingduck.ChannelSubscriberSpec) *eventingduck.Subscribable {
+func makeSubscribable(subsriberSpec ...eventingduck.SubscriberSpec) *eventingduck.Subscribable {
 	return &eventingduck.Subscribable{
 		Subscribers: subsriberSpec,
 	}
 }
 
-func makeSubscriber(name string) eventingduck.ChannelSubscriberSpec {
-	return eventingduck.ChannelSubscriberSpec{
+func makeSubscriber(name string) eventingduck.SubscriberSpec {
+	return eventingduck.SubscriberSpec{
 		SubscriberURI: name + "-suburi",
 		ReplyURI:      name + "-replyuri",
 	}

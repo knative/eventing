@@ -76,7 +76,7 @@ var (
 				Namespace: cNamespace,
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "foo",
 						},
@@ -94,7 +94,7 @@ var (
 				Namespace: cNamespace,
 				Name:      "c3",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "steve",
 						},
@@ -118,7 +118,7 @@ var (
 					Name: ccpName,
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
+					Subscribers: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "foo",
 						},
@@ -146,7 +146,7 @@ var (
 					Name: "some-other-provisioner",
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
+					Subscribers: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "anything",
 						},
@@ -167,7 +167,7 @@ var (
 					Name: ccpName,
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
+					Subscribers: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "steve",
 						},
