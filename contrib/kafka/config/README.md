@@ -30,12 +30,8 @@ Kafka channels are those backed by [Apache Kafka](http://kafka.apache.org/) topi
       # Broker URL. Replace this with the URLs for your kafka cluster,
       # which is in the format of my-cluster-kafka-bootstrap.my-kafka-namespace:9092.
       bootstrap_servers: REPLACE_WITH_CLUSTER_URL
-    
-      # Consumer mode to dispatch events from different partitions in parallel.
-      # By default(multiplex), partitions are multiplexed with a single go channel.
-      # `multiplex` and `partitions` are valid values.
-      ## consumer_mode: partitions
-   ```   
+    ...
+   ``` 
 
 1. Apply the Kafka config:
 
@@ -50,12 +46,11 @@ Kafka channels are those backed by [Apache Kafka](http://kafka.apache.org/) topi
     kind: KafkaChannel
     metadata:
       name: my-kafka-channel
-    spec: 
+    spec:
       numPartitions: 1
       replicationFactor: 3
     ```
-    You can configure the number of partitions with `numPartitions`, as well as the replication factor with 
-    `replicationFactor`. If not set, both will default to `1`.
+    You can configure the number of partitions with `numPartitions`, as well as the replication factor with `replicationFactor`. If not set, both will default to `1`.
 
 ## Components
 
