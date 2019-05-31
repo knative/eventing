@@ -23,6 +23,7 @@ import (
 
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/common"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -33,28 +34,34 @@ func TestContainerSource(t *testing.T) {
 		imageName = "heartbeats"
 
 		loggerPodName = "e2e-container-source-logger-pod"
-
-		saIngressName = "e2e-container-source-ingress"
-		crIngressName = "eventing-broker-ingress"
 	)
-	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
-	// msg is an argument that is used in the heartbeats image
-	args := []string{"--msg=" + data}
 
 	client := Setup(t, true)
 	defer TearDown(client)
-
-	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
 
 	// create event logger pod and service
 	loggerPod := base.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
+	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
+	// args are the arguments passing to the container, msg is used in the heartbeats image
+	args := []string{"--msg=" + data}
+	// envVars are the environment variables passing to the container
+	envVars := []corev1.EnvVar{
+		corev1.EnvVar{
+			Name:  "POD_NAME",
+			Value: "e2e-container-source-pod",
+		},
+		corev1.EnvVar{
+			Name:  "POD_NAMESPACE",
+			Value: client.Namespace,
+		},
+	}
 	// create container source
 	sinkOption := base.WithSinkServiceForContainerSource(loggerPodName)
 	argsOption := base.WithArgsForContainerSource(args)
-	saOption := base.WithServiceAccountForContainerSource(saIngressName)
-	client.CreateContainerSourceOrFail(containerSourceName, imageName, argsOption, sinkOption, saOption)
+	envVarOption := base.WithEnvVarsForContainerSource(envVars)
+	client.CreateContainerSourceOrFail(containerSourceName, imageName, argsOption, sinkOption, envVarOption)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
