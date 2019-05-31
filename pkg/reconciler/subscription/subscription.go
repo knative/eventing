@@ -23,10 +23,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
@@ -44,7 +40,8 @@ import (
 	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1"
 	apiextensionslisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -131,7 +128,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Get the Subscription resource with this namespace/name
 	original, err := r.subscriptionLister.Subscriptions(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
+	if errors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Error("subscription key in work queue no longer exists")
 		return nil
@@ -179,13 +176,13 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
 		return err
 	}
-	subscribableChan, err := r.getSubscribableChannel(ctx, subscription)
+	channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to get Spec.Channel as subscribable",
+		logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: %v", err)
-		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to validate spec.channel: %v", err)
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
 		return err
 	}
 	// See if the subscription has been deleted
@@ -193,7 +190,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
 		if subscription.Status.IsAddedToChannel() {
-			err := r.syncPhysicalChannel(ctx, subscription, subscribableChan, true)
+			err := r.syncPhysicalChannel(ctx, subscription, channel, true)
 			if err != nil {
 				logging.FromContext(ctx).Warn("Failed to sync physical from Channel", zap.Error(err))
 				r.Recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
@@ -204,7 +201,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		_, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
 		return err
 	}
-	if err := r.validateChannel(ctx, subscribableChan); err != nil {
+	if err := r.validateChannel(ctx, channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
@@ -247,10 +244,10 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	// Check if the subscription needs to be added to the channel
-	if !r.subPresentInChannelSpec(subscription, subscribableChan) {
+	if !r.subPresentInChannelSpec(subscription, channel) {
 		// Ok, now that we have the Channel and at least one of the Call/Result, let's reconcile
 		// the Channel with this information.
-		if err := r.syncPhysicalChannel(ctx, subscription, subscribableChan, false); err != nil {
+		if err := r.syncPhysicalChannel(ctx, subscription, channel, false); err != nil {
 			logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
 			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 			subscription.Status.MarkNotAddedToChannel(physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
@@ -262,23 +259,31 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	// Check if the subscription is marked as ready by channel.
 	// Refresh subscribableChan to avoid another reconile loop.
 	// If it doesn't get refreshed, then next reconcile loop will get the updated channel
-	subscribableChan, err = r.getSubscribableChannel(ctx, subscription)
-	if err != nil {
-		// TODO
-	}
-	if err := r.subMarkedReadyByChannel(subscription, subscribableChan); err != nil {
-		logging.FromContext(ctx).Warn("Subscription not marked by Channel as Ready.", zap.Error(err))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.String())
-		subscription.Status.MarkChannelNotReady(subscriptionNotMarkedReadyByChannel, err.String())
-		return err
+	// Skip this if older channel of kind:channel and apiversion:eventing.knative.dev/v1alpha1
+	if !deprecatedChannel(channel) {
+		channel, err = r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
+				zap.Error(err),
+				zap.Any("channel", subscription.Spec.Channel))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+			subscription.Status.MarkChannelNotReady(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+			return err
+		}
+		if err := r.subMarkedReadyByChannel(subscription, channel); err != nil {
+			logging.FromContext(ctx).Warn("Subscription not marked by Channel as Ready.", zap.Error(err))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
+			subscription.Status.MarkChannelNotReady(subscriptionNotMarkedReadyByChannel, "Subscription not marked by Channel as Ready: %s", err)
+			return err
+		}
 	}
 	subscription.Status.MarkChannelReady()
 	return nil
 }
 
-func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channel) error {
+func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) error {
 	if channel.Status.SubscribableStatus == nil {
-		return errors.New("channel.Status.SubscribableStatus is nil")
+		return fmt.Errorf("channel.Status.SubscribableStatus is nil")
 	}
 	for _, sub := range channel.Status.SubscribableStatus.Subscribers {
 		if sub.UID == subscription.GetUID() &&
@@ -286,12 +291,12 @@ func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription,
 			if sub.Ready == corev1.ConditionTrue {
 				return nil
 			}
-			return errors.New(sub.Message)
+			return fmt.Errorf(sub.Message)
 		}
 	}
-	return fmt.Errorf("subscription %q not present in  ")
+	return fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
-func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channel) bool {
+func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) bool {
 	if channel.Spec.Subscribable == nil {
 		return false
 	}
@@ -304,12 +309,12 @@ func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription,
 }
 
 // Todo: this needs to be changed to use cache rather than a API call each time
-func (r *Reconciler) getSubscribableChannel(ctx context.Context, subscription *v1alpha1.Subscription) (*eventingduckv1alpha1.Channel, error) {
-	s, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, subscription.GetNamespace(), &subscription.Spec.Channel)
+func (r *Reconciler) getChannelable(ctx context.Context, namespace string, chanReference *corev1.ObjectReference) (*eventingduckv1alpha1.Channelable, error) {
+	s, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, chanReference)
 	if err != nil {
 		return nil, err
 	}
-	channel := eventingduckv1alpha1.Channel{}
+	channel := eventingduckv1alpha1.Channelable{}
 	err = duck.FromUnstructured(s, &channel)
 	if err != nil {
 		return nil, err
@@ -317,9 +322,16 @@ func (r *Reconciler) getSubscribableChannel(ctx context.Context, subscription *v
 	return &channel, nil
 }
 
-func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv1alpha1.Channel) error {
-	// Special case for backwards compatibility, channel COs are valid channels.
+func deprecatedChannel(channel *eventingduckv1alpha1.Channelable) bool {
 	if channel.Kind == "Channel" && channel.APIVersion == "eventing.knative.dev/v1alpha1" {
+		return true
+	}
+	return false
+}
+
+func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv1alpha1.Channelable) error {
+	// Special case for backwards compatibility, channel COs are valid channels.
+	if deprecatedChannel(channel) {
 		return nil
 	}
 
@@ -436,7 +448,7 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 	return "", fmt.Errorf("reply.status does not contain address")
 }
 
-func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channel, isDeleted bool) error {
+func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable, isDeleted bool) error {
 	logging.FromContext(ctx).Debug("Reconciling physical from Channel", zap.Any("sub", sub))
 
 	subs, err := r.listAllSubscriptionsWithPhysicalChannel(ctx, sub)
@@ -504,11 +516,17 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	return rv
 }
 
-func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, origChannel *eventingduckv1alpha1.Channel, subs *eventingduckv1alpha1.Subscribable) error {
+func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, origChannel *eventingduckv1alpha1.Channelable, subs *eventingduckv1alpha1.Subscribable) error {
 	after := origChannel.DeepCopy()
 	after.Spec.Subscribable = subs
 
 	patch, err := duck.CreateMergePatch(origChannel, after)
+
+	// to be deleted
+	temp := eventingduckv1alpha1.Channelable{}
+	json.Unmarshal(patch, &temp)
+	//
+
 	if err != nil {
 		return err
 	}

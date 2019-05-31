@@ -18,12 +18,11 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 )
 
 // subCondSet is a condition set with Ready as the happy condition and
 // ReferencesResolved and ChannelReady as the dependent conditions.
-var subCondSet = duckv1alpha1.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionAddedToChannel, SubscriptionConditionChannelReady)
+var subCondSet = apis.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionAddedToChannel, SubscriptionConditionChannelReady)
 
 const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
@@ -34,10 +33,10 @@ const (
 
 	// SubscriptionConditionAddedToChannel has status True when controller has successfully added a
 	// subscription to the spec.channel resource.
-	SubscriptionConditionAddedToChannel duckv1alpha1.ConditionType = "AddedToChannel"
+	SubscriptionConditionAddedToChannel apis.ConditionType = "AddedToChannel"
 
 	// SubscriptionConditionChannelReady has status True when the channel has marked the subscriber as 'ready'
-	SubscriptionConditionChannelReady duckv1alpha1.ConditionType = "ChannelReady"
+	SubscriptionConditionChannelReady apis.ConditionType = "ChannelReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
