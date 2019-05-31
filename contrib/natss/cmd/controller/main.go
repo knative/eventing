@@ -63,7 +63,7 @@ func main() {
 	}
 
 	logger = logger.With(zap.String("controller/impl", "pkg"))
-	logger.Info("Starting the Kafka controller")
+	logger.Info("Starting the Natss controller")
 
 	systemNS := system.Namespace()
 
@@ -71,7 +71,7 @@ func main() {
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
+	// Setting up our own eventingClientSet as we need the messaging API introduced with natss.
 	eventingClientSet := clientset.NewForConfigOrDie(cfg)
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
