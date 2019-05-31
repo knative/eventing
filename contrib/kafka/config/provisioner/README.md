@@ -2,7 +2,7 @@
 
 Deployment steps:
 
-1. Setup [Knative Eventing](../../../../DEVELOPMENT.md)
+1. Setup [Knative Eventing](../../../../../DEVELOPMENT.md)
 1. If not done already, install an Apache Kafka cluster!
 
    - For Kubernetes a simple installation is done using the
