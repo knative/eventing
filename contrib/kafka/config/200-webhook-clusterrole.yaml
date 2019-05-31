@@ -56,7 +56,7 @@ rules:
       - "admissionregistration.k8s.io"
     resources:
       - "mutatingwebhookconfigurations"
-    verbs: 
+    verbs:
       - "get"
       - "list"
       - "create"
