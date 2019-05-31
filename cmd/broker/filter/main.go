@@ -31,7 +31,7 @@ import (
 )
 
 type envConfig struct {
-	Namespace string `envconfig: "NAMESPACE" required:"true"`
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
 }
 
 func main() {
