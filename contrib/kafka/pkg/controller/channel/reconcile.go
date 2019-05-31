@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
 	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
@@ -38,12 +39,6 @@ import (
 
 const (
 	finalizerName = controllerAgentName
-
-	// DefaultNumPartitions defines the default number of partitions
-	DefaultNumPartitions = 1
-
-	// DefaultReplicationFactor defines the default number of replications
-	DefaultReplicationFactor = 1
 
 	// Name of the corev1.Events emitted from the reconciliation process
 	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
@@ -189,7 +184,7 @@ func (r *reconciler) shouldReconcile(channel *eventingv1alpha1.Channel, clusterC
 }
 
 func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
-	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name)
+	topicName := topicUtils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	r.logger.Info("creating topic on kafka cluster", zap.String("topic", topicName))
 
 	var arguments channelArgs
@@ -203,11 +198,11 @@ func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaCl
 	}
 
 	if arguments.NumPartitions == 0 {
-		arguments.NumPartitions = DefaultNumPartitions
+		arguments.NumPartitions = utils.DefaultNumPartitions
 	}
 
 	if arguments.ReplicationFactor == 0 {
-		arguments.ReplicationFactor = DefaultReplicationFactor
+		arguments.ReplicationFactor = utils.DefaultReplicationFactor
 	}
 
 	err := kafkaClusterAdmin.CreateTopic(topicName, &sarama.TopicDetail{
@@ -225,7 +220,7 @@ func (r *reconciler) provisionChannel(channel *eventingv1alpha1.Channel, kafkaCl
 }
 
 func (r *reconciler) deprovisionChannel(channel *eventingv1alpha1.Channel, kafkaClusterAdmin sarama.ClusterAdmin) error {
-	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name)
+	topicName := topicUtils.TopicName(utils.KafkaChannelSeparator, channel.Namespace, channel.Name)
 	r.logger.Info("deleting topic on kafka cluster", zap.String("topic", topicName))
 
 	err := kafkaClusterAdmin.DeleteTopic(topicName)
@@ -250,7 +245,7 @@ func (r *reconciler) getClusterChannelProvisioner() (*eventingv1alpha1.ClusterCh
 	return clusterChannelProvisioner, nil
 }
 
-func createKafkaAdminClient(config *controller.KafkaProvisionerConfig) (sarama.ClusterAdmin, error) {
+func createKafkaAdminClient(config *utils.KafkaConfig) (sarama.ClusterAdmin, error) {
 	saramaConf := sarama.NewConfig()
 	saramaConf.Version = sarama.V1_1_0_0
 	saramaConf.ClientID = controllerAgentName

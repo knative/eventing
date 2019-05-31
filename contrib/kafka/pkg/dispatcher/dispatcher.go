@@ -18,11 +18,12 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"sync"
 	"sync/atomic"
 
 	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
+	"github.com/bsm/sarama-cluster"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
@@ -30,7 +31,6 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 )
 
 type KafkaDispatcher struct {
@@ -46,7 +46,18 @@ type KafkaDispatcher struct {
 	kafkaConsumers     map[provisioners.ChannelReference]map[subscription]KafkaConsumer
 	kafkaCluster       KafkaCluster
 
-	logger *zap.Logger
+	topicFunc TopicFunc
+	logger    *zap.Logger
+}
+
+type TopicFunc func(separator, namespace, name string) string
+
+type KafkaDispatcherArgs struct {
+	ClientID     string
+	Brokers      []string
+	ConsumerMode cluster.ConsumerMode
+	TopicFunc    TopicFunc
+	Logger       *zap.Logger
 }
 
 type KafkaConsumer interface {
@@ -198,8 +209,7 @@ func (d *KafkaDispatcher) Start(stopCh <-chan struct{}) error {
 func (d *KafkaDispatcher) subscribe(channelRef provisioners.ChannelReference, sub subscription) error {
 	d.logger.Info("Subscribing", zap.Any("channelRef", channelRef), zap.Any("subscription", sub))
 
-	topicName := topicUtils.TopicName(controller.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
-
+	topicName := d.topicFunc(utils.KafkaChannelSeparator, channelRef.Namespace, channelRef.Name)
 	group := fmt.Sprintf("%s.%s", controller.Name, sub.UID)
 	consumer, err := d.kafkaCluster.NewConsumer(group, []string{topicName})
 
@@ -300,11 +310,11 @@ func (d *KafkaDispatcher) setHostToChannelMap(hcMap map[string]provisioners.Chan
 	d.hostToChannelMap.Store(hcMap)
 }
 
-func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *zap.Logger) (*KafkaDispatcher, error) {
+func NewDispatcher(args *KafkaDispatcherArgs) (*KafkaDispatcher, error) {
 	conf := sarama.NewConfig()
 	conf.Version = sarama.V1_1_0_0
-	conf.ClientID = controller.Name + "-dispatcher"
-	client, err := sarama.NewClient(brokers, conf)
+	conf.ClientID = args.ClientID
+	client, err := sarama.NewClient(args.Brokers, conf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create kafka client: %v", err)
 	}
@@ -315,20 +325,20 @@ func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *
 	}
 
 	dispatcher := &KafkaDispatcher{
-		dispatcher: provisioners.NewMessageDispatcher(logger.Sugar()),
+		dispatcher: provisioners.NewMessageDispatcher(args.Logger.Sugar()),
 
-		kafkaCluster:       &saramaCluster{kafkaBrokers: brokers, consumerMode: consumerMode},
+		kafkaCluster:       &saramaCluster{kafkaBrokers: args.Brokers, consumerMode: args.ConsumerMode},
 		kafkaConsumers:     make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		kafkaAsyncProducer: producer,
 
-		logger: logger,
+		logger: args.Logger,
 	}
 	receiverFunc, err := provisioners.NewMessageReceiver(
 		func(channel provisioners.ChannelReference, message *provisioners.Message) error {
-			dispatcher.kafkaAsyncProducer.Input() <- toKafkaMessage(channel, message)
+			dispatcher.kafkaAsyncProducer.Input() <- toKafkaMessage(channel, message, args.TopicFunc)
 			return nil
 		},
-		logger.Sugar(),
+		args.Logger.Sugar(),
 		provisioners.ResolveChannelFromHostHeader(provisioners.ResolveChannelFromHostFunc(dispatcher.getChannelReferenceFromHost)))
 	if err != nil {
 		return nil, err
@@ -336,6 +346,7 @@ func NewDispatcher(brokers []string, consumerMode cluster.ConsumerMode, logger *
 	dispatcher.receiver = receiverFunc
 	dispatcher.setConfig(&multichannelfanout.Config{})
 	dispatcher.setHostToChannelMap(map[string]provisioners.ChannelReference{})
+	dispatcher.topicFunc = args.TopicFunc
 	return dispatcher, nil
 }
 
@@ -360,9 +371,9 @@ func fromKafkaMessage(kafkaMessage *sarama.ConsumerMessage) *provisioners.Messag
 	return &message
 }
 
-func toKafkaMessage(channel provisioners.ChannelReference, message *provisioners.Message) *sarama.ProducerMessage {
+func toKafkaMessage(channel provisioners.ChannelReference, message *provisioners.Message, topicFunc TopicFunc) *sarama.ProducerMessage {
 	kafkaMessage := sarama.ProducerMessage{
-		Topic: topicUtils.TopicName(controller.KafkaChannelSeparator, channel.Namespace, channel.Name),
+		Topic: topicFunc(utils.KafkaChannelSeparator, channel.Namespace, channel.Name),
 		Value: sarama.ByteEncoder(message.Payload),
 	}
 	for h, v := range message.Headers {

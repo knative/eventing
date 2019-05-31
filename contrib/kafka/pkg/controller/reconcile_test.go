@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -198,8 +199,8 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfig() *KafkaProvisionerConfig {
-	return &KafkaProvisionerConfig{
+func getControllerConfig() *utils.KafkaConfig {
+	return &utils.KafkaConfig{
 		Brokers: []string{"test-broker"},
 	}
 }

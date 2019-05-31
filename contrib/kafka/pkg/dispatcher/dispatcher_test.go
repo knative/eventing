@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
+	"github.com/knative/eventing/pkg/provisioners/utils"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -394,8 +395,8 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			d := &KafkaDispatcher{
 				kafkaCluster:   &mockSaramaCluster{closed: true},
 				kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
-
-				logger: zap.NewNop(),
+				topicFunc:      utils.TopicName,
+				logger:         zap.NewNop(),
 			}
 			d.setConfig(&multichannelfanout.Config{})
 			d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
@@ -501,7 +502,7 @@ func TestToKafkaMessage(t *testing.T) {
 		},
 		Value: sarama.ByteEncoder(data),
 	}
-	got := toKafkaMessage(channelRef, msg)
+	got := toKafkaMessage(channelRef, msg, utils.TopicName)
 	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sarama.ProducerMessage{})); diff != "" {
 		t.Errorf("unexpected message (-want, +got) = %s", diff)
 	}
@@ -534,6 +535,7 @@ func TestSubscribe(t *testing.T) {
 		kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		dispatcher:     provisioners.NewMessageDispatcher(zap.NewNop().Sugar()),
 		logger:         zap.NewNop(),
+		topicFunc:      utils.TopicName,
 	}
 
 	testHandler := &dispatchTestHandler{
@@ -580,6 +582,7 @@ func TestPartitionConsumer(t *testing.T) {
 		kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		dispatcher:     provisioners.NewMessageDispatcher(zap.NewNop().Sugar()),
 		logger:         zap.NewNop(),
+		topicFunc:      utils.TopicName,
 	}
 	testHandler := &dispatchTestHandler{
 		t:       t,
@@ -627,6 +630,7 @@ func TestSubscribeError(t *testing.T) {
 	d := &KafkaDispatcher{
 		kafkaCluster: sc,
 		logger:       zap.NewNop(),
+		topicFunc:    utils.TopicName,
 	}
 
 	channelRef := provisioners.ChannelReference{
