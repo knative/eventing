@@ -53,15 +53,13 @@ import (
 	crlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-const (
-	NAMESPACE = "NAMESPACE"
-)
-
 type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Channel   string `envconfig:"CHANNEL" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 
+	// ZipkinServiceName is the name that this binary will use in Zipkin traces. It is normally
+	// '<broker-name>-broker.<broker-namespace>'.
 	ZipkinServiceName string `envconfig:"ZIPKIN_SERVICE_NAME" required:"true"`
 }
 
