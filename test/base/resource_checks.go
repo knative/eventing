@@ -24,7 +24,8 @@ import (
 	"fmt"
 	"time"
 
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"go.opencensus.io/trace"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -54,7 +55,7 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) er
 
 // isResourceReady leverage duck-type to check if the given MetaResource is in ready state
 func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, error) {
-	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1alpha1.KResource{})
+	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
 		// We swallow the error to keep on polling.
@@ -65,6 +66,6 @@ func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, 
 		return false, err
 	}
 
-	kr := untyped.(*duckv1alpha1.KResource)
-	return kr.Status.GetCondition(duckv1alpha1.ConditionReady).IsTrue(), nil
+	kr := untyped.(*duckv1beta1.KResource)
+	return kr.Status.GetCondition(apis.ConditionReady).IsTrue(), nil
 }

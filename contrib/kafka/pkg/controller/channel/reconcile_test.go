@@ -33,7 +33,8 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
@@ -468,7 +469,10 @@ func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1
 func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(serviceAddress)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   serviceAddress,
+	})
 	c.Status.MarkProvisioned()
 	c.Finalizers = []string{finalizerName}
 	return c
@@ -509,11 +513,11 @@ func getNewClusterChannelProvisioner(name string, isReady bool) *eventingv1alpha
 		ObjectMeta: om("", name),
 		Spec:       eventingv1alpha1.ClusterChannelProvisionerSpec{},
 		Status: eventingv1alpha1.ClusterChannelProvisionerStatus{
-			Conditions: []duckv1alpha1.Condition{
-				{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   eventingv1alpha1.ClusterChannelProvisionerConditionReady,
 					Status: condStatus,
-				},
+				}},
 			},
 		},
 	}

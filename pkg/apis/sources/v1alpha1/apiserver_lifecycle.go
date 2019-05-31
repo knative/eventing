@@ -17,40 +17,30 @@ limitations under the License.
 package v1alpha1
 
 import (
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 )
 
 const (
 	// ApiServerConditionReady has status True when the ApiServerSource is ready to send events.
-	ApiServerConditionReady = duckv1alpha1.ConditionReady
+	ApiServerConditionReady = apis.ConditionReady
 
 	// ApiServerConditionSinkProvided has status True when the ApiServerSource has been configured with a sink target.
-	ApiServerConditionSinkProvided duckv1alpha1.ConditionType = "SinkProvided"
+	ApiServerConditionSinkProvided apis.ConditionType = "SinkProvided"
 
 	// ApiServerConditionDeployed has status True when the ApiServerSource has had it's deployment created.
-	ApiServerConditionDeployed duckv1alpha1.ConditionType = "Deployed"
+	ApiServerConditionDeployed apis.ConditionType = "Deployed"
 
 	// ApiServerConditionEventTypeProvided has status True when the ApiServerSource has been configured with its event types.
-	ApiServerConditionEventTypeProvided duckv1alpha1.ConditionType = "EventTypesProvided"
+	ApiServerConditionEventTypeProvided apis.ConditionType = "EventTypesProvided"
 )
 
-var apiserverCondSet = duckv1alpha1.NewLivingConditionSet(
+var apiserverCondSet = apis.NewLivingConditionSet(
 	ApiServerConditionSinkProvided,
 	ApiServerConditionDeployed,
 )
 
-// GetConditions returns Conditions
-func (s *ApiServerSourceStatus) GetConditions() duckv1alpha1.Conditions {
-	return s.Conditions
-}
-
-// SetConditions sets Conditions
-func (s *ApiServerSourceStatus) SetConditions(conditions duckv1alpha1.Conditions) {
-	s.Conditions = conditions
-}
-
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (s *ApiServerSourceStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (s *ApiServerSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return apiserverCondSet.Manage(s).GetCondition(t)
 }
 

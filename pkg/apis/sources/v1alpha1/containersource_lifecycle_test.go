@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -153,8 +153,8 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		s         *ContainerSourceStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name:      "uninitialized",
 		s:         &ContainerSourceStatus{},
@@ -168,7 +168,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ContainerConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -181,7 +181,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ContainerConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -194,7 +194,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ContainerConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
@@ -208,7 +208,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ContainerConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -223,7 +223,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    ContainerConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
@@ -240,7 +240,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    ContainerConditionReady,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "Testing",
@@ -257,7 +257,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    ContainerConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
@@ -275,7 +275,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ContainerConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -289,7 +289,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:    ContainerConditionReady,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "SinkEmpty",
@@ -306,7 +306,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			return s
 		}(),
 		condQuery: ContainerConditionReady,
-		want: &duckv1alpha1.Condition{
+		want: &apis.Condition{
 			Type:   ContainerConditionReady,
 			Status: corev1.ConditionTrue,
 		},
@@ -315,7 +315,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.s.GetCondition(test.condQuery)
-			ignoreTime := cmpopts.IgnoreFields(duckv1alpha1.Condition{},
+			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)

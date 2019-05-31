@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,9 +77,10 @@ type SubscriptionSpec struct {
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Kind must be "Channel" and APIVersion must be
-	// "eventing.knative.dev/v1alpha1"
-	//
+	//  The resource pointed by this ObjectReference must meet the Subscribable contract
+	//  with a pointer to the Subscribable duck type. If the resource does not meet this contract,
+	//  it will be reflected in the Subscription's status.
+
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
 	// and what the semantics there should be. For now, you can always
@@ -154,24 +155,23 @@ type SubscriberSpec struct {
 // ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
 // If no SubscriberSpec is specified, the identity function is assumed.
 type ReplyStrategy struct {
-	// This object must be a Channel.
-	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Kind must be "Channel" and APIVersion must be
-	// "eventing.knative.dev/v1alpha1"
+	//  The resource pointed by this ObjectReference must meet the Addressable contract
+	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
+	//  it will be reflected in the Subscription's status.
 	// +optional
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
+	// inherits duck/v1beta1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1alpha1.Status `json:",inline"`
+	duckv1beta1.Status `json:",inline"`
 
 	// PhysicalSubscription is the fully resolved values that this Subscription represents.
 	PhysicalSubscription SubscriptionStatusPhysicalSubscription `json:"physicalSubscription,omitempty"`

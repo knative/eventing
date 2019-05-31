@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	channelKind       = "Channel"
+	channelKind       = "MyChannel"
 	channelAPIVersion = "eventing.knative.dev/v1alpha1"
 	routeKind         = "Route"
 	routeAPIVersion   = "serving.knative.dev/v1alpha1"
@@ -420,44 +420,7 @@ func TestValidChannel(t *testing.T) {
 			Kind: channelKind,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrInvalidValue("", "apiVersion")
-			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
-			return apis.ErrMissingField("apiVersion").Also(fe)
-		}(),
-	}, {
-		name: "missing kind",
-		c: corev1.ObjectReference{
-			Name:       channelName,
-			APIVersion: channelAPIVersion,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrInvalidValue("", "kind")
-			fe.Details = "only 'Channel' kind is allowed"
-			return apis.ErrMissingField("kind").Also(fe)
-		}(),
-	}, {
-		name: "invalid kind",
-		c: corev1.ObjectReference{
-			Name:       channelName,
-			APIVersion: channelAPIVersion,
-			Kind:       "subscription",
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrInvalidValue("subscription", "kind")
-			fe.Details = "only 'Channel' kind is allowed"
-			return fe
-		}(),
-	}, {
-		name: "invalid apiVersion",
-		c: corev1.ObjectReference{
-			Name:       channelName,
-			APIVersion: "wrongapiversion",
-			Kind:       channelKind,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrInvalidValue("wrongapiversion", "apiVersion")
-			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
-			return fe
+			return apis.ErrMissingField("apiVersion")
 		}(),
 	}, {
 		name: "extra field, namespace",
@@ -713,34 +676,6 @@ func TestValidReply(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channel.kind")
-			return fe
-		}(),
-	}, {
-		name: "invalid kind",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       "subscription",
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrInvalidValue("subscription", "kind")
-			fe.Details = "only 'Channel' kind is allowed"
-			return fe
-		}(),
-	}, {
-		name: "invalid apiVersion",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: "wrongapiversion",
-				Kind:       channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrInvalidValue("wrongapiversion", "apiVersion")
-			fe.Details = "only eventing.knative.dev/v1alpha1 is allowed for apiVersion"
 			return fe
 		}(),
 	}, {

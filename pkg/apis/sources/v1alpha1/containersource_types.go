@@ -17,8 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,9 +41,6 @@ type ContainerSource struct {
 var (
 	// Check that ContainerSource can be validated and can be defaulted.
 	_ runtime.Object = (*ContainerSource)(nil)
-
-	// Check that ContainerSource implements the Conditions duck type.
-	_ = duck.VerifyType(&ContainerSource{}, &duckv1alpha1.Conditions{})
 
 	// Check that we can create OwnerReferences to a ContainerSource.
 	_ kmeta.OwnerRefable = (*ContainerSource)(nil)
@@ -83,10 +79,10 @@ func (s *ContainerSource) GetGroupVersionKind() schema.GroupVersionKind {
 
 // ContainerSourceStatus defines the observed state of ContainerSource
 type ContainerSourceStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
+	// inherits duck/v1beta1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1alpha1.Status `json:",inline"`
+	duckv1beta1.Status `json:",inline"`
 
 	// SinkURI is the current active sink URI that has been configured for the ContainerSource.
 	// +optional

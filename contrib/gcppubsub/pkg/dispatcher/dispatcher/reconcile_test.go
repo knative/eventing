@@ -34,6 +34,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -71,7 +72,7 @@ var (
 	deletionTime = metav1.Now().Rfc3339Copy()
 
 	subscribers = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				UID: "sub-uid",
 			},
@@ -468,7 +469,7 @@ func TestReceiveFunc(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			sub := util.GcpPubSubSubscriptionStatus{
-				ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				SubscriberSpec: v1alpha1.SubscriberSpec{
 					SubscriberURI: "subscriber-uri",
 					ReplyURI:      "reply-uri",
 				},
@@ -537,7 +538,10 @@ func makeChannel() *eventingv1alpha1.Channel {
 		},
 	}
 	c.Status.InitializeConditions()
-	c.Status.SetAddress(hostname)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   hostname,
+	})
 	c.Status.MarkProvisioned()
 	pcs := &util.GcpPubSubChannelStatus{
 		GCPProject: gcpProject,
@@ -633,7 +637,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	}
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, util.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				UID:           sub.UID,
 				ReplyURI:      sub.ReplyURI,
 				SubscriberURI: sub.SubscriberURI,

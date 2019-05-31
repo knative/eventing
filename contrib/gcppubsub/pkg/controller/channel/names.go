@@ -33,6 +33,6 @@ func generateTopicName(c *v1alpha1.Channel) string {
 // generateSubName Generates the GCP PubSub Subscription name given the Knative Channel's
 // subscriber.
 // Note that this requires the subscriber's ref to be set correctly.
-func generateSubName(cs *eventduck.ChannelSubscriberSpec) string {
+func generateSubName(cs *eventduck.SubscriberSpec) string {
 	return utils.TopicNameWithUID("_", string(cs.DeprecatedRef.Name), cs.UID)
 }

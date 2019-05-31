@@ -33,6 +33,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
@@ -55,6 +56,14 @@ import (
 const (
 	NAMESPACE = "NAMESPACE"
 )
+
+type envConfig struct {
+	Broker    string `envconfig:"BROKER" required:"true"`
+	Channel   string `envconfig:"CHANNEL" required:"true"`
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
+
+	ZipkinServiceName string `envconfig:"ZIPKIN_SERVICE_NAME" required:"true"`
+}
 
 var (
 	defaultTTL = 255
@@ -85,18 +94,21 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	brokerName := utils.GetRequiredEnvOrFatal("BROKER")
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   utils.GetRequiredEnvOrFatal("CHANNEL"),
+		Host:   env.Channel,
 		Path:   "/",
 	}
 
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	configMapWatcher := configmap.NewInformedWatcher(kc, utils.GetRequiredEnvOrFatal(NAMESPACE))
+	configMapWatcher := configmap.NewInformedWatcher(kc, env.Namespace)
 
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, utils.GetRequiredEnvOrFatal("ZIPKIN_SERVICE_NAME")); err != nil {
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, env.ZipkinServiceName); err != nil {
 		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
@@ -112,7 +124,7 @@ func main() {
 		logger:     logger,
 		ceClient:   ceClient,
 		channelURI: channelURI,
-		brokerName: brokerName,
+		brokerName: env.Broker,
 	}
 
 	// Run the event handler with the manager.

@@ -22,33 +22,33 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestGetFullType(t *testing.T) {
+func TestSubscribableGetFullType(t *testing.T) {
 	s := &Subscribable{}
 	switch s.GetFullType().(type) {
-	case *Channel:
+	case *SubscribableType:
 		// expected
 	default:
-		t.Errorf("expected GetFullType to return *Channel, got %T", s.GetFullType())
+		t.Errorf("expected GetFullType to return *SubscribableType, got %T", s.GetFullType())
 	}
 }
 
-func TestGetListType(t *testing.T) {
-	c := &Channel{}
+func TestSubscribableGetListType(t *testing.T) {
+	c := &SubscribableType{}
 	switch c.GetListType().(type) {
-	case *ChannelList:
+	case *SubscribableTypeList:
 		// expected
 	default:
-		t.Errorf("expected GetFullType to return *ChannelList, got %T", c.GetListType())
+		t.Errorf("expected GetListType to return *SubscribableTypeList, got %T", c.GetListType())
 	}
 }
 
-func TestPopulate(t *testing.T) {
-	got := &Channel{}
+func TestSubscribablePopulate(t *testing.T) {
+	got := &SubscribableType{}
 
-	want := &Channel{
-		Spec: ChannelSpec{
+	want := &SubscribableType{
+		Spec: SubscribableSpec{
 			Subscribable: &Subscribable{
-				Subscribers: []ChannelSubscriberSpec{{
+				Subscribers: []SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					SubscriberURI: "call1",
 					ReplyURI:      "sink2",
