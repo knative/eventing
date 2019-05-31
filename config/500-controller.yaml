@@ -26,6 +26,8 @@ spec:
       app: eventing-controller
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
       labels:
         app: eventing-controller
         eventing.knative.dev/release: devel
@@ -53,9 +55,13 @@ spec:
         ports:
           - containerPort: 9090
             name: metrics
-        resources:
+        resources:  # An initial guess, but consistent with serving
+          requests:
+            cpu: 100m
+            memory: 100Mi
           limits:
-            memory: 1000Mi  # An initial guess, but consistent with serving
+            cpu: 1000m
+            memory: 1000Mi
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging

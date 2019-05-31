@@ -48,9 +48,13 @@ spec:
           value: config-logging
         - name: WEBHOOK_NAME
           value: webhook
-        resources:
+        resources: # An initial guess, but consistent with serving
+          requests:
+            cpu: 20m
+            memory: 100Mi
           limits:
-            memory: 1000Mi   # An initial guess, but consistent with serving
+            cpu: 200m
+            memory: 1000Mi
       volumes:
         - name: config-logging
           configMap:
