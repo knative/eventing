@@ -32,6 +32,12 @@ import (
 
 const EventingAPIVersion = "eventing.knative.dev/v1alpha1"
 
+// TriggerOption enables further configuration of a Trigger.
+type TriggerOption func(*v1alpha1.Trigger)
+
+// SubscriptionOption enables further configuration of a Subscription.
+type SubscriptionOption func(*v1alpha1.Subscription)
+
 // clusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 	if name == "" {
@@ -42,7 +48,7 @@ func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 
 // channelRef returns an ObjectReference for a given Channel Name.
 func channelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference("Channel", EventingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference(ChannelKind, EventingAPIVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner.
@@ -58,7 +64,7 @@ func Channel(name, provisioner string) *v1alpha1.Channel {
 }
 
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
-func WithSubscriberForSubscription(name string) func(*v1alpha1.Subscription) {
+func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Subscriber = &v1alpha1.SubscriberSpec{
@@ -69,7 +75,7 @@ func WithSubscriberForSubscription(name string) func(*v1alpha1.Subscription) {
 }
 
 // WithReply returns an options that adds a ReplyStrategy for the given Subscription.
-func WithReply(name string) func(*v1alpha1.Subscription) {
+func WithReply(name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &v1alpha1.ReplyStrategy{
@@ -80,7 +86,7 @@ func WithReply(name string) func(*v1alpha1.Subscription) {
 }
 
 // Subscription returns a Subscription.
-func Subscription(name, channelName string, options ...func(*v1alpha1.Subscription)) *v1alpha1.Subscription {
+func Subscription(name, channelName string, options ...SubscriptionOption) *v1alpha1.Subscription {
 	subscription := &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -110,7 +116,7 @@ func Broker(name, provisioner string) *v1alpha1.Broker {
 }
 
 // WithTriggerFilter returns an option that adds a TriggerFilter for the given Trigger.
-func WithTriggerFilter(eventSource, eventType string) func(*v1alpha1.Trigger) {
+func WithTriggerFilter(eventSource, eventType string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		triggerFilter := &v1alpha1.TriggerFilter{
 			SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
@@ -123,14 +129,14 @@ func WithTriggerFilter(eventSource, eventType string) func(*v1alpha1.Trigger) {
 }
 
 // WithBroker returns an option that adds a Broker for the given Trigger.
-func WithBroker(brokerName string) func(*v1alpha1.Trigger) {
+func WithBroker(brokerName string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Spec.Broker = brokerName
 	}
 }
 
 // WithSubscriberRefForTrigger returns an option that adds a Subscriber Ref for the given Trigger.
-func WithSubscriberRefForTrigger(name string) func(*v1alpha1.Trigger) {
+func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
@@ -141,7 +147,7 @@ func WithSubscriberRefForTrigger(name string) func(*v1alpha1.Trigger) {
 }
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
-func WithSubscriberURIForTrigger(uri string) func(*v1alpha1.Trigger) {
+func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
 			URI: &uri,
@@ -150,7 +156,7 @@ func WithSubscriberURIForTrigger(uri string) func(*v1alpha1.Trigger) {
 }
 
 // Trigger returns a Trigger.
-func Trigger(name string, options ...func(*v1alpha1.Trigger)) *v1alpha1.Trigger {
+func Trigger(name string, options ...TriggerOption) *v1alpha1.Trigger {
 	trigger := &v1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

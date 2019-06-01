@@ -17,7 +17,6 @@ limitations under the License.
 package common
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test/base"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -50,7 +49,7 @@ func (client *Client) CreateChannelsOrFail(names []string, provisionerName strin
 }
 
 // CreateSubscriptionOrFail will create a Subscription.
-func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...func(*v1alpha1.Subscription)) {
+func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...base.SubscriptionOption) {
 	namespace := client.Namespace
 	subscription := base.Subscription(name, channelName, options...)
 
@@ -64,7 +63,7 @@ func (client *Client) CreateSubscriptionOrFail(name, channelName string, options
 }
 
 // CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
-func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...func(*v1alpha1.Subscription)) {
+func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...base.SubscriptionOption) {
 	for _, name := range names {
 		client.CreateSubscriptionOrFail(name, channelName, options...)
 	}
@@ -92,7 +91,7 @@ func (client *Client) CreateBrokersOrFail(names []string, provisionerName string
 }
 
 // CreateTriggerOrFail will create a Trigger.
-func (client *Client) CreateTriggerOrFail(name string, options ...func(*v1alpha1.Trigger)) {
+func (client *Client) CreateTriggerOrFail(name string, options ...base.TriggerOption) {
 	namespace := client.Namespace
 	trigger := base.Trigger(name, options...)
 
