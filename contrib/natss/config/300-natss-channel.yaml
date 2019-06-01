@@ -24,7 +24,7 @@ spec:
   version: v1alpha1
   names:
     kind: NatssChannel
-    plural: Natsschannels
+    plural: natsschannels
     singular: natsschannel
     categories:
     - all
