@@ -49,28 +49,22 @@ func singleEvent(t *testing.T, encoding string) {
 
 	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
 		st.Logf("Run test with provisioner %q", provisioner)
-		client := Setup(st, provisioner, true)
+		client := Setup(st, true)
 		defer TearDown(client)
 
 		// create channel
-		if err := client.CreateChannel(channelName, provisioner); err != nil {
-			st.Fatalf("Failed to create channel: %v", err)
-		}
+		client.CreateChannelOrFail(channelName, provisioner)
 
 		// create logger service as the subscriber
 		pod := base.EventLoggerPod(loggerPodName)
-		if err := client.CreatePod(pod, common.WithService(loggerPodName)); err != nil {
-			st.Fatalf("Failed to create logger service: %v", err)
-		}
+		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
-		if err := client.CreateSubscription(
+		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
 			base.WithSubscriberForSubscription(loggerPodName),
-		); err != nil {
-			st.Fatalf("Failed to create subscription: %v", err)
-		}
+		)
 
 		// wait for all test resources to be ready, so that we can start sending events
 		if err := client.WaitForAllTestResourcesReady(); err != nil {
