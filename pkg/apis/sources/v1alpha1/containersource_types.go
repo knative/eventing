@@ -48,15 +48,25 @@ var (
 
 // ContainerSourceSpec defines the desired state of ContainerSource
 type ContainerSourceSpec struct {
+	// Template describes the pods that will be created
+	// +optional
+	Template *corev1.PodTemplateSpec `json:"template,omitempty"`
+
 	// Image is the image to run inside of the container.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image,omitempty"`
 
 	// Args are passed to the ContainerSpec as they are.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	Args []string `json:"args,omitempty"`
 
 	// Env is the list of environment variables to set in the container.
 	// Cannot be updated.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -64,6 +74,8 @@ type ContainerSourceSpec struct {
 
 	// ServiceAccountName is the name of the ServiceAccount to use to run this
 	// source.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
