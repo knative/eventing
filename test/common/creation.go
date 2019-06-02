@@ -18,7 +18,6 @@ package common
 
 import (
 	"github.com/knative/eventing/test/base"
-	"github.com/knative/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
@@ -52,18 +51,15 @@ func (client *Client) CreateChannelOrFail(name, provisonerName string, isCRD boo
 
 func (client *Client) createChannelCROrFail(name, provisionerName string) {
 	namespace := client.Namespace
-	var channel kmeta.OwnerRefable
-	var err error
 	if provisionerName == base.KafkaProvisioner {
 		channel := base.KafkaChannel(name)
-		client := client.KafkaChannel.MessagingV1alpha1().KafkaChannels(namespace)
-		channel, err = client.Create(channel)
+		channels := client.KafkaChannel.MessagingV1alpha1().KafkaChannels(namespace)
+		channel, err := channels.Create(channel)
+		if err != nil {
+			client.T.Fatalf("Failed to create channel CR %q: %v", name, err)
+		}
+		client.Cleaner.AddObj(channel)
 	}
-
-	if err != nil {
-		client.T.Fatalf("Failed to create channel CR %q: %v", name, err)
-	}
-	client.Cleaner.AddObj(channel)
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.
