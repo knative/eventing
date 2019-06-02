@@ -47,13 +47,13 @@ func singleEvent(t *testing.T, encoding string) {
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
 	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
+	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
 		st.Logf("Run test with provisioner %q", provisioner)
 		client := Setup(st, true)
 		defer TearDown(client)
 
 		// create channel
-		client.CreateChannelOrFail(channelName, provisioner)
+		client.CreateChannelOrFail(channelName, provisioner, isCRD)
 
 		// create logger service as the subscriber
 		pod := base.EventLoggerPod(loggerPodName)
@@ -79,7 +79,14 @@ func singleEvent(t *testing.T, encoding string) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
 			Encoding: encoding,
 		}
-		if err := client.SendFakeEventToAddressable(senderName, channelName, common.ChannelTypeMeta, event); err != nil {
+		// Get the typemeta of the Addressable used in this test.
+		// TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRD in this repo.
+		//                It needs to be removed when the provisioner implementation is removed.
+		typemeta := common.ChannelTypeMeta
+		if isCRD {
+			typemeta = common.ProvisionerChannelMap[provisioner]
+		}
+		if err := client.SendFakeEventToAddressable(senderName, channelName, typemeta, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 

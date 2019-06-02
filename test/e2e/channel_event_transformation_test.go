@@ -48,12 +48,12 @@ func TestEventTransformationForSubscription(t *testing.T) {
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
-	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
+	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
 		client := Setup(st, true)
 		defer TearDown(client)
 
 		// create channels
-		client.CreateChannelsOrFail(channelNames, provisioner)
+		client.CreateChannelsOrFail(channelNames, provisioner, isCRD)
 		client.WaitForResourcesReady(common.ChannelTypeMeta)
 
 		// create transformation pod and service
@@ -98,7 +98,14 @@ func TestEventTransformationForSubscription(t *testing.T) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 			Encoding: base.CloudEventDefaultEncoding,
 		}
-		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], common.ChannelTypeMeta, eventToSend); err != nil {
+		// Get the typemeta of the Addressable used in this test.
+		// TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRD in this repo.
+		//                It needs to be removed when the provisioner implementation is removed.
+		typemeta := common.ChannelTypeMeta
+		if isCRD {
+			typemeta = common.ProvisionerChannelMap[provisioner]
+		}
+		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], typemeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}
 

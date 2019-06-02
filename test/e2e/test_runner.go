@@ -42,14 +42,20 @@ import (
 
 // RunTests will use all provisioners that support the given feature, to run
 // a test for the testFunc.
-func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string)) {
+func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string, isCRD bool)) {
 	t.Parallel()
 	for _, provisioner := range test.EventingFlags.Provisioners {
-		supportedFeatures := common.ValidProvisionersMap[provisioner]
-		if contains(supportedFeatures, feature) {
+		channelConfig := common.ValidProvisionersMap[provisioner]
+		if contains(channelConfig.Features, feature) {
 			t.Run(t.Name()+"-"+provisioner, func(st *testing.T) {
-				testFunc(st, provisioner)
+				testFunc(st, provisioner, false)
 			})
+
+			if channelConfig.CRDSupported {
+				t.Run(t.Name()+"-crd-"+provisioner, func(st *testing.T) {
+					testFunc(st, provisioner, true)
+				})
+			}
 		}
 	}
 }

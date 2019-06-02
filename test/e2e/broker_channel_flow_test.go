@@ -51,7 +51,7 @@ func TestBrokerChannelFlow(t *testing.T) {
 	RunTests(t, common.FeatureBasic, testBrokerChannelFlow)
 }
 
-func testBrokerChannelFlow(t *testing.T, provisioner string) {
+func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-brokerchannel-sender"
 		brokerName    = "e2e-brokerchannel-broker"
@@ -126,7 +126,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 	)
 
 	// create channel for trigger3
-	client.CreateChannelOrFail(channelName, provisioner)
+	client.CreateChannelOrFail(channelName, provisioner, isCRD)
 	client.WaitForResourceReady(channelName, common.ChannelTypeMeta)
 
 	// create trigger3 to receive the transformed event, and send it to the channel

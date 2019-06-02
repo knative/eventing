@@ -18,6 +18,7 @@ package common
 
 import (
 	"github.com/knative/eventing/test/base"
+	"github.com/knative/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
@@ -30,23 +31,45 @@ var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
 // CreateChannelOrFail will create a Channel Resource in Eventing.
-func (client *Client) CreateChannelOrFail(name, provisonerName string) {
-	namespace := client.Namespace
-	channel := base.Channel(name, provisonerName)
+// TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRDs in this repo.
+//                isCRD needs to be deleted when the provisioner implementation is removed.
+func (client *Client) CreateChannelOrFail(name, provisonerName string, isCRD bool) {
+	if !isCRD {
+		namespace := client.Namespace
+		channel := base.Channel(name, provisonerName)
 
-	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	// update channel with the new reference
-	channel, err := channels.Create(channel)
+		channels := client.Eventing.EventingV1alpha1().Channels(namespace)
+		// update channel with the new reference
+		channel, err := channels.Create(channel)
+		if err != nil {
+			client.T.Fatalf("Failed to create channel %q: %v", name, err)
+		}
+		client.Cleaner.AddObj(channel)
+	} else {
+		client.createChannelCROrFail(name, provisonerName)
+	}
+}
+
+func (client *Client) createChannelCROrFail(name, provisionerName string) {
+	namespace := client.Namespace
+	var channel kmeta.OwnerRefable
+	var err error
+	if provisionerName == base.KafkaProvisioner {
+		channel := base.KafkaChannel(name)
+		client := client.KafkaChannel.MessagingV1alpha1().KafkaChannels(namespace)
+		channel, err = client.Create(channel)
+	}
+
 	if err != nil {
-		client.T.Fatalf("Failed to create channel %q: %v", name, err)
+		client.T.Fatalf("Failed to create channel CR %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(channel)
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.
-func (client *Client) CreateChannelsOrFail(names []string, provisionerName string) {
+func (client *Client) CreateChannelsOrFail(names []string, provisionerName string, isCRD bool) {
 	for _, name := range names {
-		client.CreateChannelOrFail(name, provisionerName)
+		client.CreateChannelOrFail(name, provisionerName, isCRD)
 	}
 }
 

@@ -16,18 +16,39 @@ limitations under the License.
 
 package common
 
-import "github.com/knative/eventing/test/base"
+import (
+	"github.com/knative/eventing/test/base"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
 const DefaultClusterChannelProvisioner = base.InMemoryProvisioner
 
 // ValidProvisionersMap saves the provisioner-features mapping.
 // Each pair means the provisioner support the list of features.
-var ValidProvisionersMap = map[string][]Feature{
-	base.InMemoryProvisioner:  {FeatureBasic},
-	base.GCPPubSubProvisioner: {FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	base.KafkaProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	base.NatssProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
+var ValidProvisionersMap = map[string]ChannelConfig{
+	base.InMemoryProvisioner: ChannelConfig{
+		Features: []Feature{FeatureBasic},
+	},
+	base.GCPPubSubProvisioner: ChannelConfig{
+		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	},
+	base.KafkaProvisioner: ChannelConfig{
+		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+		CRDSupported: true,
+	},
+	base.NatssProvisioner: ChannelConfig{
+		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	},
+}
+
+type ChannelConfig struct {
+	Features     []Feature
+	CRDSupported bool
+}
+
+var ProvisionerChannelMap = map[string]*metav1.TypeMeta{
+	base.KafkaProvisioner: KafkaChannelTypeMeta,
 }
 
 // Feature is the feature supported by the Channel provisioner.

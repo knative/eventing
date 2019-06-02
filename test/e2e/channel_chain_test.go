@@ -37,7 +37,7 @@ func TestChannelChain(t *testing.T) {
 	RunTests(t, common.FeatureBasic, testChannelChain)
 }
 
-func testChannelChain(t *testing.T, provisioner string) {
+func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channelchain-logger-pod"
@@ -52,7 +52,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 	defer TearDown(client)
 
 	// create channels
-	client.CreateChannelsOrFail(channelNames, provisioner)
+	client.CreateChannelsOrFail(channelNames, provisioner, isCRD)
 	client.WaitForResourcesReady(common.ChannelTypeMeta)
 
 	// create loggerPod and expose it as a service
@@ -77,7 +77,14 @@ func testChannelChain(t *testing.T, provisioner string) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: base.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToAddressable(senderName, channelNames[0], common.ChannelTypeMeta, event); err != nil {
+	// Get the typemeta of the Addressable used in this test.
+	// TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRD in this repo.
+	//                It needs to be removed when the provisioner implementation is removed.
+	typemeta := common.ChannelTypeMeta
+	if isCRD {
+		typemeta = common.ProvisionerChannelMap[provisioner]
+	}
+	if err := client.SendFakeEventToAddressable(senderName, channelNames[0], typemeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 	}
 

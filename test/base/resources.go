@@ -22,6 +22,7 @@ package base
 import (
 	"fmt"
 
+	kafkamessagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
@@ -65,6 +66,15 @@ func Channel(name, provisioner string) *eventingv1alpha1.Channel {
 		},
 		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: clusterChannelProvisioner(provisioner),
+		},
+	}
+}
+
+// KafkaChannel returns a KafkaChannel.
+func KafkaChannel(name string) *kafkamessagingv1alpha1.KafkaChannel {
+	return &kafkamessagingv1alpha1.KafkaChannel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
 		},
 	}
 }

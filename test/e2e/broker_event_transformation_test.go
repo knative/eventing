@@ -45,7 +45,7 @@ func TestEventTransformationForTrigger(t *testing.T) {
 	RunTests(t, common.FeatureBasic, testEventTransformationForTrigger)
 }
 
-func testEventTransformationForTrigger(t *testing.T, provisioner string) {
+func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-eventtransformation-sender"
 		brokerName    = "e2e-eventtransformation-broker"
