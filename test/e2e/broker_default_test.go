@@ -64,7 +64,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	// Wait for default broker ready.
-	if err := client.WaitForBrokerReady(common.DefaultBrokerName); err != nil {
+	if err := client.WaitForResourceReady(base.DefaultBrokerName, common.BrokerTypeMeta); err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
@@ -121,7 +121,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		if err := client.SendFakeEventToBroker(senderPodName, common.DefaultBrokerName, cloudEvent); err != nil {
+		if err := client.SendFakeEventToAddressable(senderPodName, base.DefaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
 			t.Fatalf("Error send cloud event to broker: %v", err)
 		}
 

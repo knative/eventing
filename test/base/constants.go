@@ -21,8 +21,6 @@ import "github.com/knative/eventing/pkg/reconciler/namespace/resources"
 const (
 	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
 	DefaultBrokerName = resources.DefaultBrokerName
-	// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
-	DefaultClusterChannelProvisioner = InMemoryProvisioner
 
 	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
 	InMemoryProvisioner = "in-memory"
@@ -32,6 +30,13 @@ const (
 	KafkaProvisioner = "kafka"
 	// NatssProvisioner is the natss provisioner, which is under contrib/natss
 	NatssProvisioner = "natss"
+)
+
+// API versions for the resources.
+const (
+	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
+	SourcesAPIVersion   = "sources.eventing.knative.dev/v1alpha1"
+	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
 )
 
 // kind for eventing resources.

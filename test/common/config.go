@@ -16,13 +16,18 @@ limitations under the License.
 
 package common
 
+import "github.com/knative/eventing/test/base"
+
+// DefaultClusterChannelProvisioner is the default ClusterChannelProvisioner we will run tests against.
+const DefaultClusterChannelProvisioner = base.InMemoryProvisioner
+
 // ValidProvisionersMap saves the provisioner-features mapping.
 // Each pair means the provisioner support the list of features.
 var ValidProvisionersMap = map[string][]Feature{
-	InMemoryProvisioner:  {FeatureBasic},
-	GCPPubSubProvisioner: {FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	KafkaProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	NatssProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	base.InMemoryProvisioner:  {FeatureBasic},
+	base.GCPPubSubProvisioner: {FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	base.KafkaProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
+	base.NatssProvisioner:     {FeatureBasic, FeatureRedelivery, FeaturePersistence},
 }
 
 // Feature is the feature supported by the Channel provisioner.

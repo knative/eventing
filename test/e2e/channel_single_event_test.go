@@ -79,7 +79,7 @@ func singleEvent(t *testing.T, encoding string) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
 			Encoding: encoding,
 		}
-		if err := client.SendFakeEventToChannel(senderName, channelName, event); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, channelName, common.ChannelTypeMeta, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 

@@ -53,7 +53,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 
 	// create channels
 	client.CreateChannelsOrFail(channelNames, provisioner)
-	client.WaitForChannelsReady()
+	client.WaitForResourcesReady(common.ChannelTypeMeta)
 
 	// create loggerPod and expose it as a service
 	pod := base.EventLoggerPod(loggerPodName)
@@ -77,7 +77,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: base.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToChannel(senderName, channelNames[0], event); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, channelNames[0], common.ChannelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 	}
 

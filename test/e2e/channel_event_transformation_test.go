@@ -54,7 +54,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, provisioner)
-		client.WaitForChannelsReady()
+		client.WaitForResourcesReady(common.ChannelTypeMeta)
 
 		// create transformation pod and service
 		transformedEventBody := fmt.Sprintf("eventBody %s", uuid.NewUUID())
@@ -98,7 +98,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 			Encoding: base.CloudEventDefaultEncoding,
 		}
-		if err := client.SendFakeEventToChannel(senderName, channelNames[0], eventToSend); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], common.ChannelTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}
 

@@ -28,6 +28,7 @@ import (
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"go.opencensus.io/trace"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 )
@@ -44,18 +45,35 @@ const (
 // name the metric that is emitted to track how long it took for
 // the resource to get into the state checked by isResourceReady.
 func WaitForResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) error {
-	metricName := fmt.Sprintf("WaitForResourceReady/%s", obj.Name)
+	metricName := fmt.Sprintf("WaitForResourceReady/%s/%s", obj.Namespace, obj.Name)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		return isResourceReady(dynamicClient, obj)
+		untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
+		return isResourceReady(untyped, err)
+	})
+}
+
+// WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
+func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *MetaResourceList) error {
+	metricName := fmt.Sprintf("WaitForResourcesReady/%s", objList.Namespace)
+	_, span := trace.StartSpan(context.Background(), metricName)
+	defer span.End()
+
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		untypeds, err := GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
+		for _, untyped := range untypeds {
+			if isReady, err := isResourceReady(untyped, err); !isReady {
+				return isReady, err
+			}
+		}
+		return true, nil
 	})
 }
 
 // isResourceReady leverage duck-type to check if the given MetaResource is in ready state
-func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, error) {
-	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
+func isResourceReady(obj runtime.Object, err error) (bool, error) {
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
 		// We swallow the error to keep on polling.
@@ -66,6 +84,6 @@ func isResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) (bool, 
 		return false, err
 	}
 
-	kr := untyped.(*duckv1beta1.KResource)
+	kr := obj.(*duckv1beta1.KResource)
 	return kr.Status.GetCondition(apis.ConditionReady).IsTrue(), nil
 }

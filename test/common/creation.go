@@ -22,6 +22,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
+// TODO(Fredy-Z): break this file into multiple files when it grows too large.
+
 var coreAPIGroup = corev1.SchemeGroupVersion.Group
 var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
@@ -102,6 +104,43 @@ func (client *Client) CreateTriggerOrFail(name string, options ...base.TriggerOp
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(trigger)
+}
+
+// CreateCronJobSourceOrFail will create a CronJobSource.
+func (client *Client) CreateCronJobSourceOrFail(
+	name,
+	schedule,
+	data string,
+	options ...base.CronJobSourceOption,
+) {
+	namespace := client.Namespace
+	cronJobSource := base.CronJobSource(name, schedule, data, options...)
+
+	cronJobSources := client.Eventing.SourcesV1alpha1().CronJobSources(namespace)
+	// update cronJobSource with the new reference
+	cronJobSource, err := cronJobSources.Create(cronJobSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create cronjobsource %q: %v", name, err)
+	}
+	client.Cleaner.AddObj(cronJobSource)
+}
+
+// CreateContainerSourceOrFail will create a ContainerSource.
+func (client *Client) CreateContainerSourceOrFail(
+	name,
+	imageName string,
+	options ...base.ContainerSourceOption,
+) {
+	namespace := client.Namespace
+	containerSource := base.ContainerSource(name, imageName, options...)
+
+	containerSources := client.Eventing.SourcesV1alpha1().ContainerSources(namespace)
+	// update containerSource with the new reference
+	containerSource, err := containerSources.Create(containerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create containersource %q: %v", name, err)
+	}
+	client.Cleaner.AddObj(containerSource)
 }
 
 // WithService returns an option that creates a Service binded with the given pod.
