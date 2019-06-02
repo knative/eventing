@@ -18,14 +18,14 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
+	"github.com/knative/eventing/contrib/natss/pkg/util"
 	"log"
 
-	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
-	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
-	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
+	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
+	eventingScheme "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/scheme"
+	informers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
+	natsschannel "github.com/knative/eventing/contrib/natss/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -57,36 +57,24 @@ func main() {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
-	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
+	natssDispatcher, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger.Desugar())
 	if err != nil {
-		logger.Fatalw("Error loading kafka config", zap.Error(err))
-	}
-
-	args := &dispatcher.KafkaDispatcherArgs{
-		ClientID:     "kafka-ch-dispatcher",
-		Brokers:      kafkaConfig.Brokers,
-		ConsumerMode: kafkaConfig.ConsumerMode,
-		TopicFunc:    utils.TopicName,
-		Logger:       logger.Desugar(),
-	}
-	kafkaDispatcher, err := dispatcher.NewDispatcher(args)
-	if err != nil {
-		logger.Fatalw("Unable to create kafka dispatcher", zap.Error(err))
+		logger.Fatalw("Unable to create natss dispatcher", zap.Error(err))
 	}
 
 	logger = logger.With(zap.String("controller/impl", "pkg"))
-	logger.Info("Starting the Kafka dispatcher")
+	logger.Info("Starting the NATSS dispatcher")
 
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
+	// Setting up our own eventingClientSet as we need the messaging API introduced with natss.
 	eventingClientSet := clientset.NewForConfigOrDie(cfg)
 	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
 
 	// Messaging
-	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
+	natssChannelInformer := eventingInformerFactory.Messaging().V1alpha1().NatssChannels()
 
 	// Adding the scheme.
 	eventingScheme.AddToScheme(scheme.Scheme)
@@ -95,11 +83,11 @@ func main() {
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
 	controllers := [...]*kncontroller.Impl{
-		kafkachannel.NewController(
+		natsschannel.NewController(
 			opt,
 			eventingClientSet,
-			kafkaDispatcher,
-			kafkaChannelInformer,
+			natssDispatcher,
+			natssChannelInformer,
 		),
 	}
 	// This line asserts at compile time that the length of controllers is equal to numControllers.
@@ -122,13 +110,13 @@ func main() {
 	if err := kncontroller.StartInformers(
 		stopCh,
 		// Messaging
-		kafkaChannelInformer.Informer(),
+		natssChannelInformer.Informer(),
 	); err != nil {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
 
 	logger.Info("Starting dispatcher.")
-	go kafkaDispatcher.Start(stopCh)
+	go natssDispatcher.Start(stopCh)
 
 	logger.Info("Starting controllers.")
 	kncontroller.StartAll(stopCh, controllers[:]...)
