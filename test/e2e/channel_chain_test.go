@@ -48,29 +48,21 @@ func testChannelChain(t *testing.T, provisioner string) {
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 
-	client := Setup(t, provisioner, true)
+	client := Setup(t, true)
 	defer TearDown(client)
 
 	// create channels
-	if err := client.CreateChannels(channelNames, provisioner); err != nil {
-		t.Fatalf("Failed to create channels %q: %v", channelNames, err)
-	}
+	client.CreateChannelsOrFail(channelNames, provisioner)
 	client.WaitForChannelsReady()
 
 	// create loggerPod and expose it as a service
 	pod := base.EventLoggerPod(loggerPodName)
-	if err := client.CreatePod(pod, common.WithService(loggerPodName)); err != nil {
-		t.Fatalf("Failed to create logger service: %v", err)
-	}
+	client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 	// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-	if err := client.CreateSubscriptions(subscriptionNames1, channelNames[0], base.WithReply(channelNames[1])); err != nil {
-		t.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames1, channelNames[0], err)
-	}
+	client.CreateSubscriptionsOrFail(subscriptionNames1, channelNames[0], base.WithReply(channelNames[1]))
 	// create subscriptions that subscribe the second channel, and call the logging service
-	if err := client.CreateSubscriptions(subscriptionNames2, channelNames[1], base.WithSubscriberForSubscription(loggerPodName)); err != nil {
-		t.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames2, channelNames[1], err)
-	}
+	client.CreateSubscriptionsOrFail(subscriptionNames2, channelNames[1], base.WithSubscriberForSubscription(loggerPodName))
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

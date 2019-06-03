@@ -300,6 +300,10 @@ function setup_test_cluster() {
     export KO_DOCKER_REPO=gcr.io/${E2E_PROJECT_ID}/${E2E_BASE_NAME}-e2e-img
   fi
 
+  # Safety checks
+  is_protected_gcr ${KO_DOCKER_REPO} && \
+    abort "\$KO_DOCKER_REPO set to ${KO_DOCKER_REPO}, which is forbidden"
+
   echo "- Project is ${E2E_PROJECT_ID}"
   echo "- Cluster is ${k8s_cluster}"
   echo "- User is ${k8s_user}"
@@ -422,10 +426,6 @@ function initialize() {
   fi
 
   (( IS_PROW )) && [[ -z "${GCP_PROJECT}" ]] && IS_BOSKOS=1
-
-  # Safety checks
-  is_protected_gcr ${KO_DOCKER_REPO} && \
-    abort "\$KO_DOCKER_REPO set to ${KO_DOCKER_REPO}, which is forbidden"
 
   (( SKIP_ISTIO_ADDON )) || GKE_ADDONS="--addons=Istio"
 

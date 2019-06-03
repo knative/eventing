@@ -18,13 +18,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/controller"
-	provisionerController "github.com/knative/eventing/contrib/kafka/pkg/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/channelwatcher"
+	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
@@ -41,7 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to create logger: %v", err)
 	}
-	provisionerConfig, err := provisionerController.GetProvisionerConfig("/etc/config-provisioner")
+	provisionerConfig, err := utils.GetKafkaConfig("/etc/config-provisioner")
 	if err != nil {
 		logger.Fatal("unable to load provisioner config", zap.Error(err))
 	}
@@ -51,7 +53,14 @@ func main() {
 		logger.Fatal("unable to create manager.", zap.Error(err))
 	}
 
-	kafkaDispatcher, err := dispatcher.NewDispatcher(provisionerConfig.Brokers, provisionerConfig.ConsumerMode, logger)
+	args := &dispatcher.KafkaDispatcherArgs{
+		ClientID:     fmt.Sprintf("%s-dispatcher", controller.Name),
+		Brokers:      provisionerConfig.Brokers,
+		ConsumerMode: provisionerConfig.ConsumerMode,
+		TopicFunc:    topicUtils.TopicName,
+		Logger:       logger,
+	}
+	kafkaDispatcher, err := dispatcher.NewDispatcher(args)
 	if err != nil {
 		logger.Fatal("unable to create kafka dispatcher.", zap.Error(err))
 	}
