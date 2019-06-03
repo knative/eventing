@@ -58,6 +58,11 @@ func (ps *PipelineStatus) InitializeConditions() {
 func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv1alpha1.Subscription) {
 	ps.SubscriptionStatuses = make([]PipelineSubscriptionStatus, len(subscriptions))
 	allReady := true
+	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
+	if len(subscriptions) == 0 {
+		allReady = false
+
+	}
 	for i, s := range subscriptions {
 		ps.SubscriptionStatuses[i] = PipelineSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
@@ -79,6 +84,8 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 	}
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(PipelineConditionSubscriptionsReady)
+	} else {
+		pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, "SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
 }
 
@@ -87,6 +94,11 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
 	ps.ChannelStatuses = make([]PipelineChannelStatus, len(channels))
 	allReady := true
+	// If there are no channels, treat that as a False case. Could go either way, but this seems right.
+	if len(channels) == 0 {
+		allReady = false
+
+	}
 	for i, s := range channels {
 		ps.ChannelStatuses[i] = PipelineChannelStatus{
 			Channel: corev1.ObjectReference{
@@ -103,5 +115,7 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 	}
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(PipelineConditionChannelsReady)
+	} else {
+		pCondSet.Manage(ps).MarkFalse(PipelineConditionChannelsReady, "ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
 }
