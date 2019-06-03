@@ -77,52 +77,14 @@ func WithPipelineChannelStatuses(channelStatuses []v1alpha1.PipelineChannelStatu
 	}
 }
 
-/*
-func WithPipelineDeploymentReady() PipelineOption {
+func WithPipelineChannelsNotReady(reason, message string) PipelineOption {
 	return func(p *v1alpha1.Pipeline) {
-		p.Status.PropagateDispatcherStatus(&appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}})
+		p.Status.MarkChannelsNotReady(reason, message)
 	}
 }
 
-func WithPipelineServicetNotReady(reason, message string) PipelineOption {
+func WithPipelineSubscriptionssNotReady(reason, message string) PipelineOption {
 	return func(p *v1alpha1.Pipeline) {
-		p.Status.MarkServiceFailed(reason, message)
+		p.Status.MarkSubscriptionsNotReady(reason, message)
 	}
 }
-
-func WithPipelineServiceReady() PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
-		p.Status.MarkServiceTrue()
-	}
-}
-
-func WithPipelineChannelServicetNotReady(reason, message string) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
-		p.Status.MarkChannelServiceFailed(reason, message)
-	}
-}
-
-func WithPipelineChannelServiceReady() PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
-		p.Status.MarkChannelServiceTrue()
-	}
-}
-
-func WithPipelineEndpointsNotReady(reason, message string) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
-		p.Status.MarkEndpointsFailed(reason, message)
-	}
-}
-
-func WithPipelineEndpointsReady() PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
-		p.Status.MarkEndpointsTrue()
-	}
-}
-
-func WithPipelineAddress(a string) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
-		p.Status.SetAddress(a)
-	}
-}
-*/

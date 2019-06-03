@@ -85,7 +85,8 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(PipelineConditionSubscriptionsReady)
 	} else {
-		pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, "SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
+		ps.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
+		//		pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, "SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
 }
 
@@ -116,6 +117,15 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(PipelineConditionChannelsReady)
 	} else {
-		pCondSet.Manage(ps).MarkFalse(PipelineConditionChannelsReady, "ChannelsNotReady", "Channels are not ready yet, or there are none")
+		ps.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
+		//		pCondSet.Manage(ps).MarkFalse(PipelineConditionChannelsReady, "ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
+}
+
+func (ps *PipelineStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(PipelineConditionChannelsReady, reason, messageFormat, messageA...)
+}
+
+func (ps *PipelineStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, reason, messageFormat, messageA...)
 }

@@ -18,7 +18,6 @@ package pipeline
 
 import (
 	"fmt"
-	//	"net/url"
 	"testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -75,7 +74,6 @@ func TestNewController(t *testing.T) {
 
 	// Create informer factories with fake clients. The second parameter sets the
 	// resync period to zero, disabling it.
-	//	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
 	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClient, 0)
 
 	// Messaging
@@ -84,11 +82,6 @@ func TestNewController(t *testing.T) {
 	// Eventing
 	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
-
-	// Kube
-	//	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	//endpointsInformer := kubeInformerFactory.Core().V1().Endpoints()
-	//	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 
 	c := NewController(
 		reconciler.Options{
@@ -213,6 +206,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitPipelineConditions,
 					reconciletesting.WithPipelineChannelTemplateSpec(imc),
 					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
 						v1alpha1.PipelineChannelStatus{
 							Channel: corev1.ObjectReference{
@@ -263,6 +258,8 @@ func TestAllCases(t *testing.T) {
 						createSubscriber(1),
 						createSubscriber(2),
 					}),
+					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
 						v1alpha1.PipelineChannelStatus{
 							Channel: corev1.ObjectReference{
