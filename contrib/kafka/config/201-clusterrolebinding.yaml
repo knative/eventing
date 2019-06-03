@@ -41,3 +41,18 @@ roleRef:
   name: kafka-ch-dispatcher
   apiGroup: rbac.authorization.k8s.io
 
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kafka-webhook
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: kafka-webhook
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: kafka-webhook
+  apiGroup: rbac.authorization.k8s.io
