@@ -58,6 +58,9 @@ func getSubscription(ready bool) *eventingv1alpha1.Subscription {
 	if ready {
 		s.Status.MarkChannelReady()
 		s.Status.MarkReferencesResolved()
+	} else {
+		s.Status.MarkChannelNotReady("testInducedFailure", "Test Induced failure")
+		s.Status.MarkReferencesNotResolved("testInducedFailure", "Test Induced failure")
 	}
 	return &s
 }
@@ -198,6 +201,18 @@ func TestPipelinePropagateSubscriptionStatuses(t *testing.T) {
 	}{{
 		name: "empty",
 		subs: []*eventingv1alpha1.Subscription{},
+		want: corev1.ConditionFalse,
+	}, {
+		name: "empty status",
+		subs: []*eventingv1alpha1.Subscription{&eventingv1alpha1.Subscription{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "eventing.knative.dev/v1alpha1",
+				Kind:       "Subscription",
+			},
+			ObjectMeta: metav1.ObjectMeta{},
+			Status:     eventingv1alpha1.SubscriptionStatus{},
+		},
+		},
 		want: corev1.ConditionFalse,
 	}, {
 		name: "one subscription not ready",
