@@ -20,7 +20,7 @@ Kafka channels are those backed by [Apache Kafka](http://kafka.apache.org/) topi
    `bootstrap_servers` value in the `config-kafka` ConfigMap,
    located inside the `contrib/kafka/config/400-kafka-config.yaml` file:
 
-   ```yaml
+    ```yaml
     apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -30,8 +30,7 @@ Kafka channels are those backed by [Apache Kafka](http://kafka.apache.org/) topi
       # Broker URL. Replace this with the URLs for your kafka cluster,
       # which is in the format of my-cluster-kafka-bootstrap.my-kafka-namespace:9092.
       bootstrap_servers: REPLACE_WITH_CLUSTER_URL
-    ...
-   ``` 
+    ``` 
 
 1. Apply the Kafka config:
 
