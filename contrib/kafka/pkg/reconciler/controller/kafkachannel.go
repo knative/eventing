@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/knative/pkg/apis"
 	"reflect"
 	"time"
 
@@ -310,7 +311,10 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		return err
 	}
 	kc.Status.MarkChannelServiceTrue()
-	kc.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	kc.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	// close the connection
 	err = kafkaClusterAdmin.Close()

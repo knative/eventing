@@ -17,12 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var kc = duckv1alpha1.NewLivingConditionSet(
+var kc = apis.NewLivingConditionSet(
 	KafkaChannelConditionTopicReady,
 	KafkaChannelConditionDispatcherReady,
 	KafkaChannelConditionServiceReady,
@@ -32,36 +32,36 @@ var kc = duckv1alpha1.NewLivingConditionSet(
 
 const (
 	// KafkaChannelConditionReady has status True when all subconditions below have been set to True.
-	KafkaChannelConditionReady = duckv1alpha1.ConditionReady
+	KafkaChannelConditionReady = apis.ConditionReady
 
 	// KafkaChannelConditionDispatcherReady has status True when a Dispatcher deployment is ready
 	// Keyed off appsv1.DeploymentAvailable, which means minimum available replicas required are up
 	// and running for at least minReadySeconds.
-	KafkaChannelConditionDispatcherReady duckv1alpha1.ConditionType = "DispatcherReady"
+	KafkaChannelConditionDispatcherReady apis.ConditionType = "DispatcherReady"
 
 	// KafkaChannelConditionServiceReady has status True when a k8s Service is ready. This
 	// basically just means it exists because there's no meaningful status in Service. See Endpoints
 	// below.
-	KafkaChannelConditionServiceReady duckv1alpha1.ConditionType = "ServiceReady"
+	KafkaChannelConditionServiceReady apis.ConditionType = "ServiceReady"
 
 	// KafkaChannelConditionEndpointsReady has status True when a k8s Service Endpoints are backed
 	// by at least one endpoint.
-	KafkaChannelConditionEndpointsReady duckv1alpha1.ConditionType = "EndpointsReady"
+	KafkaChannelConditionEndpointsReady apis.ConditionType = "EndpointsReady"
 
 	// KafkaChannelConditionAddressable has status true when this KafkaChannel meets
 	// the Addressable contract and has a non-empty hostname.
-	KafkaChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	KafkaChannelConditionAddressable apis.ConditionType = "Addressable"
 
 	// KafkaChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
 	// Because this uses ExternalName, there are no endpoints to check.
-	KafkaChannelConditionChannelServiceReady duckv1alpha1.ConditionType = "ChannelServiceReady"
+	KafkaChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
 
 	// KafkaChannelConditionTopicReady has status True when the Kafka topic to use by the channel exists.
-	KafkaChannelConditionTopicReady duckv1alpha1.ConditionType = "TopicReady"
+	KafkaChannelConditionTopicReady apis.ConditionType = "TopicReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (cs *KafkaChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (cs *KafkaChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return kc.Manage(cs).GetCondition(t)
 }
 
@@ -75,12 +75,14 @@ func (cs *KafkaChannelStatus) InitializeConditions() {
 	kc.Manage(cs).InitializeConditions()
 }
 
-// TODO: Use the new beta duck types.
-func (cs *KafkaChannelStatus) SetAddress(hostname string) {
-	cs.Address.Hostname = hostname
-	if hostname != "" {
+func (cs *KafkaChannelStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		cs.Address.Hostname = url.Host
+		cs.Address.URL = url
 		kc.Manage(cs).MarkTrue(KafkaChannelConditionAddressable)
 	} else {
+		cs.Address.Hostname = ""
+		cs.Address.URL = nil
 		kc.Manage(cs).MarkFalse(KafkaChannelConditionAddressable, "EmptyHostname", "hostname is the empty string")
 	}
 }
