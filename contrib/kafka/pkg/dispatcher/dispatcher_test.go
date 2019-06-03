@@ -3,13 +3,14 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
-	"github.com/knative/eventing/pkg/provisioners/utils"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	"github.com/knative/eventing/pkg/provisioners/utils"
 
 	cluster "github.com/bsm/sarama-cluster"
 

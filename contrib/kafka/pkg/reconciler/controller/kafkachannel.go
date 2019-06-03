@@ -20,10 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
-	"github.com/knative/eventing/pkg/reconciler/names"
 	"reflect"
 	"time"
+
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
+	"github.com/knative/eventing/pkg/reconciler/names"
 
 	"github.com/Shopify/sarama"
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"

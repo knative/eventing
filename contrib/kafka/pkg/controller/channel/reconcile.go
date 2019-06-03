@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
 	"github.com/Shopify/sarama"

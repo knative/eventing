@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"log"
+
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"

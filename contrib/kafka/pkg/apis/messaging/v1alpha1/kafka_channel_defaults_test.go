@@ -15,8 +15,9 @@ package v1alpha1
 
 import (
 	"context"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"testing"
+
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
 	"github.com/google/go-cmp/cmp"
 )
