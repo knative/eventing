@@ -42,20 +42,21 @@ type ReceiveAdapterArgs struct {
 // Cron Job Sources.
 func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	replicas := int32(1)
-	RequestResourceCPU, specified := args.Source.Spec.Resources.Requests[corev1.ResourceCPU]
-	if !specified {
+
+	RequestResourceCPU, err := resource.ParseQuantity(args.Source.Spec.Resources.Requests.ResourceCPU)
+	if err != nil {
 		RequestResourceCPU = resource.MustParse("250m")
 	}
-	RequestResourceMemory, specified := args.Source.Spec.Resources.Requests[corev1.ResourceMemory]
-	if !specified {
+	RequestResourceMemory, err := resource.ParseQuantity(args.Source.Spec.Resources.Requests.ResourceMemory)
+	if err != nil {
 		RequestResourceMemory = resource.MustParse("512Mi")
 	}
-	LimitResourceCPU, specified := args.Source.Spec.Resources.Limits[corev1.ResourceCPU]
-	if !specified {
+	LimitResourceCPU, err := resource.ParseQuantity(args.Source.Spec.Resources.Limits.ResourceCPU)
+	if err != nil {
 		LimitResourceCPU = resource.MustParse("250m")
 	}
-	LimitResourceMemory, specified := args.Source.Spec.Resources.Limits[corev1.ResourceCPU]
-	if !specified {
+	LimitResourceMemory, err := resource.ParseQuantity(args.Source.Spec.Resources.Limits.ResourceMemory)
+	if err != nil {
 		LimitResourceMemory = resource.MustParse("512Mi")
 	}
 
