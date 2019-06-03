@@ -176,20 +176,19 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
 		return err
 	}
-	channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
-			zap.Error(err),
-			zap.Any("channel", subscription.Spec.Channel))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-		return err
-	}
-	// See if the subscription has been deleted
 	if subscription.DeletionTimestamp != nil {
+
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
-		if subscription.Status.IsAddedToChannel() {
+		if channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel); !errors.IsNotFound(err) && subscription.Status.IsAddedToChannel() {
+			if err != nil {
+				logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
+					zap.Error(err),
+					zap.Any("channel", subscription.Spec.Channel))
+				r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+				subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+				return err
+			}
 			err := r.syncPhysicalChannel(ctx, subscription, channel, true)
 			if err != nil {
 				logging.FromContext(ctx).Warn("Failed to sync physical from Channel", zap.Error(err))
@@ -201,6 +200,17 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		_, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
 		return err
 	}
+	channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
+			zap.Error(err),
+			zap.Any("channel", subscription.Spec.Channel))
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		return err
+	}
+	// See if the subscription has been deleted
+
 	if err := r.validateChannel(ctx, channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),

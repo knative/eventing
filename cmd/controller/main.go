@@ -81,7 +81,7 @@ func main() {
 
 	logger.Info("Starting the controller")
 
-	const numControllers = 1
+	const numControllers = 6
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)

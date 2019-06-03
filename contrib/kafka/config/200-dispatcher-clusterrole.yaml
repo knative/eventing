@@ -21,11 +21,19 @@ rules:
       - messaging.knative.dev
     resources:
       - kafkachannels
-      - kafkachannels/status
     verbs:
       - get
       - list
       - watch
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - kafkachannels/status
+    verbs:
+      - get
+      # - list
+      # - watch
+      - update
   - apiGroups:
       - "" # Core API group.
     resources:
