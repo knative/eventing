@@ -55,13 +55,9 @@ spec:
         ports:
           - containerPort: 9090
             name: metrics
-        resources:  # An initial guess, but consistent with serving
-          requests:
-            cpu: 100m
-            memory: 100Mi
+        resources:
           limits:
-            cpu: 1000m
-            memory: 1000Mi
+            memory: 1000Mi  # An initial guess, but consistent with serving
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging
