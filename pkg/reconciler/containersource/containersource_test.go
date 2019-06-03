@@ -194,7 +194,67 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "valid first pass",
+			Name: "valid first pass with template",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 0, nil, nil),
+			},
+		}, {
+			Name: "valid first pass without template",
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
@@ -234,7 +294,69 @@ func TestAllCases(t *testing.T) {
 				), 0, nil, nil),
 			},
 		}, {
-			Name: "valid, with ready deployment",
+			Name: "valid, with ready deployment with template",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 1, nil, nil),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "" has 1 ready replicas`),
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReadinessChanged", `ContainerSource "test-container-source" became ready`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					// Status Update:
+					WithContainerSourceDeployed,
+				),
+			}},
+		}, {
+			Name: "valid, with ready deployment without template",
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
@@ -276,7 +398,71 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "valid first pass, with annotations and labels",
+			Name: "valid first pass, with annotations and labels with template",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
+					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
+					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Image: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), 0, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
+			},
+		}, {
+			Name: "valid first pass, with annotations and labels without template",
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
