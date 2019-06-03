@@ -34,7 +34,6 @@ import (
 )
 
 const (
-	clientID = "knative-natss-dispatcher"
 	// maxElements defines a maximum number of outstanding re-connect requests
 	maxElements = 10
 )
@@ -57,6 +56,7 @@ type SubscriptionsSupervisor struct {
 	connect   chan struct{}
 	natssURL  string
 	clusterID string
+	clientID  string
 	// natConnMux is used to protect natssConn and natssConnInProgress during
 	// the transition from not connected to connected states.
 	natssConnMux        sync.Mutex
@@ -67,13 +67,14 @@ type SubscriptionsSupervisor struct {
 }
 
 // NewDispatcher returns a new SubscriptionsSupervisor.
-func NewDispatcher(natssURL, clusterID string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
+func NewDispatcher(natssURL, clusterID, clientID string, logger *zap.Logger) (*SubscriptionsSupervisor, error) {
 	d := &SubscriptionsSupervisor{
 		logger:        logger,
 		dispatcher:    provisioners.NewMessageDispatcher(logger.Sugar()),
 		connect:       make(chan struct{}, maxElements),
 		natssURL:      natssURL,
 		clusterID:     clusterID,
+		clientID:      clientID,
 		subscriptions: make(map[provisioners.ChannelReference]map[subscriptionReference]*stan.Subscription),
 	}
 	d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
@@ -141,7 +142,7 @@ func (s *SubscriptionsSupervisor) connectWithRetry(stopCh <-chan struct{}) {
 	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()
 	for {
-		nConn, err := stanutil.Connect(s.clusterID, clientID, s.natssURL, s.logger.Sugar())
+		nConn, err := stanutil.Connect(s.clusterID, s.clientID, s.natssURL, s.logger.Sugar())
 		if err == nil {
 			// Locking here in order to reduce time in locked state.
 			s.natssConnMux.Lock()
