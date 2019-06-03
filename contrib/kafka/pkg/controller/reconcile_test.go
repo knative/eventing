@@ -19,8 +19,9 @@ package controller
 import (
 	"context"
 	"fmt"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"testing"
+
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"

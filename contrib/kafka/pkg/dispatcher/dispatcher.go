@@ -18,12 +18,13 @@ package dispatcher
 import (
 	"errors"
 	"fmt"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"sync"
 	"sync/atomic"
 
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
+
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 
