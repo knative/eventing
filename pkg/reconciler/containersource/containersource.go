@@ -200,7 +200,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 // an Event containing the error string.
 func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.ContainerSource, args *resources.ContainerArguments) error {
 	if uri, ok := sinkArg(source); ok {
-		args.SinkInArgs = true
 		source.Status.MarkSink(uri)
 		return nil
 	}

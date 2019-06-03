@@ -589,7 +589,6 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 			},
 		}},
 		ServiceAccountName: "test-service-account",
-		SinkInArgs:         false,
 		Sink:               "test-sink",
 		Labels: map[string]string{
 			"eventing.knative.dev/source": "not-allowed",
@@ -696,7 +695,6 @@ func TestMakeDeployment_sink(t *testing.T) {
 			},
 		}},
 		ServiceAccountName: "test-service-account",
-		SinkInArgs:         false,
 		Sink:               "test-sink",
 	})
 	want := &appsv1.Deployment{
@@ -789,7 +787,6 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 			},
 		}},
 		ServiceAccountName: "test-service-account",
-		SinkInArgs:         true,
 		Labels:             map[string]string{"eventing.knative.dev/source": "test-name"},
 	})
 

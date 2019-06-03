@@ -26,7 +26,6 @@ type ContainerArguments struct {
 	Name        string
 	Namespace   string
 	Template    *corev1.PodTemplateSpec
-	SinkInArgs  bool
 	Sink        string
 	Annotations map[string]string
 	Labels      map[string]string
