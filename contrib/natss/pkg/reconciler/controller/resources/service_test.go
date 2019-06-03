@@ -43,7 +43,7 @@ func TestMakeExternalServiceAddress(t *testing.T) {
 }
 
 func TestMakeChannelServiceAddress(t *testing.T) {
-	if want, got := "my-test-kc-kn-channel", MakeChannelServiceName(ncName); want != got {
+	if want, got := "my-test-nc-kn-channel", MakeChannelServiceName(ncName); want != got {
 		t.Errorf("Want: %q got %q", want, got)
 	}
 }

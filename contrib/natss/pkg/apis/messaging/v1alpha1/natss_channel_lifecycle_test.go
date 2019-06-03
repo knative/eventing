@@ -281,14 +281,6 @@ func TestChannelIsReady(t *testing.T) {
 		dispatcherStatus:        deploymentStatusReady,
 		setAddress:              true,
 		wantReady:               false,
-	}, {
-		name:                    "topic not ready",
-		markServiceReady:        true,
-		markChannelServiceReady: true,
-		markEndpointsReady:      true,
-		dispatcherStatus:        deploymentStatusReady,
-		setAddress:              true,
-		wantReady:               false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
