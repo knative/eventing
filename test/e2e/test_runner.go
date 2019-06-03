@@ -61,7 +61,7 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 }
 
 // Setup creates the client objects needed in the e2e tests,
-// and does other setups, like creating namespaces, run the test case in parallel, etc.
+// and does other setups, like creating namespaces, set the test case to run in parallel, etc.
 func Setup(t *testing.T, runInParallel bool) *common.Client {
 	// Create a new namespace to run this test case.
 	baseFuncName := getBaseFuncName(t.Name())
@@ -111,6 +111,17 @@ func contains(features []common.Feature, feature common.Feature) bool {
 		}
 	}
 	return false
+}
+
+// Get the actual typemeta of the Channel type.
+// TODO(Fredy-Z): This function is a workaround when there are both provisioner and Channel CRD in this repo.
+//                It needs to be removed when the provisioner implementation is removed.
+func getChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
+	channelTypeMeta := common.ChannelTypeMeta
+	if isCRD {
+		channelTypeMeta = common.ProvisionerChannelMap[provisioner]
+	}
+	return channelTypeMeta
 }
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.

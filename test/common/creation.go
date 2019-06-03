@@ -20,6 +20,7 @@ import (
 	"github.com/knative/eventing/test/base"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TODO(Fredy-Z): break this file into multiple files when it grows too large.
@@ -32,10 +33,10 @@ var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 // CreateChannelOrFail will create a Channel Resource in Eventing.
 // TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRDs in this repo.
 //                isCRD needs to be deleted when the provisioner implementation is removed.
-func (client *Client) CreateChannelOrFail(name, provisonerName string, isCRD bool) {
-	if !isCRD {
+func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
+	if channelTypeMeta.Kind == base.ChannelKind {
 		namespace := client.Namespace
-		channel := base.Channel(name, provisonerName)
+		channel := base.Channel(name, provisionerName)
 
 		channels := client.Eventing.EventingV1alpha1().Channels(namespace)
 		// update channel with the new reference
@@ -45,13 +46,13 @@ func (client *Client) CreateChannelOrFail(name, provisonerName string, isCRD boo
 		}
 		client.Cleaner.AddObj(channel)
 	} else {
-		client.createChannelCROrFail(name, provisonerName)
+		client.createChannelCROrFail(name, channelTypeMeta)
 	}
 }
 
-func (client *Client) createChannelCROrFail(name, provisionerName string) {
+func (client *Client) createChannelCROrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
-	if provisionerName == base.KafkaProvisioner {
+	if channelTypeMeta.Kind == base.KafkaChannelKind {
 		channel := base.KafkaChannel(name)
 		channels := client.KafkaChannel.MessagingV1alpha1().KafkaChannels(namespace)
 		channel, err := channels.Create(channel)
@@ -63,16 +64,20 @@ func (client *Client) createChannelCROrFail(name, provisionerName string) {
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.
-func (client *Client) CreateChannelsOrFail(names []string, provisionerName string, isCRD bool) {
+func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
 	for _, name := range names {
-		client.CreateChannelOrFail(name, provisionerName, isCRD)
+		client.CreateChannelOrFail(name, channelTypeMeta, provisionerName)
 	}
 }
 
 // CreateSubscriptionOrFail will create a Subscription.
-func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...base.SubscriptionOption) {
+func (client *Client) CreateSubscriptionOrFail(
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...base.SubscriptionOption,
+) {
 	namespace := client.Namespace
-	subscription := base.Subscription(name, channelName, options...)
+	subscription := base.Subscription(name, channelName, channelTypeMeta, options...)
 
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
 	// update subscription with the new reference
@@ -84,9 +89,14 @@ func (client *Client) CreateSubscriptionOrFail(name, channelName string, options
 }
 
 // CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
-func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...base.SubscriptionOption) {
+func (client *Client) CreateSubscriptionsOrFail(
+	names []string,
+	channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...base.SubscriptionOption,
+) {
 	for _, name := range names {
-		client.CreateSubscriptionOrFail(name, channelName, options...)
+		client.CreateSubscriptionOrFail(name, channelName, channelTypeMeta, options...)
 	}
 }
 

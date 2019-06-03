@@ -53,8 +53,9 @@ func TestEventTransformationForSubscription(t *testing.T) {
 		defer TearDown(client)
 
 		// create channels
-		client.CreateChannelsOrFail(channelNames, provisioner, isCRD)
-		client.WaitForResourcesReady(common.ChannelTypeMeta)
+		channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+		client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+		client.WaitForResourcesReady(channelTypeMeta)
 
 		// create transformation pod and service
 		transformedEventBody := fmt.Sprintf("eventBody %s", uuid.NewUUID())
@@ -75,6 +76,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 		client.CreateSubscriptionsOrFail(
 			subscriptionNames1,
 			channelNames[0],
+			channelTypeMeta,
 			base.WithSubscriberForSubscription(transformationPodName),
 			base.WithReply(channelNames[1]),
 		)
@@ -82,6 +84,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 		client.CreateSubscriptionsOrFail(
 			subscriptionNames2,
 			channelNames[1],
+			channelTypeMeta,
 			base.WithSubscriberForSubscription(loggerPodName),
 		)
 
@@ -98,14 +101,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 			Encoding: base.CloudEventDefaultEncoding,
 		}
-		// Get the typemeta of the Addressable used in this test.
-		// TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRD in this repo.
-		//                It needs to be removed when the provisioner implementation is removed.
-		typemeta := common.ChannelTypeMeta
-		if isCRD {
-			typemeta = common.ProvisionerChannelMap[provisioner]
-		}
-		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], typemeta, eventToSend); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}
 

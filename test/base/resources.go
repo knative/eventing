@@ -54,8 +54,8 @@ func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 }
 
 // channelRef returns an ObjectReference for a given Channel Name.
-func channelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference(ChannelKind, EventingAPIVersion, name)
+func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
+	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner.
@@ -75,11 +75,6 @@ func KafkaChannel(name string) *kafkamessagingv1alpha1.KafkaChannel {
 	return &kafkamessagingv1alpha1.KafkaChannel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
-		},
-		// TODO(Fredy-Z): remove this after the webhook code to set default value is merged
-		Spec: kafkamessagingv1alpha1.KafkaChannelSpec{
-			NumPartitions:     1,
-			ReplicationFactor: 1,
 		},
 	}
 }
@@ -107,13 +102,17 @@ func WithReply(name string) SubscriptionOption {
 }
 
 // Subscription returns a Subscription.
-func Subscription(name, channelName string, options ...SubscriptionOption) *eventingv1alpha1.Subscription {
+func Subscription(
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...SubscriptionOption,
+) *eventingv1alpha1.Subscription {
 	subscription := &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: eventingv1alpha1.SubscriptionSpec{
-			Channel: *channelRef(channelName),
+			Channel: *channelRef(channelName, channelTypeMeta),
 		},
 	}
 	for _, option := range options {

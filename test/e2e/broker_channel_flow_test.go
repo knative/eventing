@@ -126,11 +126,12 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	)
 
 	// create channel for trigger3
-	client.CreateChannelOrFail(channelName, provisioner, isCRD)
-	client.WaitForResourceReady(channelName, common.ChannelTypeMeta)
+	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+	client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
+	client.WaitForResourceReady(channelName, channelTypeMeta)
 
 	// create trigger3 to receive the transformed event, and send it to the channel
-	channelURL, err := client.GetAddressableURI(channelName, common.ChannelTypeMeta)
+	channelURL, err := client.GetAddressableURI(channelName, channelTypeMeta)
 	if err != nil {
 		t.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
 	}
@@ -149,6 +150,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
 		channelName,
+		channelTypeMeta,
 		base.WithSubscriberForSubscription(loggerPodName2),
 	)
 
