@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
