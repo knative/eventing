@@ -62,7 +62,7 @@ kubectl get deployment -n knative-eventing natss-ch-dispatcher
 By default the components are configured to connect to NATS at
 `nats://nats-streaming.natss.svc:4222` with NATS Streaming cluster ID
 `knative-nats-streaming`. This may be overridden by configuring both the
-`natss-ch-controller` and `natss-ch-dispatcher` deployments with the following 
+`natss-ch-controller` and `natss-ch-dispatcher` deployments with the following
 environment variables:
 
 ```yaml
