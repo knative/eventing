@@ -44,6 +44,10 @@ var (
 	kubeconfig             = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+const (
+	clientID = "natss-ch-dispatcher"
+)
+
 func main() {
 	flag.Parse()
 	logger, atomicLevel := setupLogger()
@@ -57,7 +61,7 @@ func main() {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
-	natssDispatcher, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger.Desugar())
+	natssDispatcher, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), clientID, logger.Desugar())
 	if err != nil {
 		logger.Fatalw("Unable to create natss dispatcher", zap.Error(err))
 	}

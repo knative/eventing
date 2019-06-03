@@ -33,6 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const (
+	clientID = "knative-natss-dispatcher"
+)
+
 func main() {
 
 	logger, err := zap.NewProduction()
@@ -58,7 +62,7 @@ func main() {
 	}
 
 	logger.Info("Dispatcher starting...")
-	d, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger)
+	d, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), clientID, logger)
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}

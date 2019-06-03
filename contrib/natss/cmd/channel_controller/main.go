@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
+	"github.com/knative/eventing/contrib/natss/pkg/util"
 	"log"
 
 	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
@@ -41,6 +43,7 @@ import (
 const (
 	dispatcherDeploymentName = "natss-ch-dispatcher"
 	dispatcherServiceName    = "natss-ch-dispatcher"
+	clientID                 = "natss-ch-controller"
 )
 
 var (
@@ -60,6 +63,11 @@ func main() {
 	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
+	}
+
+	// check the connection to NATSS
+	if _, err := stanutil.Connect(util.GetDefaultClusterID(), clientID, util.GetDefaultNatssURL(), logger); err != nil {
+		logger.Fatalw("Error connecting to NATSS cluster", zap.Error(err))
 	}
 
 	logger = logger.With(zap.String("controller/impl", "pkg"))
