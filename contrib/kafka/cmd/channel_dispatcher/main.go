@@ -20,7 +20,11 @@ import (
 	"flag"
 	"log"
 
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
+
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
@@ -58,10 +62,14 @@ func main() {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
-	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
-	if err != nil {
-		logger.Fatalw("Error loading kafka config", zap.Error(err))
-	}
+	// kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
+	// if err != nil {
+	// 	logger.Fatalw("Error loading kafka config", zap.Error(err))
+	// }
+	// todo: uncomment above lines and delete below 3 lines after debugging
+	kafkaConfig := &utils.KafkaConfig{}
+	kafkaConfig.Brokers = []string{"localhost:9092"}
+	kafkaConfig.ConsumerMode = cluster.ConsumerModeMultiplex
 
 	args := &dispatcher.KafkaDispatcherArgs{
 		ClientID:     "kafka-ch-dispatcher",

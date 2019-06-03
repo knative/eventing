@@ -19,20 +19,21 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners/fanout"
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -45,6 +46,11 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "kafka-ch-dispatcher"
+
+	// Name of the corev1.Events emitted from the reconciliation process.
+	channelReconciled         = "ChannelReconciled"
+	channelReconcileFailed    = "ChannelReconcileFailed"
+	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 )
 
 // Reconciler reconciles Kafka Channels.
@@ -124,6 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReconciled, "KafkaChannel reconciled")
 	}
 
+	// SHould this check for subscribable status
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update KafkaChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update KafkaChannel's status: %v", updateStatusErr)
@@ -148,46 +155,12 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		}
 	}
 	config := r.newConfigFromKafkaChannels(kafkaChannels)
-	if err := r.kafkaDispatcher.UpdateHostToChannelMap(); err != nil {
+	if err := r.kafkaDispatcher.UpdateHostToChannelMap(config); err != nil {
 		logging.FromContext(ctx).Error("Error updating host to channel map in dispatcher")
 		return err
 	}
 
-	failedSubscriptions, err := r.kafkaDispatcher.UpdateKafkaConsumers(cConfig)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error updating kafka consumers in dispatcher")
-		return err
-	}
-	kc.Status.SubscribableTypeStatus.SubscribableStatus = r.CreateSubscribableStatus(kc.Spec.Subscribable, failedSubscriptions)
-}
-
-func (r *Reconciler) reconcile_alt(ctx context.Context, kc *v1alpha1.KafkaChannel) error {
-	// This is a special Reconciler that does the following:
-	// 1. Updates the dispatcher host to channel map which is used for routing requests
-	// 2. Creates a channel config and updates the kafkaconsumers map in dispatcher.
-	// 3. Updates the kafka channel's subscribable status
-
-	//TODO: Handle deletion
-	channels, err := r.kafkachannelLister.List(labels.Everything())
-	if err != nil {
-		logging.FromContext(ctx).Error("Error listing kafka channels")
-		return err
-	}
-
-	kafkaChannels := make([]*v1alpha1.KafkaChannel, 0)
-	for _, channel := range channels {
-		if channel.Status.IsReady() {
-			kafkaChannels = append(kafkaChannels, channel)
-		}
-	}
-	config := r.newConfigFromKafkaChannels(kafkaChannels)
-	if err := r.kafkaDispatcher.UpdateHostToChannelMap(); err != nil {
-		logging.FromContext(ctx).Error("Error updating host to channel map in dispatcher")
-		return err
-	}
-
-	cConfig := r.newChannelConfigFromKafkaChannel(kc)
-	failedSubscriptions, err := r.kafkaDispatcher.UpdateKafkaConsumers(cConfig)
+	failedSubscriptions, err := r.kafkaDispatcher.UpdateKafkaConsumers(config)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error updating kafka consumers in dispatcher")
 		return err
@@ -196,30 +169,65 @@ func (r *Reconciler) reconcile_alt(ctx context.Context, kc *v1alpha1.KafkaChanne
 	return nil
 }
 
-func (r *Reconciler) CreateSubscribableStatus(subscribable *eventingduck.Subscribable, failedSubscriptions map[eventingduck.SubscriberSpec]error) eventingduck.SubscribableStatus {
+// func (r *Reconciler) reconcile_alt(ctx context.Context, kc *v1alpha1.KafkaChannel) error {
+// 	// This is a special Reconciler that does the following:
+// 	// 1. Updates the dispatcher host to channel map which is used for routing requests
+// 	// 2. Creates a channel config and updates the kafkaconsumers map in dispatcher.
+// 	// 3. Updates the kafka channel's subscribable status
+
+// 	//TODO: Handle deletion
+// 	channels, err := r.kafkachannelLister.List(labels.Everything())
+// 	if err != nil {
+// 		logging.FromContext(ctx).Error("Error listing kafka channels")
+// 		return err
+// 	}
+
+// 	kafkaChannels := make([]*v1alpha1.KafkaChannel, 0)
+// 	for _, channel := range channels {
+// 		if channel.Status.IsReady() {
+// 			kafkaChannels = append(kafkaChannels, channel)
+// 		}
+// 	}
+// 	config := r.newConfigFromKafkaChannels(kafkaChannels)
+// 	if err := r.kafkaDispatcher.UpdateHostToChannelMap(); err != nil {
+// 		logging.FromContext(ctx).Error("Error updating host to channel map in dispatcher")
+// 		return err
+// 	}
+
+// 	cConfig := r.newChannelConfigFromKafkaChannel(kc)
+// 	failedSubscriptions, err := r.kafkaDispatcher.UpdateKafkaConsumers(cConfig)
+// 	if err != nil {
+// 		logging.FromContext(ctx).Error("Error updating kafka consumers in dispatcher")
+// 		return err
+// 	}
+// 	kc.Status.SubscribableTypeStatus.SubscribableStatus = r.CreateSubscribableStatus(kc.Spec.Subscribable, failedSubscriptions)
+// 	return nil
+// }
+
+func (r *Reconciler) CreateSubscribableStatus(subscribable *eventingduck.Subscribable, failedSubscriptions map[eventingduck.SubscriberSpec]error) *eventingduck.SubscribableStatus {
 	if subscribable == nil {
 		return nil
 	}
 	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
-	for _,sub := range subscribable.Subscribers {
-		status := eventingduck.SubscriberStatus {
-			UID = sub.UID,
-			ObservedGeneration = sub.Generation,
-			Ready =  corev1.ConditionTrue,
+	for _, sub := range subscribable.Subscribers {
+		status := eventingduck.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
 		}
 		if err, ok := failedSubscriptions[sub]; ok {
 			status.Ready = corev1.ConditionFalse
 			status.Message = err.Error()
 		}
-		append(subscriberStatus, status)
+		subscriberStatus = append(subscriberStatus, status)
 	}
-	return &eventingduck.SubscribableStatus {
-		Subscribers = subscriberStatus,
+	return &eventingduck.SubscribableStatus{
+		Subscribers: subscriberStatus,
 	}
 }
 
 // newConfigFromKafkaChannels creates a new Config from the list of kafka channels.
-func (r *Reconciler) newChannelConfigFromKafkaChannel(channel *v1alpha1.KafkaChannel) *multichannelfanout.ChannelConfig {
+func (r *Reconciler) newChannelConfigFromKafkaChannel(c *v1alpha1.KafkaChannel) *multichannelfanout.ChannelConfig {
 	channelConfig := multichannelfanout.ChannelConfig{
 		Namespace: c.Namespace,
 		Name:      c.Name,
@@ -231,15 +239,15 @@ func (r *Reconciler) newChannelConfigFromKafkaChannel(channel *v1alpha1.KafkaCha
 			Subscriptions: c.Spec.Subscribable.Subscribers,
 		}
 	}
-	return channelConfig
+	return &channelConfig
 }
 
-/ newConfigFromKafkaChannels creates a new Config from the list of kafka channels.
+// newConfigFromKafkaChannels creates a new Config from the list of kafka channels.
 func (r *Reconciler) newConfigFromKafkaChannels(channels []*v1alpha1.KafkaChannel) *multichannelfanout.Config {
 	cc := make([]multichannelfanout.ChannelConfig, 0)
 	for _, c := range channels {
 		channelConfig := r.newChannelConfigFromKafkaChannel(c)
-		cc = append(cc, channelConfig)
+		cc = append(cc, *channelConfig)
 	}
 	return &multichannelfanout.Config{
 		ChannelConfigs: cc,

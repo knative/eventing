@@ -22,6 +22,9 @@ import (
 
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
@@ -64,11 +67,13 @@ func main() {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
-	// TODO the underlying config map needs to be watched and the config should be reloaded if there is a change.
 	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
 	if err != nil {
 		logger.Fatalw("Error loading kafka config", zap.Error(err))
 	}
+	// kafkaConfig := &utils.KafkaConfig{}
+	// kafkaConfig.Brokers = []string{"my-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"}
+	// kafkaConfig.ConsumerMode = cluster.ConsumerModeMultiplex
 
 	logger = logger.With(zap.String("controller/impl", "pkg"))
 	logger.Info("Starting the Kafka controller")
