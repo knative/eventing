@@ -28,8 +28,8 @@ var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// CreateChannel will create a Channel Resource in Eventing.
-func (client *Client) CreateChannel(name, provisonerName string) error {
+// CreateChannelOrFail will create a Channel Resource in Eventing.
+func (client *Client) CreateChannelOrFail(name, provisonerName string) {
 	namespace := client.Namespace
 	channel := base.Channel(name, provisonerName)
 
@@ -37,24 +37,20 @@ func (client *Client) CreateChannel(name, provisonerName string) error {
 	// update channel with the new reference
 	channel, err := channels.Create(channel)
 	if err != nil {
-		return err
+		client.T.Fatalf("Failed to create channel %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(channel)
-	return nil
 }
 
-// CreateChannels will create a list of Channel Resources in Eventing.
-func (client *Client) CreateChannels(names []string, provisionerName string) error {
+// CreateChannelsOrFail will create a list of Channel Resources in Eventing.
+func (client *Client) CreateChannelsOrFail(names []string, provisionerName string) {
 	for _, name := range names {
-		if err := client.CreateChannel(name, provisionerName); err != nil {
-			return err
-		}
+		client.CreateChannelOrFail(name, provisionerName)
 	}
-	return nil
 }
 
-// CreateSubscription will create a Subscription.
-func (client *Client) CreateSubscription(name, channelName string, options ...func(*v1alpha1.Subscription)) error {
+// CreateSubscriptionOrFail will create a Subscription.
+func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...func(*v1alpha1.Subscription)) {
 	namespace := client.Namespace
 	subscription := base.Subscription(name, channelName, options...)
 
@@ -62,24 +58,20 @@ func (client *Client) CreateSubscription(name, channelName string, options ...fu
 	// update subscription with the new reference
 	subscription, err := subscriptions.Create(subscription)
 	if err != nil {
-		return err
+		client.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(subscription)
-	return nil
 }
 
-// CreateSubscriptions will create a list of Subscriptions.
-func (client *Client) CreateSubscriptions(names []string, channelName string, options ...func(*v1alpha1.Subscription)) error {
+// CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
+func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...func(*v1alpha1.Subscription)) {
 	for _, name := range names {
-		if err := client.CreateSubscription(name, channelName, options...); err != nil {
-			return err
-		}
+		client.CreateSubscriptionOrFail(name, channelName, options...)
 	}
-	return nil
 }
 
-// CreateBroker will create a Broker.
-func (client *Client) CreateBroker(name, provisionerName string) error {
+// CreateBrokerOrFail will create a Broker.
+func (client *Client) CreateBrokerOrFail(name, provisionerName string) {
 	namespace := client.Namespace
 	broker := base.Broker(name, provisionerName)
 
@@ -87,24 +79,20 @@ func (client *Client) CreateBroker(name, provisionerName string) error {
 	// update broker with the new reference
 	broker, err := brokers.Create(broker)
 	if err != nil {
-		return err
+		client.T.Fatalf("Failed to create broker %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(broker)
-	return nil
 }
 
-// CreateBrokers will create a list of Brokers.
-func (client *Client) CreateBrokers(names []string, provisionerName string) error {
+// CreateBrokersOrFail will create a list of Brokers.
+func (client *Client) CreateBrokersOrFail(names []string, provisionerName string) {
 	for _, name := range names {
-		if err := client.CreateBroker(name, provisionerName); err != nil {
-			return err
-		}
+		client.CreateBrokerOrFail(name, provisionerName)
 	}
-	return nil
 }
 
-// CreateTrigger will create a Trigger.
-func (client *Client) CreateTrigger(name string, options ...func(*v1alpha1.Trigger)) error {
+// CreateTriggerOrFail will create a Trigger.
+func (client *Client) CreateTriggerOrFail(name string, options ...func(*v1alpha1.Trigger)) {
 	namespace := client.Namespace
 	trigger := base.Trigger(name, options...)
 
@@ -112,10 +100,9 @@ func (client *Client) CreateTrigger(name string, options ...func(*v1alpha1.Trigg
 	// update trigger with the new reference
 	trigger, err := triggers.Create(trigger)
 	if err != nil {
-		return err
+		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
 	client.Cleaner.AddObj(trigger)
-	return nil
 }
 
 // WithService returns an option that creates a Service binded with the given pod.
@@ -133,40 +120,38 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 	}
 }
 
-// CreatePod will create a Pod.
-func (client *Client) CreatePod(pod *corev1.Pod, options ...func(*corev1.Pod, *Client) error) error {
+// CreatePodOrFail will create a Pod.
+func (client *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *Client) error) {
 	// set namespace for the pod in case it's empty
 	namespace := client.Namespace
 	pod.Namespace = namespace
 	// apply options on the pod before creation
 	for _, option := range options {
 		if err := option(pod, client); err != nil {
-			return err
+			client.T.Fatalf("Failed to configure pod %q: %v", pod.Name, err)
 		}
 	}
 	if _, err := client.Kube.CreatePod(pod); err != nil {
-		return err
+		client.T.Fatalf("Failed to create pod %q: %v", pod.Name, err)
 	}
 	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
-	return nil
 }
 
-// CreateServiceAccountAndBinding creates both ServiceAccount and ClusterRoleBinding with default
+// CreateServiceAccountAndBindingOrFail creates both ServiceAccount and ClusterRoleBinding with default
 // cluster-admin role.
-func (client *Client) CreateServiceAccountAndBinding(saName, crName string) error {
+func (client *Client) CreateServiceAccountAndBindingOrFail(saName, crName string) {
 	namespace := client.Namespace
 	sa := base.ServiceAccount(saName, namespace)
 	sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
 	if _, err := sas.Create(sa); err != nil {
-		return err
+		client.T.Fatalf("Failed to create service account %q: %v", saName, err)
 	}
 	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
 
 	crb := base.ClusterRoleBinding(saName, crName, namespace)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
 	if _, err := crbs.Create(crb); err != nil {
-		return err
+		client.T.Fatalf("Failed to create cluster role binding %q: %v", crName, err)
 	}
 	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
-	return nil
 }

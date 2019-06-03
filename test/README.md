@@ -93,11 +93,11 @@ go test -v -tags=e2e -count=1 ./test/e2e -clusterChannelProvisioners=in-memory,g
 
 #### One test case
 
-To run one e2e test case, e.g. `TestSingleBinaryEvents`, use
+To run one e2e test case, e.g. `TestSingleBinaryEventForChannel`, use
 [the `-run` flag with `go test`](https://golang.org/cmd/go/#hdr-Testing_flags):
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEventForChannel$
 ```
 
 By default, it will run the test against the default
@@ -107,7 +107,7 @@ If you want to run it against another `ClusterChannelProvisioner`, you can
 specify it through `-clusterChannelProvisioners`.
 
 ```bash
-go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEvent$ -clusterChannelProvisioners=in-memory
+go test -v -tags=e2e -count=1 ./test/e2e -run ^TestSingleBinaryEventForChannel$ -clusterChannelProvisioners=in-memory
 ```
 
 ## Environment requirements
