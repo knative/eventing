@@ -10,12 +10,12 @@ Knative/Eventing offers a consistent, Kubernetes-based platform for reliable, se
 
 ## Full Mission Statement
 
-The Knative Eventing mission has three main focus areas: Developer Experience, Event Delivery, and Event Sourcing. Developer experience around event driven applications is our primary focus, with delivery and sourcing acting as enabling infrastructure.
+The Knative Eventing mission focuses on three areas: Developer Experience, Event Delivery, and Event Sourcing. The primary focus is Developer experience around event driven applications; event delivery and sourcing provide infrastructure which enables the developer experience to scale to complex applications.
 
-We leverage open standards when possible: CloudEvents, Knative Serving, Kubernetes.
+By leveraging open standards and infrastructure (such as CloudEvents and Kubernetes), Knative Eventing provides a robust and extensible ecosystem which accommodates interoperability between open and closed-source frameworks and services.
 
 **Developer Experience:** Enable developers to write, maintain, and support event driven applications by sourcing events from other systems and events from their own systems with a uniform experience.
 
-**Event Delivery:** Provide a core set of event delivery specifications and standards. Enable a pluggable architecture for the event delivery mechanism so that developers and operators can choose the correct event delivery substrate for their requirements.
+**Event Delivery:** Provide an implementation of event delivery infrastructure, accompanied by a well documented specification. Enable a pluggable architecture for the event delivery mechanism so that developers and operators can choose the correct event delivery substrate for their requirements.
 
 **Event Sourcing:** Provide a specification for how to create event importers as well as guidelines and tools for event providers to cleanly integrate in a CloudEvents environment.
