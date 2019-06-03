@@ -56,9 +56,8 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, run the test case in parallel, etc.
-func Setup(t *testing.T, provisioner string, runInParallel bool) *common.Client {
+func Setup(t *testing.T, runInParallel bool) *common.Client {
 	// Create a new namespace to run this test case.
-	// Combine the test name and CCP to avoid duplication.
 	baseFuncName := getBaseFuncName(t.Name())
 	namespace := makeK8sNamePrefix(baseFuncName)
 	t.Logf("namespace is : %q", namespace)
@@ -66,7 +65,7 @@ func Setup(t *testing.T, provisioner string, runInParallel bool) *common.Client 
 		pkgTest.Flags.Kubeconfig,
 		pkgTest.Flags.Cluster,
 		namespace,
-		t.Logf)
+		t)
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
@@ -95,7 +94,7 @@ func Setup(t *testing.T, provisioner string, runInParallel bool) *common.Client 
 func TearDown(client *common.Client) {
 	client.Cleaner.Clean(true)
 	if err := DeleteNameSpace(client); err != nil {
-		client.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
+		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
 	}
 }
 
@@ -183,8 +182,8 @@ func logPodLogsForDebugging(client *common.Client, podName, containerName string
 	namespace := client.Namespace
 	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
 	if err != nil {
-		client.Logf("Failed to get the logs for container %q of the pod %q in namespace %q: %v", containerName, podName, namespace, err)
+		client.T.Logf("Failed to get the logs for container %q of the pod %q in namespace %q: %v", containerName, podName, namespace, err)
 	} else {
-		client.Logf("Logs for the container %q of the pod %q in namespace %q:\n%s", containerName, podName, namespace, string(logs))
+		client.T.Logf("Logs for the container %q of the pod %q in namespace %q:\n%s", containerName, podName, namespace, string(logs))
 	}
 }

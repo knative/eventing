@@ -21,7 +21,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 
 	"github.com/knative/pkg/configmap"
 )
