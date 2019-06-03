@@ -76,6 +76,11 @@ func KafkaChannel(name string) *kafkamessagingv1alpha1.KafkaChannel {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
+		// TODO(Fredy-Z): remove this after the webhook code to set default value is merged
+		Spec: kafkamessagingv1alpha1.KafkaChannelSpec{
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		},
 	}
 }
 
