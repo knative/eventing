@@ -21,8 +21,8 @@ They do not offer:
 
 ## Deployment steps
 
-1. Setup [Knative Eventing](../../../../DEVELOPMENT.md).
-1. If not done already, install a [NATS Streaming](../broker)
+1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
+1. If not done already, install a [NATS Streaming](./broker)
 1. Apply the NATSS configuration:
 
    ```shell
