@@ -41,35 +41,25 @@ const (
 
 // kind for eventing resources.
 const (
-	// ChannelKind is the kind for Channel.
-	ChannelKind string = "Channel"
-	// SubscriptionKind is the kind for Subscription.
-	SubscriptionKind string = "Subscription"
-	// ClusterChannelProvisionerKind is the kind for ClusterChannelProvisioner.
+	ChannelKind                   string = "Channel"
+	SubscriptionKind              string = "Subscription"
 	ClusterChannelProvisionerKind string = "ClusterChannelProvisioner"
 
-	// BrokerKind is the kind for Broker.
-	BrokerKind string = "Broker"
-	// TriggerKind is the kind for Trigger.
+	BrokerKind  string = "Broker"
 	TriggerKind string = "Trigger"
 )
 
 // kind for messaging resources.
 const (
-	// InMemoryChannelKind is the kind for InMemoryChannel.
 	InMemoryChannelKind string = "InMemoryChannel"
-	// KafkaChannelKind is the kind for KafkaChannel.
-	KafkaChannelKind string = "KafkaChannel"
+	KafkaChannelKind    string = "KafkaChannel"
 	// NatssChannelKind     string = "NatssChannel"
 	// GCPPubSubChannelKind string = "GCPPubSubChannel"
 )
 
 // kind for sources resources.
 const (
-	// CronJobSourceKind is the kind for CronJobSource.
-	CronJobSourceKind string = "CronJobSource"
-	// ContainerSourceKind is the kind for ContainerSource.
+	CronJobSourceKind   string = "CronJobSource"
 	ContainerSourceKind string = "ContainerSource"
-	// ApiServerSourceKind is the kind for ApiServerSource.
 	ApiServerSourceKind string = "ApiServerSource"
 )
