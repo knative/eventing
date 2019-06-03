@@ -46,10 +46,7 @@ spec:
           value: config-logging
         - name: WEBHOOK_NAME
           value: kafka-webhook
-        resources:
-          limits:
-            # TODO set a proper value.
-            memory: 1000Mi   # An initial guess, but consistent with serving
+        # TODO set proper resource limits.
       volumes:
         - name: config-logging
           configMap:
