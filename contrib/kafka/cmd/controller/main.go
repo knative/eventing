@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"os"
+
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"

@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 )
 
