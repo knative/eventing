@@ -92,7 +92,7 @@ spec:
       serviceAccountName: natss-controller
       containers:
         - name: controller
-          image: github.com/knative/eventing/contrib/natss/pkg/controller
+          image: github.com/knative/eventing/contrib/natss/cmd/controller
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
@@ -200,7 +200,7 @@ spec:
       serviceAccountName: natss-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/contrib/natss/pkg/dispatcher
+          image: github.com/knative/eventing/contrib/natss/cmd/dispatcher
           env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
