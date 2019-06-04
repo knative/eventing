@@ -70,21 +70,15 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		loggerPodName         = "logger-pod"
 	)
 
-	client := Setup(t, provisioner, true)
+	client := Setup(t, true)
 	defer TearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	if err := client.CreateServiceAccountAndBinding(saIngressName, crIngressName); err != nil {
-		t.Fatalf("Failed to create the Ingress ServiceAccount and ServiceAccountRoleBinding: %v", err)
-	}
-	if err := client.CreateServiceAccountAndBinding(saFilterName, crFilterName); err != nil {
-		t.Fatalf("Failed to create the Filter ServiceAccount and ServiceAccountRoleBinding: %v", err)
-	}
+	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
+	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
 
 	// create a new broker
-	if err := client.CreateBroker(brokerName, provisioner); err != nil {
-		t.Fatalf("Failed to create the Broker: %q, %v", brokerName, err)
-	}
+	client.CreateBrokerOrFail(brokerName, provisioner)
 	client.WaitForBrokerReady(brokerName)
 
 	// create the event we want to transform to
@@ -98,35 +92,27 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 
 	// create the transformation service
 	transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
-	if err := client.CreatePod(transformationPod, common.WithService(transformationPodName)); err != nil {
-		t.Fatalf("Failed to create transformation service %q: %v", transformationPodName, err)
-	}
+	client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
 	// create trigger1 for event transformation
-	if err := client.CreateTrigger(
+	client.CreateTriggerOrFail(
 		triggerName1,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(eventSource1, eventType1),
 		base.WithSubscriberRefForTrigger(transformationPodName),
-	); err != nil {
-		t.Fatalf("Error creating trigger %q: %v", triggerName1, err)
-	}
+	)
 
 	// create logger pod and service
 	loggerPod := base.EventLoggerPod(loggerPodName)
-	if err := client.CreatePod(loggerPod, common.WithService(loggerPodName)); err != nil {
-		t.Fatalf("Failed to create logger service %q: %v", loggerPodName, err)
-	}
+	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// create trigger2 for event receiving
-	if err := client.CreateTrigger(
+	client.CreateTriggerOrFail(
 		triggerName2,
 		base.WithBroker(brokerName),
 		base.WithTriggerFilter(eventSource2, eventType2),
 		base.WithSubscriberRefForTrigger(loggerPodName),
-	); err != nil {
-		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
-	}
+	)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

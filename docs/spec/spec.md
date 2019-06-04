@@ -261,9 +261,9 @@ a Channel system that receives and delivers events._
 
 | Field         | Type                      | Description                                        | Constraints |
 | ------------- | ------------------------- | -------------------------------------------------- | ----------- |
-| sourceAndType | TriggerFilterSourceAndTpe | A filter that can specific both a source and type. |             |
+| sourceAndType | TriggerFilterSourceAndType | A filter that can specific both a source and type. |             |
 
-### TriggerFilterSourceAndTpe
+### TriggerFilterSourceAndType
 
 | Field  | Type   | Description                             | Constraints                          |
 | ------ | ------ | --------------------------------------- | ------------------------------------ |

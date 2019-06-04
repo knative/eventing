@@ -34,10 +34,10 @@ import (
 
 // These are Environment variable names.
 type envConfig struct {
-	DefaultGcpProject      string `envconfig: "DEFAULT_GCP_PROJECT" required: "true"`
-	DefaultSecretNamespace string `envconfig: "DEFAULT_SECRET_NAMESPACE" required: "true"`
-	DefaultSecretName      string `envconfig: "DEFAULT_SECRET_NAME" required: "true"`
-	DefaultSecretKey       string `envconfig: "DEFAULT_SECRET_KEY" required: "true"`
+	DefaultGcpProject      string `envconfig:"DEFAULT_GCP_PROJECT" required:"true"`
+	DefaultSecretNamespace string `envconfig:"DEFAULT_SECRET_NAMESPACE" required:"true"`
+	DefaultSecretName      string `envconfig:"DEFAULT_SECRET_NAME" required:"true"`
+	DefaultSecretKey       string `envconfig:"DEFAULT_SECRET_KEY" required:"true"`
 }
 
 // This is the main method for the GCP PubSub Channel controller. It reconciles the

@@ -20,9 +20,10 @@ limitations under the License.
 package common
 
 import (
+	"testing"
+
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"github.com/knative/pkg/test"
-	"github.com/knative/pkg/test/logging"
 	"k8s.io/client-go/dynamic"
 )
 
@@ -33,13 +34,13 @@ type Client struct {
 	Dynamic  dynamic.Interface
 
 	Namespace string
-	Logf      logging.FormatLogger
+	T         *testing.T
 	Cleaner   *Cleaner
 }
 
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
-func NewClient(configPath string, clusterName string, namespace string, logger logging.FormatLogger) (*Client, error) {
+func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
 	client := &Client{}
 	cfg, err := test.BuildClientConfig(configPath, clusterName)
 	if err != nil {
@@ -61,7 +62,7 @@ func NewClient(configPath string, clusterName string, namespace string, logger l
 	}
 
 	client.Namespace = namespace
-	client.Logf = logger
-	client.Cleaner = NewCleaner(logger, client.Dynamic)
+	client.T = t
+	client.Cleaner = NewCleaner(t.Logf, client.Dynamic)
 	return client, nil
 }

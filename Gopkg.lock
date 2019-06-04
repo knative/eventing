@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:ddedfe0babdfcd5068e0088d26aea020bc09e2be3d1c3fe3196e95d854490899"
+  digest = "1:5ca0b0ee5cecb6a8665434e37a3044728120f6bc37391852002d1ea782cd4668"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -481,18 +481,18 @@
     "webhook",
   ]
   pruneopts = "NUT"
-  revision = "5fe2b490af198572a89d128259f25e4aa4f16123"
+  revision = "67d95db07608ccc232772a7e6f4b182dd4707683"
 
 [[projects]]
   branch = "master"
-  digest = "1:8cbd2b6c179d93c5cdc5f75c1acda0aa7ef7649cf9ca138e587d9ac98a137802"
+  digest = "1:480c2cdecde930157f2d3849eb3f1769d2c9215c44823e77ac52a653b24d9536"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "7d0c44fb03a996501f10e3af4a718fd008fe9bed"
+  revision = "a3c073a2fea1d6a5a97c4150b05792a3faba2bc0"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1457,6 +1457,8 @@
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "go.opencensus.io/exporter/prometheus",
+    "go.opencensus.io/plugin/ochttp",
+    "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
