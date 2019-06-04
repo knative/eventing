@@ -41,6 +41,9 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	// This defines the shared main for injected controllers.
+	"github.com/knative/pkg/injection/sharedmain"
 )
 
 const (
@@ -54,6 +57,9 @@ var (
 )
 
 func main() {
+
+	sharedmain.Main()
+
 	flag.Parse()
 
 	logger, atomicLevel := setupLogger()

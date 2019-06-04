@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:5ca0b0ee5cecb6a8665434e37a3044728120f6bc37391852002d1ea782cd4668"
+  digest = "1:00ca826706936ffc0e524620ebae097ed8d9558034ed3d4abf154b05eb1ca692"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -455,9 +455,16 @@
     "client/clientset/versioned/typed/authentication/v1alpha1/fake",
     "client/clientset/versioned/typed/istio/v1alpha3",
     "client/clientset/versioned/typed/istio/v1alpha3/fake",
+    "codegen/cmd/injection-gen",
+    "codegen/cmd/injection-gen/args",
+    "codegen/cmd/injection-gen/generators",
     "configmap",
     "configmap/testing",
     "controller",
+    "injection",
+    "injection/clients/dynamicclient",
+    "injection/clients/kubeclient",
+    "injection/sharedmain",
     "kmeta",
     "kmp",
     "logging",
@@ -480,8 +487,9 @@
     "tracker",
     "webhook",
   ]
-  pruneopts = "NUT"
-  revision = "67d95db07608ccc232772a7e6f4b182dd4707683"
+  pruneopts = "T"
+  revision = "8fcd0aa7cce5bd7fbf3ba82534b436e6a4da7dcb"
+  source = "github.com/mattmoor/pkg-1"
 
 [[projects]]
   branch = "master"
@@ -1430,9 +1438,14 @@
     "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/knative/pkg/apis/duck/v1beta1",
     "github.com/knative/pkg/client/clientset/versioned/fake",
+    "github.com/knative/pkg/codegen/cmd/injection-gen",
     "github.com/knative/pkg/configmap",
     "github.com/knative/pkg/configmap/testing",
     "github.com/knative/pkg/controller",
+    "github.com/knative/pkg/injection",
+    "github.com/knative/pkg/injection/clients/dynamicclient",
+    "github.com/knative/pkg/injection/clients/kubeclient",
+    "github.com/knative/pkg/injection/sharedmain",
     "github.com/knative/pkg/kmeta",
     "github.com/knative/pkg/kmp",
     "github.com/knative/pkg/logging",

@@ -17,7 +17,13 @@ limitations under the License.
 package reconciler
 
 import (
+	"context"
+	"github.com/knative/pkg/injection/clients/dynamicclient"
+	"github.com/knative/pkg/injection/clients/kubeclient"
+	"github.com/knative/pkg/logging"
 	"time"
+
+	eventingclient "github.com/knative/eventing/pkg/client/injection/client"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
@@ -165,6 +171,79 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 	}
 
 	return base
+}
+
+// NewBase instantiates a new instance of Base implementing
+// the common & boilerplate code between our reconcilers.
+func NewInjectionBase(ctx context.Context, controllerAgentName string, cmw configmap.Watcher) *Base {
+	// Enrich the logs with controller name
+	logger := logging.FromContext(ctx).
+		Named(controllerAgentName).
+		With(zap.String(logkey.ControllerType, controllerAgentName))
+
+	kubeClient := kubeclient.Get(ctx)
+
+	recorder := GetEventRecorder(ctx)
+	if recorder == nil {
+		// Create event broadcaster
+		logger.Debug("Creating event broadcaster")
+		eventBroadcaster := record.NewBroadcaster()
+		watches := []watch.Interface{
+			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
+			eventBroadcaster.StartRecordingToSink(
+				&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")}),
+		}
+		recorder = eventBroadcaster.NewRecorder(
+			scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+		go func() {
+			<-ctx.Done()
+			for _, w := range watches {
+				w.Stop()
+			}
+		}()
+	}
+
+	statsReporter := GetStatsReporter(ctx)
+	if statsReporter == nil {
+		logger.Debug("Creating stats reporter")
+		var err error
+		statsReporter, err = NewStatsReporter(controllerAgentName)
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}
+
+	base := &Base{
+		KubeClientSet:     kubeClient,
+		EventingClientSet: eventingclient.Get(ctx),
+		//ApiExtensionsClientSet: opt.ApiExtensionsClientSet,
+		DynamicClientSet: dynamicclient.Get(ctx),
+		ConfigMapWatcher: cmw,
+		Recorder:         recorder,
+		StatsReporter:    statsReporter,
+		Logger:           logger,
+	}
+
+	return base
+}
+
+// erKey is used to associate record.EventRecorders with contexts.
+type erKey struct{}
+
+// WithEventRecorder attaches the given record.EventRecorder to the provided context
+// in the returned context.
+func WithEventRecorder(ctx context.Context, er record.EventRecorder) context.Context {
+	return context.WithValue(ctx, erKey{}, er)
+}
+
+// GetEventRecorder attempts to look up the record.EventRecorder on a given context.
+// It may return null if none is found.
+func GetEventRecorder(ctx context.Context) record.EventRecorder {
+	untyped := ctx.Value(erKey{})
+	if untyped == nil {
+		return nil
+	}
+	return untyped.(record.EventRecorder)
 }
 
 func init() {

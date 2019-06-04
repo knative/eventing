@@ -277,12 +277,7 @@ func (r *Reconciler) validateChannel(ctx context.Context, subscription *v1alpha1
 	//if err := r.tracker.Track(utils.ObjectRef(crd, customResourceDefinitionGVK), subscription); err != nil {
 	//	return fmt.Errorf("error tracking channel crd '%s': %v", crd.Name, err)
 	//}
-
-	if val, ok := crd.Labels[channelCrdLabelKey]; !ok {
-		return fmt.Errorf("crd %q does not contain mandatory label %q", crdName, channelCrdLabelKey)
-	} else if val != channelCrdLabelValue {
-		return fmt.Errorf("crd label %s has invalid value %q", channelCrdLabelKey, val)
-	}
+	1
 	return nil
 }
 
