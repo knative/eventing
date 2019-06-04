@@ -51,7 +51,11 @@ func (client *Client) CreateChannelsOrFail(names []string, provisionerName strin
 }
 
 // CreateSubscriptionOrFail will create a Subscription or fail the test if there is an error.
-func (client *Client) CreateSubscriptionOrFail(name, channelName string, options ...func(*eventingv1alpha1.Subscription)) {
+func (client *Client) CreateSubscriptionOrFail(
+	name,
+	channelName string,
+	options ...func(*eventingv1alpha1.Subscription),
+) {
 	namespace := client.Namespace
 	subscription := base.Subscription(name, channelName, options...)
 
@@ -65,7 +69,11 @@ func (client *Client) CreateSubscriptionOrFail(name, channelName string, options
 }
 
 // CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
-func (client *Client) CreateSubscriptionsOrFail(names []string, channelName string, options ...func(*eventingv1alpha1.Subscription)) {
+func (client *Client) CreateSubscriptionsOrFail(
+	names []string,
+	channelName string,
+	options ...func(*eventingv1alpha1.Subscription),
+) {
 	for _, name := range names {
 		client.CreateSubscriptionOrFail(name, channelName, options...)
 	}
