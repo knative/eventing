@@ -34,8 +34,8 @@ var ValidProvisionersMap = map[string]ChannelConfig{
 		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 	},
 	base.KafkaProvisioner: ChannelConfig{
-		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
-		CRDSupported: true,
+		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+		// CRDSupported: true,
 	},
 	base.NatssProvisioner: ChannelConfig{
 		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},

@@ -107,11 +107,11 @@ function test_setup() {
   ko apply -f ${KAFKA_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka ClusterChannelProvisioner"
 
-  echo "Installing Kafka Channel CRD"
-  cp ${KAFKA_CRD_CONFIG_TEMPLATE_DIR}/*yaml ${KAFKA_CRD_CONFIG_DIR}
-  sed -i "s/REPLACE_WITH_CLUSTER_URL/${KAFKA_CLUSTER_URL}/" ${KAFKA_CRD_CONFIG_DIR}/${KAFKA_CRD_CONFIG_TEMPLATE}
-  ko apply -f ${KAFKA_CRD_CONFIG_DIR} || return 1
-  wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka Channel CRD"
+  # echo "Installing Kafka Channel CRD"
+  # cp ${KAFKA_CRD_CONFIG_TEMPLATE_DIR}/*yaml ${KAFKA_CRD_CONFIG_DIR}
+  # sed -i "s/REPLACE_WITH_CLUSTER_URL/${KAFKA_CLUSTER_URL}/" ${KAFKA_CRD_CONFIG_DIR}/${KAFKA_CRD_CONFIG_TEMPLATE}
+  # ko apply -f ${KAFKA_CRD_CONFIG_DIR} || return 1
+  # wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka Channel CRD"
 
   # Publish test images.
   echo ">> Publishing test images"
