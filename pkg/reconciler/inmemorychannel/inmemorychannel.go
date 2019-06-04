@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -37,23 +36,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "InMemoryChannels"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "in-memory-channel-controller"
-
-	finalizerName = controllerAgentName
-
 	// Name of the corev1.Events emitted from the reconciliation process.
 	reconciled         = "Reconciled"
 	reconcileFailed    = "ReconcileFailed"
@@ -83,53 +71,6 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 
 // Check that our Reconciler implements cache.ResourceEventHandler
 var _ cache.ResourceEventHandler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code.
-// Registers event handlers to enqueue events.
-func NewController(
-	opt reconciler.Options,
-	dispatcherNamespace string,
-	dispatcherDeploymentName string,
-	dispatcherServiceName string,
-	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	endpointsInformer corev1informers.EndpointsInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                     reconciler.NewBase(opt, controllerAgentName),
-		dispatcherNamespace:      dispatcherNamespace,
-		dispatcherDeploymentName: dispatcherDeploymentName,
-		dispatcherServiceName:    dispatcherServiceName,
-		inmemorychannelLister:    inmemorychannelinformer.Lister(),
-		inmemorychannelInformer:  inmemorychannelinformer.Informer(),
-		deploymentLister:         deploymentInformer.Lister(),
-		serviceLister:            serviceInformer.Lister(),
-		endpointsLister:          endpointsInformer.Lister(),
-	}
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-	inmemorychannelinformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
-
-	// Set up watches for dispatcher resources we care about, since any changes to these
-	// resources will affect our Channels. So, set up a watch here, that will cause
-	// a global Resync for all the channels to take stock of their health when these change.
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherDeploymentName),
-		Handler:    r,
-	})
-	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
-		Handler:    r,
-	})
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
-		Handler:    r,
-	})
-	return r.impl
-}
 
 // cache.ResourceEventHandler implementation.
 // These 3 functions just cause a Global Resync of the channels, because any changes here
