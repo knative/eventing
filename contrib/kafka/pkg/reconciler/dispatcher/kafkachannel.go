@@ -130,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReconciled, "KafkaChannel reconciled")
 	}
 
-	// SHould this check for subscribable status
+	// todo: Should this check for subscribable status rather than entire status?
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update KafkaChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update KafkaChannel's status: %v", updateStatusErr)
@@ -165,46 +165,11 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		logging.FromContext(ctx).Error("Error updating kafka consumers in dispatcher")
 		return err
 	}
-	kc.Status.SubscribableTypeStatus.SubscribableStatus = r.CreateSubscribableStatus(kc.Spec.Subscribable, failedSubscriptions)
+	kc.Status.SubscribableTypeStatus.SubscribableStatus = r.createSubscribableStatus(kc.Spec.Subscribable, failedSubscriptions)
 	return nil
 }
 
-// func (r *Reconciler) reconcile_alt(ctx context.Context, kc *v1alpha1.KafkaChannel) error {
-// 	// This is a special Reconciler that does the following:
-// 	// 1. Updates the dispatcher host to channel map which is used for routing requests
-// 	// 2. Creates a channel config and updates the kafkaconsumers map in dispatcher.
-// 	// 3. Updates the kafka channel's subscribable status
-
-// 	//TODO: Handle deletion
-// 	channels, err := r.kafkachannelLister.List(labels.Everything())
-// 	if err != nil {
-// 		logging.FromContext(ctx).Error("Error listing kafka channels")
-// 		return err
-// 	}
-
-// 	kafkaChannels := make([]*v1alpha1.KafkaChannel, 0)
-// 	for _, channel := range channels {
-// 		if channel.Status.IsReady() {
-// 			kafkaChannels = append(kafkaChannels, channel)
-// 		}
-// 	}
-// 	config := r.newConfigFromKafkaChannels(kafkaChannels)
-// 	if err := r.kafkaDispatcher.UpdateHostToChannelMap(); err != nil {
-// 		logging.FromContext(ctx).Error("Error updating host to channel map in dispatcher")
-// 		return err
-// 	}
-
-// 	cConfig := r.newChannelConfigFromKafkaChannel(kc)
-// 	failedSubscriptions, err := r.kafkaDispatcher.UpdateKafkaConsumers(cConfig)
-// 	if err != nil {
-// 		logging.FromContext(ctx).Error("Error updating kafka consumers in dispatcher")
-// 		return err
-// 	}
-// 	kc.Status.SubscribableTypeStatus.SubscribableStatus = r.CreateSubscribableStatus(kc.Spec.Subscribable, failedSubscriptions)
-// 	return nil
-// }
-
-func (r *Reconciler) CreateSubscribableStatus(subscribable *eventingduck.Subscribable, failedSubscriptions map[eventingduck.SubscriberSpec]error) *eventingduck.SubscribableStatus {
+func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable, failedSubscriptions map[eventingduck.SubscriberSpec]error) *eventingduck.SubscribableStatus {
 	if subscribable == nil {
 		return nil
 	}

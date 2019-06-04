@@ -106,7 +106,7 @@ func (d *KafkaDispatcher) configDiff(updated *multichannelfanout.Config) string 
 	return cmp.Diff(d.getConfig(), updated)
 }
 
-// UpdateKafkaConsumers will be called by new CRD based kafka channel dispatcher controller instead of UpdateConfig
+// UpdateKafkaConsumers will be called by new CRD based kafka channel dispatcher controller, instead of UpdateConfig.
 func (d *KafkaDispatcher) UpdateKafkaConsumers(config *multichannelfanout.Config) (map[eventingduck.SubscriberSpec]error, error) {
 	if config == nil {
 		return nil, fmt.Errorf("nil config")
@@ -146,51 +146,7 @@ func (d *KafkaDispatcher) UpdateKafkaConsumers(config *multichannelfanout.Config
 	return failedToSubscribe, nil
 }
 
-// UpdateKafkaConsumers_alt will be called by new CRD based kafka channel dispatcher controller instead of UpdateConfig
-func (d *KafkaDispatcher) UpdateKafkaConsumers_alt(config *multichannelfanout.ChannelConfig, channelDeleted bool) (map[eventingduck.SubscriberSpec]error, error) {
-	if config == nil {
-		return nil, errors.New("nil config")
-	}
-
-	d.consumerUpdateLock.Lock()
-	defer d.consumerUpdateLock.Unlock()
-
-	newSubs := make(map[subscription]bool)
-	failedToSubscribe := make(map[eventingduck.SubscriberSpec]error)
-
-	channelRef := provisioners.ChannelReference{
-		Name:      config.Name,
-		Namespace: config.Namespace,
-	}
-	if !channelDeleted {
-		for _, subSpec := range config.FanoutConfig.Subscriptions {
-			sub := newSubscription(subSpec)
-			if _, ok := d.kafkaConsumers[channelRef][sub]; !ok {
-				// only subscribe when not exists in channel-subscriptions map
-				// do not need to resubscribe every time channel fanout config is updated
-				if err := d.subscribe(channelRef, sub); err != nil {
-					failedToSubscribe[subSpec] = err
-				}
-			}
-
-			newSubs[sub] = true
-		}
-	}
-
-	for channelRef, subMap := range d.kafkaConsumers {
-		if channelRef.Name == config.Name && channelRef.Namespace == config.Namespace {
-			for sub := range subMap {
-				if ok := newSubs[sub]; !ok {
-					d.unsubscribe(channelRef, sub)
-				}
-			}
-		}
-	}
-
-	return failedToSubscribe, nil
-}
-
-// UpdateHostToChannelMap will be called by new CRD based kafka channel dispatcher controller instead of UpdateConfig
+// UpdateHostToChannelMap will be called by new CRD based kafka channel dispatcher controller, instead of UpdateConfig.
 func (d *KafkaDispatcher) UpdateHostToChannelMap(config *multichannelfanout.Config) error {
 	if config == nil {
 		return errors.New("nil config")
@@ -208,7 +164,7 @@ func (d *KafkaDispatcher) UpdateHostToChannelMap(config *multichannelfanout.Conf
 	return nil
 }
 
-// UpdateConfig is used by older kafka channel dispatcher controller that is based on ChannelProvisioners model
+// UpdateConfig is used by older kafka channel dispatcher controller that is based on ClusterChannelProvisioners model
 // Remove this function when the older channel code is deleted
 func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error {
 	if config == nil {

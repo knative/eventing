@@ -112,11 +112,6 @@ func (in *InMemoryChannelStatus) DeepCopyInto(out *InMemoryChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.Address.DeepCopyInto(&out.Address)
-	if in.SubscribablerStatus != nil {
-		in, out := &in.SubscribablerStatus, &out.SubscribablerStatus
-		*out = new(duckv1alpha1.SubscribableStatus)
-		(*in).DeepCopyInto(*out)
-	}
 	return
 }
 

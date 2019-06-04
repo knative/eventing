@@ -31,8 +31,6 @@ rules:
       - kafkachannels/status
     verbs:
       - get
-      # - list
-      # - watch
       - update
   - apiGroups:
       - "" # Core API group.

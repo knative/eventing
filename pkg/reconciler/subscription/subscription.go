@@ -168,7 +168,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	// Track the channel using the addressableInformer.
-	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
+	// We don't need to explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
 	track := r.addressableInformer.TrackInNamespace(r.tracker, subscription)
@@ -209,8 +209,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
 		return err
 	}
-	// See if the subscription has been deleted
-
 	if err := r.validateChannel(ctx, channel); err != nil {
 		logging.FromContext(ctx).Warn("Failed to validate Channel",
 			zap.Error(err),
@@ -531,11 +529,6 @@ func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, or
 	after.Spec.Subscribable = subs
 
 	patch, err := duck.CreateMergePatch(origChannel, after)
-
-	// to be deleted
-	temp := eventingduckv1alpha1.Channelable{}
-	json.Unmarshal(patch, &temp)
-	//
 
 	if err != nil {
 		return err
