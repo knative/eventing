@@ -1457,6 +1457,8 @@
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "go.opencensus.io/exporter/prometheus",
+    "go.opencensus.io/plugin/ochttp",
+    "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",

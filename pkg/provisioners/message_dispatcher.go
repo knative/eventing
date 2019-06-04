@@ -25,10 +25,12 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/knative/eventing/pkg/utils"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
-
-	"github.com/knative/eventing/pkg/utils"
 )
 
 const correlationIDHeaderName = "Knative-Correlation-Id"
@@ -44,6 +46,8 @@ type Dispatcher interface {
 
 // MessageDispatcher is the 'real' Dispatcher used everywhere except unit tests.
 var _ Dispatcher = &MessageDispatcher{}
+
+var propagation = &b3.HTTPFormat{}
 
 // MessageDispatcher dispatches messages to a destination over HTTP.
 type MessageDispatcher struct {
@@ -64,7 +68,11 @@ type DispatchDefaults struct {
 // messages to HTTP destinations.
 func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 	return &MessageDispatcher{
-		httpClient:       &http.Client{},
+		httpClient: &http.Client{
+			Transport: &ochttp.Transport{
+				Propagation: propagation,
+			},
+		},
 		forwardHeaders:   sets.NewString(forwardHeaders...),
 		forwardPrefixes:  forwardPrefixes,
 		supportedSchemes: sets.NewString("http", "https"),
@@ -107,6 +115,13 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		return nil, fmt.Errorf("unable to create request %v", err)
 	}
 	req.Header = d.toHTTPHeaders(message.Headers)
+
+	// Attach the Span context that is currently saved in the request's headers.
+	if sc, ok := propagation.SpanContextFromRequest(req); ok {
+		newCtx, _ := trace.StartSpanWithRemoteParent(req.Context(), req.URL.Path, sc)
+		req = req.WithContext(newCtx)
+	}
+
 	res, err := d.httpClient.Do(req)
 	if err != nil {
 		return nil, err
