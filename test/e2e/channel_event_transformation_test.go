@@ -78,7 +78,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 			channelNames[0],
 			channelTypeMeta,
 			base.WithSubscriberForSubscription(transformationPodName),
-			base.WithReply(channelNames[1]),
+			base.WithReply(channelNames[1], channelTypeMeta),
 		)
 		// create subscriptions that subscribe the second channel, and forward the received events to the logger service
 		client.CreateSubscriptionsOrFail(

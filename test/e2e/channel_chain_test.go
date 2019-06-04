@@ -65,7 +65,7 @@ func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 		subscriptionNames1,
 		channelNames[0],
 		channelTypeMeta,
-		base.WithReply(channelNames[1]),
+		base.WithReply(channelNames[1], channelTypeMeta),
 	)
 	// create subscriptions that subscribe the second channel, and call the logging service
 	client.CreateSubscriptionsOrFail(

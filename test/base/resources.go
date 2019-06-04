@@ -91,11 +91,11 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 }
 
 // WithReply returns an options that adds a ReplyStrategy for the given Subscription.
-func WithReply(name string) SubscriptionOption {
+func WithReply(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
 	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference(ChannelKind, EventingAPIVersion, name),
+				Channel: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 			}
 		}
 	}
