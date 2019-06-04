@@ -75,9 +75,7 @@ type KafkaChannelStatus struct {
 	// provided targets from inside the cluster.
 	//
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	// To do: This should be defined in duck APIs as AddressStatus and then inlined here.
-	// Current AddressStatus in duck apis is a *Addressable and NOT and Addressable.
-	Address duckv1alpha1.Addressable `json:"address,omitempty"`
+	duckv1alpha1.AddressStatus `json:",inline"`
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	eventingduck.SubscribableTypeStatus `json:",inline"`

@@ -93,11 +93,11 @@ type SubscribableType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// SubscribableSpec is the part where Subscribable object is
+	// SubscribableTypeSpec is the part where Subscribable object is
 	// configured as to be compatible with Subscribable contract.
 	Spec SubscribableTypeSpec `json:"spec"`
 
-	// ChannelStatus is the part where SubscribableStatus object is
+	// SubscribableTypeStatus is the part where SubscribableStatus object is
 	// configured as to be compatible with Subscribable contract.
 	Status SubscribableTypeStatus `json:"status"`
 }
