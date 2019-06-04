@@ -70,7 +70,6 @@ func (client *Client) sendFakeEventToAddress(
 	event *base.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	client.T.Logf("Sending fake CloudEvent")
 	pod := base.EventSenderPod(senderName, uri, event)
 	client.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
@@ -102,26 +101,21 @@ func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
 }
 
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
-// If there are new resources, this function needs to be changed.
+// If there is a new resource, its TypeMeta needs to be added into the list.
 // TODO(Fredy-Z): make this function more generic by only checking existed resources in the current namespace.
 func (client *Client) WaitForAllTestResourcesReady() error {
-	if err := client.WaitForResourcesReady(ChannelTypeMeta); err != nil {
-		return err
+	typemetas := []*metav1.TypeMeta{
+		ChannelTypeMeta,
+		SubscriptionTypeMeta,
+		BrokerTypeMeta,
+		TriggerTypeMeta,
+		CronJobSourceTypeMeta,
+		ContainerSourceTypeMeta,
 	}
-	if err := client.WaitForResourcesReady(SubscriptionTypeMeta); err != nil {
-		return err
-	}
-	if err := client.WaitForResourcesReady(BrokerTypeMeta); err != nil {
-		return err
-	}
-	if err := client.WaitForResourcesReady(TriggerTypeMeta); err != nil {
-		return err
-	}
-	if err := client.WaitForResourcesReady(CronJobSourceTypeMeta); err != nil {
-		return err
-	}
-	if err := client.WaitForResourcesReady(ContainerSourceTypeMeta); err != nil {
-		return err
+	for _, typemeta := range typemetas {
+		if err := client.WaitForResourcesReady(typemeta); err != nil {
+			return err
+		}
 	}
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err
