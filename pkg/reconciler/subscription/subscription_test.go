@@ -52,9 +52,10 @@ const (
 	channelName    = "origin"
 	serviceName    = "service"
 
-	subscriptionUID  = subscriptionName + "-abc-123"
-	subscriptionName = "testsubscription"
-	testNS           = "testnamespace"
+	subscriptionUID        = subscriptionName + "-abc-123"
+	subscriptionName       = "testsubscription"
+	testNS                 = "testnamespace"
+	subscriptionGeneration = 1
 )
 
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
@@ -144,7 +145,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName),
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. channels.eventing.knative.dev %q not found", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -153,7 +154,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to validate spec.channel: channels.eventing.knative.dev %q not found", channelName)),
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel as Channelable duck type. channels.eventing.knative.dev %q not found", channelName)),
 				),
 			}},
 		}, {
@@ -404,6 +405,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
+
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 				),
 			}},
@@ -504,6 +506,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionGeneration(subscriptionGeneration),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithInitSubscriptionConditions,
@@ -530,6 +533,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionGeneration(subscriptionGeneration),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithInitSubscriptionConditions,
@@ -539,7 +543,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -548,6 +552,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionGeneration(subscriptionGeneration),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithInitSubscriptionConditions,
 					WithSubscriptionReply(channelGVK, replyName),
@@ -575,6 +580,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionGeneration(subscriptionGeneration),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionReply(channelGVK, replyName),
 					WithInitSubscriptionConditions,
@@ -584,7 +590,7 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+					{UID: subscriptionUID, Generation: subscriptionGeneration, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
