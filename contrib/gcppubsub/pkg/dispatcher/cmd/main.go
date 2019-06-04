@@ -65,9 +65,8 @@ func main() {
 
 	// Zipkin tracing.
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	ns := system.Namespace()
-	configMapWatcher := configmap.NewInformedWatcher(kc, ns)
-	if err = tracing.SetupDynamicZipkinPublishing(logger, ns, configMapWatcher, "gcp-pubsub-dispatcher"); err != nil {
+	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
+	if err = tracing.SetupDynamicZipkinPublishing(logger, configMapWatcher, "gcp-pubsub-dispatcher"); err != nil {
 		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}
 

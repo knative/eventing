@@ -106,7 +106,7 @@ func main() {
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), env.Namespace, configMapWatcher, zipkinServiceName); err != nil {
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
 		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
