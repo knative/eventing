@@ -118,3 +118,8 @@ type ChannelList struct {
 func (c *Channel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Channel")
 }
+
+// GetSpec returns the spec of the Channel.
+func (c *Channel) GetSpec() interface{} {
+	return c.Spec
+}
