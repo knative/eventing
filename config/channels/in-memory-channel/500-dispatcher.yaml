@@ -29,9 +29,18 @@ spec:
       serviceAccountName: imc-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/cmd/in_memory/dispatcher
+          image: github.com/knative/eventing/cmd/in_memory/channel_dispatcher
           env:
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          volumeMounts:
+            - name: config-logging
+              mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging
