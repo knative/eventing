@@ -19,10 +19,13 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"github.com/knative/eventing/pkg/reconciler"
 	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/dispatcher"
 	"github.com/knative/pkg/configmap"
@@ -37,6 +40,10 @@ var (
 	hardcodedLoggingConfig = flag.Bool("hardCodedLoggingConfig", false, "If true, use the hard coded logging config. It is intended to be used only when debugging outside a Kubernetes cluster.")
 	masterURL              = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	kubeconfig             = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+
+	readTimeout  = 1 * time.Minute
+	writeTimeout = 1 * time.Minute
+	port         = 8080
 )
 
 func main() {
@@ -52,8 +59,22 @@ func main() {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
+	sh, err := swappable.NewEmptyHandler(logger.Desugar())
+	if err != nil {
+		logger.Fatal("Error creating swappable.Handler", zap.Error(err))
+	}
+
+	args := &dispatcher.InMemoryDispatcherArgs{
+		Port:         port,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		Handler:      sh,
+		Logger:       logger.Desugar(),
+	}
+	inMemoryDispatcher := dispatcher.NewDispatcher(args)
+
 	logger = logger.With(zap.String("controller/impl", "pkg"))
-	logger.Info("Starting the Kafka dispatcher")
+	logger.Info("Starting the InMemory dispatcher")
 
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
@@ -71,6 +92,7 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		inmemorychannel.NewController(
 			opt,
+			inMemoryDispatcher,
 			inMemoryChannelInformer,
 		),
 	}
@@ -99,8 +121,12 @@ func main() {
 		logger.Fatalf("Failed to start informers: %v", err)
 	}
 
+	go inMemoryDispatcher.Start(stopCh)
+
 	logger.Info("Starting controllers.")
 	kncontroller.StartAll(stopCh, controllers[:]...)
+
+	inMemoryDispatcher.Stop()
 }
 
 func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"github.com/knative/eventing/pkg/inmemorychannel"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
@@ -40,10 +41,11 @@ const (
 	controllerAgentName = "in-memory-channel-dispatcher"
 )
 
-// Reconciler reconciles Kafka Channels.
+// Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	*reconciler.Base
 
+	dispatcher              *inmemorychannel.InMemoryDispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 	impl                    *controller.Impl
@@ -56,11 +58,13 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
+	dispatcher *inmemorychannel.InMemoryDispatcher,
 	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
 		Base:                    reconciler.NewBase(opt, controllerAgentName),
+		dispatcher:              dispatcher,
 		inmemorychannelLister:   inmemorychannelinformer.Lister(),
 		inmemorychannelInformer: inmemorychannelinformer.Informer(),
 	}
@@ -89,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	channels, err := r.inmemorychannelLister.List(labels.Everything())
 	if err != nil {
-		logging.FromContext(ctx).Error("Error listing kafka channels")
+		logging.FromContext(ctx).Error("Error listing InMemory channels")
 		return err
 	}
 
@@ -101,9 +105,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	config := r.newConfigFromInMemoryChannels(inmemoryChannels)
-	err = r..UpdateConfig(config)
+	err = r.dispatcher.UpdateConfig(config)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error updating kafka dispatcher config")
+		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
 		return err
 	}
 
