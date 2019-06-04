@@ -57,7 +57,7 @@ func WithBrokerDeletionTimestamp(b *v1alpha1.Broker) {
 // WithBrokerChannelProvisioner sets the Broker's ChannelTemplate provisioner.
 func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Spec.ChannelTemplate = &v1alpha1.ChannelSpec{
+		b.Spec.DeprecatedChannelTemplate = &v1alpha1.ChannelSpec{
 			Provisioner: provisioner,
 		}
 	}

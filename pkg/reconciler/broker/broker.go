@@ -126,6 +126,99 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
+	if b.Spec.DeprecatedChannelTemplate != nil {
+		return r.reconcileLegacy(ctx, b)
+	} else {
+		return r.reconcileCRD(ctx, b)
+	}
+}
+
+func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) error {
+	b.Status.InitializeConditions()
+
+	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
+	// 2. Filter Deployment.
+	// 3. Ingress Deployment.
+	// 4. K8s Services that point at the Deployments.
+	// 5. Ingress Channel is created to get events from Triggers back into this Broker via the
+	//    Ingress Deployment.
+	//   - Ideally this wouldn't exist and we would point the Trigger's reply directly to the K8s
+	//     Service. However, Subscriptions only allow us to send replies to Channels, so we need
+	//     this as an intermediary.
+	// 6. Subscription from the Ingress Channel to the Ingress Service.
+
+	if b.DeletionTimestamp != nil {
+		// Everything is cleaned up by the garbage collector.
+		return nil
+	}
+
+	triggerChan, err := r.reconcileTriggerChannel(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
+		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
+		return err
+	} else if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
+		// We check the trigger Channel's address here because it is needed to create the Ingress
+		// Deployment.
+		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
+		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
+		return nil
+	}
+	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
+
+	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
+		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
+		return err
+	}
+	_, err = r.reconcileFilterService(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
+		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
+		return err
+	}
+	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
+
+	ingressDeployment, err := r.reconcileIngressDeployment(ctx, b, triggerChan)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
+		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
+		return err
+	}
+
+	svc, err := r.reconcileIngressService(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
+		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
+		return err
+	}
+	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
+	b.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
+
+	ingressChan, err := r.reconcileIngressChannel(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
+		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
+		return err
+	}
+	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
+
+	ingressSub, err := r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling the ingress subscription", zap.Error(err))
+		b.Status.MarkIngressSubscriptionFailed("SubscriptionFailure", "%v", err)
+		return err
+	}
+	b.Status.PropagateIngressSubscriptionReadiness(&ingressSub.Status)
+
+	return nil
+}
+
+func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error {
 	b.Status.InitializeConditions()
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
@@ -315,8 +408,8 @@ func newIngressChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
 // newChannel creates a new Channel for Broker 'b'.
 func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 	var spec v1alpha1.ChannelSpec
-	if b.Spec.ChannelTemplate != nil {
-		spec = *b.Spec.ChannelTemplate
+	if b.Spec.DeprecatedChannelTemplate != nil {
+		spec = *b.Spec.DeprecatedChannelTemplate
 	}
 
 	return &v1alpha1.Channel{

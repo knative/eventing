@@ -536,7 +536,7 @@ func makeBroker() *v1alpha1.Broker {
 			Name:      brokerName,
 		},
 		Spec: v1alpha1.BrokerSpec{
-			ChannelTemplate: &v1alpha1.ChannelSpec{
+			DeprecatedChannelTemplate: &v1alpha1.ChannelSpec{
 				Provisioner: makeChannelProvisioner(),
 			},
 		},

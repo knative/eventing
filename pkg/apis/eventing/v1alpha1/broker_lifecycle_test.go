@@ -442,14 +442,14 @@ func TestBrokerAnnotateUserInfo(t *testing.T) {
 	}, {
 		"update broker which has no annotations with diff",
 		u2,
-		&Broker{Spec: BrokerSpec{ChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}},
+		&Broker{Spec: BrokerSpec{DeprecatedChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}},
 		&Broker{},
 		map[string]string{
 			eventing.UpdaterAnnotation: u2,
 		}}, {
 		"update broker which has annotations with diff",
 		u3,
-		withUserAnns(u1, u2, &Broker{Spec: BrokerSpec{ChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}}),
+		withUserAnns(u1, u2, &Broker{Spec: BrokerSpec{DeprecatedChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}}),
 		withUserAnns(u1, u2, &Broker{}),
 		map[string]string{
 			eventing.CreatorAnnotation: u1,
