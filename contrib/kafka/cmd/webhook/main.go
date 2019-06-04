@@ -17,8 +17,9 @@ package main
 
 import (
 	"flag"
-	"go.uber.org/zap"
 	"log"
+
+	"go.uber.org/zap"
 
 	messagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
