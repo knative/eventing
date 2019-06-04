@@ -25,10 +25,7 @@ import (
 	"github.com/knative/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
 
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
-	rbacv1informers "k8s.io/client-go/informers/rbac/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 
@@ -45,12 +42,6 @@ import (
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName       = "knative-eventing-namespace-controller"
 	namespaceReconciled       = "NamespaceReconciled"
 	namespaceReconcileFailure = "NamespaceReconcileFailure"
 
@@ -79,43 +70,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	namespaceInformer corev1informers.NamespaceInformer,
-	serviceAccountInformer corev1informers.ServiceAccountInformer,
-	roleBindingInformer rbacv1informers.RoleBindingInformer,
-	brokerInformer eventinginformers.BrokerInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:            reconciler.NewBase(opt, controllerAgentName),
-		namespaceLister: namespaceInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	// TODO: filter label selector: on InjectionEnabledLabels()
-
-	r.Logger.Info("Setting up event handlers")
-	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Tracker is used to notify us the namespace's resources we need to reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-
-	// Watch all the resources that this reconciler reconciles.
-	serviceAccountInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
-	))
-	roleBindingInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
-	))
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
-	))
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Namespace resource
