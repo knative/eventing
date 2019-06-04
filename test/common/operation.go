@@ -109,6 +109,7 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 		SubscriptionTypeMeta,
 		BrokerTypeMeta,
 		TriggerTypeMeta,
+		KafkaChannelTypeMeta,
 		CronJobSourceTypeMeta,
 		ContainerSourceTypeMeta,
 	}
