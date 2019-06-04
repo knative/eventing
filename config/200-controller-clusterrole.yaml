@@ -100,3 +100,10 @@ rules:
       - "get"
       - "list"
       - "watch"
+  # todo: Do not check-in below lines. This is temporary till eventing controller gets read,list,write access to all channels
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - kafkachannels
+      - kafkachannels/status
+    verbs: *everything
