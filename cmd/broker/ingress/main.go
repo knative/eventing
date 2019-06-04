@@ -102,7 +102,10 @@ func main() {
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	configMapWatcher := configmap.NewInformedWatcher(kc, env.Namespace)
 
-	zipkinServiceName := fmt.Sprintf("%s-broker-ingress.%s", env.Broker, env.Namespace)
+	zipkinServiceName := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
+		Namespace:  env.Namespace,
+		BrokerName: env.Broker,
+	})
 	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
 		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}

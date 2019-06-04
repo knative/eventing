@@ -49,7 +49,7 @@ var (
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
 	}
 
-	enableZeroSamplingCM = &corev1.ConfigMap{
+	enableZeroSamplingCM = corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: tracingconfig.ConfigName,
 		},
@@ -119,8 +119,11 @@ func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher co
 	configStore := eventingconfigmap.NewDefaultUntypedStore(
 		"tracing-config",
 		logger,
-		eventingconfigmap.DefaultConstructors{
-			enableZeroSamplingCM: tracingconfig.NewTracingConfigFromConfigMap,
+		[]eventingconfigmap.DefaultConstructor{
+			{
+				Default:     enableZeroSamplingCM,
+				Constructor: tracingconfig.NewTracingConfigFromConfigMap,
+			},
 		},
 		tracerUpdater)
 	configStore.WatchConfigs(configMapWatcher)

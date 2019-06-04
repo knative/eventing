@@ -17,11 +17,23 @@ limitations under the License.
 package configmap
 
 import (
+	"fmt"
+
 	"github.com/knative/pkg/configmap"
 	v1 "k8s.io/api/core/v1"
 )
 
 // TODO Move this to knative/pkg.
+
+// DefaultConstructor defines a default ConfigMap to use if the real ConfigMap does not exist and
+// the constructor to use to parse both the default and any real ConfigMap with that name.
+type DefaultConstructor struct {
+	// Default is the default value to use for the ConfigMap if a real one does not exist. Its name
+	// is used to determine which ConfigMap to watch.
+	Default v1.ConfigMap
+	// Constructor follows the same interface as configmap.DefaultConstructor's value.
+	Constructor interface{}
+}
 
 // DefaultConstructors is a map for specifying default ConfigMaps to their function constructors.
 //
@@ -42,13 +54,17 @@ type DefaultUntypedStore struct {
 func NewDefaultUntypedStore(
 	name string,
 	logger configmap.Logger,
-	defaultConstructors DefaultConstructors,
+	defaultConstructors []DefaultConstructor,
 	onAfterStore ...func(name string, value interface{})) *DefaultUntypedStore {
 	constructors := configmap.Constructors{}
 	defaultCMs := make([]v1.ConfigMap, 0, len(defaultConstructors))
-	for cm, ctor := range defaultConstructors {
-		constructors[cm.Name] = ctor
-		defaultCMs = append(defaultCMs, *cm)
+	for _, dc := range defaultConstructors {
+		cmName := dc.Default.Name
+		if _, present := constructors[cmName]; present {
+			panic(fmt.Sprintf("tried to add ConfigMap named %q more than once", cmName))
+		}
+		constructors[cmName] = dc.Constructor
+		defaultCMs = append(defaultCMs, dc.Default)
 	}
 	return &DefaultUntypedStore{
 		store:      configmap.NewUntypedStore(name, logger, constructors, onAfterStore...),
