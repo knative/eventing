@@ -81,7 +81,7 @@ required = [
 [[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2019-05-30
-  revision = "5fe2b490af198572a89d128259f25e4aa4f16123"
+  revision = "67d95db07608ccc232772a7e6f4b182dd4707683"
 
 # TODO why is this overridden?
 [[override]]
