@@ -19,16 +19,12 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
-	//	"net/url"
 
 	"github.com/knative/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	//	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	"k8s.io/apimachinery/pkg/runtime"
-	//	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // PipelineChannelName creates a name for the Channel fronting a specific step.
@@ -54,13 +50,6 @@ func NewChannel(name string, p *v1alpha1.Pipeline) (*unstructured.Unstructured, 
 		},
 		p.Spec.ChannelTemplate.Spec,
 	}
-	//	template := new.Spec.ChannelTemplate
-	//	template.Name = name
-	//	template.Namespace = p.Namespace
-	//	template.OwnerReferences = []metav1.OwnerReference{
-	//		*kmeta.NewControllerRef(p),
-	//	}
-	// TODO: Set the owner ref, etc.
 	raw, err := json.Marshal(template)
 	if err != nil {
 		return nil, err
