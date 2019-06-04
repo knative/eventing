@@ -112,6 +112,7 @@ func (in *KafkaChannelStatus) DeepCopyInto(out *KafkaChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.Address.DeepCopyInto(&out.Address)
+	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	return
 }
 
