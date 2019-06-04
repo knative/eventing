@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
-	//	corev1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -43,6 +43,23 @@ func TestPipelineValidation(t *testing.T) {
 			t.Errorf("Pipeline.Validate (-want, +got) = %v", diff)
 		}
 	})
+}
+
+func makeValidReply(channelName string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "inmemorychannel",
+		Name:       channelName,
+	}
+}
+
+func makeInvalidReply(channelName string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "inmemorychannel",
+		Namespace:  "notallowed",
+		Name:       channelName,
+	}
 }
 
 func TestPipelineSpecValidation(t *testing.T) {
@@ -111,6 +128,42 @@ func TestPipelineSpecValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			return nil
+		}(),
+	}, {
+		name: "valid pipeline with valid reply",
+		ts: &PipelineSpec{
+			ChannelTemplate: validChannelTemplate,
+			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
+			Reply:           makeValidReply("reply-channel"),
+		},
+		want: func() *apis.FieldError {
+			return nil
+		}(),
+	}, {
+		name: "valid pipeline with invalid missing name",
+		ts: &PipelineSpec{
+			ChannelTemplate: validChannelTemplate,
+			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
+			Reply: &corev1.ObjectReference{
+				APIVersion: "messaging.knative.dev/v1alpha1",
+				Kind:       "inmemorychannel",
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply.name")
+			return fe
+		}(),
+	}, {
+		name: "valid pipeline with invalid reply",
+		ts: &PipelineSpec{
+			ChannelTemplate: validChannelTemplate,
+			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
+			Reply:           makeInvalidReply("reply-channel"),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrDisallowedFields("reply.Namespace")
+			fe.Details = "only name, apiVersion and kind are supported fields"
+			return fe
 		}(),
 		/*
 			}, {

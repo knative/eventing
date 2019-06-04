@@ -25,20 +25,16 @@ import (
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
-	//	"github.com/knative/pkg/kmeta"
 	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	//	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
-	//	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	//	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
@@ -49,18 +45,6 @@ const (
 	pipelineName     = "test-pipeline"
 	pipelineUID      = "test-pipeline-uid"
 	replyChannelName = "reply-channel"
-	brokerName       = "test-broker"
-
-	channelServiceAddress = "test-pipeline-kn-channel.test-namespace.svc.cluster.local"
-
-	subscriberAPIVersion = "v1"
-	subscriberKind       = "Service"
-	subscriberName       = "subscriberName"
-	subscriberURI        = "http://example.com/subscriber"
-)
-
-var (
-	trueVal = true
 )
 
 func init() {
@@ -150,17 +134,6 @@ func TestAllCases(t *testing.T) {
 		},
 		runtime.RawExtension{Raw: []byte("{}")},
 	}
-
-	/*
-		imcWithSpec := v1alpha1.ChannelTemplateSpec{
-			metav1.TypeMeta{
-				APIVersion: "messaging.knative.dev/v1alpha1",
-				Kind:       "inmemorychannel",
-			},
-			metav1.ObjectMeta{},
-			runtime.RawExtension{Raw: []byte("{}")},
-		}
-	*/
 
 	table := TableTest{
 		{

@@ -33,7 +33,6 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	//	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
@@ -172,7 +171,6 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	}
 
 	// Convert the object into runtime.Object so we can grab the schema.ObjectKind and create the correct interface client
-
 	obj := p.Spec.ChannelTemplate.DeepCopyObject()
 
 	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
@@ -186,14 +184,13 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	channels := []*duckv1alpha1.Channelable{}
 	for i := 0; i < len(p.Spec.Steps); i++ {
 		ingressChannelName := resources.PipelineChannelName(p.Name, i)
-		// Use the duck typed one here instead of this Get.
 		c, err := r.reconcileChannel(ctx, ingressChannelName, channelResourceInterface, p)
 		if err != nil {
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
 			return err
 
 		}
-		// Let's convert to Channel duck
+		// Convert to Channel duck so that we can treat all Channels the same.
 		channelable := &duckv1alpha1.Channelable{}
 		err = duckapis.FromUnstructured(c, channelable)
 		if err != nil {
@@ -210,7 +207,6 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	for i := 0; i < len(p.Spec.Steps); i++ {
 		sub, err := r.reconcileSubscription(ctx, i, p)
 		if err != nil {
-			// TODO: Propagate Status through...
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Subscription Object for step: %d", i), zap.Error(err))
 			return err
 		}
@@ -241,7 +237,6 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Pipelin
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Pipeline) (*unstructured.Unstructured, error) {
-	// Use the duck typed one here instead of this Get.
 	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -279,12 +274,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v : SUBSCRIBERSPEC: %+v", sub, sub.Spec.Subscriber))
 		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
+			// TODO: Send events here, or elsewhere?
 			//			r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipeline's subscription failed: %v", err)
 			return nil, err
 		}
 		return newSub, nil
 	} else if err != nil {
 		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
+		// TODO: Send events here, or elsewhere?
 		//		r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipelines's subscription failed: %v", err)
 		return nil, err
 	}

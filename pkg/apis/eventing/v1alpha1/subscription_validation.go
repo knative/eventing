@@ -99,7 +99,7 @@ func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 
 	// If Ref given, check the fields.
 	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		fe := isValidObjectReference(*s.Ref)
+		fe := IsValidObjectReference(*s.Ref)
 		if fe != nil {
 			errs = errs.Also(fe.ViaField("ref"))
 		}
@@ -112,7 +112,7 @@ func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
 }
 
 func isValidReply(r ReplyStrategy) *apis.FieldError {
-	if fe := isValidObjectReference(*r.Channel); fe != nil {
+	if fe := IsValidObjectReference(*r.Channel); fe != nil {
 		return fe.ViaField("channel")
 	}
 	return nil

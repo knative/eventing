@@ -53,5 +53,10 @@ func (ps *PipelineSpec) Validate(ctx context.Context) *apis.FieldError {
 	if len(ps.ChannelTemplate.Kind) == 0 {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
 	}
+	if ps.Reply != nil {
+		if err := eventingv1alpha1.IsValidObjectReference(*ps.Reply); err != nil {
+			errs = errs.Also(err.ViaField("reply"))
+		}
+	}
 	return errs
 }
