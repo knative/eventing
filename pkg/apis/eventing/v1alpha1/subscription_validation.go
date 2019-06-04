@@ -52,7 +52,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingSubscriber {
-		if fe := isValidSubscriberSpec(*ss.Subscriber); fe != nil {
+		if fe := IsValidSubscriberSpec(*ss.Subscriber); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
@@ -78,7 +78,7 @@ func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
 	return false
 }
 
-func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
+func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	var errs *apis.FieldError
 
 	fieldsSet := make([]string, 0, 0)

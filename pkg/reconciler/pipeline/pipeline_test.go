@@ -45,10 +45,11 @@ import (
 )
 
 const (
-	testNS       = "test-namespace"
-	pipelineName = "test-pipeline"
-	pipelineUID  = "test-pipeline-uid"
-	brokerName   = "test-broker"
+	testNS           = "test-namespace"
+	pipelineName     = "test-pipeline"
+	pipelineUID      = "test-pipeline-uid"
+	replyChannelName = "reply-channel"
+	brokerName       = "test-broker"
 
 	channelServiceAddress = "test-pipeline-kn-channel.test-namespace.svc.cluster.local"
 
@@ -98,6 +99,15 @@ func TestNewController(t *testing.T) {
 	}
 }
 
+func createReplyChannel(channelName string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "inmemorychannel",
+		Name:       channelName,
+	}
+
+}
+
 func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -112,16 +122,13 @@ func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructur
 						"apiVersion":         "messaging.knative.dev/v1alpha1",
 						"blockOwnerDeletion": true,
 						"controller":         true,
-						"kind":               "InMemoryChannel",
+						"kind":               "Pipeline",
 						"name":               pipelineName,
 						"uid":                "",
 					},
 				},
 			},
 			"spec": map[string]interface{}{},
-			//			"spec": map[string]interface{}{
-			//				"something": "foo",
-			//			},
 		},
 	}
 
@@ -228,6 +235,53 @@ func TestAllCases(t *testing.T) {
 					})),
 			}},
 		}, {
+			Name: "singlestepwithreply",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(pipelineName, 0),
+				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 0),
+							},
+						},
+					}),
+					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+							},
+						},
+					})),
+			}},
+		}, {
 			Name: "threestep",
 			Key:  pKey,
 			Objects: []runtime.Object{
@@ -252,6 +306,97 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewPipeline(pipelineName, testNS,
 					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+						createSubscriber(0),
+						createSubscriber(1),
+						createSubscriber(2),
+					}),
+					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 0),
+							},
+						},
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 1),
+							},
+						},
+						v1alpha1.PipelineChannelStatus{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.PipelineChannelName(pipelineName, 2),
+							},
+						},
+					}),
+					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+							},
+						},
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 1),
+							},
+						},
+						v1alpha1.PipelineSubscriptionStatus{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.PipelineSubscriptionName(pipelineName, 2),
+							},
+						},
+					})),
+			}},
+		}, {
+			Name: "threestepwithreply",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+						createSubscriber(0),
+						createSubscriber(1),
+						createSubscriber(2)}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(pipelineName, 0),
+				createChannel(pipelineName, 1),
+				createChannel(pipelineName, 2),
+				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(1, reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(2, reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithPipelineChannelTemplateSpec(imc),
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewPipeline(pipelineName, testNS,
+					reconciletesting.WithInitPipelineConditions,
+					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithPipelineChannelTemplateSpec(imc),
 					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
 						createSubscriber(0),

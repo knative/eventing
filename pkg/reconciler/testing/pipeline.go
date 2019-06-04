@@ -22,6 +22,7 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -62,6 +63,12 @@ func WithPipelineChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) PipelineO
 func WithPipelineSteps(steps []eventingv1alpha1.SubscriberSpec) PipelineOption {
 	return func(p *v1alpha1.Pipeline) {
 		p.Spec.Steps = steps
+	}
+}
+
+func WithPipelineReply(reply *corev1.ObjectReference) PipelineOption {
+	return func(p *v1alpha1.Pipeline) {
+		p.Spec.Reply = reply
 	}
 }
 

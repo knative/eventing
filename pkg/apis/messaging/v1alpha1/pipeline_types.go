@@ -150,5 +150,5 @@ type PipelineList struct {
 
 // GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
 func (p *Pipeline) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("InMemoryChannel")
+	return SchemeGroupVersion.WithKind("Pipeline")
 }
