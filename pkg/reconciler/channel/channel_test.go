@@ -22,13 +22,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -158,22 +155,4 @@ func TestAllCases(t *testing.T) {
 	},
 		false,
 	))
-}
-
-func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-
-	channelInformer := eventingInformer.Eventing().V1alpha1().Channels()
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	}, channelInformer)
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
 }

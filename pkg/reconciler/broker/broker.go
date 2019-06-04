@@ -25,7 +25,6 @@ import (
 	"github.com/knative/pkg/kmeta"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -41,20 +40,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "broker-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerReadinessChanged          = "BrokerReadinessChanged"
 	brokerReconcileError            = "BrokerReconcileError"
@@ -88,54 +79,6 @@ type ReconcilerArgs struct {
 	IngressServiceAccountName string
 	FilterImage               string
 	FilterServiceAccountName  string
-}
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	brokerInformer eventinginformers.BrokerInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	channelInformer eventinginformers.ChannelInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	args ReconcilerArgs,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                      reconciler.NewBase(opt, controllerAgentName),
-		brokerLister:              brokerInformer.Lister(),
-		channelLister:             channelInformer.Lister(),
-		serviceLister:             serviceInformer.Lister(),
-		deploymentLister:          deploymentInformer.Lister(),
-		subscriptionLister:        subscriptionInformer.Lister(),
-		ingressImage:              args.IngressImage,
-		ingressServiceAccountName: args.IngressServiceAccountName,
-		filterImage:               args.FilterImage,
-		filterServiceAccountName:  args.FilterServiceAccountName,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
 }
 
 // Reconcile compares the actual state with the desired, and attempts to

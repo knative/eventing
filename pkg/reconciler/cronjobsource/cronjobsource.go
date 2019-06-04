@@ -26,8 +26,6 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
@@ -44,18 +42,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "CronJobSources"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "cronjob-source-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	cronjobReconciled         = "CronJobSourceReconciled"
 	cronJobReadinessChanged   = "CronJobSourceReadinessChanged"
@@ -82,39 +73,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	cronjobsourceInformer sourceinformers.CronJobSourceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	eventTypeInformer eventinginformers.EventTypeInformer,
-) *controller.Impl {
-	r := &Reconciler{
-		Base:             reconciler.NewBase(opt, controllerAgentName),
-		cronjobLister:    cronjobsourceInformer.Lister(),
-		deploymentLister: deploymentInformer.Lister(),
-		eventTypeLister:  eventTypeInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
-
-	r.Logger.Info("Setting up event handlers")
-	cronjobsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the CronJobSource

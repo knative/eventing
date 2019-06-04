@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -36,11 +35,6 @@ import (
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Channels"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName       = "channel-default-controller"
 	channelReadinessChanged   = "ChannelReadinessChanged"
 	channelReconciled         = "ChannelReconciled"
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
@@ -55,25 +49,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	channelInformer eventinginformers.ChannelInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:          reconciler.NewBase(opt, controllerAgentName),
-		channelLister: channelInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	return impl
-}
 
 // Reconcile will check if the channel is being watched by provisioner's channel controller
 // This will improve UX. See https://github.com/knative/eventing/issues/779

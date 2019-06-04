@@ -27,8 +27,6 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/pkg/controller"
@@ -36,8 +34,6 @@ import (
 	. "github.com/knative/pkg/reconciler/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -67,29 +63,6 @@ var (
 func init() {
 	// Add types to scheme
 	_ = eventingv1alpha1.AddToScheme(scheme.Scheme)
-}
-
-func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-	eventingInformer := eventinginformers.NewSharedInformerFactory(eventingClient, 0)
-
-	namespaceInformer := kubeInformer.Core().V1().Namespaces()
-	serviceAccountInformer := kubeInformer.Core().V1().ServiceAccounts()
-	roleBindingInformer := kubeInformer.Rbac().V1().RoleBindings()
-	brokerInformer := eventingInformer.Eventing().V1alpha1().Brokers()
-
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	}, namespaceInformer, serviceAccountInformer, roleBindingInformer, brokerInformer)
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
 }
 
 func TestAllCases(t *testing.T) {
