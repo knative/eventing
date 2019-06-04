@@ -118,9 +118,6 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 			return err
 		}
 	}
-	if err := client.WaitForResourcesReady(KafkaChannelTypeMeta); err != nil {
-		return err
-	}
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err
 	}
