@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -175,12 +174,4 @@ func getLoggingConfigOrDie() map[string]string {
 		}
 		return cm
 	}
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }

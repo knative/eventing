@@ -26,7 +26,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/contrib/kafka/pkg/controller"
+	. "github.com/knative/eventing/contrib/kafka/pkg/utils"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
@@ -535,8 +535,8 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfig() *controller.KafkaProvisionerConfig {
-	return &controller.KafkaProvisionerConfig{
+func getControllerConfig() *KafkaConfig {
+	return &KafkaConfig{
 		Brokers: []string{"test-broker"},
 	}
 }

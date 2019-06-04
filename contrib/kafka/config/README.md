@@ -1,6 +1,8 @@
 # Apache Kafka Channels
 
-Deployment steps:
+Kafka channels are those backed by [Apache Kafka](http://kafka.apache.org/) topics.
+
+## Deployment steps
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md)
 1. If not done already, install an Apache Kafka cluster!
@@ -15,80 +17,70 @@ Deployment steps:
    > installation.
 
 1. Now that Apache Kafka is installed, you need to configure the
-   `bootstrap_servers` value in the `kafka-channel-controller-config` ConfigMap,
-   located inside the `contrib/kafka/config/kafka.yaml` file:
+   `bootstrap_servers` value in the `config-kafka` ConfigMap,
+   located inside the `contrib/kafka/config/400-kafka-config.yaml` file:
+
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: config-kafka
+      namespace: knative-eventing
+    data:
+      # Broker URL. Replace this with the URLs for your kafka cluster,
+      # which is in the format of my-cluster-kafka-bootstrap.my-kafka-namespace:9092.
+      bootstrap_servers: REPLACE_WITH_CLUSTER_URL
+    ```
+
+1. Apply the Kafka config:
+
+   ```
+   ko apply -f contrib/kafka/config
+   ```
+
+1. Create the kafka channel custom objects:
 
    ```yaml
-   ...
-   apiVersion: v1
-   kind: ConfigMap
-   metadata:
-     name: kafka-channel-controller-config
-     namespace: knative-eventing
-   data:
-     # Broker URL's for the provisioner
-     bootstrap_servers: my-cluster-kafka-bootstrap.my-kafka-namespace:9092
-
-     # Consumer mode to dispatch events from different partitions in parallel.
-     # By default(multiplex), partitions are multiplexed with a single go channel.
-     # `multiplex` and `partitions` are valid values.
-     ## consumer_mode: partitions
-     ...
-   ```
-
-1. Apply the 'Kafka' ClusterChannelProvisioner, Controller, and Dispatcher:
-
-   ```
-   ko apply -f contrib/kafka/config/kafka.yaml
-   ```
-
-1. Create Channels that reference the 'kafka' ClusterChannelProvisioner.
-
-   ```yaml
-   apiVersion: eventing.knative.dev/v1alpha1
-   kind: Channel
-   metadata:
-     name: my-kafka-channel
-   spec:
-     provisioner:
-       apiVersion: eventing.knative.dev/v1alpha1
-       kind: ClusterChannelProvisioner
-       name: kafka
-   ```
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: KafkaChannel
+    metadata:
+      name: my-kafka-channel
+    spec:
+      numPartitions: 1
+      replicationFactor: 3
+    ```
+    You can configure the number of partitions with `numPartitions`, as well as the replication factor with `replicationFactor`. If not set, both will default to `1`.
 
 ## Components
 
 The major components are:
 
-- ClusterChannelProvisioner Controller
-- Channel Controller
-- Channel Controller Config Map.
-- Channel Dispatcher
-- Channel Dispatcher Config Map.
+- Kafka Channel Controller
+- Kafka Channel Dispatcher
+- Kafka Webhook
+- Kafka Config Map
 
-The ClusterChannelProvisioner Controller and the Channel Controller are
-colocated in one Pod:
+
+The Kafka Channel Controller is located in one Pod:
 
 ```shell
-kubectl get deployment -n knative-eventing kafka-channel-controller
+kubectl get deployment -n knative-eventing kafka-ch-controller
 ```
 
-The Channel Controller Config Map is used to configure the `bootstrap_servers`
-of your Apache Kafka installation:
+The Kafka Channel Dispatcher receives and distributes all events to the appropriate consumers:
 
 ```shell
-kubectl get configmap -n knative-eventing kafka-channel-controller-config
+kubectl get deployment -n knative-eventing kafka-ch-dispatcher
 ```
 
-The Channel Dispatcher receives and distributes all events:
+The Kafka Webhook is used to validate and set defaults to `KafkaChannel` custom objects:
 
 ```shell
-kubectl get deployment -n knative-eventing kafka-channel-dispatcher
+kubectl get deployment -n knative-eventing kafka-webhook
 ```
 
-The Channel Dispatcher Config Map is used to send information about Channels and
-Subscriptions from the Channel Controller to the Channel Dispatcher:
+The Kafka Config Map is used to configure the `bootstrap_servers` of your Apache Kafka installation:
 
 ```shell
-kubectl get configmap -n knative-eventing kafka-channel-dispatcher
+kubectl get configmap -n knative-eventing config-kafka
 ```

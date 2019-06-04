@@ -108,7 +108,7 @@ its subscribers._
 | ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
 | provisioner\*            | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
 | arguments                | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
-| subscribable.subscribers | SubscriberSpec[]            | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
+| subscribable.subscribers | SubscriberSpec[]                   | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
 \*: Required
 
@@ -243,11 +243,11 @@ a Channel system that receives and delivers events._
 
 ### SubscriberSpec
 
-| Field         | Type   | Description                                                        | Constraints    |
-| ------------- | ------ | ------------------------------------------------------------------ | -------------- |
+| Field         | Type   | Description                                                 | Constraints    |
+| ------------- | ------ | ----------------------------------------------------------- | -------------- |
 | uid           | String | The Subscription UID this SubscriberSpec was resolved from. |                |
-| subscriberURI | String | The URI name of the endpoint for the subscriber.                   | Must be a URL. |
-| replyURI      | String | The URI name of the endpoint for the reply.                        | Must be a URL. |
+| subscriberURI | String | The URI name of the endpoint for the subscriber.            | Must be a URL. |
+| replyURI      | String | The URI name of the endpoint for the reply.                 | Must be a URL. |
 
 ### ReplyStrategy
 
