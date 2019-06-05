@@ -103,26 +103,27 @@ func TestNewController(t *testing.T) {
 func TestAllCases(t *testing.T) {
 	ncKey := testNS + "/" + ncName
 	table := TableTest{
+		//{
+		//	Name: "bad workqueue key",
+		//	// Make sure Reconcile handles bad keys.
+		//	Key: "too/many/parts",
+		//}, {
+		//	Name: "key not found",
+		//	// Make sure Reconcile handles good keys that don't exist.
+		//	Key: "foo/not-found",
+		//}, {
+		//	Name: "deleting",
+		//	Key:  ncKey,
+		//	Objects: []runtime.Object{
+		//		reconciletesting.NewNatssChannel(ncName, testNS,
+		//			reconciletesting.WithInitNatssChannelConditions,
+		//			reconciletesting.WithNatssChannelDeleted)},
+		//	WantErr: false,
+		//	WantEvents: []string{
+		//		Eventf(corev1.EventTypeNormal, channelReconciled, "NatssChannel reconciled"),
+		//	},
+		//}, {
 		{
-			Name: "bad workqueue key",
-			// Make sure Reconcile handles bad keys.
-			Key: "too/many/parts",
-		}, {
-			Name: "key not found",
-			// Make sure Reconcile handles good keys that don't exist.
-			Key: "foo/not-found",
-		}, {
-			Name: "deleting",
-			Key:  ncKey,
-			Objects: []runtime.Object{
-				reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
-					reconciletesting.WithNatssChannelDeleted)},
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "NatssChannel reconciled"),
-			},
-		}, {
 			Name: "deployment does not exist",
 			Key:  ncKey,
 			Objects: []runtime.Object{
