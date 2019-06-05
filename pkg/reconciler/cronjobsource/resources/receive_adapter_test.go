@@ -132,4 +132,57 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	if diff, err := kmp.SafeDiff(want, got); err != nil {
 		t.Errorf("unexpected cron job (-want, +got) = %v", diff)
 	}
+	src.Spec.Resources = v1alpha1.CronJobResourceSpec{
+		Requests: v1alpha1.CronJobRequestsSpec{
+			ResourceCPU:    "101m",
+			ResourceMemory: "200Mi",
+		},
+		Limits: v1alpha1.CronJobLimitsSpec{
+			ResourceCPU:    "102m",
+			ResourceMemory: "500Mi",
+		},
+	}
+	want.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name:  "receive-adapter",
+			Image: "test-image",
+			Env: []corev1.EnvVar{
+				{
+					Name:  "SCHEDULE",
+					Value: "*/2 * * * *",
+				},
+				{
+					Name:  "DATA",
+					Value: "data",
+				},
+				{
+					Name:  "SINK_URI",
+					Value: "sink-uri",
+				},
+				{
+					Name:  "NAME",
+					Value: "source-name",
+				},
+				{
+					Name:  "NAMESPACE",
+					Value: "source-namespace",
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("101m"),
+					corev1.ResourceMemory: resource.MustParse("200Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("102m"),
+					corev1.ResourceMemory: resource.MustParse("500Mi"),
+				},
+			},
+		},
+	}
+
+	if diff, err := kmp.SafeDiff(want, got); err != nil {
+		t.Errorf("unexpected cron job resources (-want, +got) = %v", diff)
+	}
+
 }
