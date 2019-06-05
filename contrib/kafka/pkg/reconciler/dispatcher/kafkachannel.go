@@ -148,6 +148,9 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		return err
 	}
 
+	// TODO: revisit this code. Instead of reading all channels and updating consumers and hostToChannel map for all
+	// why not just reconcile the current channel. With this the UpdateKafkaConsumers can now return SubscribableStatus
+	// for the subscriptions on the channel that is being reconciled.
 	kafkaChannels := make([]*v1alpha1.KafkaChannel, 0)
 	for _, channel := range channels {
 		if channel.Status.IsReady() {

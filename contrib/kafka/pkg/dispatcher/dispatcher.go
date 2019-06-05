@@ -36,16 +36,17 @@ import (
 
 type KafkaDispatcher struct {
 	// TODO: config doesn't have to be atomic as it is read and updated using updateLock.
-	config               atomic.Value
-	hostToChannelMap     atomic.Value
+	config           atomic.Value
+	hostToChannelMap atomic.Value
+	// hostToChannelMapLock is used to update hostToChannelMap
 	hostToChannelMapLock sync.Mutex
-	updateLock           sync.Mutex
 
 	receiver   *provisioners.MessageReceiver
 	dispatcher *provisioners.MessageDispatcher
 
 	kafkaAsyncProducer sarama.AsyncProducer
 	kafkaConsumers     map[provisioners.ChannelReference]map[subscription]KafkaConsumer
+	// consumerUpdateLock must be used to update kafkaConsumers
 	consumerUpdateLock sync.Mutex
 	kafkaCluster       KafkaCluster
 
