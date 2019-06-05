@@ -107,3 +107,16 @@ rules:
       - kafkachannels
       - kafkachannels/status
     verbs: *everything
+
+  # Messaging resources and statuses we care about.
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "inmemorychannels"
+      - "inmemorychannels/status"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+      - "update"
+      - "patch"

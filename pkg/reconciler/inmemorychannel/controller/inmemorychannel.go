@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package inmemorychannel
+package controller
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/resources"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/controller"

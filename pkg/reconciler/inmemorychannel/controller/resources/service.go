@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	PortName          = "http"
-	PortNumber        = 80
-	EventingRoleLabel = "eventing.knative.dev/role"
-	EventingRole      = "in-memory-channel"
+	PortName           = "http"
+	PortNumber         = 80
+	MessagingRoleLabel = "messaging.knative.dev/role"
+	MessagingRole      = "in-memory-channel"
 )
 
 // ServiceOption can be used to optionally modify the K8s service in CreateK8sService
@@ -54,7 +54,7 @@ func NewK8sService(imc *v1alpha1.InMemoryChannel, opts ...K8sServiceOption) (*co
 			Name:      CreateChannelServiceName(imc.ObjectMeta.Name),
 			Namespace: imc.Namespace,
 			Labels: map[string]string{
-				EventingRoleLabel: EventingRole,
+				MessagingRoleLabel: MessagingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(imc),
