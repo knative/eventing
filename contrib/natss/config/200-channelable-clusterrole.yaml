@@ -15,30 +15,19 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: eventing-broker-filter
+  name: natss-channelable
+  labels:
+    duck.knative.dev/channelable: "true"
+# Do not use this role directly. These rules will be added to the "channelable" role.
 rules:
   - apiGroups:
-      - "eventing.knative.dev"
+      - messaging.knative.dev
     resources:
-      - "triggers"
-      - "triggers/status"
+      - natsschannels
+      - natsschannels/status
     verbs:
-      - "get"
-      - "list"
-      - "watch"
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: eventing-broker-ingress
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - "configmaps"
-    verbs:
-      - "get"
-      - "list"
-      - "watch"
+      - get
+      - list
+      - watch
+      - update
+      - patch

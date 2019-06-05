@@ -17,7 +17,6 @@ package main
 
 import (
 	"flag"
-	"go.uber.org/zap"
 	"log"
 
 	messagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
@@ -28,6 +27,7 @@ import (
 	"github.com/knative/pkg/signals"
 	"github.com/knative/pkg/system"
 	"github.com/knative/pkg/webhook"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
 	}
-	config, err := logging.NewConfigFromMap(cm, logconfig.WebhookName())
+	config, err := logging.NewConfigFromMap(cm)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
@@ -66,7 +66,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName(), logconfig.WebhookName()))
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
 
 	options := webhook.ControllerOptions{
 		ServiceName:    logconfig.WebhookName(),

@@ -26,6 +26,14 @@ rules:
       - get
       - list
       - watch
+      - update
+      - patch
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - natsschannels/finalizers
+    verbs:
+      - update
   - apiGroups:
       - "" # Core API group.
     resources:

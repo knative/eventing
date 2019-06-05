@@ -219,5 +219,8 @@ func toChannel(natssChannel *v1alpha1.NatssChannel) *eventingv1alpha1.Channel {
 		Spec: eventingv1alpha1.ChannelSpec{
 			Subscribable: natssChannel.Spec.Subscribable,
 		},
+		Status: eventingv1alpha1.ChannelStatus{
+			Address: natssChannel.Status.Address,
+		},
 	}
 }

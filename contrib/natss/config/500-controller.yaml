@@ -30,7 +30,7 @@ spec:
       serviceAccountName: natss-ch-controller
       containers:
         - name: controller
-          image: github.com/knative/eventing/contrib/natss/cmd/controller
+          image: github.com/knative/eventing/contrib/natss/cmd/channel_controller
           env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging

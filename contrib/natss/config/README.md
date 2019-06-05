@@ -21,9 +21,9 @@ They do not offer:
 
 ## Deployment steps
 
-1. Setup [Knative Eventing](../../../../DEVELOPMENT.md).
-1. If not done already, install a [NATS Streaming](../broker)
-1. Apply the 'natss' configuration:
+1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
+1. If not done already, install a [NATS Streaming](./broker)
+1. Apply the NATSS configuration:
 
    ```shell
    ko apply -f contrib/natss/config
@@ -62,7 +62,7 @@ kubectl get deployment -n knative-eventing natss-ch-dispatcher
 By default the components are configured to connect to NATS at
 `nats://nats-streaming.natss.svc:4222` with NATS Streaming cluster ID
 `knative-nats-streaming`. This may be overridden by configuring both the
-`natss-ch-controller` and `natss-ch-dispatcher` deployments with the following 
+`natss-ch-controller` and `natss-ch-dispatcher` deployments with the following
 environment variables:
 
 ```yaml

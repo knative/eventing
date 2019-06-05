@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"reflect"
 	"time"
 
@@ -273,7 +274,10 @@ func (r *Reconciler) reconcile(ctx context.Context, nc *v1alpha1.NatssChannel) e
 		return err
 	}
 	nc.Status.MarkChannelServiceTrue()
-	nc.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	nc.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.

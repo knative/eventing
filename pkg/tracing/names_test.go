@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package tracing
 
-import (
-	"context"
-)
+import "testing"
 
-func (s *Subscription) SetDefaults(ctx context.Context) {
-	s.Spec.SetDefaults(ctx)
-	setUserInfoAnnotations(s, ctx)
-}
-
-func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
-	// TODO anything?
+func TestBrokerIngressName(t *testing.T) {
+	const testNS = "test-namespace"
+	const broker = "my-broker"
+	args := BrokerIngressNameArgs{
+		Namespace:  testNS,
+		BrokerName: broker,
+	}
+	if got, want := BrokerIngressName(args), "my-broker-broker-ingress.test-namespace"; got != want {
+		t.Errorf("BrokerIngressName = %q, want %q", got, want)
+	}
 }

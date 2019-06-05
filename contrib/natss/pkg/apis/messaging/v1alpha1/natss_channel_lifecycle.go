@@ -17,12 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var nc = duckv1alpha1.NewLivingConditionSet(
+var nc = apis.NewLivingConditionSet(
 	NatssChannelConditionDispatcherReady,
 	NatssChannelConditionServiceReady,
 	NatssChannelConditionEndpointsReady,
@@ -31,33 +31,33 @@ var nc = duckv1alpha1.NewLivingConditionSet(
 
 const (
 	// NatssChannelConditionReady has status True when all subconditions below have been set to True.
-	NatssChannelConditionReady = duckv1alpha1.ConditionReady
+	NatssChannelConditionReady = apis.ConditionReady
 
 	// NatssChannelConditionDispatcherReady has status True when a Dispatcher deployment is ready
 	// Keyed off appsv1.DeploymentAvailable, which means minimum available replicas required are up
 	// and running for at least minReadySeconds.
-	NatssChannelConditionDispatcherReady duckv1alpha1.ConditionType = "DispatcherReady"
+	NatssChannelConditionDispatcherReady apis.ConditionType = "DispatcherReady"
 
 	// NatssChannelConditionServiceReady has status True when a k8s Service is ready. This
 	// basically just means it exists because there's no meaningful status in Service. See Endpoints
 	// below.
-	NatssChannelConditionServiceReady duckv1alpha1.ConditionType = "ServiceReady"
+	NatssChannelConditionServiceReady apis.ConditionType = "ServiceReady"
 
 	// NatssChannelConditionEndpointsReady has status True when a k8s Service Endpoints are backed
 	// by at least one endpoint.
-	NatssChannelConditionEndpointsReady duckv1alpha1.ConditionType = "EndpointsReady"
+	NatssChannelConditionEndpointsReady apis.ConditionType = "EndpointsReady"
 
 	// NatssChannelConditionAddressable has status true when this NatssChannel meets
 	// the Addressable contract and has a non-empty hostname.
-	NatssChannelConditionAddressable duckv1alpha1.ConditionType = "Addressable"
+	NatssChannelConditionAddressable apis.ConditionType = "Addressable"
 
 	// NatssChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
 	// Because this uses ExternalName, there are no endpoints to check.
-	NatssChannelConditionChannelServiceReady duckv1alpha1.ConditionType = "ChannelServiceReady"
+	NatssChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (cs *NatssChannelStatus) GetCondition(t duckv1alpha1.ConditionType) *duckv1alpha1.Condition {
+func (cs *NatssChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return nc.Manage(cs).GetCondition(t)
 }
 
@@ -71,12 +71,14 @@ func (cs *NatssChannelStatus) InitializeConditions() {
 	nc.Manage(cs).InitializeConditions()
 }
 
-// TODO: Use the new beta duck types.
-func (cs *NatssChannelStatus) SetAddress(hostname string) {
-	cs.Address.Hostname = hostname
-	if hostname != "" {
+func (cs *NatssChannelStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		cs.Address.Hostname = url.Host
+		cs.Address.URL = url
 		nc.Manage(cs).MarkTrue(NatssChannelConditionAddressable)
 	} else {
+		cs.Address.Hostname = ""
+		cs.Address.URL = nil
 		nc.Manage(cs).MarkFalse(NatssChannelConditionAddressable, "EmptyHostname", "hostname is the empty string")
 	}
 }
