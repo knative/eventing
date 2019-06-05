@@ -42,20 +42,26 @@ import (
 
 // RunTests will use all provisioners that support the given feature, to run
 // a test for the testFunc.
-func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string)) {
+func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string, isCRD bool)) {
 	t.Parallel()
 	for _, provisioner := range test.EventingFlags.Provisioners {
-		supportedFeatures := common.ValidProvisionersMap[provisioner]
-		if contains(supportedFeatures, feature) {
-			t.Run(t.Name()+"-"+provisioner, func(st *testing.T) {
-				testFunc(st, provisioner)
+		channelConfig := common.ValidProvisionersMap[provisioner]
+		if contains(channelConfig.Features, feature) {
+			t.Run(fmt.Sprintf("%s-%s", t.Name(), provisioner), func(st *testing.T) {
+				testFunc(st, provisioner, false)
 			})
+
+			if channelConfig.CRDSupported {
+				t.Run(fmt.Sprintf("%s-crd-%s", t.Name(), provisioner), func(st *testing.T) {
+					testFunc(st, provisioner, true)
+				})
+			}
 		}
 	}
 }
 
 // Setup creates the client objects needed in the e2e tests,
-// and does other setups, like creating namespaces, run the test case in parallel, etc.
+// and does other setups, like creating namespaces, set the test case to run in parallel, etc.
 func Setup(t *testing.T, runInParallel bool) *common.Client {
 	// Create a new namespace to run this test case.
 	baseFuncName := getBaseFuncName(t.Name())
@@ -105,6 +111,17 @@ func contains(features []common.Feature, feature common.Feature) bool {
 		}
 	}
 	return false
+}
+
+// Get the actual typemeta of the Channel type.
+// TODO(Fredy-Z): This function is a workaround when there are both provisioner and Channel CRD in this repo.
+//                It needs to be removed when the provisioner implementation is removed.
+func getChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
+	channelTypeMeta := common.ChannelTypeMeta
+	if isCRD {
+		channelTypeMeta = common.OperatorChannelMap[provisioner]
+	}
+	return channelTypeMeta
 }
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.

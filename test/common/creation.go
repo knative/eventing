@@ -17,47 +17,59 @@ limitations under the License.
 package common
 
 import (
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/test/base"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// TODO(Fredy-Z): break this file into multiple files when it grows too large.
 
 var coreAPIGroup = corev1.SchemeGroupVersion.Group
 var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// CreateChannelOrFail will create a Channel or fail the test if there is an error.
-func (client *Client) CreateChannelOrFail(name, provisonerName string) {
+// CreateChannelOrFail will create a Channel Resource in Eventing.
+// TODO(Fredy-Z): This is a workaround when there are both provisioner and Channel CRDs in this repo.
+//                isCRD needs to be deleted when the provisioner implementation is removed.
+func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
 	namespace := client.Namespace
-	channel := base.Channel(name, provisonerName)
-
-	channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-	// update channel with the new reference
-	channel, err := channels.Create(channel)
-	if err != nil {
-		client.T.Fatalf("Failed to create channel %q: %v", name, err)
+	switch channelTypeMeta.Kind {
+	case base.ChannelKind:
+		channel := base.Channel(name, provisionerName)
+		channels := client.Eventing.EventingV1alpha1().Channels(namespace)
+		channel, err := channels.Create(channel)
+		if err != nil {
+			client.T.Fatalf("Failed to create channel %q: %v", name, err)
+		}
+		client.Cleaner.AddObj(channel)
+	case base.KafkaChannelKind:
+		channel := base.KafkaChannel(name)
+		channels := client.Kafka.MessagingV1alpha1().KafkaChannels(namespace)
+		channel, err := channels.Create(channel)
+		if err != nil {
+			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
+		}
+		client.Cleaner.AddObj(channel)
 	}
-	client.Cleaner.AddObj(channel)
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.
-func (client *Client) CreateChannelsOrFail(names []string, provisionerName string) {
+func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
 	for _, name := range names {
-		client.CreateChannelOrFail(name, provisionerName)
+		client.CreateChannelOrFail(name, channelTypeMeta, provisionerName)
 	}
 }
 
 // CreateSubscriptionOrFail will create a Subscription or fail the test if there is an error.
 func (client *Client) CreateSubscriptionOrFail(
-	name,
-	channelName string,
-	options ...func(*eventingv1alpha1.Subscription),
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...base.SubscriptionOption,
 ) {
 	namespace := client.Namespace
-	subscription := base.Subscription(name, channelName, options...)
+	subscription := base.Subscription(name, channelName, channelTypeMeta, options...)
 
 	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
 	// update subscription with the new reference
@@ -72,10 +84,11 @@ func (client *Client) CreateSubscriptionOrFail(
 func (client *Client) CreateSubscriptionsOrFail(
 	names []string,
 	channelName string,
-	options ...func(*eventingv1alpha1.Subscription),
+	channelTypeMeta *metav1.TypeMeta,
+	options ...base.SubscriptionOption,
 ) {
 	for _, name := range names {
-		client.CreateSubscriptionOrFail(name, channelName, options...)
+		client.CreateSubscriptionOrFail(name, channelName, channelTypeMeta, options...)
 	}
 }
 
@@ -101,7 +114,7 @@ func (client *Client) CreateBrokersOrFail(names []string, provisionerName string
 }
 
 // CreateTriggerOrFail will create a Trigger or fail the test if there is an error.
-func (client *Client) CreateTriggerOrFail(name string, options ...func(*eventingv1alpha1.Trigger)) {
+func (client *Client) CreateTriggerOrFail(name string, options ...base.TriggerOption) {
 	namespace := client.Namespace
 	trigger := base.Trigger(name, options...)
 
@@ -119,7 +132,7 @@ func (client *Client) CreateCronJobSourceOrFail(
 	name,
 	schedule,
 	data string,
-	options ...func(*sourcesv1alpha1.CronJobSource),
+	options ...base.CronJobSourceOption,
 ) {
 	namespace := client.Namespace
 	cronJobSource := base.CronJobSource(name, schedule, data, options...)
@@ -136,7 +149,7 @@ func (client *Client) CreateCronJobSourceOrFail(
 // CreateContainerSourceOrFail will create a ContainerSource.
 func (client *Client) CreateContainerSourceOrFail(
 	name string,
-	options ...func(*sourcesv1alpha1.ContainerSource),
+	options ...base.ContainerSourceOption,
 ) {
 	namespace := client.Namespace
 	containerSource := base.ContainerSource(name, options...)

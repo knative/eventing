@@ -45,7 +45,7 @@ func TestEventTransformationForTrigger(t *testing.T) {
 	RunTests(t, common.FeatureBasic, testEventTransformationForTrigger)
 }
 
-func testEventTransformationForTrigger(t *testing.T, provisioner string) {
+func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-eventtransformation-sender"
 		brokerName    = "e2e-eventtransformation-broker"
@@ -79,7 +79,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, provisioner)
-	client.WaitForBrokerReady(brokerName)
+	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
@@ -126,7 +126,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 		Encoding: base.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToBroker(senderName, brokerName, eventToSend); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 	}
 
