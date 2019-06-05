@@ -95,6 +95,8 @@ spec:
                           uid:
                             type: string
                             minLength: 1
+                      generation:
+                        type: integer
                       uid:
                         type: string
                         minLength: 1

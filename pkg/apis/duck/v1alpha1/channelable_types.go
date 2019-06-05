@@ -20,10 +20,10 @@ import (
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
-	v1 "k8s.io/api/core/v1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // +genclient
@@ -37,9 +37,14 @@ type Channelable struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec is the part where the Channelable fulfills the Subscribable contract.
-	Spec SubscribableSpec `json:"spec"`
+	Spec ChannelableSpec `json:"spec,omitempty"`
 
-	Status ChannelableStatus `json:"status"`
+	Status ChannelableStatus `json:"status,omitempty"`
+}
+
+// ChannelableSpec contains Spec of the Channelable object
+type ChannelableSpec struct {
+	SubscribableTypeSpec `json:",inline"`
 }
 
 // ChannelableStatus contains the Status of a Channelable object.
@@ -47,14 +52,7 @@ type ChannelableStatus struct {
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
 	v1alpha1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	Subscribers []Subscriber `json:"subscribers,omitempty"`
-}
-
-// Subscriber contains the status of a Channelable's Subscriber.
-type Subscriber struct {
-	UID     types.UID          `json:"uid,omitempty"`
-	Ready   v1.ConditionStatus `json:"ready,omitempty"`
-	Message string             `json:"message,omitempty"`
+	SubscribableTypeStatus `json:",inline"`
 }
 
 var (
@@ -69,10 +67,12 @@ func (c *Channelable) Populate() {
 		// Populate ALL fields
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+			Generation:    1,
 			SubscriberURI: "call1",
 			ReplyURI:      "sink2",
 		}, {
 			UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+			Generation:    2,
 			SubscriberURI: "call2",
 			ReplyURI:      "sink2",
 		}},
@@ -81,18 +81,30 @@ func (c *Channelable) Populate() {
 		AddressStatus: v1alpha1.AddressStatus{
 			Address: &v1alpha1.Addressable{
 				// Populate ALL fields
-				Hostname: "this is not empty",
+				Addressable: duckv1beta1.Addressable{
+					URL: &apis.URL{
+						Scheme: "http",
+						Host:   "test-domain",
+					},
+				},
+				Hostname: "test-domain",
 			},
 		},
-		Subscribers: []Subscriber{{
-			UID:     "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-			Ready:   "True",
-			Message: "ready",
-		}, {
-			UID:     "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-			Ready:   "False",
-			Message: "not ready",
-		}},
+		SubscribableTypeStatus: SubscribableTypeStatus{
+			SubscribableStatus: &SubscribableStatus{
+				Subscribers: []SubscriberStatus{{
+					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 1,
+					Ready:              corev1.ConditionTrue,
+					Message:            "Some message",
+				}, {
+					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 2,
+					Ready:              corev1.ConditionFalse,
+					Message:            "Some message",
+				}},
+			},
+		},
 	}
 }
 

@@ -485,7 +485,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
 			},
-			WantErrMsg: "empty reference UID: {nil  http://foo/ }",
+			WantErrMsg: "empty reference UID: {nil  0 http://foo/ }",
 			WantEvent: []corev1.Event{
 				events[gcpResourcesPlanFailed],
 			},

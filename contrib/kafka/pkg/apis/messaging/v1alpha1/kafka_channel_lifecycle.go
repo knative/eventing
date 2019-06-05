@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/apis/duck/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -75,7 +76,11 @@ func (cs *KafkaChannelStatus) InitializeConditions() {
 	kc.Manage(cs).InitializeConditions()
 }
 
+// SetAddress sets the address (as part of Addressable contract) and marks the correct condition.
 func (cs *KafkaChannelStatus) SetAddress(url *apis.URL) {
+	if cs.Address == nil {
+		cs.Address = &v1alpha1.Addressable{}
+	}
 	if url != nil {
 		cs.Address.Hostname = url.Host
 		cs.Address.URL = url

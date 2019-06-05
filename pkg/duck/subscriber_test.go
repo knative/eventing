@@ -60,7 +60,7 @@ func TestDomainToURL(t *testing.T) {
 }
 
 func TestResourceInterface_BadDynamicInterface(t *testing.T) {
-	actual, err := ResourceInterface(&badDynamicInterface{}, testNS, &corev1.ObjectReference{})
+	actual, err := ResourceInterface(&badDynamicInterface{}, testNS, schema.GroupVersionKind{})
 	if err.Error() != "failed to create dynamic client resource" {
 		t.Fatalf("Unexpected error '%v'", err)
 	}

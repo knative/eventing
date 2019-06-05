@@ -102,6 +102,8 @@ type ChannelStatus struct {
 	// Internal is status unique to each ClusterChannelProvisioner.
 	// +optional
 	Internal *runtime.RawExtension `json:"internal,omitempty"`
+
+	eventingduck.SubscribableTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

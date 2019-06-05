@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler/names"
@@ -46,8 +48,8 @@ func DomainToURL(domain string) string {
 }
 
 // ResourceInterface creates a resource interface for the given ObjectReference.
-func ResourceInterface(dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (dynamic.ResourceInterface, error) {
-	rc := dynamicClient.Resource(duckapis.KindToResource(ref.GroupVersionKind()))
+func ResourceInterface(dynamicClient dynamic.Interface, namespace string, gvk schema.GroupVersionKind) (dynamic.ResourceInterface, error) {
+	rc := dynamicClient.Resource(duckapis.KindToResource(gvk))
 
 	if rc == nil {
 		return nil, fmt.Errorf("failed to create dynamic client resource")
@@ -57,7 +59,7 @@ func ResourceInterface(dynamicClient dynamic.Interface, namespace string, ref *c
 
 // ObjectReference resolves an object based on an ObjectReference.
 func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
-	resourceClient, err := ResourceInterface(dynamicClient, namespace, ref)
+	resourceClient, err := ResourceInterface(dynamicClient, namespace, ref.GroupVersionKind())
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return nil, err
