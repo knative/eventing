@@ -24,8 +24,6 @@ import (
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/injection"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
 	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
@@ -44,27 +42,6 @@ const (
 
 func init() {
 	injection.Default.RegisterController(NewController)
-}
-
-func init() {
-	injection.Default.RegisterClient(withClient)
-}
-
-// Key is used as the key for associating information
-// with a context.Context.
-type Key struct{}
-
-func withClient(ctx context.Context, cfg *rest.Config) context.Context {
-	return context.WithValue(ctx, Key{}, kubernetes.NewForConfigOrDie(cfg))
-}
-
-// Get extracts the Kubernetes client from the context.
-func Get(ctx context.Context) kubernetes.Interface {
-	untyped := ctx.Value(Key{})
-	if untyped == nil {
-		return nil
-	}
-	return untyped.(kubernetes.Interface)
 }
 
 // NewController initializes the controller and is called by the generated code
