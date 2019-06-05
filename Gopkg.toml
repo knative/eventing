@@ -8,6 +8,7 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
+  "github.com/knative/pkg/codegen/cmd/injection-gen",
   "github.com/knative/test-infra/scripts",
   "github.com/knative/test-infra/tools/dep-collector",
 ]
@@ -24,6 +25,11 @@ required = [
 
 [[prune.project]]
   name = "github.com/knative/test-infra"
+  non-go = false
+
+[[prune.project]]
+  name = "github.com/knative/pkg"
+  unused-packages = false
   non-go = false
 
 # TODO why is this overridden?
@@ -80,8 +86,8 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-05-30
-  revision = "67d95db07608ccc232772a7e6f4b182dd4707683"
+  # HEAD as of 2919-06-05
+  revision = "4d86f3ad6f48dffa0846c76711ca6c3697def63c"
 
 # TODO why is this overridden?
 [[override]]
