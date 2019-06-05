@@ -19,8 +19,8 @@ package main
 import (
 	"log"
 
+	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/channel"
-	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/dispatcher"
 	"github.com/knative/eventing/contrib/natss/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/tracing"
@@ -31,6 +31,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+const (
+	clientID = "knative-natss-dispatcher"
 )
 
 func main() {
@@ -58,7 +62,7 @@ func main() {
 	}
 
 	logger.Info("Dispatcher starting...")
-	d, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), logger)
+	d, err := dispatcher.NewDispatcher(util.GetDefaultNatssURL(), util.GetDefaultClusterID(), clientID, logger)
 	if err != nil {
 		logger.Fatal("Unable to create NATSS dispatcher.", zap.Error(err))
 	}

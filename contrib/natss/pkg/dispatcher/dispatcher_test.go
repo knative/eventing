@@ -46,6 +46,7 @@ const (
 	cNamespace = "test-namespace"
 	cName      = "test-channel"
 	cUID       = "test-uid"
+	clientID   = "test-clientID"
 )
 
 var (
@@ -80,7 +81,7 @@ func TestMain(m *testing.M) {
 	}
 	defer stopNatss(stanServer)
 	// Create and start Dispatcher.
-	s, err = NewDispatcher(natssTestURL, clusterID, testLogger)
+	s, err = NewDispatcher(natssTestURL, clusterID, clientID, testLogger)
 	if err != nil {
 		logger.Fatalf("Unable to create NATSS dispatcher: %v", err)
 	}

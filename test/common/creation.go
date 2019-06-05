@@ -29,7 +29,7 @@ var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// CreateChannelOrFail will create a Channel Resource in Eventing.
+// CreateChannelOrFail will create a Channel or fail the test if there is an error.
 func (client *Client) CreateChannelOrFail(name, provisonerName string) {
 	namespace := client.Namespace
 	channel := base.Channel(name, provisonerName)
@@ -50,7 +50,7 @@ func (client *Client) CreateChannelsOrFail(names []string, provisionerName strin
 	}
 }
 
-// CreateSubscriptionOrFail will create a Subscription.
+// CreateSubscriptionOrFail will create a Subscription or fail the test if there is an error.
 func (client *Client) CreateSubscriptionOrFail(
 	name,
 	channelName string,
@@ -79,7 +79,7 @@ func (client *Client) CreateSubscriptionsOrFail(
 	}
 }
 
-// CreateBrokerOrFail will create a Broker.
+// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
 func (client *Client) CreateBrokerOrFail(name, provisionerName string) {
 	namespace := client.Namespace
 	broker := base.Broker(name, provisionerName)
@@ -100,7 +100,7 @@ func (client *Client) CreateBrokersOrFail(names []string, provisionerName string
 	}
 }
 
-// CreateTriggerOrFail will create a Trigger.
+// CreateTriggerOrFail will create a Trigger or fail the test if there is an error.
 func (client *Client) CreateTriggerOrFail(name string, options ...func(*eventingv1alpha1.Trigger)) {
 	namespace := client.Namespace
 	trigger := base.Trigger(name, options...)
@@ -114,7 +114,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...func(*eventing
 	client.Cleaner.AddObj(trigger)
 }
 
-// CreateCronJobSourceOrFail will create a CronJobSource.
+// CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.
 func (client *Client) CreateCronJobSourceOrFail(
 	name,
 	schedule,
@@ -165,7 +165,7 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 	}
 }
 
-// CreatePodOrFail will create a Pod.
+// CreatePodOrFail will create a Pod or fail the test if there is an error.
 func (client *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *Client) error) {
 	// set namespace for the pod in case it's empty
 	namespace := client.Namespace
