@@ -138,6 +138,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 }
 
+// reconcileLegacy reconciles Provisioner based Brokers.
 func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) error {
 	b.Status.InitializeConditions()
 
@@ -223,6 +224,7 @@ func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) er
 	return nil
 }
 
+// reconcileCRD reconciles channel CRD based implementations.
 func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error {
 	b.Status.InitializeConditions()
 
