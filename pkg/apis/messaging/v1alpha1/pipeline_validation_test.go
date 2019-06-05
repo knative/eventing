@@ -165,42 +165,7 @@ func TestPipelineSpecValidation(t *testing.T) {
 			fe.Details = "only name, apiVersion and kind are supported fields"
 			return fe
 		}(),
-		/*
-			}, {
-				name: "missing filter.sourceAndType",
-				ts: &PipelineSpec{
-					Broker:     "test_broker",
-					Filter:     &PipelineFilter{},
-					Subscriber: validSubscriber,
-				},
-				want: func() *apis.FieldError {
-					fe := apis.ErrMissingField("filter.sourceAndType")
-					return fe
-				}(),
-			}, {
-				name: "missing subscriber",
-				ts: &PipelineSpec{
-					Broker: "test_broker",
-					Filter: validPipelineFilter,
-				},
-				want: func() *apis.FieldError {
-					fe := apis.ErrMissingField("subscriber")
-					return fe
-				}(),
-			}, {
-				name: "missing subscriber.ref.name",
-				ts: &PipelineSpec{
-					Broker:     "test_broker",
-					Filter:     validPipelineFilter,
-					Subscriber: invalidSubscriber,
-				},
-				want: func() *apis.FieldError {
-					fe := apis.ErrMissingField("subscriber.ref.name")
-					return fe
-				}(),
-		*/
-	},
-	}
+	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
