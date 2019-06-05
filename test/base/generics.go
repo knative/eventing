@@ -31,8 +31,18 @@ type MetaResource struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
+// MetaEventing returns a MetaResource that can represent a Knative Eventing resource.
+func MetaEventing(name, namespace, kind string) *MetaResource {
+	return Meta(name, namespace, kind, eventingAPIVersion)
+}
+
+// MetaSource returns a MetaResource that can represent a Knative Sources resource.
+func MetaSource(name, namespace, kind string) *MetaResource {
+	return Meta(name, namespace, kind, sourcesAPIVersion)
+}
+
 // Meta returns a MetaResource built from the given name, namespace and kind.
-func Meta(name, namespace, kind string) *MetaResource {
+func Meta(name, namespace, kind, apiVersion string) *MetaResource {
 	return &MetaResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -40,7 +50,7 @@ func Meta(name, namespace, kind string) *MetaResource {
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kind,
-			APIVersion: EventingAPIVersion,
+			APIVersion: apiVersion,
 		},
 	}
 }
