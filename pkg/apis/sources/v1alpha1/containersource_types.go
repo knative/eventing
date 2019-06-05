@@ -48,24 +48,36 @@ var (
 
 // ContainerSourceSpec defines the desired state of ContainerSource
 type ContainerSourceSpec struct {
-	// Image is the image to run inside of the container.
+	// Template describes the pods that will be created
+	// +optional
+	Template *corev1.PodTemplateSpec `json:"template,omitempty"`
+
+	// DeprecatedImage is the image to run inside of the container.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	// +kubebuilder:validation:MinLength=1
-	Image string `json:"image,omitempty"`
+	DeprecatedImage string `json:"image,omitempty"`
 
-	// Args are passed to the ContainerSpec as they are.
-	Args []string `json:"args,omitempty"`
+	// DeprecatedArgs are passed to the ContainerSpec as they are.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
+	DeprecatedArgs []string `json:"args,omitempty"`
 
-	// Env is the list of environment variables to set in the container.
+	// DeprecatedEnv is the list of environment variables to set in the container.
 	// Cannot be updated.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	Env []corev1.EnvVar `json:"env,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	DeprecatedEnv []corev1.EnvVar `json:"env,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
-	// ServiceAccountName is the name of the ServiceAccount to use to run this
+	// DeprecatedServiceAccountName is the name of the ServiceAccount to use to run this
 	// source.
+	// This field is to be deprecated. Use `Template` instead.
+	// When `Template` is set, this field is ignored.
 	// +optional
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	DeprecatedServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
 	// +optional
