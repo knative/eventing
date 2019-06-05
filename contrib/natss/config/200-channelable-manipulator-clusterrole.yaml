@@ -15,10 +15,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: natss-channelable
+  name: natss-channelable-manipulator
   labels:
     duck.knative.dev/channelable: "true"
-# Do not use this role directly. These rules will be added to the "channelable" role.
+# Do not use this role directly. These rules will be added to the "channelable-manipulator" role.
 rules:
   - apiGroups:
       - messaging.knative.dev
