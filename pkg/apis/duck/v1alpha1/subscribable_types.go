@@ -109,7 +109,7 @@ type SubscribableTypeSpec struct {
 
 // SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
 type SubscribableTypeStatus struct {
-	SubscribableStatus *SubscribableStatus `json:"subscribable,omitempty"`
+	SubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
 }
 
 var (

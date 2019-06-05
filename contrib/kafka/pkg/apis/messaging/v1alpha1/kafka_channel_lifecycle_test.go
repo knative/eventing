@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis"
 	"testing"
+
+	"github.com/knative/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -375,20 +376,22 @@ func TestKafkaChannelStatus_SetAddressable(t *testing.T) {
 						},
 					},
 				},
+				AddressStatus: duckv1alpha1.AddressStatus{Address: &duckv1alpha1.Addressable{}},
 			},
 		},
 		"has domain": {
 			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &KafkaChannelStatus{
-				Address: duckv1alpha1.Addressable{
-					Addressable: duckv1beta1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
+				AddressStatus: duckv1alpha1.AddressStatus{
+					Address: &duckv1alpha1.Addressable{
+						Addressable: duckv1beta1.Addressable{
+							URL: &apis.URL{
+								Scheme: "http",
+								Host:   "test-domain",
+							},
 						},
-					},
-					Hostname: "test-domain",
-				},
+						Hostname: "test-domain",
+					}},
 				Status: duckv1beta1.Status{
 					Conditions: []apis.Condition{
 						{

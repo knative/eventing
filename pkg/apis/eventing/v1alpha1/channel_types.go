@@ -103,7 +103,7 @@ type ChannelStatus struct {
 	// +optional
 	Internal *runtime.RawExtension `json:"internal,omitempty"`
 
-	SubscribableStatus *eventingduck.SubscribableStatus `json:"subscribablestatus,omitempty"`
+	eventingduck.SubscribableTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
