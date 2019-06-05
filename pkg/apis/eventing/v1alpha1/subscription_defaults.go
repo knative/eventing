@@ -18,33 +18,11 @@ package v1alpha1
 
 import (
 	"context"
-
-	"github.com/knative/eventing/pkg/apis/eventing"
-	"github.com/knative/pkg/apis"
-	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 func (s *Subscription) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
-
-	if ui := apis.GetUserInfo(ctx); ui != nil {
-		ans := s.GetAnnotations()
-		if ans == nil {
-			ans = map[string]string{}
-			defer s.SetAnnotations(ans)
-		}
-
-		if apis.IsInUpdate(ctx) {
-			old := apis.GetBaseline(ctx).(*Subscription)
-			if equality.Semantic.DeepEqual(old.Spec, s.Spec) {
-				return
-			}
-			ans[eventing.UpdaterAnnotation] = ui.Username
-		} else {
-			ans[eventing.CreatorAnnotation] = ui.Username
-			ans[eventing.UpdaterAnnotation] = ui.Username
-		}
-	}
+	setUserInfoAnnotations(s, ctx)
 }
 
 func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {

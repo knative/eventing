@@ -22,8 +22,6 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/reconciler"
 	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
@@ -40,8 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 )
@@ -66,45 +62,6 @@ func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-}
-
-func TestNewController(t *testing.T) {
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-
-	// Create informer factories with fake clients. The second parameter sets the
-	// resync period to zero, disabling it.
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClient, 0)
-
-	// Eventing
-	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
-	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
-	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
-	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
-
-	// Kube
-	serviceInformer := kubeInformerFactory.Core().V1().Services()
-
-	// Duck
-	addressableInformer := &fakeAddressableInformer{}
-
-	c := NewController(
-		reconciler.Options{
-			KubeClientSet:     kubeClient,
-			EventingClientSet: eventingClient,
-			Logger:            logtesting.TestLogger(t),
-		},
-		triggerInformer,
-		channelInformer,
-		subscriptionInformer,
-		brokerInformer,
-		serviceInformer,
-		addressableInformer)
-
-	if c == nil {
-		t.Fatalf("Failed to create with NewController")
-	}
 }
 
 type fakeAddressableInformer struct{}
