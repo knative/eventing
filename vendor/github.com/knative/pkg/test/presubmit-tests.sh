@@ -18,6 +18,10 @@
 # It is started by prow for each PR.
 # For convenience, it can also be executed manually.
 
+# Markdown linting failures don't show up properly in Gubernator resulting
+# in a net-negative contributor experience.
+export DISABLE_MD_LINTING=1
+
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/presubmit-tests.sh
 
 # TODO(#17): Write integration tests.
