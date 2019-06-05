@@ -26,7 +26,7 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"

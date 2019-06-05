@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package inmemorychannel
+package controller
 
 import (
 	"fmt"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
@@ -335,7 +336,7 @@ func makeChannelService(imc *v1alpha1.InMemoryChannel) *corev1.Service {
 			Namespace: testNS,
 			Name:      fmt.Sprintf("%s-kn-channel", imcName),
 			Labels: map[string]string{
-				"eventing.knative.dev/role": "in-memory-channel",
+				resources.MessagingRoleLabel: resources.MessagingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(imc),
@@ -358,7 +359,7 @@ func makeChannelServiceNotOwnedByUs(imc *v1alpha1.InMemoryChannel) *corev1.Servi
 			Namespace: testNS,
 			Name:      fmt.Sprintf("%s-kn-channel", imcName),
 			Labels: map[string]string{
-				"eventing.knative.dev/role": "in-memory-channel",
+				resources.MessagingRoleLabel: resources.MessagingRole,
 			},
 		},
 		Spec: corev1.ServiceSpec{

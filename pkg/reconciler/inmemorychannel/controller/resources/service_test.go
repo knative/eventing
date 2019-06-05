@@ -64,7 +64,7 @@ func TestNewK8sService(t *testing.T) {
 			Name:      fmt.Sprintf("%s-kn-channel", imcName),
 			Namespace: testNS,
 			Labels: map[string]string{
-				EventingRoleLabel: EventingRole,
+				MessagingRoleLabel: MessagingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(imc),
@@ -107,7 +107,7 @@ func TestNewK8sServiceWithExternal(t *testing.T) {
 			Name:      fmt.Sprintf("%s-kn-channel", imcName),
 			Namespace: testNS,
 			Labels: map[string]string{
-				EventingRoleLabel: EventingRole,
+				MessagingRoleLabel: MessagingRole,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(imc),
