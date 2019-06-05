@@ -19,11 +19,14 @@ package tracing
 import (
 	"fmt"
 
+	eventingconfigmap "github.com/knative/eventing/pkg/configmap"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/tracing"
 	tracingconfig "github.com/knative/pkg/tracing/config"
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TODO Move this to knative/pkg.
@@ -44,6 +47,18 @@ var (
 		Debug:          false,
 		SampleRate:     0,
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	}
+
+	enableZeroSamplingCM = corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: tracingconfig.ConfigName,
+		},
+		Data: map[string]string{
+			"enable":          "True",
+			"debug":           "False",
+			"sample-rate":     "0",
+			"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+		},
 	}
 )
 
@@ -82,7 +97,7 @@ func SetupStaticZipkinPublishing(serviceName string, cfg *tracingconfig.Config) 
 // just ensures that if generated, they are collected appropriately. This is normally done by using
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
-func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher configmap.Watcher, serviceName string) error {
+func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher configmap.DefaultingWatcher, serviceName string) error {
 	oct, err := setupZipkinPublishing(serviceName)
 	if err != nil {
 		return err
@@ -101,11 +116,14 @@ func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher co
 	}
 
 	// Set up our config store.
-	configStore := configmap.NewUntypedStore(
+	configStore := eventingconfigmap.NewDefaultUntypedStore(
 		"tracing-config",
 		logger,
-		configmap.Constructors{
-			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
+		[]eventingconfigmap.DefaultConstructor{
+			{
+				Default:     enableZeroSamplingCM,
+				Constructor: tracingconfig.NewTracingConfigFromConfigMap,
+			},
 		},
 		tracerUpdater)
 	configStore.WatchConfigs(configMapWatcher)

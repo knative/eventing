@@ -20,6 +20,7 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,10 +61,10 @@ type InMemoryChannelSpec struct {
 
 // ChannelStatus represents the current state of a Channel.
 type InMemoryChannelStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
+	// inherits duck/v1beta1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1alpha1.Status `json:",inline"`
+	duckv1beta1.Status `json:",inline"`
 
 	// InMemoryChannel is Addressable. It currently exposes the endpoint as a
 	// fully-qualified DNS name which will distribute traffic over the

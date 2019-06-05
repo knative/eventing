@@ -204,24 +204,10 @@ func CronJobSource(
 	return cronJobSource
 }
 
-// WithArgsForContainerSource returns an option that adds args for the given ContainerSource.
-func WithArgsForContainerSource(args []string) func(*sourcesv1alpha1.ContainerSource) {
+// WithTemplateForContainerSource returns an option that adds a template for the given ContainerSource.
+func WithTemplateForContainerSource(template *corev1.PodTemplateSpec) func(*sourcesv1alpha1.ContainerSource) {
 	return func(cs *sourcesv1alpha1.ContainerSource) {
-		cs.Spec.Args = args
-	}
-}
-
-// WithEnvVarsForContainerSource returns an option that adds environment vars for the given ContainerSource.
-func WithEnvVarsForContainerSource(envVars []corev1.EnvVar) func(*sourcesv1alpha1.ContainerSource) {
-	return func(cs *sourcesv1alpha1.ContainerSource) {
-		cs.Spec.Env = envVars
-	}
-}
-
-// WithServiceAccountForContainerSource returns an option that adds a ServiceAccount for the given ContainerSource.
-func WithServiceAccountForContainerSource(saName string) func(*sourcesv1alpha1.ContainerSource) {
-	return func(cs *sourcesv1alpha1.ContainerSource) {
-		cs.Spec.ServiceAccountName = saName
+		cs.Spec.Template = template
 	}
 }
 
@@ -234,22 +220,55 @@ func WithSinkServiceForContainerSource(name string) func(*sourcesv1alpha1.Contai
 
 // ContainerSource returns a Container EventSource.
 func ContainerSource(
-	name,
-	imageName string,
+	name string,
 	options ...func(*sourcesv1alpha1.ContainerSource),
 ) *sourcesv1alpha1.ContainerSource {
 	containerSource := &sourcesv1alpha1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: sourcesv1alpha1.ContainerSourceSpec{
-			Image: pkgTest.ImagePath(imageName),
-		},
 	}
 	for _, option := range options {
 		option(containerSource)
 	}
 	return containerSource
+}
+
+// ContainerSourceBasicTemplate returns a basic template that can be used in ContainerSource.
+func ContainerSourceBasicTemplate(
+	name,
+	namespace,
+	imageName string,
+	args []string,
+) *corev1.PodTemplateSpec {
+	envVars := []corev1.EnvVar{
+		corev1.EnvVar{
+			Name:  "POD_NAME",
+			Value: name,
+		},
+		corev1.EnvVar{
+			Name:  "POD_NAMESPACE",
+			Value: namespace,
+		},
+	}
+
+	podTemplateSpec := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:            imageName,
+					Image:           pkgTest.ImagePath(imageName),
+					ImagePullPolicy: corev1.PullAlways,
+					Args:            args,
+					Env:             envVars,
+				},
+			},
+		},
+	}
+	return podTemplateSpec
 }
 
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent

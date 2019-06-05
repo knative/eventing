@@ -27,6 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/pkg/apis"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -73,7 +74,7 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
 							AsyncHandler: true,
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								makeSubscriber("sub1"),
 								makeSubscriber("sub2"),
 							},
@@ -84,7 +85,7 @@ func TestUpdateConfigWatchHandler(t *testing.T) {
 						HostName:  "i.j.k.l",
 						FanoutConfig: fanout.Config{
 							AsyncHandler: true,
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								makeSubscriber("sub3"),
 								makeSubscriber("sub4"),
 							},
@@ -173,17 +174,20 @@ func makeChannel(name string, namespace string, hostname string, subscribable *e
 	c.Status.InitializeConditions()
 	c.Status.MarkProvisioned()
 	c.Status.MarkProvisionerInstalled()
-	c.Status.SetAddress(hostname)
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   hostname,
+	})
 	return &c
 }
-func makeSubscribable(subsriberSpec ...eventingduck.ChannelSubscriberSpec) *eventingduck.Subscribable {
+func makeSubscribable(subsriberSpec ...eventingduck.SubscriberSpec) *eventingduck.Subscribable {
 	return &eventingduck.Subscribable{
 		Subscribers: subsriberSpec,
 	}
 }
 
-func makeSubscriber(name string) eventingduck.ChannelSubscriberSpec {
-	return eventingduck.ChannelSubscriberSpec{
+func makeSubscriber(name string) eventingduck.SubscriberSpec {
+	return eventingduck.SubscriberSpec{
 		SubscriberURI: name + "-suburi",
 		ReplyURI:      name + "-replyuri",
 	}

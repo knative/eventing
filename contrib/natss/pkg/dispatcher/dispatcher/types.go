@@ -28,7 +28,7 @@ type subscriptionReference struct {
 	ReplyURI      string
 }
 
-func newSubscriptionReference(spec eventingduck.ChannelSubscriberSpec) subscriptionReference {
+func newSubscriptionReference(spec eventingduck.SubscriberSpec) subscriptionReference {
 	return subscriptionReference{
 		UID:           string(spec.UID),
 		SubscriberURI: spec.SubscriberURI,

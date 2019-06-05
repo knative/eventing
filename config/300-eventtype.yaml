@@ -15,6 +15,8 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: eventtypes.eventing.knative.dev
+  labels:
+    knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
   version: v1alpha1
@@ -51,3 +53,25 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          required:
+            - type
+            - source
+            - broker
+          properties:
+            type:
+              type: string
+              minLength: 1
+            source:
+              type: string
+              minLength: 1
+            schema:
+              type: string
+            broker:
+              type: string
+              minLength: 1
+            description:
+              type: string

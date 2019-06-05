@@ -17,7 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/knative/pkg/kmeta"
@@ -30,16 +29,45 @@ import (
 const sourceLabelKey = "eventing.knative.dev/source"
 
 func MakeDeployment(args ContainerArguments) *appsv1.Deployment {
-
-	containerArgs := args.Args
-
-	// if sink is already in the provided args.Args, don't attempt to add
-	if !args.SinkInArgs {
-		remote := fmt.Sprintf("--sink=%s", args.Sink)
-		containerArgs = append(containerArgs, remote)
+	template := args.Template
+	if template == nil {
+		template = &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				ServiceAccountName: args.ServiceAccountName,
+				Containers: []corev1.Container{
+					{
+						Name:            "source",
+						Image:           args.Image,
+						Args:            args.Args,
+						Env:             args.Env,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+					},
+				},
+			},
+		}
 	}
 
-	env := append(args.Env, corev1.EnvVar{Name: "SINK", Value: sinkArg(args)})
+	if template.ObjectMeta.Labels == nil {
+		template.ObjectMeta.Labels = make(map[string]string)
+	}
+	template.ObjectMeta.Labels[sourceLabelKey] = args.Name
+
+	containers := []corev1.Container{}
+	for _, c := range template.Spec.Containers {
+		sink, hasSinkArg := sinkArg(c.Args)
+		if sink == "" {
+			sink = args.Sink
+		}
+
+		// if sink is already in the provided, don't attempt to add
+		if !hasSinkArg {
+			c.Args = append(c.Args, "--sink="+sink)
+		}
+
+		c.Env = append(c.Env, corev1.EnvVar{Name: "SINK", Value: sink})
+		containers = append(containers, c)
+	}
+	template.Spec.Containers = containers
 
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -59,25 +87,7 @@ func MakeDeployment(args ContainerArguments) *appsv1.Deployment {
 					sourceLabelKey: args.Name,
 				},
 			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						sourceLabelKey: args.Name,
-					},
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: args.ServiceAccountName,
-					Containers: []corev1.Container{
-						{
-							Name:            "source",
-							Image:           args.Image,
-							Args:            containerArgs,
-							Env:             env,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-						},
-					},
-				},
-			},
+			Template: *template,
 		},
 	}
 
@@ -105,13 +115,12 @@ func MakeDeployment(args ContainerArguments) *appsv1.Deployment {
 	return deploy
 }
 
-func sinkArg(args ContainerArguments) string {
-	if args.SinkInArgs {
-		for _, a := range args.Args {
-			if strings.HasPrefix(a, "--sink=") {
-				return strings.Replace(a, "--sink=", "", -1)
-			}
+func sinkArg(args []string) (string, bool) {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "--sink=") {
+			return strings.Replace(arg, "--sink=", "", -1), true
 		}
 	}
-	return args.Sink
+
+	return "", false
 }

@@ -35,7 +35,7 @@ func TestImMemoryChannelValidation(t *testing.T) {
 		cr: &InMemoryChannel{
 			Spec: InMemoryChannelSpec{
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{{
+					Subscribers: []eventingduck.SubscriberSpec{{
 						SubscriberURI: "subscriberendpoint",
 						ReplyURI:      "resultendpoint",
 					}},
@@ -47,7 +47,7 @@ func TestImMemoryChannelValidation(t *testing.T) {
 		cr: &InMemoryChannel{
 			Spec: InMemoryChannelSpec{
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{{
+					Subscribers: []eventingduck.SubscriberSpec{{
 						SubscriberURI: "subscriberendpoint",
 						ReplyURI:      "replyendpoint",
 					}, {}},
@@ -63,7 +63,7 @@ func TestImMemoryChannelValidation(t *testing.T) {
 		cr: &InMemoryChannel{
 			Spec: InMemoryChannelSpec{
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{{}, {}},
+					Subscribers: []eventingduck.SubscriberSpec{{}, {}},
 				},
 			},
 		},

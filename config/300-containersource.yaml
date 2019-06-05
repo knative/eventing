@@ -56,6 +56,8 @@ spec:
               type: string
             serviceAccountName:
               type: string
+            template:
+              type: object
             sink:
               type: object
           type: object

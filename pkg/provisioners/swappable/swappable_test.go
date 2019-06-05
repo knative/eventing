@@ -45,7 +45,7 @@ func TestHandler(t *testing.T) {
 						{
 							HostName: hostName,
 							FanoutConfig: fanout.Config{
-								Subscriptions: []eventingduck.ChannelSubscriberSpec{
+								Subscriptions: []eventingduck.SubscriberSpec{
 									{
 										SubscriberURI: replaceDomain,
 									},
@@ -59,7 +59,7 @@ func TestHandler(t *testing.T) {
 						{
 							HostName: hostName,
 							FanoutConfig: fanout.Config{
-								Subscriptions: []eventingduck.ChannelSubscriberSpec{
+								Subscriptions: []eventingduck.SubscriberSpec{
 									{
 										ReplyURI: replaceDomain,
 									},
@@ -95,7 +95,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 					{
 						HostName: hostName,
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									SubscriberURI: replaceDomain,
 								},
