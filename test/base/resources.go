@@ -21,7 +21,8 @@ package base
 import (
 	"fmt"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -30,38 +31,39 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-const EventingAPIVersion = "eventing.knative.dev/v1alpha1"
+const eventingAPIVersion = "eventing.knative.dev/v1alpha1"
+const sourcesAPIVersion = "sources.eventing.knative.dev/v1alpha1"
 
 // clusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 	if name == "" {
 		return nil
 	}
-	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", EventingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventingAPIVersion, name)
 }
 
 // channelRef returns an ObjectReference for a given Channel Name.
 func channelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference("Channel", EventingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference("Channel", eventingAPIVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner.
-func Channel(name, provisioner string) *v1alpha1.Channel {
-	return &v1alpha1.Channel{
+func Channel(name, provisioner string) *eventingv1alpha1.Channel {
+	return &eventingv1alpha1.Channel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1alpha1.ChannelSpec{
+		Spec: eventingv1alpha1.ChannelSpec{
 			Provisioner: clusterChannelProvisioner(provisioner),
 		},
 	}
 }
 
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
-func WithSubscriberForSubscription(name string) func(*v1alpha1.Subscription) {
-	return func(s *v1alpha1.Subscription) {
+func WithSubscriberForSubscription(name string) func(*eventingv1alpha1.Subscription) {
+	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+			s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
 				Ref: pkgTest.CoreV1ObjectReference("Service", "v1", name),
 			}
 		}
@@ -69,23 +71,27 @@ func WithSubscriberForSubscription(name string) func(*v1alpha1.Subscription) {
 }
 
 // WithReply returns an options that adds a ReplyStrategy for the given Subscription.
-func WithReply(name string) func(*v1alpha1.Subscription) {
-	return func(s *v1alpha1.Subscription) {
+func WithReply(name string) func(*eventingv1alpha1.Subscription) {
+	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Reply = &v1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference("Channel", EventingAPIVersion, name),
+			s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
+				Channel: pkgTest.CoreV1ObjectReference("Channel", eventingAPIVersion, name),
 			}
 		}
 	}
 }
 
 // Subscription returns a Subscription.
-func Subscription(name, channelName string, options ...func(*v1alpha1.Subscription)) *v1alpha1.Subscription {
-	subscription := &v1alpha1.Subscription{
+func Subscription(
+	name,
+	channelName string,
+	options ...func(*eventingv1alpha1.Subscription),
+) *eventingv1alpha1.Subscription {
+	subscription := &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1alpha1.SubscriptionSpec{
+		Spec: eventingv1alpha1.SubscriptionSpec{
 			Channel: *channelRef(channelName),
 		},
 	}
@@ -96,13 +102,13 @@ func Subscription(name, channelName string, options ...func(*v1alpha1.Subscripti
 }
 
 // Broker returns a Broker.
-func Broker(name, provisioner string) *v1alpha1.Broker {
-	return &v1alpha1.Broker{
+func Broker(name, provisioner string) *eventingv1alpha1.Broker {
+	return &eventingv1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1alpha1.BrokerSpec{
-			ChannelTemplate: &v1alpha1.ChannelSpec{
+		Spec: eventingv1alpha1.BrokerSpec{
+			ChannelTemplate: &eventingv1alpha1.ChannelSpec{
 				Provisioner: clusterChannelProvisioner(provisioner),
 			},
 		},
@@ -110,10 +116,10 @@ func Broker(name, provisioner string) *v1alpha1.Broker {
 }
 
 // WithTriggerFilter returns an option that adds a TriggerFilter for the given Trigger.
-func WithTriggerFilter(eventSource, eventType string) func(*v1alpha1.Trigger) {
-	return func(t *v1alpha1.Trigger) {
-		triggerFilter := &v1alpha1.TriggerFilter{
-			SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
+func WithTriggerFilter(eventSource, eventType string) func(*eventingv1alpha1.Trigger) {
+	return func(t *eventingv1alpha1.Trigger) {
+		triggerFilter := &eventingv1alpha1.TriggerFilter{
+			SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
 				Type:   eventType,
 				Source: eventSource,
 			},
@@ -123,17 +129,17 @@ func WithTriggerFilter(eventSource, eventType string) func(*v1alpha1.Trigger) {
 }
 
 // WithBroker returns an option that adds a Broker for the given Trigger.
-func WithBroker(brokerName string) func(*v1alpha1.Trigger) {
-	return func(t *v1alpha1.Trigger) {
+func WithBroker(brokerName string) func(*eventingv1alpha1.Trigger) {
+	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Broker = brokerName
 	}
 }
 
 // WithSubscriberRefForTrigger returns an option that adds a Subscriber Ref for the given Trigger.
-func WithSubscriberRefForTrigger(name string) func(*v1alpha1.Trigger) {
-	return func(t *v1alpha1.Trigger) {
+func WithSubscriberRefForTrigger(name string) func(*eventingv1alpha1.Trigger) {
+	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+			t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
 				Ref: pkgTest.CoreV1ObjectReference("Service", "v1", name),
 			}
 		}
@@ -141,17 +147,17 @@ func WithSubscriberRefForTrigger(name string) func(*v1alpha1.Trigger) {
 }
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
-func WithSubscriberURIForTrigger(uri string) func(*v1alpha1.Trigger) {
-	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+func WithSubscriberURIForTrigger(uri string) func(*eventingv1alpha1.Trigger) {
+	return func(t *eventingv1alpha1.Trigger) {
+		t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
 			URI: &uri,
 		}
 	}
 }
 
 // Trigger returns a Trigger.
-func Trigger(name string, options ...func(*v1alpha1.Trigger)) *v1alpha1.Trigger {
-	trigger := &v1alpha1.Trigger{
+func Trigger(name string, options ...func(*eventingv1alpha1.Trigger)) *eventingv1alpha1.Trigger {
+	trigger := &eventingv1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
@@ -160,6 +166,42 @@ func Trigger(name string, options ...func(*v1alpha1.Trigger)) *v1alpha1.Trigger 
 		option(trigger)
 	}
 	return trigger
+}
+
+// WithSinkServiceForCronJobSource returns an option that adds a Kubernetes Service sink for the given CronJobSource.
+func WithSinkServiceForCronJobSource(name string) func(*sourcesv1alpha1.CronJobSource) {
+	return func(cjs *sourcesv1alpha1.CronJobSource) {
+		cjs.Spec.Sink = pkgTest.CoreV1ObjectReference("Service", "v1", name)
+	}
+}
+
+// WithServiceAccountForCronJobSource returns an option that adds a ServiceAccount for the given CronJobSource.
+func WithServiceAccountForCronJobSource(saName string) func(*sourcesv1alpha1.CronJobSource) {
+	return func(cjs *sourcesv1alpha1.CronJobSource) {
+		cjs.Spec.ServiceAccountName = saName
+	}
+}
+
+// CronJobSource returns a CronJob EventSource.
+func CronJobSource(
+	name,
+	schedule,
+	data string,
+	options ...func(*sourcesv1alpha1.CronJobSource),
+) *sourcesv1alpha1.CronJobSource {
+	cronJobSource := &sourcesv1alpha1.CronJobSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: sourcesv1alpha1.CronJobSourceSpec{
+			Schedule: schedule,
+			Data:     data,
+		},
+	}
+	for _, option := range options {
+		option(cronJobSource)
+	}
+	return cronJobSource
 }
 
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent

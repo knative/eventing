@@ -53,7 +53,7 @@ func (client *Client) SendFakeEventToChannel(senderName, channelName string, eve
 // GetChannelURL will return the url for the given channel.
 func (client *Client) GetChannelURL(name string) (string, error) {
 	namespace := client.Namespace
-	channelMeta := base.Meta(name, namespace, "Channel")
+	channelMeta := base.MetaEventing(name, namespace, "Channel")
 	return base.GetAddressableURI(client.Dynamic, channelMeta)
 }
 
@@ -69,7 +69,7 @@ func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event
 // GetBrokerURL will return the url for the given broker.
 func (client *Client) GetBrokerURL(name string) (string, error) {
 	namespace := client.Namespace
-	brokerMeta := base.Meta(name, namespace, "Broker")
+	brokerMeta := base.MetaEventing(name, namespace, "Broker")
 	return base.GetAddressableURI(client.Dynamic, brokerMeta)
 }
 
@@ -92,7 +92,7 @@ func (client *Client) sendFakeEventToAddress(
 // WaitForBrokerReady waits until the broker is Ready.
 func (client *Client) WaitForBrokerReady(name string) error {
 	namespace := client.Namespace
-	brokerMeta := base.Meta(name, namespace, "Broker")
+	brokerMeta := base.MetaEventing(name, namespace, "Broker")
 	if err := base.WaitForResourceReady(client.Dynamic, brokerMeta); err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (client *Client) WaitForBrokersReady() error {
 // WaitForTriggerReady waits until the trigger is Ready.
 func (client *Client) WaitForTriggerReady(name string) error {
 	namespace := client.Namespace
-	triggerMeta := base.Meta(name, namespace, "Trigger")
+	triggerMeta := base.MetaEventing(name, namespace, "Trigger")
 	if err := base.WaitForResourceReady(client.Dynamic, triggerMeta); err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (client *Client) WaitForTriggersReady() error {
 // WaitForChannelReady waits until the channel is Ready.
 func (client *Client) WaitForChannelReady(name string) error {
 	namespace := client.Namespace
-	channelMeta := base.Meta(name, namespace, "Channel")
+	channelMeta := base.MetaEventing(name, namespace, "Channel")
 	if err := base.WaitForResourceReady(client.Dynamic, channelMeta); err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (client *Client) WaitForChannelsReady() error {
 // WaitForSubscriptionReady waits until the subscription is Ready.
 func (client *Client) WaitForSubscriptionReady(name string) error {
 	namespace := client.Namespace
-	subscriptionMeta := base.Meta(name, namespace, "Subscription")
+	subscriptionMeta := base.MetaEventing(name, namespace, "Subscription")
 	if err := base.WaitForResourceReady(client.Dynamic, subscriptionMeta); err != nil {
 		return err
 	}
@@ -189,6 +189,31 @@ func (client *Client) WaitForSubscriptionsReady() error {
 	return nil
 }
 
+// WaitForCronJobSourceReady waits until the cronjobsource is Ready.
+func (client *Client) WaitForCronJobSourceReady(name string) error {
+	namespace := client.Namespace
+	cronJobSourceMeta := base.MetaSource(name, namespace, "CronJobSource")
+	if err := base.WaitForResourceReady(client.Dynamic, cronJobSourceMeta); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WaitForCronJobSourcesReady waits until all cronjobsources in the namespace are Ready.
+func (client *Client) WaitForCronJobSourcesReady() error {
+	namespace := client.Namespace
+	cronJobSources, err := client.Eventing.SourcesV1alpha1().CronJobSources(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, cronJobSource := range cronJobSources.Items {
+		if err := client.WaitForCronJobSourceReady(cronJobSource.Name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
 // Currently the test resources include Pod, Channel, Subscription, Broker and Trigger.
 // If there are new resources, this function needs to be changed.
@@ -203,6 +228,9 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 		return err
 	}
 	if err := client.WaitForTriggersReady(); err != nil {
+		return err
+	}
+	if err := client.WaitForCronJobSourcesReady(); err != nil {
 		return err
 	}
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
