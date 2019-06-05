@@ -17,37 +17,36 @@ limitations under the License.
 package apiserversource
 
 import (
+	"context"
+	"github.com/knative/pkg/configmap"
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/logging"
 	logtesting "github.com/knative/pkg/logging/testing"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+
+	fakeeventingclient "github.com/knative/eventing/pkg/client/injection/client/fake"
+	fakedynamicclient "github.com/knative/pkg/injection/clients/dynamicclient/fake"
+	fakekubeclient "github.com/knative/pkg/injection/clients/kubeclient/fake"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
+	fakeapiserversource "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
 )
 
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
 
-	apiserverInformer := eventingInformer.Sources().V1alpha1().ApiServerSources()
-	deploymentInformer := kubeInformer.Apps().V1().Deployments()
-	eventTypeInformer := eventingInformer.Eventing().V1alpha1().EventTypes()
+	ctx := context.Background()
+	ctx = logging.WithLogger(ctx, logtesting.TestLogger(t))
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx, _ = fakeeventingclient.With(ctx)
+	ctx, _ = fakedynamicclient.With(ctx, runtime.NewScheme())
 
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	},
-		apiserverInformer,
-		deploymentInformer,
-		eventTypeInformer,
-		source,
-	)
+	fakeapiserversource.Get(ctx)
+
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

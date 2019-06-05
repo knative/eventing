@@ -16,37 +16,38 @@ limitations under the License.
 
 package containersource
 
-import (
-	"testing"
-
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
-	logtesting "github.com/knative/pkg/logging/testing"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
-)
-
-func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-
-	containerSourceInformer := eventingInformer.Sources().V1alpha1().ContainerSources()
-	deploymentInformer := kubeInformer.Apps().V1().Deployments()
-
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	},
-		containerSourceInformer,
-		deploymentInformer,
-	)
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
-}
+//
+//import (
+//	"testing"
+//
+//	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+//	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+//	"github.com/knative/eventing/pkg/reconciler"
+//	logtesting "github.com/knative/pkg/logging/testing"
+//	kubeinformers "k8s.io/client-go/informers"
+//	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+//)
+//
+//func TestNew(t *testing.T) {
+//	defer logtesting.ClearAll()
+//	kubeClient := fakekubeclientset.NewSimpleClientset()
+//	eventingClient := fakeclientset.NewSimpleClientset()
+//	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
+//	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
+//
+//	containerSourceInformer := eventingInformer.Sources().V1alpha1().ContainerSources()
+//	deploymentInformer := kubeInformer.Apps().V1().Deployments()
+//
+//	c := NewController(reconciler.Options{
+//		KubeClientSet:     kubeClient,
+//		EventingClientSet: eventingClient,
+//		Logger:            logtesting.TestLogger(t),
+//	},
+//		containerSourceInformer,
+//		deploymentInformer,
+//	)
+//
+//	if c == nil {
+//		t.Fatal("Expected NewController to return a non-nil value")
+//	}
+//}
