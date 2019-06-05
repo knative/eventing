@@ -47,12 +47,12 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 	for _, provisioner := range test.EventingFlags.Provisioners {
 		channelConfig := common.ValidProvisionersMap[provisioner]
 		if contains(channelConfig.Features, feature) {
-			t.Run(t.Name()+"-"+provisioner, func(st *testing.T) {
+			t.Run(fmt.Sprintf("%s-%s", t.Name(), provisioner), func(st *testing.T) {
 				testFunc(st, provisioner, false)
 			})
 
 			if channelConfig.CRDSupported {
-				t.Run(t.Name()+"-crd-"+provisioner, func(st *testing.T) {
+				t.Run(fmt.Sprintf("%s-crd-%s", t.Name(), provisioner), func(st *testing.T) {
 					testFunc(st, provisioner, true)
 				})
 			}
@@ -119,7 +119,7 @@ func contains(features []common.Feature, feature common.Feature) bool {
 func getChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
 	channelTypeMeta := common.ChannelTypeMeta
 	if isCRD {
-		channelTypeMeta = common.ProvisionerChannelMap[provisioner]
+		channelTypeMeta = common.OperatorChannelMap[provisioner]
 	}
 	return channelTypeMeta
 }

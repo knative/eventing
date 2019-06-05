@@ -47,7 +47,7 @@ type ChannelConfig struct {
 	CRDSupported bool
 }
 
-var ProvisionerChannelMap = map[string]*metav1.TypeMeta{
+var OperatorChannelMap = map[string]*metav1.TypeMeta{
 	base.KafkaProvisioner: KafkaChannelTypeMeta,
 }
 
