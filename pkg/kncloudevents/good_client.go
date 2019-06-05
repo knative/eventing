@@ -3,10 +3,14 @@ package kncloudevents
 import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/knative/pkg/tracing"
 )
 
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {
-	tOpts := []http.Option{cloudevents.WithBinaryEncoding()}
+	tOpts := []http.Option{
+		cloudevents.WithBinaryEncoding(),
+		http.WithMiddleware(tracing.HTTPSpanMiddleware),
+	}
 	if len(target) > 0 && target[0] != "" {
 		tOpts = append(tOpts, cloudevents.WithTarget(target[0]))
 	}
