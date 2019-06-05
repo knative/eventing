@@ -133,10 +133,11 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		Source:             source,
 		Name:               source.Name,
 		Namespace:          source.Namespace,
-		Image:              source.Spec.Image,
-		Args:               source.Spec.Args,
-		Env:                source.Spec.Env,
-		ServiceAccountName: source.Spec.ServiceAccountName,
+		Template:           source.Spec.Template,
+		Image:              source.Spec.DeprecatedImage,
+		Args:               source.Spec.DeprecatedArgs,
+		Env:                source.Spec.DeprecatedEnv,
+		ServiceAccountName: source.Spec.DeprecatedServiceAccountName,
 		Annotations:        annotations,
 		Labels:             labels,
 	}
@@ -199,7 +200,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 // an Event containing the error string.
 func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.ContainerSource, args *resources.ContainerArguments) error {
 	if uri, ok := sinkArg(source); ok {
-		args.SinkInArgs = true
 		source.Status.MarkSink(uri)
 		return nil
 	}
@@ -227,11 +227,22 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 }
 
 func sinkArg(source *v1alpha1.ContainerSource) (string, bool) {
-	for _, a := range source.Spec.Args {
+	args := []string{}
+
+	if source.Spec.Template != nil {
+		for _, c := range source.Spec.Template.Spec.Containers {
+			args = append(args, c.Args...)
+		}
+	}
+
+	args = append(args, source.Spec.DeprecatedArgs...)
+
+	for _, a := range args {
 		if strings.HasPrefix(a, "--sink=") {
 			return strings.Replace(a, "--sink=", "", -1), true
 		}
 	}
+
 	return "", false
 }
 

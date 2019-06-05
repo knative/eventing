@@ -46,7 +46,7 @@ readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 # NATS Streaming installation config.
 readonly NATSS_INSTALLATION_CONFIG="contrib/natss/config/broker/natss.yaml"
 # NATSS provisioner config.
-readonly NATSS_CONFIG="contrib/natss/config/provisioner.yaml"
+readonly NATSS_CONFIG="contrib/natss/config/provisioner/provisioner.yaml"
 
 # Strimzi installation config template used for starting up Kafka clusters.
 readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="test/config/100-strimzi-cluster-operator-0.11.3.yaml"

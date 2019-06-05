@@ -70,7 +70,7 @@ func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *meta
 	}
 }
 
-// CreateSubscriptionOrFail will create a Subscription.
+// CreateSubscriptionOrFail will create a Subscription or fail the test if there is an error.
 func (client *Client) CreateSubscriptionOrFail(
 	name, channelName string,
 	channelTypeMeta *metav1.TypeMeta,
@@ -100,7 +100,7 @@ func (client *Client) CreateSubscriptionsOrFail(
 	}
 }
 
-// CreateBrokerOrFail will create a Broker.
+// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
 func (client *Client) CreateBrokerOrFail(name, provisionerName string) {
 	namespace := client.Namespace
 	broker := base.Broker(name, provisionerName)
@@ -121,7 +121,7 @@ func (client *Client) CreateBrokersOrFail(names []string, provisionerName string
 	}
 }
 
-// CreateTriggerOrFail will create a Trigger.
+// CreateTriggerOrFail will create a Trigger or fail the test if there is an error.
 func (client *Client) CreateTriggerOrFail(name string, options ...base.TriggerOption) {
 	namespace := client.Namespace
 	trigger := base.Trigger(name, options...)
@@ -135,7 +135,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...base.TriggerOp
 	client.Cleaner.AddObj(trigger)
 }
 
-// CreateCronJobSourceOrFail will create a CronJobSource.
+// CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.
 func (client *Client) CreateCronJobSourceOrFail(
 	name,
 	schedule,
@@ -156,12 +156,11 @@ func (client *Client) CreateCronJobSourceOrFail(
 
 // CreateContainerSourceOrFail will create a ContainerSource.
 func (client *Client) CreateContainerSourceOrFail(
-	name,
-	imageName string,
+	name string,
 	options ...base.ContainerSourceOption,
 ) {
 	namespace := client.Namespace
-	containerSource := base.ContainerSource(name, imageName, options...)
+	containerSource := base.ContainerSource(name, options...)
 
 	containerSources := client.Eventing.SourcesV1alpha1().ContainerSources(namespace)
 	// update containerSource with the new reference
@@ -187,7 +186,7 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 	}
 }
 
-// CreatePodOrFail will create a Pod.
+// CreatePodOrFail will create a Pod or fail the test if there is an error.
 func (client *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.Pod, *Client) error) {
 	// set namespace for the pod in case it's empty
 	namespace := client.Namespace
