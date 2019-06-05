@@ -30,10 +30,10 @@ import (
 
 // Client holds instances of interfaces for making requests to Knative.
 type Client struct {
-	Kube         *test.KubeClient
-	Eventing     *eventing.Clientset
-	Dynamic      dynamic.Interface
-	KafkaChannel *kafkachannel.Clientset
+	Kube     *test.KubeClient
+	Eventing *eventing.Clientset
+	Dynamic  dynamic.Interface
+	Kafka    *kafkachannel.Clientset
 
 	Namespace string
 	T         *testing.T
@@ -63,7 +63,7 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
-	client.KafkaChannel, err = kafkachannel.NewForConfig(cfg)
+	client.Kafka, err = kafkachannel.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

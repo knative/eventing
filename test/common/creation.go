@@ -54,7 +54,7 @@ func (client *Client) createChannelCROrFail(name string, channelTypeMeta *metav1
 	namespace := client.Namespace
 	if channelTypeMeta.Kind == base.KafkaChannelKind {
 		channel := base.KafkaChannel(name)
-		channels := client.KafkaChannel.MessagingV1alpha1().KafkaChannels(namespace)
+		channels := client.Kafka.MessagingV1alpha1().KafkaChannels(namespace)
 		channel, err := channels.Create(channel)
 		if err != nil {
 			client.T.Fatalf("Failed to create channel CR %q: %v", name, err)
