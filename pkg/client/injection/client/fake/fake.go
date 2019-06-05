@@ -24,6 +24,7 @@ import (
 	fake "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	client "github.com/knative/eventing/pkg/client/injection/client"
 	injection "github.com/knative/pkg/injection"
+	logging "github.com/knative/pkg/logging"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 )
@@ -46,7 +47,8 @@ func With(ctx context.Context, objects ...runtime.Object) (context.Context, *fak
 func Get(ctx context.Context) *fake.Clientset {
 	untyped := ctx.Value(client.Key{})
 	if untyped == nil {
-		return nil
+		logging.FromContext(ctx).Fatalf(
+			"Unable to fetch %T from context.", (*fake.Clientset)(nil))
 	}
 	return untyped.(*fake.Clientset)
 }

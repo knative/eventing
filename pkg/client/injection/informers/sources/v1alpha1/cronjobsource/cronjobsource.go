@@ -25,6 +25,7 @@ import (
 	factory "github.com/knative/eventing/pkg/client/injection/informers/sources/factory"
 	controller "github.com/knative/pkg/controller"
 	injection "github.com/knative/pkg/injection"
+	logging "github.com/knative/pkg/logging"
 )
 
 func init() {
@@ -44,7 +45,8 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 func Get(ctx context.Context) v1alpha1.CronJobSourceInformer {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		return nil
+		logging.FromContext(ctx).Fatalf(
+			"Unable to fetch %T from context.", (v1alpha1.CronJobSourceInformer)(nil))
 	}
 	return untyped.(v1alpha1.CronJobSourceInformer)
 }

@@ -85,6 +85,10 @@ func (g *injectionGenerator) GenerateType(c *generator.Context, t *types.Type, w
 		"controllerInformer":        c.Universe.Type(types.Name{Package: "github.com/knative/pkg/controller", Name: "Informer"}),
 		"informersTypedInformer":    c.Universe.Type(types.Name{Package: g.typedInformerPackage, Name: t.Name.Name + "Informer"}),
 		"factoryGet":                c.Universe.Type(types.Name{Package: g.groupInformerFactoryPackage, Name: "Get"}),
+		"loggingFromContext": c.Universe.Function(types.Name{
+			Package: "github.com/knative/pkg/logging",
+			Name:    "FromContext",
+		}),
 	}
 
 	sw.Do(injectionInformer, m)
@@ -110,7 +114,8 @@ func withInformer(ctx context.Context) (context.Context, {{.controllerInformer|r
 func Get(ctx context.Context) {{.informersTypedInformer|raw}} {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		return nil
+		{{.loggingFromContext|raw}}(ctx).Fatalf(
+			"Unable to fetch %T from context.", ({{.informersTypedInformer|raw}})(nil))
 	}
 	return untyped.({{.informersTypedInformer|raw}})
 }

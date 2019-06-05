@@ -25,6 +25,7 @@ import (
 	factory "github.com/knative/pkg/client/injection/informers/istio/factory"
 	controller "github.com/knative/pkg/controller"
 	injection "github.com/knative/pkg/injection"
+	logging "github.com/knative/pkg/logging"
 )
 
 func init() {
@@ -44,7 +45,8 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 func Get(ctx context.Context) v1alpha3.VirtualServiceInformer {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		return nil
+		logging.FromContext(ctx).Fatalf(
+			"Unable to fetch %T from context.", (v1alpha3.VirtualServiceInformer)(nil))
 	}
 	return untyped.(v1alpha3.VirtualServiceInformer)
 }

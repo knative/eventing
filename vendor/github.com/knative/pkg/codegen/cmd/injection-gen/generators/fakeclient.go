@@ -70,6 +70,10 @@ func (g *fakeClientGenerator) GenerateType(c *generator.Context, t *types.Type, 
 			Package: "github.com/knative/pkg/injection",
 			Name:    "Fake.RegisterClient",
 		}),
+		"loggingFromContext": c.Universe.Function(types.Name{
+			Package: "github.com/knative/pkg/logging",
+			Name:    "FromContext",
+		}),
 	}
 
 	sw.Do(injectionFakeClient, m)
@@ -96,7 +100,8 @@ func With(ctx context.Context, objects ...runtime.Object) (context.Context, *{{.
 func Get(ctx context.Context) *{{.fakeClient|raw}} {
 	untyped := ctx.Value({{.clientKey|raw}}{})
 	if untyped == nil {
-		return nil
+		{{.loggingFromContext|raw}}(ctx).Fatalf(
+			"Unable to fetch %T from context.", (*{{.fakeClient|raw}})(nil))
 	}
 	return untyped.(*fake.Clientset)
 }

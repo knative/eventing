@@ -66,6 +66,10 @@ func (g *clientGenerator) GenerateType(c *generator.Context, t *types.Type, w io
 		"clientSetInterface":         c.Universe.Type(types.Name{Package: g.clientSetPackage, Name: "Interface"}),
 		"injectionRegisterClient":    c.Universe.Function(types.Name{Package: "github.com/knative/pkg/injection", Name: "Default.RegisterClient"}),
 		"restConfig":                 c.Universe.Type(types.Name{Package: "k8s.io/client-go/rest", Name: "Config"}),
+		"loggingFromContext": c.Universe.Function(types.Name{
+			Package: "github.com/knative/pkg/logging",
+			Name:    "FromContext",
+		}),
 	}
 
 	sw.Do(injectionClient, m)
@@ -89,7 +93,8 @@ func withClient(ctx context.Context, cfg *{{.restConfig|raw}}) context.Context {
 func Get(ctx context.Context) {{.clientSetInterface|raw}} {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		return nil
+		{{.loggingFromContext|raw}}(ctx).Fatalf(
+			"Unable to fetch %T from context.", ({{.clientSetInterface|raw}})(nil))
 	}
 	return untyped.({{.clientSetInterface|raw}})
 }

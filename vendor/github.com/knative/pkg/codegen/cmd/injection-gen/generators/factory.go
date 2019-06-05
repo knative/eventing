@@ -68,6 +68,10 @@ func (g *factoryGenerator) GenerateType(c *generator.Context, t *types.Type, w i
 		"informersSharedInformerFactory":    c.Universe.Function(types.Name{Package: g.sharedInformerFactoryPackage, Name: "SharedInformerFactory"}),
 		"injectionRegisterInformerFactory":  c.Universe.Type(types.Name{Package: "github.com/knative/pkg/injection", Name: "Default.RegisterInformerFactory"}),
 		"controllerGetResyncPeriod":         c.Universe.Type(types.Name{Package: "github.com/knative/pkg/controller", Name: "GetResyncPeriod"}),
+		"loggingFromContext": c.Universe.Function(types.Name{
+			Package: "github.com/knative/pkg/logging",
+			Name:    "FromContext",
+		}),
 	}
 
 	sw.Do(injectionFactory, m)
@@ -93,7 +97,8 @@ func withInformerFactory(ctx context.Context) context.Context {
 func Get(ctx context.Context) {{.informersSharedInformerFactory|raw}} {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		return nil
+		{{.loggingFromContext|raw}}(ctx).Fatalf(
+			"Unable to fetch %T from context.", ({{.informersSharedInformerFactory|raw}})(nil))
 	}
 	return untyped.({{.informersSharedInformerFactory|raw}})
 }

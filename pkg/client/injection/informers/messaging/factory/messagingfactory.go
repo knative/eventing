@@ -25,6 +25,7 @@ import (
 	client "github.com/knative/eventing/pkg/client/injection/client"
 	controller "github.com/knative/pkg/controller"
 	injection "github.com/knative/pkg/injection"
+	logging "github.com/knative/pkg/logging"
 )
 
 func init() {
@@ -44,7 +45,8 @@ func withInformerFactory(ctx context.Context) context.Context {
 func Get(ctx context.Context) externalversions.SharedInformerFactory {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		return nil
+		logging.FromContext(ctx).Fatalf(
+			"Unable to fetch %T from context.", (externalversions.SharedInformerFactory)(nil))
 	}
 	return untyped.(externalversions.SharedInformerFactory)
 }
