@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package inmemorychannel
+package controller
 
 import (
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
