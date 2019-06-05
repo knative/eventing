@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/apps/v1"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 )
 
@@ -91,6 +92,16 @@ func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *ChannelStatus) {
 	}
 }
 
+func (bs *BrokerStatus) PropagateTriggerChannelReadinessCRD(cs *duckv1alpha1.ChannelableStatus) {
+	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
+	address := cs.AddressStatus.Address
+	if address != nil {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
+	} else {
+		bs.MarkTriggerChannelFailed("ChannelNotReady", "trigger Channel is not ready: not addressalbe")
+	}
+}
+
 func (bs *BrokerStatus) MarkIngressChannelFailed(reason, format string, args ...interface{}) {
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, reason, format, args...)
 }
@@ -104,6 +115,16 @@ func (bs *BrokerStatus) PropagateIngressChannelReadiness(cs *ChannelStatus) {
 			msg = cc.Message
 		}
 		bs.MarkIngressChannelFailed("ChannelNotReady", "ingress Channel is not ready: %s", msg)
+	}
+}
+
+func (bs *BrokerStatus) PropagateIngressChannelReadinessCRD(cs *duckv1alpha1.ChannelableStatus) {
+	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
+	address := cs.AddressStatus.Address
+	if address != nil {
+		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressChannel)
+	} else {
+		bs.MarkIngressChannelFailed("ChannelNotReady", "ingress Channel is not ready: not addressable")
 	}
 }
 
