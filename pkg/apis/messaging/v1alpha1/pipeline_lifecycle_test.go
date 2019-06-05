@@ -345,8 +345,57 @@ func TestPipelineReady(t *testing.T) {
 			got := ps.IsReady()
 			want := test.want
 			if want != got {
-				//			if diff := cmp.Diff(test.want, test.ts, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
+			}
+		})
+	}
+}
+
+func TestPipelinePropagateSetAddress(t *testing.T) {
+	URL, _ := apis.ParseURL("http://example.com")
+	tests := []struct {
+		name       string
+		address    *pkgduckv1alpha1.Addressable
+		want       *pkgduckv1alpha1.Addressable
+		wantStatus corev1.ConditionStatus
+	}{{
+		name:       "nil",
+		address:    nil,
+		want:       &pkgduckv1alpha1.Addressable{},
+		wantStatus: corev1.ConditionFalse,
+	}, {
+		name:       "empty",
+		address:    &pkgduckv1alpha1.Addressable{},
+		want:       &pkgduckv1alpha1.Addressable{},
+		wantStatus: corev1.ConditionFalse,
+	}, {
+		name:       "URL",
+		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
+		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, "example.com"},
+		wantStatus: corev1.ConditionTrue,
+	}, {
+		name:       "hostname",
+		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, "myhostname"},
+		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, "myhostname"},
+		wantStatus: corev1.ConditionTrue,
+	}, {
+		name:       "nil",
+		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{nil}, ""},
+		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, ""},
+		wantStatus: corev1.ConditionFalse,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ps := PipelineStatus{}
+			ps.setAddress(test.address)
+			got := ps.Address
+			if diff := cmp.Diff(test.want, &got, ignoreAllButTypeAndStatus); diff != "" {
+				t.Errorf("unexpected address (-want, +got) = %v", diff)
+			}
+			gotStatus := ps.GetCondition(PipelineConditionAddressable).Status
+			if test.wantStatus != gotStatus {
+				t.Errorf("unexpected conditions (-want, +got) = %v %v", test.wantStatus, gotStatus)
 			}
 		})
 	}
