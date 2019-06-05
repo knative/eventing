@@ -45,7 +45,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	dispatcher              *inmemorychannel.InMemoryDispatcher
+	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 	impl                    *controller.Impl
@@ -58,7 +58,7 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	dispatcher *inmemorychannel.InMemoryDispatcher,
+	dispatcher inmemorychannel.Dispatcher,
 	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
 ) *controller.Impl {
 

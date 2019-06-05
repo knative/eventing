@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package tracing
 
-import (
-	"context"
-)
+import "fmt"
 
-func (s *Subscription) SetDefaults(ctx context.Context) {
-	s.Spec.SetDefaults(ctx)
-	setUserInfoAnnotations(s, ctx)
+// BrokerIngressNameArgs are the arguments needed to generate the BrokerIngressName.
+type BrokerIngressNameArgs struct {
+	Namespace  string
+	BrokerName string
 }
 
-func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
-	// TODO anything?
+// BrokerIngressName creates the service name for Broker Ingresses to use when writing Zipkin
+// traces.
+func BrokerIngressName(args BrokerIngressNameArgs) string {
+	return fmt.Sprintf("%s-broker-ingress.%s", args.BrokerName, args.Namespace)
 }

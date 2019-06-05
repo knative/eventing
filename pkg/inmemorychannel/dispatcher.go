@@ -27,6 +27,10 @@ import (
 	"go.uber.org/zap"
 )
 
+type Dispatcher interface {
+	UpdateConfig(config *multichannelfanout.Config) error
+}
+
 type InMemoryDispatcher struct {
 	handler *swappable.Handler
 	server  *http.Server
