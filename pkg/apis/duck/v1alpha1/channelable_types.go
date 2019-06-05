@@ -50,8 +50,6 @@ type ChannelableSpec struct {
 // ChannelableStatus contains the Status of a Channelable object.
 type ChannelableStatus struct {
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
-	// todo: Kafka and in-memory channels define this as Addressable rather than *Addressable as in AddressStatus inlined type.
-	// Need to be resolved.
 	v1alpha1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	SubscribableTypeStatus `json:",inline"`
