@@ -52,8 +52,8 @@ The NATSS Channel Controller is located in one Pod.
 kubectl get deployment -n knative-eventing natss-ch-controller
 ```
 
-The NATSS Channel Dispatcher receives and distributes all events. There is a single
-Dispatcher for all NATSS Channels.
+The NATSS Channel Dispatcher receives and distributes all events. There is a
+single Dispatcher for all NATSS Channels.
 
 ```shell
 kubectl get deployment -n knative-eventing natss-ch-dispatcher

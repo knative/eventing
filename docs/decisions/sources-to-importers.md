@@ -6,12 +6,12 @@ Decision date: 4 June 2019
 
 Rename Eventing's existing Source concept to avoid conflict with the subtly
 different CloudEvents concept of source. The name Importer was chosen to imply
-that events emitted from an Importer were imported from an external system
-and did not originate at the Importer.
+that events emitted from an Importer were imported from an external system and
+did not originate at the Importer.
 
 Some sources such as CronSource do not technically import events from outside
-the cluster, but may still reasonably be called Importers because they are
-not themselves the originator of the event. This may be revisited in the future.
+the cluster, but may still reasonably be called Importers because they are not
+themselves the originator of the event. This may be revisited in the future.
 
 ## Details
 
