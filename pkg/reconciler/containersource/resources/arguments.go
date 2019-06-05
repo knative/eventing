@@ -22,15 +22,18 @@ import (
 )
 
 type ContainerArguments struct {
-	Source             *v1alpha1.ContainerSource
-	Name               string
-	Namespace          string
+	Source      *v1alpha1.ContainerSource
+	Name        string
+	Namespace   string
+	Template    *corev1.PodTemplateSpec
+	Sink        string
+	Annotations map[string]string
+	Labels      map[string]string
+
+	// TODO(jingweno): The following fields are to be deprecated
+	// Use `Template` instead
 	Image              string
 	Args               []string
 	Env                []corev1.EnvVar
 	ServiceAccountName string
-	SinkInArgs         bool
-	Sink               string
-	Annotations        map[string]string
-	Labels             map[string]string
 }

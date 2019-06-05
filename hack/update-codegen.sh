@@ -37,7 +37,7 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
   "duck:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
-CONTRIB_DIRS=(contrib/kafka/pkg)
+CONTRIB_DIRS=(contrib/kafka/pkg contrib/natss/pkg)
 
 for DIR in "${CONTRIB_DIRS[@]}"; do
     # generate the code with:

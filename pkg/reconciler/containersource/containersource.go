@@ -30,12 +30,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
@@ -46,12 +44,6 @@ import (
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "ContainerSources"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "container-source-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	sourceReconciled         = "ContainerSourceReconciled"
 	sourceReadinessChanged   = "ContainerSourceReadinessChanged"
@@ -70,32 +62,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	containerSourceInformer sourceinformers.ContainerSourceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-) *controller.Impl {
-	r := &Reconciler{
-		Base:                  reconciler.NewBase(opt, controllerAgentName),
-		containerSourceLister: containerSourceInformer.Lister(),
-		deploymentLister:      deploymentInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
-
-	r.Logger.Info("Setting up event handlers")
-	containerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ContainerSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the CronJobSource
@@ -167,10 +133,11 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		Source:             source,
 		Name:               source.Name,
 		Namespace:          source.Namespace,
-		Image:              source.Spec.Image,
-		Args:               source.Spec.Args,
-		Env:                source.Spec.Env,
-		ServiceAccountName: source.Spec.ServiceAccountName,
+		Template:           source.Spec.Template,
+		Image:              source.Spec.DeprecatedImage,
+		Args:               source.Spec.DeprecatedArgs,
+		Env:                source.Spec.DeprecatedEnv,
+		ServiceAccountName: source.Spec.DeprecatedServiceAccountName,
 		Annotations:        annotations,
 		Labels:             labels,
 	}
@@ -233,7 +200,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 // an Event containing the error string.
 func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.ContainerSource, args *resources.ContainerArguments) error {
 	if uri, ok := sinkArg(source); ok {
-		args.SinkInArgs = true
 		source.Status.MarkSink(uri)
 		return nil
 	}
@@ -261,11 +227,22 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 }
 
 func sinkArg(source *v1alpha1.ContainerSource) (string, bool) {
-	for _, a := range source.Spec.Args {
+	args := []string{}
+
+	if source.Spec.Template != nil {
+		for _, c := range source.Spec.Template.Spec.Containers {
+			args = append(args, c.Args...)
+		}
+	}
+
+	args = append(args, source.Spec.DeprecatedArgs...)
+
+	for _, a := range args {
 		if strings.HasPrefix(a, "--sink=") {
 			return strings.Replace(a, "--sink=", "", -1), true
 		}
 	}
+
 	return "", false
 }
 
