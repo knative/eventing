@@ -19,10 +19,11 @@ package controller
 import (
 	"context"
 	"fmt"
-	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/apis"
 	"reflect"
 	"time"
+
+	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
