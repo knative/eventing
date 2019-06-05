@@ -470,7 +470,7 @@ func (r *Reconciler) listAllSubscriptionsWithPhysicalChannel(ctx context.Context
 func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduckv1alpha1.Subscribable {
 	rv := &eventingduckv1alpha1.Subscribable{}
 	for _, sub := range subs {
-		if sub.Status.AreReferencesResolved() {
+		if sub.Status.AreReferencesResolved() && sub.DeletionTimestamp == nil {
 			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					APIVersion: sub.APIVersion,

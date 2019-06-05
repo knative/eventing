@@ -171,58 +171,13 @@ func (d *KafkaDispatcher) UpdateConfig(config *multichannelfanout.Config) error 
 		return errors.New("nil config")
 	}
 
-	d.hostToChannelMapLock.Lock()
-	defer d.hostToChannelMapLock.Unlock()
-	d.consumerUpdateLock.Lock()
-	defer d.consumerUpdateLock.Unlock()
-
-	if diff := d.configDiff(config); diff != "" {
-		d.logger.Info("Updating config (-old +new)", zap.String("diff", diff))
-
-		// Create hostToChannelMap before updating kafkaConsumers.
-		// But update the map only after updating kafkaConsumers.
-		hcMap, err := createHostToChannelMap(config)
-		if err != nil {
-			return err
-		}
-
-		newSubs := make(map[subscription]bool)
-
-		// Subscribe to new subscriptions.
-		// TODO: Error returned by subscribe/unsubscribe must be handled.
-		// https://github.com/knative/eventing/issues/1072.
-		for _, cc := range config.ChannelConfigs {
-			channelRef := provisioners.ChannelReference{
-				Name:      cc.Name,
-				Namespace: cc.Namespace,
-			}
-			for _, subSpec := range cc.FanoutConfig.Subscriptions {
-				sub := newSubscription(subSpec)
-				if _, ok := d.kafkaConsumers[channelRef][sub]; !ok {
-					// only subscribe when not exists in channel-subscriptions map
-					// do not need to resubscribe every time channel fanout config is updated
-					d.subscribe(channelRef, sub)
-				}
-
-				newSubs[sub] = true
-			}
-		}
-
-		// Unsubscribe and close consumer for any deleted subscriptions
-		for channelRef, subMap := range d.kafkaConsumers {
-			for sub := range subMap {
-				if ok := newSubs[sub]; !ok {
-					d.unsubscribe(channelRef, sub)
-				}
-			}
-		}
-		// At this point all updates are done and hostToChannelMap is created successfully.
-		// Update the atomic value.
-		d.setHostToChannelMap(hcMap)
-
-		// Update the config so that it can be used for comparison during next sync
-		d.setConfig(config)
+	if _, err := d.UpdateKafkaConsumers(config); err != nil {
+		return err
 	}
+	if err := d.UpdateHostToChannelMap(config); err != nil {
+		return err
+	}
+
 	return nil
 }
 

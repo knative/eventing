@@ -417,9 +417,6 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			if diff := sets.NewString(tc.unsubscribes...).Difference(oldSubscribers); diff.Len() != 0 {
 				t.Errorf("subscriptions %+v were never subscribed", diff)
 			}
-			if diff := cmp.Diff(tc.oldConfig, d.getConfig()); diff != "" {
-				t.Errorf("unexpected config (-want, +got) = %v", diff)
-			}
 			if diff := cmp.Diff(tc.oldHostToChanMap, d.getHostToChannelMap()); diff != "" {
 				t.Errorf("unexpected hostToChannelMap (-want, +got) = %v", diff)
 			}
@@ -449,9 +446,6 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.newHostToChanMap, d.getHostToChannelMap()); diff != "" {
 				t.Errorf("unexpected hostToChannelMap (-want, +got) = %v", diff)
-			}
-			if diff := cmp.Diff(tc.newConfig, d.getConfig()); diff != "" {
-				t.Errorf("unexpected config (-want, +got) = %v", diff)
 			}
 
 		})
