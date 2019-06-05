@@ -27,8 +27,8 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 
-	"github.com/GoogleCloudPlatform/cloud-run-events/pkg/reconciler"
 	fakeclientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/fake"
+	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 
@@ -68,7 +68,7 @@ func MakeFactory(ctor Ctor) Factory {
 		c := ctor(&ls, reconciler.Options{
 			KubeClientSet:    kubeClient,
 			DynamicClientSet: dynamicClient,
-			RunClientSet:     client,
+			NatssClientSet:   client,
 			Recorder:         eventRecorder,
 			//StatsReporter:    statsReporter,
 			Logger: logtesting.TestLogger(t),

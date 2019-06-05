@@ -23,9 +23,11 @@ import (
 	fakeeventsclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	fakesharedclientset "github.com/knative/pkg/client/clientset/versioned/fake"
 	"github.com/knative/pkg/reconciler/testing"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -84,10 +86,18 @@ func (l *Listers) GetSharedObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakesharedclientset.AddToScheme)
 }
 
+func (l *Listers) GetServiceLister() corev1listers.ServiceLister {
+	return corev1listers.NewServiceLister(l.indexerFor(&corev1.Service{}))
+}
+
 func (l *Listers) GetEndpointsLister() corev1listers.EndpointsLister {
 	return corev1listers.NewEndpointsLister(l.indexerFor(&corev1.Endpoints{}))
 }
 
-func (l *Listers) GetInMemoryChannelLister() messaginglisters.NatssChannelLister {
+func (l *Listers) GetNatssChannelLister() messaginglisters.NatssChannelLister {
 	return messaginglisters.NewNatssChannelLister(l.indexerFor(&messagingv1alpha1.NatssChannel{}))
+}
+
+func (l *Listers) GetDeploymentLister() appsv1listers.DeploymentLister {
+	return appsv1listers.NewDeploymentLister(l.indexerFor(&appsv1.Deployment{}))
 }
