@@ -26,7 +26,7 @@ import (
 	"github.com/knative/pkg/apis"
 )
 
-func TestKafkaChannelValidation(t *testing.T) {
+func TestNatssChannelValidation(t *testing.T) {
 	testCases := map[string]struct {
 		cr   webhook.GenericCRD
 		want *apis.FieldError

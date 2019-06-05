@@ -60,7 +60,7 @@ const (
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 )
 
-// Reconciler reconciles Kafka Channels.
+// Reconciler reconciles NATSS Channels.
 type Reconciler struct {
 	*reconciler.Base
 
@@ -309,9 +309,9 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, channel *v1alp
 		}
 		return nil, err
 	}
-	// Check to make sure that the KafkaChannel owns this service and if not, complain.
+	// Check to make sure that the NatssChannel owns this service and if not, complain.
 	if !metav1.IsControlledBy(svc, channel) {
-		return nil, fmt.Errorf("kafkachannel: %s/%s does not own Service: %q", channel.Namespace, channel.Name, svc.Name)
+		return nil, fmt.Errorf("natsschannel: %s/%s does not own Service: %q", channel.Namespace, channel.Name, svc.Name)
 	}
 	return svc, nil
 }

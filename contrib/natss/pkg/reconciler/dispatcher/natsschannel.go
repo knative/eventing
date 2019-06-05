@@ -51,7 +51,7 @@ const (
 	finalizerName = controllerAgentName
 )
 
-// Reconciler reconciles Kafka Channels.
+// Reconciler reconciles NATSS Channels.
 type Reconciler struct {
 	*reconciler.Base
 
