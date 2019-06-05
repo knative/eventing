@@ -87,9 +87,7 @@ required = [
 [[override]]
   name = "github.com/knative/pkg"
   # HEAD as of 2919-06-05
-  # TODO(mattmoor): DO NOT SUBMIT
-  source = "github.com/mattmoor/pkg-1"
-  revision = "467c429f16bd13f1e43153fc7f70972306216903"
+  revision = "35bb0fc83b3d7a3a524e04e8327348e2009b058d"
 
 # TODO why is this overridden?
 [[override]]
