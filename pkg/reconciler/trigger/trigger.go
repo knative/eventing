@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
@@ -45,19 +44,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Triggers"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "trigger-controller"
-
 	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process.
@@ -88,52 +79,6 @@ var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
 // Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code.
-// Registers event handlers to enqueue events.
-func NewController(
-	opt reconciler.Options,
-	triggerInformer eventinginformers.TriggerInformer,
-	channelInformer eventinginformers.ChannelInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	brokerInformer eventinginformers.BrokerInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	addressableInformer duck.AddressableInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		triggerLister:       triggerInformer.Lister(),
-		channelLister:       channelInformer.Lister(),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		brokerLister:        brokerInformer.Lister(),
-		serviceLister:       serviceInformer.Lister(),
-		addressableInformer: addressableInformer,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Tracker is used to notify us that a Trigger's Broker has changed so that
-	// we can reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		// Call the tracker's OnChanged method, but we've seen the objects
-		// coming through this path missing TypeMeta, so ensure it is properly
-		// populated.
-		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
-		),
-	))
-
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Trigger resource

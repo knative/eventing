@@ -26,18 +26,26 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var (
 	// Headers that are added to the response, but we don't want to check in our assertions.
-	unimportantHeaders = map[string]struct{}{
-		"accept-encoding": {},
-		"content-length":  {},
-		"content-type":    {},
-		"user-agent":      {},
-	}
+	unimportantHeaders = sets.NewString(
+		"accept-encoding",
+		"content-length",
+		"content-type",
+		"user-agent",
+	)
+
+	// Headers that should be present, but their value should not be asserted.
+	ignoreValueHeaders = sets.NewString(
+		// These are headers added for tracing, they will have random values, so don't bother
+		// checking them.
+		"x-b3-spanid",
+		"x-b3-traceid",
+	)
 )
 
 func TestDispatchMessage(t *testing.T) {
@@ -69,6 +77,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "destination",
 			},
@@ -92,6 +103,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "destination",
 			},
@@ -120,6 +134,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "reply",
 			},
@@ -143,6 +160,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "reply",
 			},
@@ -172,6 +192,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "destination",
 			},
@@ -201,6 +224,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "destination",
 			},
@@ -235,6 +261,9 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":    {"knative-1-value"},
 					"knative-2":    {"knative-2-value"},
 					"ce-abc":       {"ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "destination",
 			},
@@ -253,6 +282,9 @@ func TestDispatchMessage(t *testing.T) {
 					"x-request-id": {"altered-id"},
 					"knative-1":    {"new-knative-1-value"},
 					"ce-abc":       {"new-ce-abc-value"},
+					"x-b3-sampled": {"0"},
+					"x-b3-spanid":  {"random-value"},
+					"x-b3-traceid": {"random-value"},
 				},
 				Body: "destination-response",
 			},
@@ -382,9 +414,14 @@ func canonicalizeHeaders(rvs ...requestValidation) {
 		headers := rv.Headers
 		for n, v := range headers {
 			delete(headers, n)
-			ln := strings.ToLower(n)
-			if _, present := unimportantHeaders[ln]; !present {
-				headers[ln] = v
+			n = strings.ToLower(n)
+			if unimportantHeaders.Has(n) {
+				continue
+			}
+			if ignoreValueHeaders.Has(n) {
+				headers[n] = []string{"ignored-value-header"}
+			} else {
+				headers[n] = v
 			}
 		}
 	}

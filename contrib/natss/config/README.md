@@ -22,25 +22,20 @@ They do not offer:
 ## Deployment steps
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. If not done already, install a [NATS Streaming](broker)
-1. Apply the 'natss' ClusterChannelProvisioner, Controller, and Dispatcher.
+1. If not done already, install a [NATS Streaming](./broker)
+1. Apply the NATSS configuration:
 
    ```shell
-   ko apply -f contrib/natss/config/provisioner.yaml
+   ko apply -f contrib/natss/config
    ```
 
-1. Create Channels that reference the 'natss'.
+1. Create NATSS channels:
 
    ```yaml
-   apiVersion: eventing.knative.dev/v1alpha1
-   kind: Channel
+   apiVersion: messaging.knative.dev/v1alpha1
+   kind: NatssChannel
    metadata:
      name: foo
-   spec:
-     provisioner:
-       apiVersion: eventing.knative.dev/v1alpha1
-       kind: ClusterChannelProvisioner
-       name: natss
    ```
 
 ## Components
@@ -48,29 +43,27 @@ They do not offer:
 The major components are:
 
 - NATS Streaming
-- ClusterChannelProvisioner Controller
-- Channel Controller
-- Channel Dispatcher
+- NATSS Channel Controller
+- NATSS Channel Dispatcher
 
-The ClusterChannelProvisioner Controller and the Channel Controller are
-colocated in one Pod.
+The NATSS Channel Controller is located in one Pod.
 
 ```shell
-kubectl get deployment -n knative-eventing natss-controller
+kubectl get deployment -n knative-eventing natss-ch-controller
 ```
 
-The Channel Dispatcher receives and distributes all events. There is a single
-Dispatcher for all natss Channels.
+The NATSS Channel Dispatcher receives and distributes all events. There is a single
+Dispatcher for all NATSS Channels.
 
 ```shell
-kubectl get deployment -n knative-eventing natss-dispatcher
+kubectl get deployment -n knative-eventing natss-ch-dispatcher
 ```
 
 By default the components are configured to connect to NATS at
 `nats://nats-streaming.natss.svc:4222` with NATS Streaming cluster ID
 `knative-nats-streaming`. This may be overridden by configuring both the
-`natss-channel-controller` and `natss-dispatcher` deployments with environment
-variables:
+`natss-ch-controller` and `natss-ch-dispatcher` deployments with the following
+environment variables:
 
 ```yaml
 env:
