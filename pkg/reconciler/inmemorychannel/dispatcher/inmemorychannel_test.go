@@ -17,10 +17,11 @@ limitations under the License.
 package controller
 
 import (
+	"testing"
+
 	"github.com/knative/eventing/pkg/inmemorychannel"
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"

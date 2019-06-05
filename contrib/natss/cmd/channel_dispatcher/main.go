@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/contrib/natss/pkg/util"
 	"log"
+
+	"github.com/knative/eventing/contrib/natss/pkg/util"
 
 	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/scheme"

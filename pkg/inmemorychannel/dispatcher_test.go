@@ -17,9 +17,10 @@ limitations under the License.
 package inmemorychannel
 
 import (
-	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"testing"
 	"time"
+
+	"github.com/knative/eventing/pkg/provisioners/swappable"
 
 	logtesting "github.com/knative/pkg/logging/testing"
 )
