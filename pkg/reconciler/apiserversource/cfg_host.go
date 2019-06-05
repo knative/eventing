@@ -37,7 +37,7 @@ func withCfgHost(ctx context.Context, cfg *rest.Config) context.Context {
 
 // GetCfgHost extracts the k8s rest config host from the context.
 func GetCfgHost(ctx context.Context) string {
-	untyped := ctx.Value(Key{})
+	untyped := ctx.Value(HostKey{})
 	if untyped == nil {
 		return "unknown"
 	}
