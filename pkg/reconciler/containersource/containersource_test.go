@@ -94,8 +94,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 				),
 			},
@@ -107,8 +107,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
@@ -120,8 +120,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &nonsinkRef,
+						DeprecatedImage: image,
+						Sink:            &nonsinkRef,
 					}),
 				),
 				NewTrigger(sinkName, testNS, ""),
@@ -134,8 +134,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &nonsinkRef,
+						DeprecatedImage: image,
+						Sink:            &nonsinkRef,
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
@@ -147,8 +147,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 				),
 				NewChannel(sinkName, testNS),
@@ -161,8 +161,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
@@ -174,7 +174,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 				),
 			},
@@ -186,7 +186,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
@@ -248,7 +248,7 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 0, nil, nil),
@@ -258,8 +258,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 				),
@@ -275,8 +275,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 					// Status Update:
@@ -288,7 +288,7 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 0, nil, nil),
@@ -321,7 +321,7 @@ func TestAllCases(t *testing.T) {
 				),
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 1, nil, nil),
@@ -360,8 +360,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 					WithInitContainerSourceConditions,
@@ -373,7 +373,7 @@ func TestAllCases(t *testing.T) {
 				),
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 1, nil, nil),
@@ -387,8 +387,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 					WithInitContainerSourceConditions,
@@ -456,7 +456,7 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 0, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
@@ -466,8 +466,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
@@ -485,8 +485,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
@@ -500,7 +500,7 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 0, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
@@ -510,8 +510,8 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 				),
@@ -530,8 +530,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
-						Sink:  &sinkRef,
+						DeprecatedImage: image,
+						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
 					// Status Update:
@@ -543,7 +543,7 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeDeployment(NewContainerSource(sourceName, testNS,
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
-						Image: image,
+						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
 				), 0, nil, nil),
@@ -604,8 +604,8 @@ func TestAllCases(t *testing.T) {
 }
 
 func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
-	args := append(source.Spec.Args, fmt.Sprintf("--sink=%s", sinkURI))
-	env := append(source.Spec.Env, corev1.EnvVar{Name: "SINK", Value: sinkURI})
+	args := append(source.Spec.DeprecatedArgs, fmt.Sprintf("--sink=%s", sinkURI))
+	env := append(source.Spec.DeprecatedEnv, corev1.EnvVar{Name: "SINK", Value: sinkURI})
 
 	labs := map[string]string{
 		"eventing.knative.dev/source": source.Name,
@@ -638,12 +638,12 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, lab
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name:            "source",
-						Image:           source.Spec.Image,
+						Image:           source.Spec.DeprecatedImage,
 						Args:            args,
 						Env:             env,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 					}},
-					ServiceAccountName: source.Spec.ServiceAccountName,
+					ServiceAccountName: source.Spec.DeprecatedServiceAccountName,
 				},
 			},
 		},

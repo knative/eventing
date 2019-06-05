@@ -134,10 +134,10 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		Name:               source.Name,
 		Namespace:          source.Namespace,
 		Template:           source.Spec.Template,
-		Image:              source.Spec.Image,
-		Args:               source.Spec.Args,
-		Env:                source.Spec.Env,
-		ServiceAccountName: source.Spec.ServiceAccountName,
+		Image:              source.Spec.DeprecatedImage,
+		Args:               source.Spec.DeprecatedArgs,
+		Env:                source.Spec.DeprecatedEnv,
+		ServiceAccountName: source.Spec.DeprecatedServiceAccountName,
 		Annotations:        annotations,
 		Labels:             labels,
 	}
@@ -235,7 +235,7 @@ func sinkArg(source *v1alpha1.ContainerSource) (string, bool) {
 		}
 	}
 
-	args = append(args, source.Spec.Args...)
+	args = append(args, source.Spec.DeprecatedArgs...)
 
 	for _, a := range args {
 		if strings.HasPrefix(a, "--sink=") {
