@@ -204,6 +204,73 @@ func CronJobSource(
 	return cronJobSource
 }
 
+// WithTemplateForContainerSource returns an option that adds a template for the given ContainerSource.
+func WithTemplateForContainerSource(template *corev1.PodTemplateSpec) func(*sourcesv1alpha1.ContainerSource) {
+	return func(cs *sourcesv1alpha1.ContainerSource) {
+		cs.Spec.Template = template
+	}
+}
+
+// WithSinkServiceForContainerSource returns an option that adds a Kubernetes Service sink for the given ContainerSource.
+func WithSinkServiceForContainerSource(name string) func(*sourcesv1alpha1.ContainerSource) {
+	return func(cs *sourcesv1alpha1.ContainerSource) {
+		cs.Spec.Sink = pkgTest.CoreV1ObjectReference("Service", "v1", name)
+	}
+}
+
+// ContainerSource returns a Container EventSource.
+func ContainerSource(
+	name string,
+	options ...func(*sourcesv1alpha1.ContainerSource),
+) *sourcesv1alpha1.ContainerSource {
+	containerSource := &sourcesv1alpha1.ContainerSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	for _, option := range options {
+		option(containerSource)
+	}
+	return containerSource
+}
+
+// ContainerSourceBasicTemplate returns a basic template that can be used in ContainerSource.
+func ContainerSourceBasicTemplate(
+	name,
+	namespace,
+	imageName string,
+	args []string,
+) *corev1.PodTemplateSpec {
+	envVars := []corev1.EnvVar{
+		corev1.EnvVar{
+			Name:  "POD_NAME",
+			Value: name,
+		},
+		corev1.EnvVar{
+			Name:  "POD_NAMESPACE",
+			Value: namespace,
+		},
+	}
+
+	podTemplateSpec := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:            imageName,
+					Image:           pkgTest.ImagePath(imageName),
+					ImagePullPolicy: corev1.PullAlways,
+					Args:            args,
+					Env:             envVars,
+				},
+			},
+		},
+	}
+	return podTemplateSpec
+}
+
 // CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
 // binary.
 type CloudEvent struct {

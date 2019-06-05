@@ -133,6 +133,23 @@ func (client *Client) CreateCronJobSourceOrFail(
 	client.Cleaner.AddObj(cronJobSource)
 }
 
+// CreateContainerSourceOrFail will create a ContainerSource.
+func (client *Client) CreateContainerSourceOrFail(
+	name string,
+	options ...func(*sourcesv1alpha1.ContainerSource),
+) {
+	namespace := client.Namespace
+	containerSource := base.ContainerSource(name, options...)
+
+	containerSources := client.Eventing.SourcesV1alpha1().ContainerSources(namespace)
+	// update containerSource with the new reference
+	containerSource, err := containerSources.Create(containerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create containersource %q: %v", name, err)
+	}
+	client.Cleaner.AddObj(containerSource)
+}
+
 // WithService returns an option that creates a Service binded with the given pod.
 func WithService(name string) func(*corev1.Pod, *Client) error {
 	return func(pod *corev1.Pod, client *Client) error {
