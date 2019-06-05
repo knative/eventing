@@ -19,7 +19,7 @@ package channel
 import (
 	"context"
 
-	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/dispatcher"
+	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
 	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"

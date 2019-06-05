@@ -26,15 +26,12 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
-	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,19 +40,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "ApiServerSources"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "apiserver-source-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	apiserversourceReconciled         = "ApiServerSourceReconciled"
 	apiServerSourceReadinessChanged   = "ApiServerSourceReadinessChanged"
@@ -89,41 +78,6 @@ type Reconciler struct {
 
 	source         string
 	sinkReconciler *duck.SinkReconciler
-}
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	apiserversourceInformer sourceinformers.ApiServerSourceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	eventTypeInformer eventinginformers.EventTypeInformer,
-	source string,
-) *controller.Impl {
-	r := &Reconciler{
-		Base:                  reconciler.NewBase(opt, controllerAgentName),
-		apiserversourceLister: apiserversourceInformer.Lister(),
-		deploymentLister:      deploymentInformer.Lister(),
-		source:                source,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
-
-	r.Logger.Info("Setting up event handlers")
-	apiserversourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
 }
 
 // Reconcile compares the actual state with the desired, and attempts to

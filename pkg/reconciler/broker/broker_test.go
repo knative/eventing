@@ -931,6 +931,14 @@ func envVars(containerName string) []corev1.EnvVar {
 	case ingressContainerName:
 		return []corev1.EnvVar{
 			{
+				Name: "NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
 				Name:  "FILTER",
 				Value: "",
 			},
