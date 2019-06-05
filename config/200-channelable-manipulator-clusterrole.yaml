@@ -12,22 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Use this aggregated ClusterRole when you need read and update permissions on "Channelables".
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: natss-channelable
-  labels:
-    duck.knative.dev/channelable: "true"
-# Do not use this role directly. These rules will be added to the "channelable" role.
-rules:
-  - apiGroups:
-      - messaging.knative.dev
-    resources:
-      - natsschannels
-      - natsschannels/status
-    verbs:
-      - get
-      - list
-      - watch
-      - update
-      - patch
+  name: channelable-manipulator
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      duck.knative.dev/channelable: "true"
+rules: [] # Rules are automatically filled in by the controller manager.
+

@@ -20,9 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/knative/pkg/apis"
 	"reflect"
 	"time"
+
+	"github.com/knative/pkg/apis"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/reconciler/names"

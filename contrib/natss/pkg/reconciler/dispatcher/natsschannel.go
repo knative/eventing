@@ -19,9 +19,10 @@ package controller
 import (
 	"context"
 	"encoding/json"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"

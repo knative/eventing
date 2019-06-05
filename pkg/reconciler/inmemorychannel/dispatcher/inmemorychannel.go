@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/knative/eventing/pkg/inmemorychannel"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
