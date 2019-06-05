@@ -172,7 +172,7 @@ func main() {
 		pipeline.NewController(
 			opt,
 			pipelineInformer,
-			channelInformer,
+			addressableInformer,
 			subscriptionInformer,
 		),
 	}

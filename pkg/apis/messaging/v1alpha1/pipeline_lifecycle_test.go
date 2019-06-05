@@ -65,6 +65,7 @@ func getSubscription(ready bool) *eventingv1alpha1.Subscription {
 }
 
 func getChannelable(ready bool) *duckv1alpha1.Channelable {
+	URL, _ := apis.ParseURL("http://example.com")
 	s := duckv1alpha1.Channelable{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
@@ -75,7 +76,7 @@ func getChannelable(ready bool) *duckv1alpha1.Channelable {
 	}
 
 	if ready {
-		s.Status.Address = &pkgduckv1alpha1.Addressable{}
+		s.Status.Address = &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""}
 	}
 
 	return &s
@@ -121,6 +122,9 @@ func TestPipelineInitializeConditions(t *testing.T) {
 		want: &PipelineStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
+					Type:   PipelineConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   PipelineConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -145,6 +149,9 @@ func TestPipelineInitializeConditions(t *testing.T) {
 		want: &PipelineStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
+					Type:   PipelineConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   PipelineConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
@@ -169,6 +176,9 @@ func TestPipelineInitializeConditions(t *testing.T) {
 		want: &PipelineStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
+					Type:   PipelineConditionAddressable,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   PipelineConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {

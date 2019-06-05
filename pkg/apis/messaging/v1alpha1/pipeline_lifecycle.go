@@ -20,10 +20,11 @@ import (
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/pkg/apis"
+	pkgduckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var pCondSet = apis.NewLivingConditionSet(PipelineConditionReady, PipelineConditionChannelsReady, PipelineConditionSubscriptionsReady)
+var pCondSet = apis.NewLivingConditionSet(PipelineConditionReady, PipelineConditionChannelsReady, PipelineConditionSubscriptionsReady, PipelineConditionAddressable)
 
 const (
 	// PipelineConditionReady has status True when all subconditions below have been set to True.
@@ -36,6 +37,10 @@ const (
 	// PipelineSubscriptionsReady has status True when all the subscriptions created as part of
 	// this pipeline are ready.
 	PipelineConditionSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
+
+	// PipelineConditionAddressable has status true when this Pipeline meets
+	// the Addressable contract and has a non-empty hostname.
+	PipelineConditionAddressable apis.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -86,7 +91,6 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 		pCondSet.Manage(ps).MarkTrue(PipelineConditionSubscriptionsReady)
 	} else {
 		ps.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
-		//		pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, "SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
 }
 
@@ -113,12 +117,15 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 		if address == nil {
 			allReady = false
 		}
+		// If the first channel is addressable, mark it as such
+		if i == 0 {
+			ps.setAddress(address)
+		}
 	}
 	if allReady {
 		pCondSet.Manage(ps).MarkTrue(PipelineConditionChannelsReady)
 	} else {
 		ps.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
-		//		pCondSet.Manage(ps).MarkFalse(PipelineConditionChannelsReady, "ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
 }
 
@@ -128,4 +135,31 @@ func (ps *PipelineStatus) MarkChannelsNotReady(reason, messageFormat string, mes
 
 func (ps *PipelineStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
 	pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, reason, messageFormat, messageA...)
+}
+
+func (ps *PipelineStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(PipelineConditionAddressable, reason, messageFormat, messageA...)
+}
+
+// TODO: Use the new beta duck types.
+func (ps *PipelineStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
+	if address == nil {
+		ps.Address.Hostname = ""
+		ps.Address.URL = nil
+		pCondSet.Manage(ps).MarkFalse(PipelineConditionAddressable, "emptyHostname", "hostname is the empty string")
+		return
+	}
+
+	if address.URL != nil {
+		ps.Address.Hostname = address.URL.Host
+		ps.Address.URL = address.URL
+		pCondSet.Manage(ps).MarkTrue(PipelineConditionAddressable)
+	} else if address.Hostname != "" {
+		ps.Address.Hostname = address.Hostname
+		pCondSet.Manage(ps).MarkTrue(PipelineConditionAddressable)
+	} else {
+		ps.Address.Hostname = ""
+		ps.Address.URL = nil
+		pCondSet.Manage(ps).MarkFalse(PipelineConditionAddressable, "emptyHostname", "hostname is the empty string")
+	}
 }

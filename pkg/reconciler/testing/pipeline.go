@@ -90,8 +90,14 @@ func WithPipelineChannelsNotReady(reason, message string) PipelineOption {
 	}
 }
 
-func WithPipelineSubscriptionssNotReady(reason, message string) PipelineOption {
+func WithPipelineSubscriptionsNotReady(reason, message string) PipelineOption {
 	return func(p *v1alpha1.Pipeline) {
 		p.Status.MarkSubscriptionsNotReady(reason, message)
+	}
+}
+
+func WithPipelineAddressableNotReady(reason, message string) PipelineOption {
+	return func(p *v1alpha1.Pipeline) {
+		p.Status.MarkAddressableNotReady(reason, message)
 	}
 }

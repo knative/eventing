@@ -31,6 +31,7 @@ import (
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
+	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -53,6 +54,12 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
+type fakeAddressableInformer struct{}
+
+func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
+	return func(corev1.ObjectReference) error { return nil }
+}
+
 func TestNewController(t *testing.T) {
 	kubeClient := fakekubeclientset.NewSimpleClientset()
 	eventingClient := fakeclientset.NewSimpleClientset()
@@ -65,7 +72,6 @@ func TestNewController(t *testing.T) {
 	pipelineInformer := eventingInformerFactory.Messaging().V1alpha1().Pipelines()
 
 	// Eventing
-	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 
 	c := NewController(
@@ -75,7 +81,7 @@ func TestNewController(t *testing.T) {
 			Logger:            logtesting.TestLogger(t),
 		},
 		pipelineInformer,
-		channelInformer,
+		&fakeAddressableInformer{},
 		subscriptionInformer)
 
 	if c == nil {
@@ -187,7 +193,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithPipelineChannelTemplateSpec(imc),
 					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
 					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
 						v1alpha1.PipelineChannelStatus{
 							Channel: corev1.ObjectReference{
@@ -233,8 +240,9 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithPipelineChannelTemplateSpec(imc),
 					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
 					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
 						v1alpha1.PipelineChannelStatus{
 							Channel: corev1.ObjectReference{
@@ -286,7 +294,8 @@ func TestAllCases(t *testing.T) {
 						createSubscriber(2),
 					}),
 					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
 						v1alpha1.PipelineChannelStatus{
 							Channel: corev1.ObjectReference{
@@ -377,7 +386,8 @@ func TestAllCases(t *testing.T) {
 						createSubscriber(2),
 					}),
 					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineSubscriptionssNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
 						v1alpha1.PipelineChannelStatus{
 							Channel: corev1.ObjectReference{
@@ -432,10 +442,10 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:               reconciler.NewBase(opt, controllerAgentName),
-			pipelineLister:     listers.GetPipelineLister(),
-			channelLister:      listers.GetChannelLister(),
-			subscriptionLister: listers.GetSubscriptionLister(),
+			Base:                reconciler.NewBase(opt, controllerAgentName),
+			pipelineLister:      listers.GetPipelineLister(),
+			addressableInformer: &fakeAddressableInformer{},
+			subscriptionLister:  listers.GetSubscriptionLister(),
 		}
 	},
 		false,

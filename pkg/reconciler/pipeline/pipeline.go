@@ -33,12 +33,15 @@ import (
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
+	"github.com/knative/eventing/pkg/utils"
 	duckroot "github.com/knative/pkg/apis"
 	duckapis "github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -61,9 +64,10 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	pipelineLister     listers.PipelineLister
-	channelLister      eventinglisters.ChannelLister
-	subscriptionLister eventinglisters.SubscriptionLister
+	pipelineLister      listers.PipelineLister
+	tracker             tracker.Interface
+	addressableInformer duck.AddressableInformer
+	subscriptionLister  eventinglisters.SubscriptionLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -74,30 +78,27 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 func NewController(
 	opt reconciler.Options,
 	pipelineInformer informers.PipelineInformer,
-	channelInformer eventinginformers.ChannelInformer,
+	addressableInformer duck.AddressableInformer,
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(opt, controllerAgentName),
-		pipelineLister:     pipelineInformer.Lister(),
-		channelLister:      channelInformer.Lister(),
-		subscriptionLister: subscriptionInformer.Lister(),
+		Base:                reconciler.NewBase(opt, controllerAgentName),
+		pipelineLister:      pipelineInformer.Lister(),
+		addressableInformer: addressableInformer,
+		subscriptionLister:  subscriptionInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
 	pipelineInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Register handlers for Channel/Subscriptions that are owned by Pipeline, so that
+	// Register handler for Subscriptions that are owned by Pipeline, so that
 	// we get notified if they change.
-	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Channel")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Subscription")),
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Pipeline")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
@@ -170,16 +171,17 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 		return nil
 	}
 
-	// Convert the object into runtime.Object so we can grab the schema.ObjectKind and create the correct interface client
-	obj := p.Spec.ChannelTemplate.DeepCopyObject()
-
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
+	//	obj := p.Spec.ChannelTemplate
+	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
 
 	if channelResourceInterface == nil {
 		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
 		logging.FromContext(ctx).Error(msg)
 		errors.New(msg)
 	}
+
+	// Tell tracker to reconcile this Pipeline whenever my channels change.
+	track := r.addressableInformer.TrackInNamespace(r.tracker, p)
 
 	channels := []*duckv1alpha1.Channelable{}
 	for i := 0; i < len(p.Spec.Steps); i++ {
@@ -198,7 +200,12 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 			return err
 
 		}
+		// Track channels and enqueue pipeline when they change.
 		channels = append(channels, channelable)
+		if err = track(utils.ObjectRef(channelable, channelable.GroupVersionKind())); err != nil {
+			logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
+			return err
+		}
 		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, ingressChannelName, c))
 	}
 	p.Status.PropagateChannelStatuses(channels)
@@ -274,6 +281,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v : SUBSCRIBERSPEC: %+v", sub, sub.Spec.Subscriber))
 		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Subscription Object for step: %d", step), zap.Error(err))
 			// TODO: Send events here, or elsewhere?
 			//			r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipeline's subscription failed: %v", err)
 			return nil, err
