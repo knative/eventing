@@ -27,7 +27,6 @@ import (
 
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	eventingduck "github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
@@ -39,7 +38,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1"
 	apiextensionslisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -52,12 +50,6 @@ import (
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Subscriptions"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "subscription-controller"
-
 	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process
@@ -88,33 +80,6 @@ type Reconciler struct {
 var _ controller.Reconciler = (*Reconciler)(nil)
 
 var customResourceDefinitionGVK = apiextensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	addressableInformer eventingduck.AddressableInformer,
-	customResourceDefinitionInformer apiextensionsinformers.CustomResourceDefinitionInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                           reconciler.NewBase(opt, controllerAgentName),
-		subscriptionLister:             subscriptionInformer.Lister(),
-		customResourceDefinitionLister: customResourceDefinitionInformer.Lister(),
-		addressableInformer:            addressableInformer,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Tracker is used to notify us when the resources Subscription depends on change, so that the
-	// Subscription needs to reconcile again.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
