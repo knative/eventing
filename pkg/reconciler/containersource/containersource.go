@@ -19,7 +19,6 @@ package containersource
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/controller"
 	"reflect"
 	"strings"
 	"time"
@@ -40,6 +39,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/containersource/resources"
+	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 )
 

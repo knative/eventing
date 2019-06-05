@@ -19,7 +19,6 @@ package containersource
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/configmap"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,6 +33,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 
