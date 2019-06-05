@@ -16,12 +16,7 @@ limitations under the License.
 
 package base
 
-import "github.com/knative/eventing/pkg/reconciler/namespace/resources"
-
 const (
-	// DefaultBrokerName is the name of the Broker that is automatically created after the current namespace is labeled.
-	DefaultBrokerName = resources.DefaultBrokerName
-
 	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
 	InMemoryProvisioner = "in-memory"
 	// GCPPubSubProvisioner is the gcp-pubsub provisioner, which is under contrib/gcppubsub.
@@ -39,7 +34,7 @@ const (
 	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
 )
 
-// kind for eventing resources.
+// Kind for eventing resources.
 const (
 	ChannelKind                   string = "Channel"
 	SubscriptionKind              string = "Subscription"
@@ -49,15 +44,14 @@ const (
 	TriggerKind string = "Trigger"
 )
 
-// kind for messaging resources.
+// Kind for messaging resources.
 const (
 	InMemoryChannelKind string = "InMemoryChannel"
 	KafkaChannelKind    string = "KafkaChannel"
-	// NatssChannelKind     string = "NatssChannel"
-	// GCPPubSubChannelKind string = "GCPPubSubChannel"
+	NatssChannelKind    string = "NatssChannel"
 )
 
-// kind for sources resources.
+// Kind for sources resources.
 const (
 	CronJobSourceKind   string = "CronJobSource"
 	ContainerSourceKind string = "ContainerSource"
