@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// InMemoryChannels returns a InMemoryChannelInformer.
 	InMemoryChannels() InMemoryChannelInformer
+	// Pipelines returns a PipelineInformer.
+	Pipelines() PipelineInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // InMemoryChannels returns a InMemoryChannelInformer.
 func (v *version) InMemoryChannels() InMemoryChannelInformer {
 	return &inMemoryChannelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Pipelines returns a PipelineInformer.
+func (v *version) Pipelines() PipelineInformer {
+	return &pipelineInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

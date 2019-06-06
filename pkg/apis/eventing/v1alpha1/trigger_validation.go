@@ -47,7 +47,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
 		fe := apis.ErrMissingField("subscriber")
 		errs = errs.Also(fe)
-	} else if fe := isValidSubscriberSpec(*ts.Subscriber); fe != nil {
+	} else if fe := IsValidSubscriberSpec(*ts.Subscriber); fe != nil {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 
