@@ -26,6 +26,8 @@ spec:
       app: eventing-controller
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
       labels:
         app: eventing-controller
         eventing.knative.dev/release: devel
