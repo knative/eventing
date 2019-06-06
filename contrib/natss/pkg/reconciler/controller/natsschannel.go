@@ -333,7 +333,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.NatssCh
 	if err == nil && becomesReady {
 		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("NatssChannel %q became ready after %v", kc.Name, duration)
-		if err := r.StatsReporter.ReportReady("Channel", kc.Namespace, kc.Name, duration); err != nil {
+		if err := r.StatsReporter.ReportReady("NatssChannel", kc.Namespace, kc.Name, duration); err != nil {
 			r.Logger.Infof("Failed to record ready for NatssChannel %q: %v", kc.Name, err)
 		}
 	}
