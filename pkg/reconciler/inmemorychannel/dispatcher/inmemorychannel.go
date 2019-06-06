@@ -25,7 +25,6 @@ import (
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
@@ -53,7 +52,6 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	eventingClientSet       clientset.Interface
 	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
@@ -67,7 +65,6 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet clientset.Interface,
 	dispatcher inmemorychannel.Dispatcher,
 	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
 ) *controller.Impl {
@@ -75,7 +72,6 @@ func NewController(
 	r := &Reconciler{
 		Base:                    reconciler.NewBase(opt, controllerAgentName),
 		dispatcher:              dispatcher,
-		eventingClientSet:       eventingClientSet,
 		inmemorychannelLister:   inmemorychannelinformer.Lister(),
 		inmemorychannelInformer: inmemorychannelinformer.Informer(),
 	}
@@ -213,6 +209,5 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemor
 	existing := imc.DeepCopy()
 	existing.Status = desired.Status
 
-	new, err := r.eventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
-	return new, err
+	return r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
 }
