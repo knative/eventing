@@ -65,6 +65,7 @@ func TestNewController(t *testing.T) {
 			EventingClientSet: eventingClient,
 			Logger:            logtesting.TestLogger(t),
 		},
+		eventingClient,
 		dispatcher,
 		imcInformer)
 
@@ -104,6 +105,7 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
 		return &Reconciler{
 			Base:                  reconciler.NewBase(opt, controllerAgentName),
+			eventingClientSet:     fakeclientset.NewSimpleClientset(),
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO fix
 			inmemorychannelInformer: nil,

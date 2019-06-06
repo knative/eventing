@@ -92,6 +92,7 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		inmemorychannel.NewController(
 			opt,
+			opt.EventingClientSet,
 			inMemoryDispatcher,
 			inMemoryChannelInformer,
 		),
