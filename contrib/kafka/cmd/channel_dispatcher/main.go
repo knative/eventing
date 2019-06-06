@@ -23,14 +23,13 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -84,12 +83,10 @@ func main() {
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
-	eventingClientSet := clientset.NewForConfigOrDie(cfg)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
+	messagingInformerFactory := informers.NewSharedInformerFactory(opt.KafkaClientSet, opt.ResyncPeriod)
 
 	// Messaging
-	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
+	kafkaChannelInformer := messagingInformerFactory.Messaging().V1alpha1().KafkaChannels()
 
 	// Adding the scheme.
 	eventingScheme.AddToScheme(scheme.Scheme)
@@ -100,7 +97,6 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		kafkachannel.NewController(
 			opt,
-			eventingClientSet,
 			kafkaDispatcher,
 			kafkaChannelInformer,
 		),
