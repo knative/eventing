@@ -22,6 +22,7 @@ package common
 import (
 	"testing"
 
+	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"github.com/knative/pkg/test"
 	"k8s.io/client-go/dynamic"
@@ -32,6 +33,7 @@ type Client struct {
 	Kube     *test.KubeClient
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
+	Kafka    *kafkachannel.Clientset
 
 	Namespace string
 	T         *testing.T
@@ -57,6 +59,11 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	}
 
 	client.Dynamic, err = dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Kafka, err = kafkachannel.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

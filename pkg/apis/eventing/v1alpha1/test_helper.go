@@ -45,6 +45,7 @@ func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
 	ss := &SubscriptionStatus{}
 	ss.MarkChannelReady()
 	ss.MarkReferencesResolved()
+	ss.MarkAddedToChannel()
 	return ss
 }
 

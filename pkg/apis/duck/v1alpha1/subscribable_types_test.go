@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestSubscribableGetFullType(t *testing.T) {
@@ -46,16 +47,34 @@ func TestSubscribablePopulate(t *testing.T) {
 	got := &SubscribableType{}
 
 	want := &SubscribableType{
-		Spec: SubscribableSpec{
+		Spec: SubscribableTypeSpec{
 			Subscribable: &Subscribable{
 				Subscribers: []SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					Generation:    1,
 					SubscriberURI: "call1",
 					ReplyURI:      "sink2",
 				}, {
 					UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					Generation:    2,
 					SubscriberURI: "call2",
 					ReplyURI:      "sink2",
+				}},
+			},
+		},
+		Status: SubscribableTypeStatus{
+			SubscribableStatus: &SubscribableStatus{
+				// Populate ALL fields
+				Subscribers: []SubscriberStatus{{
+					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 1,
+					Ready:              corev1.ConditionTrue,
+					Message:            "Some message",
+				}, {
+					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 2,
+					Ready:              corev1.ConditionFalse,
+					Message:            "Some message",
 				}},
 			},
 		},

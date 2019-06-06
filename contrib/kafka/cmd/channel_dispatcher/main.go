@@ -20,6 +20,9 @@ import (
 	"flag"
 	"log"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"

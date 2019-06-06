@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/knative/pkg/apis"
+	"github.com/knative/pkg/apis/duck/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -68,6 +69,9 @@ func (imcs *InMemoryChannelStatus) InitializeConditions() {
 
 // TODO: Use the new beta duck types.
 func (imcs *InMemoryChannelStatus) SetAddress(url *apis.URL) {
+	if imcs.Address == nil {
+		imcs.Address = &v1alpha1.Addressable{}
+	}
 	if url != nil {
 		imcs.Address.Hostname = url.Host
 		imcs.Address.URL = url

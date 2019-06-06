@@ -39,6 +39,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -184,7 +185,42 @@ func (r *Reconciler) getReceiveAdapterImage() string {
 	return r.receiveAdapterImage
 }
 
+func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
+
+	for _, rsrc := range []struct {
+		key   string
+		field string
+	}{{
+		key:   "Request.CPU",
+		field: src.Spec.Resources.Requests.ResourceCPU,
+	}, {
+		key:   "Request.Memory",
+		field: src.Spec.Resources.Requests.ResourceMemory,
+	}, {
+		key:   "Limit.CPU",
+		field: src.Spec.Resources.Limits.ResourceCPU,
+	}, {
+		key:   "Limit.Memory",
+		field: src.Spec.Resources.Limits.ResourceMemory,
+	}} {
+		// In the event the field isn't specified, we assign a default in the receive_adapter
+		if rsrc.field != "" {
+			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
+				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %s, Error: %s", rsrc.key, rsrc.field, err)
+				return err
+			}
+		}
+	}
+	src.Status.MarkResourcesCorrect()
+	return nil
+}
+
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource, sinkURI string) (*appsv1.Deployment, error) {
+
+	if err := checkResourcesStatus(src); err != nil {
+		return nil, err
+	}
+
 	ra, err := r.getReceiveAdapter(ctx, src)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get an existing receive adapter", zap.Error(err))

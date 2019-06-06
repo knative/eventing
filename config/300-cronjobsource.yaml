@@ -51,6 +51,23 @@ spec:
               type: string
             sink:
               type: object
+            resources:
+              properties:
+                limits:
+                  properties:
+                    cpu:
+                      type: string
+                    memory:
+                      type: string
+                  type: object
+                requests:
+                  properties:
+                    cpu:
+                      type: string
+                    memory:
+                      type: string
+                  type: object
+              type: object
           required:
           - schedule
           type: object

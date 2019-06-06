@@ -23,6 +23,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
@@ -33,6 +34,7 @@ import (
 	. "github.com/knative/pkg/reconciler/testing"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgotesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -74,6 +76,28 @@ func TestNewController(t *testing.T) {
 }
 
 func TestAllCases(t *testing.T) {
+	subscribers := []duckv1alpha1.SubscriberSpec{{
+		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: "call1",
+		ReplyURI:      "sink2",
+	}, {
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    2,
+		SubscriberURI: "call2",
+		ReplyURI:      "sink2",
+	}}
+
+	subscriberStatuses := []duckv1alpha1.SubscriberStatus{{
+		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              "True",
+	}, {
+		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 2,
+		Ready:              "True",
+	}}
+
 	imcKey := testNS + "/" + imcName
 	table := TableTest{
 		{
@@ -96,6 +120,31 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
 			},
+			WantErr: false,
+		}, {
+			Name: "with subscribers",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
+					reconciletesting.WithInMemoryChannelStatusSubscribers(subscriberStatuses),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
+			}},
 			WantErr: false,
 		}, {},
 	}

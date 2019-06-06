@@ -60,6 +60,12 @@ readonly KAFKA_CONFIG_TEMPLATE="contrib/kafka/config/provisioner/kafka.yaml"
 readonly KAFKA_CONFIG="$(mktemp)"
 # Kafka cluster URL for our installation
 readonly KAFKA_CLUSTER_URL="my-cluster-kafka-bootstrap.kafka:9092"
+# Kafka channel CRD config template directory.
+readonly KAFKA_CRD_CONFIG_TEMPLATE_DIR="contrib/kafka/config"
+# Kafka channel CRD config template file. It needs to be modified to be the real config file.
+readonly KAFKA_CRD_CONFIG_TEMPLATE="400-kafka-config.yaml"
+# Real Kafka channel CRD config , generated from the template directory and modified template file.
+readonly KAFKA_CRD_CONFIG_DIR="$(mktemp -d)"
 
 # Setup the Knative environment for running tests.
 function knative_setup() {
@@ -101,6 +107,12 @@ function test_setup() {
   ko apply -f ${KAFKA_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka ClusterChannelProvisioner"
 
+  echo "Installing Kafka Channel CRD"
+  cp ${KAFKA_CRD_CONFIG_TEMPLATE_DIR}/*yaml ${KAFKA_CRD_CONFIG_DIR}
+  sed -i "s/REPLACE_WITH_CLUSTER_URL/${KAFKA_CLUSTER_URL}/" ${KAFKA_CRD_CONFIG_DIR}/${KAFKA_CRD_CONFIG_TEMPLATE}
+  ko apply -f ${KAFKA_CRD_CONFIG_DIR} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the Kafka Channel CRD"
+
   # Publish test images.
   echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
@@ -123,6 +135,9 @@ function test_teardown() {
   echo "Uninstalling Kafka ClusterChannelProvisioner"
   kafka_teardown
   ko delete --ignore-not-found=true --now --timeout 60s -f ${KAFKA_CONFIG}
+
+  echo "Uninstalling Kafka Channel CRD"
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${KAFKA_CRD_CONFIG_DIR}
 
   wait_until_object_does_not_exist namespaces knative-eventing
 }
@@ -211,6 +226,6 @@ function dump_extra_cluster_state() {
 
 initialize $@ --skip-istio-addon
 
-go_test_e2e -timeout=20m ./test/e2e -clusterChannelProvisioners=in-memory,natss,kafka || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/e2e -clusterChannelProvisioners=in-memory,natss,kafka || fail_test
 
 success
