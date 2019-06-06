@@ -110,8 +110,8 @@ func main() {
 	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
 
 	// Setup zipkin tracing.
-	if err = tracing.SetupDynamicZipkinPublishing(logger, opt.ConfigMapWatcher, "imc-dispatcher"); err != nil {
-		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	if err = tracing.SetupDynamicZipkinPublishing(logger, opt.ConfigMapWatcher, "kafka-ch-dispatcher"); err != nil {
+		logger.Fatalw("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
