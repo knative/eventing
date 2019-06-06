@@ -47,7 +47,7 @@ type Options struct {
 	Recorder      record.EventRecorder
 	StatsReporter StatsReporter
 
-	ConfigMapWatcher configmap.Watcher
+	ConfigMapWatcher *configmap.InformedWatcher
 	Logger           *zap.SugaredLogger
 
 	ResyncPeriod time.Duration
