@@ -625,7 +625,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := isValidSubscriberSpec(test.s)
+			got := IsValidSubscriberSpec(test.s)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: isValidSubscriber (-want, +got) = %v", test.name, diff)
 			}

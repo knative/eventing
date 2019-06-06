@@ -28,6 +28,7 @@ import (
 type MessagingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	InMemoryChannelsGetter
+	PipelinesGetter
 }
 
 // MessagingV1alpha1Client is used to interact with features provided by the messaging.knative.dev group.
@@ -37,6 +38,10 @@ type MessagingV1alpha1Client struct {
 
 func (c *MessagingV1alpha1Client) InMemoryChannels(namespace string) InMemoryChannelInterface {
 	return newInMemoryChannels(c, namespace)
+}
+
+func (c *MessagingV1alpha1Client) Pipelines(namespace string) PipelineInterface {
+	return newPipelines(c, namespace)
 }
 
 // NewForConfig creates a new MessagingV1alpha1Client for the given config.
