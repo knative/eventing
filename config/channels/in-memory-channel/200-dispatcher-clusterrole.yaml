@@ -33,3 +33,10 @@ rules:
       - get
       - list
       - watch
+# Updates the status to reflect subscribable status.
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels/status
+    verbs:
+      - update

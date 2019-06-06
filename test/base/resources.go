@@ -17,10 +17,12 @@ limitations under the License.
 package base
 
 // resources contains functions that construct Eventing CRs and other Kubernetes resources.
+// TODO(Fredy-Z): break this file into multiple files when it grows too large.
 
 import (
 	"fmt"
 
+	kafkamessagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	pkgTest "github.com/knative/pkg/test"
@@ -31,20 +33,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-const eventingAPIVersion = "eventing.knative.dev/v1alpha1"
-const sourcesAPIVersion = "sources.eventing.knative.dev/v1alpha1"
+// TriggerOption enables further configuration of a Trigger.
+type TriggerOption func(*eventingv1alpha1.Trigger)
+
+// SubscriptionOption enables further configuration of a Subscription.
+type SubscriptionOption func(*eventingv1alpha1.Subscription)
+
+// CronJobSourceOption enables further configuration of a CronJobSource.
+type CronJobSourceOption func(*sourcesv1alpha1.CronJobSource)
+
+// ContainerSourceOption enables further configuration of a ContainerSource.
+type ContainerSourceOption func(*sourcesv1alpha1.ContainerSource)
 
 // clusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
 func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 	if name == "" {
 		return nil
 	}
-	return pkgTest.CoreV1ObjectReference("ClusterChannelProvisioner", eventingAPIVersion, name)
+	return pkgTest.CoreV1ObjectReference(ClusterChannelProvisionerKind, EventingAPIVersion, name)
 }
 
 // channelRef returns an ObjectReference for a given Channel Name.
-func channelRef(name string) *corev1.ObjectReference {
-	return pkgTest.CoreV1ObjectReference("Channel", eventingAPIVersion, name)
+func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
+	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
 }
 
 // Channel returns a Channel with the specified provisioner.
@@ -59,8 +70,17 @@ func Channel(name, provisioner string) *eventingv1alpha1.Channel {
 	}
 }
 
+// KafkaChannel returns a KafkaChannel.
+func KafkaChannel(name string) *kafkamessagingv1alpha1.KafkaChannel {
+	return &kafkamessagingv1alpha1.KafkaChannel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+}
+
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
-func WithSubscriberForSubscription(name string) func(*eventingv1alpha1.Subscription) {
+func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
@@ -71,11 +91,11 @@ func WithSubscriberForSubscription(name string) func(*eventingv1alpha1.Subscript
 }
 
 // WithReply returns an options that adds a ReplyStrategy for the given Subscription.
-func WithReply(name string) func(*eventingv1alpha1.Subscription) {
+func WithReply(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
 	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference("Channel", eventingAPIVersion, name),
+				Channel: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 			}
 		}
 	}
@@ -83,16 +103,16 @@ func WithReply(name string) func(*eventingv1alpha1.Subscription) {
 
 // Subscription returns a Subscription.
 func Subscription(
-	name,
-	channelName string,
-	options ...func(*eventingv1alpha1.Subscription),
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...SubscriptionOption,
 ) *eventingv1alpha1.Subscription {
 	subscription := &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: eventingv1alpha1.SubscriptionSpec{
-			Channel: *channelRef(channelName),
+			Channel: *channelRef(channelName, channelTypeMeta),
 		},
 	}
 	for _, option := range options {
@@ -116,7 +136,7 @@ func Broker(name, provisioner string) *eventingv1alpha1.Broker {
 }
 
 // WithTriggerFilter returns an option that adds a TriggerFilter for the given Trigger.
-func WithTriggerFilter(eventSource, eventType string) func(*eventingv1alpha1.Trigger) {
+func WithTriggerFilter(eventSource, eventType string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		triggerFilter := &eventingv1alpha1.TriggerFilter{
 			SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
@@ -129,14 +149,14 @@ func WithTriggerFilter(eventSource, eventType string) func(*eventingv1alpha1.Tri
 }
 
 // WithBroker returns an option that adds a Broker for the given Trigger.
-func WithBroker(brokerName string) func(*eventingv1alpha1.Trigger) {
+func WithBroker(brokerName string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Broker = brokerName
 	}
 }
 
 // WithSubscriberRefForTrigger returns an option that adds a Subscriber Ref for the given Trigger.
-func WithSubscriberRefForTrigger(name string) func(*eventingv1alpha1.Trigger) {
+func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
@@ -147,7 +167,7 @@ func WithSubscriberRefForTrigger(name string) func(*eventingv1alpha1.Trigger) {
 }
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
-func WithSubscriberURIForTrigger(uri string) func(*eventingv1alpha1.Trigger) {
+func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
 			URI: &uri,
@@ -156,7 +176,7 @@ func WithSubscriberURIForTrigger(uri string) func(*eventingv1alpha1.Trigger) {
 }
 
 // Trigger returns a Trigger.
-func Trigger(name string, options ...func(*eventingv1alpha1.Trigger)) *eventingv1alpha1.Trigger {
+func Trigger(name string, options ...TriggerOption) *eventingv1alpha1.Trigger {
 	trigger := &eventingv1alpha1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -169,14 +189,14 @@ func Trigger(name string, options ...func(*eventingv1alpha1.Trigger)) *eventingv
 }
 
 // WithSinkServiceForCronJobSource returns an option that adds a Kubernetes Service sink for the given CronJobSource.
-func WithSinkServiceForCronJobSource(name string) func(*sourcesv1alpha1.CronJobSource) {
+func WithSinkServiceForCronJobSource(name string) CronJobSourceOption {
 	return func(cjs *sourcesv1alpha1.CronJobSource) {
 		cjs.Spec.Sink = pkgTest.CoreV1ObjectReference("Service", "v1", name)
 	}
 }
 
 // WithServiceAccountForCronJobSource returns an option that adds a ServiceAccount for the given CronJobSource.
-func WithServiceAccountForCronJobSource(saName string) func(*sourcesv1alpha1.CronJobSource) {
+func WithServiceAccountForCronJobSource(saName string) CronJobSourceOption {
 	return func(cjs *sourcesv1alpha1.CronJobSource) {
 		cjs.Spec.ServiceAccountName = saName
 	}
@@ -187,7 +207,7 @@ func CronJobSource(
 	name,
 	schedule,
 	data string,
-	options ...func(*sourcesv1alpha1.CronJobSource),
+	options ...CronJobSourceOption,
 ) *sourcesv1alpha1.CronJobSource {
 	cronJobSource := &sourcesv1alpha1.CronJobSource{
 		ObjectMeta: metav1.ObjectMeta{
@@ -205,14 +225,14 @@ func CronJobSource(
 }
 
 // WithTemplateForContainerSource returns an option that adds a template for the given ContainerSource.
-func WithTemplateForContainerSource(template *corev1.PodTemplateSpec) func(*sourcesv1alpha1.ContainerSource) {
+func WithTemplateForContainerSource(template *corev1.PodTemplateSpec) ContainerSourceOption {
 	return func(cs *sourcesv1alpha1.ContainerSource) {
 		cs.Spec.Template = template
 	}
 }
 
 // WithSinkServiceForContainerSource returns an option that adds a Kubernetes Service sink for the given ContainerSource.
-func WithSinkServiceForContainerSource(name string) func(*sourcesv1alpha1.ContainerSource) {
+func WithSinkServiceForContainerSource(name string) ContainerSourceOption {
 	return func(cs *sourcesv1alpha1.ContainerSource) {
 		cs.Spec.Sink = pkgTest.CoreV1ObjectReference("Service", "v1", name)
 	}
@@ -221,7 +241,7 @@ func WithSinkServiceForContainerSource(name string) func(*sourcesv1alpha1.Contai
 // ContainerSource returns a Container EventSource.
 func ContainerSource(
 	name string,
-	options ...func(*sourcesv1alpha1.ContainerSource),
+	options ...ContainerSourceOption,
 ) *sourcesv1alpha1.ContainerSource {
 	containerSource := &sourcesv1alpha1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{

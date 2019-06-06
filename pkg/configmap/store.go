@@ -35,15 +35,6 @@ type DefaultConstructor struct {
 	Constructor interface{}
 }
 
-// DefaultConstructors is a map for specifying default ConfigMaps to their function constructors.
-//
-// The values of this map must be functions with the definition:
-//
-// func(*k8s.io/api/core/v1.ConfigMap) (... , error)
-//
-// These functions can return any type along with an error.
-type DefaultConstructors map[*v1.ConfigMap]interface{}
-
 // DefaultUntypedStore is an UntypedStore with default values for ConfigMaps that do not exist.
 type DefaultUntypedStore struct {
 	store      *configmap.UntypedStore

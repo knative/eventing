@@ -37,7 +37,7 @@ func TestChannelChain(t *testing.T) {
 	RunTests(t, common.FeatureBasic, testChannelChain)
 }
 
-func testChannelChain(t *testing.T, provisioner string) {
+func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channelchain-logger-pod"
@@ -52,17 +52,28 @@ func testChannelChain(t *testing.T, provisioner string) {
 	defer TearDown(client)
 
 	// create channels
-	client.CreateChannelsOrFail(channelNames, provisioner)
-	client.WaitForChannelsReady()
+	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+	client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+	client.WaitForResourcesReady(channelTypeMeta)
 
 	// create loggerPod and expose it as a service
 	pod := base.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 	// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-	client.CreateSubscriptionsOrFail(subscriptionNames1, channelNames[0], base.WithReply(channelNames[1]))
+	client.CreateSubscriptionsOrFail(
+		subscriptionNames1,
+		channelNames[0],
+		channelTypeMeta,
+		base.WithReply(channelNames[1], channelTypeMeta),
+	)
 	// create subscriptions that subscribe the second channel, and call the logging service
-	client.CreateSubscriptionsOrFail(subscriptionNames2, channelNames[1], base.WithSubscriberForSubscription(loggerPodName))
+	client.CreateSubscriptionsOrFail(
+		subscriptionNames2,
+		channelNames[1],
+		channelTypeMeta,
+		base.WithSubscriberForSubscription(loggerPodName),
+	)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -77,7 +88,7 @@ func testChannelChain(t *testing.T, provisioner string) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
 		Encoding: base.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToChannel(senderName, channelNames[0], event); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 	}
 

@@ -41,47 +41,36 @@ func (client *Client) LabelNamespace(labels map[string]string) error {
 	return err
 }
 
-// SendFakeEventToChannel will send the given event to the given channel.
-func (client *Client) SendFakeEventToChannel(senderName, channelName string, event *base.CloudEvent) error {
-	url, err := client.GetChannelURL(channelName)
+// SendFakeEventToAddressable will send the given event to the given Addressable.
+func (client *Client) SendFakeEventToAddressable(
+	senderName,
+	addressableName string,
+	typemeta *metav1.TypeMeta,
+	event *base.CloudEvent,
+) error {
+	uri, err := client.GetAddressableURI(addressableName, typemeta)
 	if err != nil {
 		return err
 	}
-	return client.sendFakeEventToAddress(senderName, url, event)
+	return client.sendFakeEventToAddress(senderName, uri, event)
 }
 
-// GetChannelURL will return the url for the given channel.
-func (client *Client) GetChannelURL(name string) (string, error) {
+// GetAddressableURI returns the URI of the addressable resource.
+// To use this function, the given resource must have implemented the Addressable duck-type.
+func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1.TypeMeta) (string, error) {
 	namespace := client.Namespace
-	channelMeta := base.MetaEventing(name, namespace, "Channel")
-	return base.GetAddressableURI(client.Dynamic, channelMeta)
-}
-
-// SendFakeEventToBroker will send the given event to the given broker.
-func (client *Client) SendFakeEventToBroker(senderName, brokerName string, event *base.CloudEvent) error {
-	url, err := client.GetBrokerURL(brokerName)
-	if err != nil {
-		return err
-	}
-	return client.sendFakeEventToAddress(senderName, url, event)
-}
-
-// GetBrokerURL will return the url for the given broker.
-func (client *Client) GetBrokerURL(name string) (string, error) {
-	namespace := client.Namespace
-	brokerMeta := base.MetaEventing(name, namespace, "Broker")
-	return base.GetAddressableURI(client.Dynamic, brokerMeta)
+	metaAddressable := base.NewMetaResource(addressableName, namespace, typemeta)
+	return base.GetAddressableURI(client.Dynamic, metaAddressable)
 }
 
 // sendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
 func (client *Client) sendFakeEventToAddress(
 	senderName string,
-	url string,
+	uri string,
 	event *base.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	client.T.Logf("Sending fake CloudEvent")
-	pod := base.EventSenderPod(senderName, url, event)
+	pod := base.EventSenderPod(senderName, uri, event)
 	client.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
 		return err
@@ -89,177 +78,45 @@ func (client *Client) sendFakeEventToAddress(
 	return nil
 }
 
-// WaitForBrokerReady waits until the broker is Ready.
-func (client *Client) WaitForBrokerReady(name string) error {
+// WaitForResourceReady waits for the resource to become ready.
+// To use this function, the given resource must have implemented the Status duck-type.
+func (client *Client) WaitForResourceReady(name string, typemeta *metav1.TypeMeta) error {
 	namespace := client.Namespace
-	brokerMeta := base.MetaEventing(name, namespace, "Broker")
-	if err := base.WaitForResourceReady(client.Dynamic, brokerMeta); err != nil {
+	metaResource := base.NewMetaResource(name, namespace, typemeta)
+	if err := base.WaitForResourceReady(client.Dynamic, metaResource); err != nil {
 		return err
 	}
 	return nil
 }
 
-// WaitForBrokersReady waits until all brokers in the namespace are Ready.
-func (client *Client) WaitForBrokersReady() error {
+// WaitForResourcesReady waits for resources of the given type in the namespace to become ready.
+// To use this function, the given resource must have implemented the Status duck-type.
+func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
 	namespace := client.Namespace
-	brokers, err := client.Eventing.EventingV1alpha1().Brokers(namespace).List(metav1.ListOptions{})
-	if err != nil {
+	metaResourceList := base.NewMetaResourceList(namespace, typemeta)
+	if err := base.WaitForResourcesReady(client.Dynamic, metaResourceList); err != nil {
 		return err
-	}
-	for _, broker := range brokers.Items {
-		if err := client.WaitForBrokerReady(broker.Name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WaitForTriggerReady waits until the trigger is Ready.
-func (client *Client) WaitForTriggerReady(name string) error {
-	namespace := client.Namespace
-	triggerMeta := base.MetaEventing(name, namespace, "Trigger")
-	if err := base.WaitForResourceReady(client.Dynamic, triggerMeta); err != nil {
-		return err
-	}
-	return nil
-}
-
-// WaitForTriggersReady waits until all triggers in the namespace are Ready.
-func (client *Client) WaitForTriggersReady() error {
-	namespace := client.Namespace
-	triggers, err := client.Eventing.EventingV1alpha1().Triggers(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, trigger := range triggers.Items {
-		if err := client.WaitForTriggerReady(trigger.Name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WaitForChannelReady waits until the channel is Ready.
-func (client *Client) WaitForChannelReady(name string) error {
-	namespace := client.Namespace
-	channelMeta := base.MetaEventing(name, namespace, "Channel")
-	if err := base.WaitForResourceReady(client.Dynamic, channelMeta); err != nil {
-		return err
-	}
-	return nil
-}
-
-// WaitForChannelsReady waits until all channels in the namespace are Ready.
-func (client *Client) WaitForChannelsReady() error {
-	namespace := client.Namespace
-	channels, err := client.Eventing.EventingV1alpha1().Channels(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, channel := range channels.Items {
-		if err := client.WaitForChannelReady(channel.Name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WaitForSubscriptionReady waits until the subscription is Ready.
-func (client *Client) WaitForSubscriptionReady(name string) error {
-	namespace := client.Namespace
-	subscriptionMeta := base.MetaEventing(name, namespace, "Subscription")
-	if err := base.WaitForResourceReady(client.Dynamic, subscriptionMeta); err != nil {
-		return err
-	}
-	return nil
-}
-
-// WaitForSubscriptionsReady waits until all subscriptions in the namespace are Ready.
-func (client *Client) WaitForSubscriptionsReady() error {
-	namespace := client.Namespace
-	subscriptions, err := client.Eventing.EventingV1alpha1().Subscriptions(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, subscription := range subscriptions.Items {
-		if err := client.WaitForSubscriptionReady(subscription.Name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WaitForCronJobSourceReady waits until the cronjobsource is Ready.
-func (client *Client) WaitForCronJobSourceReady(name string) error {
-	namespace := client.Namespace
-	cronJobSourceMeta := base.MetaSource(name, namespace, "CronJobSource")
-	if err := base.WaitForResourceReady(client.Dynamic, cronJobSourceMeta); err != nil {
-		return err
-	}
-	return nil
-}
-
-// WaitForCronJobSourcesReady waits until all cronjobsources in the namespace are Ready.
-func (client *Client) WaitForCronJobSourcesReady() error {
-	namespace := client.Namespace
-	cronJobSources, err := client.Eventing.SourcesV1alpha1().CronJobSources(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, cronJobSource := range cronJobSources.Items {
-		if err := client.WaitForCronJobSourceReady(cronJobSource.Name); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WaitForContainerSourceReady waits until the containersource is Ready.
-func (client *Client) WaitForContainerSourceReady(name string) error {
-	namespace := client.Namespace
-	containerSourceMeta := base.MetaSource(name, namespace, "ContainerSource")
-	if err := base.WaitForResourceReady(client.Dynamic, containerSourceMeta); err != nil {
-		return err
-	}
-	return nil
-}
-
-// WaitForContainerSourcesReady waits until all containersources in the namespace are Ready.
-func (client *Client) WaitForContainerSourcesReady() error {
-	namespace := client.Namespace
-	containerSources, err := client.Eventing.SourcesV1alpha1().ContainerSources(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, containerSource := range containerSources.Items {
-		if err := client.WaitForContainerSourceReady(containerSource.Name); err != nil {
-			return err
-		}
 	}
 	return nil
 }
 
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
-// Currently the test resources include Pod, Channel, Subscription, Broker and Trigger.
-// If there are new resources, this function needs to be changed.
+// If there is a new resource, its TypeMeta needs to be added into the list.
+// TODO(Fredy-Z): make this function more generic by only checking existed resources in the current namespace.
 func (client *Client) WaitForAllTestResourcesReady() error {
-	if err := client.WaitForChannelsReady(); err != nil {
-		return err
+	typemetas := []*metav1.TypeMeta{
+		ChannelTypeMeta,
+		SubscriptionTypeMeta,
+		BrokerTypeMeta,
+		TriggerTypeMeta,
+		KafkaChannelTypeMeta,
+		CronJobSourceTypeMeta,
+		ContainerSourceTypeMeta,
 	}
-	if err := client.WaitForSubscriptionsReady(); err != nil {
-		return err
-	}
-	if err := client.WaitForBrokersReady(); err != nil {
-		return err
-	}
-	if err := client.WaitForTriggersReady(); err != nil {
-		return err
-	}
-	if err := client.WaitForCronJobSourcesReady(); err != nil {
-		return err
-	}
-	if err := client.WaitForContainerSourcesReady(); err != nil {
-		return err
+	for _, typemeta := range typemetas {
+		if err := client.WaitForResourcesReady(typemeta); err != nil {
+			return err
+		}
 	}
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err

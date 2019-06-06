@@ -48,13 +48,14 @@ func TestEventTransformationForSubscription(t *testing.T) {
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
-	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
+	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
 		client := Setup(st, true)
 		defer TearDown(client)
 
 		// create channels
-		client.CreateChannelsOrFail(channelNames, provisioner)
-		client.WaitForChannelsReady()
+		channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+		client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+		client.WaitForResourcesReady(channelTypeMeta)
 
 		// create transformation pod and service
 		transformedEventBody := fmt.Sprintf("eventBody %s", uuid.NewUUID())
@@ -75,13 +76,15 @@ func TestEventTransformationForSubscription(t *testing.T) {
 		client.CreateSubscriptionsOrFail(
 			subscriptionNames1,
 			channelNames[0],
+			channelTypeMeta,
 			base.WithSubscriberForSubscription(transformationPodName),
-			base.WithReply(channelNames[1]),
+			base.WithReply(channelNames[1], channelTypeMeta),
 		)
 		// create subscriptions that subscribe the second channel, and forward the received events to the logger service
 		client.CreateSubscriptionsOrFail(
 			subscriptionNames2,
 			channelNames[1],
+			channelTypeMeta,
 			base.WithSubscriberForSubscription(loggerPodName),
 		)
 
@@ -98,7 +101,7 @@ func TestEventTransformationForSubscription(t *testing.T) {
 			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 			Encoding: base.CloudEventDefaultEncoding,
 		}
-		if err := client.SendFakeEventToChannel(senderName, channelNames[0], eventToSend); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}
 

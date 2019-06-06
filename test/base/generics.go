@@ -21,8 +21,11 @@ import (
 	"github.com/knative/pkg/apis/duck"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/cache"
 )
 
 // MetaResource includes necessary meta data to retrieve the generic Kubernetes resource.
@@ -31,37 +34,66 @@ type MetaResource struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
-// MetaEventing returns a MetaResource that can represent a Knative Eventing resource.
-func MetaEventing(name, namespace, kind string) *MetaResource {
-	return Meta(name, namespace, kind, eventingAPIVersion)
+// MetaResourceList includes necessary meta data to retrieve the generic Kubernetes resource list.
+type MetaResourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	Namespace       string
 }
 
-// MetaSource returns a MetaResource that can represent a Knative Sources resource.
-func MetaSource(name, namespace, kind string) *MetaResource {
-	return Meta(name, namespace, kind, sourcesAPIVersion)
-}
-
-// Meta returns a MetaResource built from the given name, namespace and kind.
-func Meta(name, namespace, kind, apiVersion string) *MetaResource {
+// NewMetaResource returns a MetaResource built from the given name, namespace and typemeta.
+func NewMetaResource(name, namespace string, typemeta *metav1.TypeMeta) *MetaResource {
 	return &MetaResource{
+		TypeMeta: *typemeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       kind,
-			APIVersion: apiVersion,
-		},
+	}
+}
+
+// NewMetaResourceList returns a MetaResourceList built from the given namespace and typemeta.
+func NewMetaResourceList(namespace string, typemeta *metav1.TypeMeta) *MetaResourceList {
+	return &MetaResourceList{
+		TypeMeta:  *typemeta,
+		Namespace: namespace,
 	}
 }
 
 // GetGenericObject returns a generic object representing a Kubernetes resource.
 // Callers can cast this returned object to other objects that implement the corresponding duck-type.
-func GetGenericObject(dynamicClient dynamic.Interface, obj *MetaResource, rtype apis.Listable) (runtime.Object, error) {
-	// get the resource's name, namespace and gvr
-	name := obj.Name
-	namespace := obj.Namespace
-	gvk := obj.GroupVersionKind()
+func GetGenericObject(
+	dynamicClient dynamic.Interface,
+	obj *MetaResource,
+	rtype apis.Listable,
+) (runtime.Object, error) {
+	lister, err := getGenericLister(dynamicClient, obj.GroupVersionKind(), obj.Namespace, rtype)
+	if err != nil {
+		return nil, err
+	}
+	return lister.Get(obj.Name)
+}
+
+// GetGenericObjectList returns a generic object list representing a list of Kubernetes resource.
+func GetGenericObjectList(
+	dynamicClient dynamic.Interface,
+	objList *MetaResourceList,
+	rtype apis.Listable,
+) ([]runtime.Object, error) {
+	lister, err := getGenericLister(dynamicClient, objList.GroupVersionKind(), objList.Namespace, rtype)
+	if err != nil {
+		return nil, err
+	}
+	return lister.List(labels.Everything())
+}
+
+// getGenericLister returns a GenericNamespacedLister, which can be used to get resources in the namespace.
+func getGenericLister(
+	dynamicClient dynamic.Interface,
+	gvk schema.GroupVersionKind,
+	namespace string,
+	rtype apis.Listable,
+) (cache.GenericNamespaceLister, error) {
+	// get the resource's namespace and gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
 	stopChannel := make(chan struct{})
@@ -73,5 +105,5 @@ func GetGenericObject(dynamicClient dynamic.Interface, obj *MetaResource, rtype 
 	if err != nil {
 		return nil, err
 	}
-	return lister.ByNamespace(namespace).Get(name)
+	return lister.ByNamespace(namespace), nil
 }

@@ -178,6 +178,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
 					WithCronJobSourceEventType,
@@ -216,6 +217,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceEventType,
 					WithCronJobSourceSink(sinkURI),
@@ -267,6 +269,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceEventType,
 					WithCronJobSourceSink(sinkURI),
@@ -316,6 +319,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
 					WithCronJobSourceEventType,
@@ -332,6 +336,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
 					WithCronJobSourceEventType,
@@ -357,6 +362,8 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
 					WithCronJobSourceEventType,

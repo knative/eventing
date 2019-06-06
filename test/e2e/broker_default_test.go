@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/common"
 
@@ -36,11 +37,12 @@ const (
 	waitForFilterPodRunning = 30 * time.Second
 	selectorKey             = "end2end-test-broker-trigger"
 
-	any          = v1alpha1.TriggerAnyFilter
-	eventType1   = "type1"
-	eventType2   = "type2"
-	eventSource1 = "source1"
-	eventSource2 = "source2"
+	defaultBrokerName = resources.DefaultBrokerName
+	any               = v1alpha1.TriggerAnyFilter
+	eventType1        = "type1"
+	eventType2        = "type2"
+	eventSource1      = "source1"
+	eventSource2      = "source2"
 )
 
 // Helper struct to tie the type and sources of the events we expect to receive
@@ -64,7 +66,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	// Wait for default broker ready.
-	if err := client.WaitForBrokerReady(common.DefaultBrokerName); err != nil {
+	if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
@@ -121,7 +123,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		if err := client.SendFakeEventToBroker(senderPodName, common.DefaultBrokerName, cloudEvent); err != nil {
+		if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
 			t.Fatalf("Error send cloud event to broker: %v", err)
 		}
 

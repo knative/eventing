@@ -60,6 +60,21 @@ func CronJobEventSource(namespace, cronJobName string) string {
 	return fmt.Sprintf("/apis/v1/namespaces/%s/cronjobsources/%s", namespace, cronJobName)
 }
 
+type CronJobRequestsSpec struct {
+	ResourceCPU    string `json:"cpu,omitempty"`
+	ResourceMemory string `json:"memory,omitempty"`
+}
+
+type CronJobLimitsSpec struct {
+	ResourceCPU    string `json:"cpu,omitempty"`
+	ResourceMemory string `json:"memory,omitempty"`
+}
+
+type CronJobResourceSpec struct {
+	Requests CronJobRequestsSpec `json:"requests,omitempty"`
+	Limits   CronJobLimitsSpec   `json:"limits,omitempty"`
+}
+
 // CronJobSourceSpec defines the desired state of the CronJobSource.
 type CronJobSourceSpec struct {
 	// Schedule is the cronjob schedule.
@@ -76,6 +91,9 @@ type CronJobSourceSpec struct {
 	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
 	// Adapter Deployment.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// Resource limits and Request specifications of the Receive Adapter Deployment
+	Resources CronJobResourceSpec `json:"resources,omitempty"`
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.

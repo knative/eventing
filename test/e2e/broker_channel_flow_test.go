@@ -51,7 +51,7 @@ func TestBrokerChannelFlow(t *testing.T) {
 	RunTests(t, common.FeatureBasic, testBrokerChannelFlow)
 }
 
-func testBrokerChannelFlow(t *testing.T, provisioner string) {
+func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-brokerchannel-sender"
 		brokerName    = "e2e-brokerchannel-broker"
@@ -90,7 +90,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, provisioner)
-	client.WaitForBrokerReady(brokerName)
+	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
@@ -126,11 +126,12 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 	)
 
 	// create channel for trigger3
-	client.CreateChannelOrFail(channelName, provisioner)
-	client.WaitForChannelReady(channelName)
+	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+	client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
+	client.WaitForResourceReady(channelName, channelTypeMeta)
 
 	// create trigger3 to receive the transformed event, and send it to the channel
-	channelURL, err := client.GetChannelURL(channelName)
+	channelURL, err := client.GetAddressableURI(channelName, channelTypeMeta)
 	if err != nil {
 		t.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
 	}
@@ -149,6 +150,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
 		channelName,
+		channelTypeMeta,
 		base.WithSubscriberForSubscription(loggerPodName2),
 	)
 
@@ -164,7 +166,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
 		Encoding: base.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToBroker(senderName, brokerName, eventToSend); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 	}
 
