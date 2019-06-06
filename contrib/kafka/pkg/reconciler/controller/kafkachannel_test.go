@@ -134,22 +134,23 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, channelReconciled, "KafkaChannel reconciled"),
 			},
 		}, {
-			Name: "deployment does not exist",
+			Name: "deployment does not exist, and patching finalizers",
 			Key:  kcKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewKafkaChannel(kcName, testNS,
 					reconciletesting.WithInitKafkaChannelConditions,
-					reconciletesting.WithKafkaFinalizer(finalizerName),
 					reconciletesting.WithKafkaChannelTopicReady()),
 			},
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewKafkaChannel(kcName, testNS,
 					reconciletesting.WithInitKafkaChannelConditions,
-					reconciletesting.WithKafkaFinalizer(finalizerName),
 					reconciletesting.WithKafkaChannelTopicReady(),
 					reconciletesting.WithKafkaChannelDeploymentNotReady("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, kcName),
+			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "KafkaChannel reconciliation failed: deployment.apps \"test-deployment\" not found"),
 			},
@@ -333,7 +334,7 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "KafkaChannel reconciliation failed: inducing failure for create services"),
 			},
-			// TODO add UTs for topic creation and deletion, and for setting up the finalizer.
+			// TODO add UTs for topic creation and deletion.
 		},
 	}
 	defer logtesting.ClearAll()
@@ -502,4 +503,13 @@ func makeReadyEndpoints() *corev1.Endpoints {
 	e := makeEmptyEndpoints()
 	e.Subsets = []corev1.EndpointSubset{{Addresses: []corev1.EndpointAddress{{IP: "1.1.1.1"}}}}
 	return e
+}
+
+func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
 }
