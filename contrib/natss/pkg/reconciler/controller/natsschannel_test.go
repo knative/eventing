@@ -103,27 +103,26 @@ func TestNewController(t *testing.T) {
 func TestAllCases(t *testing.T) {
 	ncKey := testNS + "/" + ncName
 	table := TableTest{
-		//{
-		//	Name: "bad workqueue key",
-		//	// Make sure Reconcile handles bad keys.
-		//	Key: "too/many/parts",
-		//}, {
-		//	Name: "key not found",
-		//	// Make sure Reconcile handles good keys that don't exist.
-		//	Key: "foo/not-found",
-		//}, {
-		//	Name: "deleting",
-		//	Key:  ncKey,
-		//	Objects: []runtime.Object{
-		//		reconciletesting.NewNatssChannel(ncName, testNS,
-		//			reconciletesting.WithInitNatssChannelConditions,
-		//			reconciletesting.WithNatssChannelDeleted)},
-		//	WantErr: false,
-		//	WantEvents: []string{
-		//		Eventf(corev1.EventTypeNormal, channelReconciled, "NatssChannel reconciled"),
-		//	},
-		//}, {
 		{
+			Name: "bad workqueue key",
+			// Make sure Reconcile handles bad keys.
+			Key: "too/many/parts",
+		}, {
+			Name: "key not found",
+			// Make sure Reconcile handles good keys that don't exist.
+			Key: "foo/not-found",
+		}, {
+			Name: "deleting",
+			Key:  ncKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewNatssChannel(ncName, testNS,
+					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssChannelDeleted)},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, channelReconciled, "NatssChannel reconciled"),
+			},
+		}, {
 			Name: "deployment does not exist",
 			Key:  ncKey,
 			Objects: []runtime.Object{
@@ -194,7 +193,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "NatssChannel reconciliation failed: there are no endpoints ready for Dispatcher service"),
+				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "NatssChannel reconciliation failed: there are no endpoints ready for Dispatcher service test-service"),
 			},
 		}, {
 			Name: "Works, creates new channel",
@@ -263,11 +262,11 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsReady(),
-					reconciletesting.WithNatssChannelChannelServicetNotReady("ChannelServiceFailed", "Channel Service failed: NatssChannel: test-namespace/test-nc does not own Service: \"test-nc-kn-channel\""),
+					reconciletesting.WithNatssChannelChannelServicetNotReady("ChannelServiceFailed", "Channel Service failed: natsschannel: test-namespace/test-nc does not own Service: \"test-nc-kn-channel\""),
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "NatssChannel reconciliation failed: NatssChannel: test-namespace/test-nc does not own Service: \"test-nc-kn-channel\""),
+				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "NatssChannel reconciliation failed: natsschannel: test-namespace/test-nc does not own Service: \"test-nc-kn-channel\""),
 			},
 		}, {
 			Name: "channel does not exist, fails to create",
@@ -297,7 +296,7 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, channelReconcileFailed, "NatssChannel reconciliation failed: inducing failure for create services"),
 			},
-		}, {},
+		},
 	}
 	defer logtesting.ClearAll()
 

@@ -50,7 +50,7 @@ func MakeFactory(ctor Ctor) Factory {
 		ls := NewListers(r.Objects)
 
 		kubeClient := fakekubeclientset.NewSimpleClientset(ls.GetKubeObjects()...)
-		client := fakeclientset.NewSimpleClientset(ls.GetEventsObjects()...)
+		client := fakeclientset.NewSimpleClientset(ls.GetMessagingObjects()...)
 
 		dynamicScheme := runtime.NewScheme()
 		for _, addTo := range clientSetSchemes {
