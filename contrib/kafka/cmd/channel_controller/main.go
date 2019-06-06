@@ -23,7 +23,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
@@ -36,7 +35,6 @@ import (
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -90,9 +88,6 @@ func main() {
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	endpointsInformer := kubeInformerFactory.Core().V1().Endpoints()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-
-	// Adding the scheme.
-	eventingScheme.AddToScheme(scheme.Scheme)
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.

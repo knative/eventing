@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"time"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
@@ -54,6 +55,12 @@ func WithInitKafkaChannelConditions(nc *v1alpha1.KafkaChannel) {
 func WithKafkaChannelDeleted(nc *v1alpha1.KafkaChannel) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	nc.ObjectMeta.SetDeletionTimestamp(&deleteTime)
+}
+
+func WithKafkaChannelTopicReady() KafkaChannelOption {
+	return func(nc *v1alpha1.KafkaChannel) {
+		nc.Status.MarkTopicTrue()
+	}
 }
 
 func WithKafkaChannelDeploymentNotReady(reason, message string) KafkaChannelOption {
@@ -110,5 +117,13 @@ func WithKafkaChannelAddress(a string) KafkaChannelOption {
 			Scheme: "http",
 			Host:   a,
 		})
+	}
+}
+
+func WithKafkaFinalizer(finalizerName string) KafkaChannelOption {
+	return func(nc *v1alpha1.KafkaChannel) {
+		finalizers := sets.NewString(nc.Finalizers...)
+		finalizers.Insert(finalizerName)
+		nc.SetFinalizers(finalizers.List())
 	}
 }

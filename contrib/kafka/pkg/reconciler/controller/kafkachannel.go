@@ -453,7 +453,7 @@ func (r *Reconciler) ensureFinalizer(channel *v1alpha1.KafkaChannel) error {
 		return err
 	}
 
-	_, err = r.eventingClientSet.MessagingV1alpha1().KafkaChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
+	_, err = r.KafkaClientSet.MessagingV1alpha1().KafkaChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
 	return err
 }
 
