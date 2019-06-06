@@ -146,7 +146,7 @@ func MakeInjectionFactory(ctor injectionCtor, unstructured bool) Factory {
 			})
 
 		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
-		ctx = reconciler.WithEventRecorder(ctx, eventRecorder)
+		ctx = controller.WithEventRecorder(ctx, eventRecorder)
 		statsReporter := &FakeStatsReporter{}
 		//ctx = reconciler.WithStatsReporter(ctx, statsReporter) // TODO: upstream stats interface from eventing to PKG
 

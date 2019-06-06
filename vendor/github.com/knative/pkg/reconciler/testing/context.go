@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/injection"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -31,6 +30,6 @@ import (
 
 func SetupFakeContext(t *testing.T) (context.Context, []controller.Informer) {
 	ctx := logtesting.TestContextWithLogger(t)
-	ctx = reconciler.WithEventRecorder(ctx, record.NewFakeRecorder(1000))
+	ctx = controller.WithEventRecorder(ctx, record.NewFakeRecorder(1000))
 	return injection.Fake.SetupInformers(ctx, &rest.Config{})
 }

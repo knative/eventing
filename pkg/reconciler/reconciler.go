@@ -18,6 +18,7 @@ package reconciler
 
 import (
 	"context"
+	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/injection/clients/dynamicclient"
 	"github.com/knative/pkg/injection/clients/kubeclient"
 	"github.com/knative/pkg/logging"
@@ -183,7 +184,7 @@ func NewInjectionBase(ctx context.Context, controllerAgentName string, cmw confi
 
 	kubeClient := kubeclient.Get(ctx)
 
-	recorder := GetEventRecorder(ctx)
+	recorder := controller.GetEventRecorder(ctx)
 	if recorder == nil {
 		// Create event broadcaster
 		logger.Debug("Creating event broadcaster")
@@ -225,25 +226,6 @@ func NewInjectionBase(ctx context.Context, controllerAgentName string, cmw confi
 	}
 
 	return base
-}
-
-// erKey is used to associate record.EventRecorders with contexts.
-type erKey struct{}
-
-// WithEventRecorder attaches the given record.EventRecorder to the provided context
-// in the returned context.
-func WithEventRecorder(ctx context.Context, er record.EventRecorder) context.Context {
-	return context.WithValue(ctx, erKey{}, er)
-}
-
-// GetEventRecorder attempts to look up the record.EventRecorder on a given context.
-// It may return null if none is found.
-func GetEventRecorder(ctx context.Context) record.EventRecorder {
-	untyped := ctx.Value(erKey{})
-	if untyped == nil {
-		return nil
-	}
-	return untyped.(record.EventRecorder)
 }
 
 func init() {

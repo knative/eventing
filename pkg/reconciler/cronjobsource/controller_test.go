@@ -19,9 +19,9 @@ package cronjobsource
 import (
 	"testing"
 
-	. "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/pkg/configmap"
 	logtesting "github.com/knative/pkg/logging/testing"
+	. "github.com/knative/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"

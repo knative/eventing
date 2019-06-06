@@ -20,8 +20,8 @@ import (
 	"github.com/knative/pkg/configmap"
 	"testing"
 
-	. "github.com/knative/eventing/pkg/reconciler/testing"
 	logtesting "github.com/knative/pkg/logging/testing"
+	. "github.com/knative/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/containersource/fake"
