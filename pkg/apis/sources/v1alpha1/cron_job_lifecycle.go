@@ -35,6 +35,10 @@ const (
 
 	// CronJobConditionEventTypeProvided has status True when the CronJobSource has been configured with its event type.
 	CronJobConditionEventTypeProvided apis.ConditionType = "EventTypeProvided"
+
+	// CronJobConditionResources is True when the resources listed for the CronJobSource have been properly
+	// parsed and match specified syntax for resource quantities
+	CronJobConditionResources apis.ConditionType = "ResourcesCorrect"
 )
 
 var cronJobSourceCondSet = apis.NewLivingConditionSet(
@@ -106,4 +110,14 @@ func (s *CronJobSourceStatus) MarkEventType() {
 // MarkNoEventType sets the condition that the source does not its event type configured.
 func (s *CronJobSourceStatus) MarkNoEventType(reason, messageFormat string, messageA ...interface{}) {
 	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionEventTypeProvided, reason, messageFormat, messageA...)
+}
+
+// MarkResourcesCorrect sets the condtion that the source resources are properly parsable quantities
+func (s *CronJobSourceStatus) MarkResourcesCorrect() {
+	cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionResources)
+}
+
+// MarkResourcesInorrect sets the condtion that the source resources are not properly parsable quantities
+func (s *CronJobSourceStatus) MarkResourcesIncorrect(reason, messageFormat string, messageA ...interface{}) {
+	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionResources, reason, messageFormat, messageA...)
 }
