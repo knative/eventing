@@ -114,6 +114,8 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 				Namespace:  c.Namespace,
 			},
 		}
+		// TODO: Once the addressable has a real status to dig through, use that here instead of
+		// addressable, because it might be addressable but not ready.
 		address := c.Status.AddressStatus.Address
 		if address != nil {
 			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}

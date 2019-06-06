@@ -277,7 +277,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipeline's subscription failed: %v", err)
-			return nil, fmt.Errorf("Failed to create Subscription Object for step: %d", step)
+			return nil, fmt.Errorf("Failed to create Subscription Object for step: %d : %s", step, err)
 		}
 		return newSub, nil
 	} else if err != nil {
