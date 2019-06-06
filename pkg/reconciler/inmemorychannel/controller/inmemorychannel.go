@@ -265,8 +265,8 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemor
 	new, err := r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Subscription %q became ready after %v", imc.Name, duration)
-		//r.StatsReporter.ReportServiceReady(trigger.Namespace, imc.Name, duration) // TODO: stats
+		r.Logger.Infof("InMemoryChannel %q became ready after %v", imc.Name, duration)
+		r.StatsReporter.ReportReady("InMemoryChannel", imc.Namespace, imc.Name, duration)
 	}
 
 	return new, err

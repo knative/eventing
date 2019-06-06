@@ -64,6 +64,11 @@ const (
 	ApiServerSourceReadyCountN = "api_server_source_ready_count"
 	// ApiServerSourceReadyLatencyN is the time it takes for an api server source to become ready since the resource is created.
 	ApiServerSourceReadyLatencyN = "api_server_source_ready_latency"
+
+	// InMemoryChannelReadyCountN is the number of in memory channels that have become ready.
+	InMemoryChannelReadyCountN = "inmemorychannel_ready_count"
+	// InMemoryChannelReadyLatencyN is the time it takes for an in memory channel to become ready since the resource is created.
+	InMemoryChannelReadyLatencyN = "inmemorychannel_ready_latency"
 )
 
 var (
@@ -81,6 +86,10 @@ var (
 		"Channel": {
 			ReadyLatencyKey: ChannelReadyLatencyN,
 			ReadyCountKey:   ChannelReadyCountN,
+		},
+		"InMemoryChannel": {
+			ReadyLatencyKey: InMemoryChannelReadyLatencyN,
+			ReadyCountKey:   InMemoryChannelReadyCountN,
 		},
 		"Subscription": {
 			ReadyLatencyKey: SubscriptionReadyLatencyN,
