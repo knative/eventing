@@ -18,9 +18,12 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/knative/eventing/pkg/inmemorychannel"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -29,6 +32,9 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 )
@@ -81,12 +87,45 @@ func NewController(
 
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name.
-	_, _, err := cache.SplitMetaNamespaceKey(key)
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
+	// Get the IMC resource with this namespace/name.
+	original, err := r.inmemorychannelLister.InMemoryChannels(namespace).Get(name)
+	if apierrs.IsNotFound(err) {
+		// The resource may no longer exist, in which case we stop processing.
+		logging.FromContext(ctx).Error("InMemoryChannel key in work queue no longer exists")
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	if !original.Status.IsReady() {
+		return fmt.Errorf("Channel is not ready. Cannot configure and update subscriber status")
+	}
+
+	// Don't modify the informers copy.
+	channel := original.DeepCopy()
+
+	reconcileErr := r.reconcile(ctx, channel)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
+	} else {
+		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
+	}
+
+	// todo: Should this check for subscribable status rather than entire status?
+	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
+		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
+		return updateStatusErr
+	}
+	return nil
+}
+
+func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChannel) error {
 	// This is a special Reconciler that does the following:
 	// 1. Lists the inmemory channels.
 	// 2. Creates a multi-channel-fanout-config.
@@ -112,7 +151,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
+	imc.Status.SubscribableTypeStatus.SubscribableStatus = r.createSubscribableStatus(imc.Spec.Subscribable)
 	return nil
+}
+
+func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable) *eventingduck.SubscribableStatus {
+	if subscribable == nil {
+		return nil
+	}
+	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
+	for _, sub := range subscribable.Subscribers {
+		status := eventingduck.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
+		}
+		subscriberStatus = append(subscriberStatus, status)
+	}
+	return &eventingduck.SubscribableStatus{
+		Subscribers: subscriberStatus,
+	}
 }
 
 // newConfigFromInMemoryChannels creates a new Config from the list of inmemory channels.
@@ -135,4 +193,21 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 	return &multichannelfanout.Config{
 		ChannelConfigs: cc,
 	}
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {
+	imc, err := r.inmemorychannelLister.InMemoryChannels(desired.Namespace).Get(desired.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if reflect.DeepEqual(imc.Status, desired.Status) {
+		return imc, nil
+	}
+
+	// Don't modify the informers copy.
+	existing := imc.DeepCopy()
+	existing.Status = desired.Status
+
+	return r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
 }

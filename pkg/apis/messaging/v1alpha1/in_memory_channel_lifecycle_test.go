@@ -340,19 +340,22 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 						},
 					},
 				},
+				AddressStatus: duckv1alpha1.AddressStatus{Address: &duckv1alpha1.Addressable{}},
 			},
 		},
 		"has domain": {
 			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &InMemoryChannelStatus{
-				Address: duckv1alpha1.Addressable{
-					Addressable: duckv1beta1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
+				AddressStatus: duckv1alpha1.AddressStatus{
+					Address: &duckv1alpha1.Addressable{
+						duckv1beta1.Addressable{
+							URL: &apis.URL{
+								Scheme: "http",
+								Host:   "test-domain",
+							},
 						},
+						"test-domain",
 					},
-					Hostname: "test-domain",
 				},
 				Status: duckv1beta1.Status{
 					Conditions: []apis.Condition{{
