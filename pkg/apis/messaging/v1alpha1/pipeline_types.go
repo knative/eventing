@@ -90,15 +90,15 @@ type PipelineSpec struct {
 	ChannelTemplate ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
-	// Currently due to limitations on the Subscription, this _must_ be a Channel.
-	// If that changes, we can change that later.
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	// Kind must be "Channel" and APIVersion must be
-	// "eventing.knative.dev/v1alpha1"
+	//
+	//  The resource pointed by this ObjectReference must meet the Addressable contract
+	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
+	//  it will be reflected in the Subscription's status.
 	// +optional
 	Reply *corev1.ObjectReference `json:"reply,omitempty"`
 }

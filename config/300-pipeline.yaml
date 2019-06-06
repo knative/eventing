@@ -28,6 +28,7 @@ spec:
     - all
     - knative
     - eventing
+    - messaging
   scope: Namespaced
   subresources:
     status: {}
@@ -52,29 +53,33 @@ spec:
             steps:
               type: array
               items:
-              properties:
-                dnsName:
-                  type: string
-                  minLength: 1
-                uri:
-                  type: string
-                  minLength: 1
-                ref:
-                  type: object
-                  required:
-                    - apiVersion
-                    - kind
-                    - name
-                  properties:
-                    apiVersion:
-                      type: string
-                      minLength: 1
-                    kind:
-                      type: string
-                      minLength: 1
-                    name:
-                      type: string
-                      minLength: 1
+                type: object
+                properties:
+                  dnsName:
+                    type: string
+                    minLength: 1
+                  uri:
+                    type: string
+                    minLength: 1
+                  ref:
+                    type: object
+                    required:
+                      - apiVersion
+                      - kind
+                      - name
+                    properties:
+                      apiVersion:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                      namespace:
+                        type: string
+                        maxLength: 0
             channelTemplate:
               type: object
               required:

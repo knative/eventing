@@ -74,6 +74,7 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 				APIVersion: s.APIVersion,
 				Kind:       s.Kind,
 				Name:       s.Name,
+				Namespace:  s.Namespace,
 			},
 		}
 		readyCondition := s.Status.GetCondition(eventingv1alpha1.SubscriptionConditionReady)
@@ -104,19 +105,23 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 		allReady = false
 
 	}
-	for i, s := range channels {
+	for i, c := range channels {
 		ps.ChannelStatuses[i] = PipelineChannelStatus{
 			Channel: corev1.ObjectReference{
-				APIVersion: s.APIVersion,
-				Kind:       s.Kind,
-				Name:       s.Name,
+				APIVersion: c.APIVersion,
+				Kind:       c.Kind,
+				Name:       c.Name,
+				Namespace:  c.Namespace,
 			},
 		}
-		address := s.Status.AddressStatus.Address
-		// TODO: Once channealables actually display status, check it here.
-		if address == nil {
+		address := c.Status.AddressStatus.Address
+		if address != nil {
+			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
+		} else {
+			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 			allReady = false
 		}
+
 		// If the first channel is addressable, mark it as such
 		if i == 0 {
 			ps.setAddress(address)

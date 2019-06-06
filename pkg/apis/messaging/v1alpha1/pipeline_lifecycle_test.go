@@ -45,21 +45,26 @@ var pipelineConditionSubscriptionsReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
-func getSubscription(ready bool) *eventingv1alpha1.Subscription {
+func getSubscription(name string, ready bool) *eventingv1alpha1.Subscription {
 	s := eventingv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
 			Kind:       "Subscription",
 		},
-		ObjectMeta: metav1.ObjectMeta{},
-		Status:     eventingv1alpha1.SubscriptionStatus{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "testns",
+		},
+		Status: eventingv1alpha1.SubscriptionStatus{},
 	}
 	if ready {
 		s.Status.MarkChannelReady()
 		s.Status.MarkReferencesResolved()
+		s.Status.MarkAddedToChannel()
 	} else {
 		s.Status.MarkChannelNotReady("testInducedFailure", "Test Induced failure")
 		s.Status.MarkReferencesNotResolved("testInducedFailure", "Test Induced failure")
+		s.Status.MarkNotAddedToChannel("testInducedfailure", "Test Induced failure")
 	}
 	return &s
 }
@@ -218,26 +223,29 @@ func TestPipelinePropagateSubscriptionStatuses(t *testing.T) {
 				APIVersion: "eventing.knative.dev/v1alpha1",
 				Kind:       "Subscription",
 			},
-			ObjectMeta: metav1.ObjectMeta{},
-			Status:     eventingv1alpha1.SubscriptionStatus{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sub",
+				Namespace: "testns",
+			},
+			Status: eventingv1alpha1.SubscriptionStatus{},
 		},
 		},
 		want: corev1.ConditionFalse,
 	}, {
 		name: "one subscription not ready",
-		subs: []*eventingv1alpha1.Subscription{getSubscription(false)},
+		subs: []*eventingv1alpha1.Subscription{getSubscription("sub0", false)},
 		want: corev1.ConditionFalse,
 	}, {
 		name: "one subscription ready",
-		subs: []*eventingv1alpha1.Subscription{getSubscription(true)},
+		subs: []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
 		want: corev1.ConditionTrue,
 	}, {
 		name: "one subscription ready, one not",
-		subs: []*eventingv1alpha1.Subscription{getSubscription(true), getSubscription(false)},
+		subs: []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
 		want: corev1.ConditionFalse,
 	}, {
 		name: "two subscriptions ready",
-		subs: []*eventingv1alpha1.Subscription{getSubscription(true), getSubscription(true)},
+		subs: []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want: corev1.ConditionTrue,
 	}}
 
@@ -308,32 +316,32 @@ func TestPipelineReady(t *testing.T) {
 	}, {
 		name:     "one channelable not ready, one subscription ready",
 		channels: []*duckv1alpha1.Channelable{getChannelable(false)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription(true)},
+		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
 		want:     false,
 	}, {
 		name:     "one channelable ready, one subscription not ready",
 		channels: []*duckv1alpha1.Channelable{getChannelable(true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription(false)},
+		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", false)},
 		want:     false,
 	}, {
 		name:     "one channelable ready, one subscription ready",
 		channels: []*duckv1alpha1.Channelable{getChannelable(true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription(true)},
+		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
 		want:     true,
 	}, {
 		name:     "one channelable ready, one not, two subsriptions ready",
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(false)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription(true), getSubscription(true)},
+		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     false,
 	}, {
 		name:     "two channelables ready, one subscription ready, one not",
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription(true), getSubscription(false)},
+		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
 		want:     false,
 	}, {
 		name:     "two channelables ready, two subscriptions ready",
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription(true), getSubscription(true)},
+		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     true,
 	}}
 

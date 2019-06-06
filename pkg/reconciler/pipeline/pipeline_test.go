@@ -27,6 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -201,6 +202,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 					}),
@@ -210,6 +218,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Namespace:  testNS,
 							},
 						},
 					})),
@@ -249,6 +258,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 					}),
@@ -258,6 +274,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Namespace:  testNS,
 							},
 						},
 					})),
@@ -302,6 +319,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 						v1alpha1.PipelineChannelStatus{
@@ -309,6 +333,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 						v1alpha1.PipelineChannelStatus{
@@ -316,6 +347,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 2),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 					}),
@@ -325,6 +363,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Namespace:  testNS,
 							},
 						},
 						v1alpha1.PipelineSubscriptionStatus{
@@ -332,6 +371,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 1),
+								Namespace:  testNS,
 							},
 						},
 						v1alpha1.PipelineSubscriptionStatus{
@@ -339,6 +379,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 2),
+								Namespace:  testNS,
 							},
 						},
 					})),
@@ -394,6 +435,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 						v1alpha1.PipelineChannelStatus{
@@ -401,6 +449,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 1),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 						v1alpha1.PipelineChannelStatus{
@@ -408,6 +463,13 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
 								Name:       resources.PipelineChannelName(pipelineName, 2),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
 							},
 						},
 					}),
@@ -417,6 +479,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Namespace:  testNS,
 							},
 						},
 						v1alpha1.PipelineSubscriptionStatus{
@@ -424,6 +487,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 1),
+								Namespace:  testNS,
 							},
 						},
 						v1alpha1.PipelineSubscriptionStatus{
@@ -431,6 +495,7 @@ func TestAllCases(t *testing.T) {
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.PipelineSubscriptionName(pipelineName, 2),
+								Namespace:  testNS,
 							},
 						},
 					})),
