@@ -1,11 +1,11 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2019 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,14 +19,13 @@ package reconciler
 import (
 	"time"
 
-	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
+	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
+	kafkaScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging/logkey"
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -43,9 +42,7 @@ type Options struct {
 	KubeClientSet    kubernetes.Interface
 	DynamicClientSet dynamic.Interface
 
-	EventingClientSet      clientset.Interface
-	ApiExtensionsClientSet apiextensionsclientset.Interface
-	//CachingClientSet cachingclientset.Interface
+	KafkaClientSet clientset.Interface
 
 	Recorder      record.EventRecorder
 	StatsReporter StatsReporter
@@ -57,23 +54,25 @@ type Options struct {
 	StopChannel  <-chan struct{}
 }
 
+// This is mutable for testing.
+var resetPeriod = 30 * time.Second
+
 func NewOptionsOrDie(cfg *rest.Config, logger *zap.SugaredLogger, stopCh <-chan struct{}) Options {
 	kubeClient := kubernetes.NewForConfigOrDie(cfg)
-	eventingClient := clientset.NewForConfigOrDie(cfg)
 	dynamicClient := dynamic.NewForConfigOrDie(cfg)
-	apiExtensionsClient := apiextensionsclientset.NewForConfigOrDie(cfg)
+
+	kafkaClient := clientset.NewForConfigOrDie(cfg)
 
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
 	return Options{
-		KubeClientSet:          kubeClient,
-		DynamicClientSet:       dynamicClient,
-		EventingClientSet:      eventingClient,
-		ApiExtensionsClientSet: apiExtensionsClient,
-		ConfigMapWatcher:       configMapWatcher,
-		Logger:                 logger,
-		ResyncPeriod:           10 * time.Hour, // Based on controller-runtime default.
-		StopChannel:            stopCh,
+		KubeClientSet:    kubeClient,
+		DynamicClientSet: dynamicClient,
+		ConfigMapWatcher: configMapWatcher,
+		KafkaClientSet:   kafkaClient,
+		Logger:           logger,
+		ResyncPeriod:     10 * time.Hour, // Based on controller-runtime default.
+		StopChannel:      stopCh,
 	}
 }
 
@@ -90,14 +89,10 @@ type Base struct {
 	// KubeClientSet allows us to talk to the k8s for core APIs
 	KubeClientSet kubernetes.Interface
 
-	// EventingClientSet allows us to configure Eventing objects
-	EventingClientSet clientset.Interface
-
-	// ApiExtensionsClientSet allows us to configure k8s API extension objects.
-	ApiExtensionsClientSet apiextensionsclientset.Interface
-
 	// DynamicClientSet allows us to configure pluggable Build objects
 	DynamicClientSet dynamic.Interface
+
+	KafkaClientSet clientset.Interface
 
 	// ConfigMapWatcher allows us to watch for ConfigMap changes.
 	ConfigMapWatcher configmap.Watcher
@@ -154,21 +149,20 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 	}
 
 	base := &Base{
-		KubeClientSet:          opt.KubeClientSet,
-		EventingClientSet:      opt.EventingClientSet,
-		ApiExtensionsClientSet: opt.ApiExtensionsClientSet,
-		DynamicClientSet:       opt.DynamicClientSet,
-		ConfigMapWatcher:       opt.ConfigMapWatcher,
-		Recorder:               recorder,
-		StatsReporter:          statsReporter,
-		Logger:                 logger,
+		KubeClientSet:    opt.KubeClientSet,
+		DynamicClientSet: opt.DynamicClientSet,
+		KafkaClientSet:   opt.KafkaClientSet,
+		ConfigMapWatcher: opt.ConfigMapWatcher,
+		Recorder:         recorder,
+		StatsReporter:    statsReporter,
+		Logger:           logger,
 	}
 
 	return base
 }
 
 func init() {
-	// Add eventing types to the default Kubernetes Scheme so Events can be
-	// logged for eventing types.
-	eventingScheme.AddToScheme(scheme.Scheme)
+	// Add run types to the default Kubernetes Scheme so Events can be
+	// logged for run types.
+	_ = kafkaScheme.AddToScheme(scheme.Scheme)
 }

@@ -831,6 +831,7 @@ func makeChannelWithSubscribersAndFinalizerAndPCSAndAddress() *eventingv1alpha1.
 func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 	c := makeChannel()
 	c.Finalizers = []string{finalizerName}
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -869,24 +870,28 @@ func makeDeletingChannelWithoutPCS() *eventingv1alpha1.Channel {
 func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	c.Finalizers = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithoutFinalizerOrPCS() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithoutFinalizer()
 	c.Status.Internal = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	addSubscribers(c, subscribers)
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 

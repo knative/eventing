@@ -31,6 +31,16 @@ import (
 
 // TODO Move this to knative/pkg.
 
+var (
+	// OnePercentSampling is a configuration that samples 1% of the requests.
+	OnePercentSampling = &tracingconfig.Config{
+		Enable:         true,
+		Debug:          false,
+		SampleRate:     0.01,
+		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	}
+)
+
 // setupZipkinPublishing sets up Zipkin trace publishing for the process. Note that other pieces
 // still need to generate the traces, this just ensures that if generated, they are collected
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP

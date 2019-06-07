@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2019 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,83 +30,17 @@ import (
 type Measurement int
 
 const (
-	// BrokerReadyCountN is the number of brokers that have become ready.
-	BrokerReadyCountN = "broker_ready_count"
-	// BrokerReadyLatencyN is the time it takes for a broker to become ready since the resource is created.
-	BrokerReadyLatencyN = "broker_ready_latency"
-
-	// TriggerReadyCountN is the number of triggers that have become ready.
-	TriggerReadyCountN = "trigger_ready_count"
-	// TriggerReadyLatencyN is the time it takes for a trigger to become ready since the resource is created.
-	TriggerReadyLatencyN = "trigger_ready_latency"
-
-	// ChannelReadyCountN is the number of channels that have become ready.
-	ChannelReadyCountN = "channel_ready_count"
-	// ChannelReadyLatencyN is the time it takes for a trigger to become ready since the resource is created.
-	ChannelReadyLatencyN = "channel_ready_latency"
-
-	// SubscriptionReadyCountN is the number of subscriptions that have become ready.
-	SubscriptionReadyCountN = "subscription_ready_count"
-	// SubscriptionReadyLatencyN is the time it takes for a subscription to become ready since the resource is created.
-	SubscriptionReadyLatencyN = "subscription_ready_latency"
-
-	// ContainerSourceReadyCountN is the number of container sources that have become ready.
-	ContainerSourceReadyCountN = "container_source_ready_count"
-	// ContainerSourceReadyLatencyN is the time it takes for a container source to become ready since the resource is created.
-	ContainerSourceReadyLatencyN = "container_source_ready_latency"
-
-	// CronJobSourceReadyCountN is the number of cron job sources that have become ready.
-	CronJobSourceReadyCountN = "cron_job_source_ready_count"
-	// CronJobSourceReadyLatencyN is the time it takes for a cron job source to become ready since the resource is created.
-	CronJobSourceReadyLatencyN = "cron_job_source_ready_latency"
-
-	// ApiServerSourceReadyCountN is the number of api server sources that have become ready.
-	ApiServerSourceReadyCountN = "api_server_source_ready_count"
-	// ApiServerSourceReadyLatencyN is the time it takes for an api server source to become ready since the resource is created.
-	ApiServerSourceReadyLatencyN = "api_server_source_ready_latency"
-
-	// InMemoryChannelReadyCountN is the number of in memory channels that have become ready.
-	InMemoryChannelReadyCountN = "inmemorychannel_ready_count"
-	// InMemoryChannelReadyLatencyN is the time it takes for an in memory channel to become ready since the resource is created.
-	InMemoryChannelReadyLatencyN = "inmemorychannel_ready_latency"
+	// KafkaChannelReadyCountN is the number of kafka channels that have become ready.
+	KafkaChannelReadyCountN = "kafkachannel_ready_count"
+	// KafkaChannelReadyLatencyN is the time it takes for a kafka channel to become ready since the resource is created.
+	KafkaChannelReadyLatencyN = "kafkachannel_ready_latency"
 )
 
 var (
 	KindToStatKeys = map[string]StatKey{
-		// Eventing
-		"Broker": {
-			ReadyLatencyKey: BrokerReadyLatencyN,
-			ReadyCountKey:   BrokerReadyCountN,
-		},
-		"Trigger": {
-			ReadyLatencyKey: TriggerReadyLatencyN,
-			ReadyCountKey:   TriggerReadyCountN,
-		},
-		// Messaging
-		"Channel": {
-			ReadyLatencyKey: ChannelReadyLatencyN,
-			ReadyCountKey:   ChannelReadyCountN,
-		},
-		"InMemoryChannel": {
-			ReadyLatencyKey: InMemoryChannelReadyLatencyN,
-			ReadyCountKey:   InMemoryChannelReadyCountN,
-		},
-		"Subscription": {
-			ReadyLatencyKey: SubscriptionReadyLatencyN,
-			ReadyCountKey:   SubscriptionReadyCountN,
-		},
-		// Sources
-		"ContainerSource": {
-			ReadyLatencyKey: ContainerSourceReadyLatencyN,
-			ReadyCountKey:   ContainerSourceReadyCountN,
-		},
-		"CronJobSource": {
-			ReadyLatencyKey: CronJobSourceReadyLatencyN,
-			ReadyCountKey:   CronJobSourceReadyCountN,
-		},
-		"ApiServerSource": {
-			ReadyLatencyKey: ApiServerSourceReadyLatencyN,
-			ReadyCountKey:   ApiServerSourceReadyCountN,
+		"KafkaChannel": {
+			ReadyCountKey:   KafkaChannelReadyCountN,
+			ReadyLatencyKey: KafkaChannelReadyLatencyN,
 		},
 	}
 

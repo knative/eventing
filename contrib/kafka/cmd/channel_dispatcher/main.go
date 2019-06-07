@@ -18,25 +18,23 @@ package main
 
 import (
 	"flag"
+	"github.com/knative/eventing/pkg/tracing"
 	"log"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -84,15 +82,10 @@ func main() {
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
-	eventingClientSet := clientset.NewForConfigOrDie(cfg)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
+	messagingInformerFactory := informers.NewSharedInformerFactory(opt.KafkaClientSet, opt.ResyncPeriod)
 
 	// Messaging
-	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
-
-	// Adding the scheme.
-	eventingScheme.AddToScheme(scheme.Scheme)
+	kafkaChannelInformer := messagingInformerFactory.Messaging().V1alpha1().KafkaChannels()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -100,7 +93,6 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		kafkachannel.NewController(
 			opt,
-			eventingClientSet,
 			kafkaDispatcher,
 			kafkaChannelInformer,
 		),
@@ -116,6 +108,12 @@ func main() {
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
 	// TODO: Watch the observability config map and dynamically update metrics exporter.
 	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
+
+	// Setup zipkin tracing.
+	if err = tracing.SetupDynamicZipkinPublishing(logger, opt.ConfigMapWatcher, "kafka-ch-dispatcher"); err != nil {
+		logger.Fatalw("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalw("failed to start configuration manager", zap.Error(err))
 	}
