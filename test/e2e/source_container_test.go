@@ -36,8 +36,8 @@ func TestContainerSource(t *testing.T) {
 		loggerPodName = "e2e-container-source-logger-pod"
 	)
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)

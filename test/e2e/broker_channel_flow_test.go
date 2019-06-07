@@ -48,7 +48,7 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlow(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testBrokerChannelFlow)
+	runTests(t, provisioners, common.FeatureBasic, testBrokerChannelFlow)
 }
 
 func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
@@ -81,8 +81,8 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role

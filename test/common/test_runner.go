@@ -14,21 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package common
 
 import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
-	"unicode"
 
-	"github.com/knative/eventing/test"
-	"github.com/knative/eventing/test/common"
 	pkgTest "github.com/knative/pkg/test"
+	"github.com/knative/pkg/test/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,10 +39,15 @@ import (
 
 // RunTests will use all provisioners that support the given feature, to run
 // a test for the testFunc.
-func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T, provisioner string, isCRD bool)) {
+func RunTests(
+	t *testing.T,
+	provisioners []string,
+	feature Feature,
+	testFunc func(st *testing.T, provisioner string, isCRD bool),
+) {
 	t.Parallel()
-	for _, provisioner := range test.EventingFlags.Provisioners {
-		channelConfig := common.ValidProvisionersMap[provisioner]
+	for _, provisioner := range provisioners {
+		channelConfig := ValidProvisionersMap[provisioner]
 		if contains(channelConfig.Features, feature) {
 			t.Run(fmt.Sprintf("%s-%s", t.Name(), provisioner), func(st *testing.T) {
 				testFunc(st, provisioner, false)
@@ -62,12 +64,12 @@ func RunTests(t *testing.T, feature common.Feature, testFunc func(st *testing.T,
 
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, set the test case to run in parallel, etc.
-func Setup(t *testing.T, runInParallel bool) *common.Client {
+func Setup(t *testing.T, runInParallel bool) *Client {
 	// Create a new namespace to run this test case.
-	baseFuncName := getBaseFuncName(t.Name())
-	namespace := makeK8sNamePrefix(baseFuncName)
+	baseFuncName := helpers.GetBaseFuncName(t.Name())
+	namespace := helpers.MakeK8sNamePrefix(baseFuncName)
 	t.Logf("namespace is : %q", namespace)
-	client, err := common.NewClient(
+	client, err := NewClient(
 		pkgTest.Flags.Kubeconfig,
 		pkgTest.Flags.Cluster,
 		namespace,
@@ -97,14 +99,14 @@ func Setup(t *testing.T, runInParallel bool) *common.Client {
 }
 
 // TearDown will delete created names using clients.
-func TearDown(client *common.Client) {
+func TearDown(client *Client) {
 	client.Cleaner.Clean(true)
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
 	}
 }
 
-func contains(features []common.Feature, feature common.Feature) bool {
+func contains(features []Feature, feature Feature) bool {
 	for _, f := range features {
 		if f == feature {
 			return true
@@ -113,19 +115,19 @@ func contains(features []common.Feature, feature common.Feature) bool {
 	return false
 }
 
-// Get the actual typemeta of the Channel type.
+// GetChannelTypeMeta gets the actual typemeta of the Channel type.
 // TODO(Fredy-Z): This function is a workaround when there are both provisioner and Channel CRD in this repo.
 //                It needs to be removed when the provisioner implementation is removed.
-func getChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
-	channelTypeMeta := common.ChannelTypeMeta
+func GetChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
+	channelTypeMeta := ChannelTypeMeta
 	if isCRD {
-		channelTypeMeta = common.ProvisionerChannelMap[provisioner]
+		channelTypeMeta = ProvisionerChannelMap[provisioner]
 	}
 	return channelTypeMeta
 }
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
-func CreateNamespaceIfNeeded(t *testing.T, client *common.Client, namespace string) {
+func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 	nsSpec, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 
 	if err != nil && errors.IsNotFound(err) {
@@ -146,7 +148,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *common.Client, namespace stri
 }
 
 // waitForServiceAccountExists waits until the ServiceAccount exists.
-func waitForServiceAccountExists(t *testing.T, client *common.Client, name, namespace string) error {
+func waitForServiceAccountExists(t *testing.T, client *Client, name, namespace string) error {
 	return wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
 		sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
 		if _, err := sas.Get(name, metav1.GetOptions{}); err == nil {
@@ -156,37 +158,8 @@ func waitForServiceAccountExists(t *testing.T, client *common.Client, name, name
 	})
 }
 
-// TODO(Fredy-Z): Borrowed this function from Knative/Serving, will delete it after we move it to Knative/pkg/test.
-// makeK8sNamePrefix converts each chunk of non-alphanumeric character into a single dash
-// and also convert camelcase tokens into dash-delimited lowercase tokens.
-func makeK8sNamePrefix(s string) string {
-	var sb strings.Builder
-	newToken := false
-	for _, c := range s {
-		if !(unicode.IsLetter(c) || unicode.IsNumber(c)) {
-			newToken = true
-			continue
-		}
-		if sb.Len() > 0 && (newToken || unicode.IsUpper(c)) {
-			sb.WriteRune('-')
-		}
-		sb.WriteRune(unicode.ToLower(c))
-		newToken = false
-	}
-	return sb.String()
-}
-
-// getBaseFuncName returns the baseFuncName parsed from the fullFuncName.
-// eg. test/e2e.TestMain will return TestMain.
-// TODO(Fredy-Z): many functions in this file can be moved to knative/pkg/test to make it cleaner.
-func getBaseFuncName(fullFuncName string) string {
-	baseFuncName := fullFuncName[strings.LastIndex(fullFuncName, "/")+1:]
-	baseFuncName = baseFuncName[strings.LastIndex(baseFuncName, ".")+1:]
-	return baseFuncName
-}
-
 // DeleteNameSpace deletes the namespace that has the given name.
-func DeleteNameSpace(client *common.Client) error {
+func DeleteNameSpace(client *Client) error {
 	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
 	if err == nil || !errors.IsNotFound(err) {
 		return client.Kube.Kube.CoreV1().Namespaces().Delete(client.Namespace, nil)
@@ -194,8 +167,8 @@ func DeleteNameSpace(client *common.Client) error {
 	return err
 }
 
-// logPodLogsForDebugging add the pod logs in the testing log for further debugging.
-func logPodLogsForDebugging(client *common.Client, podName, containerName string) {
+// LogPodLogsForDebugging add the pod logs in the testing log for further debugging.
+func LogPodLogsForDebugging(client *Client, podName, containerName string) {
 	namespace := client.Namespace
 	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
 	if err != nil {

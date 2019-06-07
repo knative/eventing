@@ -35,8 +35,8 @@ func TestApiServerSource(t *testing.T) {
 		loggerPodName      = "e2e-api-server-source-logger-pod"
 	)
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
 	cr := resources.EventWatcherClusterRole(clusterRoleName)

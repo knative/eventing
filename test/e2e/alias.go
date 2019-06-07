@@ -1,6 +1,5 @@
 /*
 Copyright 2019 The Knative Authors
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,21 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package e2e
 
-// CloudEvent specifies the arguments for a CloudEvent used by the sendevents or transformevents image.
-type CloudEvent struct {
-	ID       string
-	Type     string
-	Source   string
-	Data     string // must be in json format
-	Encoding string // binary or structured
-}
+import "github.com/knative/eventing/test/common"
+import "github.com/knative/eventing/test"
 
-// CloudEvent related constants.
-const (
-	CloudEventEncodingBinary     = "binary"
-	CloudEventEncodingStructured = "structured"
-	CloudEventDefaultEncoding    = CloudEventEncodingBinary
-	CloudEventDefaultType        = "dev.knative.test.event"
-)
+var runTests = common.RunTests
+var setup = common.Setup
+var tearDown = common.TearDown
+var getChannelTypeMeta = common.GetChannelTypeMeta
+var provisioners = test.EventingFlags.Provisioners

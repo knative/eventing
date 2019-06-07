@@ -20,6 +20,7 @@ package resources
 
 import (
 	"fmt"
+	"strconv"
 
 	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ import (
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
-	const imageName = "sendevent"
+	const imageName = "sendevents"
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -49,17 +50,16 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 					event.ID,
 					"-event-type",
 					event.Type,
-					"-source",
+					"-event-source",
 					event.Source,
-					"-data",
+					"-event-data",
 					event.Data,
-					"-encoding",
+					"-event-encoding",
 					event.Encoding,
 					"-sink",
 					sink,
 				},
 			}},
-			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}
@@ -113,17 +113,43 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 
 // HelloWorldPod creates a Pod that logs "Hello, World!".
 func HelloWorldPod(name string) *corev1.Pod {
+	const imageName = "helloworld"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
-				Name:            "helloworld",
-				Image:           pkgTest.ImagePath("helloworld"),
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
 			}},
 			RestartPolicy: corev1.RestartPolicyNever,
+		},
+	}
+}
+
+// EventLatencyPod creates a Pod that measures events transfer latency.
+func EventLatencyPod(name, sink string, eventNum int) *corev1.Pod {
+	const imageName = "latency"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"perftest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-sink",
+					sink,
+					"-event-num",
+					strconv.Itoa(eventNum),
+				},
+			}},
+			RestartPolicy: corev1.RestartPolicyOnFailure,
 		},
 	}
 }

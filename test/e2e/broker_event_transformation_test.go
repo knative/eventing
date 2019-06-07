@@ -42,7 +42,7 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testEventTransformationForTrigger)
+	runTests(t, provisioners, common.FeatureBasic, testEventTransformationForTrigger)
 }
 
 func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
@@ -70,8 +70,8 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 		loggerPodName         = "logger-pod"
 	)
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role

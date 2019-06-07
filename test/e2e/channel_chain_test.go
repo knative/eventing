@@ -34,7 +34,7 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testChannelChain)
+	runTests(t, provisioners, common.FeatureBasic, testChannelChain)
 }
 
 func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
@@ -48,8 +48,8 @@ func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 
 	// create channels
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)

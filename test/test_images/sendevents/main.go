@@ -30,33 +30,28 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 )
 
-type Heartbeat struct {
-	Sequence int    `json:"id"`
-	Data     string `json:"data"`
-}
-
 var (
-	sink      string
-	data      string
-	eventID   string
-	eventType string
-	source    string
-	periodStr string
-	delayStr  string
-	maxMsgStr string
-	encoding  string
+	sink          string
+	eventID       string
+	eventType     string
+	eventSource   string
+	eventData     string
+	eventEncoding string
+	periodStr     string
+	delayStr      string
+	maxMsgStr     string
 )
 
 func init() {
 	flag.StringVar(&sink, "sink", "", "The sink url for the message destination.")
-	flag.StringVar(&data, "data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
-	flag.StringVar(&source, "source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
+	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
 	flag.StringVar(&delayStr, "delay", "5", "The number of seconds to wait before sending messages.")
 	flag.StringVar(&maxMsgStr, "max-messages", "1", "The number of messages to attempt to send. 0 for unlimited.")
-	flag.StringVar(&encoding, "encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 }
 
 func parseDurationStr(durationStr string, defaultDuration int) time.Duration {
@@ -94,18 +89,18 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
-	if source == "" {
-		source = "localhost"
+	if eventSource == "" {
+		eventSource = "localhost"
 	}
 
 	var encodingOption http.Option
-	switch encoding {
+	switch eventEncoding {
 	case "binary":
 		encodingOption = cloudevents.WithBinaryEncoding()
 	case "structured":
 		encodingOption = cloudevents.WithStructuredEncoding()
 	default:
-		log.Printf("unsupported encoding option: %q\n", encoding)
+		log.Printf("unsupported encoding option: %q\n", eventEncoding)
 		os.Exit(1)
 	}
 
@@ -125,7 +120,7 @@ func main() {
 	}
 
 	var untyped map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &untyped); err != nil {
+	if err := json.Unmarshal([]byte(eventData), &untyped); err != nil {
 		log.Println("Currently sendevent only supports JSON event data")
 		os.Exit(1)
 	}
@@ -142,7 +137,7 @@ func main() {
 			event.SetID(eventID)
 		}
 		event.SetType(eventType)
-		event.SetSource(source)
+		event.SetSource(eventSource)
 		if err := event.SetData(untyped); err != nil {
 			log.Fatalf("failed to set data, %v", err)
 		}
