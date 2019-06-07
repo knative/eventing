@@ -32,7 +32,7 @@ type Measurement int
 const (
 	// KafkaChannelReadyCountN is the number of kafka channels that have become ready.
 	KafkaChannelReadyCountN = "kafkachannel_ready_count"
-	// KafkaChannelReadyCountN is the time it takes for a kafka channel to become ready since the resource is created.
+	// KafkaChannelReadyLatencyN is the time it takes for a kafka channel to become ready since the resource is created.
 	KafkaChannelReadyLatencyN = "kafkachannel_ready_latency"
 )
 
