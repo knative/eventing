@@ -17,51 +17,54 @@ limitations under the License.
 package common
 
 import (
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ChannelTypeMeta is the TypeMeta ref for Channel.
-var ChannelTypeMeta = EventingTypeMeta(base.ChannelKind)
+var ChannelTypeMeta = EventingTypeMeta(resources.ChannelKind)
 
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.
-var SubscriptionTypeMeta = EventingTypeMeta(base.SubscriptionKind)
+var SubscriptionTypeMeta = EventingTypeMeta(resources.SubscriptionKind)
 
 // BrokerTypeMeta is the TypeMeta ref for Broker.
-var BrokerTypeMeta = EventingTypeMeta(base.BrokerKind)
+var BrokerTypeMeta = EventingTypeMeta(resources.BrokerKind)
 
 // TriggerTypeMeta is the TypeMeta ref for Trigger.
-var TriggerTypeMeta = EventingTypeMeta(base.TriggerKind)
+var TriggerTypeMeta = EventingTypeMeta(resources.TriggerKind)
 
 // EventingTypeMeta returns the TypeMeta ref for an eventing resource.
 func EventingTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
 		Kind:       kind,
-		APIVersion: base.EventingAPIVersion,
+		APIVersion: resources.EventingAPIVersion,
 	}
 }
 
 // CronJobSourceTypeMeta is the TypeMeta ref for CronJobSource.
-var CronJobSourceTypeMeta = SourcesTypeMeta(base.CronJobSourceKind)
+var CronJobSourceTypeMeta = SourcesTypeMeta(resources.CronJobSourceKind)
 
 // ContainerSourceTypeMeta is the TypeMeta ref for ContainerSource.
-var ContainerSourceTypeMeta = SourcesTypeMeta(base.ContainerSourceKind)
+var ContainerSourceTypeMeta = SourcesTypeMeta(resources.ContainerSourceKind)
 
 // SourcesTypeMeta returns the TypeMeta ref for an eventing sources resource.
 func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
 		Kind:       kind,
-		APIVersion: base.SourcesAPIVersion,
+		APIVersion: resources.SourcesAPIVersion,
 	}
 }
 
 // KafkaChannelTypeMeta is the TypeMeta ref for KafkaChannel.
-var KafkaChannelTypeMeta = MessagingTypeMeta(base.KafkaChannelKind)
+var KafkaChannelTypeMeta = MessagingTypeMeta(resources.KafkaChannelKind)
+
+// InMemoryChannelTypeMeta is the TypeMeta ref for InMemoryChannel.
+var InMemoryChannelTypeMeta = MessagingTypeMeta(resources.InMemoryChannelKind)
 
 // MessagingTypeMeta returns the TypeMeta ref for an eventing messaing resource.
 func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
 		Kind:       kind,
-		APIVersion: base.MessagingAPIVersion,
+		APIVersion: resources.MessagingAPIVersion,
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	pkgTest "github.com/knative/pkg/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -46,7 +47,7 @@ func (client *Client) SendFakeEventToAddressable(
 	senderName,
 	addressableName string,
 	typemeta *metav1.TypeMeta,
-	event *base.CloudEvent,
+	event *resources.CloudEvent,
 ) error {
 	uri, err := client.GetAddressableURI(addressableName, typemeta)
 	if err != nil {
@@ -59,7 +60,7 @@ func (client *Client) SendFakeEventToAddressable(
 // To use this function, the given resource must have implemented the Addressable duck-type.
 func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1.TypeMeta) (string, error) {
 	namespace := client.Namespace
-	metaAddressable := base.NewMetaResource(addressableName, namespace, typemeta)
+	metaAddressable := resources.NewMetaResource(addressableName, namespace, typemeta)
 	return base.GetAddressableURI(client.Dynamic, metaAddressable)
 }
 
@@ -67,10 +68,10 @@ func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1
 func (client *Client) sendFakeEventToAddress(
 	senderName string,
 	uri string,
-	event *base.CloudEvent,
+	event *resources.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	pod := base.EventSenderPod(senderName, uri, event)
+	pod := resources.EventSenderPod(senderName, uri, event)
 	client.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
 		return err
@@ -82,7 +83,7 @@ func (client *Client) sendFakeEventToAddress(
 // To use this function, the given resource must have implemented the Status duck-type.
 func (client *Client) WaitForResourceReady(name string, typemeta *metav1.TypeMeta) error {
 	namespace := client.Namespace
-	metaResource := base.NewMetaResource(name, namespace, typemeta)
+	metaResource := resources.NewMetaResource(name, namespace, typemeta)
 	if err := base.WaitForResourceReady(client.Dynamic, metaResource); err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (client *Client) WaitForResourceReady(name string, typemeta *metav1.TypeMet
 // To use this function, the given resource must have implemented the Status duck-type.
 func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
 	namespace := client.Namespace
-	metaResourceList := base.NewMetaResourceList(namespace, typemeta)
+	metaResourceList := resources.NewMetaResourceList(namespace, typemeta)
 	if err := base.WaitForResourcesReady(client.Dynamic, metaResourceList); err != nil {
 		return err
 	}
@@ -110,6 +111,7 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 		BrokerTypeMeta,
 		TriggerTypeMeta,
 		KafkaChannelTypeMeta,
+		InMemoryChannelTypeMeta,
 		CronJobSourceTypeMeta,
 		ContainerSourceTypeMeta,
 	}

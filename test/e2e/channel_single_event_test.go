@@ -22,17 +22,17 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 func TestSingleBinaryEventForChannel(t *testing.T) {
-	singleEvent(t, base.CloudEventEncodingBinary)
+	singleEvent(t, resources.CloudEventEncodingBinary)
 }
 
 func TestSingleStructuredEventForChannel(t *testing.T) {
-	singleEvent(t, base.CloudEventEncodingStructured)
+	singleEvent(t, resources.CloudEventEncodingStructured)
 }
 
 /*
@@ -57,7 +57,7 @@ func singleEvent(t *testing.T, encoding string) {
 		client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
 
 		// create logger service as the subscriber
-		pod := base.EventLoggerPod(loggerPodName)
+		pod := resources.EventLoggerPod(loggerPodName)
 		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
@@ -65,7 +65,7 @@ func singleEvent(t *testing.T, encoding string) {
 			subscriptionName,
 			channelName,
 			channelTypeMeta,
-			base.WithSubscriberForSubscription(loggerPodName),
+			resources.WithSubscriberForSubscription(loggerPodName),
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
@@ -75,9 +75,9 @@ func singleEvent(t *testing.T, encoding string) {
 
 		// send fake CloudEvent to the channel
 		body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-		event := &base.CloudEvent{
+		event := &resources.CloudEvent{
 			Source:   senderName,
-			Type:     base.CloudEventDefaultType,
+			Type:     resources.CloudEventDefaultType,
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
 			Encoding: encoding,
 		}

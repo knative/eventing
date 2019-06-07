@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -83,35 +83,35 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 
 	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-	eventAfterTransformation := &base.CloudEvent{
+	eventAfterTransformation := &resources.CloudEvent{
 		Source:   eventSource2,
 		Type:     eventType2,
 		Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-		Encoding: base.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
 
 	// create the transformation service
-	transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
+	transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
 	client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
 	// create trigger1 for event transformation
 	client.CreateTriggerOrFail(
 		triggerName1,
-		base.WithBroker(brokerName),
-		base.WithTriggerFilter(eventSource1, eventType1),
-		base.WithSubscriberRefForTrigger(transformationPodName),
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(eventSource1, eventType1),
+		resources.WithSubscriberRefForTrigger(transformationPodName),
 	)
 
 	// create logger pod and service
-	loggerPod := base.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// create trigger2 for event receiving
 	client.CreateTriggerOrFail(
 		triggerName2,
-		base.WithBroker(brokerName),
-		base.WithTriggerFilter(eventSource2, eventType2),
-		base.WithSubscriberRefForTrigger(loggerPodName),
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(eventSource2, eventType2),
+		resources.WithSubscriberRefForTrigger(loggerPodName),
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
@@ -120,11 +120,11 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 	}
 
 	// send fake CloudEvent to the broker
-	eventToSend := &base.CloudEvent{
+	eventToSend := &resources.CloudEvent{
 		Source:   eventSource1,
 		Type:     eventType1,
 		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-		Encoding: base.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
 	if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
