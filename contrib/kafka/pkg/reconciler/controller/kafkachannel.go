@@ -30,12 +30,11 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
-	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -81,7 +80,6 @@ type Reconciler struct {
 	// Shopify/sarama, see https://github.com/Shopify/sarama/issues/1162.
 	kafkaClusterAdmin sarama.ClusterAdmin
 
-	eventingClientSet    clientset.Interface
 	kafkachannelLister   listers.KafkaChannelLister
 	kafkachannelInformer cache.SharedIndexInformer
 	deploymentLister     appsv1listers.DeploymentLister
@@ -105,7 +103,6 @@ var _ cache.ResourceEventHandler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet clientset.Interface,
 	kafkaConfig *utils.KafkaConfig,
 	dispatcherNamespace string,
 	dispatcherDeploymentName string,
@@ -122,7 +119,6 @@ func NewController(
 		dispatcherDeploymentName: dispatcherDeploymentName,
 		dispatcherServiceName:    dispatcherServiceName,
 		kafkaConfig:              kafkaConfig,
-		eventingClientSet:        eventingClientSet,
 		kafkachannelLister:       kafkachannelInformer.Lister(),
 		kafkachannelInformer:     kafkachannelInformer.Informer(),
 		deploymentLister:         deploymentInformer.Lister(),
@@ -234,7 +230,7 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 			return err
 		}
 		removeFinalizer(kc)
-		_, err := r.eventingClientSet.MessagingV1alpha1().KafkaChannels(kc.Namespace).Update(kc)
+		_, err := r.KafkaClientSet.MessagingV1alpha1().KafkaChannels(kc.Namespace).Update(kc)
 		return err
 	}
 
@@ -377,11 +373,11 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.KafkaCh
 	existing := kc.DeepCopy()
 	existing.Status = desired.Status
 
-	new, err := r.eventingClientSet.MessagingV1alpha1().KafkaChannels(desired.Namespace).UpdateStatus(existing)
+	new, err := r.KafkaClientSet.MessagingV1alpha1().KafkaChannels(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("KafkaChannel %q became ready after %v", kc.Name, duration)
-		if err := r.StatsReporter.ReportReady("Channel", kc.Namespace, kc.Name, duration); err != nil {
+		if err := r.StatsReporter.ReportReady("KafkaChannel", kc.Namespace, kc.Name, duration); err != nil {
 			r.Logger.Infof("Failed to record ready for KafkaChannel %q: %v", kc.Name, err)
 		}
 	}
@@ -457,7 +453,7 @@ func (r *Reconciler) ensureFinalizer(channel *v1alpha1.KafkaChannel) error {
 		return err
 	}
 
-	_, err = r.eventingClientSet.MessagingV1alpha1().KafkaChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
+	_, err = r.KafkaClientSet.MessagingV1alpha1().KafkaChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
 	return err
 }
 
