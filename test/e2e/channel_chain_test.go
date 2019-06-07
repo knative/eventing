@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -57,7 +57,7 @@ func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 	client.WaitForResourcesReady(channelTypeMeta)
 
 	// create loggerPod and expose it as a service
-	pod := base.EventLoggerPod(loggerPodName)
+	pod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 	// create subscriptions that subscribe the first channel, and reply events directly to the second channel
@@ -65,14 +65,14 @@ func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 		subscriptionNames1,
 		channelNames[0],
 		channelTypeMeta,
-		base.WithReply(channelNames[1], channelTypeMeta),
+		resources.WithReply(channelNames[1], channelTypeMeta),
 	)
 	// create subscriptions that subscribe the second channel, and call the logging service
 	client.CreateSubscriptionsOrFail(
 		subscriptionNames2,
 		channelNames[1],
 		channelTypeMeta,
-		base.WithSubscriberForSubscription(loggerPodName),
+		resources.WithSubscriberForSubscription(loggerPodName),
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
@@ -82,11 +82,11 @@ func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
-	event := &base.CloudEvent{
+	event := &resources.CloudEvent{
 		Source:   senderName,
-		Type:     base.CloudEventDefaultType,
+		Type:     resources.CloudEventDefaultType,
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: base.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
 	if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])

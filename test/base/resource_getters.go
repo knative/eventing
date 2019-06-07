@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file contains functions which get actual resources given the meta resource.
+
 package base
 
 import (
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,42 +30,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// MetaResource includes necessary meta data to retrieve the generic Kubernetes resource.
-type MetaResource struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-}
-
-// MetaResourceList includes necessary meta data to retrieve the generic Kubernetes resource list.
-type MetaResourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	Namespace       string
-}
-
-// NewMetaResource returns a MetaResource built from the given name, namespace and typemeta.
-func NewMetaResource(name, namespace string, typemeta *metav1.TypeMeta) *MetaResource {
-	return &MetaResource{
-		TypeMeta: *typemeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-	}
-}
-
-// NewMetaResourceList returns a MetaResourceList built from the given namespace and typemeta.
-func NewMetaResourceList(namespace string, typemeta *metav1.TypeMeta) *MetaResourceList {
-	return &MetaResourceList{
-		TypeMeta:  *typemeta,
-		Namespace: namespace,
-	}
-}
-
 // GetGenericObject returns a generic object representing a Kubernetes resource.
 // Callers can cast this returned object to other objects that implement the corresponding duck-type.
 func GetGenericObject(
 	dynamicClient dynamic.Interface,
-	obj *MetaResource,
+	obj *resources.MetaResource,
 	rtype apis.Listable,
 ) (runtime.Object, error) {
 	lister, err := getGenericLister(dynamicClient, obj.GroupVersionKind(), obj.Namespace, rtype)
@@ -76,7 +47,7 @@ func GetGenericObject(
 // GetGenericObjectList returns a generic object list representing a list of Kubernetes resource.
 func GetGenericObjectList(
 	dynamicClient dynamic.Interface,
-	objList *MetaResourceList,
+	objList *resources.MetaResourceList,
 	rtype apis.Listable,
 ) ([]runtime.Object, error) {
 	lister, err := getGenericLister(dynamicClient, objList.GroupVersionKind(), objList.Namespace, rtype)

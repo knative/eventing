@@ -22,15 +22,14 @@ import (
 	"reflect"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
-	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/contrib/kafka/pkg/dispatcher"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners/fanout"
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -59,7 +58,6 @@ type Reconciler struct {
 
 	kafkaDispatcher *dispatcher.KafkaDispatcher
 
-	eventingClientSet    clientset.Interface
 	kafkachannelLister   listers.KafkaChannelLister
 	kafkachannelInformer cache.SharedIndexInformer
 	impl                 *controller.Impl
@@ -72,7 +70,6 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet clientset.Interface,
 	kafkaDispatcher *dispatcher.KafkaDispatcher,
 	kafkachannelInformer messaginginformers.KafkaChannelInformer,
 ) *controller.Impl {
@@ -80,7 +77,6 @@ func NewController(
 	r := &Reconciler{
 		Base:                 reconciler.NewBase(opt, controllerAgentName),
 		kafkaDispatcher:      kafkaDispatcher,
-		eventingClientSet:    eventingClientSet,
 		kafkachannelLister:   kafkachannelInformer.Lister(),
 		kafkachannelInformer: kafkachannelInformer.Informer(),
 	}
@@ -130,7 +126,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReconciled, "KafkaChannel reconciled")
 	}
 
-	// todo: Should this check for subscribable status rather than entire status?
+	// TODO: Should this check for subscribable status rather than entire status?
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update KafkaChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update KafkaChannel's status: %v", updateStatusErr)
@@ -235,6 +231,6 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.KafkaCh
 	existing := kc.DeepCopy()
 	existing.Status = desired.Status
 
-	new, err := r.eventingClientSet.MessagingV1alpha1().KafkaChannels(desired.Namespace).UpdateStatus(existing)
+	new, err := r.KafkaClientSet.MessagingV1alpha1().KafkaChannels(desired.Namespace).UpdateStatus(existing)
 	return new, err
 }

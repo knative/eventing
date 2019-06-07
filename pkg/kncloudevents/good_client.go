@@ -1,12 +1,21 @@
 package kncloudevents
 
 import (
+	gohttp "net/http"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/knative/pkg/tracing"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
 )
 
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {
-	tOpts := []http.Option{cloudevents.WithBinaryEncoding()}
+	tOpts := []http.Option{
+		cloudevents.WithBinaryEncoding(),
+		// Add input tracing.
+		http.WithMiddleware(tracing.HTTPSpanMiddleware),
+	}
 	if len(target) > 0 && target[0] != "" {
 		tOpts = append(tOpts, cloudevents.WithTarget(target[0]))
 	}
@@ -15,6 +24,12 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	t, err := cloudevents.NewHTTPTransport(tOpts...)
 	if err != nil {
 		return nil, err
+	}
+	// Add output tracing.
+	t.Client = &gohttp.Client{
+		Transport: &ochttp.Transport{
+			Propagation: &b3.HTTPFormat{},
+		},
 	}
 
 	// Use the transport to make a new CloudEvents client.

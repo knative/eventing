@@ -17,7 +17,9 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"fmt"
+	"github.com/knative/pkg/injection/clients/dynamicclient"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -50,6 +52,26 @@ func NewSinkReconciler(opt reconciler.Options, callback func(string)) *SinkRecon
 				Type:         &duckv1alpha1.AddressableType{},
 				ResyncPeriod: opt.ResyncPeriod,
 				StopChannel:  opt.StopChannel,
+			},
+			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
+		},
+	}
+
+	return ret
+}
+
+// NewSinkReconciler creates and initializes a new SinkReconciler
+func NewInjectionSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
+	ret := &SinkReconciler{}
+
+	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
+	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
+		Delegate: &pkgapisduck.EnqueueInformerFactory{
+			Delegate: &pkgapisduck.TypedInformerFactory{
+				Client:       dynamicclient.Get(ctx),
+				Type:         &duckv1alpha1.AddressableType{},
+				ResyncPeriod: controller.GetResyncPeriod(ctx),
+				StopChannel:  ctx.Done(),
 			},
 			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
 		},

@@ -58,6 +58,10 @@ spec:
                 fieldPath: metadata.namespace
           - name: CONFIG_LOGGING_NAME
             value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/sources
           - name: CRONJOB_RA_IMAGE
             # This is the Go import path for cron job receive adapter binary
             # that is containerized and substituted here.

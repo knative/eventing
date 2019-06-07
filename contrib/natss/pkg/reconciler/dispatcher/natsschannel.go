@@ -28,14 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
-	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/natss/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
+	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners/fanout"
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -60,7 +59,6 @@ type Reconciler struct {
 
 	natssDispatcher *dispatcher.SubscriptionsSupervisor
 
-	eventingClientSet    clientset.Interface
 	natsschannelLister   listers.NatssChannelLister
 	natsschannelInformer cache.SharedIndexInformer
 	impl                 *controller.Impl
@@ -73,14 +71,12 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet clientset.Interface,
 	natssDispatcher *dispatcher.SubscriptionsSupervisor,
 	natsschannelInformer messaginginformers.NatssChannelInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
 		Base:                 reconciler.NewBase(opt, controllerAgentName),
-		eventingClientSet:    eventingClientSet,
 		natssDispatcher:      natssDispatcher,
 		natsschannelLister:   natsschannelInformer.Lister(),
 		natsschannelInformer: natsschannelInformer.Informer(),
@@ -146,7 +142,7 @@ func (r *Reconciler) reconcile(ctx context.Context, natssChannel *v1alpha1.Natss
 			return err
 		}
 		removeFinalizer(natssChannel)
-		_, err := r.eventingClientSet.MessagingV1alpha1().NatssChannels(natssChannel.Namespace).Update(natssChannel)
+		_, err := r.NatssClientSet.MessagingV1alpha1().NatssChannels(natssChannel.Namespace).Update(natssChannel)
 		return err
 	}
 
@@ -242,7 +238,7 @@ func (r *Reconciler) ensureFinalizer(channel *v1alpha1.NatssChannel) error {
 		return err
 	}
 
-	_, err = r.eventingClientSet.MessagingV1alpha1().NatssChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
+	_, err = r.NatssClientSet.MessagingV1alpha1().NatssChannels(channel.Namespace).Patch(channel.Name, types.MergePatchType, patch)
 	return err
 }
 

@@ -21,6 +21,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/knative/eventing/pkg/tracing"
+
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
 	"github.com/knative/eventing/pkg/logconfig"
@@ -107,6 +109,12 @@ func main() {
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
 	// TODO: Watch the observability config map and dynamically update metrics exporter.
 	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
+
+	// Setup zipkin tracing.
+	if err = tracing.SetupDynamicZipkinPublishing(logger, opt.ConfigMapWatcher, "imc-dispatcher"); err != nil {
+		logger.Fatalw("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalw("failed to start configuration manager", zap.Error(err))
 	}

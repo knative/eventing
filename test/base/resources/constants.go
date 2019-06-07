@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package base
+package resources
 
 const (
 	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
@@ -29,9 +29,15 @@ const (
 
 // API versions for the resources.
 const (
+	CoreAPIVersion      = "v1"
 	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
 	SourcesAPIVersion   = "sources.eventing.knative.dev/v1alpha1"
 	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
+)
+
+// Kind for core Kubernetes resources.
+const (
+	ServiceKind string = "Service"
 )
 
 // Kind for eventing resources.

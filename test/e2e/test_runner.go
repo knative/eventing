@@ -119,7 +119,7 @@ func contains(features []common.Feature, feature common.Feature) bool {
 func getChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
 	channelTypeMeta := common.ChannelTypeMeta
 	if isCRD {
-		channelTypeMeta = common.OperatorChannelMap[provisioner]
+		channelTypeMeta = common.ProvisionerChannelMap[provisioner]
 	}
 	return channelTypeMeta
 }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// resource_checks.go contains functions which check resources until they
+// This file contains functions which check resources until they
 // get into the state desired by the caller or time out.
 
 package base
@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/pkg/apis"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"go.opencensus.io/trace"
@@ -44,7 +45,7 @@ const (
 // it is done, returns an error or timeout. desc will be used to
 // name the metric that is emitted to track how long it took for
 // the resource to get into the state checked by isResourceReady.
-func WaitForResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) error {
+func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
 	metricName := fmt.Sprintf("WaitForResourceReady/%s/%s", obj.Namespace, obj.Name)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -56,7 +57,7 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj *MetaResource) er
 }
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
-func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *MetaResourceList) error {
+func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
 	metricName := fmt.Sprintf("WaitForResourcesReady/%s", objList.Namespace)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()

@@ -24,15 +24,6 @@ import (
 	"sync"
 	"time"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
-	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -42,6 +33,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
+	"go.uber.org/zap"
 )
 
 const (

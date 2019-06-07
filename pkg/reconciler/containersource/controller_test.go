@@ -17,34 +17,22 @@ limitations under the License.
 package containersource
 
 import (
+	"github.com/knative/pkg/configmap"
 	"testing"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
 	logtesting "github.com/knative/pkg/logging/testing"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/containersource/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
 )
 
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
+	ctx, _ := SetupFakeContext(t)
 
-	containerSourceInformer := eventingInformer.Sources().V1alpha1().ContainerSources()
-	deploymentInformer := kubeInformer.Apps().V1().Deployments()
-
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	},
-		containerSourceInformer,
-		deploymentInformer,
-	)
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

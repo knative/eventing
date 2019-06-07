@@ -26,12 +26,11 @@ import (
 	"github.com/knative/pkg/apis"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
-	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	messaginginformers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/natss/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	"github.com/knative/eventing/contrib/natss/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -69,7 +68,6 @@ type Reconciler struct {
 	dispatcherDeploymentName string
 	dispatcherServiceName    string
 
-	eventingClientSet    clientset.Interface
 	natsschannelLister   listers.NatssChannelLister
 	natsschannelInformer cache.SharedIndexInformer
 	deploymentLister     appsv1listers.DeploymentLister
@@ -93,7 +91,6 @@ var _ cache.ResourceEventHandler = (*Reconciler)(nil)
 // Registers event handlers to enqueue events.
 func NewController(
 	opt reconciler.Options,
-	eventingClientSet clientset.Interface,
 	dispatcherNamespace string,
 	dispatcherDeploymentName string,
 	dispatcherServiceName string,
@@ -108,7 +105,6 @@ func NewController(
 		dispatcherNamespace:      dispatcherNamespace,
 		dispatcherDeploymentName: dispatcherDeploymentName,
 		dispatcherServiceName:    dispatcherServiceName,
-		eventingClientSet:        eventingClientSet,
 		natsschannelLister:       natsschannelInformer.Lister(),
 		natsschannelInformer:     natsschannelInformer.Informer(),
 		deploymentLister:         deploymentInformer.Lister(),
@@ -333,11 +329,11 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.NatssCh
 	existing := kc.DeepCopy()
 	existing.Status = desired.Status
 
-	new, err := r.eventingClientSet.MessagingV1alpha1().NatssChannels(desired.Namespace).UpdateStatus(existing)
+	new, err := r.NatssClientSet.MessagingV1alpha1().NatssChannels(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("NatssChannel %q became ready after %v", kc.Name, duration)
-		if err := r.StatsReporter.ReportReady("Channel", kc.Namespace, kc.Name, duration); err != nil {
+		if err := r.StatsReporter.ReportReady("NatssChannel", kc.Namespace, kc.Name, duration); err != nil {
 			r.Logger.Infof("Failed to record ready for NatssChannel %q: %v", kc.Name, err)
 		}
 	}

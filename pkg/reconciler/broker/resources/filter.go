@@ -70,6 +70,10 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 										},
 									},
 								},
+								{
+									Name:  "BROKER",
+									Value: args.Broker.Name,
+								},
 							},
 						},
 					},

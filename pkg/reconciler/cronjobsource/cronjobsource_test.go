@@ -17,7 +17,9 @@ limitations under the License.
 package cronjobsource
 
 import (
+	"context"
 	"fmt"
+	"github.com/knative/pkg/configmap"
 	"os"
 	"testing"
 
@@ -391,14 +393,14 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeInjectionFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:             reconciler.NewBase(opt, controllerAgentName),
+			Base:             reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
 			cronjobLister:    listers.GetCronJobSourceLister(),
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
+		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -40,7 +40,7 @@ func TestContainerSource(t *testing.T) {
 	defer TearDown(client)
 
 	// create event logger pod and service
-	loggerPod := base.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
@@ -48,9 +48,9 @@ func TestContainerSource(t *testing.T) {
 	args := []string{"--msg=" + data}
 
 	// create container source
-	template := base.ContainerSourceBasicTemplate(templateName, client.Namespace, imageName, args)
-	templateOption := base.WithTemplateForContainerSource(template)
-	sinkOption := base.WithSinkServiceForContainerSource(loggerPodName)
+	template := resources.ContainerSourceBasicTemplate(templateName, client.Namespace, imageName, args)
+	templateOption := resources.WithTemplateForContainerSource(template)
+	sinkOption := resources.WithSinkServiceForContainerSource(loggerPodName)
 	client.CreateContainerSourceOrFail(containerSourceName, templateOption, sinkOption)
 
 	// wait for all test resources to be ready
