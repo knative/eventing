@@ -20,14 +20,16 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	_ "github.com/knative/eventing/pkg/reconciler/apiserversource"
-	_ "github.com/knative/eventing/pkg/reconciler/containersource"
-	_ "github.com/knative/eventing/pkg/reconciler/cronjobsource"
-
-	// This defines the shared main for injected controllers.
+	"github.com/knative/eventing/pkg/reconciler/apiserversource"
+	"github.com/knative/eventing/pkg/reconciler/containersource"
+	"github.com/knative/eventing/pkg/reconciler/cronjobsource"
 	"github.com/knative/pkg/injection/sharedmain"
 )
 
 func main() {
-	sharedmain.Main()
+	sharedmain.Main("source-controller",
+		apiserversource.NewController,
+		containersource.NewController,
+		cronjobsource.NewController,
+	)
 }

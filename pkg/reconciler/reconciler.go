@@ -217,6 +217,7 @@ func NewInjectionBase(ctx context.Context, controllerAgentName string, cmw confi
 	base := &Base{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingclient.Get(ctx),
+		// TODO: this will need to be added when for the eventing controller.
 		//ApiExtensionsClientSet: opt.ApiExtensionsClientSet,
 		DynamicClientSet: dynamicclient.Get(ctx),
 		ConfigMapWatcher: cmw,

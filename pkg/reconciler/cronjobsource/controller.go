@@ -23,7 +23,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/injection"
 	"k8s.io/client-go/tools/cache"
 
 	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
@@ -38,10 +37,6 @@ const (
 	// itself when creating events.
 	controllerAgentName = "cronjob-source-controller"
 )
-
-func init() {
-	injection.Default.RegisterController(NewController)
-}
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
