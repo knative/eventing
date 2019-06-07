@@ -18,8 +18,9 @@ package testing
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/pkg/apis"
