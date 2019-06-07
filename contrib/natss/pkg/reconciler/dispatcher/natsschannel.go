@@ -195,7 +195,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.NatssCh
 	existing := imc.DeepCopy()
 	existing.Status = desired.Status
 
-	return r.eventingClientSet.MessagingV1alpha1().NatssChannels(desired.Namespace).UpdateStatus(existing)
+	return r.NatssClientSet.MessagingV1alpha1().NatssChannels(desired.Namespace).UpdateStatus(existing)
 }
 
 // newConfigFromNatssChannels creates a new Config from the list of natss channels.
