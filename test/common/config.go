@@ -27,17 +27,17 @@ const DefaultClusterChannelProvisioner = base.InMemoryProvisioner
 // ValidProvisionersMap saves the provisioner-features mapping.
 // Each pair means the provisioner support the list of features.
 var ValidProvisionersMap = map[string]ChannelConfig{
-	base.InMemoryProvisioner: ChannelConfig{
+	base.InMemoryProvisioner: {
 		Features: []Feature{FeatureBasic},
 	},
-	base.GCPPubSubProvisioner: ChannelConfig{
+	base.GCPPubSubProvisioner: {
 		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 	},
-	base.KafkaProvisioner: ChannelConfig{
+	base.KafkaProvisioner: {
 		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 		CRDSupported: true,
 	},
-	base.NatssProvisioner: ChannelConfig{
+	base.NatssProvisioner: {
 		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 	},
 }
