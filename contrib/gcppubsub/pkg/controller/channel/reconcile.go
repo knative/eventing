@@ -61,6 +61,8 @@ const (
 	topicDeleteFailed         = "TopicDeleteFailed"
 	subscriptionSyncFailed    = "SubscriptionSyncFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+
+	deprecatedMessage = "The `gcp-pubsub` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `PubSubChannel` CRD from https://github.com/GoogleCloudPlatform/cloud-run-events."
 )
 
 // reconciler reconciles GCP-PubSub Channels by creating the K8s Service (ExternalName)
@@ -161,6 +163,8 @@ func ShouldReconcile(c *eventingv1alpha1.Channel) bool {
 // returned error indicates an error during reconciliation.
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	c.Status.InitializeConditions()
+
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 
 	// We are syncing the following:
 	// - The K8s Service to talk to this Channel.

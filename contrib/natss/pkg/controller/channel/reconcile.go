@@ -33,6 +33,10 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 )
 
+const (
+	deprecatedMessage = "The `natss` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `NatssChannel` CRD."
+)
+
 type reconciler struct {
 	client   client.Client
 	recorder record.EventRecorder
@@ -113,6 +117,8 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	c.Status.InitializeConditions()
+
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 
 	// We are syncing two things:
 	// 1. The K8s Service to talk to this Channel.

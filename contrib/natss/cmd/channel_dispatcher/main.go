@@ -18,23 +18,22 @@ package main
 
 import (
 	"flag"
+	"github.com/knative/eventing/pkg/tracing"
 	"log"
 
 	"github.com/knative/eventing/contrib/natss/pkg/util"
 
 	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
+	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	natsschannel "github.com/knative/eventing/contrib/natss/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -74,15 +73,11 @@ func main() {
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with natss.
-	eventingClientSet := clientset.NewForConfigOrDie(cfg)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
+	messagingClientSet := clientset.NewForConfigOrDie(cfg)
+	messagingInformerFactory := informers.NewSharedInformerFactory(messagingClientSet, opt.ResyncPeriod)
 
 	// Messaging
-	natssChannelInformer := eventingInformerFactory.Messaging().V1alpha1().NatssChannels()
-
-	// Adding the scheme.
-	eventingScheme.AddToScheme(scheme.Scheme)
+	natssChannelInformer := messagingInformerFactory.Messaging().V1alpha1().NatssChannels()
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -90,7 +85,6 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		natsschannel.NewController(
 			opt,
-			eventingClientSet,
 			natssDispatcher,
 			natssChannelInformer,
 		),
@@ -106,6 +100,12 @@ func main() {
 	opt.ConfigMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.Controller))
 	// TODO: Watch the observability config map and dynamically update metrics exporter.
 	//opt.ConfigMapWatcher.Watch(metrics.ObservabilityConfigName, metrics.UpdateExporterFromConfigMap(component, logger))
+
+	// Setup zipkin tracing.
+	if err = tracing.SetupDynamicZipkinPublishing(logger, opt.ConfigMapWatcher, "natss-ch-dispatcher"); err != nil {
+		logger.Fatalw("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
 	if err := opt.ConfigMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalw("failed to start configuration manager", zap.Error(err))
 	}
