@@ -47,6 +47,9 @@ var CronJobSourceTypeMeta = SourcesTypeMeta(resources.CronJobSourceKind)
 // ContainerSourceTypeMeta is the TypeMeta ref for ContainerSource.
 var ContainerSourceTypeMeta = SourcesTypeMeta(resources.ContainerSourceKind)
 
+// ApiServerSourceTypeMeta is the TypeMeta ref for ApiServerSource.
+var ApiServerSourceTypeMeta = SourcesTypeMeta(resources.ApiServerSourceKind)
+
 // SourcesTypeMeta returns the TypeMeta ref for an eventing sources resource.
 func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{

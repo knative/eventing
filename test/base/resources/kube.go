@@ -111,6 +111,23 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 	}
 }
 
+// HelloWorldPod creates a Pod that logs "Hello, World!".
+func HelloWorldPod(name string) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            "helloworld",
+				Image:           pkgTest.ImagePath("helloworld"),
+				ImagePullPolicy: corev1.PullAlways,
+			}},
+			RestartPolicy: corev1.RestartPolicyNever,
+		},
+	}
+}
+
 // Service creates a Kubernetes Service with the given name, namespace, and
 // selector. Port 8080 is set as the target port.
 func Service(name string, selector map[string]string) *corev1.Service {
@@ -157,6 +174,22 @@ func ClusterRoleBinding(saName, crName, namespace string) *rbacv1.ClusterRoleBin
 			Kind:     "ClusterRole",
 			Name:     crName,
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
+		},
+	}
+}
+
+// EventWatcherClusterRole creates a Kubernetes ClusterRole that can be used to watch Events.
+func EventWatcherClusterRole(crName string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crName,
+		},
+		Rules: []rbacv1.PolicyRule{
+			rbacv1.PolicyRule{
+				APIGroups: []string{rbacv1.APIGroupAll},
+				Resources: []string{"events"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
 		},
 	}
 }
