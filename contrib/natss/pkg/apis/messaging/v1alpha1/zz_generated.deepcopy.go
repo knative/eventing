@@ -111,7 +111,8 @@ func (in *NatssChannelSpec) DeepCopy() *NatssChannelSpec {
 func (in *NatssChannelStatus) DeepCopyInto(out *NatssChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	in.Address.DeepCopyInto(&out.Address)
+	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
+	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	return
 }
 

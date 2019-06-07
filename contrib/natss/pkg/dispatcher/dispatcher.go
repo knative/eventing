@@ -20,17 +20,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
+	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners"
 	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -182,27 +184,27 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 	}
 }
 
-func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel, isFinalizer bool) error {
+func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel, isFinalizer bool) (*v1alpha1.SubscribableStatus, error) {
 	s.subscriptionsMux.Lock()
 	defer s.subscriptionsMux.Unlock()
 
 	cRef := provisioners.ChannelReference{Namespace: channel.Namespace, Name: channel.Name}
-
 	if channel.Spec.Subscribable == nil || isFinalizer {
 		s.logger.Sugar().Infof("Empty subscriptions for channel Ref: %v; unsubscribe all active subscriptions, if any", cRef)
 		chMap, ok := s.subscriptions[cRef]
 		if !ok {
 			// nothing to do
 			s.logger.Sugar().Infof("No channel Ref %v found in subscriptions map", cRef)
-			return nil
+			return nil, nil
 		}
 		for sub := range chMap {
 			s.unsubscribe(cRef, sub)
 		}
 		delete(s.subscriptions, cRef)
-		return nil
+		return nil, nil
 	}
 
+	subsStatus := &v1alpha1.SubscribableStatus{}
 	subscriptions := channel.Spec.Subscribable.Subscribers
 	activeSubs := make(map[subscriptionReference]bool) // it's logically a set
 
@@ -211,21 +213,28 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 		chMap = make(map[subscriptionReference]*stan.Subscription)
 		s.subscriptions[cRef] = chMap
 	}
+	var errStrings []string
 	for _, sub := range subscriptions {
 		// check if the subscription already exist and do nothing in this case
 		subRef := newSubscriptionReference(sub)
 		if _, ok := chMap[subRef]; ok {
 			activeSubs[subRef] = true
 			s.logger.Sugar().Infof("Subscription: %v already active for channel: %v", sub, cRef)
+			subsStatus.Subscribers = append(subsStatus.Subscribers, *ToSubscriberStatus(&sub, corev1.ConditionTrue, ""))
 			continue
 		}
 		// subscribe
 		natssSub, err := s.subscribe(cRef, subRef)
 		if err != nil {
-			return err
+			subsStatus.Subscribers = append(subsStatus.Subscribers, *ToSubscriberStatus(&sub, corev1.ConditionFalse, err.Error()))
+			errStrings = append(errStrings, err.Error())
 		}
 		chMap[subRef] = natssSub
 		activeSubs[subRef] = true
+		subsStatus.Subscribers = append(subsStatus.Subscribers, *ToSubscriberStatus(&sub, corev1.ConditionTrue, ""))
+	}
+	if len(errStrings) > 0 {
+		return subsStatus, fmt.Errorf(strings.Join(errStrings, "\n"))
 	}
 	// Unsubscribe for deleted subscriptions
 	for sub := range chMap {
@@ -237,7 +246,19 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 	if len(s.subscriptions[cRef]) == 0 {
 		delete(s.subscriptions, cRef)
 	}
-	return nil
+	return subsStatus, nil
+}
+
+func ToSubscriberStatus(subSpec *v1alpha1.SubscriberSpec, condition corev1.ConditionStatus, msg string) *v1alpha1.SubscriberStatus {
+	if subSpec == nil {
+		return nil
+	}
+	return &v1alpha1.SubscriberStatus{
+		UID:                subSpec.UID,
+		ObservedGeneration: subSpec.Generation,
+		Message:            msg,
+		Ready:              condition,
+	}
 }
 
 func (s *SubscriptionsSupervisor) subscribe(channel provisioners.ChannelReference, subscription subscriptionReference) (*stan.Subscription, error) {

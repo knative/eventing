@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"reflect"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"go.uber.org/zap"
@@ -111,15 +113,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
+	if !original.Status.IsReady() {
+		return fmt.Errorf("Channel is not ready. Cannot configure and update subscriber status")
+	}
+
 	// Don't modify the informers copy.
 	natssChannel := original.DeepCopy()
 
+	reconcileErr := r.reconcile(ctx, natssChannel)
+	if reconcileErr != nil {
+		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
+	} else {
+		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
+	}
+
+	// todo: Should this check for subscribable status rather than entire status?
+	if _, updateStatusErr := r.updateStatus(ctx, natssChannel); updateStatusErr != nil {
+		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
+		return updateStatusErr
+	}
+	return nil
+}
+
+func (r *Reconciler) reconcile(ctx context.Context, natssChannel *v1alpha1.NatssChannel) error {
 	// TODO update dispatcher API and use Channelable or NatssChannel.
 	c := toChannel(natssChannel)
 
 	// See if the channel has been deleted.
 	if natssChannel.DeletionTimestamp != nil {
-		if err := r.natssDispatcher.UpdateSubscriptions(c, true); err != nil {
+		if _, err := r.natssDispatcher.UpdateSubscriptions(c, true); err != nil {
 			logging.FromContext(ctx).Error("Error updating subscriptions", zap.Any("channel", c), zap.Error(err))
 			return err
 		}
@@ -135,7 +157,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Try to subscribe.
-	if err := r.natssDispatcher.UpdateSubscriptions(c, false); err != nil {
+	subStatus, err := r.natssDispatcher.UpdateSubscriptions(c, false)
+	natssChannel.Status.SubscribableStatus = subStatus
+	if err != nil {
 		logging.FromContext(ctx).Error("Error updating subscriptions", zap.Any("channel", c), zap.Error(err))
 		return err
 	}
@@ -159,6 +183,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	return nil
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.NatssChannel) (*v1alpha1.NatssChannel, error) {
+	imc, err := r.natsschannelLister.NatssChannels(desired.Namespace).Get(desired.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if reflect.DeepEqual(imc.Status, desired.Status) {
+		return imc, nil
+	}
+
+	// Don't modify the informers copy.
+	existing := imc.DeepCopy()
+	existing.Status = desired.Status
+
+	return r.eventingClientSet.MessagingV1alpha1().NatssChannels(desired.Namespace).UpdateStatus(existing)
 }
 
 // newConfigFromNatssChannels creates a new Config from the list of natss channels.
@@ -212,7 +253,7 @@ func removeFinalizer(channel *v1alpha1.NatssChannel) {
 }
 
 func toChannel(natssChannel *v1alpha1.NatssChannel) *eventingv1alpha1.Channel {
-	return &eventingv1alpha1.Channel{
+	channel := &eventingv1alpha1.Channel{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      natssChannel.Name,
 			Namespace: natssChannel.Namespace,
@@ -220,8 +261,11 @@ func toChannel(natssChannel *v1alpha1.NatssChannel) *eventingv1alpha1.Channel {
 		Spec: eventingv1alpha1.ChannelSpec{
 			Subscribable: natssChannel.Spec.Subscribable,
 		},
-		Status: eventingv1alpha1.ChannelStatus{
-			Address: natssChannel.Status.Address,
-		},
 	}
+	if natssChannel.Status.Address != nil {
+		channel.Status = eventingv1alpha1.ChannelStatus{
+			Address: *natssChannel.Status.Address,
+		}
+	}
+	return channel
 }
