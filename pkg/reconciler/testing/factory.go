@@ -164,12 +164,10 @@ func MakeInjectionFactory(ctor injectionCtor, unstructured bool) Factory {
 
 		// Validate all Create operations through the serving client.
 		client.PrependReactor("create", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-			// TODO(n3wscott): context.Background is the best we can do at the moment, but it should be set-able.
-			return ValidateCreates(context.Background(), action)
+			return ValidateCreates(ctx, action)
 		})
 		client.PrependReactor("update", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-			// TODO(n3wscott): context.Background is the best we can do at the moment, but it should be set-able.
-			return ValidateUpdates(context.Background(), action)
+			return ValidateUpdates(ctx, action)
 		})
 
 		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}

@@ -19,6 +19,7 @@ package apiserversource
 import (
 	"context"
 	"github.com/knative/pkg/injection"
+	"github.com/knative/pkg/logging"
 	"k8s.io/client-go/rest"
 )
 
@@ -39,7 +40,7 @@ func withCfgHost(ctx context.Context, cfg *rest.Config) context.Context {
 func GetCfgHost(ctx context.Context) string {
 	untyped := ctx.Value(HostKey{})
 	if untyped == nil {
-		return "unknown"
+		logging.FromContext(ctx).Fatalf("failed to load cfg host from context")
 	}
 	return untyped.(string)
 }

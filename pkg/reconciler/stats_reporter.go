@@ -186,7 +186,7 @@ func WithStatsReporter(ctx context.Context, sr StatsReporter) context.Context {
 }
 
 // GetStatsReporter attempts to look up the StatsReporter on a given context.
-// It may return null if none is found.
+// It may return nil if none is found.
 func GetStatsReporter(ctx context.Context) StatsReporter {
 	untyped := ctx.Value(srKey{})
 	if untyped == nil {
