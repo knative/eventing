@@ -215,23 +215,29 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 	}
 	var errStrings []string
 	for _, sub := range subscriptions {
+		subscriberStatus := ToSubscriberStatus(&sub, corev1.ConditionFalse, "internal error")
 		// check if the subscription already exist and do nothing in this case
 		subRef := newSubscriptionReference(sub)
 		if _, ok := chMap[subRef]; ok {
 			activeSubs[subRef] = true
 			s.logger.Sugar().Infof("Subscription: %v already active for channel: %v", sub, cRef)
-			subsStatus.Subscribers = append(subsStatus.Subscribers, *ToSubscriberStatus(&sub, corev1.ConditionTrue, ""))
+			subscriberStatus.Ready = corev1.ConditionTrue
+			subscriberStatus.Message = fmt.Sprintf("Subscription: %v already active for channel: %v", sub, cRef)
 			continue
 		}
 		// subscribe
 		natssSub, err := s.subscribe(cRef, subRef)
 		if err != nil {
-			subsStatus.Subscribers = append(subsStatus.Subscribers, *ToSubscriberStatus(&sub, corev1.ConditionFalse, err.Error()))
+			subscriberStatus.Ready = corev1.ConditionTrue
+			subscriberStatus.Message = err.Error()
 			errStrings = append(errStrings, err.Error())
 		}
 		chMap[subRef] = natssSub
 		activeSubs[subRef] = true
-		subsStatus.Subscribers = append(subsStatus.Subscribers, *ToSubscriberStatus(&sub, corev1.ConditionTrue, ""))
+
+		subscriberStatus.Ready = corev1.ConditionTrue
+		subscriberStatus.Message = fmt.Sprintf("Subscription: %v subscribed to channel: %v", sub, cRef)
+		subsStatus.Subscribers = append(subsStatus.Subscribers, *subscriberStatus)
 	}
 	if len(errStrings) > 0 {
 		return subsStatus, fmt.Errorf(strings.Join(errStrings, "\n"))
