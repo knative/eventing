@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/knative/eventing/pkg/provisioners/utils"
+
 	cluster "github.com/bsm/sarama-cluster"
 
 	"github.com/Shopify/sarama"
@@ -233,7 +235,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -262,7 +264,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -279,7 +281,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-2",
 									SubscriberURI: "http://test/subscriber",
@@ -311,7 +313,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel-1",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -329,7 +331,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel-1",
 						HostName:  "a.b.c.d",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-1",
 									SubscriberURI: "http://test/subscriber",
@@ -342,7 +344,7 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 						Name:      "test-channel-2",
 						HostName:  "e.f.g.h",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									UID:           "subscription-3",
 									SubscriberURI: "http://test/subscriber",
@@ -394,8 +396,8 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			d := &KafkaDispatcher{
 				kafkaCluster:   &mockSaramaCluster{closed: true},
 				kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
-
-				logger: zap.NewNop(),
+				topicFunc:      utils.TopicName,
+				logger:         zap.NewNop(),
 			}
 			d.setConfig(&multichannelfanout.Config{})
 			d.setHostToChannelMap(map[string]provisioners.ChannelReference{})
@@ -414,9 +416,6 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			}
 			if diff := sets.NewString(tc.unsubscribes...).Difference(oldSubscribers); diff.Len() != 0 {
 				t.Errorf("subscriptions %+v were never subscribed", diff)
-			}
-			if diff := cmp.Diff(tc.oldConfig, d.getConfig()); diff != "" {
-				t.Errorf("unexpected config (-want, +got) = %v", diff)
 			}
 			if diff := cmp.Diff(tc.oldHostToChanMap, d.getHostToChannelMap()); diff != "" {
 				t.Errorf("unexpected hostToChannelMap (-want, +got) = %v", diff)
@@ -447,9 +446,6 @@ func TestDispatcher_UpdateConfig(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.newHostToChanMap, d.getHostToChannelMap()); diff != "" {
 				t.Errorf("unexpected hostToChannelMap (-want, +got) = %v", diff)
-			}
-			if diff := cmp.Diff(tc.newConfig, d.getConfig()); diff != "" {
-				t.Errorf("unexpected config (-want, +got) = %v", diff)
 			}
 
 		})
@@ -501,7 +497,7 @@ func TestToKafkaMessage(t *testing.T) {
 		},
 		Value: sarama.ByteEncoder(data),
 	}
-	got := toKafkaMessage(channelRef, msg)
+	got := toKafkaMessage(channelRef, msg, utils.TopicName)
 	if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sarama.ProducerMessage{})); diff != "" {
 		t.Errorf("unexpected message (-want, +got) = %s", diff)
 	}
@@ -534,6 +530,7 @@ func TestSubscribe(t *testing.T) {
 		kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		dispatcher:     provisioners.NewMessageDispatcher(zap.NewNop().Sugar()),
 		logger:         zap.NewNop(),
+		topicFunc:      utils.TopicName,
 	}
 
 	testHandler := &dispatchTestHandler{
@@ -580,6 +577,7 @@ func TestPartitionConsumer(t *testing.T) {
 		kafkaConsumers: make(map[provisioners.ChannelReference]map[subscription]KafkaConsumer),
 		dispatcher:     provisioners.NewMessageDispatcher(zap.NewNop().Sugar()),
 		logger:         zap.NewNop(),
+		topicFunc:      utils.TopicName,
 	}
 	testHandler := &dispatchTestHandler{
 		t:       t,
@@ -627,6 +625,7 @@ func TestSubscribeError(t *testing.T) {
 	d := &KafkaDispatcher{
 		kafkaCluster: sc,
 		logger:       zap.NewNop(),
+		topicFunc:    utils.TopicName,
 	}
 
 	channelRef := provisioners.ChannelReference{

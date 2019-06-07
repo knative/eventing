@@ -24,28 +24,40 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"sync"
 	"time"
 
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
+	pkgtracing "github.com/knative/pkg/tracing"
 	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	crlog "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
+
+type envConfig struct {
+	Broker    string `envconfig:"BROKER" required:"true"`
+	Channel   string `envconfig:"CHANNEL" required:"true"`
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
+}
 
 var (
 	defaultTTL = 255
@@ -76,15 +88,33 @@ func main() {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
 	}
 
-	brokerName := getRequiredEnv("BROKER")
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
 
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   getRequiredEnv("CHANNEL"),
+		Host:   env.Channel,
 		Path:   "/",
 	}
 
-	ceClient, err := cloudevents.NewDefaultClient()
+	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	configMapWatcher := configmap.NewInformedWatcher(kc, env.Namespace)
+
+	zipkinServiceName := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
+		Namespace:  env.Namespace,
+		BrokerName: env.Broker,
+	})
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
+		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	if err != nil {
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
+	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
@@ -92,7 +122,7 @@ func main() {
 		logger:     logger,
 		ceClient:   ceClient,
 		channelURI: channelURI,
-		brokerName: brokerName,
+		brokerName: env.Broker,
 	}
 
 	// Run the event handler with the manager.
@@ -127,6 +157,12 @@ func main() {
 
 	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()
+
+	// configMapWatcher does not block, so start it first.
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+	}
+
 	// Start blocks forever.
 	if err = mgr.Start(stopCh); err != nil {
 		logger.Error("manager.Start() returned an error", zap.Error(err))
@@ -144,14 +180,6 @@ func main() {
 	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }
 
 type handler struct {

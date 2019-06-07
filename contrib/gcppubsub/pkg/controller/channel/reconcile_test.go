@@ -31,6 +31,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/system"
 	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
@@ -67,7 +68,7 @@ var (
 	truePointer = true
 
 	subscribers = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: "sub-name",
@@ -484,7 +485,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
 			},
-			WantErrMsg: "empty reference UID: {nil  http://foo/ }",
+			WantErrMsg: "empty reference UID: {nil  0 http://foo/ }",
 			WantEvent: []corev1.Event{
 				events[gcpResourcesPlanFailed],
 			},
@@ -783,7 +784,10 @@ func makeChannelWithFinalizerAndPCSAndAddress() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
 	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
 	// does not fill in Name, so the name is the empty string.
-	c.Status.SetAddress(fmt.Sprintf(".%s.svc.%s", c.Namespace, utils.GetClusterDomainName()))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf(".%s.svc.%s", c.Namespace, utils.GetClusterDomainName()),
+	})
 	return c
 }
 
@@ -827,6 +831,7 @@ func makeChannelWithSubscribersAndFinalizerAndPCSAndAddress() *eventingv1alpha1.
 func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 	c := makeChannel()
 	c.Finalizers = []string{finalizerName}
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -865,24 +870,28 @@ func makeDeletingChannelWithoutPCS() *eventingv1alpha1.Channel {
 func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	c.Finalizers = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithoutFinalizerOrPCS() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithoutFinalizer()
 	c.Status.Internal = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	addSubscribers(c, subscribers)
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -898,7 +907,7 @@ func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
 func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				UID:           "",
 				SubscriberURI: "http://foo/",
@@ -929,7 +938,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	}
 	for _, plannedSubUID := range plannedSubUIDs {
 		sub := pubsubutil.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: string(plannedSubUID),
 					UID:  plannedSubUID,
@@ -951,7 +960,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 
 	// Overwrite the spec subs.
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: "keep-sub",
@@ -980,7 +989,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	}
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				DeprecatedRef: sub.DeprecatedRef,
 				UID:           sub.UID,
 				ReplyURI:      sub.ReplyURI,

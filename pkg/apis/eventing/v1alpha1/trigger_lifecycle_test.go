@@ -17,25 +17,30 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
+	"github.com/knative/eventing/pkg/apis/eventing"
+	"github.com/knative/pkg/apis"
+
 	"github.com/google/go-cmp/cmp"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var (
-	triggerConditionReady = duckv1alpha1.Condition{
+	triggerConditionReady = apis.Condition{
 		Type:   TriggerConditionReady,
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionBroker = duckv1alpha1.Condition{
+	triggerConditionBroker = apis.Condition{
 		Type:   TriggerConditionBroker,
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionSubscribed = duckv1alpha1.Condition{
+	triggerConditionSubscribed = apis.Condition{
 		Type:   TriggerConditionSubscribed,
 		Status: corev1.ConditionFalse,
 	}
@@ -45,24 +50,24 @@ func TestTriggerGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		ts        *TriggerStatus
-		condQuery duckv1alpha1.ConditionType
-		want      *duckv1alpha1.Condition
+		condQuery apis.ConditionType
+		want      *apis.Condition
 	}{{
 		name: "single condition",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionReady,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionReady,
+		condQuery: apis.ConditionReady,
 		want:      &triggerConditionReady,
 	}, {
 		name: "multiple conditions",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 				},
@@ -73,8 +78,8 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition false",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 				},
@@ -85,13 +90,13 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{
 					triggerConditionSubscribed,
 				},
 			},
 		},
-		condQuery: duckv1alpha1.ConditionType("foo"),
+		condQuery: apis.ConditionType("foo"),
 		want:      nil,
 	}}
 
@@ -114,8 +119,8 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		name: "empty",
 		ts:   &TriggerStatus{},
 		want: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -130,16 +135,16 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
 		want: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
 				}, {
@@ -154,16 +159,16 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ts: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
 		want: &TriggerStatus{
-			Status: duckv1alpha1.Status{
-				Conditions: []duckv1alpha1.Condition{{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -236,6 +241,96 @@ func TestTriggerIsReady(t *testing.T) {
 			got := ts.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
+		})
+	}
+}
+
+func TestTriggerAnnotateUserInfo(t *testing.T) {
+	const (
+		u1 = "oveja@knative.dev"
+		u2 = "cabra@knative.dev"
+		u3 = "vaca@knative.dev"
+	)
+
+	withUserAnns := func(creator, updater string, t *Trigger) *Trigger {
+		a := t.GetAnnotations()
+		if a == nil {
+			a = map[string]string{}
+			defer t.SetAnnotations(a)
+		}
+
+		a[eventing.CreatorAnnotation] = creator
+		a[eventing.UpdaterAnnotation] = updater
+
+		return t
+	}
+
+	tests := []struct {
+		name       string
+		user       string
+		this       *Trigger
+		prev       *Trigger
+		wantedAnns map[string]string
+	}{
+		{
+			name: "create new trigger",
+			user: u1,
+			this: &Trigger{},
+			prev: nil,
+			wantedAnns: map[string]string{
+				eventing.CreatorAnnotation: u1,
+				eventing.UpdaterAnnotation: u1,
+			},
+		}, {
+			name:       "update trigger which has no annotations without diff",
+			user:       u1,
+			this:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}},
+			prev:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}},
+			wantedAnns: map[string]string{},
+		}, {
+			name: "update trigger which has annotations without diff",
+			user: u2,
+			this: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}}),
+			prev: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}}),
+			wantedAnns: map[string]string{
+				eventing.CreatorAnnotation: u1,
+				eventing.UpdaterAnnotation: u1,
+			},
+		}, {
+			name: "update trigger which has no annotations with diff",
+			user: u2,
+			this: &Trigger{Spec: TriggerSpec{Broker: defaultBroker}},
+			prev: &Trigger{Spec: TriggerSpec{Broker: otherBroker}},
+			wantedAnns: map[string]string{
+				eventing.UpdaterAnnotation: u2,
+			},
+		}, {
+			name: "update trigger which has annotations with diff",
+			user: u3,
+			this: withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: otherBroker}}),
+			prev: withUserAnns(u1, u2, &Trigger{Spec: TriggerSpec{Broker: defaultBroker}}),
+			wantedAnns: map[string]string{
+				eventing.CreatorAnnotation: u1,
+				eventing.UpdaterAnnotation: u3,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := apis.WithUserInfo(context.Background(), &authv1.UserInfo{
+				Username: test.user,
+			})
+			if test.prev != nil {
+				ctx = apis.WithinUpdate(ctx, test.prev)
+			}
+			test.this.SetDefaults(ctx)
+
+			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
+				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
 			}
 		})
 	}

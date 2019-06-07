@@ -26,15 +26,12 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
-	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,19 +40,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "ApiServerSources"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "apiserver-source-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	apiserversourceReconciled         = "ApiServerSourceReconciled"
 	apiServerSourceReadinessChanged   = "ApiServerSourceReadinessChanged"
@@ -87,43 +76,8 @@ type Reconciler struct {
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
 
-	source string
+	source         string
 	sinkReconciler *duck.SinkReconciler
-}
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	apiserversourceInformer sourceinformers.ApiServerSourceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	eventTypeInformer eventinginformers.EventTypeInformer,
-	source string,
-) *controller.Impl {
-	r := &Reconciler{
-		Base:                  reconciler.NewBase(opt, controllerAgentName),
-		apiserversourceLister: apiserversourceInformer.Lister(),
-		deploymentLister:      deploymentInformer.Lister(),
-		source:                source,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-
-	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
-
-	r.Logger.Info("Setting up event handlers")
-	apiserversourceInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-	})
-
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-	})
-
-	return impl
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -194,15 +148,13 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	// Update source status
 	source.Status.MarkDeployed()
 
-	// Only create EventType for Broker sinks.
-	if source.Spec.Sink.Kind == "Broker" {
-		err = r.createEventTypes(ctx, source)
-		if err != nil {
-			source.Status.MarkNoEventTypes("EventTypesCreateFailed", "")
-			return err
-		}
-		source.Status.MarkEventTypes()
+	err = r.reconcileEventTypes(ctx, source)
+	if err != nil {
+		source.Status.MarkNoEventTypes("EventTypesReconcileFailed", "")
+		return err
 	}
+	source.Status.MarkEventTypes()
+
 	return nil
 }
 
@@ -256,7 +208,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	return ra, err
 }
 
-func (r *Reconciler) createEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
+func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
 	current, err := r.getEventTypes(ctx, src)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get existing event types", zap.Error(err))
@@ -306,6 +258,14 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerS
 
 func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
+
+	// Only create EventTypes for Broker sinks.
+	// We add this check here in case the APIServerSource was changed from Broker to non-Broker sink.
+	// If so, we need to delete the existing ones, thus we return empty expected.
+	if src.Spec.Sink.Kind != "Broker" {
+		return eventTypes, nil
+	}
+
 	args := &resources.EventTypeArgs{
 		Src:    src,
 		Source: r.source,

@@ -16,10 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+)
 
 func (b *Broker) SetDefaults(ctx context.Context) {
 	b.Spec.SetDefaults(ctx)
+	setUserInfoAnnotations(b, ctx)
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {

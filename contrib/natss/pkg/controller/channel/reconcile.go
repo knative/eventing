@@ -22,6 +22,7 @@ import (
 
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
@@ -30,6 +31,10 @@ import (
 
 	ccpcontroller "github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+)
+
+const (
+	deprecatedMessage = "The `natss` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `NatssChannel` CRD."
 )
 
 type reconciler struct {
@@ -113,6 +118,8 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) error {
 	c.Status.InitializeConditions()
 
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
+
 	// We are syncing two things:
 	// 1. The K8s Service to talk to this Channel.
 
@@ -126,7 +133,10 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 		r.logger.Info("Error creating the Channel's K8s Service", zap.Error(err))
 		return err
 	}
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	c.Status.MarkProvisioned()
 	return nil

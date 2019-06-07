@@ -21,26 +21,30 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
+	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/eventing/pkg/utils"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
 	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	NAMESPACE = "NAMESPACE"
-)
+type envConfig struct {
+	Broker    string `envconfig:"BROKER" required:"true"`
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
+}
 
 var (
 	metricsPort = 9090
@@ -61,8 +65,13 @@ func main() {
 
 	logger.Info("Starting...")
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Namespace: getRequiredEnv(NAMESPACE),
+		Namespace: env.Namespace,
 	})
 	if err != nil {
 		logger.Fatal("Error starting up.", zap.Error(err))
@@ -70,6 +79,17 @@ func main() {
 
 	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
+	}
+
+	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	configMapWatcher := configmap.NewInformedWatcher(kc, env.Namespace)
+
+	zipkinServiceName := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
+		Namespace:  env.Namespace,
+		BrokerName: env.Broker,
+	})
+	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
+		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
@@ -110,6 +130,11 @@ func main() {
 	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()
 
+	// configMapWatcher does not block, so start it first.
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+	}
+
 	// Start blocks forever.
 	logger.Info("Manager starting...")
 	err = mgr.Start(stopCh)
@@ -129,12 +154,4 @@ func main() {
 	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
-}
-
-func getRequiredEnv(envKey string) string {
-	val, defined := os.LookupEnv(envKey)
-	if !defined {
-		log.Fatalf("required environment variable not defined '%s'", envKey)
-	}
-	return val
 }

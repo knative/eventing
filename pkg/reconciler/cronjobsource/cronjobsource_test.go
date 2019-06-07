@@ -25,18 +25,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/eventing/pkg/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -57,7 +53,7 @@ var (
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS + "/"
+	sinkURI = "http://" + sinkDNS
 
 	trueVal  = true
 	ownerRef = metav1.OwnerReference{
@@ -182,11 +178,13 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				makeReceiveAdapter(),
 			},
 		}, {
@@ -219,12 +217,13 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceEventType,
 					WithCronJobSourceSink(sinkURI),
 				),
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewEventType("", testNS,
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
@@ -270,6 +269,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceEventType,
 					WithCronJobSourceSink(sinkURI),
@@ -278,7 +278,7 @@ func TestAllCases(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: "name-1",
 			}},
-			WantCreates: []metav1.Object{
+			WantCreates: []runtime.Object{
 				NewEventType("", testNS,
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
@@ -319,8 +319,10 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
 				),
 			}},
 		}, {
@@ -334,8 +336,10 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -347,6 +351,42 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
+		}, {
+			Name: "valid with event type deletion",
+			Objects: []runtime.Object{
+				NewCronSourceJob(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
+					WithValidCronJobSourceResources,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeReceiveAdapter(),
+				NewEventType("name-1", testNS,
+					WithEventTypeLabels(resources.Labels(sourceName)),
+					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
+					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
+					WithEventTypeBroker(sinkName),
+					WithEventTypeOwnerReference(ownerRef)),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: "name-1",
+			}},
 		},
 	}
 
@@ -358,37 +398,11 @@ func TestAllCases(t *testing.T) {
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string){})
+		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
 		return r
 	},
-	true,
+		true,
 	))
-}
-
-func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-
-	cronjobInformer := eventingInformer.Sources().V1alpha1().CronJobSources()
-	deploymentInformer := kubeInformer.Apps().V1().Deployments()
-	eventTypeInformer := eventingInformer.Eventing().V1alpha1().EventTypes()
-
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	},
-		cronjobInformer,
-		deploymentInformer,
-		eventTypeInformer,
-	)
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {

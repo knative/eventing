@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,11 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Broker collects a pool of events that are consumable using Triggers. Brokers
+// provide a well-known endpoint for event delivery that senders can use with
+// minimal knowledge of the event routing strategy. Receivers use Triggers to
+// request delivery of events from a Broker's pool to a specific URL or
+// Addressable endpoint.
 type Broker struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -66,10 +72,10 @@ type BrokerSpec struct {
 
 // BrokerStatus represents the current state of a Broker.
 type BrokerStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
+	// inherits duck/v1beta1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1alpha1.Status `json:",inline"`
+	duckv1beta1.Status `json:",inline"`
 
 	// Broker is Addressable. It currently exposes the endpoint as a
 	// fully-qualified DNS name which will distribute traffic over the
@@ -92,4 +98,9 @@ type BrokerList struct {
 // GetGroupVersionKind returns GroupVersionKind for Brokers
 func (t *Broker) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Broker")
+}
+
+// GetSpec returns the spec of the Broker.
+func (b *Broker) GetSpec() interface{} {
+	return b.Spec
 }

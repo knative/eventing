@@ -21,10 +21,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,10 +48,10 @@ func init() {
 	eventingv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-var ClusterChannelProvisionerConditionReady = duckv1alpha1.Condition{
+var ClusterChannelProvisionerConditionReady = apis.Condition{
 	Type:     eventingv1alpha1.ClusterChannelProvisionerConditionReady,
 	Status:   corev1.ConditionTrue,
-	Severity: duckv1alpha1.ConditionSeverityError,
+	Severity: apis.ConditionSeverityError,
 }
 
 var mockFetchError = controllertesting.Mocks{
@@ -166,8 +169,10 @@ func getNewClusterChannelProvisioner(name string, reconcileKind string) *eventin
 func GetNewChannelClusterChannelProvisionerReady(name string) *eventingv1alpha1.ClusterChannelProvisioner {
 	c := GetNewChannelClusterChannelProvisioner(name)
 	c.Status = eventingv1alpha1.ClusterChannelProvisionerStatus{
-		Conditions: []duckv1alpha1.Condition{
-			ClusterChannelProvisionerConditionReady,
+		Status: duckv1beta1.Status{
+			Conditions: []apis.Condition{
+				ClusterChannelProvisionerConditionReady,
+			},
 		},
 	}
 	return c
@@ -195,8 +200,8 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfig() *KafkaProvisionerConfig {
-	return &KafkaProvisionerConfig{
+func getControllerConfig() *utils.KafkaConfig {
+	return &utils.KafkaConfig{
 		Brokers: []string{"test-broker"},
 	}
 }

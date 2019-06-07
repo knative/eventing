@@ -47,8 +47,8 @@ var forwardPrefixes = []string{
 	"x-ot-",
 }
 
-// Message represents an chunk of data within a channel dispatcher. The message contains both
-// a map of string headers and a binary payload. This struct gets mashaled/unmarshaled in order to
+// Message represents a chunk of data within a channel dispatcher. The message contains both
+// a map of string headers and a binary payload. This struct gets marshaled/unmarshaled in order to
 // preserve and pass Header information to the event subscriber.
 //
 // A message may represent a CloudEvent.
@@ -77,7 +77,7 @@ func (m *Message) History() []string {
 	return nil
 }
 
-// AppendToHistory append a new host at the end of the list of hosts of the message history
+// AppendToHistory appends a new host at the end of the list of hosts of the message history
 func (m *Message) AppendToHistory(host string) {
 	host = cleanupMessageHistoryItem(host)
 	if host == "" {

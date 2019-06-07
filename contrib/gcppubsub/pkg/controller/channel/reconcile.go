@@ -27,6 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
 	corev1 "k8s.io/api/core/v1"
@@ -60,6 +61,8 @@ const (
 	topicDeleteFailed         = "TopicDeleteFailed"
 	subscriptionSyncFailed    = "SubscriptionSyncFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+
+	deprecatedMessage = "The `gcp-pubsub` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `PubSubChannel` CRD from https://github.com/GoogleCloudPlatform/cloud-run-events."
 )
 
 // reconciler reconciles GCP-PubSub Channels by creating the K8s Service (ExternalName)
@@ -160,6 +163,8 @@ func ShouldReconcile(c *eventingv1alpha1.Channel) bool {
 // returned error indicates an error during reconciliation.
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	c.Status.InitializeConditions()
+
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 
 	// We are syncing the following:
 	// - The K8s Service to talk to this Channel.
@@ -323,7 +328,7 @@ func (r *reconciler) planGcpResources(ctx context.Context, c *eventingv1alpha1.C
 				subscription = generateSubName(&subscriber)
 			}
 			subsToSync.subsToCreate = append(subsToSync.subsToCreate, pubsubutil.GcpPubSubSubscriptionStatus{
-				ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+				SubscriberSpec: v1alpha1.SubscriberSpec{
 					DeprecatedRef: subscriber.DeprecatedRef,
 					UID:           subscriber.UID,
 					SubscriberURI: subscriber.SubscriberURI,
@@ -358,7 +363,10 @@ func (r *reconciler) createK8sService(ctx context.Context, c *eventingv1alpha1.C
 		return nil, err
 	}
 
-	c.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	c.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 	return svc, nil
 }
 

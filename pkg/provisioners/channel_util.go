@@ -39,7 +39,7 @@ const (
 	OldEventingProvisionerLabel = "provisioner"
 )
 
-// AddFinalizerResult is used indicate whether a finalizer was added or already present.
+// AddFinalizerResult is used to indicate whether a finalizer was added or already present.
 type AddFinalizerResult bool
 
 // RemoveFinalizerResult is used to indicate whether a finalizer was found and removed (FinalizerRemoved), or finalizer not found (FinalizerNotFound).
@@ -287,17 +287,17 @@ func channelHostName(channelName, namespace string) string {
 func NewHostNameToChannelRefMap(cList []eventingv1alpha1.Channel) (map[string]ChannelReference, error) {
 	hostToChanMap := make(map[string]ChannelReference, len(cList))
 	for _, c := range cList {
-		hostName := c.Status.Address.Hostname
-		if cr, ok := hostToChanMap[hostName]; ok {
+		url := c.Status.Address.GetURL()
+		if cr, ok := hostToChanMap[url.Host]; ok {
 			return nil, fmt.Errorf(
 				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
-				hostName,
+				url.Host,
 				c.Namespace,
 				c.Name,
 				cr.Namespace,
 				cr.Name)
 		}
-		hostToChanMap[hostName] = ChannelReference{Name: c.Name, Namespace: c.Namespace}
+		hostToChanMap[url.Host] = ChannelReference{Name: c.Name, Namespace: c.Namespace}
 	}
 	return hostToChanMap, nil
 }

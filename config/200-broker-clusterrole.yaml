@@ -18,10 +18,34 @@ metadata:
   name: eventing-broker-filter
 rules:
   - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
       - "eventing.knative.dev"
     resources:
       - "triggers"
       - "triggers/status"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventing-broker-ingress
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
     verbs:
       - "get"
       - "list"

@@ -48,6 +48,7 @@ func (c *Channel) SetDefaults(ctx context.Context) {
 		}
 	}
 	c.Spec.SetDefaults(ctx)
+	setUserInfoAnnotations(c, ctx)
 }
 
 func (cs *ChannelSpec) SetDefaults(ctx context.Context) {}

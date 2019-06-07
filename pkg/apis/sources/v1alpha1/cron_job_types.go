@@ -19,8 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,9 +48,6 @@ var (
 
 	// Check that we can create OwnerReferences to a Configuration.
 	_ kmeta.OwnerRefable = (*CronJobSource)(nil)
-
-	// Check that CronJobSource implements the Conditions duck type.
-	_ = duck.VerifyType(&CronJobSource{}, &duckv1alpha1.Conditions{})
 )
 
 const (
@@ -62,6 +58,21 @@ const (
 // CronJobEventSource returns the CronJob CloudEvent source.
 func CronJobEventSource(namespace, cronJobName string) string {
 	return fmt.Sprintf("/apis/v1/namespaces/%s/cronjobsources/%s", namespace, cronJobName)
+}
+
+type CronJobRequestsSpec struct {
+	ResourceCPU    string `json:"cpu,omitempty"`
+	ResourceMemory string `json:"memory,omitempty"`
+}
+
+type CronJobLimitsSpec struct {
+	ResourceCPU    string `json:"cpu,omitempty"`
+	ResourceMemory string `json:"memory,omitempty"`
+}
+
+type CronJobResourceSpec struct {
+	Requests CronJobRequestsSpec `json:"requests,omitempty"`
+	Limits   CronJobLimitsSpec   `json:"limits,omitempty"`
 }
 
 // CronJobSourceSpec defines the desired state of the CronJobSource.
@@ -80,6 +91,9 @@ type CronJobSourceSpec struct {
 	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
 	// Adapter Deployment.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// Resource limits and Request specifications of the Receive Adapter Deployment
+	Resources CronJobResourceSpec `json:"resources,omitempty"`
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.
@@ -89,10 +103,10 @@ func (s *CronJobSource) GetGroupVersionKind() schema.GroupVersionKind {
 
 // CronJobSourceStatus defines the observed state of CronJobSource.
 type CronJobSourceStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
+	// inherits duck/v1beta1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1alpha1.Status `json:",inline"`
+	duckv1beta1.Status `json:",inline"`
 
 	// SinkURI is the current active sink URI that has been configured for the CronJobSource.
 	// +optional

@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/test"
-	pkgTest "github.com/knative/pkg/test"
+	"github.com/knative/eventing/test/base/resources"
+	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
@@ -42,11 +42,19 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
+	RunTests(t, common.FeatureBasic, testEventTransformationForTrigger)
+}
+
+func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
 	const (
-		brokerName = "e2e-eventtransformation-broker"
-		saName     = "eventing-broker-filter"
+		senderName    = "e2e-eventtransformation-sender"
+		brokerName    = "e2e-eventtransformation-broker"
+		saIngressName = "eventing-broker-ingress"
+		saFilterName  = "eventing-broker-filter"
+
 		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
-		crName = "eventing-broker-filter"
+		crIngressName = "eventing-broker-ingress"
+		crFilterName  = "eventing-broker-filter"
 
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -62,96 +70,68 @@ func TestEventTransformationForTrigger(t *testing.T) {
 		loggerPodName         = "logger-pod"
 	)
 
-	clients, ns, provisioner, cleaner := Setup(t, true, t.Logf)
-	defer TearDown(clients, ns, cleaner, t.Logf)
+	client := Setup(t, true)
+	defer TearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	err := CreateServiceAccountAndBinding(clients, saName, crName, ns, t.Logf, cleaner)
-	if err != nil {
-		t.Fatalf("Failed to create the ServiceAccount and ServiceAccountRoleBinding: %v", err)
-	}
+	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
+	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
 
 	// create a new broker
-	broker := test.Broker(brokerName, ns, test.ClusterChannelProvisioner(provisioner))
-	t.Logf("provisioner name is: %s", broker.Spec.ChannelTemplate.Provisioner.Name)
-	err = WithBrokerReady(clients, broker, t.Logf, cleaner)
-	if err != nil {
-		t.Fatalf("Error waiting for the broker to become ready: %v, %v", err, broker)
-	}
-	brokerUrl := fmt.Sprintf("http://%s", broker.Status.Address.Hostname)
-	t.Logf("The broker is ready with url: %q", brokerUrl)
-
-	// create an event we want to send
-	eventToSend := &test.CloudEvent{
-		Source:   eventSource1,
-		Type:     eventType1,
-		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-		Encoding: test.CloudEventDefaultEncoding,
-	}
+	client.CreateBrokerOrFail(brokerName, provisioner)
+	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-	eventAfterTransformation := &test.CloudEvent{
+	eventAfterTransformation := &resources.CloudEvent{
 		Source:   eventSource2,
 		Type:     eventType2,
 		Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-		Encoding: test.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
 
-	// create the transformation pod and service, and get them ready
-	transformationPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	transformationPod := test.EventTransformationPod(transformationPodName, ns, transformationPodSelector, eventAfterTransformation)
-	transformationSvc := test.Service(transformationPodName, ns, transformationPodSelector)
-	transformationPod, err = CreatePodAndServiceReady(clients, transformationPod, transformationSvc, t.Logf, cleaner)
-	if err != nil {
-		t.Fatalf("Failed to create transformation pod and service, and get them ready: %v", err)
-	}
+	// create the transformation service
+	transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
+	client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
-	trigger1 := test.NewTriggerBuilder(triggerName1, ns).
-		EventType(eventType1).
-		EventSource(eventSource1).
-		Broker(brokerName).
-		SubscriberSvc(transformationPodName).
-		Build()
-	err = CreateTrigger(clients, trigger1, t.Logf, cleaner)
-	if err != nil {
-		t.Fatalf("Error creating trigger1: %v", err)
-	}
+	// create trigger1 for event transformation
+	client.CreateTriggerOrFail(
+		triggerName1,
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(eventSource1, eventType1),
+		resources.WithSubscriberRefForTrigger(transformationPodName),
+	)
 
-	// create logger pod and service, and get them ready
-	loggerPodSelector := map[string]string{"e2etest": string(uuid.NewUUID())}
-	loggerPod := test.EventLoggerPod(loggerPodName, ns, loggerPodSelector)
-	loggerSvc := test.Service(loggerPodName, ns, loggerPodSelector)
-	loggerPod, err = CreatePodAndServiceReady(clients, loggerPod, loggerSvc, t.Logf, cleaner)
-	if err != nil {
-		t.Fatalf("Failed to create logger pod and service, and get them ready: %v", err)
-	}
+	// create logger pod and service
+	loggerPod := resources.EventLoggerPod(loggerPodName)
+	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
-	trigger2 := test.NewTriggerBuilder(triggerName2, ns).
-		EventType(eventType2).
-		EventSource(eventSource2).
-		Broker(brokerName).
-		SubscriberSvc(loggerPodName).
-		Build()
-	err = CreateTrigger(clients, trigger2, t.Logf, cleaner)
-	if err != nil {
-		t.Fatalf("Error creating trigger2: %v", err)
-	}
+	// create trigger2 for event receiving
+	client.CreateTriggerOrFail(
+		triggerName2,
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(eventSource2, eventType2),
+		resources.WithSubscriberRefForTrigger(loggerPodName),
+	)
 
-	// Wait for all of the triggers in the namespace to be ready.
-	if err := WaitForAllTriggersReady(clients, ns, t.Logf); err != nil {
-		t.Fatalf("Error waiting for triggers to become ready: %v", err)
+	// wait for all test resources to be ready, so that we can start sending events
+	if err := client.WaitForAllTestResourcesReady(); err != nil {
+		t.Fatalf("Failed to get all test resources ready: %v", err)
 	}
 
 	// send fake CloudEvent to the broker
-	if err := SendFakeEventToBroker(clients, eventToSend, broker, t.Logf, cleaner); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the broker %q", broker.Name)
+	eventToSend := &resources.CloudEvent{
+		Source:   eventSource1,
+		Type:     eventType1,
+		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
+		Encoding: resources.CloudEventDefaultEncoding,
+	}
+	if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
+		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 	}
 
-	if err := pkgTest.WaitForLogContent(clients.Kube, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, transformedEventBody); err != nil {
-		logPodLogsForDebugging(clients, transformationPodName, transformationPod.Spec.Containers[0].Name, ns, t.Logf)
-		logPodLogsForDebugging(clients, loggerPodName, loggerPod.Spec.Containers[0].Name, ns, t.Logf)
-		logPodLogsForDebugging(clients, eventSource1, "sendevent", ns, t.Logf)
+	// check if the logging service receives the correct event
+	if err := client.CheckLog(loggerPodName, common.CheckerContains(transformedEventBody)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName, err)
 	}
 }

@@ -25,12 +25,12 @@ import (
 	"github.com/knative/pkg/kmeta"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
@@ -40,20 +40,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "broker-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process.
 	brokerReadinessChanged          = "BrokerReadinessChanged"
 	brokerReconcileError            = "BrokerReconcileError"
@@ -87,54 +79,6 @@ type ReconcilerArgs struct {
 	IngressServiceAccountName string
 	FilterImage               string
 	FilterServiceAccountName  string
-}
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	brokerInformer eventinginformers.BrokerInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	channelInformer eventinginformers.ChannelInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	args ReconcilerArgs,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                      reconciler.NewBase(opt, controllerAgentName),
-		brokerLister:              brokerInformer.Lister(),
-		channelLister:             channelInformer.Lister(),
-		serviceLister:             serviceInformer.Lister(),
-		deploymentLister:          deploymentInformer.Lister(),
-		subscriptionLister:        subscriptionInformer.Lister(),
-		ingressImage:              args.IngressImage,
-		ingressServiceAccountName: args.IngressServiceAccountName,
-		filterImage:               args.FilterImage,
-		filterServiceAccountName:  args.FilterServiceAccountName,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName, reconciler.MustNewStatsReporter(ReconcilerName, r.Logger))
-
-	r.Logger.Info("Setting up event handlers")
-
-	brokerInformer.Informer().AddEventHandler(reconciler.Handler(impl.Enqueue))
-
-	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-	})
-
-	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-	})
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    reconciler.Handler(impl.EnqueueControllerOf),
-	})
-
-	return impl
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -205,7 +149,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
 		return err
-	} else if triggerChan.Status.Address.Hostname == "" {
+	} else if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
 		// We check the trigger Channel's address here because it is needed to create the Ingress
 		// Deployment.
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
@@ -242,7 +186,10 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return err
 	}
 	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
-	b.Status.SetAddress(names.ServiceHostName(svc.Name, svc.Namespace))
+	b.Status.SetAddress(&apis.URL{
+		Scheme: "http",
+		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+	})
 
 	ingressChan, err := r.reconcileIngressChannel(ctx, b)
 	if err != nil {
@@ -462,7 +409,7 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
-		ChannelAddress:     c.Status.Address.Hostname,
+		ChannelAddress:     c.Status.Address.GetURL().Host,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }

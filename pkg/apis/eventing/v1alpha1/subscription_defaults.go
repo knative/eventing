@@ -16,10 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+)
 
 func (s *Subscription) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
+	setUserInfoAnnotations(s, ctx)
 }
 
 func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {

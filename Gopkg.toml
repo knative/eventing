@@ -8,6 +8,7 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
+  "github.com/knative/pkg/codegen/cmd/injection-gen",
   "github.com/knative/test-infra/scripts",
   "github.com/knative/test-infra/tools/dep-collector",
 ]
@@ -24,6 +25,11 @@ required = [
 
 [[prune.project]]
   name = "github.com/knative/test-infra"
+  non-go = false
+
+[[prune.project]]
+  name = "github.com/knative/pkg"
+  unused-packages = false
   non-go = false
 
 # TODO why is this overridden?
@@ -45,6 +51,13 @@ required = [
 # controller-runtime 0.1.9 requires at least 1.12
 [[override]]
   name = "k8s.io/apimachinery"
+  version = "kubernetes-1.12.6"
+
+# Overridden to ensure compatibility with GKE
+# GKE version as of 2019-01-24 is 1.11
+# controller-runtime 0.1.9 requires at least 1.12
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
   version = "kubernetes-1.12.6"
 
 # Overridden to ensure compatibility with GKE
@@ -73,8 +86,8 @@ required = [
 # This controls when we upgrade apis independently of Serving.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2019-05-08
-  revision = "c0f06c32f13373c6ab641d3c67815ac57704171e"
+  # HEAD as of 2919-06-05
+  revision = "4d86f3ad6f48dffa0846c76711ca6c3697def63c"
 
 # TODO why is this overridden?
 [[override]]
