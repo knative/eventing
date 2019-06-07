@@ -3,8 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/knative/eventing?status.svg)](https://godoc.org/github.com/knative/eventing)
 [![Go Report Card](https://goreportcard.com/badge/knative/eventing)](https://goreportcard.com/report/knative/eventing)
 
-This repository contains a work-in-progress eventing system that is designed to
-address a common need for cloud native development:
+This repository contains a work-in-progress eventing system that is designed to address a common need for cloud native development:
 
 1. Services are loosely coupled during development and deployed independently
 1. A producer can generate events before a consumer is listening, and a consumer
@@ -14,6 +13,10 @@ address a common need for cloud native development:
    - without modifying producer or consumer, and
    - with the ability to select a specific subset of events from a particular
      producer.
+
+The high level mission of Knative Eventing is: **Enable asynchronous application development through event delivery from anywhere.**
+
+For the full mission of Knative Eventing see [docs/mission.md](./docs/mission.md).
 
 For complete Knative Eventing documentation, see
 [Knative eventing](https://www.knative.dev/docs/eventing/) or
