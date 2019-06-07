@@ -51,7 +51,6 @@ var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakesharedclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
-	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
 }

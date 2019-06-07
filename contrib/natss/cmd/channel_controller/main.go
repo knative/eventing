@@ -23,12 +23,10 @@ import (
 	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"github.com/knative/eventing/contrib/natss/pkg/util"
 
-	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/scheme"
 	informers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	natsschannel "github.com/knative/eventing/contrib/natss/pkg/reconciler/controller"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -36,7 +34,6 @@ import (
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -80,22 +77,17 @@ func main() {
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with natss.
-	eventingClientSet := clientset.NewForConfigOrDie(cfg)
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
+	messagingInformerFactory := informers.NewSharedInformerFactory(opt.NatssClientSet, opt.ResyncPeriod)
 
 	// Messaging
-	natssChannelInformer := eventingInformerFactory.Messaging().V1alpha1().NatssChannels()
+	natssChannelInformer := messagingInformerFactory.Messaging().V1alpha1().NatssChannels()
 
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	endpointsInformer := kubeInformerFactory.Core().V1().Endpoints()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-
-	// Adding the scheme.
-	eventingScheme.AddToScheme(scheme.Scheme)
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -103,7 +95,6 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		natsschannel.NewController(
 			opt,
-			eventingClientSet,
 			systemNS,
 			dispatcherDeploymentName,
 			dispatcherServiceName,
