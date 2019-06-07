@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//	"k8s.io/apimachinery/pkg/types"
 )
 
 // NatssChannelOption enables further configuration of a NatssChannel.
@@ -47,7 +46,7 @@ func NewNatssChannel(name, namespace string, ncopt ...NatssChannelOption) *v1alp
 	return nc
 }
 
-func WithInitNatssChannelConditions(nc *v1alpha1.NatssChannel) {
+func WithNatssInitChannelConditions(nc *v1alpha1.NatssChannel) {
 	nc.Status.InitializeConditions()
 }
 

@@ -116,7 +116,7 @@ func TestAllCases(t *testing.T) {
 			Key:  ncKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeleted)},
 			WantErr: false,
 			WantEvents: []string{
@@ -131,7 +131,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentNotReady("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
 			}},
 			WantEvents: []string{
@@ -147,7 +147,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServicetNotReady("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")),
 			}},
@@ -165,7 +165,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsNotReady("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist"),
@@ -186,7 +186,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsNotReady("DispatcherEndpointsNotReady", "There are no endpoints ready for Dispatcher service"),
@@ -210,7 +210,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsReady(),
@@ -234,7 +234,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsReady(),
@@ -258,7 +258,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsReady(),
@@ -283,7 +283,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNatssChannel(ncName, testNS,
-					reconciletesting.WithInitNatssChannelConditions,
+					reconciletesting.WithNatssInitChannelConditions,
 					reconciletesting.WithNatssChannelDeploymentReady(),
 					reconciletesting.WithNatssChannelServiceReady(),
 					reconciletesting.WithNatssChannelEndpointsReady(),
