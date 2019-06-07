@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"github.com/knative/pkg/configmap"
+	"k8s.io/client-go/rest"
 	"testing"
 
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -32,6 +33,7 @@ import (
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
 	ctx, _ := SetupFakeContext(t)
+	ctx = withCfgHost(ctx, &rest.Config{Host: "unit_test"})
 
 	c := NewController(ctx, configmap.NewFixedWatcher())
 
