@@ -33,6 +33,9 @@ readonly EVENTING_CONFIG="config/"
 # In-memory provisioner config.
 readonly IN_MEMORY_CHANNEL_CONFIG="config/provisioners/in-memory-channel/in-memory-channel.yaml"
 
+# In-memory channel CRD config.
+readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
+
 # GCP PubSub provisioner config template.
 readonly GCP_PUBSUB_CONFIG_TEMPLATE="contrib/gcppubsub/config/gcppubsub.yaml"
 # Real GCP PubSub provisioner config, generated from the template.
@@ -90,6 +93,10 @@ function test_setup() {
   ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
 
+  echo "Installing In-Memory Channel CRD"
+  ko apply -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory Channel CRD"
+
   echo "Installing GCPPubSub ClusterChannelProvisioner"
   gcppubsub_setup || return 1
   sed "s/REPLACE_WITH_GCP_PROJECT/${E2E_PROJECT_ID}/" ${GCP_PUBSUB_CONFIG_TEMPLATE} > ${GCP_PUBSUB_CONFIG}
@@ -120,9 +127,11 @@ function test_setup() {
 
 # Tear down resources used in the eventing tests.
 function test_teardown() {
-  # Uninstall provisioners used by the tests.
   echo "Uninstalling In-Memory ClusterChannelProvisioner"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CONFIG}
+
+  echo "Uninstalling In-Memory Channel CRD"
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}
 
   echo "Uninstalling GCPPubSub ClusterChannelProvisioner"
   gcppubsub_teardown

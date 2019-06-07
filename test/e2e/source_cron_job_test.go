@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -39,12 +39,12 @@ func TestCronJobSource(t *testing.T) {
 	defer TearDown(client)
 
 	// create event logger pod and service
-	loggerPod := base.EventLoggerPod(loggerPodName)
+	loggerPod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// create cron job source
 	data := fmt.Sprintf("TestCronJobSource %s", uuid.NewUUID())
-	sinkOption := base.WithSinkServiceForCronJobSource(loggerPodName)
+	sinkOption := resources.WithSinkServiceForCronJobSource(loggerPodName)
 	client.CreateCronJobSourceOrFail(cronJobSourceName, schedule, data, sinkOption)
 
 	// wait for all test resources to be ready

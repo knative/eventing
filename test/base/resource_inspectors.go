@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// resource_inspectors.go contains functions which get property values for
+// This file contains functions which get property values for
 // resources provided by the caller.
 
 package base
@@ -22,12 +22,13 @@ package base
 import (
 	"fmt"
 
+	"github.com/knative/eventing/test/base/resources"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"k8s.io/client-go/dynamic"
 )
 
 // GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.
-func GetAddressableURI(dynamicClient dynamic.Interface, obj *MetaResource) (string, error) {
+func GetAddressableURI(dynamicClient dynamic.Interface, obj *resources.MetaResource) (string, error) {
 	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1alpha1.AddressableType{})
 	if err != nil {
 		return "", err
