@@ -44,6 +44,8 @@ const (
 	// Name of the corev1.Events emitted from the reconciliation process
 	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
 	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
+
+	deprecatedMessage = "The `kafka` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `KafkaChannel` CRD."
 )
 
 type channelArgs struct {
@@ -89,6 +91,8 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	channel.Status.InitializeConditions()
+
+	channel.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 
 	var requeue = false
 	if clusterChannelProvisioner.Status.IsReady() {

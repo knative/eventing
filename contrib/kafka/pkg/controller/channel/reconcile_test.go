@@ -454,6 +454,7 @@ func getNewChannelWithFinalizer(name, provisioner string) *eventingv1alpha1.Chan
 func getNewChannelWithStatusAndFinalizer(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannelWithFinalizer(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -469,6 +470,7 @@ func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1
 func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	c.Status.SetAddress(&apis.URL{
 		Scheme: "http",
 		Host:   serviceAddress,
@@ -487,6 +489,7 @@ func getNewChannelDeleted(name, provisioner string) *eventingv1alpha1.Channel {
 func getNewChannelNotProvisionedStatus(name, provisioner, msg string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	c.Status.MarkNotProvisioned("NotProvisioned", msg)
 	return c
 }
