@@ -40,7 +40,7 @@ func withCfgHost(ctx context.Context, cfg *rest.Config) context.Context {
 func GetCfgHost(ctx context.Context) string {
 	untyped := ctx.Value(HostKey{})
 	if untyped == nil {
-		logging.FromContext(ctx).Fatalf("failed to load cfg host from context")
+		logging.FromContext(ctx).Fatal("Failed to load cfg host from context.")
 	}
 	return untyped.(string)
 }
