@@ -66,7 +66,7 @@ func init() {
 		&view.View{
 			Name:        "broker_dispatch_time",
 			Measure:     MeasureDispatchTime,
-			Aggregation: view.Distribution(10, 100, 1000, 10000),
+			Aggregation: view.Distribution(1, 2, 5, 10, 100, 1000),
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 	)
