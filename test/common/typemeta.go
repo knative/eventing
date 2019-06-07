@@ -61,6 +61,9 @@ var KafkaChannelTypeMeta = MessagingTypeMeta(resources.KafkaChannelKind)
 // InMemoryChannelTypeMeta is the TypeMeta ref for InMemoryChannel.
 var InMemoryChannelTypeMeta = MessagingTypeMeta(resources.InMemoryChannelKind)
 
+// NatssChannelTypeMeta is the TypeMeta ref for NatssChannel.
+var NatssChannelTypeMeta = MessagingTypeMeta(resources.NatssChannelKind)
+
 // MessagingTypeMeta returns the TypeMeta ref for an eventing messaing resource.
 func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
