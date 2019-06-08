@@ -17,28 +17,21 @@ limitations under the License.
 package channel
 
 import (
+	"github.com/knative/pkg/configmap"
 	"testing"
 
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
-
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
 	logtesting "github.com/knative/pkg/logging/testing"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel/fake"
 )
 
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
+	ctx, _ := SetupFakeContext(t)
 
-	channelInformer := eventingInformer.Eventing().V1alpha1().Channels()
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	}, channelInformer)
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
