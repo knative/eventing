@@ -52,7 +52,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingSubscriber {
-		if fe := isValidSubscriberSpec(*ss.Subscriber); fe != nil {
+		if fe := IsValidSubscriberSpec(*ss.Subscriber); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
@@ -78,7 +78,7 @@ func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
 	return false
 }
 
-func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
+func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	var errs *apis.FieldError
 
 	fieldsSet := make([]string, 0, 0)
@@ -99,7 +99,7 @@ func isValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 
 	// If Ref given, check the fields.
 	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		fe := isValidObjectReference(*s.Ref)
+		fe := IsValidObjectReference(*s.Ref)
 		if fe != nil {
 			errs = errs.Also(fe.ViaField("ref"))
 		}
@@ -112,7 +112,7 @@ func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
 }
 
 func isValidReply(r ReplyStrategy) *apis.FieldError {
-	if fe := isValidObjectReference(*r.Channel); fe != nil {
+	if fe := IsValidObjectReference(*r.Channel); fe != nil {
 		return fe.ViaField("channel")
 	}
 	return nil

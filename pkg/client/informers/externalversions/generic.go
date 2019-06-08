@@ -71,6 +71,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=messaging.knative.dev, Version=v1alpha1
 	case messagingv1alpha1.SchemeGroupVersion.WithResource("inmemorychannels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().InMemoryChannels().Informer()}, nil
+	case messagingv1alpha1.SchemeGroupVersion.WithResource("pipelines"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Pipelines().Informer()}, nil
 
 		// Group=sources.eventing.knative.dev, Version=v1alpha1
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("apiserversources"):

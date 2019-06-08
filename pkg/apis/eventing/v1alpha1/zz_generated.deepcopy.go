@@ -228,6 +228,7 @@ func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	return
 }
 

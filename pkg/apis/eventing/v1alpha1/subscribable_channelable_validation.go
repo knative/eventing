@@ -31,10 +31,10 @@ func isChannelEmpty(f corev1.ObjectReference) bool {
 
 // Valid if it is a valid object reference.
 func isValidChannel(f corev1.ObjectReference) *apis.FieldError {
-	return isValidObjectReference(f)
+	return IsValidObjectReference(f)
 }
 
-func isValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
+func IsValidObjectReference(f corev1.ObjectReference) *apis.FieldError {
 	return checkRequiredObjectReferenceFields(f).
 		Also(checkDisallowedObjectReferenceFields(f))
 }

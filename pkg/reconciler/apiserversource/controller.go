@@ -17,14 +17,17 @@ limitations under the License.
 package apiserversource
 
 import (
+	"context"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/tools/cache"
+
+	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
+	apiserversourceinformer "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
+	deploymentinformer "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment"
 )
 
 const (
@@ -39,24 +42,26 @@ const (
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
-	opt reconciler.Options,
-	apiserversourceInformer sourceinformers.ApiServerSourceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	eventTypeInformer eventinginformers.EventTypeInformer,
-	source string,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
+
+	deploymentInformer := deploymentinformer.Get(ctx)
+	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
+	eventTypeInformer := eventtypeinformer.Get(ctx)
+
 	r := &Reconciler{
-		Base:                  reconciler.NewBase(opt, controllerAgentName),
-		apiserversourceLister: apiserversourceInformer.Lister(),
+		Base:                  reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
-		source:                source,
+		source:                GetCfgHost(ctx),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
+	r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
-	apiserversourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),

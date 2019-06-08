@@ -49,10 +49,38 @@ type SubscriberSpec struct {
 	// UID is used to understand the origin of the subscriber.
 	// +optional
 	UID types.UID `json:"uid,omitempty"`
+	// Generation of the origin of the subscriber with uid:UID.
+	// +optional
+	Generation int64 `json:"generation,omitempty"`
 	// +optional
 	SubscriberURI string `json:"subscriberURI,omitempty"`
 	// +optional
 	ReplyURI string `json:"replyURI,omitempty"`
+}
+
+// SubscribableStatus is the schema for the subscribable's status portion of the status
+// section of the resource.
+type SubscribableStatus struct {
+	// This is the list of subscription's statuses for this channel.
+	// +patchMergeKey=uid
+	// +patchStrategy=merge
+	Subscribers []SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
+}
+
+// SubscriberStatus defines the status of a single subscriber to a Channel.
+type SubscriberStatus struct {
+	// UID is used to understand the origin of the subscriber.
+	// +optional
+	UID types.UID `json:"uid,omitempty"`
+	// Generation of the origin of the subscriber with uid:UID.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Status of the subscriber.
+	// +optional
+	Ready corev1.ConditionStatus `json:"ready,omitempty"`
+	// A human readable message indicating details of Ready status.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // +genclient
@@ -65,14 +93,23 @@ type SubscribableType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// SubscribableSpec is the part where Subscribable object is
+	// SubscribableTypeSpec is the part where Subscribable object is
 	// configured as to be compatible with Subscribable contract.
-	Spec SubscribableSpec `json:"spec"`
+	Spec SubscribableTypeSpec `json:"spec"`
+
+	// SubscribableTypeStatus is the part where SubscribableStatus object is
+	// configured as to be compatible with Subscribable contract.
+	Status SubscribableTypeStatus `json:"status"`
 }
 
-// SubscribableSpec shows how we expect folks to embed Subscribable in their Spec field.
-type SubscribableSpec struct {
+// SubscribableTypeSpec shows how we expect folks to embed Subscribable in their Spec field.
+type SubscribableTypeSpec struct {
 	Subscribable *Subscribable `json:"subscribable,omitempty"`
+}
+
+// SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
+type SubscribableTypeStatus struct {
+	SubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
 }
 
 var (
@@ -92,12 +129,28 @@ func (c *SubscribableType) Populate() {
 		// Populate ALL fields
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+			Generation:    1,
 			SubscriberURI: "call1",
 			ReplyURI:      "sink2",
 		}, {
 			UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+			Generation:    2,
 			SubscriberURI: "call2",
 			ReplyURI:      "sink2",
+		}},
+	}
+	c.Status.SubscribableStatus = &SubscribableStatus{
+		// Populate ALL fields
+		Subscribers: []SubscriberStatus{{
+			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+			ObservedGeneration: 1,
+			Ready:              corev1.ConditionTrue,
+			Message:            "Some message",
+		}, {
+			UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+			ObservedGeneration: 2,
+			Ready:              corev1.ConditionFalse,
+			Message:            "Some message",
 		}},
 	}
 }

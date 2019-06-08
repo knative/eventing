@@ -20,13 +20,14 @@ import (
 	"flag"
 	"log"
 
-	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
-	eventingScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	informers "github.com/knative/eventing/contrib/kafka/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -34,7 +35,6 @@ import (
 	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -63,7 +63,6 @@ func main() {
 		logger.Fatalw("Error building kubeconfig", zap.Error(err))
 	}
 
-	// TODO the underlying config map needs to be watched and the config should be reloaded if there is a change.
 	kafkaConfig, err := utils.GetKafkaConfig("/etc/config-kafka")
 	if err != nil {
 		logger.Fatalw("Error loading kafka config", zap.Error(err))
@@ -78,22 +77,17 @@ func main() {
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
-	// Setting up our own eventingClientSet as we need the messaging API introduced with kafka.
-	eventingClientSet := clientset.NewForConfigOrDie(cfg)
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClientSet, opt.ResyncPeriod)
+	messagingInformerFactory := informers.NewSharedInformerFactory(opt.KafkaClientSet, opt.ResyncPeriod)
 
 	// Messaging
-	kafkaChannelInformer := eventingInformerFactory.Messaging().V1alpha1().KafkaChannels()
+	kafkaChannelInformer := messagingInformerFactory.Messaging().V1alpha1().KafkaChannels()
 
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 	endpointsInformer := kubeInformerFactory.Core().V1().Endpoints()
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-
-	// Adding the scheme.
-	eventingScheme.AddToScheme(scheme.Scheme)
 
 	// Build all of our controllers, with the clients constructed above.
 	// Add new controllers to this array.
@@ -101,7 +95,6 @@ func main() {
 	controllers := [...]*kncontroller.Impl{
 		kafkachannel.NewController(
 			opt,
-			eventingClientSet,
 			kafkaConfig,
 			systemNS,
 			dispatcherDeploymentName,

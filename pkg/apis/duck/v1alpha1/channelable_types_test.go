@@ -19,7 +19,10 @@ package v1alpha1
 import (
 	"testing"
 
+	"github.com/knative/pkg/apis"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -38,35 +41,51 @@ func TestChannelablePopulate(t *testing.T) {
 	got := &Channelable{}
 
 	want := &Channelable{
-		Spec: SubscribableSpec{
-			Subscribable: &Subscribable{
-				Subscribers: []SubscriberSpec{{
-					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					SubscriberURI: "call1",
-					ReplyURI:      "sink2",
-				}, {
-					UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					SubscriberURI: "call2",
-					ReplyURI:      "sink2",
-				}},
+		Spec: ChannelableSpec{
+			SubscribableTypeSpec: SubscribableTypeSpec{
+				Subscribable: &Subscribable{
+					Subscribers: []SubscriberSpec{{
+						UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+						Generation:    1,
+						SubscriberURI: "call1",
+						ReplyURI:      "sink2",
+					}, {
+						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						Generation:    2,
+						SubscriberURI: "call2",
+						ReplyURI:      "sink2",
+					}},
+				},
 			},
 		},
 		Status: ChannelableStatus{
 			AddressStatus: v1alpha1.AddressStatus{
 				Address: &v1alpha1.Addressable{
 					// Populate ALL fields
-					Hostname: "this is not empty",
+					Addressable: duckv1beta1.Addressable{
+						URL: &apis.URL{
+							Scheme: "http",
+							Host:   "test-domain",
+						},
+					},
+					Hostname: "test-domain",
 				},
 			},
-			Subscribers: []Subscriber{{
-				UID:     "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-				Ready:   "True",
-				Message: "ready",
-			}, {
-				UID:     "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-				Ready:   "False",
-				Message: "not ready",
-			}},
+			SubscribableTypeStatus: SubscribableTypeStatus{
+				SubscribableStatus: &SubscribableStatus{
+					Subscribers: []SubscriberStatus{{
+						UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 1,
+						Ready:              corev1.ConditionTrue,
+						Message:            "Some message",
+					}, {
+						UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 2,
+						Ready:              corev1.ConditionFalse,
+						Message:            "Some message",
+					}},
+				},
+			},
 		},
 	}
 

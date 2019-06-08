@@ -44,6 +44,13 @@ rules:
       - watch
       - update
   - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - channels/finalizers
+      - clusterchannelprovisioners/finalizers
+    verbs:
+      - update
+  - apiGroups:
       - "" # Core API group.
     resources:
       - services

@@ -120,6 +120,9 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		want: &SubscriptionStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
+					Type:   SubscriptionConditionAddedToChannel,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -144,6 +147,9 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		want: &SubscriptionStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
+					Type:   SubscriptionConditionAddedToChannel,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionFalse,
 				}, {
@@ -168,6 +174,9 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		want: &SubscriptionStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
+					Type:   SubscriptionConditionAddedToChannel,
+					Status: corev1.ConditionUnknown,
+				}, {
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionUnknown,
 				}, {
@@ -193,30 +202,46 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 
 func TestSubscriptionIsReady(t *testing.T) {
 	tests := []struct {
-		name             string
-		markResolved     bool
-		markChannelReady bool
-		wantReady        bool
+		name               string
+		markResolved       bool
+		markChannelReady   bool
+		wantReady          bool
+		markAddedToChannel bool
 	}{{
-		name:             "all happy",
-		markResolved:     true,
-		markChannelReady: true,
-		wantReady:        true,
+		name:               "all happy",
+		markResolved:       true,
+		markChannelReady:   true,
+		markAddedToChannel: true,
+		wantReady:          true,
 	}, {
-		name:             "one sad",
-		markResolved:     false,
-		markChannelReady: true,
-		wantReady:        false,
+		name:               "one sad - markResolved",
+		markResolved:       false,
+		markChannelReady:   true,
+		markAddedToChannel: true,
+		wantReady:          false,
+	}, {
+		name:               "one sad - markChannelReady",
+		markResolved:       true,
+		markChannelReady:   false,
+		markAddedToChannel: true,
+		wantReady:          false,
+	}, {
+		name:               "one sad - markAddedToChannel",
+		markResolved:       true,
+		markChannelReady:   true,
+		markAddedToChannel: false,
+		wantReady:          false,
 	}, {
 		name:             "other sad",
 		markResolved:     true,
 		markChannelReady: false,
 		wantReady:        false,
 	}, {
-		name:             "both sad",
-		markResolved:     false,
-		markChannelReady: false,
-		wantReady:        false,
+		name:               "all sad",
+		markResolved:       false,
+		markChannelReady:   false,
+		markAddedToChannel: false,
+		wantReady:          false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -226,6 +251,9 @@ func TestSubscriptionIsReady(t *testing.T) {
 			}
 			if test.markChannelReady {
 				ss.MarkChannelReady()
+			}
+			if test.markAddedToChannel {
+				ss.MarkAddedToChannel()
 			}
 			got := ss.IsReady()
 			if test.wantReady != got {

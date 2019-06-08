@@ -51,7 +51,6 @@ var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakesharedclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
-	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
 }
@@ -134,6 +133,10 @@ func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLis
 
 func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
+}
+
+func (l *Listers) GetPipelineLister() messaginglisters.PipelineLister {
+	return messaginglisters.NewPipelineLister(l.indexerFor(&messagingv1alpha1.Pipeline{}))
 }
 
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {

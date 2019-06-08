@@ -25,6 +25,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/adapter/apiserver"
 	"github.com/knative/eventing/pkg/kncloudevents"
+	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -78,6 +79,12 @@ func main() {
 	client, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
+	}
+
+	if err = tracing.SetupStaticZipkinPublishing("apiserversource", tracing.OnePercentSampling); err != nil {
+		// If tracing doesn't work, we will log an error, but allow the importer to continue to
+		// start.
+		logger.Error("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
 	eventsClient, err := kncloudevents.NewDefaultClient(env.SinkURI)

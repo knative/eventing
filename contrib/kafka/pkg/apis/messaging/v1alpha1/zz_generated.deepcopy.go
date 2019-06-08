@@ -111,7 +111,8 @@ func (in *KafkaChannelSpec) DeepCopy() *KafkaChannelSpec {
 func (in *KafkaChannelStatus) DeepCopyInto(out *KafkaChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
-	in.Address.DeepCopyInto(&out.Address)
+	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
+	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
 	return
 }
 

@@ -927,6 +927,10 @@ func envVars(containerName string) []corev1.EnvVar {
 					},
 				},
 			},
+			{
+				Name:  "BROKER",
+				Value: brokerName,
+			},
 		}
 	case ingressContainerName:
 		return []corev1.EnvVar{

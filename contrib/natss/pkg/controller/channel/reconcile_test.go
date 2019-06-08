@@ -162,6 +162,7 @@ func makeNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 func makeNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := makeNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	c.Status.SetAddress(&apis.URL{
 		Scheme: "http",
 		Host:   serviceAddress,

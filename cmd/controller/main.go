@@ -35,6 +35,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/channel"
 	"github.com/knative/eventing/pkg/reconciler/eventtype"
 	"github.com/knative/eventing/pkg/reconciler/namespace"
+	"github.com/knative/eventing/pkg/reconciler/pipeline"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 	"github.com/knative/pkg/configmap"
@@ -81,7 +82,7 @@ func main() {
 
 	logger.Info("Starting the controller")
 
-	const numControllers = 6
+	const numControllers = 7
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
 	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
@@ -96,6 +97,9 @@ func main() {
 	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
 	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
 	eventTypeInformer := eventingInformerFactory.Eventing().V1alpha1().EventTypes()
+
+	// Messaging
+	pipelineInformer := eventingInformerFactory.Messaging().V1alpha1().Pipelines()
 
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
@@ -165,6 +169,12 @@ func main() {
 			eventTypeInformer,
 			brokerInformer,
 		),
+		pipeline.NewController(
+			opt,
+			pipelineInformer,
+			addressableInformer,
+			subscriptionInformer,
+		),
 	}
 	// This line asserts at compile time that the length of controllers is equal to numControllers.
 	// It is based on https://go101.org/article/tips.html#assert-at-compile-time, which notes that
@@ -191,6 +201,7 @@ func main() {
 		subscriptionInformer.Informer(),
 		triggerInformer.Informer(),
 		eventTypeInformer.Informer(),
+		pipelineInformer.Informer(),
 		// Kube
 		configMapInformer.Informer(),
 		serviceInformer.Informer(),

@@ -25,7 +25,8 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/test/base"
+	pkgResources "github.com/knative/eventing/pkg/reconciler/namespace/resources"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 
 	"github.com/knative/pkg/test/logging"
@@ -36,17 +37,24 @@ const (
 	waitForFilterPodRunning = 30 * time.Second
 	selectorKey             = "end2end-test-broker-trigger"
 
-	any          = v1alpha1.TriggerAnyFilter
-	eventType1   = "type1"
-	eventType2   = "type2"
-	eventSource1 = "source1"
-	eventSource2 = "source2"
+	defaultBrokerName = pkgResources.DefaultBrokerName
+	any               = v1alpha1.TriggerAnyFilter
+	eventType1        = "type1"
+	eventType2        = "type2"
+	eventSource1      = "source1"
+	eventSource2      = "source2"
 )
+
+// eventTypeAndSource specifies the type and source of an Event.
+type eventTypeAndSource struct {
+	Type   string
+	Source string
+}
 
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
-	typeAndSource base.TypeAndSource
+	typeAndSource eventTypeAndSource
 	selector      map[string]string
 }
 
@@ -64,23 +72,23 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	// Wait for default broker ready.
-	if err := client.WaitForBrokerReady(common.DefaultBrokerName); err != nil {
+	if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
 	// These are the event types and sources that triggers will listen to, as well as the selectors
 	// to set  in the subscriber and services pods.
 	eventsToReceive := []eventReceiver{
-		{base.TypeAndSource{Type: any, Source: any}, newSelector()},
-		{base.TypeAndSource{Type: eventType1, Source: any}, newSelector()},
-		{base.TypeAndSource{Type: any, Source: eventSource1}, newSelector()},
-		{base.TypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
+		{eventTypeAndSource{Type: any, Source: any}, newSelector()},
+		{eventTypeAndSource{Type: eventType1, Source: any}, newSelector()},
+		{eventTypeAndSource{Type: any, Source: eventSource1}, newSelector()},
+		{eventTypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
 	}
 
 	// Create subscribers.
 	for _, event := range eventsToReceive {
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		pod := base.EventLoggerPod(subscriberName)
+		pod := resources.EventLoggerPod(subscriberName)
 		client.CreatePodOrFail(pod, common.WithService(subscriberName))
 	}
 
@@ -89,8 +97,8 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
 		client.CreateTriggerOrFail(triggerName,
-			base.WithSubscriberRefForTrigger(subscriberName),
-			base.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
+			resources.WithSubscriberRefForTrigger(subscriberName),
+			resources.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
 		)
 	}
 
@@ -100,7 +108,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 
 	// These are the event types and sources that will be send.
-	eventsToSend := []base.TypeAndSource{
+	eventsToSend := []eventTypeAndSource{
 		{eventType1, eventSource1},
 		{eventType1, eventSource2},
 		{eventType2, eventSource1},
@@ -114,14 +122,14 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		// Create cloud event.
 		// Using event type and source as part of the body for easier debugging.
 		body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
-		cloudEvent := &base.CloudEvent{
+		cloudEvent := &resources.CloudEvent{
 			Source: eventToSend.Source,
 			Type:   eventToSend.Type,
 			Data:   fmt.Sprintf(`{"msg":%q}`, body),
 		}
 		// Create sender pod.
 		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		if err := client.SendFakeEventToBroker(senderPodName, common.DefaultBrokerName, cloudEvent); err != nil {
+		if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
 			t.Fatalf("Error send cloud event to broker: %v", err)
 		}
 
@@ -172,7 +180,7 @@ func newSelector() map[string]string {
 }
 
 // Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.
-func shouldExpectEvent(eventToSend *base.TypeAndSource, receiver *eventReceiver, logf logging.FormatLogger) bool {
+func shouldExpectEvent(eventToSend *eventTypeAndSource, receiver *eventReceiver, logf logging.FormatLogger) bool {
 	if receiver.typeAndSource.Type != any && receiver.typeAndSource.Type != eventToSend.Type {
 		return false
 	}

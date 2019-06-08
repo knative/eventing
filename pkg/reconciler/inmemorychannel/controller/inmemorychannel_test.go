@@ -18,8 +18,9 @@ package controller
 
 import (
 	"fmt"
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"testing"
+
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"

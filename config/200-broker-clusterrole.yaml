@@ -18,6 +18,14 @@ metadata:
   name: eventing-broker-filter
 rules:
   - apiGroups:
+      - ""
+    resources:
+      - "configmaps"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
       - "eventing.knative.dev"
     resources:
       - "triggers"
