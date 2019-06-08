@@ -21,7 +21,6 @@ import (
 
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -66,7 +65,6 @@ func NewController(
 		subscriptionLister:  subscriptionInformer.Lister(),
 		brokerLister:        brokerInformer.Lister(),
 		serviceLister:       serviceInformer.Lister(),
-		addressableInformer: addressableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -75,13 +73,13 @@ func NewController(
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		// Call the tracker's OnChanged method, but we've seen the objects
 		// coming through this path missing TypeMeta, so ensure it is properly
 		// populated.
 		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
+			r.addressableTracker.OnChanged,
 			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
 		),
 	))

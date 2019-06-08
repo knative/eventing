@@ -37,7 +37,6 @@ import (
 	duckroot "github.com/knative/pkg/apis"
 	duckapis "github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -73,10 +72,7 @@ type Reconciler struct {
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister eventinglisters.SubscriptionLister
 
-	addressableInformer duck.AddressableInformer
-
-	// Track my channels
-	tracker tracker.Interface
+	addressableTracker duck.AddressableTracker
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -280,7 +276,7 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 	}
 
 	// Tell tracker to reconcile this Broker whenever my channels change.
-	track := r.addressableInformer.TrackInNamespace(r.tracker, b)
+	track := r.addressableTracker.TrackInNamespace(b)
 
 	// Start tracking trigger channel...
 	if err = track(utils.ObjectRef(triggerChan, triggerChan.GroupVersionKind())); err != nil {
