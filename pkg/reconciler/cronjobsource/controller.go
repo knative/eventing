@@ -50,7 +50,7 @@ func NewController(
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:             reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 		cronjobLister:    cronJobSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),

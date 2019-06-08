@@ -49,7 +49,7 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                  reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 		containerSourceLister: containerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 	}
