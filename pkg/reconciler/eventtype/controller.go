@@ -17,12 +17,16 @@ limitations under the License.
 package eventtype
 
 import (
-	"github.com/knative/pkg/tracker"
+	"context"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
+
+	brokerinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
+	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 )
 
 const (
@@ -36,13 +40,15 @@ const (
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
-	opt reconciler.Options,
-	eventTypeInformer eventinginformers.EventTypeInformer,
-	brokerInformer eventinginformers.BrokerInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	brokerInformer := brokerinformer.Get(ctx)
+	eventTypeInformer := eventtypeinformer.Get(ctx)
+
 	r := &Reconciler{
-		Base:            reconciler.NewBase(opt, controllerAgentName),
+		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 		eventTypeLister: eventTypeInformer.Lister(),
 		brokerLister:    brokerInformer.Lister(),
 	}
@@ -53,7 +59,7 @@ func NewController(
 
 	// Tracker is used to notify us that a EventType's Broker has changed so that
 	// we can reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(
 			r.tracker.OnChanged,
