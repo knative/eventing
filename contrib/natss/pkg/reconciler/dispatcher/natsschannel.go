@@ -22,23 +22,24 @@ import (
 	"fmt"
 	"reflect"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"go.uber.org/zap"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
 	listers "github.com/knative/eventing/contrib/natss/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
 	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/provisioners/fanout"
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/pkg/controller"
+	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -118,14 +119,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	reconcileErr := r.reconcile(ctx, natssChannel)
 	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
+		logging.FromContext(ctx).Error("Error reconciling NatssChannel", zap.Error(reconcileErr))
 	} else {
-		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
+		logging.FromContext(ctx).Debug("NatssChannel reconciled")
 	}
 
-	// todo: Should this check for subscribable status rather than entire status?
+	// TODO: Should this check for subscribable status rather than entire status?
 	if _, updateStatusErr := r.updateStatus(ctx, natssChannel); updateStatusErr != nil {
-		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
+		logging.FromContext(ctx).Error("Failed to update NatssChannel status", zap.Error(updateStatusErr))
 		return updateStatusErr
 	}
 	return nil
@@ -153,11 +154,15 @@ func (r *Reconciler) reconcile(ctx context.Context, natssChannel *v1alpha1.Natss
 	}
 
 	// Try to subscribe.
-	subStatus, err := r.natssDispatcher.UpdateSubscriptions(c, false)
-	natssChannel.Status.SubscribableStatus = subStatus
+	failedSubscriptions, err := r.natssDispatcher.UpdateSubscriptions(c, false)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error updating subscriptions", zap.Any("channel", c), zap.Error(err))
 		return err
+	}
+	natssChannel.Status.SubscribableStatus = r.createSubscribableStatus(natssChannel.Spec.Subscribable, failedSubscriptions)
+	if len(failedSubscriptions) > 0 {
+		logging.FromContext(ctx).Error("Some natss subscriptions failed to subscribe")
+		return fmt.Errorf("Some natss subscriptions failed to subscribe")
 	}
 
 	natssChannels, err := r.natsschannelLister.List(labels.Everything())
@@ -180,19 +185,40 @@ func (r *Reconciler) reconcile(ctx context.Context, natssChannel *v1alpha1.Natss
 
 	return nil
 }
+func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable, failedSubscriptions map[eventingduck.SubscriberSpec]error) *eventingduck.SubscribableStatus {
+	if subscribable == nil {
+		return nil
+	}
+	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
+	for _, sub := range subscribable.Subscribers {
+		status := eventingduck.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
+		}
+		if err, ok := failedSubscriptions[sub]; ok {
+			status.Ready = corev1.ConditionFalse
+			status.Message = err.Error()
+		}
+		subscriberStatus = append(subscriberStatus, status)
+	}
+	return &eventingduck.SubscribableStatus{
+		Subscribers: subscriberStatus,
+	}
+}
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.NatssChannel) (*v1alpha1.NatssChannel, error) {
-	imc, err := r.natsschannelLister.NatssChannels(desired.Namespace).Get(desired.Name)
+	nc, err := r.natsschannelLister.NatssChannels(desired.Namespace).Get(desired.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	if reflect.DeepEqual(imc.Status, desired.Status) {
-		return imc, nil
+	if reflect.DeepEqual(nc.Status, desired.Status) {
+		return nc, nil
 	}
 
 	// Don't modify the informers copy.
-	existing := imc.DeepCopy()
+	existing := nc.DeepCopy()
 	existing.Status = desired.Status
 
 	return r.NatssClientSet.MessagingV1alpha1().NatssChannels(desired.Namespace).UpdateStatus(existing)
