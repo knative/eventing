@@ -17,22 +17,17 @@ limitations under the License.
 package trigger
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
 	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +35,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
+	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
+	"github.com/knative/eventing/pkg/utils"
+
+	. "github.com/knative/pkg/reconciler/testing"
+
+	. "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
 const (
@@ -478,10 +484,9 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-
-	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(opt, controllerAgentName),
+			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
 			triggerLister:       listers.GetTriggerLister(),
 			channelLister:       listers.GetChannelLister(),
 			subscriptionLister:  listers.GetSubscriptionLister(),
