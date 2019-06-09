@@ -17,6 +17,8 @@ limitations under the License.
 package namespace
 
 import (
+	"context"
+	"github.com/knative/pkg/configmap"
 	"testing"
 
 	"github.com/knative/pkg/tracker"
@@ -280,17 +282,14 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                 reconciler.NewBase(opt, controllerAgentName),
+			Base:                 reconciler.NewBase(ctx, controllerAgentName, cmw),
 			namespaceLister:      listers.GetNamespaceLister(),
 			brokerLister:         listers.GetBrokerLister(),
 			serviceAccountLister: listers.GetServiceAccountLister(),
 			roleBindingLister:    listers.GetRoleBindingLister(),
 			tracker:              tracker.New(func(string) {}, 0),
 		}
-
-	},
-		false,
-	))
+	}, false))
 }
