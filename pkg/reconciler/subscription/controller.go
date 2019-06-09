@@ -17,12 +17,18 @@ limitations under the License.
 package subscription
 
 import (
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	eventingduck "github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/reconciler"
+	"context"
+
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
-	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1"
+
+	"github.com/knative/eventing/pkg/duck"
+	"github.com/knative/eventing/pkg/reconciler"
+
+	"github.com/knative/pkg/injection/informers/apiextinformers/apiextensionsv1beta1/crd"
+
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 )
 
 const (
@@ -36,14 +42,16 @@ const (
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
-	opt reconciler.Options,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	addressableInformer eventingduck.AddressableInformer,
-	customResourceDefinitionInformer apiextensionsinformers.CustomResourceDefinitionInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	subscriptionInformer := subscription.Get(ctx)
+	customResourceDefinitionInformer := crd.Get(ctx)
+	addressableInformer := duck.NewAddressableInformer(ctx)
+
 	r := &Reconciler{
-		Base:                           reconciler.NewBase(opt, controllerAgentName),
+		Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 		subscriptionLister:             subscriptionInformer.Lister(),
 		customResourceDefinitionLister: customResourceDefinitionInformer.Lister(),
 		addressableInformer:            addressableInformer,
@@ -55,7 +63,7 @@ func NewController(
 
 	// Tracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }
