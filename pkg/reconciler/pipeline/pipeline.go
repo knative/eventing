@@ -22,15 +22,9 @@ import (
 	"fmt"
 	"reflect"
 
-	corev1 "k8s.io/api/core/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
-
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
@@ -43,18 +37,15 @@ import (
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Pipelines"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "pipeline-controller"
-
 	reconciled         = "Reconciled"
 	reconcileFailed    = "ReconcileFailed"
 	updateStatusFailed = "UpdateStatusFailed"
@@ -72,38 +63,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	pipelineInformer informers.PipelineInformer,
-	addressableInformer duck.AddressableInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		pipelineLister:      pipelineInformer.Lister(),
-		addressableInformer: addressableInformer,
-		subscriptionLister:  subscriptionInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	pipelineInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Register handler for Subscriptions that are owned by Pipeline, so that
-	// we get notified if they change.
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Pipeline")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // reconcile the two. It then updates the Status block of the Pipeline resource

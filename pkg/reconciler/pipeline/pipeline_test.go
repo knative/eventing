@@ -17,18 +17,13 @@ limitations under the License.
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
@@ -37,9 +32,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
+	. "github.com/knative/eventing/pkg/reconciler/testing"
+	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
 const (
@@ -59,35 +60,6 @@ type fakeAddressableInformer struct{}
 
 func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
 	return func(corev1.ObjectReference) error { return nil }
-}
-
-func TestNewController(t *testing.T) {
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-
-	// Create informer factories with fake clients. The second parameter sets the
-	// resync period to zero, disabling it.
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClient, 0)
-
-	// Messaging
-	pipelineInformer := eventingInformerFactory.Messaging().V1alpha1().Pipelines()
-
-	// Eventing
-	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
-
-	c := NewController(
-		reconciler.Options{
-			KubeClientSet:     kubeClient,
-			EventingClientSet: eventingClient,
-			Logger:            logtesting.TestLogger(t),
-		},
-		pipelineInformer,
-		&fakeAddressableInformer{},
-		subscriptionInformer)
-
-	if c == nil {
-		t.Fatalf("Failed to create with NewController")
-	}
 }
 
 func createReplyChannel(channelName string) *corev1.ObjectReference {
@@ -504,15 +476,12 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-
-	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(opt, controllerAgentName),
+			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
 			pipelineLister:      listers.GetPipelineLister(),
 			addressableInformer: &fakeAddressableInformer{},
 			subscriptionLister:  listers.GetSubscriptionLister(),
 		}
-	},
-		false,
-	))
+	}, false))
 }

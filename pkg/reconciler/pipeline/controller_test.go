@@ -14,21 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package namespace
+package pipeline
 
 import (
-	"github.com/knative/pkg/configmap"
 	"testing"
 
+	"github.com/knative/pkg/configmap"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
 
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/namespace/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/serviceaccount/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/rbacv1/rolebinding/fake"
-
 	// Fake injection informers
-	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/pipeline/fake"
 )
 
 func TestNew(t *testing.T) {
