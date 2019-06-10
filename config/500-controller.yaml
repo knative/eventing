@@ -44,6 +44,10 @@ spec:
                 fieldPath: metadata.namespace
           - name: CONFIG_LOGGING_NAME
             value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/eventing
           - name: BROKER_INGRESS_IMAGE
             value: github.com/knative/eventing/cmd/broker/ingress
           - name: BROKER_INGRESS_SERVICE_ACCOUNT
