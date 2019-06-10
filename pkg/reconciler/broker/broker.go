@@ -256,7 +256,13 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
 		return err
-	} else if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
+	}
+	if triggerChan.Status.Address == nil {
+		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
+		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
+		return nil
+	}
+	if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
 		// We check the trigger Channel's address here because it is needed to create the Ingress
 		// Deployment.
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
@@ -279,7 +285,7 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 	}
 	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
 
-	ingressDeployment, err := r.reconcileIngressDeploymentCRD(ctx, channelResourceInterface, b, triggerChan)
+	ingressDeployment, err := r.reconcileIngressDeploymentCRD(ctx, b, triggerChan)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
 		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
@@ -585,7 +591,7 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 }
 
 // reconcileIngressDeploymentCRD reconciles the Ingress Deployment for a CRD backed channel.
-func (r *Reconciler) reconcileIngressDeploymentCRD(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileIngressDeploymentCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
 	expected := resources.MakeIngress(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,

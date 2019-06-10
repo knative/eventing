@@ -63,6 +63,15 @@ func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOpt
 	}
 }
 
+// WithBrokerChannelCRD sets the Broker's ChannelTemplateSpec to the specified CRD.
+func WithBrokerChannelCRD(crdType metav1.TypeMeta) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Spec.ChannelTemplate = v1alpha1.ChannelTemplateSpec{
+			TypeMeta: crdType,
+		}
+	}
+}
+
 // WithBrokerAddress sets the Broker's address.
 func WithBrokerAddress(address string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
