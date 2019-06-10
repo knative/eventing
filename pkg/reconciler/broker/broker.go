@@ -244,12 +244,10 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 		return nil
 	}
 
-	// Convert the object into runtime.Object so we can grab the schema.ObjectKind and create the correct interface client
-	obj := b.Spec.ChannelTemplate.DeepCopyObject()
-
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(obj.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
+	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
 
 	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
+	logging.FromContext(ctx).Error("Reconciling the trigger channel CRD")
 	triggerChan, err := r.reconcileTriggerChannelCRD(ctx, triggerChannelName, channelResourceInterface, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
@@ -450,6 +448,7 @@ func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 func (r *Reconciler) reconcileTriggerChannelCRD(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	c, err := newTriggerChannelCRD(b)
 	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel CRD object: %s/%s", b.Namespace, channelName), zap.Error(err))
 		return nil, err
 	}
 	return r.reconcileChannelCRD(ctx, channelName, channelResourceInterface, c, b)
@@ -465,26 +464,21 @@ func (r *Reconciler) reconcileIngressChannelCRD(ctx context.Context, channelName
 
 // reconcileChannelCRD reconciles Broker's 'b' underlying channel for CRD based Channels
 func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
-	// TODO: Like, real channel name here...
 	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
-			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", b.Namespace, channelName), zap.Error(err))
-				return nil, err
-			}
+			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel CRD Object: %+v", newChannel))
 			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", b.Namespace, channelName), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Error(fmt.Sprintf("Created Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", zap.Any("NewChannel", newChannel)))
+			logging.FromContext(ctx).Error(fmt.Sprintf("Created Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", newChannel))
 			channelable := &duckv1alpha1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", b.Namespace, channelName), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", b.Namespace, channelName), zap.Any("createdChannel", created), zap.Error(err))
 				return nil, err
 
 			}
@@ -494,7 +488,7 @@ func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string
 			return nil, err
 		}
 	}
-	logging.FromContext(ctx).Error(fmt.Sprintf("Found Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", c))
+	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", c))
 	channelable := &duckv1alpha1.Channelable{}
 	err = duckapis.FromUnstructured(c, channelable)
 	if err != nil {
@@ -506,6 +500,7 @@ func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string
 }
 
 // getChannel returns the Channel object for Broker 'b' if exists, otherwise it returns an error.
+/*
 func (r *Reconciler) getChannelCRD(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
 	channels, err := r.channelLister.Channels(b.Namespace).List(ls)
 	if err != nil {
@@ -539,6 +534,7 @@ func newChannelCRD(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 		Spec: spec,
 	}
 }
+*/
 
 // TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
