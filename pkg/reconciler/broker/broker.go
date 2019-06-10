@@ -131,10 +131,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
-	if b.Spec.DeprecatedChannelTemplate != nil {
-		return r.reconcileLegacy(ctx, b)
-	} else {
+	if b.Spec.ChannelTemplate.Kind != "" && b.Spec.ChannelTemplate.APIVersion != "" {
 		return r.reconcileCRD(ctx, b)
+	} else {
+		return r.reconcileLegacy(ctx, b)
 	}
 }
 
@@ -498,43 +498,6 @@ func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string
 	}
 	return channelable, nil
 }
-
-// getChannel returns the Channel object for Broker 'b' if exists, otherwise it returns an error.
-/*
-func (r *Reconciler) getChannelCRD(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
-	channels, err := r.channelLister.Channels(b.Namespace).List(ls)
-	if err != nil {
-		return nil, err
-	}
-	for _, c := range channels {
-		if metav1.IsControlledBy(c, b) {
-			return c, nil
-		}
-	}
-
-	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
-}
-
-// newChannel creates a new Channel for Broker 'b'.
-func newChannelCRD(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
-	var spec v1alpha1.ChannelSpec
-	if b.Spec.DeprecatedChannelTemplate != nil {
-		spec = *b.Spec.DeprecatedChannelTemplate
-	}
-
-	return &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
-			Labels:       l,
-			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(b),
-			},
-		},
-		Spec: spec,
-	}
-}
-*/
 
 // TriggerChannelLabels are all the labels placed on the Trigger Channel for the given brokerName. This
 // should only be used by Broker and Trigger code.
