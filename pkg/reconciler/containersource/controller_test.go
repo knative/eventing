@@ -17,8 +17,9 @@ limitations under the License.
 package containersource
 
 import (
-	"github.com/knative/pkg/configmap"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"

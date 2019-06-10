@@ -19,9 +19,10 @@ package testing
 import (
 	"context"
 	"encoding/json"
+	"testing"
+
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/logging"
-	"testing"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

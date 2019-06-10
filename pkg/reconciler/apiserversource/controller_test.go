@@ -17,9 +17,10 @@ limitations under the License.
 package apiserversource
 
 import (
+	"testing"
+
 	"github.com/knative/pkg/configmap"
 	"k8s.io/client-go/rest"
-	"testing"
 
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"

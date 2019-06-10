@@ -19,6 +19,7 @@ package duck
 import (
 	"context"
 	"fmt"
+
 	"github.com/knative/pkg/injection/clients/dynamicclient"
 
 	corev1 "k8s.io/api/core/v1"

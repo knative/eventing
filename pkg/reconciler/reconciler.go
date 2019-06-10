@@ -18,11 +18,12 @@ package reconciler
 
 import (
 	"context"
+	"time"
+
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/injection/clients/dynamicclient"
 	"github.com/knative/pkg/injection/clients/kubeclient"
 	"github.com/knative/pkg/logging"
-	"time"
 
 	eventingclient "github.com/knative/eventing/pkg/client/injection/client"
 

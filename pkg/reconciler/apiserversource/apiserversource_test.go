@@ -19,9 +19,10 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/configmap"
 	"os"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
