@@ -18,6 +18,7 @@ package factory
 
 import (
 	"context"
+
 	"github.com/knative/pkg/logging"
 
 	informers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
