@@ -18,13 +18,14 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing"
 	"github.com/knative/pkg/apis"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-
-	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -256,6 +257,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady              *bool
 		address                      *apis.URL
 		markIngressSubscriptionReady *bool
+		markDeprecated               bool
 		wantReady                    bool
 	}{{
 		name:                         "all happy",
@@ -265,6 +267,17 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
+		wantReady:                    true,
+	}, {
+		name:                         "all happy - deprecated",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               true,
 		wantReady:                    true,
 	}, {
 		name:                         "ingress sad",
@@ -274,6 +287,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "trigger channel sad",
@@ -283,6 +297,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "ingress channel sad",
@@ -292,6 +307,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "filter sad",
@@ -301,6 +317,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &falseVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "addressable sad",
@@ -310,6 +327,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      nil,
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "ingress subscription sad",
@@ -319,6 +337,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &falseVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "all sad",
@@ -328,64 +347,91 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &falseVal,
 		address:                      nil,
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			bs := &BrokerStatus{}
-			if test.markIngressReady != nil {
-				var d *v1.Deployment
-				if *test.markIngressReady {
-					d = TestHelper.AvailableDeployment()
-				} else {
-					d = TestHelper.UnavailableDeployment()
+		for _, useCRDPropagation := range []bool{true, false} {
+			testName := fmt.Sprintf("%s - using CRD %t", test.name, useCRDPropagation)
+			//			t.Run(test.name, func(t *testing.T) {
+			t.Run(testName, func(t *testing.T) {
+				bs := &BrokerStatus{}
+				if test.markIngressReady != nil {
+					var d *v1.Deployment
+					if *test.markIngressReady {
+						d = TestHelper.AvailableDeployment()
+					} else {
+						d = TestHelper.UnavailableDeployment()
+					}
+					bs.PropagateIngressDeploymentAvailability(d)
 				}
-				bs.PropagateIngressDeploymentAvailability(d)
-			}
-			if test.markTriggerChannelReady != nil {
-				var c *ChannelStatus
-				if *test.markTriggerChannelReady {
-					c = TestHelper.ReadyChannelStatus()
-				} else {
-					c = TestHelper.NotReadyChannelStatus()
+				if test.markTriggerChannelReady != nil && useCRDPropagation {
+					var c *duckv1alpha1.ChannelableStatus
+					if *test.markTriggerChannelReady {
+						c = TestHelper.ReadyChannelStatusCRD()
+					} else {
+						c = TestHelper.NotReadyChannelStatusCRD()
+					}
+					bs.PropagateTriggerChannelReadinessCRD(c)
 				}
-				bs.PropagateTriggerChannelReadiness(c)
-			}
-			if test.markIngressChannelReady != nil {
-				var c *ChannelStatus
-				if *test.markIngressChannelReady {
-					c = TestHelper.ReadyChannelStatus()
-				} else {
-					c = TestHelper.NotReadyChannelStatus()
+				if test.markTriggerChannelReady != nil && !useCRDPropagation {
+					var c *ChannelStatus
+					if *test.markTriggerChannelReady {
+						c = TestHelper.ReadyChannelStatus()
+					} else {
+						c = TestHelper.NotReadyChannelStatus()
+					}
+					bs.PropagateTriggerChannelReadiness(c)
 				}
-				bs.PropagateIngressChannelReadiness(c)
-			}
-			if test.markIngressSubscriptionReady != nil {
-				var sub *SubscriptionStatus
-				if *test.markIngressSubscriptionReady {
-					sub = TestHelper.ReadySubscriptionStatus()
-				} else {
-					sub = TestHelper.NotReadySubscriptionStatus()
+				if test.markIngressChannelReady != nil && useCRDPropagation {
+					var c *duckv1alpha1.ChannelableStatus
+					if *test.markIngressChannelReady {
+						c = TestHelper.ReadyChannelStatusCRD()
+					} else {
+						c = TestHelper.NotReadyChannelStatusCRD()
+					}
+					bs.PropagateIngressChannelReadinessCRD(c)
 				}
-				bs.PropagateIngressSubscriptionReadiness(sub)
-			}
-			if test.markFilterReady != nil {
-				var d *v1.Deployment
-				if *test.markFilterReady {
-					d = TestHelper.AvailableDeployment()
-				} else {
-					d = TestHelper.UnavailableDeployment()
+				if test.markIngressChannelReady != nil && !useCRDPropagation {
+					var c *ChannelStatus
+					if *test.markIngressChannelReady {
+						c = TestHelper.ReadyChannelStatus()
+					} else {
+						c = TestHelper.NotReadyChannelStatus()
+					}
+					bs.PropagateIngressChannelReadiness(c)
 				}
-				bs.PropagateFilterDeploymentAvailability(d)
-			}
-			bs.SetAddress(test.address)
+				if test.markIngressSubscriptionReady != nil {
+					var sub *SubscriptionStatus
+					if *test.markIngressSubscriptionReady {
+						sub = TestHelper.ReadySubscriptionStatus()
+					} else {
+						sub = TestHelper.NotReadySubscriptionStatus()
+					}
+					bs.PropagateIngressSubscriptionReadiness(sub)
+				}
+				if test.markFilterReady != nil {
+					var d *v1.Deployment
+					if *test.markFilterReady {
+						d = TestHelper.AvailableDeployment()
+					} else {
+						d = TestHelper.UnavailableDeployment()
+					}
+					bs.PropagateFilterDeploymentAvailability(d)
+				}
+				if test.markDeprecated {
+					bs.MarkDeprecated("TestReason", "Test Message For Deprecation")
+				}
+				bs.SetAddress(test.address)
 
-			got := bs.IsReady()
-			if test.wantReady != got {
-				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
-			}
-		})
+				got := bs.IsReady()
+				if test.wantReady != got {
+					t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+				}
+
+			})
+		}
 	}
 }
 
@@ -442,14 +488,14 @@ func TestBrokerAnnotateUserInfo(t *testing.T) {
 	}, {
 		"update broker which has no annotations with diff",
 		u2,
-		&Broker{Spec: BrokerSpec{ChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}},
+		&Broker{Spec: BrokerSpec{DeprecatedChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}},
 		&Broker{},
 		map[string]string{
 			eventing.UpdaterAnnotation: u2,
 		}}, {
 		"update broker which has annotations with diff",
 		u3,
-		withUserAnns(u1, u2, &Broker{Spec: BrokerSpec{ChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}}),
+		withUserAnns(u1, u2, &Broker{Spec: BrokerSpec{DeprecatedChannelTemplate: &ChannelSpec{DeprecatedGeneration: 1}}}),
 		withUserAnns(u1, u2, &Broker{}),
 		map[string]string{
 			eventing.CreatorAnnotation: u1,
@@ -471,6 +517,42 @@ func TestBrokerAnnotateUserInfo(t *testing.T) {
 
 			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
 				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
+			}
+		})
+	}
+}
+
+func TestBrokerStatus_MarkDeprecated(t *testing.T) {
+	testCases := map[string]struct {
+		alreadyPresent bool
+	}{
+		"not present": {
+			alreadyPresent: false,
+		},
+		"already present": {
+			alreadyPresent: true,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			bs := &BrokerStatus{}
+			if tc.alreadyPresent {
+				bs.MarkDeprecated("AlreadyPresent", "Already present.")
+			}
+			bs.MarkDeprecated("Test", "Test Message")
+			if len(bs.Conditions) != 1 {
+				t.Fatalf("Incorrect number of conditions. Expected 1, actually %v", bs)
+			}
+
+			expected := apis.Condition{
+				Type:     "Deprecated",
+				Reason:   "Test",
+				Status:   corev1.ConditionTrue,
+				Severity: apis.ConditionSeverityWarning,
+				Message:  "Test Message",
+			}
+			if diff := cmp.Diff(expected, bs.Conditions[0], ignoreLastTransitionTime); diff != "" {
+				t.Errorf("Condition incorrect (-want +got): %s", diff)
 			}
 		})
 	}
