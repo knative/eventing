@@ -11,11 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: imc-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
@@ -28,18 +31,22 @@ spec:
     spec:
       serviceAccountName: imc-dispatcher
       containers:
-        - name: dispatcher
-          image: github.com/knative/eventing/cmd/in_memory/channel_dispatcher
-          env:
+      - name: dispatcher
+        image: github.com/knative/eventing/cmd/in_memory/channel_dispatcher
+        env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/inmemorychannel-dispatcher
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          volumeMounts:
-            - name: config-logging
-              mountPath: /etc/config-logging
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
       volumes:
         - name: config-logging
           configMap:
