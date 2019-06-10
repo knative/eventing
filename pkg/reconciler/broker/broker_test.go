@@ -977,6 +977,24 @@ func TestReconcileCRD(t *testing.T) {
 			WantErr: true,
 		},
 		{
+			Name: "Trigger Channel.Create no address",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannelCRD(channelCRD()),
+					WithInitBrokerConditions),
+			},
+			WantCreates: []runtime.Object{
+				createChannelCRD(testNS, triggerChannel, false),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithInitBrokerConditions,
+					WithBrokerChannelCRD(channelCRD()),
+					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
+			}},
+		},
+		{
 			Name: "Trigger Channel is not yet Addressable",
 			Key:  testKey,
 			Objects: []runtime.Object{
