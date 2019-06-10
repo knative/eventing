@@ -644,7 +644,7 @@ func (r *Reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alph
 }
 
 func (r *Reconciler) reconcileIngressSubscriptionCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) (*v1alpha1.Subscription, error) {
-	expected := makeSubscriptionCRD(b, c, svc)
+	expected := resources.MakeSubscriptionCRD(b, c, svc)
 
 	sub, err := r.getIngressSubscription(ctx, b)
 	// If the resource doesn't exist, we'll create it
@@ -710,34 +710,6 @@ func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Servi
 			Channel: corev1.ObjectReference{
 				APIVersion: v1alpha1.SchemeGroupVersion.String(),
 				Kind:       "Channel",
-				Name:       c.Name,
-			},
-			Subscriber: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       svc.Name,
-				},
-			},
-		},
-	}
-}
-
-// makeSubscriptionCRD returns a placeholder subscription for broker 'b', channelable 'c', and service 'svc'.
-func makeSubscriptionCRD(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) *v1alpha1.Subscription {
-	return &v1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("internal-ingress-%s-", b.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(b),
-			},
-			Labels: ingressSubscriptionLabels(b.Name),
-		},
-		Spec: v1alpha1.SubscriptionSpec{
-			Channel: corev1.ObjectReference{
-				APIVersion: c.APIVersion,
-				Kind:       c.Kind,
 				Name:       c.Name,
 			},
 			Subscriber: &v1alpha1.SubscriberSpec{
