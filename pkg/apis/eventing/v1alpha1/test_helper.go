@@ -19,7 +19,10 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/apps/v1"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
+	pkgduckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 )
 
 type testHelper struct{}
@@ -39,6 +42,15 @@ func (t testHelper) NotReadyChannelStatus() *ChannelStatus {
 	cs := t.ReadyChannelStatus()
 	cs.MarkNotProvisioned("foo", "bar")
 	return cs
+}
+
+func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
+	cs := &duckv1alpha1.ChannelableStatus{pkgduckv1alpha1.AddressStatus{&pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{&apis.URL{Scheme: "http", Host: "foo"}}, "http://foo"}}, duckv1alpha1.SubscribableTypeStatus{}}
+	return cs
+}
+
+func (t testHelper) NotReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
+	return &duckv1alpha1.ChannelableStatus{}
 }
 
 func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {

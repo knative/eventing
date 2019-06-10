@@ -18,8 +18,10 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing"
 	"github.com/knative/pkg/apis"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
@@ -332,60 +334,83 @@ func TestBrokerIsReady(t *testing.T) {
 	}}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			bs := &BrokerStatus{}
-			if test.markIngressReady != nil {
-				var d *v1.Deployment
-				if *test.markIngressReady {
-					d = TestHelper.AvailableDeployment()
-				} else {
-					d = TestHelper.UnavailableDeployment()
+		for _, useCRDPropagation := range []bool{true, false} {
+			testName := fmt.Sprintf("%s - using CRD %t", test.name, useCRDPropagation)
+			//			t.Run(test.name, func(t *testing.T) {
+			t.Run(testName, func(t *testing.T) {
+				bs := &BrokerStatus{}
+				if test.markIngressReady != nil {
+					var d *v1.Deployment
+					if *test.markIngressReady {
+						d = TestHelper.AvailableDeployment()
+					} else {
+						d = TestHelper.UnavailableDeployment()
+					}
+					bs.PropagateIngressDeploymentAvailability(d)
 				}
-				bs.PropagateIngressDeploymentAvailability(d)
-			}
-			if test.markTriggerChannelReady != nil {
-				var c *ChannelStatus
-				if *test.markTriggerChannelReady {
-					c = TestHelper.ReadyChannelStatus()
-				} else {
-					c = TestHelper.NotReadyChannelStatus()
+				if test.markTriggerChannelReady != nil && useCRDPropagation {
+					var c *duckv1alpha1.ChannelableStatus
+					if *test.markTriggerChannelReady {
+						c = TestHelper.ReadyChannelStatusCRD()
+					} else {
+						c = TestHelper.NotReadyChannelStatusCRD()
+					}
+					bs.PropagateTriggerChannelReadinessCRD(c)
 				}
-				bs.PropagateTriggerChannelReadiness(c)
-			}
-			if test.markIngressChannelReady != nil {
-				var c *ChannelStatus
-				if *test.markIngressChannelReady {
-					c = TestHelper.ReadyChannelStatus()
-				} else {
-					c = TestHelper.NotReadyChannelStatus()
+				if test.markTriggerChannelReady != nil && !useCRDPropagation {
+					var c *ChannelStatus
+					if *test.markTriggerChannelReady {
+						c = TestHelper.ReadyChannelStatus()
+					} else {
+						c = TestHelper.NotReadyChannelStatus()
+					}
+					bs.PropagateTriggerChannelReadiness(c)
 				}
-				bs.PropagateIngressChannelReadiness(c)
-			}
-			if test.markIngressSubscriptionReady != nil {
-				var sub *SubscriptionStatus
-				if *test.markIngressSubscriptionReady {
-					sub = TestHelper.ReadySubscriptionStatus()
-				} else {
-					sub = TestHelper.NotReadySubscriptionStatus()
+				if test.markIngressChannelReady != nil && useCRDPropagation {
+					var c *duckv1alpha1.ChannelableStatus
+					if *test.markIngressChannelReady {
+						c = TestHelper.ReadyChannelStatusCRD()
+					} else {
+						c = TestHelper.NotReadyChannelStatusCRD()
+					}
+					bs.PropagateIngressChannelReadinessCRD(c)
 				}
-				bs.PropagateIngressSubscriptionReadiness(sub)
-			}
-			if test.markFilterReady != nil {
-				var d *v1.Deployment
-				if *test.markFilterReady {
-					d = TestHelper.AvailableDeployment()
-				} else {
-					d = TestHelper.UnavailableDeployment()
+				if test.markIngressChannelReady != nil && !useCRDPropagation {
+					var c *ChannelStatus
+					if *test.markIngressChannelReady {
+						c = TestHelper.ReadyChannelStatus()
+					} else {
+						c = TestHelper.NotReadyChannelStatus()
+					}
+					bs.PropagateIngressChannelReadiness(c)
 				}
-				bs.PropagateFilterDeploymentAvailability(d)
-			}
-			bs.SetAddress(test.address)
+				if test.markIngressSubscriptionReady != nil {
+					var sub *SubscriptionStatus
+					if *test.markIngressSubscriptionReady {
+						sub = TestHelper.ReadySubscriptionStatus()
+					} else {
+						sub = TestHelper.NotReadySubscriptionStatus()
+					}
+					bs.PropagateIngressSubscriptionReadiness(sub)
+				}
+				if test.markFilterReady != nil {
+					var d *v1.Deployment
+					if *test.markFilterReady {
+						d = TestHelper.AvailableDeployment()
+					} else {
+						d = TestHelper.UnavailableDeployment()
+					}
+					bs.PropagateFilterDeploymentAvailability(d)
+				}
+				bs.SetAddress(test.address)
 
-			got := bs.IsReady()
-			if test.wantReady != got {
-				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
-			}
-		})
+				got := bs.IsReady()
+				if test.wantReady != got {
+					t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+				}
+
+			})
+		}
 	}
 }
 
