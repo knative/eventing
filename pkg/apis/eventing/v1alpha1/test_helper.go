@@ -17,12 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/apps/v1"
-
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
 	pkgduckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	v1 "k8s.io/api/apps/v1"
 )
 
 type testHelper struct{}
@@ -69,6 +68,18 @@ func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
 
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
+	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
+	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
+	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
+	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
+	return bs
+}
+
+func (t testHelper) ReadyBrokerStatusDeprecated() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
 	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())

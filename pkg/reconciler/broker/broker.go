@@ -57,6 +57,7 @@ const (
 	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
+	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
 )
 
 type Reconciler struct {
@@ -157,6 +158,8 @@ func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) er
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
+
+	b.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 
 	triggerChan, err := r.reconcileTriggerChannel(ctx, b)
 	if err != nil {

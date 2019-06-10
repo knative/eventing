@@ -78,6 +78,11 @@ func WithBrokerReady(b *v1alpha1.Broker) {
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 }
 
+// WithBrokerReadyDeprecated sets .Status to ready and sets the Deprecated field.
+func WithBrokerReadyDeprecated(b *v1alpha1.Broker) {
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatusDeprecated()
+}
+
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
 func WithTriggerChannelFailed(reason, msg string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
@@ -128,6 +133,12 @@ func WithIngressDeploymentAvailable() BrokerOption {
 func WithBrokerIngressChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.PropagateIngressChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
+	}
+}
+
+func WithBrokerDeprecated() BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
 	}
 }
 

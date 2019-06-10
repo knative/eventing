@@ -21,12 +21,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing"
 	"github.com/knative/pkg/apis"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-
-	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -258,6 +257,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady              *bool
 		address                      *apis.URL
 		markIngressSubscriptionReady *bool
+		markDeprecated               bool
 		wantReady                    bool
 	}{{
 		name:                         "all happy",
@@ -267,6 +267,17 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
+		wantReady:                    true,
+	}, {
+		name:                         "all happy - deprecated",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               true,
 		wantReady:                    true,
 	}, {
 		name:                         "ingress sad",
@@ -276,6 +287,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "trigger channel sad",
@@ -285,6 +297,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "ingress channel sad",
@@ -294,6 +307,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "filter sad",
@@ -303,6 +317,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &falseVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "addressable sad",
@@ -312,6 +327,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      nil,
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "ingress subscription sad",
@@ -321,6 +337,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionReady: &falseVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
 		name:                         "all sad",
@@ -330,6 +347,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markFilterReady:              &falseVal,
 		address:                      nil,
 		markIngressSubscriptionReady: &trueVal,
+		markDeprecated:               false,
 		wantReady:                    false,
 	}}
 
@@ -401,6 +419,9 @@ func TestBrokerIsReady(t *testing.T) {
 						d = TestHelper.UnavailableDeployment()
 					}
 					bs.PropagateFilterDeploymentAvailability(d)
+				}
+				if test.markDeprecated {
+					bs.MarkDeprecated("TestReason", "Test Message For Deprecation")
 				}
 				bs.SetAddress(test.address)
 
@@ -496,6 +517,42 @@ func TestBrokerAnnotateUserInfo(t *testing.T) {
 
 			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
 				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
+			}
+		})
+	}
+}
+
+func TestBrokerStatus_MarkDeprecated(t *testing.T) {
+	testCases := map[string]struct {
+		alreadyPresent bool
+	}{
+		"not present": {
+			alreadyPresent: false,
+		},
+		"already present": {
+			alreadyPresent: true,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			bs := &BrokerStatus{}
+			if tc.alreadyPresent {
+				bs.MarkDeprecated("AlreadyPresent", "Already present.")
+			}
+			bs.MarkDeprecated("Test", "Test Message")
+			if len(bs.Conditions) != 1 {
+				t.Fatalf("Incorrect number of conditions. Expected 1, actually %v", bs)
+			}
+
+			expected := apis.Condition{
+				Type:     "Deprecated",
+				Reason:   "Test",
+				Status:   corev1.ConditionTrue,
+				Severity: apis.ConditionSeverityWarning,
+				Message:  "Test Message",
+			}
+			if diff := cmp.Diff(expected, bs.Conditions[0], ignoreLastTransitionTime); diff != "" {
+				t.Errorf("Condition incorrect (-want +got): %s", diff)
 			}
 		})
 	}
