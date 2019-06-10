@@ -105,11 +105,11 @@ func ContainerSourceBasicTemplate(
 	args []string,
 ) *corev1.PodTemplateSpec {
 	envVars := []corev1.EnvVar{
-		corev1.EnvVar{
+		{
 			Name:  "POD_NAME",
 			Value: name,
 		},
-		corev1.EnvVar{
+		{
 			Name:  "POD_NAMESPACE",
 			Value: namespace,
 		},
@@ -121,7 +121,7 @@ func ContainerSourceBasicTemplate(
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:            imageName,
 					Image:           pkgTest.ImagePath(imageName),
 					ImagePullPolicy: corev1.PullAlways,

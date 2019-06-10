@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"context"
+
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"

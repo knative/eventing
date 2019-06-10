@@ -19,9 +19,10 @@ package cronjobsource
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/configmap"
 	"os"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
