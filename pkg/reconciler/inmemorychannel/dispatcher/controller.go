@@ -18,11 +18,14 @@ package dispatcher
 
 import (
 	"context"
+	"github.com/knative/pkg/system"
 	"time"
 
 	"github.com/knative/eventing/pkg/inmemorychannel"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/tracing"
+
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
@@ -50,6 +53,11 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	base := reconciler.NewBase(ctx, controllerAgentName, cmw)
+
+	// Setup zipkin tracing.
+	if err := tracing.SetupDynamicZipkinPublishing(base.Logger, cmw, system.Namespace(), "imc-dispatcher"); err != nil {
+		base.Logger.Fatalw("Error setting up Zipkin publishing", zap.Error(err))
+	}
 
 	sh, err := swappable.NewEmptyHandler(base.Logger.Desugar())
 	if err != nil {
