@@ -18,7 +18,6 @@ package dispatcher
 
 import (
 	"context"
-	"github.com/knative/pkg/system"
 	"time"
 
 	"github.com/knative/eventing/pkg/inmemorychannel"
@@ -55,7 +54,8 @@ func NewController(
 	base := reconciler.NewBase(ctx, controllerAgentName, cmw)
 
 	// Setup zipkin tracing.
-	if err := tracing.SetupDynamicZipkinPublishing(base.Logger, cmw, system.Namespace(), "imc-dispatcher"); err != nil {
+	iw := cmw.(*configmap.InformedWatcher)
+	if err := tracing.SetupDynamicZipkinPublishing(base.Logger, iw, "imc-dispatcher"); err != nil {
 		base.Logger.Fatalw("Error setting up Zipkin publishing", zap.Error(err))
 	}
 

@@ -84,7 +84,7 @@ func MainWithConfig(ctx context.Context, component string, cfg *rest.Config, cto
 
 	// TODO(mattmoor): This should itself take a context and be injection-based.
 	cmw := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
-
+	
 	// Based on the reconcilers we have linked, build up the set of controllers to run.
 	controllers := make([]*controller.Impl, 0, len(ctors))
 	for _, cf := range ctors {
