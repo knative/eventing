@@ -1610,9 +1610,9 @@ func TestReconcileCRD(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                      reconciler.NewBase(opt, controllerAgentName),
+			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:        listers.GetSubscriptionLister(),
 			brokerLister:              listers.GetBrokerLister(),
 			channelLister:             listers.GetChannelLister(),
