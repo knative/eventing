@@ -69,7 +69,10 @@ type NatssChannelStatus struct {
 	// provided targets from inside the cluster.
 	//
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	Address duckv1alpha1.Addressable `json:"address,omitempty"`
+	duckv1alpha1.AddressStatus `json:",inline"`
+
+	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
+	eventingduck.SubscribableTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
