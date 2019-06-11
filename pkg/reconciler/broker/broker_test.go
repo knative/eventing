@@ -28,6 +28,7 @@ import (
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
+	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -102,6 +103,12 @@ var (
 func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
+}
+
+type fakeAddressableInformer struct{}
+
+func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
+	return func(corev1.ObjectReference) error { return nil }
 }
 
 func TestReconcile(t *testing.T) {
@@ -1622,6 +1629,7 @@ func TestReconcileCRD(t *testing.T) {
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
+			addressableInformer:       &fakeAddressableInformer{},
 		}
 	},
 		false,
