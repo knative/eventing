@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
@@ -161,8 +162,14 @@ func (r *Reconciler) reconcile(ctx context.Context, natssChannel *v1alpha1.Natss
 	}
 	natssChannel.Status.SubscribableStatus = r.createSubscribableStatus(natssChannel.Spec.Subscribable, failedSubscriptions)
 	if len(failedSubscriptions) > 0 {
-		logging.FromContext(ctx).Error("Some natss subscriptions failed to subscribe")
-		return fmt.Errorf("Some natss subscriptions failed to subscribe")
+		var b strings.Builder
+		for _, subError := range failedSubscriptions {
+			b.WriteString("\n")
+			b.WriteString(subError.Error())
+		}
+		errMsg := b.String()
+		logging.FromContext(ctx).Error(errMsg)
+		return fmt.Errorf(errMsg)
 	}
 
 	natssChannels, err := r.natsschannelLister.List(labels.Everything())

@@ -185,6 +185,8 @@ func (s *SubscriptionsSupervisor) Connect(stopCh <-chan struct{}) {
 }
 
 // UpdateSubscriptions creates/deletes the natss subscriptions based on channel.Spec.Subscribable.Subscribers
+// Return type:map[eventingduck.SubscriberSpec]error --> Returns a map of subscriberSpec that failed with the value=error encountered.
+// Ignore the value in case error != nil
 func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.Channel, isFinalizer bool) (map[eventingduck.SubscriberSpec]error, error) {
 	s.subscriptionsMux.Lock()
 	defer s.subscriptionsMux.Unlock()
@@ -223,7 +225,7 @@ func (s *SubscriptionsSupervisor) UpdateSubscriptions(channel *eventingv1alpha1.
 			s.logger.Sugar().Infof("Subscription: %v already active for channel: %v", sub, cRef)
 			continue
 		}
-		// subscribe
+		// subscribe and update failedSubscription if subscribe fails
 		natssSub, err := s.subscribe(cRef, subRef)
 		if err != nil {
 			errStrings = append(errStrings, err.Error())
