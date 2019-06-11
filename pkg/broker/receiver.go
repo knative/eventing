@@ -210,7 +210,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 
 	if !r.shouldSendMessage(ctx, &t.Spec, event) {
 		r.logger.Debug("Message did not pass filter", zap.Any("triggerRef", trigger))
-		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "reject"))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "drop"))
 		return nil, nil
 	}
 
