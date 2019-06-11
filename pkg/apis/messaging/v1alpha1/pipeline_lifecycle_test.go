@@ -218,7 +218,7 @@ func TestPipelinePropagateSubscriptionStatuses(t *testing.T) {
 		want: corev1.ConditionFalse,
 	}, {
 		name: "empty status",
-		subs: []*eventingv1alpha1.Subscription{&eventingv1alpha1.Subscription{
+		subs: []*eventingv1alpha1.Subscription{{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "eventing.knative.dev/v1alpha1",
 				Kind:       "Subscription",

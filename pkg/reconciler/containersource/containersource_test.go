@@ -17,6 +17,7 @@ limitations under the License.
 package containersource
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 
@@ -590,13 +592,13 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeInjectionFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:                  reconciler.NewBase(opt, controllerAgentName),
+			Base:                  reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
 			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
+		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,

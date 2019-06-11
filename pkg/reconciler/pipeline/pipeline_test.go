@@ -197,7 +197,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -213,7 +213,7 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -253,7 +253,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -269,7 +269,7 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -314,7 +314,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -328,7 +328,7 @@ func TestAllCases(t *testing.T) {
 								Message: "Channel is not addressable",
 							},
 						},
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -342,7 +342,7 @@ func TestAllCases(t *testing.T) {
 								Message: "Channel is not addressable",
 							},
 						},
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -358,7 +358,7 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -366,7 +366,7 @@ func TestAllCases(t *testing.T) {
 								Namespace:  testNS,
 							},
 						},
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -374,7 +374,7 @@ func TestAllCases(t *testing.T) {
 								Namespace:  testNS,
 							},
 						},
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -430,7 +430,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -444,7 +444,7 @@ func TestAllCases(t *testing.T) {
 								Message: "Channel is not addressable",
 							},
 						},
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -458,7 +458,7 @@ func TestAllCases(t *testing.T) {
 								Message: "Channel is not addressable",
 							},
 						},
-						v1alpha1.PipelineChannelStatus{
+						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
@@ -474,7 +474,7 @@ func TestAllCases(t *testing.T) {
 						},
 					}),
 					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -482,7 +482,7 @@ func TestAllCases(t *testing.T) {
 								Namespace:  testNS,
 							},
 						},
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
@@ -490,7 +490,7 @@ func TestAllCases(t *testing.T) {
 								Namespace:  testNS,
 							},
 						},
-						v1alpha1.PipelineSubscriptionStatus{
+						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",

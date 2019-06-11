@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:6a405899228cd065e8730e163e7fbb4faaee51af4035120ec054795873380d50"
+  digest = "1:b70b258562f5326dc1034c6555d1ffa7890c574217f3eb93901bfefe15f391ac"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -462,6 +462,15 @@
     "configmap/testing",
     "controller",
     "injection",
+    "injection/clients/dynamicclient",
+    "injection/clients/dynamicclient/fake",
+    "injection/clients/kubeclient",
+    "injection/clients/kubeclient/fake",
+    "injection/informers/kubeinformers/appsv1/deployment",
+    "injection/informers/kubeinformers/appsv1/deployment/fake",
+    "injection/informers/kubeinformers/factory",
+    "injection/informers/kubeinformers/factory/fake",
+    "injection/sharedmain",
     "kmeta",
     "kmp",
     "logging",
@@ -485,7 +494,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "4d86f3ad6f48dffa0846c76711ca6c3697def63c"
+  revision = "d8a2a739d6b359a325ee6bb1dcbee13ecfee8dcc"
 
 [[projects]]
   branch = "master"
@@ -1441,6 +1450,13 @@
     "github.com/knative/pkg/configmap/testing",
     "github.com/knative/pkg/controller",
     "github.com/knative/pkg/injection",
+    "github.com/knative/pkg/injection/clients/dynamicclient",
+    "github.com/knative/pkg/injection/clients/dynamicclient/fake",
+    "github.com/knative/pkg/injection/clients/kubeclient",
+    "github.com/knative/pkg/injection/clients/kubeclient/fake",
+    "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment",
+    "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake",
+    "github.com/knative/pkg/injection/sharedmain",
     "github.com/knative/pkg/kmeta",
     "github.com/knative/pkg/kmp",
     "github.com/knative/pkg/logging",

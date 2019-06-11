@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/pkg/tracing"
 	"log"
+
+	"github.com/knative/eventing/pkg/tracing"
 
 	"github.com/knative/eventing/contrib/natss/pkg/util"
 

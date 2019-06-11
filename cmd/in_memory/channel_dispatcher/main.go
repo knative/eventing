@@ -18,9 +18,10 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/eventing/pkg/tracing"
 	"log"
 	"time"
+
+	"github.com/knative/eventing/pkg/tracing"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
