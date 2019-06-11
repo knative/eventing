@@ -17,6 +17,7 @@
 package main
 
 import (
+	"github.com/knative/eventing/pkg/broker"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -66,7 +67,7 @@ func init() {
 		&view.View{
 			Name:        "broker_dispatch_time",
 			Measure:     MeasureDispatchTime,
-			Aggregation: view.Distribution(1, 2, 5, 10, 100, 1000),
+			Aggregation: view.Distribution(broker.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 	)
