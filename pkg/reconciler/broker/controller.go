@@ -19,8 +19,10 @@ package broker
 import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
 	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -43,6 +45,7 @@ func NewController(
 	channelInformer eventinginformers.ChannelInformer,
 	serviceInformer corev1informers.ServiceInformer,
 	deploymentInformer appsv1informers.DeploymentInformer,
+	addressableInformer duck.AddressableInformer,
 	args ReconcilerArgs,
 ) *controller.Impl {
 
@@ -53,6 +56,7 @@ func NewController(
 		serviceLister:             serviceInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
+		addressableInformer:       addressableInformer,
 		ingressImage:              args.IngressImage,
 		ingressServiceAccountName: args.IngressServiceAccountName,
 		filterImage:               args.FilterImage,
@@ -61,6 +65,8 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
+
+	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
 
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
