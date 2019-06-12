@@ -214,9 +214,14 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, nil
 	}
 
-	ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
-	return r.ceClient.Send(sendingCTX, *event)
+	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
+	if err == nil {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))
+	} else {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "error"))
+	}
+	return replyEvent, err
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
