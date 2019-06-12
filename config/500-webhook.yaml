@@ -48,9 +48,6 @@ spec:
           value: config-logging
         - name: WEBHOOK_NAME
           value: eventing-webhook
-        resources:
-          limits:
-            memory: 1000Mi   # An initial guess, but consistent with serving
       volumes:
         - name: config-logging
           configMap:
