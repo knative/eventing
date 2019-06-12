@@ -157,6 +157,7 @@ func main() {
 			channelInformer,
 			serviceInformer,
 			deploymentInformer,
+			addressableInformer,
 			broker.ReconcilerArgs{
 				IngressImage:              env.BrokerIngressImage,
 				IngressServiceAccountName: env.BrokerIngressServiceAccount,

@@ -18,12 +18,13 @@ package controller
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/Shopify/sarama"
 	. "github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	fakeclientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/fake"

@@ -50,6 +50,8 @@ readonly PUBSUB_SECRET_NAME="gcppubsub-channel-key"
 readonly NATSS_INSTALLATION_CONFIG="contrib/natss/config/broker/natss.yaml"
 # NATSS provisioner config.
 readonly NATSS_CONFIG="contrib/natss/config/provisioner/provisioner.yaml"
+# NATSS channel CRD config directory.
+readonly NATSS_CRD_CONFIG_DIR="contrib/natss/config"
 
 # Strimzi installation config template used for starting up Kafka clusters.
 readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="test/config/100-strimzi-cluster-operator-0.11.3.yaml"
@@ -108,6 +110,10 @@ function test_setup() {
   ko apply -f ${NATSS_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the NATSS ClusterChannelProvisioner"
 
+  echo "Installing NATSS Channel CRD"
+  ko apply -f ${NATSS_CRD_CONFIG_DIR} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Failed to install the NATSS Channel CRD"
+
   echo "Installing Kafka ClusterChannelProvisioner"
   kafka_setup || return 1
   sed "s/REPLACE_WITH_CLUSTER_URL/${KAFKA_CLUSTER_URL}/" ${KAFKA_CONFIG_TEMPLATE} > ${KAFKA_CONFIG}
@@ -140,6 +146,9 @@ function test_teardown() {
   echo "Uninstalling NATSS ClusterChannelProvisioner"
   natss_teardown
   ko delete --ignore-not-found=true --now --timeout 60s -f ${NATSS_CONFIG}
+
+  echo "Uninstalling NATSS Channel CRD"
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${NATSS_CRD_CONFIG_DIR}
 
   echo "Uninstalling Kafka ClusterChannelProvisioner"
   kafka_teardown

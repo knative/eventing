@@ -17,9 +17,12 @@ limitations under the License.
 package apiserversource
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -366,14 +369,14 @@ func TestReconcile(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeInjectionFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:                  reconciler.NewBase(opt, controllerAgentName),
+			Base:                  reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
+		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,

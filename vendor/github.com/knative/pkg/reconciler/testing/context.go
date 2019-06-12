@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2019 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,20 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package testing
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"context"
+	"testing"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
+
+	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/injection"
+	logtesting "github.com/knative/pkg/logging/testing"
 )
 
-// MakeBroker creates a default Broker object for Namespace 'namespace'.
-func MakeBroker(namespace string) *v1alpha1.Broker {
-	return &v1alpha1.Broker{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      DefaultBrokerName,
-			Labels:    OwnedLabels(),
-		},
-	}
+func SetupFakeContext(t *testing.T) (context.Context, []controller.Informer) {
+	ctx := logtesting.TestContextWithLogger(t)
+	ctx = controller.WithEventRecorder(ctx, record.NewFakeRecorder(1000))
+	return injection.Fake.SetupInformers(ctx, &rest.Config{})
 }

@@ -27,19 +27,20 @@ const DefaultClusterChannelProvisioner = resources.InMemoryProvisioner
 // ValidProvisionersMap saves the provisioner-features mapping.
 // Each pair means the provisioner support the list of features.
 var ValidProvisionersMap = map[string]ChannelConfig{
-	resources.InMemoryProvisioner: ChannelConfig{
+	resources.InMemoryProvisioner: {
 		Features:     []Feature{FeatureBasic},
 		CRDSupported: true,
 	},
-	resources.GCPPubSubProvisioner: ChannelConfig{
+	resources.GCPPubSubProvisioner: {
 		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 	},
-	resources.KafkaProvisioner: ChannelConfig{
+	resources.KafkaProvisioner: {
 		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 		CRDSupported: true,
 	},
 	resources.NatssProvisioner: ChannelConfig{
-		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
+		CRDSupported: true,
 	},
 }
 
@@ -54,6 +55,7 @@ type ChannelConfig struct {
 var ProvisionerChannelMap = map[string]*metav1.TypeMeta{
 	resources.KafkaProvisioner:    KafkaChannelTypeMeta,
 	resources.InMemoryProvisioner: InMemoryChannelTypeMeta,
+	resources.NatssProvisioner:    NatssChannelTypeMeta,
 }
 
 // Feature is the feature supported by the Channel provisioner.

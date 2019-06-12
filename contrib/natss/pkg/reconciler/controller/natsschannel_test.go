@@ -18,10 +18,11 @@ package controller
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"testing"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	fakeclientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/fake"

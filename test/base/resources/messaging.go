@@ -20,6 +20,7 @@ package resources
 
 import (
 	kafkamessagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
+	natssmessagingv1alpha1 "github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,6 +37,15 @@ func KafkaChannel(name string) *kafkamessagingv1alpha1.KafkaChannel {
 // InMemoryChannel returns an InMemoryChannel resource.
 func InMemoryChannel(name string) *messagingv1alpha1.InMemoryChannel {
 	return &messagingv1alpha1.InMemoryChannel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+}
+
+// NatssChannel returns an NatssChannel resource.
+func NatssChannel(name string) *natssmessagingv1alpha1.NatssChannel {
+	return &natssmessagingv1alpha1.NatssChannel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},

@@ -105,7 +105,7 @@ func Broker(name, provisioner string) *eventingv1alpha1.Broker {
 			Name: name,
 		},
 		Spec: eventingv1alpha1.BrokerSpec{
-			ChannelTemplate: &eventingv1alpha1.ChannelSpec{
+			DeprecatedChannelTemplate: &eventingv1alpha1.ChannelSpec{
 				Provisioner: clusterChannelProvisioner(provisioner),
 			},
 		},

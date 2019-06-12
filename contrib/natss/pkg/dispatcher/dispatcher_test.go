@@ -177,7 +177,7 @@ func TestUpdateSubscriptions(t *testing.T) {
 	logger.Info("TestUpdateSubscriptions()")
 
 	c := makeChannelWithSubscribers()
-	if err := s.UpdateSubscriptions(c, false); err != nil {
+	if _, err := s.UpdateSubscriptions(c, false); err != nil {
 		t.Errorf("UpdateSubscriptions failed: %v", err)
 	}
 

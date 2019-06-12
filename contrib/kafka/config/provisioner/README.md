@@ -15,7 +15,7 @@ Deployment steps:
    > installation.
 
 1. Now that Apache Kafka is installed, you need to configure the
-   `bootstrap_servers` value in the `kafka-channel-controller-config` ConfigMap,
+   `bootstrapServers` value in the `kafka-channel-controller-config` ConfigMap,
    located inside the `contrib/kafka/config/provisioner/kafka.yaml` file:
 
    ```yaml
@@ -27,12 +27,12 @@ Deployment steps:
      namespace: knative-eventing
    data:
      # Broker URL's for the provisioner
-     bootstrap_servers: my-cluster-kafka-bootstrap.my-kafka-namespace:9092
+     bootstrapServers: my-cluster-kafka-bootstrap.my-kafka-namespace:9092
 
      # Consumer mode to dispatch events from different partitions in parallel.
      # By default(multiplex), partitions are multiplexed with a single go channel.
      # `multiplex` and `partitions` are valid values.
-     ## consumer_mode: partitions
+     ## consumerMode: partitions
      ...
    ```
 
@@ -73,7 +73,7 @@ colocated in one Pod:
 kubectl get deployment -n knative-eventing kafka-channel-controller
 ```
 
-The Channel Controller Config Map is used to configure the `bootstrap_servers`
+The Channel Controller Config Map is used to configure the `bootstrapServers`
 of your Apache Kafka installation:
 
 ```shell

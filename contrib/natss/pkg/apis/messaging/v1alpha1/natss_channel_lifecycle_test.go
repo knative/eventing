@@ -19,10 +19,10 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/knative/pkg/apis"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -341,19 +341,23 @@ func TestNatssChannelStatus_SetAddressable(t *testing.T) {
 						},
 					},
 				},
+				AddressStatus:          duckv1alpha1.AddressStatus{Address: &duckv1alpha1.Addressable{}},
+				SubscribableTypeStatus: eventingduck.SubscribableTypeStatus{},
 			},
 		},
 		"has domain": {
 			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &NatssChannelStatus{
-				Address: duckv1alpha1.Addressable{
-					Addressable: duckv1beta1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
+				AddressStatus: duckv1alpha1.AddressStatus{
+					Address: &duckv1alpha1.Addressable{
+						Addressable: duckv1beta1.Addressable{
+							URL: &apis.URL{
+								Scheme: "http",
+								Host:   "test-domain",
+							},
 						},
+						Hostname: "test-domain",
 					},
-					Hostname: "test-domain",
 				},
 				Status: duckv1beta1.Status{
 					Conditions: []apis.Condition{
