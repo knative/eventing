@@ -1729,13 +1729,6 @@ func servicePorts(containerName string, httpInternal int) []corev1.ServicePort {
 			Port: 9090,
 		},
 	}
-	// TODO remove this if once we add metrics to the filter container.
-	if containerName == ingressContainerName {
-		svcPorts = append(svcPorts, corev1.ServicePort{
-			Name: "metrics",
-			Port: 9090,
-		})
-	}
 	return svcPorts
 }
 
