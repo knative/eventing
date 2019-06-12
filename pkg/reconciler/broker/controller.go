@@ -45,7 +45,6 @@ func NewController(
 	channelInformer eventinginformers.ChannelInformer,
 	serviceInformer corev1informers.ServiceInformer,
 	deploymentInformer appsv1informers.DeploymentInformer,
-	addressableInformer duck.AddressableInformer,
 	args ReconcilerArgs,
 ) *controller.Impl {
 
@@ -56,7 +55,6 @@ func NewController(
 		serviceLister:             serviceInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
-		addressableInformer:       addressableInformer,
 		ingressImage:              args.IngressImage,
 		ingressServiceAccountName: args.IngressServiceAccountName,
 		filterImage:               args.FilterImage,
@@ -68,6 +66,7 @@ func NewController(
 
 	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
 
+	r.addressableInformer = duck.NewAddressableInformer(opt)
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
