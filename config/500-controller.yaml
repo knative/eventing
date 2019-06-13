@@ -55,9 +55,6 @@ spec:
         ports:
           - containerPort: 9090
             name: metrics
-        resources:
-          limits:
-            memory: 1000Mi  # An initial guess, but consistent with serving
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging
