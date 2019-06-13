@@ -143,8 +143,6 @@ func main() {
 	}
 	logger.Info("Exiting...")
 
-	// TODO Gracefully shutdown the filter server. CloudEvents SDK doesn't seem
-	// to let us do that today.
 	go func() {
 		<-time.After(shutdownTimeout)
 		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
