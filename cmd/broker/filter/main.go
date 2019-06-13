@@ -83,7 +83,7 @@ func main() {
 	}
 	err = mgr.Add(receiver)
 	if err != nil {
-		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
+		logger.Warn("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.
