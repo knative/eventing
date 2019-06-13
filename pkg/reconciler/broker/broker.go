@@ -183,8 +183,8 @@ func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) er
 		return nil
 	}
 	b.Status.TriggerChannel = &corev1.ObjectReference{
-		Kind:       triggerChan.Kind,
-		APIVersion: triggerChan.APIVersion,
+		Kind:       "Channel",
+		APIVersion: "eventing.knative.dev/v1alpha1",
 		Name:       triggerChan.Name,
 		Namespace:  triggerChan.Namespace,
 	}
@@ -230,8 +230,8 @@ func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) er
 		return err
 	}
 	b.Status.IngressChannel = &corev1.ObjectReference{
-		Kind:       ingressChan.Kind,
-		APIVersion: ingressChan.APIVersion,
+		Kind:       "Channel",
+		APIVersion: "eventing.knative.dev/v1alpha1",
 		Name:       ingressChan.Name,
 		Namespace:  ingressChan.Namespace,
 	}
