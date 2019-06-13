@@ -182,6 +182,12 @@ func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) er
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		return nil
 	}
+	b.Status.TriggerChannel = &corev1.ObjectReference{
+		Kind:       triggerChan.Kind,
+		APIVersion: triggerChan.APIVersion,
+		Name:       triggerChan.Name,
+		Namespace:  triggerChan.Namespace,
+	}
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
 	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
@@ -222,6 +228,12 @@ func (r *Reconciler) reconcileLegacy(ctx context.Context, b *v1alpha1.Broker) er
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
 		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
 		return err
+	}
+	b.Status.IngressChannel = &corev1.ObjectReference{
+		Kind:       ingressChan.Kind,
+		APIVersion: ingressChan.APIVersion,
+		Name:       ingressChan.Name,
+		Namespace:  ingressChan.Namespace,
 	}
 	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
 
@@ -288,6 +300,12 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		return nil
 	}
+	b.Status.TriggerChannel = &corev1.ObjectReference{
+		Kind:       triggerChan.Kind,
+		APIVersion: triggerChan.APIVersion,
+		Name:       triggerChan.Name,
+		Namespace:  triggerChan.Namespace,
+	}
 	b.Status.PropagateTriggerChannelReadinessCRD(&triggerChan.Status)
 
 	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
@@ -329,6 +347,12 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
 		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
 		return err
+	}
+	b.Status.IngressChannel = &corev1.ObjectReference{
+		Kind:       ingressChan.Kind,
+		APIVersion: ingressChan.APIVersion,
+		Name:       ingressChan.Name,
+		Namespace:  ingressChan.Namespace,
 	}
 	b.Status.PropagateIngressChannelReadinessCRD(&ingressChan.Status)
 

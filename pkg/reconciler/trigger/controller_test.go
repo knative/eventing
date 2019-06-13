@@ -58,8 +58,7 @@ func TestNewController(t *testing.T) {
 		channelInformer,
 		subscriptionInformer,
 		brokerInformer,
-		serviceInformer,
-		addressableInformer)
+		serviceInformer)
 
 	if c == nil {
 		t.Fatalf("Failed to create with NewController")
