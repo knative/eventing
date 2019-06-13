@@ -83,7 +83,7 @@ func main() {
 	}
 	err = mgr.Add(receiver)
 	if err != nil {
-		logger.Warn("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
+		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
 	}
 
 	// Set up signals so we handle the first shutdown signal gracefully.
@@ -91,7 +91,7 @@ func main() {
 
 	// configMapWatcher does not block, so start it first.
 	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
 
 	// Start blocks forever.
