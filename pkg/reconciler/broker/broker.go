@@ -468,11 +468,11 @@ func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labe
 }
 
 func newTriggerChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
-	return newChannel(b, TriggerChannelLabels(b.Name))
+	return newChannel("trigger", b, TriggerChannelLabels(b.Name))
 }
 
 func newIngressChannel(b *v1alpha1.Broker) *v1alpha1.Channel {
-	return newChannel(b, IngressChannelLabels(b.Name))
+	return newChannel("ingress", b, IngressChannelLabels(b.Name))
 }
 
 func newTriggerChannelCRD(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
@@ -484,17 +484,21 @@ func newIngressChannelCRD(b *v1alpha1.Broker) (*unstructured.Unstructured, error
 }
 
 // newChannel creates a new Channel for Broker 'b'.
-func newChannel(b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
+func newChannel(channelType string, b *v1alpha1.Broker, l map[string]string) *v1alpha1.Channel {
 	var spec v1alpha1.ChannelSpec
 	if b.Spec.DeprecatedChannelTemplate != nil {
 		spec = *b.Spec.DeprecatedChannelTemplate
 	}
 
 	return &v1alpha1.Channel{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Channel",
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("%s-broker-", b.Name),
-			Labels:       l,
+			Namespace: b.Namespace,
+			Name:      resources.BrokerChannelName(b.Name, channelType),
+			Labels:    l,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
