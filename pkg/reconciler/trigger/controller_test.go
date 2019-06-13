@@ -45,9 +45,6 @@ func TestNewController(t *testing.T) {
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
-	// Duck
-	addressableInformer := &fakeAddressableInformer{}
-
 	c := NewController(
 		reconciler.Options{
 			KubeClientSet:     kubeClient,
