@@ -148,7 +148,6 @@ func main() {
 			subscriptionInformer,
 			brokerInformer,
 			serviceInformer,
-			addressableInformer,
 		),
 		broker.NewController(
 			opt,

@@ -45,9 +45,6 @@ func TestNewController(t *testing.T) {
 	// Kube
 	serviceInformer := kubeInformerFactory.Core().V1().Services()
 
-	// Duck
-	addressableInformer := &fakeAddressableInformer{}
-
 	c := NewController(
 		reconciler.Options{
 			KubeClientSet:     kubeClient,
@@ -58,8 +55,7 @@ func TestNewController(t *testing.T) {
 		channelInformer,
 		subscriptionInformer,
 		brokerInformer,
-		serviceInformer,
-		addressableInformer)
+		serviceInformer)
 
 	if c == nil {
 		t.Fatalf("Failed to create with NewController")

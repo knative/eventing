@@ -156,3 +156,15 @@ func WithBrokerIngressSubscriptionFailed(reason, msg string) BrokerOption {
 		b.Status.MarkIngressSubscriptionFailed(reason, msg)
 	}
 }
+
+func WithBrokerTriggerChannel(c *corev1.ObjectReference) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.TriggerChannel = c
+	}
+}
+
+func WithBrokerIngressChannel(c *corev1.ObjectReference) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.IngressChannel = c
+	}
+}

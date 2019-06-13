@@ -45,22 +45,22 @@ func NewController(
 	subscriptionInformer eventinginformers.SubscriptionInformer,
 	brokerInformer eventinginformers.BrokerInformer,
 	serviceInformer corev1informers.ServiceInformer,
-	addressableInformer duck.AddressableInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		triggerLister:       triggerInformer.Lister(),
-		channelLister:       channelInformer.Lister(),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		brokerLister:        brokerInformer.Lister(),
-		serviceLister:       serviceInformer.Lister(),
-		addressableInformer: addressableInformer,
+		Base:               reconciler.NewBase(opt, controllerAgentName),
+		triggerLister:      triggerInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
+		brokerLister:       brokerInformer.Lister(),
+		serviceLister:      serviceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
+	r.addressableInformer = duck.NewAddressableInformer(opt)
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.

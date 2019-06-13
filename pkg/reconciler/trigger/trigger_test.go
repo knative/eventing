@@ -155,7 +155,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Trigger Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBrokerNoTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -180,7 +180,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Ingress Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBrokerNoIngressChannel(),
 				makeTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -543,9 +543,24 @@ func makeBroker() *v1alpha1.Broker {
 	}
 }
 
+func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	return b
+}
+
+func makeReadyBrokerNoIngressChannel() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	b.Status.TriggerChannel = makeTriggerChannelRef()
+	return b
+}
+
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	b.Status.TriggerChannel = makeTriggerChannelRef()
+	b.Status.IngressChannel = makeIngressChannelRef()
 	return b
 }
 
@@ -592,12 +607,30 @@ func makeTriggerChannel() *v1alpha1.Channel {
 	return newChannel(fmt.Sprintf("%s-broker", brokerName), labels)
 }
 
+func makeTriggerChannelRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "Channel",
+		Namespace:  testNS,
+		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
+	}
+}
+
 func makeIngressChannel() *v1alpha1.Channel {
 	labels := map[string]string{
 		"eventing.knative.dev/broker":        brokerName,
 		"eventing.knative.dev/brokerIngress": "true",
 	}
 	return newChannel(fmt.Sprintf("%s-broker-ingress", brokerName), labels)
+}
+
+func makeIngressChannelRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "Channel",
+		Namespace:  testNS,
+		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
+	}
 }
 
 func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
@@ -626,7 +659,7 @@ func makeServiceURI() *url.URL {
 }
 
 func makeIngressSubscription() *v1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeIngressChannel(), makeServiceURI())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
 }
 
 // Just so we can test subscription updates

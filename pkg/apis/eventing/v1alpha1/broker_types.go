@@ -22,6 +22,7 @@ import (
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	"github.com/knative/pkg/kmeta"
 	"github.com/knative/pkg/webhook"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -113,6 +114,12 @@ type BrokerStatus struct {
 	//
 	// It generally has the form {broker}-router.{namespace}.svc.{cluster domain name}
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
+
+	// TriggerChannel is an objectref to the object for the TriggerChannel
+	TriggerChannel *corev1.ObjectReference `json:"triggerChannel,omitempty"`
+
+	// IngressChannel is an objectref to the object for the IngressChannel
+	IngressChannel *corev1.ObjectReference `json:"IngressChannel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
