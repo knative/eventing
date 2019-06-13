@@ -38,7 +38,7 @@ var ValidProvisionersMap = map[string]ChannelConfig{
 		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 		CRDSupported: true,
 	},
-	resources.NatssProvisioner: ChannelConfig{
+	resources.NatssProvisioner: {
 		Features:     []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 		CRDSupported: true,
 	},
