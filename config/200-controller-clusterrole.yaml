@@ -84,6 +84,8 @@ rules:
       - "pipelines/status"
       - "inmemorychannels"
       - "inmemorychannels/status"
+      - "kafkachannels"
+      - "kafkachannels/status"
     verbs: *everything
 
   # Source resources and statuses we care about.
