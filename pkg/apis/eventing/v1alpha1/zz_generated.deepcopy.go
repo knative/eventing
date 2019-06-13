@@ -114,6 +114,16 @@ func (in *BrokerStatus) DeepCopyInto(out *BrokerStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.Address.DeepCopyInto(&out.Address)
+	if in.TriggerChannel != nil {
+		in, out := &in.TriggerChannel, &out.TriggerChannel
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
+	if in.IngressChannel != nil {
+		in, out := &in.IngressChannel, &out.IngressChannel
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	return
 }
 
