@@ -27,14 +27,17 @@ import (
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/apis"
 	duckroot "github.com/knative/pkg/apis"
 	duckapis "github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -69,6 +72,11 @@ type Reconciler struct {
 	serviceLister      corev1listers.ServiceLister
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister eventinglisters.SubscriptionLister
+
+	addressableInformer duck.AddressableInformer
+
+	// Track my channels
+	tracker tracker.Interface
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -132,6 +140,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
+	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	if b.Spec.ChannelTemplate.Kind != "" && b.Spec.ChannelTemplate.APIVersion != "" {
 		return r.reconcileCRD(ctx, b)
 	} else {
@@ -250,13 +259,23 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
 
 	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
-	logging.FromContext(ctx).Error("Reconciling the trigger channel CRD")
+	logging.FromContext(ctx).Info("Reconciling the trigger channel CRD")
 	triggerChan, err := r.reconcileTriggerChannelCRD(ctx, triggerChannelName, channelResourceInterface, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
 		return err
 	}
+
+	// Tell tracker to reconcile this Broker whenever my channels change.
+	track := r.addressableInformer.TrackInNamespace(r.tracker, b)
+
+	// Start tracking trigger channel...
+	if err = track(utils.ObjectRef(triggerChan, triggerChan.GroupVersionKind())); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
+		return err
+	}
+
 	if triggerChan.Status.Address == nil {
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
@@ -312,6 +331,12 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 		return err
 	}
 	b.Status.PropagateIngressChannelReadinessCRD(&ingressChan.Status)
+
+	// Start tracking ingress channel...
+	if err = track(utils.ObjectRef(ingressChan, ingressChan.GroupVersionKind())); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
+		return err
+	}
 
 	ingressSub, err := r.reconcileIngressSubscriptionCRD(ctx, b, ingressChan, svc)
 	if err != nil {
@@ -483,7 +508,7 @@ func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string
 				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", b.Namespace, channelName), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Error(fmt.Sprintf("Created Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", newChannel))
+			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", newChannel))
 			channelable := &duckv1alpha1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {

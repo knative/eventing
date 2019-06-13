@@ -22,9 +22,11 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 
@@ -84,6 +86,9 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+
+	r.addressableInformer = duck.NewAddressableInformer(ctx)
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

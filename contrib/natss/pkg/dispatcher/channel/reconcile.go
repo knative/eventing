@@ -105,7 +105,7 @@ func (r *reconciler) shouldReconcile(c *eventingv1alpha1.Channel) bool {
 
 func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel) (bool, error) {
 	if !c.DeletionTimestamp.IsZero() {
-		if err := r.subscriptionsSupervisor.UpdateSubscriptions(c, true); err != nil {
+		if _, err := r.subscriptionsSupervisor.UpdateSubscriptions(c, true); err != nil {
 			r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
 			return false, err
 		}
@@ -119,7 +119,7 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	}
 
 	// try to subscribe
-	if err := r.subscriptionsSupervisor.UpdateSubscriptions(c, false); err != nil {
+	if _, err := r.subscriptionsSupervisor.UpdateSubscriptions(c, false); err != nil {
 		r.logger.Error("UpdateSubscriptions() failed: ", zap.Error(err))
 		return false, err
 	}

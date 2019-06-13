@@ -18,7 +18,7 @@ topics.
    > installation.
 
 1. Now that Apache Kafka is installed, you need to configure the
-   `bootstrap_servers` value in the `config-kafka` ConfigMap, located inside the
+   `bootstrapServers` value in the `config-kafka` ConfigMap, located inside the
    `contrib/kafka/config/400-kafka-config.yaml` file:
 
    ```yaml
@@ -30,7 +30,7 @@ topics.
    data:
      # Broker URL. Replace this with the URLs for your kafka cluster,
      # which is in the format of my-cluster-kafka-bootstrap.my-kafka-namespace:9092.
-     bootstrap_servers: REPLACE_WITH_CLUSTER_URL
+     bootstrapServers: REPLACE_WITH_CLUSTER_URL
    ```
 
 1. Apply the Kafka config:
@@ -84,7 +84,7 @@ objects:
 kubectl get deployment -n knative-eventing kafka-webhook
 ```
 
-The Kafka Config Map is used to configure the `bootstrap_servers` of your Apache
+The Kafka Config Map is used to configure the `bootstrapServers` of your Apache
 Kafka installation:
 
 ```shell
