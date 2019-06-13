@@ -155,7 +155,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Trigger Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBrokerNoTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -180,7 +180,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Ingress Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBrokerNoIngressChannel(),
 				makeTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -543,9 +543,24 @@ func makeBroker() *v1alpha1.Broker {
 	}
 }
 
+func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	return b
+}
+
+func makeReadyBrokerNoIngressChannel() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	b.Status.TriggerChannel = makeTriggerChannelRef()
+	return b
+}
+
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	b.Status.TriggerChannel = makeTriggerChannelRef()
+	b.Status.IngressChannel = makeIngressChannelRef()
 	return b
 }
 
