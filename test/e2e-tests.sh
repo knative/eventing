@@ -54,7 +54,8 @@ readonly NATSS_CONFIG="contrib/natss/config/provisioner/provisioner.yaml"
 readonly NATSS_CRD_CONFIG_DIR="contrib/natss/config"
 
 # Strimzi installation config template used for starting up Kafka clusters.
-readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="test/config/100-strimzi-cluster-operator-0.11.3.yaml"
+readonly STRIMZI_VERSION="0.11.4"
+readonly STRIMZI_INSTALLATION_CONFIG_TEMPLATE="test/config/100-strimzi-cluster-operator-${STRIMZI_VERSION}.yaml"
 # Strimzi installation config.
 readonly STRIMZI_INSTALLATION_CONFIG="$(mktemp)"
 # Kafka cluster CR config file.
