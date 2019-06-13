@@ -107,7 +107,7 @@ func main() {
 		BrokerName: env.Broker,
 	})
 	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
-		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+		logger.Warn("Error setting up Zipkin publishing", zap.Error(err))
 	}
 
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
@@ -160,7 +160,7 @@ func main() {
 
 	// configMapWatcher does not block, so start it first.
 	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatal("Failed to start ConfigMap watcher", zap.Error(err))
+		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
 
 	// Start blocks forever.
