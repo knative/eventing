@@ -18,7 +18,8 @@ package controller
 
 import (
 	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+
 	"github.com/knative/pkg/controller"
 	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
@@ -37,7 +38,7 @@ const (
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
-	opt reconciler.Options,
+	opt inmemorychannel.Options,
 	dispatcherNamespace string,
 	dispatcherDeploymentName string,
 	dispatcherServiceName string,
@@ -48,7 +49,7 @@ func NewController(
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:                     reconciler.NewBase(opt, controllerAgentName),
+		Base:                     inmemorychannel.NewBase(opt, controllerAgentName),
 		dispatcherNamespace:      dispatcherNamespace,
 		dispatcherDeploymentName: dispatcherDeploymentName,
 		dispatcherServiceName:    dispatcherServiceName,

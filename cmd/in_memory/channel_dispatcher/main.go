@@ -21,13 +21,6 @@ import (
 	"log"
 	"time"
 
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
-	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/provisioners/swappable"
-	inmemoryreconciler "github.com/knative/eventing/pkg/reconciler/inmemorychannel"
-	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/dispatcher"
-	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -35,6 +28,14 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/provisioners/swappable"
+	inmemoryreconciler "github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/dispatcher"
+	"github.com/knative/eventing/pkg/tracing"
 )
 
 var (
