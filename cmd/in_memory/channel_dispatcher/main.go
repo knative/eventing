@@ -18,28 +18,21 @@ package main
 
 import (
 	"flag"
-	"github.com/knative/pkg/system"
-	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/record"
 	"log"
 	"time"
-
-	"github.com/knative/eventing/pkg/tracing"
 
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
 	"github.com/knative/eventing/pkg/logconfig"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
-	"github.com/knative/eventing/pkg/reconciler"
+	inmemoryreconciler "github.com/knative/eventing/pkg/reconciler/inmemorychannel"
 	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/dispatcher"
+	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
 	"github.com/knative/pkg/signals"
 	"go.uber.org/zap"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -87,7 +80,7 @@ func main() {
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
-	opt := NewOptionsOrDie(cfg, logger, stopCh)
+	opt := inmemoryreconciler.NewOptionsOrDie(cfg, logger, stopCh)
 
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 
@@ -151,47 +144,6 @@ func setupLogger() (*zap.SugaredLogger, zap.AtomicLevel) {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
 	return logging.NewLoggerFromConfig(loggingConfig, logconfig.Controller)
-}
-
-// Options defines the common reconciler options.
-// We define this to reduce the boilerplate argument list when
-// creating our controllers.
-type Options struct {
-	KubeClientSet    kubernetes.Interface
-	DynamicClientSet dynamic.Interface
-
-	EventingClientSet      clientset.Interface
-	ApiExtensionsClientSet apiextensionsclientset.Interface
-	//CachingClientSet cachingclientset.Interface
-
-	Recorder      record.EventRecorder
-	StatsReporter reconciler.StatsReporter
-
-	ConfigMapWatcher *configmap.InformedWatcher
-	Logger           *zap.SugaredLogger
-
-	ResyncPeriod time.Duration
-	StopChannel  <-chan struct{}
-}
-
-func NewOptionsOrDie(cfg *rest.Config, logger *zap.SugaredLogger, stopCh <-chan struct{}) Options {
-	kubeClient := kubernetes.NewForConfigOrDie(cfg)
-	eventingClient := clientset.NewForConfigOrDie(cfg)
-	dynamicClient := dynamic.NewForConfigOrDie(cfg)
-	apiExtensionsClient := apiextensionsclientset.NewForConfigOrDie(cfg)
-
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-
-	return Options{
-		KubeClientSet:          kubeClient,
-		DynamicClientSet:       dynamicClient,
-		EventingClientSet:      eventingClient,
-		ApiExtensionsClientSet: apiExtensionsClient,
-		ConfigMapWatcher:       configMapWatcher,
-		Logger:                 logger,
-		ResyncPeriod:           10 * time.Hour, // Based on controller-runtime default.
-		StopChannel:            stopCh,
-	}
 }
 
 func getLoggingConfigOrDie() map[string]string {
