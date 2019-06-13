@@ -19,8 +19,9 @@ package eventtype
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/configmap"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	"github.com/knative/pkg/tracker"
 

@@ -19,8 +19,9 @@ package broker
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/configmap"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"

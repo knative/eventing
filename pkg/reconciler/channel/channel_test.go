@@ -18,8 +18,9 @@ package channel
 
 import (
 	"context"
-	"github.com/knative/pkg/configmap"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
