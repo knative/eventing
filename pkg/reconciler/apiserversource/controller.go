@@ -52,7 +52,7 @@ func NewController(
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                  reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 		source:                GetCfgHost(ctx),

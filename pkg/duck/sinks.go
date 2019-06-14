@@ -20,18 +20,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/pkg/injection/clients/dynamicclient"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 
+	"github.com/knative/eventing/pkg/reconciler/names"
 	pkgapisduck "github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
-
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/pkg/tracker"
+
+	"github.com/knative/pkg/injection/clients/dynamicclient"
 )
 
 // SinkReconciler is a helper for Sources. It triggers
@@ -42,17 +40,17 @@ type SinkReconciler struct {
 }
 
 // NewSinkReconciler creates and initializes a new SinkReconciler
-func NewSinkReconciler(opt reconciler.Options, callback func(string)) *SinkReconciler {
+func NewSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
 	ret := &SinkReconciler{}
 
-	ret.tracker = tracker.New(callback, opt.GetTrackerLease())
+	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
 	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
 		Delegate: &pkgapisduck.EnqueueInformerFactory{
 			Delegate: &pkgapisduck.TypedInformerFactory{
-				Client:       opt.DynamicClientSet,
+				Client:       dynamicclient.Get(ctx),
 				Type:         &duckv1alpha1.AddressableType{},
-				ResyncPeriod: opt.ResyncPeriod,
-				StopChannel:  opt.StopChannel,
+				ResyncPeriod: controller.GetResyncPeriod(ctx),
+				StopChannel:  ctx.Done(),
 			},
 			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
 		},

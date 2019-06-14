@@ -17,8 +17,11 @@ limitations under the License.
 package broker
 
 import (
+	"context"
 	"fmt"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -928,9 +931,9 @@ func TestReconcile(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                      reconciler.NewBase(opt, controllerAgentName),
+			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:        listers.GetSubscriptionLister(),
 			brokerLister:              listers.GetBrokerLister(),
 			channelLister:             listers.GetChannelLister(),
@@ -941,9 +944,7 @@ func TestReconcile(t *testing.T) {
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
 		}
-	},
-		false,
-	))
+	}, false))
 }
 
 func TestReconcileCRD(t *testing.T) {
@@ -1647,9 +1648,9 @@ func TestReconcileCRD(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                      reconciler.NewBase(opt, controllerAgentName),
+			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:        listers.GetSubscriptionLister(),
 			brokerLister:              listers.GetBrokerLister(),
 			channelLister:             listers.GetChannelLister(),

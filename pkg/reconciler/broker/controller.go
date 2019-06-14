@@ -17,15 +17,24 @@ limitations under the License.
 package broker
 
 import (
+	"context"
+	"log"
+
+	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
+	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
+
+	brokerinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
+	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
+	subscriptioninformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
+	deploymentinformer "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment"
+	serviceinformer "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service"
 )
 
 const (
@@ -36,37 +45,50 @@ const (
 	controllerAgentName = "broker-controller"
 )
 
+type envConfig struct {
+	IngressImage          string `envconfig:"BROKER_INGRESS_IMAGE" required:"true"`
+	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
+	FilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
+	FilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
+}
+
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
-	opt reconciler.Options,
-	brokerInformer eventinginformers.BrokerInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	channelInformer eventinginformers.ChannelInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	args ReconcilerArgs,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
+	deploymentInformer := deploymentinformer.Get(ctx)
+	brokerInformer := brokerinformer.Get(ctx)
+	channelInformer := channelinformer.Get(ctx)
+	subscriptionInformer := subscriptioninformer.Get(ctx)
+	serviceInformer := serviceinformer.Get(ctx)
+
 	r := &Reconciler{
-		Base:                      reconciler.NewBase(opt, controllerAgentName),
+		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 		brokerLister:              brokerInformer.Lister(),
 		channelLister:             channelInformer.Lister(),
 		serviceLister:             serviceInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
-		ingressImage:              args.IngressImage,
-		ingressServiceAccountName: args.IngressServiceAccountName,
-		filterImage:               args.FilterImage,
-		filterServiceAccountName:  args.FilterServiceAccountName,
+		ingressImage:              env.IngressImage,
+		ingressServiceAccountName: env.IngressServiceAccount,
+		filterImage:               env.FilterImage,
+		filterServiceAccountName:  env.FilterServiceAccount,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
-	r.addressableInformer = duck.NewAddressableInformer(opt)
+	r.addressableInformer = duck.NewAddressableInformer(ctx)
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

@@ -20,12 +20,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
 	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/kmeta"
@@ -37,6 +34,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
+
+	. "github.com/knative/eventing/pkg/reconciler/inmemorychannel/testing"
 )
 
 const (
@@ -276,9 +279,9 @@ func TestAllCases(t *testing.T) {
 	}
 	defer logtesting.ClearAll()
 
-	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(listers *reconciletesting.Listers, opt inmemorychannel.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:                     reconciler.NewBase(opt, controllerAgentName),
+			Base:                     inmemorychannel.NewBase(opt, controllerAgentName),
 			dispatcherNamespace:      testNS,
 			dispatcherDeploymentName: dispatcherDeploymentName,
 			dispatcherServiceName:    dispatcherServiceName,

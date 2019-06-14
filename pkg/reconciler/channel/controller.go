@@ -17,9 +17,13 @@ limitations under the License.
 package channel
 
 import (
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
+	"context"
+
 	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
+
+	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
 )
 
 const (
@@ -33,12 +37,14 @@ const (
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
-	opt reconciler.Options,
-	channelInformer eventinginformers.ChannelInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	channelInformer := channelinformer.Get(ctx)
+
 	r := &Reconciler{
-		Base:          reconciler.NewBase(opt, controllerAgentName),
+		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
 		channelLister: channelInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)

@@ -21,7 +21,8 @@ import (
 
 	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
 	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+
 	logtesting "github.com/knative/pkg/logging/testing"
 	kubeinformers "k8s.io/client-go/informers"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
@@ -45,7 +46,7 @@ func TestNewController(t *testing.T) {
 	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 
 	c := NewController(
-		reconciler.Options{
+		inmemorychannel.Options{
 			KubeClientSet:     kubeClient,
 			EventingClientSet: eventingClient,
 			Logger:            logtesting.TestLogger(t),

@@ -19,45 +19,26 @@ package trigger
 import (
 	"testing"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	logtesting "github.com/knative/pkg/logging/testing"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service/fake"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 )
 
-func TestNewController(t *testing.T) {
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
+func TestNew(t *testing.T) {
+	defer logtesting.ClearAll()
+	ctx, _ := SetupFakeContext(t)
 
-	// Create informer factories with fake clients. The second parameter sets the
-	// resync period to zero, disabling it.
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClient, 0)
-
-	// Eventing
-	triggerInformer := eventingInformerFactory.Eventing().V1alpha1().Triggers()
-	channelInformer := eventingInformerFactory.Eventing().V1alpha1().Channels()
-	subscriptionInformer := eventingInformerFactory.Eventing().V1alpha1().Subscriptions()
-	brokerInformer := eventingInformerFactory.Eventing().V1alpha1().Brokers()
-
-	// Kube
-	serviceInformer := kubeInformerFactory.Core().V1().Services()
-
-	c := NewController(
-		reconciler.Options{
-			KubeClientSet:     kubeClient,
-			EventingClientSet: eventingClient,
-			Logger:            logtesting.TestLogger(t),
-		},
-		triggerInformer,
-		channelInformer,
-		subscriptionInformer,
-		brokerInformer,
-		serviceInformer)
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
-		t.Fatalf("Failed to create with NewController")
+		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }

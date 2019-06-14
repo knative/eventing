@@ -17,6 +17,7 @@ limitations under the License.
 package subscription
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	"github.com/knative/pkg/tracker"
@@ -751,17 +753,15 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                           reconciler.NewBase(opt, controllerAgentName),
+			Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:             listers.GetSubscriptionLister(),
 			tracker:                        tracker.New(func(string) {}, 0),
 			addressableInformer:            &fakeAddressableInformer{},
 			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
-	},
-		false,
-	))
+	}, false))
 }
 
 type fakeAddressableInformer struct{}

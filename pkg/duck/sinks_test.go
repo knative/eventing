@@ -17,18 +17,17 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	fakedynamicclient "github.com/knative/pkg/injection/clients/dynamicclient/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-
-	"github.com/knative/eventing/pkg/reconciler"
 )
 
 var (
@@ -108,12 +107,8 @@ func TestGetSinkURI(t *testing.T) {
 
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			sr := NewSinkReconciler(
-				reconciler.Options{
-					DynamicClientSet: fake.NewSimpleDynamicClient(scheme.Scheme, tc.objects...),
-				},
-				func(string) {},
-			)
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.objects...)
+			sr := NewSinkReconciler(ctx, func(string) {})
 			sourceName := "nilRef"
 			if tc.ref != nil {
 				sourceName = tc.ref.Name

@@ -435,7 +435,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:b70b258562f5326dc1034c6555d1ffa7890c574217f3eb93901bfefe15f391ac"
+  digest = "1:d6d25cf50e69e0e69e7a1719143135bced01f2dc695646ae1ec0a95da22cfc68"
   name = "github.com/knative/pkg"
   packages = [
     "apis",
@@ -462,14 +462,28 @@
     "configmap/testing",
     "controller",
     "injection",
+    "injection/clients/apiextclient",
+    "injection/clients/apiextclient/fake",
     "injection/clients/dynamicclient",
     "injection/clients/dynamicclient/fake",
     "injection/clients/kubeclient",
     "injection/clients/kubeclient/fake",
+    "injection/informers/apiextinformers/apiextensionsv1beta1/crd",
+    "injection/informers/apiextinformers/apiextensionsv1beta1/crd/fake",
+    "injection/informers/apiextinformers/factory",
+    "injection/informers/apiextinformers/factory/fake",
     "injection/informers/kubeinformers/appsv1/deployment",
     "injection/informers/kubeinformers/appsv1/deployment/fake",
+    "injection/informers/kubeinformers/corev1/namespace",
+    "injection/informers/kubeinformers/corev1/namespace/fake",
+    "injection/informers/kubeinformers/corev1/service",
+    "injection/informers/kubeinformers/corev1/service/fake",
+    "injection/informers/kubeinformers/corev1/serviceaccount",
+    "injection/informers/kubeinformers/corev1/serviceaccount/fake",
     "injection/informers/kubeinformers/factory",
     "injection/informers/kubeinformers/factory/fake",
+    "injection/informers/kubeinformers/rbacv1/rolebinding",
+    "injection/informers/kubeinformers/rbacv1/rolebinding/fake",
     "injection/sharedmain",
     "kmeta",
     "kmp",
@@ -494,7 +508,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "d8a2a739d6b359a325ee6bb1dcbee13ecfee8dcc"
+  revision = "f48815f4545fe120cb9d9fb9a05a40367cbe8072"
 
 [[projects]]
   branch = "master"
@@ -1454,8 +1468,18 @@
     "github.com/knative/pkg/injection/clients/dynamicclient/fake",
     "github.com/knative/pkg/injection/clients/kubeclient",
     "github.com/knative/pkg/injection/clients/kubeclient/fake",
+    "github.com/knative/pkg/injection/informers/apiextinformers/apiextensionsv1beta1/crd",
+    "github.com/knative/pkg/injection/informers/apiextinformers/apiextensionsv1beta1/crd/fake",
     "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment",
     "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/namespace",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/namespace/fake",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service/fake",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/serviceaccount",
+    "github.com/knative/pkg/injection/informers/kubeinformers/corev1/serviceaccount/fake",
+    "github.com/knative/pkg/injection/informers/kubeinformers/rbacv1/rolebinding",
+    "github.com/knative/pkg/injection/informers/kubeinformers/rbacv1/rolebinding/fake",
     "github.com/knative/pkg/injection/sharedmain",
     "github.com/knative/pkg/kmeta",
     "github.com/knative/pkg/kmp",
@@ -1502,8 +1526,6 @@
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
     "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake",
-    "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions",
-    "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1beta1",
     "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/equality",
     "k8s.io/apimachinery/pkg/api/errors",
@@ -1532,7 +1554,6 @@
     "k8s.io/client-go/informers",
     "k8s.io/client-go/informers/apps/v1",
     "k8s.io/client-go/informers/core/v1",
-    "k8s.io/client-go/informers/rbac/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/scheme",

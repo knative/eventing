@@ -17,9 +17,9 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"sync"
 
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/knative/pkg/injection/clients/dynamicclient"
 )
 
 // AddressableInformer is an informer that allows tracking arbitrary Addressables.
@@ -54,13 +56,13 @@ type addressableInformer struct {
 }
 
 // NewAddressableInformer creates a new AddressableInformer.
-func NewAddressableInformer(opt reconciler.Options) AddressableInformer {
+func NewAddressableInformer(ctx context.Context) AddressableInformer {
 	return &addressableInformer{
 		duck: &duck.TypedInformerFactory{
-			Client:       opt.DynamicClientSet,
+			Client:       dynamicclient.Get(ctx),
 			Type:         &v1alpha1.AddressableType{},
-			ResyncPeriod: opt.ResyncPeriod,
-			StopChannel:  opt.StopChannel,
+			ResyncPeriod: controller.GetResyncPeriod(ctx),
+			StopChannel:  ctx.Done(),
 		},
 		concrete: map[schema.GroupVersionResource]struct{}{},
 	}

@@ -17,14 +17,18 @@ limitations under the License.
 package namespace
 
 import (
+	"context"
+
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/tracker"
 
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
-	rbacv1informers "k8s.io/client-go/informers/rbac/v1"
-
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
+
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
+	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/namespace"
+	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/serviceaccount"
+	"github.com/knative/pkg/injection/informers/kubeinformers/rbacv1/rolebinding"
 )
 
 const (
@@ -39,15 +43,17 @@ const (
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
-	opt reconciler.Options,
-	namespaceInformer corev1informers.NamespaceInformer,
-	serviceAccountInformer corev1informers.ServiceAccountInformer,
-	roleBindingInformer rbacv1informers.RoleBindingInformer,
-	brokerInformer eventinginformers.BrokerInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	namespaceInformer := namespace.Get(ctx)
+	serviceAccountInformer := serviceaccount.Get(ctx)
+	roleBindingInformer := rolebinding.Get(ctx)
+	brokerInformer := broker.Get(ctx)
+
 	r := &Reconciler{
-		Base:            reconciler.NewBase(opt, controllerAgentName),
+		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 		namespaceLister: namespaceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
@@ -57,7 +63,7 @@ func NewController(
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us the namespace's resources we need to reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	// Watch all the resources that this reconciler reconciles.
 	serviceAccountInformer.Informer().AddEventHandler(controller.HandleAll(
