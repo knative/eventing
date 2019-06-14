@@ -32,8 +32,8 @@ func (c *FakeMessagingV1alpha1) InMemoryChannels(namespace string) v1alpha1.InMe
 	return &FakeInMemoryChannels{c, namespace}
 }
 
-func (c *FakeMessagingV1alpha1) Pipelines(namespace string) v1alpha1.PipelineInterface {
-	return &FakePipelines{c, namespace}
+func (c *FakeMessagingV1alpha1) Sequences(namespace string) v1alpha1.SequenceInterface {
+	return &FakeSequences{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
