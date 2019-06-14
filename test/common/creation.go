@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -107,9 +108,14 @@ func (client *Client) CreateSubscriptionsOrFail(
 }
 
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
-func (client *Client) CreateBrokerOrFail(name, provisionerName string) {
+func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
 	namespace := client.Namespace
-	broker := resources.Broker(name, provisionerName)
+	var broker *eventingv1alpha1.Broker
+	if channelTypeMeta.Kind == resources.ChannelKind {
+		broker = resources.Broker(name, resources.WithDeprecatedChannelTemplateForBroker(provisionerName))
+	} else {
+		broker = resources.Broker(name, resources.WithChannelTemplateForBroker(*channelTypeMeta))
+	}
 
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
 	// update broker with the new reference
@@ -121,9 +127,9 @@ func (client *Client) CreateBrokerOrFail(name, provisionerName string) {
 }
 
 // CreateBrokersOrFail will create a list of Brokers.
-func (client *Client) CreateBrokersOrFail(names []string, provisionerName string) {
+func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
 	for _, name := range names {
-		client.CreateBrokerOrFail(name, provisionerName)
+		client.CreateBrokerOrFail(name, channelTypeMeta, provisionerName)
 	}
 }
 

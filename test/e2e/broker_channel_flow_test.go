@@ -83,13 +83,14 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 
 	client := Setup(t, true)
 	defer TearDown(client)
+	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
 	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
 	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
 
 	// create a new broker
-	client.CreateBrokerOrFail(brokerName, provisioner)
+	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)
 	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to
@@ -126,7 +127,6 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	)
 
 	// create channel for trigger3
-	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 	client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
 	client.WaitForResourceReady(channelName, channelTypeMeta)
 

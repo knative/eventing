@@ -25,6 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// BrokerOption enables further configuration of a Broker.
+type BrokerOption func(*eventingv1alpha1.Broker)
+
 // TriggerOption enables further configuration of a Trigger.
 type TriggerOption func(*eventingv1alpha1.Trigger)
 
@@ -98,18 +101,37 @@ func Subscription(
 	return subscription
 }
 
+// WithDeprecatedChannelTemplateForBroker returns a function that adds a DeprecatedChannelTemplate for the given Broker.
+func WithDeprecatedChannelTemplateForBroker(provisionerName string) BrokerOption {
+	return func(b *eventingv1alpha1.Broker) {
+		deprecatedChannelTemplate := &eventingv1alpha1.ChannelSpec{
+			Provisioner: clusterChannelProvisioner(provisionerName),
+		}
+		b.Spec.DeprecatedChannelTemplate = deprecatedChannelTemplate
+	}
+}
+
+// WithChannelTemplateForBroker returns a function that adds a ChannelTemplate for the given Broker.
+func WithChannelTemplateForBroker(channelTypeMeta metav1.TypeMeta) BrokerOption {
+	return func(b *eventingv1alpha1.Broker) {
+		channelTemplate := eventingv1alpha1.ChannelTemplateSpec{
+			TypeMeta: channelTypeMeta,
+		}
+		b.Spec.ChannelTemplate = channelTemplate
+	}
+}
+
 // Broker returns a Broker.
-func Broker(name, provisioner string) *eventingv1alpha1.Broker {
-	return &eventingv1alpha1.Broker{
+func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
+	broker := &eventingv1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: eventingv1alpha1.BrokerSpec{
-			DeprecatedChannelTemplate: &eventingv1alpha1.ChannelSpec{
-				Provisioner: clusterChannelProvisioner(provisioner),
-			},
-		},
 	}
+	for _, option := range options {
+		option(broker)
+	}
+	return broker
 }
 
 // WithTriggerFilter returns an option that adds a TriggerFilter for the given Trigger.
