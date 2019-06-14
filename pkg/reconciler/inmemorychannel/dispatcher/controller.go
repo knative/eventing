@@ -88,5 +88,13 @@ func NewController(
 	// Watch for inmemory channels.
 	r.inmemorychannelInformer.AddEventHandler(controller.HandleAll(r.impl.Enqueue))
 
+	// Start the dispatcher.
+	go func() {
+		err := inMemoryDispatcher.Start(ctx.Done())
+		if err != nil {
+			r.Logger.Error("Failed stopping inMemoryDispatcher.", zap.Error(err))
+		}
+	}()
+
 	return r.impl
 }
