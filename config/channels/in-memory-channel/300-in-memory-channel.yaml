@@ -29,6 +29,7 @@ spec:
     - all
     - knative
     - messaging
+    - channel
     shortNames:
     - imc
   scope: Namespaced
