@@ -18,14 +18,22 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/broker"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/tracing"
+	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
+	"go.opencensus.io/exporter/prometheus"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/kubernetes"
@@ -37,6 +45,15 @@ type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 }
+
+var (
+	metricsPort = 9090
+
+	writeTimeout    = 1 * time.Minute
+	shutdownTimeout = 1 * time.Minute
+
+	wg sync.WaitGroup
+)
 
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
@@ -86,6 +103,30 @@ func main() {
 		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
 	}
 
+	// Metrics
+	e, err := prometheus.NewExporter(prometheus.Options{})
+	if err != nil {
+		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
+	}
+	view.RegisterExporter(e)
+	sm := http.NewServeMux()
+	sm.Handle("/metrics", e)
+	metricsSrv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", metricsPort),
+		Handler:      e,
+		ErrorLog:     zap.NewStdLog(logger),
+		WriteTimeout: writeTimeout,
+	}
+
+	err = mgr.Add(&utils.RunnableServer{
+		Server:          metricsSrv,
+		ShutdownTimeout: shutdownTimeout,
+		WaitGroup:       &wg,
+	})
+	if err != nil {
+		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
+	}
+
 	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()
 
@@ -101,4 +142,14 @@ func main() {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+
+	go func() {
+		<-time.After(shutdownTimeout)
+		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
+	}()
+
+	// Wait for runnables to stop. This blocks indefinitely, but the above
+	// goroutine will exit the process if it takes longer than shutdownTimeout.
+	wg.Wait()
+	logger.Info("Done.")
 }
