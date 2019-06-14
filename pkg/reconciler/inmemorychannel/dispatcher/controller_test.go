@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package dispatcher
 
 import (
 	"testing"
@@ -25,16 +25,13 @@ import (
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/endpoints/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service/fake"
 )
 
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
 	ctx, _ := SetupFakeContext(t)
 
-	c := NewController(ctx, configmap.NewFixedWatcher())
+	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

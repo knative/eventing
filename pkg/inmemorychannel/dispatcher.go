@@ -51,17 +51,24 @@ func (d *InMemoryDispatcher) UpdateConfig(config *multichannelfanout.Config) err
 }
 
 // Start starts the inmemory dispatcher's message processing.
+// This is a blocking call.
 func (d *InMemoryDispatcher) Start(stopCh <-chan struct{}) error {
 	d.logger.Info("in memory dispatcher listening", zap.String("address", d.server.Addr))
-	return d.server.ListenAndServe()
-}
-
-func (d *InMemoryDispatcher) Stop() {
+	go func() {
+		err := d.server.ListenAndServe()
+		if err != nil {
+			d.logger.Error("Failed to ListenAndServe.", zap.Error(err))
+		}
+	}()
+	<-stopCh
 	ctx, cancel := context.WithTimeout(context.Background(), d.server.WriteTimeout)
 	defer cancel()
-	if err := d.server.Shutdown(ctx); err != nil {
+
+	err := d.server.Shutdown(ctx)
+	if err != nil {
 		d.logger.Error("Shutdown returned an error", zap.Error(err))
 	}
+	return err
 }
 
 func NewDispatcher(args *InMemoryDispatcherArgs) *InMemoryDispatcher {

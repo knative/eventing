@@ -14,46 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package dispatcher
 
 import (
 	"context"
 	"fmt"
 	"reflect"
 
+	"github.com/knative/eventing/pkg/inmemorychannel"
+
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners/fanout"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
+	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	channelimpl "github.com/knative/eventing/pkg/inmemorychannel"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/provisioners/fanout"
-	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler.
-	ReconcilerName = "InMemoryChannels"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "in-memory-channel-dispatcher"
 )
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	*reconciler.Base
 
-	dispatcher              channelimpl.Dispatcher
+	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 	impl                    *controller.Impl
@@ -61,30 +50,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code.
-// Registers event handlers to enqueue events.
-func NewController(
-	opt inmemorychannel.Options,
-	dispatcher channelimpl.Dispatcher,
-	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                    inmemorychannel.NewBase(opt, controllerAgentName),
-		dispatcher:              dispatcher,
-		inmemorychannelLister:   inmemorychannelinformer.Lister(),
-		inmemorychannelInformer: inmemorychannelinformer.Informer(),
-	}
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-
-	// Watch for inmemory channels.
-	r.inmemorychannelInformer.AddEventHandler(controller.HandleAll(r.impl.Enqueue))
-
-	return r.impl
-}
 
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name.
