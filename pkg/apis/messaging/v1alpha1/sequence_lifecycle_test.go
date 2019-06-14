@@ -369,7 +369,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 	}{{
 		name:       "nil",
 		address:    nil,
-		want:       &pkgduckv1alpha1.Addressable{},
+		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}, {
 		name:       "empty",
@@ -379,7 +379,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 	}, {
 		name:       "URL",
 		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
-		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, "example.com"},
+		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "hostname",
@@ -398,7 +398,7 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 			ps := SequenceStatus{}
 			ps.setAddress(test.address)
 			got := ps.Address
-			if diff := cmp.Diff(test.want, &got, ignoreAllButTypeAndStatus); diff != "" {
+			if diff := cmp.Diff(test.want, got, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected address (-want, +got) = %v", diff)
 			}
 			gotStatus := ps.GetCondition(SequenceConditionAddressable).Status

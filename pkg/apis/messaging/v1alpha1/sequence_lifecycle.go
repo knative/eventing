@@ -124,7 +124,7 @@ func (ps *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 			allReady = false
 		}
 
-		// If the first channel is addressable, mark it as such
+		// Mark the Sequence address as the Address of the first channel.
 		if i == 0 {
 			ps.setAddress(address)
 		}
@@ -148,21 +148,14 @@ func (ps *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, 
 	pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, reason, messageFormat, messageA...)
 }
 
-// TODO: Use the new beta duck types.
 func (ps *SequenceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
+	ps.Address = address
+
 	if address == nil {
-		ps.Address.Hostname = ""
-		ps.Address.URL = nil
 		pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
 		return
 	}
-
-	if address.URL != nil {
-		ps.Address.Hostname = address.URL.Host
-		ps.Address.URL = address.URL
-		pCondSet.Manage(ps).MarkTrue(SequenceConditionAddressable)
-	} else if address.Hostname != "" {
-		ps.Address.Hostname = address.Hostname
+	if address.URL != nil || address.Hostname != "" {
 		pCondSet.Manage(ps).MarkTrue(SequenceConditionAddressable)
 	} else {
 		ps.Address.Hostname = ""
