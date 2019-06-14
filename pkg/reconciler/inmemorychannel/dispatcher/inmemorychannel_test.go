@@ -18,8 +18,9 @@ package dispatcher
 
 import (
 	"context"
-	"github.com/knative/pkg/configmap"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"

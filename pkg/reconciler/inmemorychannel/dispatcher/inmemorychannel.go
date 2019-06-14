@@ -19,8 +19,9 @@ package dispatcher
 import (
 	"context"
 	"fmt"
-	"github.com/knative/eventing/pkg/inmemorychannel"
 	"reflect"
+
+	"github.com/knative/eventing/pkg/inmemorychannel"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
