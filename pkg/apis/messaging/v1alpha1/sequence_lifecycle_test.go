@@ -30,18 +30,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var pipelineConditionReady = apis.Condition{
-	Type:   PipelineConditionReady,
+var sequenceConditionReady = apis.Condition{
+	Type:   SequenceConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var pipelineConditionChannelsReady = apis.Condition{
-	Type:   PipelineConditionChannelsReady,
+var sequenceConditionChannelsReady = apis.Condition{
+	Type:   SequenceConditionChannelsReady,
 	Status: corev1.ConditionTrue,
 }
 
-var pipelineConditionSubscriptionsReady = apis.Condition{
-	Type:   PipelineConditionSubscriptionsReady,
+var sequenceConditionSubscriptionsReady = apis.Condition{
+	Type:   SequenceConditionSubscriptionsReady,
 	Status: corev1.ConditionTrue,
 }
 
@@ -87,23 +87,23 @@ func getChannelable(ready bool) *duckv1alpha1.Channelable {
 	return &s
 }
 
-func TestPipelineGetCondition(t *testing.T) {
+func TestSequenceGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		ss        *PipelineStatus
+		ss        *SequenceStatus
 		condQuery apis.ConditionType
 		want      *apis.Condition
 	}{{
 		name: "single condition",
-		ss: &PipelineStatus{
+		ss: &SequenceStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{
-					pipelineConditionReady,
+					sequenceConditionReady,
 				},
 			},
 		},
 		condQuery: apis.ConditionReady,
-		want:      &pipelineConditionReady,
+		want:      &sequenceConditionReady,
 	}}
 
 	for _, test := range tests {
@@ -116,81 +116,81 @@ func TestPipelineGetCondition(t *testing.T) {
 	}
 }
 
-func TestPipelineInitializeConditions(t *testing.T) {
+func TestSequenceInitializeConditions(t *testing.T) {
 	tests := []struct {
 		name string
-		ts   *PipelineStatus
-		want *PipelineStatus
+		ts   *SequenceStatus
+		want *SequenceStatus
 	}{{
 		name: "empty",
-		ts:   &PipelineStatus{},
-		want: &PipelineStatus{
+		ts:   &SequenceStatus{},
+		want: &SequenceStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   PipelineConditionAddressable,
+					Type:   SequenceConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionChannelsReady,
+					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionReady,
+					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionSubscriptionsReady,
+					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
 	}, {
 		name: "one false",
-		ts: &PipelineStatus{
+		ts: &SequenceStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   PipelineConditionChannelsReady,
+					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
-		want: &PipelineStatus{
+		want: &SequenceStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   PipelineConditionAddressable,
+					Type:   SequenceConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionChannelsReady,
+					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
-					Type:   PipelineConditionReady,
+					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionSubscriptionsReady,
+					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
 	}, {
 		name: "one true",
-		ts: &PipelineStatus{
+		ts: &SequenceStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   PipelineConditionSubscriptionsReady,
+					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
-		want: &PipelineStatus{
+		want: &SequenceStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   PipelineConditionAddressable,
+					Type:   SequenceConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionChannelsReady,
+					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionReady,
+					Type:   SequenceConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   PipelineConditionSubscriptionsReady,
+					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
 				}},
 			},
@@ -207,7 +207,7 @@ func TestPipelineInitializeConditions(t *testing.T) {
 	}
 }
 
-func TestPipelinePropagateSubscriptionStatuses(t *testing.T) {
+func TestSequencePropagateSubscriptionStatuses(t *testing.T) {
 	tests := []struct {
 		name string
 		subs []*eventingv1alpha1.Subscription
@@ -251,9 +251,9 @@ func TestPipelinePropagateSubscriptionStatuses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := PipelineStatus{}
+			ps := SequenceStatus{}
 			ps.PropagateSubscriptionStatuses(test.subs)
-			got := ps.GetCondition(PipelineConditionSubscriptionsReady).Status
+			got := ps.GetCondition(SequenceConditionSubscriptionsReady).Status
 			want := test.want
 			if want != got {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
@@ -262,7 +262,7 @@ func TestPipelinePropagateSubscriptionStatuses(t *testing.T) {
 	}
 }
 
-func TestPipelinePropagateChannelStatuses(t *testing.T) {
+func TestSequencePropagateChannelStatuses(t *testing.T) {
 	tests := []struct {
 		name     string
 		channels []*duckv1alpha1.Channelable
@@ -291,9 +291,9 @@ func TestPipelinePropagateChannelStatuses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := PipelineStatus{}
+			ps := SequenceStatus{}
 			ps.PropagateChannelStatuses(test.channels)
-			got := ps.GetCondition(PipelineConditionChannelsReady).Status
+			got := ps.GetCondition(SequenceConditionChannelsReady).Status
 			want := test.want
 			if want != got {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
@@ -302,7 +302,7 @@ func TestPipelinePropagateChannelStatuses(t *testing.T) {
 	}
 }
 
-func TestPipelineReady(t *testing.T) {
+func TestSequenceReady(t *testing.T) {
 	tests := []struct {
 		name     string
 		subs     []*eventingv1alpha1.Subscription
@@ -347,7 +347,7 @@ func TestPipelineReady(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := PipelineStatus{}
+			ps := SequenceStatus{}
 			ps.PropagateChannelStatuses(test.channels)
 			ps.PropagateSubscriptionStatuses(test.subs)
 			got := ps.IsReady()
@@ -359,7 +359,7 @@ func TestPipelineReady(t *testing.T) {
 	}
 }
 
-func TestPipelinePropagateSetAddress(t *testing.T) {
+func TestSequencePropagateSetAddress(t *testing.T) {
 	URL, _ := apis.ParseURL("http://example.com")
 	tests := []struct {
 		name       string
@@ -395,13 +395,13 @@ func TestPipelinePropagateSetAddress(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := PipelineStatus{}
+			ps := SequenceStatus{}
 			ps.setAddress(test.address)
 			got := ps.Address
 			if diff := cmp.Diff(test.want, &got, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected address (-want, +got) = %v", diff)
 			}
-			gotStatus := ps.GetCondition(PipelineConditionAddressable).Status
+			gotStatus := ps.GetCondition(SequenceConditionAddressable).Status
 			if test.wantStatus != gotStatus {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", test.wantStatus, gotStatus)
 			}

@@ -18,10 +18,10 @@ package v1alpha1
 
 import "context"
 
-func (s *Pipeline) SetDefaults(ctx context.Context) {
+func (s *Sequence) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *PipelineSpec) SetDefaults(ctx context.Context) {
+func (ss *SequenceSpec) SetDefaults(ctx context.Context) {
 	// TODO anything?
 }
