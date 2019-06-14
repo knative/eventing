@@ -26,7 +26,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/channel"
 	"github.com/knative/eventing/pkg/reconciler/eventtype"
 	"github.com/knative/eventing/pkg/reconciler/namespace"
-	"github.com/knative/eventing/pkg/reconciler/pipeline"
+	"github.com/knative/eventing/pkg/reconciler/sequence"
 	"github.com/knative/eventing/pkg/reconciler/subscription"
 	"github.com/knative/eventing/pkg/reconciler/trigger"
 )
@@ -39,6 +39,6 @@ func main() {
 		trigger.NewController,
 		broker.NewController,
 		eventtype.NewController,
-		pipeline.NewController,
+		sequence.NewController,
 	)
 }
