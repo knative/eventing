@@ -34,7 +34,7 @@ func BrokerChannelName(brokerName, channelType string) string {
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
-// for a given pipeline.
+// for a given Broker.
 func NewChannel(channelType string, b *v1alpha1.Broker, l map[string]string) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := v1alpha1.ChannelTemplateSpecInternal{

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline
+package sequence
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ import (
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription/fake"
-	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/pipeline/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/sequence/fake"
 )
 
 func TestNew(t *testing.T) {

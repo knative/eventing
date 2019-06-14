@@ -26,8 +26,8 @@ import (
 type Interface interface {
 	// InMemoryChannels returns a InMemoryChannelInformer.
 	InMemoryChannels() InMemoryChannelInformer
-	// Pipelines returns a PipelineInformer.
-	Pipelines() PipelineInformer
+	// Sequences returns a SequenceInformer.
+	Sequences() SequenceInformer
 }
 
 type version struct {
@@ -46,7 +46,7 @@ func (v *version) InMemoryChannels() InMemoryChannelInformer {
 	return &inMemoryChannelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Pipelines returns a PipelineInformer.
-func (v *version) Pipelines() PipelineInformer {
-	return &pipelineInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// Sequences returns a SequenceInformer.
+func (v *version) Sequences() SequenceInformer {
+	return &sequenceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

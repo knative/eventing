@@ -22,12 +22,12 @@ import (
 	"context"
 
 	fake "github.com/knative/eventing/pkg/client/injection/informers/messaging/factory/fake"
-	pipeline "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/pipeline"
+	sequence "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/sequence"
 	controller "github.com/knative/pkg/controller"
 	injection "github.com/knative/pkg/injection"
 )
 
-var Get = pipeline.Get
+var Get = sequence.Get
 
 func init() {
 	injection.Fake.RegisterInformer(withInformer)
@@ -35,6 +35,6 @@ func init() {
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := fake.Get(ctx)
-	inf := f.Messaging().V1alpha1().Pipelines()
-	return context.WithValue(ctx, pipeline.Key{}, inf), inf.Informer()
+	inf := f.Messaging().V1alpha1().Sequences()
+	return context.WithValue(ctx, sequence.Key{}, inf), inf.Informer()
 }

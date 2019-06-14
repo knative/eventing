@@ -30,30 +30,30 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// Pipeline defines a sequence of Subscribers that will be wired in
+// Sequence defines a sequence of Subscribers that will be wired in
 // series through Channels and Subscriptions.
-type Pipeline struct {
+type Sequence struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of the Pipeline.
-	Spec PipelineSpec `json:"spec,omitempty"`
+	// Spec defines the desired state of the Sequence.
+	Spec SequenceSpec `json:"spec,omitempty"`
 
-	// Status represents the current state of the Pipeline. This data may be out of
+	// Status represents the current state of the Sequence. This data may be out of
 	// date.
 	// +optional
-	Status PipelineStatus `json:"status,omitempty"`
+	Status SequenceStatus `json:"status,omitempty"`
 }
 
-// Check that Pipeline can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Pipeline)(nil)
-var _ apis.Defaultable = (*Pipeline)(nil)
+// Check that Sequence can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*Sequence)(nil)
+var _ apis.Defaultable = (*Sequence)(nil)
 
 // TODO: make appropriate fields immutable.
-//var _ apis.Immutable = (*Pipeline)(nil)
-var _ runtime.Object = (*Pipeline)(nil)
-var _ webhook.GenericCRD = (*Pipeline)(nil)
+//var _ apis.Immutable = (*Sequence)(nil)
+var _ runtime.Object = (*Sequence)(nil)
+var _ webhook.GenericCRD = (*Sequence)(nil)
 
 // This should be duck so that Broker can also use this
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -81,7 +81,7 @@ type ChannelTemplateSpecInternal struct {
 	Spec runtime.RawExtension `json:"spec"`
 }
 
-type PipelineSpec struct {
+type SequenceSpec struct {
 	// Steps is the list of Subscribers (processors / functions) that will be called in the order
 	// provided.
 	Steps []eventingv1alpha1.SubscriberSpec `json:"steps"`
@@ -103,7 +103,7 @@ type PipelineSpec struct {
 	Reply *corev1.ObjectReference `json:"reply,omitempty"`
 }
 
-type PipelineChannelStatus struct {
+type SequenceChannelStatus struct {
 	// Channel is the reference to the underlying channel.
 	Channel corev1.ObjectReference `json:"channel"`
 
@@ -111,7 +111,7 @@ type PipelineChannelStatus struct {
 	ReadyCondition apis.Condition `json:"ready"`
 }
 
-type PipelineSubscriptionStatus struct {
+type SequenceSubscriptionStatus struct {
 	// Subscription is the reference to the underlying Subscription.
 	Subscription corev1.ObjectReference `json:"subscription"`
 
@@ -119,8 +119,8 @@ type PipelineSubscriptionStatus struct {
 	ReadyCondition apis.Condition `json:"ready"`
 }
 
-// PipelineStatus represents the current state of a Pipeline.
-type PipelineStatus struct {
+// SequenceStatus represents the current state of a Sequence.
+type SequenceStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
@@ -128,27 +128,27 @@ type PipelineStatus struct {
 
 	// SubscriptionStatuses is an array of corresponding Subscription statuses.
 	// Matches the Spec.Steps array in the order.
-	SubscriptionStatuses []PipelineSubscriptionStatus
+	SubscriptionStatuses []SequenceSubscriptionStatus
 
 	// ChannelStatuses is an array of corresponding Channel statuses.
 	// Matches the Spec.Steps array in the order.
-	ChannelStatuses []PipelineChannelStatus
+	ChannelStatuses []SequenceChannelStatus
 
-	// Addressable is the starting point to this Pipeline. Sending to this will target the first Subscriber.
+	// Addressable is the starting point to this Sequence. Sending to this will target the first Subscriber.
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PipelineList is a collection of Pipelines.
-type PipelineList struct {
+// SequenceList is a collection of Sequences.
+type SequenceList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Pipeline `json:"items"`
+	Items           []Sequence `json:"items"`
 }
 
 // GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
-func (p *Pipeline) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Pipeline")
+func (p *Sequence) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("Sequence")
 }

@@ -80,8 +80,8 @@ rules:
   - apiGroups:
       - "messaging.knative.dev"
     resources:
-      - "pipelines"
-      - "pipelines/status"
+      - "sequences"
+      - "sequences/status"
     verbs: *everything
 
   # Source resources and statuses we care about.

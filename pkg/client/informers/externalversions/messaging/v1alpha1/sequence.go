@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// PipelineInformer provides access to a shared informer and lister for
-// Pipelines.
-type PipelineInformer interface {
+// SequenceInformer provides access to a shared informer and lister for
+// Sequences.
+type SequenceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.PipelineLister
+	Lister() v1alpha1.SequenceLister
 }
 
-type pipelineInformer struct {
+type sequenceInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewPipelineInformer constructs a new informer for Pipeline type.
+// NewSequenceInformer constructs a new informer for Sequence type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewPipelineInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredPipelineInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewSequenceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredSequenceInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredPipelineInformer constructs a new informer for Pipeline type.
+// NewFilteredSequenceInformer constructs a new informer for Sequence type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredPipelineInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredSequenceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MessagingV1alpha1().Pipelines(namespace).List(options)
+				return client.MessagingV1alpha1().Sequences(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MessagingV1alpha1().Pipelines(namespace).Watch(options)
+				return client.MessagingV1alpha1().Sequences(namespace).Watch(options)
 			},
 		},
-		&messagingv1alpha1.Pipeline{},
+		&messagingv1alpha1.Sequence{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *pipelineInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredPipelineInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *sequenceInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredSequenceInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *pipelineInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&messagingv1alpha1.Pipeline{}, f.defaultInformer)
+func (f *sequenceInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&messagingv1alpha1.Sequence{}, f.defaultInformer)
 }
 
-func (f *pipelineInformer) Lister() v1alpha1.PipelineLister {
-	return v1alpha1.NewPipelineLister(f.Informer().GetIndexer())
+func (f *sequenceInformer) Lister() v1alpha1.SequenceLister {
+	return v1alpha1.NewSequenceLister(f.Informer().GetIndexer())
 }

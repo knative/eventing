@@ -20,4 +20,4 @@ package v1alpha1
 
 type InMemoryChannelExpansion interface{}
 
-type PipelineExpansion interface{}
+type SequenceExpansion interface{}

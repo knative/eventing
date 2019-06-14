@@ -24,11 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 
-func (p *Pipeline) Validate(ctx context.Context) *apis.FieldError {
+func (p *Sequence) Validate(ctx context.Context) *apis.FieldError {
 	return p.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (ps *PipelineSpec) Validate(ctx context.Context) *apis.FieldError {
+func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
 	if len(ps.Steps) == 0 {

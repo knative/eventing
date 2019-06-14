@@ -24,44 +24,44 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var pCondSet = apis.NewLivingConditionSet(PipelineConditionReady, PipelineConditionChannelsReady, PipelineConditionSubscriptionsReady, PipelineConditionAddressable)
+var pCondSet = apis.NewLivingConditionSet(SequenceConditionReady, SequenceConditionChannelsReady, SequenceConditionSubscriptionsReady, SequenceConditionAddressable)
 
 const (
-	// PipelineConditionReady has status True when all subconditions below have been set to True.
-	PipelineConditionReady = apis.ConditionReady
+	// SequenceConditionReady has status True when all subconditions below have been set to True.
+	SequenceConditionReady = apis.ConditionReady
 
-	// PipelineChannelsReady has status True when all the channels created as part of
-	// this pipeline are ready.
-	PipelineConditionChannelsReady apis.ConditionType = "ChannelsReady"
+	// SequenceChannelsReady has status True when all the channels created as part of
+	// this sequence are ready.
+	SequenceConditionChannelsReady apis.ConditionType = "ChannelsReady"
 
-	// PipelineSubscriptionsReady has status True when all the subscriptions created as part of
-	// this pipeline are ready.
-	PipelineConditionSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
+	// SequenceSubscriptionsReady has status True when all the subscriptions created as part of
+	// this sequence are ready.
+	SequenceConditionSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
 
-	// PipelineConditionAddressable has status true when this Pipeline meets
+	// SequenceConditionAddressable has status true when this Sequence meets
 	// the Addressable contract and has a non-empty hostname.
-	PipelineConditionAddressable apis.ConditionType = "Addressable"
+	SequenceConditionAddressable apis.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ps *PipelineStatus) GetCondition(t apis.ConditionType) *apis.Condition {
+func (ps *SequenceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return pCondSet.Manage(ps).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
-func (ps *PipelineStatus) IsReady() bool {
+func (ps *SequenceStatus) IsReady() bool {
 	return pCondSet.Manage(ps).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
-func (ps *PipelineStatus) InitializeConditions() {
+func (ps *SequenceStatus) InitializeConditions() {
 	pCondSet.Manage(ps).InitializeConditions()
 }
 
-// PropagateSubscriptionStatuses sets the SubscriptionStatuses and PipelineConditionSubscriptionsReady based on
+// PropagateSubscriptionStatuses sets the SubscriptionStatuses and SequenceConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv1alpha1.Subscription) {
-	ps.SubscriptionStatuses = make([]PipelineSubscriptionStatus, len(subscriptions))
+func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv1alpha1.Subscription) {
+	ps.SubscriptionStatuses = make([]SequenceSubscriptionStatus, len(subscriptions))
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
@@ -69,7 +69,7 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 
 	}
 	for i, s := range subscriptions {
-		ps.SubscriptionStatuses[i] = PipelineSubscriptionStatus{
+		ps.SubscriptionStatuses[i] = SequenceSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: s.APIVersion,
 				Kind:       s.Kind,
@@ -89,16 +89,16 @@ func (ps *PipelineStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 
 	}
 	if allReady {
-		pCondSet.Manage(ps).MarkTrue(PipelineConditionSubscriptionsReady)
+		pCondSet.Manage(ps).MarkTrue(SequenceConditionSubscriptionsReady)
 	} else {
 		ps.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
 }
 
-// PropagateChannelStatuses sets the ChannelStatuses and PipelineConditionChannelsReady based on the
+// PropagateChannelStatuses sets the ChannelStatuses and SequenceConditionChannelsReady based on the
 // status of the incoming channels.
-func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
-	ps.ChannelStatuses = make([]PipelineChannelStatus, len(channels))
+func (ps *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
+	ps.ChannelStatuses = make([]SequenceChannelStatus, len(channels))
 	allReady := true
 	// If there are no channels, treat that as a False case. Could go either way, but this seems right.
 	if len(channels) == 0 {
@@ -106,7 +106,7 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 
 	}
 	for i, c := range channels {
-		ps.ChannelStatuses[i] = PipelineChannelStatus{
+		ps.ChannelStatuses[i] = SequenceChannelStatus{
 			Channel: corev1.ObjectReference{
 				APIVersion: c.APIVersion,
 				Kind:       c.Kind,
@@ -130,43 +130,43 @@ func (ps *PipelineStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 		}
 	}
 	if allReady {
-		pCondSet.Manage(ps).MarkTrue(PipelineConditionChannelsReady)
+		pCondSet.Manage(ps).MarkTrue(SequenceConditionChannelsReady)
 	} else {
 		ps.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
 }
 
-func (ps *PipelineStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(PipelineConditionChannelsReady, reason, messageFormat, messageA...)
+func (ps *SequenceStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(SequenceConditionChannelsReady, reason, messageFormat, messageA...)
 }
 
-func (ps *PipelineStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(PipelineConditionSubscriptionsReady, reason, messageFormat, messageA...)
+func (ps *SequenceStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(SequenceConditionSubscriptionsReady, reason, messageFormat, messageA...)
 }
 
-func (ps *PipelineStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(PipelineConditionAddressable, reason, messageFormat, messageA...)
+func (ps *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, reason, messageFormat, messageA...)
 }
 
 // TODO: Use the new beta duck types.
-func (ps *PipelineStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
+func (ps *SequenceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
 	if address == nil {
 		ps.Address.Hostname = ""
 		ps.Address.URL = nil
-		pCondSet.Manage(ps).MarkFalse(PipelineConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
 		return
 	}
 
 	if address.URL != nil {
 		ps.Address.Hostname = address.URL.Host
 		ps.Address.URL = address.URL
-		pCondSet.Manage(ps).MarkTrue(PipelineConditionAddressable)
+		pCondSet.Manage(ps).MarkTrue(SequenceConditionAddressable)
 	} else if address.Hostname != "" {
 		ps.Address.Hostname = address.Hostname
-		pCondSet.Manage(ps).MarkTrue(PipelineConditionAddressable)
+		pCondSet.Manage(ps).MarkTrue(SequenceConditionAddressable)
 	} else {
 		ps.Address.Hostname = ""
 		ps.Address.URL = nil
-		pCondSet.Manage(ps).MarkFalse(PipelineConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }

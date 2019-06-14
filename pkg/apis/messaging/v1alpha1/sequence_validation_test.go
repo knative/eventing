@@ -28,9 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestPipelineValidation(t *testing.T) {
-	name := "invalid pipeline spec"
-	pipeline := &Pipeline{Spec: PipelineSpec{}}
+func TestSequenceValidation(t *testing.T) {
+	name := "invalid sequence spec"
+	sequence := &Sequence{Spec: SequenceSpec{}}
 
 	want := &apis.FieldError{
 		Paths:   []string{"spec.channelTemplate", "spec.steps"},
@@ -38,9 +38,9 @@ func TestPipelineValidation(t *testing.T) {
 	}
 
 	t.Run(name, func(t *testing.T) {
-		got := pipeline.Validate(context.TODO())
+		got := sequence.Validate(context.TODO())
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("Pipeline.Validate (-want, +got) = %v", diff)
+			t.Errorf("Sequence.Validate (-want, +got) = %v", diff)
 		}
 	})
 }
@@ -62,7 +62,7 @@ func makeInvalidReply(channelName string) *corev1.ObjectReference {
 	}
 }
 
-func TestPipelineSpecValidation(t *testing.T) {
+func TestSequenceSpecValidation(t *testing.T) {
 	subscriberURI := "http://example.com"
 	validChannelTemplate := ChannelTemplateSpec{
 		metav1.TypeMeta{
@@ -73,18 +73,18 @@ func TestPipelineSpecValidation(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		ts   *PipelineSpec
+		ts   *SequenceSpec
 		want *apis.FieldError
 	}{{
-		name: "invalid pipeline spec - empty",
-		ts:   &PipelineSpec{},
+		name: "invalid sequence spec - empty",
+		ts:   &SequenceSpec{},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate", "steps")
 			return fe
 		}(),
 	}, {
-		name: "invalid pipeline spec - empty steps",
-		ts: &PipelineSpec{
+		name: "invalid sequence spec - empty steps",
+		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
 		},
 		want: func() *apis.FieldError {
@@ -93,7 +93,7 @@ func TestPipelineSpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "missing channeltemplatespec",
-		ts: &PipelineSpec{
+		ts: &SequenceSpec{
 			Steps: []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
@@ -102,7 +102,7 @@ func TestPipelineSpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
-		ts: &PipelineSpec{
+		ts: &SequenceSpec{
 			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
@@ -112,7 +112,7 @@ func TestPipelineSpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
-		ts: &PipelineSpec{
+		ts: &SequenceSpec{
 			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
@@ -121,8 +121,8 @@ func TestPipelineSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "valid pipeline",
-		ts: &PipelineSpec{
+		name: "valid sequence",
+		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
@@ -130,8 +130,8 @@ func TestPipelineSpecValidation(t *testing.T) {
 			return nil
 		}(),
 	}, {
-		name: "valid pipeline with valid reply",
-		ts: &PipelineSpec{
+		name: "valid sequence with valid reply",
+		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 			Reply:           makeValidReply("reply-channel"),
@@ -140,8 +140,8 @@ func TestPipelineSpecValidation(t *testing.T) {
 			return nil
 		}(),
 	}, {
-		name: "valid pipeline with invalid missing name",
-		ts: &PipelineSpec{
+		name: "valid sequence with invalid missing name",
+		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 			Reply: &corev1.ObjectReference{
@@ -154,8 +154,8 @@ func TestPipelineSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "valid pipeline with invalid reply",
-		ts: &PipelineSpec{
+		name: "valid sequence with invalid reply",
+		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 			Reply:           makeInvalidReply("reply-channel"),
@@ -171,7 +171,7 @@ func TestPipelineSpecValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.ts.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: Validate PipelineSpec (-want, +got) = %v", test.name, diff)
+				t.Errorf("%s: Validate SequenceSpec (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
