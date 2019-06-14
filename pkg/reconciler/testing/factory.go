@@ -28,13 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
-	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	ktesting "k8s.io/client-go/testing"
@@ -53,69 +48,10 @@ const (
 )
 
 // Ctor functions create a k8s controller with given params.
-type Ctor func(*Listers, reconciler.Options) controller.Reconciler
+type Ctor func(context.Context, *Listers, configmap.Watcher) controller.Reconciler
 
 // MakeFactory creates a reconciler factory with fake clients and controller created by `ctor`.
 func MakeFactory(ctor Ctor, unstructured bool) Factory {
-	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList, *FakeStatsReporter) {
-		ls := NewListers(r.Objects)
-
-		kubeClient := fakekubeclientset.NewSimpleClientset(ls.GetKubeObjects()...)
-		client := fakeclientset.NewSimpleClientset(ls.GetEventingObjects()...)
-
-		dynamicScheme := runtime.NewScheme()
-		for _, addTo := range clientSetSchemes {
-			addTo(dynamicScheme)
-		}
-
-		allObjects := ls.GetAllObjects()
-		if unstructured {
-			allObjects = ToUnstructured(t, allObjects)
-		}
-
-		dynamicClient := fakedynamicclientset.NewSimpleDynamicClient(dynamicScheme, allObjects...)
-		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
-		statsReporter := &FakeStatsReporter{}
-
-		PrependGenerateNameReactor(&client.Fake)
-		PrependGenerateNameReactor(&dynamicClient.Fake)
-
-		// Set up our Controller from the fakes.
-		c := ctor(&ls, reconciler.Options{
-			KubeClientSet:     kubeClient,
-			DynamicClientSet:  dynamicClient,
-			EventingClientSet: client,
-			Recorder:          eventRecorder,
-			//StatsReporter:    statsReporter,
-			Logger: logtesting.TestLogger(t),
-		})
-
-		for _, reactor := range r.WithReactors {
-			kubeClient.PrependReactor("*", "*", reactor)
-			client.PrependReactor("*", "*", reactor)
-			dynamicClient.PrependReactor("*", "*", reactor)
-		}
-
-		// Validate all Create operations through the eventing client.
-		client.PrependReactor("create", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-			return ValidateCreates(context.Background(), action)
-		})
-		client.PrependReactor("update", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-			return ValidateUpdates(context.Background(), action)
-		})
-
-		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
-		eventList := EventList{Recorder: eventRecorder}
-
-		return c, actionRecorderList, eventList, statsReporter
-	}
-}
-
-// injectionCtor functions create a k8s controller with given params.
-type injectionCtor func(context.Context, *Listers, configmap.Watcher) controller.Reconciler
-
-// MakeInjectionFactory creates a reconciler factory with fake clients and controller created by `ctor`.
-func MakeInjectionFactory(ctor injectionCtor, unstructured bool) Factory {
 	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList, *FakeStatsReporter) {
 		ls := NewListers(r.Objects)
 

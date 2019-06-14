@@ -592,9 +592,9 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeInjectionFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:                  reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 		}

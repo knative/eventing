@@ -26,6 +26,7 @@ rules:
       - inmemorychannels
       - inmemorychannels/status
     verbs:
+      - create
       - get
       - list
       - watch

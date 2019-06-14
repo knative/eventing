@@ -73,8 +73,8 @@ colocated in one Pod:
 kubectl get deployment -n knative-eventing kafka-channel-controller
 ```
 
-The Channel Controller Config Map is used to configure the `bootstrapServers`
-of your Apache Kafka installation:
+The Channel Controller Config Map is used to configure the `bootstrapServers` of
+your Apache Kafka installation:
 
 ```shell
 kubectl get configmap -n knative-eventing kafka-channel-controller-config

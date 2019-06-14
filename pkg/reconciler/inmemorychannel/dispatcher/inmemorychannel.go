@@ -21,22 +21,23 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/knative/eventing/pkg/inmemorychannel"
-
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/provisioners/fanout"
-	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	channelimpl "github.com/knative/eventing/pkg/inmemorychannel"
+	"github.com/knative/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/provisioners/fanout"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
 )
 
 const (
@@ -52,7 +53,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	dispatcher              inmemorychannel.Dispatcher
+	dispatcher              channelimpl.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 	impl                    *controller.Impl
@@ -64,13 +65,13 @@ var _ controller.Reconciler = (*Reconciler)(nil)
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
-	opt reconciler.Options,
-	dispatcher inmemorychannel.Dispatcher,
+	opt inmemorychannel.Options,
+	dispatcher channelimpl.Dispatcher,
 	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
 ) *controller.Impl {
 
 	r := &Reconciler{
-		Base:                    reconciler.NewBase(opt, controllerAgentName),
+		Base:                    inmemorychannel.NewBase(opt, controllerAgentName),
 		dispatcher:              dispatcher,
 		inmemorychannelLister:   inmemorychannelinformer.Lister(),
 		inmemorychannelInformer: inmemorychannelinformer.Informer(),

@@ -62,7 +62,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: natss-channel-controller
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: natss-controller
@@ -113,7 +112,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: natss-dispatcher
-  namespace: knative-eventing
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -137,7 +135,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: natss-dispatcher
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: natss-dispatcher

@@ -23,10 +23,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/reconciler"
-	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -36,6 +32,11 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller"
 )
 
 const (
@@ -70,7 +71,7 @@ func main() {
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
-	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
+	opt := inmemorychannel.NewOptionsOrDie(cfg, logger, stopCh)
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(opt.KubeClientSet, opt.ResyncPeriod)
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
@@ -87,7 +88,7 @@ func main() {
 	// Add new controllers to this array.
 	// You also need to modify numControllers above to match this.
 	controllers := [...]*kncontroller.Impl{
-		inmemorychannel.NewController(
+		controller.NewController(
 			opt,
 			systemNS,
 			dispatcherDeploymentName,

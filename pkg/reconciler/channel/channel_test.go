@@ -17,7 +17,10 @@ limitations under the License.
 package channel
 
 import (
+	"context"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,12 +150,10 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:          reconciler.NewBase(opt, controllerAgentName),
+			Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
 			channelLister: listers.GetChannelLister(),
 		}
-	},
-		false,
-	))
+	}, false))
 }

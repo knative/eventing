@@ -29,7 +29,7 @@ import (
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *eventingv1alpha1.Channel, uri *url.URL) *eventingv1alpha1.Subscription {
+func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, uri *url.URL) *eventingv1alpha1.Subscription {
 	uriString := uri.String()
 	return &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,8 +42,8 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 		},
 		Spec: eventingv1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
-				APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Channel",
+				APIVersion: brokerTrigger.APIVersion,
+				Kind:       brokerTrigger.Kind,
 				Name:       brokerTrigger.Name,
 			},
 			Subscriber: &eventingv1alpha1.SubscriberSpec{
@@ -51,8 +51,8 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 			},
 			Reply: &eventingv1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{
-					APIVersion: eventingv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "Channel",
+					APIVersion: brokerIngress.APIVersion,
+					Kind:       brokerIngress.Kind,
 					Name:       brokerIngress.Name,
 				},
 			},

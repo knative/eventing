@@ -76,7 +76,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gcp-pubsub-channel-controller
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: gcp-pubsub-channel-controller
@@ -135,7 +134,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gcp-pubsub-channel-dispatcher
-  namespace: knative-eventing
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -170,7 +168,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gcp-pubsub-channel-dispatcher
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: gcp-pubsub-channel-dispatcher

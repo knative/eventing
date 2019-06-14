@@ -17,22 +17,17 @@ limitations under the License.
 package trigger
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/apis"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
 	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +35,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler"
+	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
+	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
+	"github.com/knative/eventing/pkg/utils"
+
+	. "github.com/knative/pkg/reconciler/testing"
+
+	. "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
 const (
@@ -155,7 +161,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Trigger Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBrokerNoTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -180,7 +186,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Ingress Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBrokerNoIngressChannel(),
 				makeTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -478,10 +484,9 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-
-	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(opt, controllerAgentName),
+			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
 			triggerLister:       listers.GetTriggerLister(),
 			channelLister:       listers.GetChannelLister(),
 			subscriptionLister:  listers.GetSubscriptionLister(),
@@ -543,9 +548,24 @@ func makeBroker() *v1alpha1.Broker {
 	}
 }
 
+func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	return b
+}
+
+func makeReadyBrokerNoIngressChannel() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	b.Status.TriggerChannel = makeTriggerChannelRef()
+	return b
+}
+
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
+	b.Status.TriggerChannel = makeTriggerChannelRef()
+	b.Status.IngressChannel = makeIngressChannelRef()
 	return b
 }
 
@@ -592,12 +612,30 @@ func makeTriggerChannel() *v1alpha1.Channel {
 	return newChannel(fmt.Sprintf("%s-broker", brokerName), labels)
 }
 
+func makeTriggerChannelRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "Channel",
+		Namespace:  testNS,
+		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
+	}
+}
+
 func makeIngressChannel() *v1alpha1.Channel {
 	labels := map[string]string{
 		"eventing.knative.dev/broker":        brokerName,
 		"eventing.knative.dev/brokerIngress": "true",
 	}
 	return newChannel(fmt.Sprintf("%s-broker-ingress", brokerName), labels)
+}
+
+func makeIngressChannelRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "Channel",
+		Namespace:  testNS,
+		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
+	}
 }
 
 func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
@@ -626,7 +664,7 @@ func makeServiceURI() *url.URL {
 }
 
 func makeIngressSubscription() *v1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannel(), makeIngressChannel(), makeServiceURI())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
 }
 
 // Just so we can test subscription updates

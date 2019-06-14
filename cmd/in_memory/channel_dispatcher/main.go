@@ -21,14 +21,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/knative/eventing/pkg/tracing"
-
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
-	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/eventing/pkg/provisioners/swappable"
-	"github.com/knative/eventing/pkg/reconciler"
-	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/dispatcher"
 	"github.com/knative/pkg/configmap"
 	kncontroller "github.com/knative/pkg/controller"
 	"github.com/knative/pkg/logging"
@@ -36,6 +28,14 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	dispatcher "github.com/knative/eventing/pkg/inmemorychannel"
+	"github.com/knative/eventing/pkg/logconfig"
+	"github.com/knative/eventing/pkg/provisioners/swappable"
+	inmemoryreconciler "github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/dispatcher"
+	"github.com/knative/eventing/pkg/tracing"
 )
 
 var (
@@ -81,7 +81,7 @@ func main() {
 	const numControllers = 1
 	cfg.QPS = numControllers * rest.DefaultQPS
 	cfg.Burst = numControllers * rest.DefaultBurst
-	opt := reconciler.NewOptionsOrDie(cfg, logger, stopCh)
+	opt := inmemoryreconciler.NewOptionsOrDie(cfg, logger, stopCh)
 
 	eventingInformerFactory := informers.NewSharedInformerFactory(opt.EventingClientSet, opt.ResyncPeriod)
 

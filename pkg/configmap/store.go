@@ -65,8 +65,8 @@ func NewDefaultUntypedStore(
 
 // WatchConfigs uses the provided configmap.DefaultingWatcher to setup watches for the config maps
 // provided in defaultCMs.
-func (s *DefaultUntypedStore) WatchConfigs(w configmap.DefaultingWatcher) {
+func (s *DefaultUntypedStore) WatchConfigs(w configmap.Watcher) {
 	for _, cm := range s.defaultCMs {
-		w.WatchWithDefault(cm, s.store.OnConfigChanged)
+		w.Watch(cm.Name, s.store.OnConfigChanged)
 	}
 }

@@ -19,22 +19,26 @@ package controller
 import (
 	"testing"
 
-	"github.com/knative/eventing/pkg/inmemorychannel"
-	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	channelimpl "github.com/knative/eventing/pkg/inmemorychannel"
+	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
+	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
 	. "github.com/knative/pkg/reconciler/testing"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
+	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
+	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+
+	. "github.com/knative/eventing/pkg/reconciler/inmemorychannel/testing"
 )
 
 const (
@@ -59,10 +63,10 @@ func TestNewController(t *testing.T) {
 	// Eventing
 	imcInformer := eventingInformerFactory.Messaging().V1alpha1().InMemoryChannels()
 
-	dispatcher := &inmemorychannel.InMemoryDispatcher{}
+	dispatcher := &channelimpl.InMemoryDispatcher{}
 
 	c := NewController(
-		reconciler.Options{
+		inmemorychannel.Options{
 			KubeClientSet:     kubeClient,
 			EventingClientSet: eventingClient,
 			Logger:            logtesting.TestLogger(t),
@@ -150,9 +154,9 @@ func TestAllCases(t *testing.T) {
 	}
 	defer logtesting.ClearAll()
 
-	table.Test(t, reconciletesting.MakeFactory(func(listers *reconciletesting.Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(listers *reconciletesting.Listers, opt inmemorychannel.Options) controller.Reconciler {
 		return &Reconciler{
-			Base:                  reconciler.NewBase(opt, controllerAgentName),
+			Base:                  inmemorychannel.NewBase(opt, controllerAgentName),
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO fix
 			inmemorychannelInformer: nil,

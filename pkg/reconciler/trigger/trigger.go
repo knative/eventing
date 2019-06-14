@@ -29,7 +29,6 @@ import (
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/broker"
 	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
@@ -161,29 +160,18 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("can not find Broker's Trigger Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
-			return errors.New("failed to find Broker's Trigger channel")
-		} else {
-			logging.FromContext(ctx).Error("failed to get Broker's Trigger Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Failed to get Broker's Trigger channel")
-			return err
-		}
+	brokerTrigger := b.Status.TriggerChannel
+	if brokerTrigger == nil {
+		logging.FromContext(ctx).Error("Broker TriggerChannel not populated")
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
+		return errors.New("failed to find Broker's Trigger channel")
 	}
-	brokerIngress, err := r.getBrokerIngressChannel(ctx, b)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("can not find Broker's Ingress Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
-			return errors.New("failed to find Broker's Ingress channel")
-		} else {
-			logging.FromContext(ctx).Error("failed to get Broker's Ingress Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Failed to get Broker's Ingress channel")
-			return err
-		}
+
+	brokerIngress := b.Status.IngressChannel
+	if brokerIngress == nil {
+		logging.FromContext(ctx).Error("Broker IngressrChannel not populated")
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
+		return errors.New("failed to find Broker's Ingress channel")
 	}
 
 	// Get Broker filter service.
@@ -247,35 +235,6 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	return trig, err
 }
 
-// getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
-// error.
-func (r *Reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b.Name)))
-}
-
-// getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
-// error.
-func (r *Reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b.Name)))
-}
-
-// getChannel returns the Broker's channel based on the provided label selector if it exists, otherwise it returns an error.
-func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
-	channels, err := r.channelLister.Channels(b.Namespace).List(ls)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: If there's more than one, should that be treated as an error. This seems a bit wonky
-	// but that's how it was before.
-	for _, c := range channels {
-		if metav1.IsControlledBy(c, b) {
-			return c, nil
-		}
-	}
-	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
-}
-
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
@@ -293,7 +252,7 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, svc *corev1.Service) (*v1alpha1.Subscription, error) {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
