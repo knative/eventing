@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline
+package sequence
 
 import (
 	"context"
@@ -28,15 +28,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
-	"github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/pipeline"
+	"github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/sequence"
 )
 
 const (
 	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Pipelines"
+	ReconcilerName = "Sequences"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "pipeline-controller"
+	controllerAgentName = "sequence-controller"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -46,13 +46,13 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 
-	pipelineInformer := pipeline.Get(ctx)
+	sequenceInformer := sequence.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
 	addressableInformer := duck.NewAddressableInformer(ctx)
 
 	r := &Reconciler{
 		Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
-		pipelineLister:      pipelineInformer.Lister(),
+		sequenceLister:      sequenceInformer.Lister(),
 		addressableInformer: addressableInformer,
 		subscriptionLister:  subscriptionInformer.Lister(),
 	}
@@ -61,12 +61,12 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	pipelineInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Register handler for Subscriptions that are owned by Pipeline, so that
+	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Pipeline")),
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Sequence")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline
+package sequence
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
+	"github.com/knative/eventing/pkg/reconciler/sequence/resources"
 	"github.com/knative/eventing/pkg/utils"
 	duckroot "github.com/knative/pkg/apis"
 	duckapis "github.com/knative/pkg/apis/duck"
@@ -55,7 +55,7 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	pipelineLister      listers.PipelineLister
+	sequenceLister      listers.SequenceLister
 	tracker             tracker.Interface
 	addressableInformer duck.AddressableInformer
 	subscriptionLister  eventinglisters.SubscriptionLister
@@ -65,7 +65,7 @@ type Reconciler struct {
 var _ controller.Reconciler = (*Reconciler)(nil)
 
 // Reconcile compares the actual state with the desired, and attempts to
-// reconcile the two. It then updates the Status block of the Pipeline resource
+// reconcile the two. It then updates the Status block of the Sequence resource
 // with the current Status of the resource.
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	logging.FromContext(ctx).Debug("reconciling", zap.String("key", key))
@@ -76,33 +76,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return nil
 	}
 
-	// Get the Pipeline resource with this namespace/name
-	original, err := r.pipelineLister.Pipelines(namespace).Get(name)
+	// Get the Sequence resource with this namespace/name
+	original, err := r.sequenceLister.Sequences(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("Pipeline key in work queue no longer exists")
+		logging.FromContext(ctx).Error("Sequence key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
 	}
 
 	// Don't modify the informers copy
-	pipeline := original.DeepCopy()
+	sequence := original.DeepCopy()
 
-	// Reconcile this copy of the Pipeline and then write back any status
+	// Reconcile this copy of the Sequence and then write back any status
 	// updates regardless of whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, pipeline)
+	reconcileErr := r.reconcile(ctx, sequence)
 	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Pipeline", zap.Error(reconcileErr))
-		r.Recorder.Eventf(pipeline, corev1.EventTypeWarning, reconcileFailed, "Pipeline reconciliation failed: %v", reconcileErr)
+		logging.FromContext(ctx).Error("Error reconciling Sequence", zap.Error(reconcileErr))
+		r.Recorder.Eventf(sequence, corev1.EventTypeWarning, reconcileFailed, "Sequence reconciliation failed: %v", reconcileErr)
 	} else {
-		logging.FromContext(ctx).Debug("Successfully reconciled Pipeline")
-		r.Recorder.Eventf(pipeline, corev1.EventTypeNormal, reconciled, "Pipeline reconciled")
+		logging.FromContext(ctx).Debug("Successfully reconciled Sequence")
+		r.Recorder.Eventf(sequence, corev1.EventTypeNormal, reconciled, "Sequence reconciled")
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, pipeline); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Error updating Pipeline status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(pipeline, corev1.EventTypeWarning, updateStatusFailed, "Failed to update pipeline status: %s", key)
+	if _, updateStatusErr := r.updateStatus(ctx, sequence); updateStatusErr != nil {
+		logging.FromContext(ctx).Warn("Error updating Sequence status", zap.Error(updateStatusErr))
+		r.Recorder.Eventf(sequence, corev1.EventTypeWarning, updateStatusFailed, "Failed to update sequence status: %s", key)
 		return updateStatusErr
 	}
 
@@ -110,11 +110,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return reconcileErr
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error {
+func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Sequence) error {
 	p.Status.InitializeConditions()
 
-	// Reconciling pipeline is pretty straightforward, it does the following things:
-	// 1. Create a channel fronting the whole pipeline
+	// Reconciling sequence is pretty straightforward, it does the following things:
+	// 1. Create a channel fronting the whole sequence
 	// 2. For each of the Steps, create a Subscription to the previous Channel
 	//    (hence the first step above for the first step in the "steps"), where the Subscriber points to the
 	//    Step, and create intermediate channel for feeding the Reply to (if we allow Reply to be something else
@@ -134,12 +134,12 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 		return errors.New(msg)
 	}
 
-	// Tell tracker to reconcile this Pipeline whenever my channels change.
+	// Tell tracker to reconcile this Sequence whenever my channels change.
 	track := r.addressableInformer.TrackInNamespace(r.tracker, p)
 
 	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Steps))
 	for i := 0; i < len(p.Spec.Steps); i++ {
-		ingressChannelName := resources.PipelineChannelName(p.Name, i)
+		ingressChannelName := resources.SequenceChannelName(p.Name, i)
 		c, err := r.reconcileChannel(ctx, ingressChannelName, channelResourceInterface, p)
 		if err != nil {
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
@@ -154,7 +154,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 			return err
 
 		}
-		// Track channels and enqueue pipeline when they change.
+		// Track channels and enqueue sequence when they change.
 		channels = append(channels, channelable)
 		if err = track(utils.ObjectRef(channelable, channelable.GroupVersionKind())); err != nil {
 			logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
@@ -178,8 +178,8 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Pipeline) error 
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Pipeline) (*v1alpha1.Pipeline, error) {
-	p, err := r.pipelineLister.Pipelines(desired.Namespace).Get(desired.Name)
+func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Sequence) (*v1alpha1.Sequence, error) {
+	p, err := r.sequenceLister.Sequences(desired.Namespace).Get(desired.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +193,10 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Pipelin
 	existing := p.DeepCopy()
 	existing.Status = desired.Status
 
-	return r.EventingClientSet.MessagingV1alpha1().Pipelines(desired.Namespace).UpdateStatus(existing)
+	return r.EventingClientSet.MessagingV1alpha1().Sequences(desired.Namespace).UpdateStatus(existing)
 }
 
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Pipeline) (*unstructured.Unstructured, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Sequence) (*unstructured.Unstructured, error) {
 	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -222,10 +222,10 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, c
 	return c, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1alpha1.Pipeline) (*eventingv1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1alpha1.Sequence) (*eventingv1alpha1.Subscription, error) {
 	expected := resources.NewSubscription(step, p)
 
-	subName := resources.PipelineSubscriptionName(p.Name, step)
+	subName := resources.SequenceSubscriptionName(p.Name, step)
 	sub, err := r.subscriptionLister.Subscriptions(p.Namespace).Get(subName)
 
 	// If the resource doesn't exist, we'll create it.
@@ -235,14 +235,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
-			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipeline's subscription failed: %v", err)
+			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequence's subscription failed: %v", err)
 			return nil, fmt.Errorf("Failed to create Subscription Object for step: %d : %s", step, err)
 		}
 		return newSub, nil
 	} else if err != nil {
 		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
 		// TODO: Send events here, or elsewhere?
-		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Pipelines's subscription failed: %v", err)
+		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequences's subscription failed: %v", err)
 		return nil, fmt.Errorf("Failed to get subscription: %s", err)
 	}
 	return sub, nil

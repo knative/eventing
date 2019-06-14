@@ -27,11 +27,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func PipelineSubscriptionName(pipelineName string, step int) string {
-	return fmt.Sprintf("%s-kn-pipeline-%d", pipelineName, step)
+func SequenceSubscriptionName(sequenceName string, step int) string {
+	return fmt.Sprintf("%s-kn-sequence-%d", sequenceName, step)
 }
 
-func NewSubscription(stepNumber int, p *v1alpha1.Pipeline) *eventingv1alpha1.Subscription {
+func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *eventingv1alpha1.Subscription {
 	r := &eventingv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -39,7 +39,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Pipeline) *eventingv1alpha1.Sub
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      PipelineSubscriptionName(p.Name, stepNumber),
+			Name:      SequenceSubscriptionName(p.Name, stepNumber),
 
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(p),
@@ -49,19 +49,19 @@ func NewSubscription(stepNumber int, p *v1alpha1.Pipeline) *eventingv1alpha1.Sub
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       PipelineChannelName(p.Name, stepNumber),
+				Name:       SequenceChannelName(p.Name, stepNumber),
 			},
 			Subscriber: &p.Spec.Steps[stepNumber],
 		},
 	}
 	// If it's not the last step, use the next channel as the reply to, if it's the very
-	// last one, we'll use the (optional) reply from the Pipeline Spec.
+	// last one, we'll use the (optional) reply from the Sequence Spec.
 	if stepNumber < len(p.Spec.Steps)-1 {
 		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
 			Channel: &corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       PipelineChannelName(p.Name, stepNumber+1),
+				Name:       SequenceChannelName(p.Name, stepNumber+1),
 			},
 		}
 	} else if p.Spec.Reply != nil {

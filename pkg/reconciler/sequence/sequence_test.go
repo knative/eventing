@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pipeline
+package sequence
 
 import (
 	"context"
@@ -38,15 +38,15 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/pipeline/resources"
+	"github.com/knative/eventing/pkg/reconciler/sequence/resources"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
 const (
 	testNS           = "test-namespace"
-	pipelineName     = "test-pipeline"
-	pipelineUID      = "test-pipeline-uid"
+	sequenceName     = "test-sequence"
+	sequenceUID      = "test-sequence-uid"
 	replyChannelName = "reply-channel"
 )
 
@@ -71,7 +71,7 @@ func createReplyChannel(channelName string) *corev1.ObjectReference {
 
 }
 
-func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructured {
+func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "messaging.knative.dev/v1alpha1",
@@ -79,14 +79,14 @@ func createChannel(pipelineName string, stepNumber int) *unstructured.Unstructur
 			"metadata": map[string]interface{}{
 				"creationTimestamp": nil,
 				"namespace":         testNS,
-				"name":              resources.PipelineChannelName(pipelineName, stepNumber),
+				"name":              resources.SequenceChannelName(sequenceName, stepNumber),
 				"ownerReferences": []interface{}{
 					map[string]interface{}{
 						"apiVersion":         "messaging.knative.dev/v1alpha1",
 						"blockOwnerDeletion": true,
 						"controller":         true,
-						"kind":               "Pipeline",
-						"name":               pipelineName,
+						"kind":               "Sequence",
+						"name":               sequenceName,
 						"uid":                "",
 					},
 				},
@@ -105,7 +105,7 @@ func createSubscriber(stepNumber int) eventingv1alpha1.SubscriberSpec {
 }
 
 func TestAllCases(t *testing.T) {
-	pKey := testNS + "/" + pipelineName
+	pKey := testNS + "/" + sequenceName
 	imc := v1alpha1.ChannelTemplateSpec{
 		metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
@@ -137,43 +137,43 @@ func TestAllCases(t *testing.T) {
 			Name: "deleting",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineDeleted)},
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceDeleted)},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 		}, {
 			Name: "singlestep",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(pipelineName, 0),
-				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
+				createChannel(sequenceName, 0),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
-					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
-					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+				Object: reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Name:       resources.SequenceChannelName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -184,12 +184,12 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					}),
-					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 						},
@@ -199,37 +199,37 @@ func TestAllCases(t *testing.T) {
 			Name: "singlestepwithreply",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(pipelineName, 0),
-				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
+				createChannel(sequenceName, 0),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
-					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+				Object: reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Name:       resources.SequenceChannelName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -240,12 +240,12 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					}),
-					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 						},
@@ -255,42 +255,42 @@ func TestAllCases(t *testing.T) {
 			Name: "threestep",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2)}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(pipelineName, 0),
-				createChannel(pipelineName, 1),
-				createChannel(pipelineName, 2),
-				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(1, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(2, reconciletesting.NewPipeline(pipelineName, testNS, reconciletesting.WithPipelineChannelTemplateSpec(imc), reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+				createChannel(sequenceName, 0),
+				createChannel(sequenceName, 1),
+				createChannel(sequenceName, 2),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+				Object: reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2),
 					}),
-					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
-					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Name:       resources.SequenceChannelName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -304,7 +304,7 @@ func TestAllCases(t *testing.T) {
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 1),
+								Name:       resources.SequenceChannelName(sequenceName, 1),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -318,7 +318,7 @@ func TestAllCases(t *testing.T) {
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 2),
+								Name:       resources.SequenceChannelName(sequenceName, 2),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -329,12 +329,12 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					}),
-					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 						},
@@ -342,7 +342,7 @@ func TestAllCases(t *testing.T) {
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 1),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 								Namespace:  testNS,
 							},
 						},
@@ -350,7 +350,7 @@ func TestAllCases(t *testing.T) {
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 2),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 								Namespace:  testNS,
 							},
 						},
@@ -360,53 +360,53 @@ func TestAllCases(t *testing.T) {
 			Name: "threestepwithreply",
 			Key:  pKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2)}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Pipeline reconciled"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(pipelineName, 0),
-				createChannel(pipelineName, 1),
-				createChannel(pipelineName, 2),
-				resources.NewSubscription(0, reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(1, reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(2, reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+				createChannel(sequenceName, 0),
+				createChannel(sequenceName, 1),
+				createChannel(sequenceName, 2),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewPipeline(pipelineName, testNS,
-					reconciletesting.WithInitPipelineConditions,
-					reconciletesting.WithPipelineReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithPipelineChannelTemplateSpec(imc),
-					reconciletesting.WithPipelineSteps([]eventingv1alpha1.SubscriberSpec{
+				Object: reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2),
 					}),
-					reconciletesting.WithPipelineChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithPipelineAddressableNotReady("emptyHostname", "hostname is the empty string"),
-					reconciletesting.WithPipelineSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithPipelineChannelStatuses([]v1alpha1.PipelineChannelStatus{
+					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 0),
+								Name:       resources.SequenceChannelName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -420,7 +420,7 @@ func TestAllCases(t *testing.T) {
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 1),
+								Name:       resources.SequenceChannelName(sequenceName, 1),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -434,7 +434,7 @@ func TestAllCases(t *testing.T) {
 							Channel: corev1.ObjectReference{
 								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "inmemorychannel",
-								Name:       resources.PipelineChannelName(pipelineName, 2),
+								Name:       resources.SequenceChannelName(sequenceName, 2),
 								Namespace:  testNS,
 							},
 							ReadyCondition: apis.Condition{
@@ -445,12 +445,12 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					}),
-					reconciletesting.WithPipelineSubscriptionStatuses([]v1alpha1.PipelineSubscriptionStatus{
+					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 0),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
 							},
 						},
@@ -458,7 +458,7 @@ func TestAllCases(t *testing.T) {
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 1),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 								Namespace:  testNS,
 							},
 						},
@@ -466,7 +466,7 @@ func TestAllCases(t *testing.T) {
 							Subscription: corev1.ObjectReference{
 								APIVersion: "eventing.knative.dev/v1alpha1",
 								Kind:       "Subscription",
-								Name:       resources.PipelineSubscriptionName(pipelineName, 2),
+								Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 								Namespace:  testNS,
 							},
 						},
@@ -479,7 +479,7 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
-			pipelineLister:      listers.GetPipelineLister(),
+			sequenceLister:      listers.GetSequenceLister(),
 			addressableInformer: &fakeAddressableInformer{},
 			subscriptionLister:  listers.GetSubscriptionLister(),
 		}

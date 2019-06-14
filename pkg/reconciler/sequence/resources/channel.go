@@ -27,14 +27,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PipelineChannelName creates a name for the Channel fronting a specific step.
-func PipelineChannelName(pipelineName string, step int) string {
-	return fmt.Sprintf("%s-kn-pipeline-%d", pipelineName, step)
+// SequenceChannelName creates a name for the Channel fronting a specific step.
+func SequenceChannelName(sequenceName string, step int) string {
+	return fmt.Sprintf("%s-kn-sequence-%d", sequenceName, step)
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
-// for a given pipeline.
-func NewChannel(name string, p *v1alpha1.Pipeline) (*unstructured.Unstructured, error) {
+// for a given sequence.
+func NewChannel(name string, p *v1alpha1.Sequence) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := v1alpha1.ChannelTemplateSpecInternal{
 		metav1.TypeMeta{

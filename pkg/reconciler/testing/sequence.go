@@ -26,17 +26,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PipelineOption enables further configuration of a Pipeline.
-type PipelineOption func(*v1alpha1.Pipeline)
+// SequenceOption enables further configuration of a Sequence.
+type SequenceOption func(*v1alpha1.Sequence)
 
-// NewPipeline creates an Pipeline with PipelineOptions.
-func NewPipeline(name, namespace string, popt ...PipelineOption) *v1alpha1.Pipeline {
-	p := &v1alpha1.Pipeline{
+// NewSequence creates an Sequence with SequenceOptions.
+func NewSequence(name, namespace string, popt ...SequenceOption) *v1alpha1.Sequence {
+	p := &v1alpha1.Sequence{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.PipelineSpec{},
+		Spec: v1alpha1.SequenceSpec{},
 	}
 	for _, opt := range popt {
 		opt(p)
@@ -45,59 +45,59 @@ func NewPipeline(name, namespace string, popt ...PipelineOption) *v1alpha1.Pipel
 	return p
 }
 
-func WithInitPipelineConditions(p *v1alpha1.Pipeline) {
+func WithInitSequenceConditions(p *v1alpha1.Sequence) {
 	p.Status.InitializeConditions()
 }
 
-func WithPipelineDeleted(p *v1alpha1.Pipeline) {
+func WithSequenceDeleted(p *v1alpha1.Sequence) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithPipelineChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Spec.ChannelTemplate = cts
 	}
 }
 
-func WithPipelineSteps(steps []eventingv1alpha1.SubscriberSpec) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceSteps(steps []eventingv1alpha1.SubscriberSpec) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Spec.Steps = steps
 	}
 }
 
-func WithPipelineReply(reply *corev1.ObjectReference) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceReply(reply *corev1.ObjectReference) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Spec.Reply = reply
 	}
 }
 
-func WithPipelineSubscriptionStatuses(subscriptionStatuses []v1alpha1.PipelineSubscriptionStatus) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceSubscriptionStatuses(subscriptionStatuses []v1alpha1.SequenceSubscriptionStatus) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Status.SubscriptionStatuses = subscriptionStatuses
 	}
 }
 
-func WithPipelineChannelStatuses(channelStatuses []v1alpha1.PipelineChannelStatus) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceChannelStatuses(channelStatuses []v1alpha1.SequenceChannelStatus) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Status.ChannelStatuses = channelStatuses
 	}
 }
 
-func WithPipelineChannelsNotReady(reason, message string) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceChannelsNotReady(reason, message string) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Status.MarkChannelsNotReady(reason, message)
 	}
 }
 
-func WithPipelineSubscriptionsNotReady(reason, message string) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceSubscriptionsNotReady(reason, message string) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Status.MarkSubscriptionsNotReady(reason, message)
 	}
 }
 
-func WithPipelineAddressableNotReady(reason, message string) PipelineOption {
-	return func(p *v1alpha1.Pipeline) {
+func WithSequenceAddressableNotReady(reason, message string) SequenceOption {
+	return func(p *v1alpha1.Sequence) {
 		p.Status.MarkAddressableNotReady(reason, message)
 	}
 }
