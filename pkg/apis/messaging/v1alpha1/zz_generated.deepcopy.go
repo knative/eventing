@@ -307,7 +307,7 @@ func (in *SequenceStatus) DeepCopyInto(out *SequenceStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.Address.DeepCopyInto(&out.Address)
+	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	return
 }
 
