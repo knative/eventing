@@ -26,6 +26,7 @@ rules:
       - natsschannels
       - natsschannels/status
     verbs:
+      - create
       - get
       - list
       - watch
