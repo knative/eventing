@@ -17,13 +17,18 @@ limitations under the License.
 package controller
 
 import (
-	messaginginformers "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+	"context"
 
+	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
+	"github.com/knative/pkg/system"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
+	"github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment"
+	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/endpoints"
+	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/service"
 )
 
 const (
@@ -33,28 +38,33 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "in-memory-channel-controller"
+
+	// TODO: these should be passed in on the env.
+	dispatcherDeploymentName = "imc-dispatcher"
+	dispatcherServiceName    = "imc-dispatcher"
 )
 
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
-	opt inmemorychannel.Options,
-	dispatcherNamespace string,
-	dispatcherDeploymentName string,
-	dispatcherServiceName string,
-	inmemorychannelinformer messaginginformers.InMemoryChannelInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	endpointsInformer corev1informers.EndpointsInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	inmemorychannelInformer := inmemorychannel.Get(ctx)
+	deploymentInformer := deployment.Get(ctx)
+	serviceInformer := service.Get(ctx)
+	endpointsInformer := endpoints.Get(ctx)
+
+	systemNS := system.Namespace()
+
 	r := &Reconciler{
-		Base:                     inmemorychannel.NewBase(opt, controllerAgentName),
-		dispatcherNamespace:      dispatcherNamespace,
+		Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
+		dispatcherNamespace:      systemNS,
 		dispatcherDeploymentName: dispatcherDeploymentName,
 		dispatcherServiceName:    dispatcherServiceName,
-		inmemorychannelLister:    inmemorychannelinformer.Lister(),
-		inmemorychannelInformer:  inmemorychannelinformer.Informer(),
+		inmemorychannelLister:    inmemorychannelInformer.Lister(),
+		inmemorychannelInformer:  inmemorychannelInformer.Informer(),
 		deploymentLister:         deploymentInformer.Lister(),
 		serviceLister:            serviceInformer.Lister(),
 		endpointsLister:          endpointsInformer.Lister(),
@@ -62,21 +72,21 @@ func NewController(
 	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
-	inmemorychannelinformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
+	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
 
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherDeploymentName),
+		FilterFunc: controller.FilterWithNameAndNamespace(systemNS, dispatcherDeploymentName),
 		Handler:    r,
 	})
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
+		FilterFunc: controller.FilterWithNameAndNamespace(systemNS, dispatcherServiceName),
 		Handler:    r,
 	})
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(dispatcherNamespace, dispatcherServiceName),
+		FilterFunc: controller.FilterWithNameAndNamespace(systemNS, dispatcherServiceName),
 		Handler:    r,
 	})
 	return r.impl

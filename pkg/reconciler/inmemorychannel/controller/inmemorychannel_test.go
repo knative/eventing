@@ -17,13 +17,18 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel"
+	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-
+	. "github.com/knative/eventing/pkg/reconciler/testing"
+	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/utils"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	"github.com/knative/pkg/kmeta"
 	logtesting "github.com/knative/pkg/logging/testing"
@@ -34,21 +39,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/utils"
-
-	. "github.com/knative/eventing/pkg/reconciler/inmemorychannel/testing"
 )
 
 const (
-	systemNS                 = "knative-eventing"
-	testNS                   = "test-namespace"
-	imcName                  = "test-imc"
-	dispatcherDeploymentName = "test-deployment"
-	dispatcherServiceName    = "test-service"
-	channelServiceAddress    = "test-imc-kn-channel.test-namespace.svc.cluster.local"
+	systemNS                     = "knative-eventing"
+	testNS                       = "test-namespace"
+	imcName                      = "test-imc"
+	testDispatcherDeploymentName = "test-deployment"
+	testDispatcherServiceName    = "test-service"
+	channelServiceAddress        = "test-imc-kn-channel.test-namespace.svc.cluster.local"
 
 	subscriberAPIVersion = "v1"
 	subscriberKind       = "Service"
@@ -277,14 +276,14 @@ func TestAllCases(t *testing.T) {
 			},
 		}, {},
 	}
-	defer logtesting.ClearAll()
 
-	table.Test(t, MakeFactory(func(listers *reconciletesting.Listers, opt inmemorychannel.Options) controller.Reconciler {
+	defer logtesting.ClearAll()
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                     inmemorychannel.NewBase(opt, controllerAgentName),
+			Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
 			dispatcherNamespace:      testNS,
-			dispatcherDeploymentName: dispatcherDeploymentName,
-			dispatcherServiceName:    dispatcherServiceName,
+			dispatcherDeploymentName: testDispatcherDeploymentName,
+			dispatcherServiceName:    testDispatcherServiceName,
 			inmemorychannelLister:    listers.GetInMemoryChannelLister(),
 			// TODO: FIx
 			inmemorychannelInformer: nil,
@@ -305,7 +304,7 @@ func makeDeployment() *appsv1.Deployment {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      dispatcherDeploymentName,
+			Name:      testDispatcherDeploymentName,
 		},
 		Status: appsv1.DeploymentStatus{},
 	}
@@ -325,7 +324,7 @@ func makeService() *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      dispatcherServiceName,
+			Name:      testDispatcherServiceName,
 		},
 	}
 }
@@ -348,7 +347,7 @@ func makeChannelService(imc *v1alpha1.InMemoryChannel) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherServiceName, testNS, utils.GetClusterDomainName()),
+			ExternalName: fmt.Sprintf("%s.%s.svc.%s", testDispatcherServiceName, testNS, utils.GetClusterDomainName()),
 		},
 	}
 }
@@ -368,7 +367,7 @@ func makeChannelServiceNotOwnedByUs(imc *v1alpha1.InMemoryChannel) *corev1.Servi
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.svc.%s", dispatcherServiceName, testNS, utils.GetClusterDomainName()),
+			ExternalName: fmt.Sprintf("%s.%s.svc.%s", testDispatcherServiceName, testNS, utils.GetClusterDomainName()),
 		},
 	}
 }
@@ -381,7 +380,7 @@ func makeEmptyEndpoints() *corev1.Endpoints {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
-			Name:      dispatcherServiceName,
+			Name:      testDispatcherServiceName,
 		},
 	}
 }
