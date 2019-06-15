@@ -59,12 +59,12 @@ func NewController(
 	addressableInformer := duck.NewAddressableInformer(ctx)
 
 	r := &Reconciler{
-		Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
-		triggerLister:       triggerInformer.Lister(),
-		channelLister:       channelInformer.Lister(),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		brokerLister:        brokerInformer.Lister(),
-		serviceLister:       serviceInformer.Lister(),
+		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		triggerLister:      triggerInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
+		brokerLister:       brokerInformer.Lister(),
+		serviceLister:      serviceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
