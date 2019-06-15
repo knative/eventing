@@ -113,6 +113,7 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 		KafkaChannelTypeMeta,
 		InMemoryChannelTypeMeta,
 		NatssChannelTypeMeta,
+		ApiServerSourceTypeMeta,
 		CronJobSourceTypeMeta,
 		ContainerSourceTypeMeta,
 	}

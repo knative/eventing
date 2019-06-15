@@ -31,6 +31,9 @@ type CronJobSourceOption func(*sourcesv1alpha1.CronJobSource)
 // ContainerSourceOption enables further configuration of a ContainerSource.
 type ContainerSourceOption func(*sourcesv1alpha1.ContainerSource)
 
+// ApiServerSourceOption enables further configuration of an ApiServerSource.
+type ApiServerSourceOption func(*sourcesv1alpha1.ApiServerSource)
+
 // WithSinkServiceForCronJobSource returns an option that adds a Kubernetes Service sink for the given CronJobSource.
 func WithSinkServiceForCronJobSource(name string) CronJobSourceOption {
 	return func(cjs *sourcesv1alpha1.CronJobSource) {
@@ -132,4 +135,40 @@ func ContainerSourceBasicTemplate(
 		},
 	}
 	return podTemplateSpec
+}
+
+// WithServiceAccountForApiServerSource returns an option that adds a ServiceAccount for the given ApiServerSource.
+func WithServiceAccountForApiServerSource(saName string) ApiServerSourceOption {
+	return func(apiServerSource *sourcesv1alpha1.ApiServerSource) {
+		apiServerSource.Spec.ServiceAccountName = saName
+	}
+}
+
+// WithSinkServiceForApiServerSource returns an option that adds a Kubernetes Service sink for the given ApiServerSource.
+func WithSinkServiceForApiServerSource(name string) ApiServerSourceOption {
+	return func(apiServerSource *sourcesv1alpha1.ApiServerSource) {
+		apiServerSource.Spec.Sink = pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
+	}
+}
+
+// ApiServerSource returns an ApiServer EventSource.
+func ApiServerSource(
+	name string,
+	resources []sourcesv1alpha1.ApiServerResource,
+	mode string,
+	options ...ApiServerSourceOption,
+) *sourcesv1alpha1.ApiServerSource {
+	apiServerSource := &sourcesv1alpha1.ApiServerSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: sourcesv1alpha1.ApiServerSourceSpec{
+			Resources: resources,
+			Mode:      mode,
+		},
+	}
+	for _, option := range options {
+		option(apiServerSource)
+	}
+	return apiServerSource
 }

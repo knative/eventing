@@ -18,6 +18,7 @@ package common
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -183,6 +184,25 @@ func (client *Client) CreateContainerSourceOrFail(
 	client.Cleaner.AddObj(containerSource)
 }
 
+// CreateApiServerSourceOrFail will create an ApiServerSource
+func (client *Client) CreateApiServerSourceOrFail(
+	name string,
+	apiServerSourceResources []sourcesv1alpha1.ApiServerResource,
+	mode string,
+	options ...resources.ApiServerSourceOption,
+) {
+	namespace := client.Namespace
+	apiServerSource := resources.ApiServerSource(name, apiServerSourceResources, mode, options...)
+
+	apiServerSources := client.Eventing.SourcesV1alpha1().ApiServerSources(namespace)
+	// update apiServerSource with the new reference
+	apiServerSource, err := apiServerSources.Create(apiServerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create apiserversource %q: %v", name, err)
+	}
+	client.Cleaner.AddObj(apiServerSource)
+}
+
 // WithService returns an option that creates a Service binded with the given pod.
 func WithService(name string) func(*corev1.Pod, *Client) error {
 	return func(pod *corev1.Pod, client *Client) error {
@@ -232,4 +252,13 @@ func (client *Client) CreateServiceAccountAndBindingOrFail(saName, crName string
 		client.T.Fatalf("Failed to create cluster role binding %q: %v", crName, err)
 	}
 	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
+}
+
+// CreateClusterRoleOrFail creates the given ClusterRole or fail the test if there is an error.
+func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
+	crs := client.Kube.Kube.RbacV1().ClusterRoles()
+	if _, err := crs.Create(cr); err != nil {
+		client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
+	}
+	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
 }
