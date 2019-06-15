@@ -23,20 +23,28 @@ import (
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/knative/pkg/injection/clients/dynamicclient"
+	"k8s.io/client-go/tools/cache"
+	"time"
+	"github.com/knative/pkg/tracker"
 )
 
 // AddressableInformer is an informer that allows tracking arbitrary Addressables.
 type AddressableInformer interface {
+	NewTracker(callback func(string), lease time.Duration) AddressableTracker
+}
+
+// A tracker capable of tracking Addressables.
+type AddressableTracker interface {
+	tracker.Interface
+
 	// TrackInNamespace returns a function that can be used to watch arbitrary Addressables in the same
 	// namespace as obj. Any change will cause a callback for obj.
-	TrackInNamespace(tracker tracker.Interface, obj metav1.Object) func(corev1.ObjectReference) error
+	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
 }
 
 // addressableInformer is a concrete implementation of AddressableInformer. It caches informers and ensures TypeMeta.
@@ -51,7 +59,7 @@ type AddressableInformer interface {
 type addressableInformer struct {
 	duck duck.InformerFactory
 
-	concrete     map[schema.GroupVersionResource]struct{}
+	concrete     map[schema.GroupVersionResource]cache.SharedIndexInformer
 	concreteLock sync.RWMutex
 }
 
@@ -64,48 +72,76 @@ func NewAddressableInformer(ctx context.Context) AddressableInformer {
 			ResyncPeriod: controller.GetResyncPeriod(ctx),
 			StopChannel:  ctx.Done(),
 		},
+		concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
+	}
+}
+
+func (i *addressableInformer) NewTracker(callback func(string), lease time.Duration) AddressableTracker {
+	return &addressableTracker {
+		informer: i,
+		tracker: tracker.New(callback, lease),
 		concrete: map[schema.GroupVersionResource]struct{}{},
 	}
 }
 
-func (i *addressableInformer) TrackInNamespace(tracker tracker.Interface, obj metav1.Object) func(corev1.ObjectReference) error {
-	return func(ref corev1.ObjectReference) error {
-		if err := i.ensureInformer(tracker, ref); err != nil {
-			return err
-		}
-
-		// This is often used by Trigger and Subscription, both of which pass in refs that do not
-		// specify the namespace.
-		ref.Namespace = obj.GetNamespace()
-		if err := tracker.Track(ref, obj); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-// ensureInformer ensures that there is an informer watching and sending events to tracker for the
-// concrete GVK.
-func (i *addressableInformer) ensureInformer(tracker tracker.Interface, ref corev1.ObjectReference) error {
+// ensureInformer ensures that there is an informer watching on a concrete GVK.
+func (i *addressableInformer) ensureInformer(ref corev1.ObjectReference) (cache.SharedIndexInformer, error) {
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
 	i.concreteLock.RLock()
-	_, present := i.concrete[gvr]
+	informer, present := i.concrete[gvr]
 	i.concreteLock.RUnlock()
 	if present {
 		// There is already an informer running for this GVR, we don't need or want to make
 		// a second one.
-		return nil
+		return informer, nil
 	}
 	// There is not an informer for this GVR, make one.
 	i.concreteLock.Lock()
 	defer i.concreteLock.Unlock()
 	// Now that we have acquired the write lock, make sure no one has made the informer.
-	if _, present = i.concrete[gvr]; present {
-		return nil
+	if informer, present = i.concrete[gvr]; present {
+		return informer, nil
 	}
 	informer, _, err := i.duck.Get(gvr)
+	if err != nil {
+		return nil, err
+	}
+	i.concrete[gvr] = informer
+	return informer, nil
+}
+
+type addressableTracker struct{
+	informer *addressableInformer
+	tracker tracker.Interface
+
+	concrete     map[schema.GroupVersionResource]struct{}
+	concreteLock sync.RWMutex
+}
+
+// ensureInformer ensures that there is an informer watching and sending events to tracker for the
+// concrete GVK.
+func (t *addressableTracker) ensureTracking(ref corev1.ObjectReference) error {
+	gvk := ref.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+
+	t.concreteLock.RLock()
+	_, present := t.concrete[gvr]
+	t.concreteLock.RUnlock()
+	if present {
+		// There is already an informer running for this GVR, we don't need or want to make
+		// a second one.
+		return nil
+	}
+	// Tracking has not been setup for this GVR.
+	t.concreteLock.Lock()
+	defer t.concreteLock.Unlock()
+	// Now that we have acquired the write lock, make sure no one has added tracking handlers.
+	if _, present = t.concrete[gvr]; present {
+		return nil
+	}
+	informer, err := t.informer.ensureInformer(ref)
 	if err != nil {
 		return err
 	}
@@ -113,10 +149,30 @@ func (i *addressableInformer) ensureInformer(tracker tracker.Interface, ref core
 		// Call the tracker's OnChanged method, but we've seen the objects coming through
 		// this path missing TypeMeta, so ensure it is properly populated.
 		controller.EnsureTypeMeta(
-			tracker.OnChanged,
+			t.tracker.OnChanged,
 			gvk,
 		),
 	))
-	i.concrete[gvr] = struct{}{}
+	t.concrete[gvr] = struct{}{}
 	return nil
+}
+
+func (t *addressableTracker) TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error {
+	return func(ref corev1.ObjectReference) error {
+		// This is often used by Trigger and Subscription, both of which pass in refs that do not
+		// specify the namespace.
+		ref.Namespace = obj.GetNamespace()
+		return t.Track(ref, obj)
+	}
+}
+
+func (t *addressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
+	if err := t.ensureTracking(ref); err != nil {
+		return err
+	}
+	return t.tracker.Track(ref, obj)
+}
+
+func (t *addressableTracker) OnChanged(obj interface{}) {
+	t.tracker.OnChanged(obj)
 }

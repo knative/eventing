@@ -35,7 +35,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -70,8 +69,7 @@ type Reconciler struct {
 	subscriptionLister  listers.SubscriptionLister
 	brokerLister        listers.BrokerLister
 	serviceLister       corev1listers.ServiceLister
-	tracker             tracker.Interface
-	addressableInformer duck.AddressableInformer
+	addressableTracker  duck.AddressableTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -153,8 +151,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
 
-	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	track := r.addressableInformer.TrackInNamespace(r.tracker, t)
+	// Tell addressableTracker to reconcile this Trigger whenever the Broker changes.
+	track := r.addressableTracker.TrackInNamespace(t)
 	if err = track(utils.ObjectRef(b, brokerGVK)); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err

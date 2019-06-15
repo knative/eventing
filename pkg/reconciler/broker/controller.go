@@ -26,7 +26,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
 
@@ -69,6 +68,7 @@ func NewController(
 	channelInformer := channelinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
+	addressableInformer := duck.NewAddressableInformer(ctx)
 
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -86,9 +86,8 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
-	r.addressableInformer = duck.NewAddressableInformer(ctx)
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

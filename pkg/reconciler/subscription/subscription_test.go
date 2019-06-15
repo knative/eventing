@@ -30,7 +30,6 @@ import (
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
 	logtesting "github.com/knative/pkg/logging/testing"
-	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +40,8 @@ import (
 
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "github.com/knative/pkg/reconciler/testing"
+	"github.com/knative/eventing/pkg/duck"
+	"time"
 )
 
 const (
@@ -757,8 +758,7 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:             listers.GetSubscriptionLister(),
-			tracker:                        tracker.New(func(string) {}, 0),
-			addressableInformer:            &fakeAddressableInformer{},
+			addressableTracker:             fakeAddressableTracker{},
 			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	}, false))
@@ -766,8 +766,21 @@ func TestAllCases(t *testing.T) {
 
 type fakeAddressableInformer struct{}
 
-func (*fakeAddressableInformer) TrackInNamespace(tracker.Interface, metav1.Object) func(corev1.ObjectReference) error {
+func (fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.AddressableTracker {
+	return fakeAddressableTracker{}
+}
+
+type fakeAddressableTracker struct{}
+
+func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
 	return func(corev1.ObjectReference) error { return nil }
+}
+
+func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
+	return nil
+}
+
+func (fakeAddressableTracker) OnChanged(obj interface{}) {
 }
 
 func TestFinalizers(t *testing.T) {

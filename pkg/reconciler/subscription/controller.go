@@ -21,7 +21,6 @@ import (
 
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -54,16 +53,15 @@ func NewController(
 		Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 		subscriptionLister:             subscriptionInformer.Lister(),
 		customResourceDefinitionLister: customResourceDefinitionInformer.Lister(),
-		addressableInformer:            addressableInformer,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Tracker is used to notify us when the resources Subscription depends on change, so that the
+	// AddressableTracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }

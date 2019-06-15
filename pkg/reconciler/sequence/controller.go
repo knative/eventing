@@ -24,7 +24,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
@@ -53,14 +52,13 @@ func NewController(
 	r := &Reconciler{
 		Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
 		sequenceLister:      sequenceInformer.Lister(),
-		addressableInformer: addressableInformer,
 		subscriptionLister:  subscriptionInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Sequence, so that
