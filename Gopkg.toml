@@ -82,12 +82,10 @@ required = [
   name = "github.com/json-iterator/go"
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
-# Constrain the version of knative/pkg we would like to import.
-# This controls when we upgrade apis independently of Serving.
+# Our master branch tracks kantive/pkg master.
 [[override]]
   name = "github.com/knative/pkg"
-  # HEAD as of 2919-06-10
-  revision = "f48815f4545fe120cb9d9fb9a05a40367cbe8072"
+  branch = "master"
 
 # TODO why is this overridden?
 [[override]]
