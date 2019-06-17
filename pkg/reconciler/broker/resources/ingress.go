@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/knative/pkg/kmeta"
+	"github.com/knative/pkg/system"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -63,6 +64,10 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 							Image: args.Image,
 							Name:  "ingress",
 							Env: []corev1.EnvVar{
+								{
+									Name:  system.NamespaceEnvKey,
+									Value: system.Namespace(),
+								},
 								{
 									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{

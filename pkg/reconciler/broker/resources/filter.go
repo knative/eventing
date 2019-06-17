@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/knative/pkg/kmeta"
+	"github.com/knative/pkg/system"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -62,6 +63,10 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 							Name:  "filter",
 							Image: args.Image,
 							Env: []corev1.EnvVar{
+								{
+									Name:  system.NamespaceEnvKey,
+									Value: system.Namespace(),
+								},
 								{
 									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
