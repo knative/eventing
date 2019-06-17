@@ -185,7 +185,7 @@ func EventWatcherClusterRole(crName string) *rbacv1.ClusterRole {
 			Name: crName,
 		},
 		Rules: []rbacv1.PolicyRule{
-			rbacv1.PolicyRule{
+			{
 				APIGroups: []string{rbacv1.APIGroupAll},
 				Resources: []string{"events"},
 				Verbs:     []string{"get", "list", "watch"},

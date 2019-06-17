@@ -68,9 +68,9 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	subscriptionLister  listers.SubscriptionLister
+	subscriptionLister             listers.SubscriptionLister
 	customResourceDefinitionLister apiextensionslisters.CustomResourceDefinitionLister
-	addressableTracker eventingduck.AddressableTracker
+	addressableTracker             eventingduck.AddressableTracker
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -129,7 +129,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	if err := subscription.Validate(ctx); err != nil {
 		return err
 	}
-
 
 	// Track the channel using the addressableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.

@@ -34,14 +34,15 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
+	"time"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/sequence/resources"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"time"
-	"github.com/knative/eventing/pkg/duck"
 )
 
 const (
@@ -492,10 +493,10 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
-			sequenceLister:      listers.GetSequenceLister(),
-			addressableTracker:  fakeAddressableTracker{},
-			subscriptionLister:  listers.GetSubscriptionLister(),
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			sequenceLister:     listers.GetSequenceLister(),
+			addressableTracker: fakeAddressableTracker{},
+			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false))
 }
