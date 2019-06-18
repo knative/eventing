@@ -20,6 +20,7 @@ package performance
 
 import (
 	"log"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -101,12 +102,20 @@ func testLatencyForBrokerTrigger(t *testing.T, channelTypeMeta *metav1.TypeMeta)
 		}
 	}
 
-	// create latency metrics and save them as XML files that can be parsed by Testgrid
-	var tc []junit.TestCase
-	for metricName, metricValue := range res {
-		if metricName == TestResultKey {
+	// collect the metricNames and sort them
+	metricNames := make([]string, 0, len(res))
+	for key := range res {
+		if key == TestResultKey {
 			continue
 		}
+		metricNames = append(metricNames, key)
+	}
+	sort.Strings(metricNames)
+
+	// create latency metrics and save them as XML files that can be parsed by Testgrid
+	var tc []junit.TestCase
+	for _, metricName := range metricNames {
+		metricValue := res[metricName]
 		floatMetricValue, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			t.Fatalf("unknown metric value %s for %s", metricValue, metricName)

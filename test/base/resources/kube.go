@@ -60,6 +60,7 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 					sink,
 				},
 			}},
+			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}
