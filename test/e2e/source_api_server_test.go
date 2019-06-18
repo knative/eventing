@@ -50,7 +50,7 @@ func TestApiServerSource(t *testing.T) {
 	// create the ApiServerSource
 	// apiServerSourceResources is the list of resources to watch for this ApiServerSource
 	apiServerSourceResources := []sourcesv1alpha1.ApiServerResource{
-		sourcesv1alpha1.ApiServerResource{
+		{
 			APIVersion: "v1",
 			Kind:       "Event",
 		},

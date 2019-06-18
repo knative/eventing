@@ -38,10 +38,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
+	"time"
+
+	"github.com/knative/eventing/pkg/duck"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "github.com/knative/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/duck"
-	"time"
 )
 
 const (

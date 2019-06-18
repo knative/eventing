@@ -64,12 +64,12 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	triggerLister       listers.TriggerLister
-	channelLister       listers.ChannelLister
-	subscriptionLister  listers.SubscriptionLister
-	brokerLister        listers.BrokerLister
-	serviceLister       corev1listers.ServiceLister
-	addressableTracker  duck.AddressableTracker
+	triggerLister      listers.TriggerLister
+	channelLister      listers.ChannelLister
+	subscriptionLister listers.SubscriptionLister
+	brokerLister       listers.BrokerLister
+	serviceLister      corev1listers.ServiceLister
+	addressableTracker duck.AddressableTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")

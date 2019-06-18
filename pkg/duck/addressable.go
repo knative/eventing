@@ -20,17 +20,18 @@ import (
 	"context"
 	"sync"
 
+	"time"
+
 	"github.com/knative/pkg/apis/duck"
 	"github.com/knative/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/controller"
+	"github.com/knative/pkg/injection/clients/dynamicclient"
+	"github.com/knative/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"github.com/knative/pkg/injection/clients/dynamicclient"
 	"k8s.io/client-go/tools/cache"
-	"time"
-	"github.com/knative/pkg/tracker"
 )
 
 // AddressableInformer is an informer that allows tracking arbitrary Addressables.
@@ -77,9 +78,9 @@ func NewAddressableInformer(ctx context.Context) AddressableInformer {
 }
 
 func (i *addressableInformer) NewTracker(callback func(string), lease time.Duration) AddressableTracker {
-	return &addressableTracker {
+	return &addressableTracker{
 		informer: i,
-		tracker: tracker.New(callback, lease),
+		tracker:  tracker.New(callback, lease),
 		concrete: map[schema.GroupVersionResource]struct{}{},
 	}
 }
@@ -112,9 +113,9 @@ func (i *addressableInformer) ensureInformer(ref corev1.ObjectReference) (cache.
 	return informer, nil
 }
 
-type addressableTracker struct{
+type addressableTracker struct {
 	informer *addressableInformer
-	tracker tracker.Interface
+	tracker  tracker.Interface
 
 	concrete     map[schema.GroupVersionResource]struct{}
 	concreteLock sync.RWMutex

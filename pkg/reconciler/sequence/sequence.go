@@ -55,10 +55,10 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	sequenceLister      listers.SequenceLister
-	tracker             tracker.Interface
-	addressableTracker  duck.AddressableTracker
-	subscriptionLister  eventinglisters.SubscriptionLister
+	sequenceLister     listers.SequenceLister
+	tracker            tracker.Interface
+	addressableTracker duck.AddressableTracker
+	subscriptionLister eventinglisters.SubscriptionLister
 }
 
 // Check that our Reconciler implements controller.Reconciler

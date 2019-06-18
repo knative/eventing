@@ -44,9 +44,10 @@ import (
 
 	. "github.com/knative/pkg/reconciler/testing"
 
-	. "github.com/knative/eventing/pkg/reconciler/testing"
 	"time"
+
 	"github.com/knative/eventing/pkg/duck"
+	. "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
 const (
@@ -500,13 +501,13 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
-			triggerLister:       listers.GetTriggerLister(),
-			channelLister:       listers.GetChannelLister(),
-			subscriptionLister:  listers.GetSubscriptionLister(),
-			brokerLister:        listers.GetBrokerLister(),
-			serviceLister:       listers.GetK8sServiceLister(),
-			addressableTracker:  fakeAddressableTracker{},
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			triggerLister:      listers.GetTriggerLister(),
+			channelLister:      listers.GetChannelLister(),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			brokerLister:       listers.GetBrokerLister(),
+			serviceLister:      listers.GetK8sServiceLister(),
+			addressableTracker: fakeAddressableTracker{},
 		}
 	},
 		false,

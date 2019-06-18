@@ -50,9 +50,9 @@ func NewController(
 	addressableInformer := duck.NewAddressableInformer(ctx)
 
 	r := &Reconciler{
-		Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
-		sequenceLister:      sequenceInformer.Lister(),
-		subscriptionLister:  subscriptionInformer.Lister(),
+		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		sequenceLister:     sequenceInformer.Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
