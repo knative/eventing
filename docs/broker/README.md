@@ -22,11 +22,15 @@ Namespaces are reconciled by the
 1. Creates the Broker Ingress' `ServiceAccount`, `eventing-ingress-filter`.
 1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
    the [`eventing-broker-ingress`](../../config/200-broker-clusterrole.yaml)
-   `Role`.
+   `Role` and the
+   [`eventing-config-reader`](../../config/200-broker-clusterrole.yaml) `Role`
+   (in the system namespace).
 1. Creates the Broker Filter's `ServiceAccount`, `eventing-broker-filter`.
 1. Ensures that `ServiceAccount` has the requisite RBAC permissions by giving it
    the [`eventing-broker-filter`](../../config/200-broker-clusterrole.yaml)
-   `Role`.
+   `Role` and the
+   [`eventing-config-reader`](../../config/200-broker-clusterrole.yaml) `Role`
+   (in the system namespace).
 1. Creates a `Broker` named `default`.
 
 ### Broker
