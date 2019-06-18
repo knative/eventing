@@ -1,0 +1,20 @@
+<testsuites>
+  <testsuite name="TestLatencyForInMemoryBrokerTrigger" time="0" failures="0" tests="0">
+    <testcase name="TestLatencyForInMemoryBrokerTrigger/p99(s)" time="0" classname="TestLatencyForInMemoryBrokerTrigger">
+      <properties>
+        <property name="perf_latency" value="4.011260"></property>
+      </properties>
+    </testcase>
+    <testcase name="TestLatencyForInMemoryBrokerTrigger/p50(s)" time="0" classname="TestLatencyForInMemoryBrokerTrigger">
+      <properties>
+        <property name="perf_latency" value="3.712738"></property>
+      </properties>
+    </testcase>
+    <testcase name="TestLatencyForInMemoryBrokerTrigger/p90(s)" time="0" classname="TestLatencyForInMemoryBrokerTrigger">
+      <properties>
+        <property name="perf_latency" value="3.951154"></property>
+      </properties>
+    </testcase>
+    <properties></properties>
+  </testsuite>
+</testsuites>
