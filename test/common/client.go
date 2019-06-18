@@ -39,7 +39,7 @@ type Client struct {
 
 	Namespace string
 	T         *testing.T
-	Cleaner   *Cleaner
+	Tracker   *Tracker
 }
 
 // NewClient instantiates and returns several clientsets required for making request to the
@@ -77,6 +77,6 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 
 	client.Namespace = namespace
 	client.T = t
-	client.Cleaner = NewCleaner(t.Logf, client.Dynamic)
+	client.Tracker = NewTracker(t.Logf, client.Dynamic)
 	return client, nil
 }
