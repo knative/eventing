@@ -106,12 +106,12 @@ metadata:
 data:
   # Broker URL's for the provisioner. Replace this with the URL's for your kafka cluster,
   # which is in the format of my-cluster-kafka-bootstrap.my-kafka-namespace:9092.
-  bootstrap_servers: REPLACE_WITH_CLUSTER_URL
+  bootstrapServers: REPLACE_WITH_CLUSTER_URL
 
   # Consumer mode to dispatch events from different partitions in parallel.
   # By default(multiplex), partitions are multiplexed with a single go channel.
   # `multiplex` and `partitions` are valid values.
-  ## consumer_mode: partitions
+  ## consumerMode: partitions
 ---
 
 apiVersion: apps/v1
@@ -158,7 +158,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kafka-channel-dispatcher
-  namespace: knative-eventing
 rules:
   - apiGroups:
       - "" # Core API group.
@@ -182,7 +181,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kafka-channel-dispatcher
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: kafka-channel-dispatcher

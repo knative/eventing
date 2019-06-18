@@ -17,14 +17,22 @@ limitations under the License.
 package trigger
 
 import (
+	"context"
+
+	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/controller"
+	"k8s.io/client-go/tools/cache"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
-	corev1informers "k8s.io/client-go/informers/core/v1"
-	"k8s.io/client-go/tools/cache"
+
+	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/service"
+
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 )
 
 const (
@@ -39,23 +47,24 @@ const (
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
-	opt reconciler.Options,
-	triggerInformer eventinginformers.TriggerInformer,
-	channelInformer eventinginformers.ChannelInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	brokerInformer eventinginformers.BrokerInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	addressableInformer duck.AddressableInformer,
+	ctx context.Context,
+	cmw configmap.Watcher,
 ) *controller.Impl {
 
+	triggerInformer := trigger.Get(ctx)
+	channelInformer := channel.Get(ctx)
+	subscriptionInformer := subscription.Get(ctx)
+	brokerInformer := broker.Get(ctx)
+	serviceInformer := service.Get(ctx)
+	addressableInformer := duck.NewAddressableInformer(ctx)
+
 	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		triggerLister:       triggerInformer.Lister(),
-		channelLister:       channelInformer.Lister(),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		brokerLister:        brokerInformer.Lister(),
-		serviceLister:       serviceInformer.Lister(),
-		addressableInformer: addressableInformer,
+		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		triggerLister:      triggerInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
+		subscriptionLister: subscriptionInformer.Lister(),
+		brokerLister:       brokerInformer.Lister(),
+		serviceLister:      serviceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -64,13 +73,13 @@ func NewController(
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
+	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		// Call the tracker's OnChanged method, but we've seen the objects
 		// coming through this path missing TypeMeta, so ensure it is properly
 		// populated.
 		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
+			r.addressableTracker.OnChanged,
 			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
 		),
 	))

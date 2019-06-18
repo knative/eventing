@@ -34,6 +34,10 @@ type ChannelOption func(*v1alpha1.Channel)
 // NewChannel creates a Channel with ChannelOptions
 func NewChannel(name, namespace string, o ...ChannelOption) *v1alpha1.Channel {
 	c := &v1alpha1.Channel{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Channel",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

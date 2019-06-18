@@ -17,8 +17,11 @@ limitations under the License.
 package eventtype
 
 import (
+	"context"
 	"fmt"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	"github.com/knative/pkg/tracker"
 
@@ -153,9 +156,9 @@ func TestReconcile(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:            reconciler.NewBase(opt, controllerAgentName),
+			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 			eventTypeLister: listers.GetEventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
 			tracker:         tracker.New(func(string) {}, 0),

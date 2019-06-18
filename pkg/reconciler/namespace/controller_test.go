@@ -19,31 +19,22 @@ package namespace
 import (
 	"testing"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	logtesting "github.com/knative/pkg/logging/testing"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/namespace/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/serviceaccount/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/rbacv1/rolebinding/fake"
 )
 
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-	eventingInformer := eventinginformers.NewSharedInformerFactory(eventingClient, 0)
+	ctx, _ := SetupFakeContext(t)
 
-	namespaceInformer := kubeInformer.Core().V1().Namespaces()
-	serviceAccountInformer := kubeInformer.Core().V1().ServiceAccounts()
-	roleBindingInformer := kubeInformer.Rbac().V1().RoleBindings()
-	brokerInformer := eventingInformer.Eventing().V1alpha1().Brokers()
-
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	}, namespaceInformer, serviceAccountInformer, roleBindingInformer, brokerInformer)
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

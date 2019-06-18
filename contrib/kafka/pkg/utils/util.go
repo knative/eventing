@@ -22,13 +22,12 @@ import (
 	"strings"
 
 	cluster "github.com/bsm/sarama-cluster"
-
 	"github.com/knative/pkg/configmap"
 )
 
 const (
-	BrokerConfigMapKey                 = "bootstrap_servers"
-	ConsumerModeConfigMapKey           = "consumer_mode"
+	BrokerConfigMapKey                 = "bootstrapServers"
+	ConsumerModeConfigMapKey           = "consumerMode"
 	ConsumerModePartitionConsumerValue = "partitions"
 	ConsumerModeMultiplexConsumerValue = "multiplex"
 	KafkaChannelSeparator              = "."
@@ -80,7 +79,7 @@ func GetKafkaConfig(path string) (*KafkaConfig, error) {
 		case ConsumerModePartitionConsumerValue:
 			config.ConsumerMode = cluster.ConsumerModePartitions
 		default:
-			log.Printf("consumer_mode: %q is invalid. Using default mode %q", mode, ConsumerModeMultiplexConsumerValue)
+			log.Printf("consumerMode: %q is invalid. Using default mode %q", mode, ConsumerModeMultiplexConsumerValue)
 			config.ConsumerMode = cluster.ConsumerModeMultiplex
 		}
 	}

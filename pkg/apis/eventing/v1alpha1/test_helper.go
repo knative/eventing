@@ -17,9 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/apps/v1"
-
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/pkg/apis"
+	pkgduckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	v1 "k8s.io/api/apps/v1"
 )
 
 type testHelper struct{}
@@ -41,6 +43,15 @@ func (t testHelper) NotReadyChannelStatus() *ChannelStatus {
 	return cs
 }
 
+func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
+	cs := &duckv1alpha1.ChannelableStatus{pkgduckv1alpha1.AddressStatus{&pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{&apis.URL{Scheme: "http", Host: "foo"}}, "http://foo"}}, duckv1alpha1.SubscribableTypeStatus{}}
+	return cs
+}
+
+func (t testHelper) NotReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
+	return &duckv1alpha1.ChannelableStatus{}
+}
+
 func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
 	ss := &SubscriptionStatus{}
 	ss.MarkChannelReady()
@@ -57,6 +68,18 @@ func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
 
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
+	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
+	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
+	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
+	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
+	return bs
+}
+
+func (t testHelper) ReadyBrokerStatusDeprecated() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
 	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())

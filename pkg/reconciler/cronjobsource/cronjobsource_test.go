@@ -19,9 +19,10 @@ package cronjobsource
 import (
 	"context"
 	"fmt"
-	"github.com/knative/pkg/configmap"
 	"os"
 	"testing"
+
+	"github.com/knative/pkg/configmap"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -393,9 +394,9 @@ func TestAllCases(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeInjectionFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:             reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+			Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 			cronjobLister:    listers.GetCronJobSourceLister(),
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),

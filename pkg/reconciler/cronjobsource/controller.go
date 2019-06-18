@@ -18,6 +18,7 @@ package cronjobsource
 
 import (
 	"context"
+
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -50,7 +51,7 @@ func NewController(
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:             reconciler.NewInjectionBase(ctx, controllerAgentName, cmw),
+		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 		cronjobLister:    cronJobSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),

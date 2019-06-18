@@ -19,46 +19,24 @@ package controller
 import (
 	"testing"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	logtesting "github.com/knative/pkg/logging/testing"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/endpoints/fake"
+	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service/fake"
 )
 
-func TestNewController(t *testing.T) {
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
+func TestNew(t *testing.T) {
+	defer logtesting.ClearAll()
+	ctx, _ := SetupFakeContext(t)
 
-	// Create informer factories with fake clients. The second parameter sets the
-	// resync period to zero, disabling it.
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-	eventingInformerFactory := informers.NewSharedInformerFactory(eventingClient, 0)
-
-	// Eventing
-	imcInformer := eventingInformerFactory.Messaging().V1alpha1().InMemoryChannels()
-
-	// Kube
-	serviceInformer := kubeInformerFactory.Core().V1().Services()
-	endpointsInformer := kubeInformerFactory.Core().V1().Endpoints()
-	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
-
-	c := NewController(
-		reconciler.Options{
-			KubeClientSet:     kubeClient,
-			EventingClientSet: eventingClient,
-			Logger:            logtesting.TestLogger(t),
-		},
-		systemNS,
-		dispatcherDeploymentName,
-		dispatcherServiceName,
-		imcInformer,
-		deploymentInformer,
-		serviceInformer,
-		endpointsInformer)
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
-		t.Fatalf("Failed to create with NewController")
+		t.Fatal("Expected NewController to return a non-nil value")
 	}
 }

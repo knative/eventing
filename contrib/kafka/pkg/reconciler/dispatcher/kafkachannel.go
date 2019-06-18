@@ -165,6 +165,10 @@ func (r *Reconciler) reconcile(ctx context.Context, kc *v1alpha1.KafkaChannel) e
 		return err
 	}
 	kc.Status.SubscribableTypeStatus.SubscribableStatus = r.createSubscribableStatus(kc.Spec.Subscribable, failedSubscriptions)
+	if len(failedSubscriptions) > 0 {
+		logging.FromContext(ctx).Error("Some kafka subscriptions failed to subscribe")
+		return fmt.Errorf("Some kafka subscriptions failed to subscribe")
+	}
 	return nil
 }
 

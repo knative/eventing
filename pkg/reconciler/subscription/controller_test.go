@@ -1,7 +1,7 @@
 /*
 Copyright 2019 The Knative Authors
 
-Licensed under the Apache License, Veroute.on 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -19,32 +19,21 @@ package subscription
 import (
 	"testing"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
-	"github.com/knative/eventing/pkg/reconciler"
+	"github.com/knative/pkg/configmap"
 	logtesting "github.com/knative/pkg/logging/testing"
-	fakeapiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
-	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	. "github.com/knative/pkg/reconciler/testing"
+
+	_ "github.com/knative/pkg/injection/informers/apiextinformers/apiextensionsv1beta1/crd/fake"
+
+	// Fake injection informers
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription/fake"
 )
 
 func TestNew(t *testing.T) {
 	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	apiExtensionsClient := fakeapiextensionsclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-	apiExtensionsInformer := apiextensionsinformers.NewSharedInformerFactory(apiExtensionsClient, 0)
+	ctx, _ := SetupFakeContext(t)
 
-	subscriptionInformer := eventingInformer.Eventing().V1alpha1().Subscriptions()
-	customResourceDefinitionInformer := apiExtensionsInformer.Apiextensions().V1beta1().CustomResourceDefinitions()
-	addressableInformer := &fakeAddressableInformer{}
-	c := NewController(reconciler.Options{
-		KubeClientSet:          kubeClient,
-		EventingClientSet:      eventingClient,
-		ApiExtensionsClientSet: apiExtensionsClient,
-		Logger:                 logtesting.TestLogger(t),
-	}, subscriptionInformer, addressableInformer, customResourceDefinitionInformer)
+	c := NewController(ctx, configmap.NewFixedWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

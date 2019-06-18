@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	cluster "github.com/bsm/sarama-cluster"
-
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/knative/pkg/system/testing"
 )
@@ -48,32 +47,32 @@ func TestGetKafkaConfig(t *testing.T) {
 			getError: "missing configuration",
 		},
 		{
-			name:     "configmap with no bootstrap_servers key",
+			name:     "configmap with no bootstrapServers key",
 			data:     map[string]string{"key": "value"},
-			getError: "missing key bootstrap_servers in configuration",
+			getError: "missing key bootstrapServers in configuration",
 		},
 		{
-			name:     "configmap with empty bootstrap_servers value",
-			data:     map[string]string{"bootstrap_servers": ""},
-			getError: "empty bootstrap_servers value in configuration",
+			name:     "configmap with empty bootstrapServers value",
+			data:     map[string]string{"bootstrapServers": ""},
+			getError: "empty bootstrapServers value in configuration",
 		},
 		{
-			name: "single bootstrap_servers",
-			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092"},
+			name: "single bootstrapServers",
+			data: map[string]string{"bootstrapServers": "kafkabroker.kafka:9092"},
 			expected: &KafkaConfig{
 				Brokers: []string{"kafkabroker.kafka:9092"},
 			},
 		},
 		{
-			name: "multiple bootstrap_servers",
-			data: map[string]string{"bootstrap_servers": "kafkabroker1.kafka:9092,kafkabroker2.kafka:9092"},
+			name: "multiple bootstrapServers",
+			data: map[string]string{"bootstrapServers": "kafkabroker1.kafka:9092,kafkabroker2.kafka:9092"},
 			expected: &KafkaConfig{
 				Brokers: []string{"kafkabroker1.kafka:9092", "kafkabroker2.kafka:9092"},
 			},
 		},
 		{
 			name: "partition consumer",
-			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "partitions"},
+			data: map[string]string{"bootstrapServers": "kafkabroker.kafka:9092", "consumerMode": "partitions"},
 			expected: &KafkaConfig{
 				Brokers:      []string{"kafkabroker.kafka:9092"},
 				ConsumerMode: cluster.ConsumerModePartitions,
@@ -81,15 +80,15 @@ func TestGetKafkaConfig(t *testing.T) {
 		},
 		{
 			name: "default multiplex",
-			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "multiplex"},
+			data: map[string]string{"bootstrapServers": "kafkabroker.kafka:9092", "consumerMode": "multiplex"},
 			expected: &KafkaConfig{
 				Brokers:      []string{"kafkabroker.kafka:9092"},
 				ConsumerMode: cluster.ConsumerModeMultiplex,
 			},
 		},
 		{
-			name: "default multiplex from invalid consumer_mode",
-			data: map[string]string{"bootstrap_servers": "kafkabroker.kafka:9092", "consumer_mode": "foo"},
+			name: "default multiplex from invalid consumerMode",
+			data: map[string]string{"bootstrapServers": "kafkabroker.kafka:9092", "consumerMode": "foo"},
 			expected: &KafkaConfig{
 				Brokers:      []string{"kafkabroker.kafka:9092"},
 				ConsumerMode: cluster.ConsumerModeMultiplex,
