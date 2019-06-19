@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/system"
 
 	"github.com/knative/pkg/tracker"
 
@@ -70,19 +71,23 @@ func init() {
 
 func TestAllCases(t *testing.T) {
 	// Events
-	saIngressEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "Service account 'eventing-broker-ingress' created for the Broker")
-	rbIngressEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "Service account RBAC 'eventing-broker-ingress' created for the Broker")
-	saFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "Service account 'eventing-broker-filter' created for the Broker")
-	rbFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "Service account RBAC 'eventing-broker-filter' created for the Broker")
+	saIngressEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "ServiceAccount 'eventing-broker-ingress' created for the Broker")
+	rbIngressEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'test-namespace/eventing-broker-ingress' created for the Broker")
+	rbIngressConfigEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'knative-testing/eventing-config-reader-test-namespace-eventing-broker-ingress' created for the Broker")
+	saFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "ServiceAccount 'eventing-broker-filter' created for the Broker")
+	rbFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'test-namespace/eventing-broker-filter' created for the Broker")
+	rbFilterConfigEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'knative-testing/eventing-config-reader-test-namespace-eventing-broker-filter' created for the Broker")
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
 
 	// Object
 	broker := resources.MakeBroker(testNS)
 	saIngress := resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName)
-	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
+	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, testNS, resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
+	rbIngressConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.IngressServiceAccountName, testNS), system.Namespace(), resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.ConfigClusterRoleName)
 	saFilter := resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName)
-	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
+	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, testNS, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
+	rbFilterConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.FilterServiceAccountName, testNS), system.Namespace(), resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.ConfigClusterRoleName)
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -124,14 +129,16 @@ func TestAllCases(t *testing.T) {
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
 			saIngressEvent,
 			rbIngressEvent,
+			rbIngressConfigEvent,
 			saFilterEvent,
 			rbFilterEvent,
+			rbFilterConfigEvent,
 			brokerEvent,
 			nsEvent,
 		},
@@ -139,8 +146,10 @@ func TestAllCases(t *testing.T) {
 			broker,
 			saIngress,
 			rbIngress,
+			rbIngressConfig,
 			saFilter,
 			rbFilter,
+			rbFilterConfig,
 		},
 	}, {
 		Name: "Namespace enabled, broker exists",
@@ -150,21 +159,25 @@ func TestAllCases(t *testing.T) {
 			),
 			resources.MakeBroker(testNS),
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
 			saIngressEvent,
 			rbIngressEvent,
+			rbIngressConfigEvent,
 			saFilterEvent,
 			rbFilterEvent,
+			rbFilterConfigEvent,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			saIngress,
 			rbIngress,
+			rbIngressConfig,
 			saFilter,
 			rbFilter,
+			rbFilterConfig,
 		},
 	}, {
 		Name: "Namespace enabled, broker exists with no label",
@@ -179,7 +192,7 @@ func TestAllCases(t *testing.T) {
 				},
 			},
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 	}, {
@@ -190,21 +203,25 @@ func TestAllCases(t *testing.T) {
 			),
 			saIngress,
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
 			rbIngressEvent,
+			rbIngressConfigEvent,
 			saFilterEvent,
 			rbFilterEvent,
+			rbFilterConfigEvent,
 			brokerEvent,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			broker,
 			rbIngress,
+			rbIngressConfig,
 			saFilter,
 			rbFilter,
+			rbFilterConfig,
 		},
 	}, {
 		Name: "Namespace enabled, ingress role binding exists",
@@ -213,14 +230,16 @@ func TestAllCases(t *testing.T) {
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
 			rbIngress,
+			rbIngressConfig,
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
 			saIngressEvent,
 			saFilterEvent,
 			rbFilterEvent,
+			rbFilterConfigEvent,
 			brokerEvent,
 			nsEvent,
 		},
@@ -229,6 +248,7 @@ func TestAllCases(t *testing.T) {
 			saIngress,
 			saFilter,
 			rbFilter,
+			rbFilterConfig,
 		},
 	}, {
 		Name: "Namespace enabled, filter service account exists",
@@ -238,13 +258,15 @@ func TestAllCases(t *testing.T) {
 			),
 			saFilter,
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
 			saIngressEvent,
 			rbIngressEvent,
+			rbIngressConfigEvent,
 			rbFilterEvent,
+			rbFilterConfigEvent,
 			brokerEvent,
 			nsEvent,
 		},
@@ -252,7 +274,9 @@ func TestAllCases(t *testing.T) {
 			broker,
 			saIngress,
 			rbIngress,
+			rbIngressConfig,
 			rbFilter,
+			rbFilterConfig,
 		},
 	}, {
 		Name: "Namespace enabled, filter role binding exists",
@@ -261,13 +285,15 @@ func TestAllCases(t *testing.T) {
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
 			rbFilter,
+			rbFilterConfig,
 		},
-		Key:                     testNS,
+		Key: testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
 			saIngressEvent,
 			rbIngressEvent,
+			rbIngressConfigEvent,
 			saFilterEvent,
 			brokerEvent,
 			nsEvent,
@@ -276,6 +302,7 @@ func TestAllCases(t *testing.T) {
 			broker,
 			saIngress,
 			rbIngress,
+			rbIngressConfig,
 			saFilter,
 		},
 	},

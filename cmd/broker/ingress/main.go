@@ -41,6 +41,7 @@ import (
 	"github.com/knative/eventing/pkg/utils"
 	"github.com/knative/pkg/configmap"
 	"github.com/knative/pkg/signals"
+	"github.com/knative/pkg/system"
 	pkgtracing "github.com/knative/pkg/tracing"
 	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats"
@@ -100,7 +101,7 @@ func main() {
 	}
 
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	configMapWatcher := configmap.NewInformedWatcher(kc, env.Namespace)
+	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
 
 	zipkinServiceName := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,

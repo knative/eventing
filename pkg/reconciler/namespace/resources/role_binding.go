@@ -24,11 +24,11 @@ import (
 
 // MakeRoleBinding creates a RoleBinding object for the Broker's filter
 // service account 'sa' in the Namespace 'ns'.
-func MakeRoleBinding(name string, sa *corev1.ServiceAccount, clusterRoleName string) *rbacv1.RoleBinding {
+func MakeRoleBinding(name string, ns string, sa *corev1.ServiceAccount, clusterRoleName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: sa.Namespace,
 			Name:      name,
+			Namespace: ns,
 			Labels:    OwnedLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{
