@@ -14,11 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
-
 // This file contains higher-level encapsulated functions for writing cleaner eventing tests.
 
-import "github.com/knative/eventing/test/base/resources"
+package common
+
+import (
+	"fmt"
+
+	"github.com/knative/eventing/test/base/resources"
+	"github.com/knative/pkg/test/helpers"
+)
 
 const (
 	// the two ServiceAccounts are required for creating new Brokers in the current namespace
@@ -33,11 +38,34 @@ const (
 
 // CreateRBACResourcesForBrokers creates required RBAC resources for creating Brokers,
 // see https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md - Manual Setup.
-func CreateRBACResourcesForBrokers(client *Client) {
+func (client *Client) CreateRBACResourcesForBrokers() {
 	client.CreateServiceAccountOrFail(saIngressName)
 	client.CreateServiceAccountOrFail(saFilterName)
-	client.CreateClusterRoleBindingOrFail(saIngressName, crIngressName, client.Namespace)
-	client.CreateClusterRoleBindingOrFail(saIngressName, crConfigReaderName, resources.SystemNamespace)
-	client.CreateClusterRoleBindingOrFail(saFilterName, crFilterName, client.Namespace)
-	client.CreateClusterRoleBindingOrFail(saFilterName, crConfigReaderName, resources.SystemNamespace)
+	// The two RoleBindings are required for running Brokers correctly.
+	client.CreateRoleBindingOrFail(
+		saIngressName,
+		crIngressName,
+		fmt.Sprintf("%s-%s", saIngressName, crIngressName),
+		client.Namespace,
+	)
+	client.CreateRoleBindingOrFail(
+		saFilterName,
+		crFilterName,
+		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
+		client.Namespace,
+	)
+	// The two RoleBindings are required for access to shared configmaps for logging,
+	// tracing, and metrics configuration.
+	client.CreateRoleBindingOrFail(
+		saIngressName,
+		crConfigReaderName,
+		fmt.Sprintf("%s-%s-%s", saIngressName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
+		resources.SystemNamespace,
+	)
+	client.CreateRoleBindingOrFail(
+		saFilterName,
+		crConfigReaderName,
+		fmt.Sprintf("%s-%s-%s", saFilterName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
+		resources.SystemNamespace,
+	)
 }

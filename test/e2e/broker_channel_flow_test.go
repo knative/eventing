@@ -80,7 +80,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
 	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-	common.CreateRBACResourcesForBrokers(client)
+	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)

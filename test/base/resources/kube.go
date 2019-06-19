@@ -19,7 +19,6 @@ package resources
 // This file contains functions that construct common Kubernetes resources.
 
 import (
-	"fmt"
 	"strconv"
 
 	pkgTest "github.com/knative/pkg/test"
@@ -184,12 +183,35 @@ func ServiceAccount(name, namespace string) *corev1.ServiceAccount {
 	}
 }
 
-// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name, namespace, ClusterRole name and binding namespace.
-func ClusterRoleBinding(saName, saNamespace, crName, crbNamespace string) *rbacv1.ClusterRoleBinding {
+// RoleBinding creates a Kubernetes RoleBinding with the given ServiceAccount name and
+// namespace, ClusterRole name, RoleBinding name and namespace.
+func RoleBinding(saName, saNamespace, crName, rbName, rbNamespace string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rbName,
+			Namespace: rbNamespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      saName,
+				Namespace: saNamespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     crName,
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+		},
+	}
+}
+
+// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name and
+// namespace, ClusterRole name, ClusterRoleBinding name.
+func ClusterRoleBinding(saName, saNamespace, crName, crbName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-binding", saName, crName),
-			Namespace: crbNamespace,
+			Name: crbName,
 		},
 		Subjects: []rbacv1.Subject{
 			{

@@ -69,7 +69,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
 	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-	common.CreateRBACResourcesForBrokers(client)
+	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)

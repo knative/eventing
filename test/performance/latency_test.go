@@ -62,7 +62,7 @@ func testLatencyForBrokerTrigger(t *testing.T, channelTypeMeta *metav1.TypeMeta)
 	defer common.TearDown(client)
 
 	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-	common.CreateRBACResourcesForBrokers(client)
+	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta, "")

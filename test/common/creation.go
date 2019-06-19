@@ -255,13 +255,24 @@ func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
 }
 
-// CreateClusterRoleBindingOrFail will create a ClusterRoleBinding or fail the test if there is an error.
-func (client *Client) CreateClusterRoleBindingOrFail(saName, crName, crbNamespace string) {
+// CreateRoleBindingOrFail will create a RoleBinding or fail the test if there is an error.
+func (client *Client) CreateRoleBindingOrFail(saName, crName, rbName, rbNamespace string) {
 	saNamespace := client.Namespace
-	crb := resources.ClusterRoleBinding(saName, saNamespace, crName, crbNamespace)
+	rb := resources.RoleBinding(saName, saNamespace, crName, rbName, rbNamespace)
+	rbs := client.Kube.Kube.RbacV1().RoleBindings(rbNamespace)
+	if _, err := rbs.Create(rb); err != nil {
+		client.T.Fatalf("Failed to create role binding %q: %v", rbName, err)
+	}
+	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "rolebindings", rbNamespace, rb.GetName())
+}
+
+// CreateClusterRoleBindingOrFail will create a ClusterRoleBinding or fail the test if there is an error.
+func (client *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName string) {
+	saNamespace := client.Namespace
+	crb := resources.ClusterRoleBinding(saName, saNamespace, crName, crbName)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
 	if _, err := crbs.Create(crb); err != nil {
-		client.T.Fatalf("Failed to create cluster role binding %q: %v", crName, err)
+		client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
 }

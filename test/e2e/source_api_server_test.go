@@ -18,6 +18,7 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
@@ -42,7 +43,11 @@ func TestApiServerSource(t *testing.T) {
 	cr := resources.EventWatcherClusterRole(clusterRoleName)
 	client.CreateServiceAccountOrFail(serviceAccountName)
 	client.CreateClusterRoleOrFail(cr)
-	client.CreateClusterRoleBindingOrFail(serviceAccountName, clusterRoleName, client.Namespace)
+	client.CreateClusterRoleBindingOrFail(
+		serviceAccountName,
+		clusterRoleName,
+		fmt.Sprintf("%s-%s", serviceAccountName, clusterRoleName),
+	)
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
