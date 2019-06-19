@@ -17,28 +17,26 @@
 ---
 
 # By not specifying a spec, the default Channel for the namespace will be used.
-
+# This will change with the 0.8.0 version, since CCP is being removed than
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
 metadata:
-  name: default-channel
+  name: default
 
 ---
 
-# By specifying spec.channelTemplate, we guarantee the Channel implementation
-# used, and thus guarantee the durability of the events that are sent to this
-# Broker.
+# By specifying spec.channelTemplateSpec, we guarantee a Channel CRD implementation
+# can be used, and thus guarantee the durability of the events that are sent to this
+# Broker, like here with Kafka:
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
 metadata:
-  name: pubsub-channel
+  name: kafka
 spec:
-  channelTemplate:
-    provisioner:
-      apiVersion: eventing.knative.dev/v1alpha1
-      kind: ClusterChannelProvisioner
-      name: gcp-pubsub
-
-
-
+  channelTemplateSpec:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: KafkaChannel
+    spec:
+      numPartitions: 3
+      replicationFactor: 1
