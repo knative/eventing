@@ -40,8 +40,9 @@ func TestApiServerSource(t *testing.T) {
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
 	cr := resources.EventWatcherClusterRole(clusterRoleName)
+	client.CreateServiceAccountOrFail(serviceAccountName)
 	client.CreateClusterRoleOrFail(cr)
-	client.CreateServiceAccountAndBindingOrFail(serviceAccountName, clusterRoleName)
+	client.CreateClusterRoleBindingOrFail(serviceAccountName, clusterRoleName, client.Namespace)
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
@@ -50,7 +51,7 @@ func TestApiServerSource(t *testing.T) {
 	// create the ApiServerSource
 	// apiServerSourceResources is the list of resources to watch for this ApiServerSource
 	apiServerSourceResources := []sourcesv1alpha1.ApiServerResource{
-		sourcesv1alpha1.ApiServerResource{
+		{
 			APIVersion: "v1",
 			Kind:       "Event",
 		},

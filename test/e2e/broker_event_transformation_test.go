@@ -50,13 +50,6 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"
 
-		saIngressName = "eventing-broker-ingress"
-		saFilterName  = "eventing-broker-filter"
-		// The two ClusterRoles are installed in Knative Eventing setup,
-		// see https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md#manual-setup
-		crIngressName = "eventing-broker-ingress"
-		crFilterName  = "eventing-broker-filter"
-
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
 		eventType2   = "type2"
@@ -75,9 +68,8 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 	defer tearDown(client)
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
-	// create ServiceAccount and ClusterRoleBinding with the preinstalled ingress and filter ClusterRoles
-	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
-	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
+	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+	common.CreateRBACResourcesForBrokers(client)
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)

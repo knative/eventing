@@ -61,6 +61,7 @@ func CreatePerfTestCase(metricValue float32, metricName, testName string) junit.
 
 // ParseTestResultFromLog will parse the test result from the pod log
 // TODO(Fredy-Z): this is very hacky and error prone, we need to find a better way to get the result.
+//                Probably write the logs in JSON format as zipkin tracing.
 func ParseTestResultFromLog(client *test.KubeClient, podName, containerName, namespace string) (map[string]string, error) {
 	res := make(map[string]string)
 	if err := wait.PollImmediate(interval, timeout, func() (bool, error) {

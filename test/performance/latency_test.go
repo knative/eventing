@@ -49,22 +49,20 @@ func testLatencyForBrokerTrigger(t *testing.T, channelTypeMeta *metav1.TypeMeta)
 		brokerName  = "perf-latency-broker"
 		triggerName = "perf-latency-trigger"
 
-		saIngressName = "eventing-broker-ingress"
-		saFilterName  = "eventing-broker-filter"
-		// The two ClusterRoles are installed in Knative Eventing setup,
-		// see https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md#manual-setup
-		crIngressName = "eventing-broker-ingress"
-		crFilterName  = "eventing-broker-filter"
-
 		latencyPodName = "perf-latency-pod"
+
+		// the number of events we want to send to the Broker in parallel.
+		// TODO(Fredy-Z): for now this test will only be run against a single-node cluster, and as we want to calculate
+		//                the sample percentile for the test results, 1000 seems to be a reasonable number. In the future
+		//                we might want to change it to a higher number for more complicated tests.
+		eventCount = 1000
 	)
 
 	client := common.Setup(t, false)
 	defer common.TearDown(client)
 
-	// create ServiceAccount and ClusterRoleBinding with the preinstalled ingress and filter ClusterRoles
-	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
-	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
+	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+	common.CreateRBACResourcesForBrokers(client)
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta, "")
@@ -75,7 +73,7 @@ func testLatencyForBrokerTrigger(t *testing.T, channelTypeMeta *metav1.TypeMeta)
 	}
 
 	// create event latency measurement service
-	latencyPod := resources.EventLatencyPod(latencyPodName, brokerURL, 1000)
+	latencyPod := resources.EventLatencyPod(latencyPodName, brokerURL, eventCount)
 	client.CreatePodOrFail(latencyPod, common.WithService(latencyPodName))
 
 	// create the trigger to receive the event and forward it back to the event latency measurement service

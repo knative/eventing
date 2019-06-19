@@ -131,7 +131,7 @@ func HelloWorldPod(name string) *corev1.Pod {
 }
 
 // EventLatencyPod creates a Pod that measures events transfer latency.
-func EventLatencyPod(name, sink string, eventNum int) *corev1.Pod {
+func EventLatencyPod(name, sink string, eventCount int) *corev1.Pod {
 	const imageName = "latency"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -147,7 +147,7 @@ func EventLatencyPod(name, sink string, eventNum int) *corev1.Pod {
 					"-sink",
 					sink,
 					"-event-count",
-					strconv.Itoa(eventNum),
+					strconv.Itoa(eventCount),
 				},
 			}},
 			RestartPolicy: corev1.RestartPolicyOnFailure,
@@ -184,17 +184,18 @@ func ServiceAccount(name, namespace string) *corev1.ServiceAccount {
 	}
 }
 
-// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name, ClusterRole name and namespace.
-func ClusterRoleBinding(saName, crName, namespace string) *rbacv1.ClusterRoleBinding {
+// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name, namespace, ClusterRole name and binding namespace.
+func ClusterRoleBinding(saName, saNamespace, crName, crbNamespace string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s-admin", saName, namespace),
+			Name:      fmt.Sprintf("%s-%s-binding", saName, crName),
+			Namespace: crbNamespace,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      saName,
-				Namespace: namespace,
+				Namespace: saNamespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -212,7 +213,7 @@ func EventWatcherClusterRole(crName string) *rbacv1.ClusterRole {
 			Name: crName,
 		},
 		Rules: []rbacv1.PolicyRule{
-			rbacv1.PolicyRule{
+			{
 				APIGroups: []string{rbacv1.APIGroupAll},
 				Resources: []string{"events"},
 				Verbs:     []string{"get", "list", "watch"},

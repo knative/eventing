@@ -16,6 +16,8 @@ limitations under the License.
 
 package resources
 
+import "fmt"
+
 const (
 	DefaultBrokerName = "default"
 
@@ -26,4 +28,14 @@ const (
 	IngressServiceAccountName = "eventing-broker-ingress"
 	IngressRoleBindingName    = "eventing-broker-ingress"
 	IngressClusterRoleName    = "eventing-broker-ingress"
+
+	ConfigClusterRoleName = "eventing-config-reader"
 )
+
+// ConfigRoleBindingName returns a name for a RoleBinding allowing access to the
+// shared ConfigMaps from a service account in another namespace. Because these
+// are all created in the system namespace, they must be named for their
+// subject namespace.
+func ConfigRoleBindingName(saName, ns string) string {
+	return fmt.Sprintf("eventing-config-reader-%s-%s", ns, saName)
+}

@@ -63,7 +63,7 @@ type ChannelTemplateSpec struct {
 	// Spec defines the Spec to use for each channel created. Passed
 	// in verbatim to the Channel CRD as Spec section.
 	// +optional
-	Spec runtime.RawExtension `json:"spec"`
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
 }
 
 // Internal version of ChannelTemplateSpec that includes ObjectMeta so that
@@ -78,7 +78,7 @@ type ChannelTemplateSpecInternal struct {
 	// Spec defines the Spec to use for each channel created. Passed
 	// in verbatim to the Channel CRD as Spec section.
 	// +optional
-	Spec runtime.RawExtension `json:"spec"`
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
 }
 
 type SequenceSpec struct {
