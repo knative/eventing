@@ -98,7 +98,7 @@ func Setup(t *testing.T, runInParallel bool) *common.Client {
 
 // TearDown will delete created names using clients.
 func TearDown(client *common.Client) {
-	client.Cleaner.Clean(true)
+	client.Tracker.Clean(true)
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
 	}

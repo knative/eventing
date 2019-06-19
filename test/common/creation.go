@@ -43,7 +43,7 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 		if err != nil {
 			client.T.Fatalf("Failed to create channel %q: %v", name, err)
 		}
-		client.Cleaner.AddObj(channel)
+		client.Tracker.AddObj(channel)
 	case resources.InMemoryChannelKind:
 		channel := resources.InMemoryChannel(name)
 		channels := client.Eventing.MessagingV1alpha1().InMemoryChannels(namespace)
@@ -51,7 +51,7 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 		if err != nil {
 			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 		}
-		client.Cleaner.AddObj(channel)
+		client.Tracker.AddObj(channel)
 	case resources.KafkaChannelKind:
 		channel := resources.KafkaChannel(name)
 		channels := client.Kafka.MessagingV1alpha1().KafkaChannels(namespace)
@@ -59,7 +59,7 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 		if err != nil {
 			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 		}
-		client.Cleaner.AddObj(channel)
+		client.Tracker.AddObj(channel)
 	case resources.NatssChannelKind:
 		channel := resources.NatssChannel(name)
 		channels := client.Natss.MessagingV1alpha1().NatssChannels(namespace)
@@ -67,7 +67,7 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 		if err != nil {
 			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 		}
-		client.Cleaner.AddObj(channel)
+		client.Tracker.AddObj(channel)
 	}
 }
 
@@ -93,7 +93,7 @@ func (client *Client) CreateSubscriptionOrFail(
 	if err != nil {
 		client.T.Fatalf("Failed to create subscription %q: %v", name, err)
 	}
-	client.Cleaner.AddObj(subscription)
+	client.Tracker.AddObj(subscription)
 }
 
 // CreateSubscriptionsOrFail will create a list of Subscriptions with the same configuration except the name.
@@ -124,7 +124,7 @@ func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.Ty
 	if err != nil {
 		client.T.Fatalf("Failed to create broker %q: %v", name, err)
 	}
-	client.Cleaner.AddObj(broker)
+	client.Tracker.AddObj(broker)
 }
 
 // CreateBrokersOrFail will create a list of Brokers.
@@ -145,7 +145,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 	if err != nil {
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
-	client.Cleaner.AddObj(trigger)
+	client.Tracker.AddObj(trigger)
 }
 
 // CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.
@@ -164,7 +164,7 @@ func (client *Client) CreateCronJobSourceOrFail(
 	if err != nil {
 		client.T.Fatalf("Failed to create cronjobsource %q: %v", name, err)
 	}
-	client.Cleaner.AddObj(cronJobSource)
+	client.Tracker.AddObj(cronJobSource)
 }
 
 // CreateContainerSourceOrFail will create a ContainerSource or fail the test if there is an error.
@@ -181,7 +181,7 @@ func (client *Client) CreateContainerSourceOrFail(
 	if err != nil {
 		client.T.Fatalf("Failed to create containersource %q: %v", name, err)
 	}
-	client.Cleaner.AddObj(containerSource)
+	client.Tracker.AddObj(containerSource)
 }
 
 // CreateApiServerSourceOrFail will create an ApiServerSource
@@ -200,7 +200,7 @@ func (client *Client) CreateApiServerSourceOrFail(
 	if err != nil {
 		client.T.Fatalf("Failed to create apiserversource %q: %v", name, err)
 	}
-	client.Cleaner.AddObj(apiServerSource)
+	client.Tracker.AddObj(apiServerSource)
 }
 
 // WithService returns an option that creates a Service binded with the given pod.
@@ -213,7 +213,7 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 		if _, err := svcs.Create(svc); err != nil {
 			return err
 		}
-		client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
+		client.Tracker.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
 		return nil
 	}
 }
@@ -232,7 +232,7 @@ func (client *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.P
 	if _, err := client.Kube.CreatePod(pod); err != nil {
 		client.T.Fatalf("Failed to create pod %q: %v", pod.Name, err)
 	}
-	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
+	client.Tracker.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
 }
 
 // CreateServiceAccountAndBindingOrFail creates both ServiceAccount and ClusterRoleBinding with default
@@ -244,14 +244,14 @@ func (client *Client) CreateServiceAccountAndBindingOrFail(saName, crName string
 	if _, err := sas.Create(sa); err != nil {
 		client.T.Fatalf("Failed to create service account %q: %v", saName, err)
 	}
-	client.Cleaner.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
+	client.Tracker.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
 
 	crb := resources.ClusterRoleBinding(saName, crName, namespace)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
 	if _, err := crbs.Create(crb); err != nil {
 		client.T.Fatalf("Failed to create cluster role binding %q: %v", crName, err)
 	}
-	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
+	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
 }
 
 // CreateClusterRoleOrFail creates the given ClusterRole or fail the test if there is an error.
@@ -260,5 +260,5 @@ func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	if _, err := crs.Create(cr); err != nil {
 		client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
 	}
-	client.Cleaner.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
+	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
 }

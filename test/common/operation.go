@@ -102,26 +102,10 @@ func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
 }
 
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
-// If there is a new resource, its TypeMeta needs to be added into the list.
-// TODO(Fredy-Z): make this function more generic by only checking existed resources in the current namespace.
 func (client *Client) WaitForAllTestResourcesReady() error {
-	typemetas := []*metav1.TypeMeta{
-		ChannelTypeMeta,
-		SubscriptionTypeMeta,
-		BrokerTypeMeta,
-		TriggerTypeMeta,
-		KafkaChannelTypeMeta,
-		InMemoryChannelTypeMeta,
-		NatssChannelTypeMeta,
-		ApiServerSourceTypeMeta,
-		CronJobSourceTypeMeta,
-		ContainerSourceTypeMeta,
-	}
-	for _, typemeta := range typemetas {
-		if err := client.WaitForResourcesReady(typemeta); err != nil {
-			return err
-		}
-	}
+	// wait for all Knative resources created in this test to become ready.
+	client.Tracker.WaitForKResourcesReady()
+	// explicitly wait for all pods to become ready.
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err
 	}
