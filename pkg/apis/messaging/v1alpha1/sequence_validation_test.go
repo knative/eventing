@@ -69,7 +69,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
 		},
-		runtime.RawExtension{},
+		&runtime.RawExtension{},
 	}
 	tests := []struct {
 		name string
@@ -103,7 +103,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &SequenceSpec{
-			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, runtime.RawExtension{}},
+			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, &runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
@@ -113,7 +113,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &SequenceSpec{
-			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, runtime.RawExtension{}},
+			ChannelTemplate: ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, &runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
