@@ -47,12 +47,13 @@ func TestEventTransformationForTrigger(t *testing.T) {
 
 func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
 	const (
-		senderName    = "e2e-eventtransformation-sender"
-		brokerName    = "e2e-eventtransformation-broker"
+		senderName = "e2e-eventtransformation-sender"
+		brokerName = "e2e-eventtransformation-broker"
+
 		saIngressName = "eventing-broker-ingress"
 		saFilterName  = "eventing-broker-filter"
-
-		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
+		// The two ClusterRoles are installed in Knative Eventing setup,
+		// see https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md#manual-setup
 		crIngressName = "eventing-broker-ingress"
 		crFilterName  = "eventing-broker-filter"
 
@@ -74,7 +75,7 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 	defer tearDown(client)
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
-	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
+	// create ServiceAccount and ClusterRoleBinding with the preinstalled ingress and filter ClusterRoles
 	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
 	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
 

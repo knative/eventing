@@ -77,7 +77,7 @@ type state struct {
 func init() {
 	flag.StringVar(&sinkURL, "sink", "", "The sink URL for the event destination.")
 	flag.IntVar(&msgSize, "msg-size", 100, "The size of each message we want to send. Generate random strings to avoid caching.")
-	flag.IntVar(&eventNum, "event-num", 10, "The number of events we want to send.")
+	flag.IntVar(&eventNum, "event-count", 10, "The number of events we want to send.")
 	flag.IntVar(&timeout, "timeout", 30, "Timeout in seconds. If we do not receive a message back within a limited time, we consider it to be dropped.")
 	flag.Float64Var(&errorRateThreshold, "error-rate-threshold", 0.1, "Rate of error event deliveries we allow. We fail the test if the error rate crosses the threshold.")
 	flag.StringVar(&encoding, "encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")

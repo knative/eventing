@@ -146,7 +146,7 @@ func EventLatencyPod(name, sink string, eventNum int) *corev1.Pod {
 				Args: []string{
 					"-sink",
 					sink,
-					"-event-num",
+					"-event-count",
 					strconv.Itoa(eventNum),
 				},
 			}},
