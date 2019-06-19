@@ -126,7 +126,7 @@ func TestAllCases(t *testing.T) {
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 		},
-		runtime.RawExtension{Raw: []byte("{}")},
+		&runtime.RawExtension{Raw: []byte("{}")},
 	}
 
 	table := TableTest{
