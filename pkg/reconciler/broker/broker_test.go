@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/knative/pkg/configmap"
+	"github.com/knative/pkg/system"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -1703,6 +1704,10 @@ func envVars(containerName string) []corev1.EnvVar {
 	case filterContainerName:
 		return []corev1.EnvVar{
 			{
+				Name:  system.NamespaceEnvKey,
+				Value: system.Namespace(),
+			},
+			{
 				Name: "NAMESPACE",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
@@ -1717,6 +1722,10 @@ func envVars(containerName string) []corev1.EnvVar {
 		}
 	case ingressContainerName:
 		return []corev1.EnvVar{
+			{
+				Name:  system.NamespaceEnvKey,
+				Value: system.Namespace(),
+			},
 			{
 				Name: "NAMESPACE",
 				ValueFrom: &corev1.EnvVarSource{
