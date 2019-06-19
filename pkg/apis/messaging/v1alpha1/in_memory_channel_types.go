@@ -57,6 +57,9 @@ var _ webhook.GenericCRD = (*InMemoryChannel)(nil)
 type InMemoryChannelSpec struct {
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
+
+	// Channel conforms to Duck type Routable.
+	Routable *eventingduck.Routable `json:"routable,omitempty"`
 }
 
 // ChannelStatus represents the current state of a Channel.

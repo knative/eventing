@@ -18,6 +18,7 @@ package provisioners
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -222,4 +223,42 @@ func (d *MessageDispatcher) resolveURL(destination string, defaultNamespace stri
 		Host:   destination,
 		Path:   "/",
 	}
+}
+
+// ComputeRoutes sends the message to the router.
+func (d *MessageDispatcher) ComputeRoutes(message *Message, router string, defaults DispatchDefaults) ([]string, error) {
+	routerURL := d.resolveURL(router, defaults.Namespace)
+	req, err := http.NewRequest(http.MethodPost, routerURL.String(), bytes.NewReader(message.Payload))
+	if err != nil {
+		return nil, fmt.Errorf("unable to create request %v", err)
+	}
+	req.Header = d.toHTTPHeaders(message.Headers)
+
+	res, err := d.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		// I don't think this is actually reachable with http.Client.Do(), but just to be sure we
+		// check anyway.
+		return nil, errors.New("non-error nil result from http.Client.Do()")
+	}
+	defer res.Body.Close()
+	if isFailure(res.StatusCode) {
+		// reject non-successful responses
+		return nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", res.StatusCode)
+	}
+
+	payload, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to read response %v", err)
+	}
+
+	var routes []string
+	err = json.Unmarshal(payload, &routes)
+	if err != nil {
+		return nil, err
+	}
+
+	return routes, nil
 }

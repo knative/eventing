@@ -23,6 +23,7 @@ package fanout
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -40,6 +41,10 @@ const (
 // Config for a fanout.Handler.
 type Config struct {
 	Subscriptions []eventingduck.SubscriberSpec `json:"subscriptions"`
+
+	// Router specifies the service determining where to dispatch events.
+	Router *eventingduck.RoutableSpec `'json:"router"`
+
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
 	AsyncHandler bool `json:"asyncHandler,omitempty"`
@@ -52,6 +57,9 @@ type Handler struct {
 	receivedMessages chan *forwardMessage
 	receiver         *provisioners.MessageReceiver
 	dispatcher       *provisioners.MessageDispatcher
+
+	// Subscribers index
+	subscribers map[string]int
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -75,8 +83,18 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 		config:           config,
 		dispatcher:       provisioners.NewMessageDispatcher(logger.Sugar()),
 		receivedMessages: make(chan *forwardMessage, messageBufferSize),
-		timeout:          defaultTimeout,
+
+		timeout: defaultTimeout,
 	}
+	if config.Router != nil && config.Subscriptions != nil {
+		handler.subscribers = make(map[string]int)
+		for i, sub := range config.Subscriptions {
+			// TODO: can we not deprecate ref?
+			key := fmt.Sprintf("%s/%s", sub.DeprecatedRef.Namespace, sub.DeprecatedRef.Name)
+			handler.subscribers[key] = i
+		}
+	}
+
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
 	receiver, err := provisioners.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
@@ -108,10 +126,35 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // requests return successfully, then return nil. Else, return an error.
 func (f *Handler) dispatch(msg *provisioners.Message) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
-	for _, sub := range f.config.Subscriptions {
-		go func(s eventingduck.SubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(*msg, s)
-		}(sub)
+
+	if f.config.Router != nil {
+		routes, err := f.dispatcher.ComputeRoutes(msg, f.config.Router.RouterURI, provisioners.DispatchDefaults{})
+		if err != nil {
+			f.logger.Error("Compute routes had an error", zap.Error(err))
+			return err
+		}
+		subsCount := len(f.config.Subscriptions)
+
+		for _, name := range routes {
+			i, ok := f.subscribers[name]
+			if !ok {
+				errorCh <- fmt.Errorf("Invalid route %v", name)
+			} else {
+				go func(s eventingduck.SubscriberSpec) {
+					errorCh <- f.makeFanoutRequest(*msg, s)
+				}(f.config.Subscriptions[i])
+			}
+		}
+
+		for i := subsCount - len(routes); i >= 0; i-- {
+			errorCh <- nil
+		}
+	} else {
+		for _, sub := range f.config.Subscriptions {
+			go func(s eventingduck.SubscriberSpec) {
+				errorCh <- f.makeFanoutRequest(*msg, s)
+			}(sub)
+		}
 	}
 
 	for range f.config.Subscriptions {

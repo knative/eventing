@@ -149,6 +149,11 @@ func (in *InMemoryChannelSpec) DeepCopyInto(out *InMemoryChannelSpec) {
 		*out = new(duckv1alpha1.Subscribable)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Routable != nil {
+		in, out := &in.Routable, &out.Routable
+		*out = new(duckv1alpha1.Routable)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

@@ -153,6 +153,9 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 				AsyncHandler:  true,
 				Subscriptions: c.Spec.Subscribable.Subscribers,
 			}
+			if c.Spec.Routable != nil && c.Spec.Routable.Router.RouterURI != "" {
+				channelConfig.FanoutConfig.Router = &c.Spec.Routable.Router
+			}
 		}
 		cc = append(cc, channelConfig)
 	}
