@@ -17,6 +17,13 @@
 # This script runs the performance tests; It is run by prow daily.
 # For convenience, it can also be executed manually.
 
+# Overwrite the cluster node number to 1
+# TODO(Fredy-Z): since now we only have one single performance test case, and we want to minimize the
+#                impact delay, we perfer to run the test on one single node. When we have more complex 
+#                test scenarios, these two lines can be removed.
+export E2E_MIN_CLUSTER_NODES=1
+export E2E_MAX_CLUSTER_NODES=1
+
 source $(dirname $0)/e2e-common.sh
 
 # Override the default install_test_resources function by only installing Channel CRDs
