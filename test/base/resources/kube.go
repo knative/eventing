@@ -19,7 +19,7 @@ package resources
 // This file contains functions that construct common Kubernetes resources.
 
 import (
-	"fmt"
+	"strconv"
 
 	pkgTest "github.com/knative/pkg/test"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +31,7 @@ import (
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
-	const imageName = "sendevent"
+	const imageName = "sendevents"
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -49,11 +49,11 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 					event.ID,
 					"-event-type",
 					event.Type,
-					"-source",
+					"-event-source",
 					event.Source,
-					"-data",
+					"-event-data",
 					event.Data,
-					"-encoding",
+					"-event-encoding",
 					event.Encoding,
 					"-sink",
 					sink,
@@ -113,17 +113,43 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 
 // HelloWorldPod creates a Pod that logs "Hello, World!".
 func HelloWorldPod(name string) *corev1.Pod {
+	const imageName = "helloworld"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
-				Name:            "helloworld",
-				Image:           pkgTest.ImagePath("helloworld"),
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
 			}},
 			RestartPolicy: corev1.RestartPolicyNever,
+		},
+	}
+}
+
+// EventLatencyPod creates a Pod that measures events transfer latency.
+func EventLatencyPod(name, sink string, eventCount int) *corev1.Pod {
+	const imageName = "latency"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"perftest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-sink",
+					sink,
+					"-event-count",
+					strconv.Itoa(eventCount),
+				},
+			}},
+			RestartPolicy: corev1.RestartPolicyOnFailure,
 		},
 	}
 }
@@ -157,17 +183,41 @@ func ServiceAccount(name, namespace string) *corev1.ServiceAccount {
 	}
 }
 
-// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name, ClusterRole name and namespace.
-func ClusterRoleBinding(saName, crName, namespace string) *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
+// RoleBinding creates a Kubernetes RoleBinding with the given ServiceAccount name and
+// namespace, ClusterRole name, RoleBinding name and namespace.
+func RoleBinding(saName, saNamespace, crName, rbName, rbNamespace string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s-admin", saName, namespace),
+			Name:      rbName,
+			Namespace: rbNamespace,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      saName,
-				Namespace: namespace,
+				Namespace: saNamespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     crName,
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+		},
+	}
+}
+
+// ClusterRoleBinding creates a Kubernetes ClusterRoleBinding with the given ServiceAccount name and
+// namespace, ClusterRole name, ClusterRoleBinding name.
+func ClusterRoleBinding(saName, saNamespace, crName, crbName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crbName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      saName,
+				Namespace: saNamespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{

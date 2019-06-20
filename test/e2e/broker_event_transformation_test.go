@@ -42,19 +42,13 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testEventTransformationForTrigger)
+	runTests(t, provisioners, common.FeatureBasic, testEventTransformationForTrigger)
 }
 
 func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
 	const (
-		senderName    = "e2e-eventtransformation-sender"
-		brokerName    = "e2e-eventtransformation-broker"
-		saIngressName = "eventing-broker-ingress"
-		saFilterName  = "eventing-broker-filter"
-
-		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
-		crIngressName = "eventing-broker-ingress"
-		crFilterName  = "eventing-broker-filter"
+		senderName = "e2e-eventtransformation-sender"
+		brokerName = "e2e-eventtransformation-broker"
 
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -70,13 +64,12 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 		loggerPodName         = "logger-pod"
 	)
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
-	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	client.CreateServiceAccountAndBindingOrFail(saIngressName, crIngressName)
-	client.CreateServiceAccountAndBindingOrFail(saFilterName, crFilterName)
+	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)

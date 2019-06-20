@@ -63,8 +63,8 @@ type eventReceiver struct {
 // and sends different events to the broker's address. Finally, it verifies that only
 // the appropriate events are routed to the subscribers.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 
 	// Label namespace so that it creates the default broker.
 	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {

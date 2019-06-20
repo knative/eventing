@@ -26,11 +26,6 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
-type example struct {
-	ID      string `json:"sequence"`
-	Message string `json:"msg"`
-}
-
 var (
 	eventType   string
 	eventSource string
@@ -46,14 +41,13 @@ func init() {
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	ctx := event.Context.AsV02()
 
-	data := &example{}
-	if err := event.DataAs(data); err != nil {
+	dataBytes, err := event.DataBytes()
+	if err != nil {
 		fmt.Printf("Got Data Error: %s\n", err.Error())
 		return err
 	}
-
 	log.Println("Received a new event: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
+	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
 
 	ctx.SetSource(eventSource)
 	ctx.SetType(eventType)

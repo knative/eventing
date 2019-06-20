@@ -16,6 +16,9 @@ limitations under the License.
 
 package resources
 
+// SystemNamespace is the namespace where Eventing is installed, it's default to be knative-eventing.
+const SystemNamespace = "knative-eventing"
+
 const (
 	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
 	InMemoryProvisioner = "in-memory"

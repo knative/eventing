@@ -2,18 +2,21 @@
 
 
 [[projects]]
-  digest = "1:53455b555be78dbce89fdea13e4bf24e57ef3a0a8da5db9d7c8cedca68c94c07"
+  digest = "1:99a39c7f9416a3217b9310e74d5fb76475c0c037ced8b0dd5dc406b14815d92a"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
     "container/apiv1",
     "iam",
+    "internal",
     "internal/optional",
+    "internal/trace",
     "internal/version",
     "monitoring/apiv3",
     "pubsub",
     "pubsub/apiv1",
     "pubsub/internal/distribution",
+    "storage",
     "trace/apiv2",
   ]
   pruneopts = "NUT"
@@ -500,6 +503,7 @@
     "system",
     "system/testing",
     "test",
+    "test/helpers",
     "test/ingress",
     "test/logging",
     "test/monitoring",
@@ -515,10 +519,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:eeebb49b9a2eb1dd46487913c8155bce627f8657b0ef6aa1d30acb729e277f1c"
+  digest = "1:6d5e4a87460794159450694fc6d67efc757b73e7ac99a21e7c0479eb76c1911c"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
+    "shared/common",
+    "shared/gcs",
+    "shared/junit",
+    "shared/prow",
+    "shared/testgrid",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
@@ -934,13 +943,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:abe7c89519ed2f514a5a9f795765439036094bcd6d25447c211c8b219a6cc251"
+  digest = "1:d7c2254211f0984c81559eef4b67c1cbaa061212ecadaf4eb8a88c2cdd45dd0b"
   name = "google.golang.org/api"
   packages = [
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
     "googleapi/transport",
     "internal",
     "iterator",
     "option",
+    "storage/v1",
     "support/bundler",
     "transport",
     "transport/grpc",
@@ -948,7 +961,7 @@
     "transport/http/internal/propagation",
   ]
   pruneopts = "NUT"
-  revision = "c5e41677a12edeac5437ebceb220505ec6b90669"
+  revision = "99157d28da3440ab21f030f8ea3c2b8143a311bd"
 
 [[projects]]
   digest = "1:b400989fa9ecf8f825e9092d41c9779444afeda5d5ce7f5c9d4a9ca9d05c949c"
@@ -973,7 +986,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7d224bd384f6fbb88bb34c0a939911edda870cbc83719545184e90daaad60ac3"
+  digest = "1:4d5dd26f06ad3b8a1bb834f69a82e18cde28b311832b7de00504ef181cbb9b1c"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -986,6 +999,7 @@
     "googleapis/iam/v1",
     "googleapis/monitoring/v3",
     "googleapis/pubsub/v1",
+    "googleapis/rpc/code",
     "googleapis/rpc/status",
     "protobuf/field_mask",
   ]
@@ -993,25 +1007,41 @@
   revision = "b5d43981345bdb2c233eb4bf3277847b48c6fdc6"
 
 [[projects]]
-  digest = "1:f16e8193cfe5fdd5b3d62c2d22f4a6bf0a08c61f99d78b54e16f780a9db4f923"
+  digest = "1:e289f85ba02e2df4965a3e92f04c8266b09b8a41171bf33488865e3f94f1fa69"
   name = "google.golang.org/grpc"
   packages = [
     ".",
     "balancer",
     "balancer/base",
+    "balancer/grpclb",
+    "balancer/grpclb/grpc_lb_v1",
     "balancer/roundrobin",
+    "binarylog/grpc_binarylog_v1",
     "codes",
     "connectivity",
     "credentials",
+    "credentials/alts",
+    "credentials/alts/internal",
+    "credentials/alts/internal/authinfo",
+    "credentials/alts/internal/conn",
+    "credentials/alts/internal/handshaker",
+    "credentials/alts/internal/handshaker/service",
+    "credentials/alts/internal/proto/grpc_gcp",
+    "credentials/google",
+    "credentials/internal",
     "credentials/oauth",
     "encoding",
     "encoding/proto",
     "grpclog",
     "internal",
     "internal/backoff",
+    "internal/balancerload",
+    "internal/binarylog",
     "internal/channelz",
     "internal/envconfig",
     "internal/grpcrand",
+    "internal/grpcsync",
+    "internal/syscall",
     "internal/transport",
     "keepalive",
     "metadata",
@@ -1025,8 +1055,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "2e463a05d100327ca47ac218281906921038fd95"
-  version = "v1.16.0"
+  revision = "501c41df7f472c740d0674ff27122f3f48c80ce7"
+  version = "v1.21.1"
 
 [[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
@@ -1497,12 +1527,15 @@
     "github.com/knative/pkg/system",
     "github.com/knative/pkg/system/testing",
     "github.com/knative/pkg/test",
+    "github.com/knative/pkg/test/helpers",
     "github.com/knative/pkg/test/logging",
     "github.com/knative/pkg/tracing",
     "github.com/knative/pkg/tracing/config",
     "github.com/knative/pkg/tracker",
     "github.com/knative/pkg/webhook",
     "github.com/knative/test-infra/scripts",
+    "github.com/knative/test-infra/shared/junit",
+    "github.com/knative/test-infra/shared/testgrid",
     "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",
     "github.com/nats-io/nats-streaming-server/server",
