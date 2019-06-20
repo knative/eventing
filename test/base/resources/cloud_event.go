@@ -16,13 +16,12 @@ limitations under the License.
 
 package resources
 
-// CloudEvent specifies the arguments for a CloudEvent sent by the sendevent
-// binary.
+// CloudEvent specifies the arguments for a CloudEvent used by the sendevents or transformevents image.
 type CloudEvent struct {
 	ID       string
 	Type     string
 	Source   string
-	Data     string
+	Data     string // must be in json format
 	Encoding string // binary or structured
 }
 

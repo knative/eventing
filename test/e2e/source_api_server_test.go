@@ -18,6 +18,7 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
@@ -35,13 +36,18 @@ func TestApiServerSource(t *testing.T) {
 		loggerPodName      = "e2e-api-server-source-logger-pod"
 	)
 
-	client := Setup(t, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
 	cr := resources.EventWatcherClusterRole(clusterRoleName)
+	client.CreateServiceAccountOrFail(serviceAccountName)
 	client.CreateClusterRoleOrFail(cr)
-	client.CreateServiceAccountAndBindingOrFail(serviceAccountName, clusterRoleName)
+	client.CreateClusterRoleBindingOrFail(
+		serviceAccountName,
+		clusterRoleName,
+		fmt.Sprintf("%s-%s", serviceAccountName, clusterRoleName),
+	)
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
