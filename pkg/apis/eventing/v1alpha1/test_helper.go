@@ -44,7 +44,17 @@ func (t testHelper) NotReadyChannelStatus() *ChannelStatus {
 }
 
 func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
-	cs := &duckv1alpha1.ChannelableStatus{pkgduckv1alpha1.AddressStatus{&pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{&apis.URL{Scheme: "http", Host: "foo"}}, "http://foo"}}, duckv1alpha1.SubscribableTypeStatus{}}
+	cs := &duckv1alpha1.ChannelableStatus{
+		Status: duckv1beta1.Status{},
+		AddressStatus: pkgduckv1alpha1.AddressStatus{
+			Address: &pkgduckv1alpha1.Addressable{
+				Addressable: duckv1beta1.Addressable{
+					URL: &apis.URL{Scheme: "http", Host: "foo"},
+				},
+				Hostname: "foo",
+			},
+		},
+		SubscribableTypeStatus: duckv1alpha1.SubscribableTypeStatus{}}
 	return cs
 }
 
