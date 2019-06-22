@@ -209,6 +209,8 @@ func TestReceiver(t *testing.T) {
 					"Knative-Foo": []string{"baz", "qux"},
 					// X-Ot-Foo will pass as a prefix match.
 					"X-Ot-Foo": []string{"haden"},
+					// knative-importer will be canonicalized.
+					"knative-importer": []string{"exporter"},
 				},
 			},
 			expectedHeaders: http.Header{
@@ -222,6 +224,8 @@ func TestReceiver(t *testing.T) {
 				"Knative-Foo": []string{"baz", "qux"},
 				// X-Ot-Foo will pass as a prefix match.
 				"X-Ot-Foo": []string{"haden"},
+				// Passes prefix match, but gets case changed.
+				"Knative-Importer": []string{"exporter"},
 			},
 			expectedDispatch: true,
 			returnedEvent:    makeDifferentEvent(),
