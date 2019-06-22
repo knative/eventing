@@ -27,6 +27,12 @@ rules:
       - list
       - watch
       - update
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels/finalizers
+    verbs:
+      - update
   # For watching the health of the service
   - apiGroups:
       - "" # Core API group.
