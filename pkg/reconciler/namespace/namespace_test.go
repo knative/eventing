@@ -129,7 +129,7 @@ func TestAllCases(t *testing.T) {
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
@@ -159,7 +159,7 @@ func TestAllCases(t *testing.T) {
 			),
 			resources.MakeBroker(testNS),
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
@@ -192,7 +192,7 @@ func TestAllCases(t *testing.T) {
 				},
 			},
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 	}, {
@@ -203,7 +203,7 @@ func TestAllCases(t *testing.T) {
 			),
 			saIngress,
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
@@ -232,7 +232,7 @@ func TestAllCases(t *testing.T) {
 			rbIngress,
 			rbIngressConfig,
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
@@ -258,7 +258,7 @@ func TestAllCases(t *testing.T) {
 			),
 			saFilter,
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
@@ -287,7 +287,7 @@ func TestAllCases(t *testing.T) {
 			rbFilter,
 			rbFilterConfig,
 		},
-		Key: testNS,
+		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
