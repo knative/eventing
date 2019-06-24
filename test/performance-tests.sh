@@ -19,7 +19,7 @@
 
 # Overwrite the cluster node number to 1
 # TODO(Fredy-Z): since now we only have one single performance test case, and we want to minimize the
-#                impact delay, we perfer to run the test on one single node. When we have more complex 
+#                impact delay, we perfer to run the test on one single node. When we have more complex
 #                test scenarios, these two lines can be removed.
 export E2E_MIN_CLUSTER_NODES=1
 export E2E_MAX_CLUSTER_NODES=1
@@ -28,12 +28,12 @@ source $(dirname $0)/e2e-common.sh
 
 # Override the default install_test_resources function by only installing Channel CRDs
 function install_test_resources() {
-    install_channel_crds() || return 1
+  install_channel_crds || return 1
 }
 
 # Override the default uninstall_test_resources function by only uninstalling Channel CRDs
 function uninstall_test_resources() {
-    uninstall_channel_crds()
+  uninstall_channel_crds
 }
 
 initialize $@ --skip-istio-addon
