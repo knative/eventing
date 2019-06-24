@@ -107,7 +107,7 @@ func TestRunnableServerShutdownContext(t *testing.T) {
 
 	// Give the request time to start
 	time.Sleep(time.Millisecond * 50)
-	shutdownCh := time.After(time.Millisecond * 20)
+	shutdownCh := time.After(time.Millisecond * 50)
 
 	close(stopCh)
 
