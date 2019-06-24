@@ -85,7 +85,7 @@ required = [
 # Our master branch tracks kantive/pkg master.
 [[override]]
   name = "github.com/knative/pkg"
-  branch = "master"
+  branch = "release-0.7"
 
 # TODO why is this overridden?
 [[override]]
