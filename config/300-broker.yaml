@@ -17,6 +17,7 @@ kind: CustomResourceDefinition
 metadata:
   name: brokers.eventing.knative.dev
   labels:
+    eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev

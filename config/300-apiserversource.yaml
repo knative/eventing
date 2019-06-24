@@ -17,6 +17,7 @@ kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
   labels:
+    eventing.knative.dev/release: devel
     eventing.knative.dev/source: "true"
     knative.dev/crd-install: "true"
   name: apiserversources.sources.eventing.knative.dev
