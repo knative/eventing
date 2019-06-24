@@ -16,7 +16,9 @@ limitations under the License.
 
 package resources
 
-import "fmt"
+import (
+	"github.com/knative/pkg/kmeta"
+)
 
 const (
 	DefaultBrokerName = "default"
@@ -37,5 +39,5 @@ const (
 // are all created in the system namespace, they must be named for their
 // subject namespace.
 func ConfigRoleBindingName(saName, ns string) string {
-	return fmt.Sprintf("eventing-config-reader-%s-%s", ns, saName)
+	return kmeta.ChildName(saName, "-"+ns)
 }
