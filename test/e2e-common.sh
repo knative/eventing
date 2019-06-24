@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2018 The Knative Authors
+# Copyright 2019 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -104,13 +104,13 @@ function test_teardown() {
 }
 
 function install_test_resources() {
-  install_provisioners() || return 1
-  install_channel_crds() || return 1
+  install_provisioners || return 1
+  install_channel_crds || return 1
 }
 
 function uninstall_test_resources() {
-  uninstall_provisioners()
-  uninstall_channel_crds()
+  uninstall_provisioners
+  uninstall_channel_crds
 }
 
 function install_provisioners() {
