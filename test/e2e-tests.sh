@@ -21,7 +21,7 @@
 # and run the tests.
 
 # Calling this script without arguments will create a new cluster in
-# project $PROJECT_ID, start Knative eventing system, run the tests and 
+# project $PROJECT_ID, start Knative eventing system, run the tests and
 # delete the cluster.
 
 source $(dirname $0)/e2e-common.sh
