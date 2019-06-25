@@ -283,8 +283,8 @@ func (h *handler) decrementTTL(event *cloudevents.Event) bool {
 }
 
 func (h *handler) getTTLToSet(event *cloudevents.Event) int {
-	ttlInterface, present := event.Context.AsV02().Extensions[broker.V02TTLAttribute]
-	if !present {
+	ttlInterface, _ := broker.GetTTL(event.Context)
+	if ttlInterface == nil {
 		h.logger.Debug("No TTL found, defaulting")
 		return defaultTTL
 	}

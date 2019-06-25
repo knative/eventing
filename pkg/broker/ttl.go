@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	// V02TTLAttribute is the name of the CloudEvents 0.2 extension attribute used to store the
-	// Broker's TTL (number of times a single event can reply through a Broker continuously).
-	V02TTLAttribute = "knativebrokerttl"
+	// v02TTLAttribute is the name of the CloudEvents 0.2 extension attribute used to store the
+	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
+	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
+	v02TTLAttribute = "knativebrokerttl"
 )
 
 // GetTTL finds the TTL in the EventContext using a case insensitive comparison
@@ -33,15 +34,15 @@ const (
 // Depending on the encoding/transport, the extension case could be changed.
 func GetTTL(ctx cloudevents.EventContext) (interface{}, string) {
 	for k, v := range ctx.AsV02().Extensions {
-		if lower := strings.ToLower(k); lower == V02TTLAttribute {
+		if lower := strings.ToLower(k); lower == v02TTLAttribute {
 			return v, k
 		}
 	}
-	return nil, V02TTLAttribute
+	return nil, v02TTLAttribute
 }
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
 func SetTTL(ctx cloudevents.EventContext, ttl interface{}) (cloudevents.EventContext, error) {
-	err := ctx.SetExtension(V02TTLAttribute, ttl)
+	err := ctx.SetExtension(v02TTLAttribute, ttl)
 	return ctx, err
 }
