@@ -16,6 +16,8 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
   name: in-memory
+  labels:
+    eventing.knative.dev/release: devel
 spec: {}
 
 ---
@@ -25,6 +27,8 @@ kind: ServiceAccount
 metadata:
   name: in-memory-channel-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 
 ---
 
@@ -32,6 +36,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: in-memory-channel-controller
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -82,6 +88,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: in-memory-channel-controller
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-controller
@@ -98,6 +106,8 @@ kind: Deployment
 metadata:
   name: in-memory-channel-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
@@ -125,6 +135,8 @@ kind: ServiceAccount
 metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 
 ---
 
@@ -132,6 +144,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: in-memory-channel-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - "eventing.knative.dev"
@@ -157,6 +171,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: in-memory-channel-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-dispatcher
@@ -173,6 +189,8 @@ kind: Role
 metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - ""
@@ -190,6 +208,8 @@ kind: RoleBinding
 metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-dispatcher
@@ -206,6 +226,8 @@ kind: Deployment
 metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
