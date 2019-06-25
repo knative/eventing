@@ -16,6 +16,7 @@ kind: CustomResourceDefinition
 metadata:
   name: sequences.messaging.knative.dev
   labels:
+    eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
 spec:
   group: messaging.knative.dev

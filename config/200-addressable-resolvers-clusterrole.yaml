@@ -17,6 +17,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
@@ -30,7 +32,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: service-addressable-resolver
   labels:
-      duck.knative.dev/addressable: "true"
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -49,7 +52,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: serving-addressable-resolver
   labels:
-      duck.knative.dev/addressable: "true"
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -71,7 +75,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: channel-addressable-resolver
   labels:
-      duck.knative.dev/addressable: "true"
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
@@ -91,7 +96,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: broker-addressable-resolver
   labels:
-      duck.knative.dev/addressable: "true"
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
