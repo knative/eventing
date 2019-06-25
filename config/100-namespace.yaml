@@ -16,4 +16,4 @@ kind: Namespace
 metadata:
   name: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    eventing.knative.dev/release: "v0.7.0"

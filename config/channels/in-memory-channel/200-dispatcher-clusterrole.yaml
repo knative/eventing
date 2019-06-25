@@ -16,7 +16,7 @@ kind: ClusterRole
 metadata:
   name: imc-dispatcher
   labels:
-    eventing.knative.dev/release: devel
+    eventing.knative.dev/release: "v0.7.0"
 rules:
   - apiGroups:
       - messaging.knative.dev

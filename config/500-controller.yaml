@@ -18,7 +18,7 @@ metadata:
   name: eventing-controller
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: devel
+    eventing.knative.dev/release: "v0.7.0"
 spec:
   replicas: 1
   selector:
@@ -30,7 +30,7 @@ spec:
         sidecar.istio.io/inject: "false"
       labels:
         app: eventing-controller
-        eventing.knative.dev/release: devel
+        eventing.knative.dev/release: "v0.7.0"
     spec:
       serviceAccountName: eventing-controller
       containers:
