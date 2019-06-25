@@ -149,7 +149,7 @@ func EventLatencyPod(name, sink string, eventCount int) *corev1.Pod {
 					strconv.Itoa(eventCount),
 				},
 			}},
-			RestartPolicy: corev1.RestartPolicyOnFailure,
+			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}
 }
