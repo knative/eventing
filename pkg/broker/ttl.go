@@ -17,6 +17,8 @@
 package broker
 
 import (
+	"strings"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
@@ -25,6 +27,18 @@ const (
 	// Broker's TTL (number of times a single event can reply through a Broker continuously).
 	V02TTLAttribute = "knativebrokerttl"
 )
+
+// GetTTL finds the TTL in the EventContext using a case insensitive comparison
+// for the key. The second return param, is the case preserved key that matched.
+// Depending on the encoding/transport, the extension case could be changed.
+func GetTTL(ctx cloudevents.EventContext) (interface{}, string) {
+	for k, v := range ctx.AsV02().Extensions {
+		if lower := strings.ToLower(k); lower == V02TTLAttribute {
+			return v, k
+		}
+	}
+	return nil, V02TTLAttribute
+}
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
 func SetTTL(ctx cloudevents.EventContext, ttl interface{}) (cloudevents.EventContext, error) {
