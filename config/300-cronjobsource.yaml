@@ -28,6 +28,7 @@ spec:
     - knative
     - eventing
     - sources
+    - importers
     kind: CronJobSource
     plural: cronjobsources
   scope: Namespaced

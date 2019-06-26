@@ -29,6 +29,7 @@ spec:
     - knative
     - eventing
     - sources
+    - importers
     kind: ApiServerSource
     plural: apiserversources
   scope: Namespaced

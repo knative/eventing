@@ -28,6 +28,7 @@ spec:
     - knative
     - eventing
     - sources
+    - importers
     kind: ContainerSource
     plural: containersources
   scope: Namespaced
