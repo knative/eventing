@@ -19,10 +19,10 @@ package channel
 import (
 	"testing"
 
-	"github.com/knative/pkg/configmap"
+	"knative.dev/pkg/configmap"
 
-	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel/fake"

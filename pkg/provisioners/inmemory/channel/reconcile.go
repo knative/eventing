@@ -30,7 +30,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 const (

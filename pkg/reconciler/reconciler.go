@@ -21,10 +21,10 @@ import (
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/logging/logkey"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -36,8 +36,8 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	eventingclient "github.com/knative/eventing/pkg/client/injection/client"
-	"github.com/knative/pkg/injection/clients/dynamicclient"
-	"github.com/knative/pkg/injection/clients/kubeclient"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/injection/clients/kubeclient"
 )
 
 // Base implements the core controller logic, given a Reconciler.

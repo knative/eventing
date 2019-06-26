@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/webhook"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/webhook"
 )
 
 type CRDTest struct {

@@ -29,7 +29,7 @@ import (
 	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 
-	"github.com/knative/pkg/test/logging"
+	"knative.dev/pkg/test/logging"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 

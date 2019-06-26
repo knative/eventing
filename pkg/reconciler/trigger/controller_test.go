@@ -19,11 +19,11 @@ package trigger
 import (
 	"testing"
 
-	"github.com/knative/pkg/configmap"
-	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	"knative.dev/pkg/configmap"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service/fake"
+	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/service/fake"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"

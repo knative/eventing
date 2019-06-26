@@ -20,10 +20,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/system"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/system"
 
-	"github.com/knative/pkg/tracker"
+	"knative.dev/pkg/tracker"
 
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,9 +33,9 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"

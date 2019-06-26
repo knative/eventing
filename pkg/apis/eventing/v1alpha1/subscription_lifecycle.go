@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 // subCondSet is a condition set with Ready as the happy condition and

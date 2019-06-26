@@ -19,16 +19,16 @@ package namespace
 import (
 	"context"
 
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
 
 	"github.com/knative/eventing/pkg/reconciler"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/namespace"
-	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/serviceaccount"
-	"github.com/knative/pkg/injection/informers/kubeinformers/rbacv1/rolebinding"
+	"knative.dev/pkg/injection/informers/kubeinformers/corev1/namespace"
+	"knative.dev/pkg/injection/informers/kubeinformers/corev1/serviceaccount"
+	"knative.dev/pkg/injection/informers/kubeinformers/rbacv1/rolebinding"
 )
 
 const (

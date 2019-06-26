@@ -35,7 +35,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	eventingNames "github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 const (

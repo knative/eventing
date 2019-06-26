@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/apis/eventing"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

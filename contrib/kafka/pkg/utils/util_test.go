@@ -24,7 +24,7 @@ import (
 
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/google/go-cmp/cmp"
-	_ "github.com/knative/pkg/system/testing"
+	_ "knative.dev/pkg/system/testing"
 )
 
 func TestGetKafkaConfig(t *testing.T) {

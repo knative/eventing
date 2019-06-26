@@ -17,7 +17,7 @@
 package provisioners
 
 import (
-	"github.com/knative/pkg/logging"
+	"knative.dev/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

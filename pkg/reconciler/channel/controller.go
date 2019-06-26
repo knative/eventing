@@ -20,8 +20,8 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 
 	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
 )

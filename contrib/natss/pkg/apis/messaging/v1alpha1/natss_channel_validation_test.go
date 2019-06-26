@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/pkg/webhook"
+	"knative.dev/pkg/webhook"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 func TestNatssChannelValidation(t *testing.T) {

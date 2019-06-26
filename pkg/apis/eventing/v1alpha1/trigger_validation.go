@@ -19,8 +19,8 @@ package v1alpha1
 import (
 	"context"
 
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/kmp"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {

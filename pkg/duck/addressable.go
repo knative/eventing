@@ -22,11 +22,11 @@ import (
 
 	"time"
 
-	"github.com/knative/pkg/apis/duck"
-	"github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/injection/clients/dynamicclient"
-	"github.com/knative/pkg/tracker"
+	"knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

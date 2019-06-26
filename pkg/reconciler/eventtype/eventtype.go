@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/tracker"
+	"knative.dev/pkg/tracker"
 
 	"k8s.io/client-go/tools/cache"
 
@@ -31,7 +31,7 @@ import (
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"

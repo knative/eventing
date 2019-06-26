@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 func TestImMemoryChannelValidation(t *testing.T) {

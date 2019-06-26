@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"

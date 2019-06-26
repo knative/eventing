@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/pkg/test/helpers"
+	"knative.dev/pkg/test/helpers"
 )
 
 const (

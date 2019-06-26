@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	eventingconfigmap "github.com/knative/eventing/pkg/configmap"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/tracing"
-	tracingconfig "github.com/knative/pkg/tracing/config"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
 	zipkin "github.com/openzipkin/zipkin-go"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"

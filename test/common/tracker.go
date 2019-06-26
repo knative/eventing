@@ -24,14 +24,14 @@ import (
 
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/knative/pkg/test/logging"
+	"knative.dev/pkg/test/logging"
 )
 
 // Tracker holds resources that need to be tracked during test execution.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
 
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -19,7 +19,7 @@ import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/system"
+	"knative.dev/pkg/system"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 

@@ -23,8 +23,8 @@ import (
 
 	fake "github.com/knative/eventing/pkg/client/injection/informers/eventing/factory/fake"
 	trigger "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	controller "github.com/knative/pkg/controller"
-	injection "github.com/knative/pkg/injection"
+	controller "knative.dev/pkg/controller"
+	injection "knative.dev/pkg/injection"
 )
 
 var Get = trigger.Get

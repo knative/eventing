@@ -23,8 +23,8 @@ import (
 
 	fake "github.com/knative/eventing/pkg/client/injection/informers/eventing/factory/fake"
 	subscription "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
-	controller "github.com/knative/pkg/controller"
-	injection "github.com/knative/pkg/injection"
+	controller "knative.dev/pkg/controller"
+	injection "knative.dev/pkg/injection"
 )
 
 var Get = subscription.Get

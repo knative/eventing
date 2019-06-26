@@ -19,8 +19,8 @@ package resources
 import (
 	"fmt"
 
-	"github.com/knative/pkg/kmeta"
-	"github.com/knative/pkg/system"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"

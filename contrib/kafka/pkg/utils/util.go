@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	cluster "github.com/bsm/sarama-cluster"
-	"github.com/knative/pkg/configmap"
+	"knative.dev/pkg/configmap"
 )
 
 const (

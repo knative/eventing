@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 func (c *NatssChannel) Validate(ctx context.Context) *apis.FieldError {

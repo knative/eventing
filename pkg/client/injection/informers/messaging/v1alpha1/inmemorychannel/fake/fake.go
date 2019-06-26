@@ -23,8 +23,8 @@ import (
 
 	fake "github.com/knative/eventing/pkg/client/injection/informers/messaging/factory/fake"
 	inmemorychannel "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
-	controller "github.com/knative/pkg/controller"
-	injection "github.com/knative/pkg/injection"
+	controller "knative.dev/pkg/controller"
+	injection "knative.dev/pkg/injection"
 )
 
 var Get = inmemorychannel.Get

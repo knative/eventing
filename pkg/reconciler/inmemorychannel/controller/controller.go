@@ -20,15 +20,15 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/system"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/system"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
-	"github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment"
-	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/endpoints"
-	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/service"
+	"knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
+	"knative.dev/pkg/injection/informers/kubeinformers/corev1/endpoints"
+	"knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
 )
 
 const (
