@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/pkg/kmp"
+	"knative.dev/pkg/kmp"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {

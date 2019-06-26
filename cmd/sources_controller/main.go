@@ -23,7 +23,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/apiserversource"
 	"github.com/knative/eventing/pkg/reconciler/containersource"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource"
-	"github.com/knative/pkg/injection/sharedmain"
+	"knative.dev/pkg/injection/sharedmain"
 )
 
 func main() {

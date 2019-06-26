@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)

@@ -19,14 +19,14 @@ package cronjobsource
 import (
 	"testing"
 
-	"github.com/knative/pkg/configmap"
-	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	"knative.dev/pkg/configmap"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
 	_ "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
+	_ "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
 )
 
 func TestNew(t *testing.T) {

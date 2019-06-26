@@ -20,7 +20,7 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/knative/pkg/injection/sharedmain"
+	"knative.dev/pkg/injection/sharedmain"
 
 	"github.com/knative/eventing/pkg/reconciler/broker"
 	"github.com/knative/eventing/pkg/reconciler/channel"

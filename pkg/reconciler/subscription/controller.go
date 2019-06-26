@@ -19,13 +19,13 @@ package subscription
 import (
 	"context"
 
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 
-	"github.com/knative/pkg/injection/informers/apiextinformers/apiextensionsv1beta1/crd"
+	"knative.dev/pkg/injection/informers/apiextinformers/apiextensionsv1beta1/crd"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 )

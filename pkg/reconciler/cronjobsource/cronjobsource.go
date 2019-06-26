@@ -32,7 +32,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"

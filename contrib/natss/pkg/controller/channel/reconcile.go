@@ -22,7 +22,7 @@ import (
 
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"

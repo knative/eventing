@@ -25,7 +25,7 @@ import (
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	natsschannel "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
-	"github.com/knative/pkg/test"
+	"knative.dev/pkg/test"
 	"k8s.io/client-go/dynamic"
 )
 

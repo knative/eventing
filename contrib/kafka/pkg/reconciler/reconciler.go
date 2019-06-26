@@ -21,9 +21,9 @@ import (
 
 	clientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	kafkaScheme "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/scheme"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/logging/logkey"
-	"github.com/knative/pkg/system"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/logging/logkey"
+	"knative.dev/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"

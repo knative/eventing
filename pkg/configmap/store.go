@@ -19,7 +19,7 @@ package configmap
 import (
 	"fmt"
 
-	"github.com/knative/pkg/configmap"
+	"knative.dev/pkg/configmap"
 	v1 "k8s.io/api/core/v1"
 )
 

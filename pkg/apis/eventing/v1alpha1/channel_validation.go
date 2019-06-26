@@ -21,8 +21,8 @@ import (
 	"fmt"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/kmp"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 func (c *Channel) Validate(ctx context.Context) *apis.FieldError {

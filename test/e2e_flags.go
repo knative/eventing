@@ -27,8 +27,8 @@ import (
 	"log"
 
 	"github.com/knative/eventing/test/common"
-	pkgTest "github.com/knative/pkg/test"
-	testLogging "github.com/knative/pkg/test/logging"
+	pkgTest "knative.dev/pkg/test"
+	testLogging "knative.dev/pkg/test/logging"
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.

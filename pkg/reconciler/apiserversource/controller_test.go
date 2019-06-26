@@ -19,16 +19,16 @@ package apiserversource
 import (
 	"testing"
 
-	"github.com/knative/pkg/configmap"
+	"knative.dev/pkg/configmap"
 	"k8s.io/client-go/rest"
 
-	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
 	_ "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
+	_ "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
 )
 
 func TestNew(t *testing.T) {

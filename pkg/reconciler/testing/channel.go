@@ -25,7 +25,7 @@ import (
 
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 // ChannelOption enables further configuration of a Channel.

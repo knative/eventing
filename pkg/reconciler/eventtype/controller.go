@@ -21,9 +21,9 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
 
 	brokerinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"

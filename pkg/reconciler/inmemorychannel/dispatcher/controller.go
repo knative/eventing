@@ -25,8 +25,8 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/tracing"
 
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 
 	inmemorychannelinformer "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"

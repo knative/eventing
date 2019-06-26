@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/knative/pkg/tracing"
+	"knative.dev/pkg/tracing"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 )

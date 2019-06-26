@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/reconciler/names"
@@ -35,7 +35,7 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

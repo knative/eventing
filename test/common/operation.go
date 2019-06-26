@@ -21,7 +21,7 @@ import (
 
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/base/resources"
-	pkgTest "github.com/knative/pkg/test"
+	pkgTest "knative.dev/pkg/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

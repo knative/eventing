@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"

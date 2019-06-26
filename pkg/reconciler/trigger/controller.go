@@ -19,15 +19,15 @@ package trigger
 import (
 	"context"
 
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 
-	"github.com/knative/pkg/injection/informers/kubeinformers/corev1/service"
+	"knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"

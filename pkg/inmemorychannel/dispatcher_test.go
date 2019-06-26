@@ -22,7 +22,7 @@ import (
 
 	"github.com/knative/eventing/pkg/provisioners/swappable"
 
-	logtesting "github.com/knative/pkg/logging/testing"
+	logtesting "knative.dev/pkg/logging/testing"
 )
 
 func TestNewDispatcher(t *testing.T) {

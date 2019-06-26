@@ -22,7 +22,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/knative/pkg/configmap"
+	"knative.dev/pkg/configmap"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,12 +36,12 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
 	"github.com/knative/eventing/pkg/utils"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
 
 	. "github.com/knative/eventing/pkg/reconciler/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 var (

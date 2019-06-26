@@ -28,7 +28,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
-	"github.com/knative/pkg/tracing"
+	"knative.dev/pkg/tracing"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"

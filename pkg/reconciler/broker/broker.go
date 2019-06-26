@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
 
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -33,10 +33,10 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/apis"
-	duckroot "github.com/knative/pkg/apis"
-	duckapis "github.com/knative/pkg/apis/duck"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/apis"
+	duckroot "knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	messaginginformers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
@@ -31,7 +31,7 @@ import (
 	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	"github.com/knative/eventing/contrib/natss/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

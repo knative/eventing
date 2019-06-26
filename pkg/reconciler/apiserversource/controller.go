@@ -22,13 +22,13 @@ import (
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 	"k8s.io/client-go/tools/cache"
 
 	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	apiserversourceinformer "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
-	deploymentinformer "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment"
+	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 )
 
 const (

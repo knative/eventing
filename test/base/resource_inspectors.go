@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"github.com/knative/eventing/test/base/resources"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"k8s.io/client-go/dynamic"
 )
 

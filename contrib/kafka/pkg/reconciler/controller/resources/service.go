@@ -21,7 +21,7 @@ import (
 
 	"github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

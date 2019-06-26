@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/knative/pkg/test"
+	"knative.dev/pkg/test"
 	"github.com/knative/test-infra/shared/junit"
 	"k8s.io/apimachinery/pkg/util/wait"
 

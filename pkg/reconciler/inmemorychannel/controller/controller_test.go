@@ -19,15 +19,15 @@ package controller
 import (
 	"testing"
 
-	"github.com/knative/pkg/configmap"
-	logtesting "github.com/knative/pkg/logging/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	"knative.dev/pkg/configmap"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
 	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/endpoints/fake"
-	_ "github.com/knative/pkg/injection/informers/kubeinformers/corev1/service/fake"
+	_ "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment/fake"
+	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/endpoints/fake"
+	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/service/fake"
 )
 
 func TestNew(t *testing.T) {

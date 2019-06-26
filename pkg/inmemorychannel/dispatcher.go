@@ -23,7 +23,7 @@ import (
 
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
-	pkgtracing "github.com/knative/pkg/tracing"
+	pkgtracing "knative.dev/pkg/tracing"
 	"go.uber.org/zap"
 )
 

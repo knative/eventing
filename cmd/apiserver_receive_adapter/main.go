@@ -26,7 +26,7 @@ import (
 	"github.com/knative/eventing/pkg/adapter/apiserver"
 	"github.com/knative/eventing/pkg/kncloudevents"
 	"github.com/knative/eventing/pkg/tracing"
-	"github.com/knative/pkg/signals"
+	"knative.dev/pkg/signals"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/meta"

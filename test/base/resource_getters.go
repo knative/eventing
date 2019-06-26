@@ -20,8 +20,8 @@ package base
 
 import (
 	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/apis/duck"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/duck"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"

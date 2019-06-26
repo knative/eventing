@@ -23,8 +23,8 @@ import (
 
 	fake "github.com/knative/eventing/pkg/client/injection/informers/sources/factory/fake"
 	containersource "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/containersource"
-	controller "github.com/knative/pkg/controller"
-	injection "github.com/knative/pkg/injection"
+	controller "knative.dev/pkg/controller"
+	injection "knative.dev/pkg/injection"
 )
 
 var Get = containersource.Get

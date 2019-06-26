@@ -19,7 +19,7 @@ package controller
 import (
 	"testing"
 
-	_ "github.com/knative/pkg/system/testing"
+	_ "knative.dev/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

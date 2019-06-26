@@ -22,8 +22,8 @@ import (
 
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/system"
-	"github.com/knative/pkg/tracker"
+	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
 
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -33,7 +33,7 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

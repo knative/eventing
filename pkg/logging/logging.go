@@ -20,7 +20,7 @@ package logging
 import (
 	"context"
 
-	"github.com/knative/pkg/logging"
+	"knative.dev/pkg/logging"
 	"go.uber.org/zap"
 )
 

@@ -29,10 +29,10 @@ import (
 
 	fakeclientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/fake"
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
 
-	. "github.com/knative/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (

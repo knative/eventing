@@ -30,7 +30,7 @@ import (
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 )
 

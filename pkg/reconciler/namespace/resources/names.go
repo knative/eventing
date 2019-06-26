@@ -17,7 +17,7 @@ limitations under the License.
 package resources
 
 import (
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
 )
 
 const (

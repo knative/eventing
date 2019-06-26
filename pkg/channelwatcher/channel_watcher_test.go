@@ -27,7 +27,7 @@ import (
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"

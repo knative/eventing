@@ -34,7 +34,7 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/controller"
+	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
