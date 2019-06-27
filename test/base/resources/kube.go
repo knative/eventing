@@ -21,12 +21,12 @@ package resources
 import (
 	"strconv"
 
-	pkgTest "knative.dev/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	pkgTest "knative.dev/pkg/test"
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.

@@ -24,11 +24,11 @@ import (
 	"github.com/knative/eventing/contrib/natss/pkg/util"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/tracing"
+	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )

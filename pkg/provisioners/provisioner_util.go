@@ -3,7 +3,6 @@ package provisioners
 import (
 	"context"
 
-	"knative.dev/pkg/kmeta"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -11,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/pkg/kmeta"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"fmt"

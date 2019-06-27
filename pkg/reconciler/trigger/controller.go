@@ -19,9 +19,9 @@ package trigger
 import (
 	"context"
 
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"

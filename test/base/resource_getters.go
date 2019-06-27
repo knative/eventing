@@ -20,14 +20,14 @@ package base
 
 import (
 	"github.com/knative/eventing/test/base/resources"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/duck"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/duck"
 )
 
 // GetGenericObject returns a generic object representing a Kubernetes resource.

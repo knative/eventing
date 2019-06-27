@@ -23,8 +23,8 @@ import (
 
 	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"github.com/knative/eventing/pkg/provisioners/swappable"
-	pkgtracing "knative.dev/pkg/tracing"
 	"go.uber.org/zap"
+	pkgtracing "knative.dev/pkg/tracing"
 )
 
 type Dispatcher interface {

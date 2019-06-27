@@ -19,9 +19,9 @@ package apiserversource
 import (
 	"context"
 
+	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/logging"
-	"k8s.io/client-go/rest"
 )
 
 func init() {

@@ -22,9 +22,9 @@ import (
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/sequence"

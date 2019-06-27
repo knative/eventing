@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	_ "knative.dev/pkg/system/testing"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	_ "knative.dev/pkg/system/testing"
 )
 
 func TestNewLoggingConfig(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"knative.dev/pkg/tracing"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	"knative.dev/pkg/tracing"
 )
 
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {

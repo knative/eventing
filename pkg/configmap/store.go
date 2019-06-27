@@ -19,8 +19,8 @@ package configmap
 import (
 	"fmt"
 
-	"knative.dev/pkg/configmap"
 	v1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/configmap"
 )
 
 // TODO Move this to knative/pkg.

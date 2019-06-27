@@ -34,7 +34,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -44,6 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/controller"
 )
 
 const (

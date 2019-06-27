@@ -28,15 +28,15 @@ import (
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/logconfig"
+	"go.uber.org/zap"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/pkg/configmap"
 	kncontroller "knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"go.uber.org/zap"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (

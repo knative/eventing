@@ -20,10 +20,10 @@ import (
 	"context"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/kmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 func (s *Subscription) Validate(ctx context.Context) *apis.FieldError {

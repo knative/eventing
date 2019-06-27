@@ -21,8 +21,6 @@ import (
 	fakemessagingclientset "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned/fake"
 	messaginglisters "github.com/knative/eventing/contrib/kafka/pkg/client/listers/messaging/v1alpha1"
 	fakeeventsclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
-	"knative.dev/pkg/reconciler/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,6 +28,8 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
+	"knative.dev/pkg/reconciler/testing"
 )
 
 var clientSetSchemes = []func(*runtime.Scheme) error{

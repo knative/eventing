@@ -25,8 +25,8 @@ import (
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
 	natsschannel "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
-	"knative.dev/pkg/test"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/pkg/test"
 )
 
 // Client holds instances of interfaces for making requests to Knative.

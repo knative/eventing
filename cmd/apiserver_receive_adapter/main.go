@@ -26,13 +26,13 @@ import (
 	"github.com/knative/eventing/pkg/adapter/apiserver"
 	"github.com/knative/eventing/pkg/kncloudevents"
 	"github.com/knative/eventing/pkg/tracing"
-	"knative.dev/pkg/signals"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
+	"knative.dev/pkg/signals"
 )
 
 var (

@@ -23,10 +23,10 @@ import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners/fanout"
+	v1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-	v1 "k8s.io/api/core/v1"
 )
 
 func TestNewConfigFromChannels(t *testing.T) {

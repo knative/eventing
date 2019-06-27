@@ -17,10 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/duck/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/duck/v1alpha1"
 )
 
 var nc = apis.NewLivingConditionSet(

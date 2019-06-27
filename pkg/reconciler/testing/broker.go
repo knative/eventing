@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 )
 
 // BrokerOption enables further configuration of a Broker.

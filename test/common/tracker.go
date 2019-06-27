@@ -24,12 +24,12 @@ import (
 
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/base/resources"
-	"knative.dev/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/pkg/kmeta"
 
 	"knative.dev/pkg/test/logging"
 )

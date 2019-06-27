@@ -17,9 +17,9 @@
 package provisioners
 
 import (
-	"knative.dev/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"knative.dev/pkg/logging"
 )
 
 const (

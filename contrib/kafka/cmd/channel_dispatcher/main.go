@@ -31,13 +31,13 @@ import (
 	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/reconciler/dispatcher"
 	"github.com/knative/eventing/contrib/kafka/pkg/utils"
 	"github.com/knative/eventing/pkg/logconfig"
+	"go.uber.org/zap"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/pkg/configmap"
 	kncontroller "knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
-	"go.uber.org/zap"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (

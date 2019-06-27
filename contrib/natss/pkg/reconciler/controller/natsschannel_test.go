@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/utils"
-	"knative.dev/pkg/kmeta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/kmeta"
 
 	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	fakeclientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/fake"
@@ -30,10 +30,6 @@ import (
 	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
 	"github.com/knative/eventing/contrib/natss/pkg/reconciler/controller/resources"
 	reconciletesting "github.com/knative/eventing/contrib/natss/pkg/reconciler/testing"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/controller"
-	logtesting "knative.dev/pkg/logging/testing"
-	. "knative.dev/pkg/reconciler/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +37,10 @@ import (
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
