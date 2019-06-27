@@ -19,8 +19,8 @@ package apiserversource
 import (
 	"testing"
 
-	"knative.dev/pkg/configmap"
 	"k8s.io/client-go/rest"
+	"knative.dev/pkg/configmap"
 
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"

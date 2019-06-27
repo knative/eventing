@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"time"
 
-	"knative.dev/pkg/apis"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 )
 
 var chanCondSet = apis.NewLivingConditionSet(ChannelConditionProvisioned, ChannelConditionAddressable, ChannelConditionProvisionerInstalled)

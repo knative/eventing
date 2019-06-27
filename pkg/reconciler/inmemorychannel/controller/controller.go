@@ -20,10 +20,10 @@ import (
 	"context"
 
 	"github.com/knative/eventing/pkg/reconciler"
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/system"
-	"k8s.io/client-go/tools/cache"
 
 	"github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"

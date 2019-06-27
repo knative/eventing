@@ -35,7 +35,6 @@ import (
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler"
 	"github.com/knative/eventing/contrib/kafka/pkg/reconciler/controller/resources"
 	"github.com/knative/eventing/pkg/logging"
-	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,6 +47,7 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/controller"
 )
 
 const (

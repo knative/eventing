@@ -24,10 +24,10 @@ import (
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 
 	brokerinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"

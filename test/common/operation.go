@@ -21,8 +21,8 @@ import (
 
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/base/resources"
-	pkgTest "knative.dev/pkg/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgTest "knative.dev/pkg/test"
 )
 
 // LabelNamespace labels the given namespace with the labels map.

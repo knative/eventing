@@ -24,12 +24,12 @@ import (
 	"testing"
 	"time"
 
-	pkgTest "knative.dev/pkg/test"
-	"knative.dev/pkg/test/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	pkgTest "knative.dev/pkg/test"
+	"knative.dev/pkg/test/helpers"
 
 	// Mysteriously required to support GCP auth (required by k8s libs).
 	// Apparently just importing it is enough. @_@ side effects @_@.

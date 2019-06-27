@@ -33,10 +33,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
-	duckroot "knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,6 +46,10 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/apis"
+	duckroot "knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/controller"
 )
 
 const (

@@ -20,8 +20,8 @@ package logging
 import (
 	"context"
 
-	"knative.dev/pkg/logging"
 	"go.uber.org/zap"
+	"knative.dev/pkg/logging"
 )
 
 const ConfigMapNameEnv = "CONFIG_LOGGING_NAME"

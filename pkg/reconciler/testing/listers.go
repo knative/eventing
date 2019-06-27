@@ -24,8 +24,6 @@ import (
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	sourcelisters "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
-	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
-	"knative.dev/pkg/reconciler/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,6 +38,8 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
+	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
+	"knative.dev/pkg/reconciler/testing"
 )
 
 var subscriberAddToScheme = func(scheme *runtime.Scheme) error {

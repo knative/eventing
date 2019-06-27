@@ -26,8 +26,8 @@ import (
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/provisioners/inmemory/channel"
 	"github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
-	"knative.dev/pkg/signals"
 	"go.uber.org/zap"
+	"knative.dev/pkg/signals"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )

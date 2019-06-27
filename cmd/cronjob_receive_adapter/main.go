@@ -23,10 +23,10 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/adapter/cronjobevents"
 	"github.com/knative/eventing/pkg/tracing"
-	"knative.dev/pkg/signals"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/net/context"
+	"knative.dev/pkg/signals"
 )
 
 type envConfig struct {

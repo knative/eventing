@@ -21,10 +21,6 @@ import (
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/logging/logkey"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -34,6 +30,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/logging/logkey"
 
 	eventingclient "github.com/knative/eventing/pkg/client/injection/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"

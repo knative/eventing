@@ -28,14 +28,14 @@ import (
 	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
-	"knative.dev/pkg/apis"
-	_ "knative.dev/pkg/system/testing"
 	"github.com/nats-io/nats-streaming-server/server"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
+	_ "knative.dev/pkg/system/testing"
 )
 
 const (

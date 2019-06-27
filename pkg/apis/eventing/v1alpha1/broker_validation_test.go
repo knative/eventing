@@ -22,9 +22,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 )
 
 // No-op test because method does nothing.

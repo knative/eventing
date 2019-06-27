@@ -23,8 +23,8 @@ import (
 	"fmt"
 
 	"github.com/knative/eventing/test/base/resources"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"k8s.io/client-go/dynamic"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
 // GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.

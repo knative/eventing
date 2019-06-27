@@ -30,9 +30,9 @@ import (
 
 	"k8s.io/client-go/tools/record"
 
+	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
-	ktesting "k8s.io/client-go/testing"
 
 	fakeeventingclient "github.com/knative/eventing/pkg/client/injection/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"

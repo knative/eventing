@@ -22,9 +22,9 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/provisioners"
-	_ "knative.dev/pkg/system/testing"
 	"github.com/nats-io/nats-streaming-server/server"
 	"go.uber.org/zap"
+	_ "knative.dev/pkg/system/testing"
 )
 
 const (

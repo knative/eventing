@@ -39,8 +39,8 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/containersource/resources"
-	"knative.dev/pkg/controller"
 	"go.uber.org/zap"
+	"knative.dev/pkg/controller"
 )
 
 const (

@@ -28,11 +28,11 @@ import (
 	"github.com/knative/eventing/pkg/channelwatcher"
 	topicUtils "github.com/knative/eventing/pkg/provisioners/utils"
 	"github.com/knative/eventing/pkg/tracing"
+	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )

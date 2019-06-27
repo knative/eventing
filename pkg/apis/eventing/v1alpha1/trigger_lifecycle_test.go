@@ -24,9 +24,9 @@ import (
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 var (

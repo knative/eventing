@@ -28,10 +28,10 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
-	"knative.dev/pkg/tracing"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
+	"knative.dev/pkg/tracing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
