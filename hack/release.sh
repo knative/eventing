@@ -26,6 +26,7 @@ COMPONENTS=(
   ["kafka-ccp.yaml"]="contrib/kafka/config/provisioner"
   ["gcp-pubsub.yaml"]="contrib/gcppubsub/config"
   ["natss.yaml"]="contrib/natss/config"
+  ["natss-ccp.yaml"]="contrib/natss/config/provisioner"
 )
 readonly COMPONENTS
 
