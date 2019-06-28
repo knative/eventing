@@ -29,9 +29,6 @@ var ValidChannelsMap = map[string]ChannelConfig{
 	resources.InMemoryChannelKind: {
 		Features: []Feature{FeatureBasic},
 	},
-	resources.KafkaChannelKind: {
-		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	},
 	resources.NatssChannelKind: {
 		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 	},

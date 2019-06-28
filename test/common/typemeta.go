@@ -55,9 +55,6 @@ func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	}
 }
 
-// KafkaChannelTypeMeta is the TypeMeta ref for KafkaChannel.
-var KafkaChannelTypeMeta = MessagingTypeMeta(resources.KafkaChannelKind)
-
 // InMemoryChannelTypeMeta is the TypeMeta ref for InMemoryChannel.
 var InMemoryChannelTypeMeta = MessagingTypeMeta(resources.InMemoryChannelKind)
 

@@ -51,14 +51,6 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
-  name = "github.com/Shopify/sarama"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "ec843464b50d4c8b56403ec9d589cf41ea30e722"
-  version = "v1.19.0"
-
-[[projects]]
   branch = "master"
   digest = "1:f12358576cd79bba0ae626530d23cde63416744f486c8bc817802c6907eaadd7"
   name = "github.com/armon/go-metrics"
@@ -121,14 +113,6 @@
   version = "v1.3.1"
 
 [[projects]]
-  digest = "1:be1e32779b5150a3e4341f584f14282db95feff53f60d49b17134a5710ac8ff9"
-  name = "github.com/bsm/sarama-cluster"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "c618e605e15c0d7535f6c96ff8efbb0dba4fd66c"
-  version = "v2.1.15"
-
-[[projects]]
   digest = "1:06bd9f98d7cf2097c16f820f980709eb4d04e1c7369132c351fbf1ffb54d3117"
   name = "github.com/census-instrumentation/opencensus-proto"
   packages = [
@@ -168,30 +152,6 @@
   pruneopts = "NUT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
-
-[[projects]]
-  digest = "1:08143362be979b087c2c1bae5dde986e988d3d5d4dc661727cbe436411b3f33a"
-  name = "github.com/eapache/go-resiliency"
-  packages = ["breaker"]
-  pruneopts = "NUT"
-  revision = "ea41b0fad31007accc7f806884dcdf3da98b79ce"
-  version = "v1.1.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:d3430c048e919ed27813d20dc65a32d4e3bae3ad05b83700e244a81eaaf48e2a"
-  name = "github.com/eapache/go-xerial-snappy"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "776d5712da21bc4762676d614db1d8a64f4238b0"
-
-[[projects]]
-  digest = "1:0d36a2b325b9e75f8057f7f9fbe778d348d70ba652cb9335485b69d1a5c4e038"
-  name = "github.com/eapache/queue"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "44cc805cf13205b55f69e14bcb69867d1ae92f98"
-  version = "v1.1.0"
 
 [[projects]]
   digest = "1:32598368f409bbee79deb9d43569fcd92b9fb27f39155f5e166b3371217f051f"
@@ -279,14 +239,6 @@
   pruneopts = "NUT"
   revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
   version = "v1.3.2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:7f114b78210bf5b75f307fc97cff293633c835bab1e0ea8a744a44b39c042dfe"
-  name = "github.com/golang/snappy"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
   branch = "master"
@@ -584,17 +536,6 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:1d920dce8e11bfff65b5709e883a8ece131b63a5bc4b2cd404f9ef7eb445f73f"
-  name = "github.com/pierrec/lz4"
-  packages = [
-    ".",
-    "internal/xxh32",
-  ]
-  pruneopts = "NUT"
-  revision = "635575b42742856941dbc767b44905bb9ba083f6"
-  version = "v2.0.7"
-
-[[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -646,14 +587,6 @@
   ]
   pruneopts = "NUT"
   revision = "94663424ae5ae9856b40a9f170762b4197024661"
-
-[[projects]]
-  branch = "master"
-  digest = "1:120b256a4d3cd2946ffa4b87102731c2f004aed6d836dc2fba400ed9398696e7"
-  name = "github.com/rcrowley/go-metrics"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "3113b8401b8a98917cde58f8bbd42a1b1c03b1fd"
 
 [[projects]]
   digest = "1:53c3320ee307f01fd24a88e396a8d2239cd8346d1a085320209319f2d33f59cc"
@@ -1487,8 +1420,6 @@
   input-imports = [
     "cloud.google.com/go/pubsub",
     "contrib.go.opencensus.io/exporter/prometheus",
-    "github.com/Shopify/sarama",
-    "github.com/bsm/sarama-cluster",
     "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
