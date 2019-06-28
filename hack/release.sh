@@ -23,8 +23,7 @@ source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
-  ["in-memory-channel-crd.yaml"]="config/channels/in-memory-channel"
-  ["in-memory-channel-provisioner.yaml"]="config/provisioners/in-memory-channel"
+  ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
   ["gcp-pubsub.yaml"]="contrib/gcppubsub/config"
   ["natss.yaml"]="contrib/natss/config"
 )
@@ -32,7 +31,7 @@ readonly COMPONENTS
 
 declare -A RELEASES
 RELEASES=(
-  ["release.yaml"]="eventing.yaml in-memory-channel-crd.yaml in-memory-channel-provisioner.yaml"
+  ["release.yaml"]="eventing.yaml in-memory-channel.yaml"
 )
 readonly RELEASES
 
