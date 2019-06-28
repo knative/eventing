@@ -18,6 +18,7 @@ package common
 
 import (
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
@@ -146,6 +147,25 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
 	client.Tracker.AddObj(trigger)
+}
+
+// CreateSequenceOrFail will create a Sequence or fail the test if there is an error.
+func (client *Client) CreateSequenceOrFail(
+	name string,
+	steps []eventingv1alpha1.SubscriberSpec,
+	channelTemplate messagingv1alpha1.ChannelTemplateSpec,
+	options ...resources.SequenceOption,
+) {
+	namespace := client.Namespace
+	sequence := resources.Sequence(name, steps, channelTemplate, options...)
+
+	sequences := client.Eventing.MessagingV1alpha1().Sequences(namespace)
+	// update sequence with the new reference
+	sequence, err := sequences.Create(sequence)
+	if err != nil {
+		client.T.Fatalf("Failed to create sequence %q: %v", name, err)
+	}
+	client.Tracker.AddObj(sequence)
 }
 
 // CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.

@@ -67,6 +67,9 @@ var InMemoryChannelTypeMeta = MessagingTypeMeta(resources.InMemoryChannelKind)
 // NatssChannelTypeMeta is the TypeMeta ref for NatssChannel.
 var NatssChannelTypeMeta = MessagingTypeMeta(resources.NatssChannelKind)
 
+// SequenceTypeMeta is the TypeMeta ref for Sequence.
+var SequenceTypeMeta = MessagingTypeMeta(resources.SequenceKind)
+
 // MessagingTypeMeta returns the TypeMeta ref for an eventing messaing resource.
 func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{

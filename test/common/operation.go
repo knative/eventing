@@ -21,8 +21,8 @@ import (
 
 	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/base/resources"
-	pkgTest "knative.dev/pkg/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgTest "knative.dev/pkg/test"
 )
 
 // LabelNamespace labels the given namespace with the labels map.
@@ -111,6 +111,6 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 	}
 	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness.
 	// Will delete it after we find the root cause and fix.
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 	return nil
 }
