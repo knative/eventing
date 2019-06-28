@@ -42,7 +42,7 @@ func clusterChannelProvisioner(name string) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference(ClusterChannelProvisionerKind, EventingAPIVersion, name)
 }
 
-// channelRef returns an ObjectReference for a given Channel Name.
+// channelRef returns an ObjectReference for a given Channel name.
 func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
 }
@@ -64,14 +64,14 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
-				Ref: pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name),
+				Ref: ServiceRef(name),
 			}
 		}
 	}
 }
 
-// WithReply returns an options that adds a ReplyStrategy for the given Subscription.
-func WithReply(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
+// WithReplyForSubscription returns an options that adds a ReplyStrategy for the given Subscription.
+func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
 	return func(s *eventingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
@@ -159,7 +159,7 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
-				Ref: pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name),
+				Ref: ServiceRef(name),
 			}
 		}
 	}

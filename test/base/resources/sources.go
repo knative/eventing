@@ -37,7 +37,7 @@ type ApiServerSourceOption func(*sourcesv1alpha1.ApiServerSource)
 // WithSinkServiceForCronJobSource returns an option that adds a Kubernetes Service sink for the given CronJobSource.
 func WithSinkServiceForCronJobSource(name string) CronJobSourceOption {
 	return func(cjs *sourcesv1alpha1.CronJobSource) {
-		cjs.Spec.Sink = pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
+		cjs.Spec.Sink = ServiceRef(name)
 	}
 }
 
@@ -80,7 +80,7 @@ func WithTemplateForContainerSource(template *corev1.PodTemplateSpec) ContainerS
 // WithSinkServiceForContainerSource returns an option that adds a Kubernetes Service sink for the given ContainerSource.
 func WithSinkServiceForContainerSource(name string) ContainerSourceOption {
 	return func(cs *sourcesv1alpha1.ContainerSource) {
-		cs.Spec.Sink = pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
+		cs.Spec.Sink = ServiceRef(name)
 	}
 }
 
@@ -147,7 +147,7 @@ func WithServiceAccountForApiServerSource(saName string) ApiServerSourceOption {
 // WithSinkServiceForApiServerSource returns an option that adds a Kubernetes Service sink for the given ApiServerSource.
 func WithSinkServiceForApiServerSource(name string) ApiServerSourceOption {
 	return func(apiServerSource *sourcesv1alpha1.ApiServerSource) {
-		apiServerSource.Spec.Sink = pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
+		apiServerSource.Spec.Sink = ServiceRef(name)
 	}
 }
 

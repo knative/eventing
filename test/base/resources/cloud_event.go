@@ -25,6 +25,12 @@ type CloudEvent struct {
 	Encoding string // binary or structured
 }
 
+// CloudEventBaseData defines a simple struct that can be used as data of a CloudEvent.
+type CloudEventBaseData struct {
+	Sequence int    `json:"id"`
+	Message  string `json:"message"`
+}
+
 // CloudEvent related constants.
 const (
 	CloudEventEncodingBinary     = "binary"

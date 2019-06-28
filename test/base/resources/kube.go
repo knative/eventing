@@ -129,6 +129,31 @@ func HelloWorldPod(name string) *corev1.Pod {
 	}
 }
 
+// SequenceStepperPod creates a Pod that can be used as a step in testing Sequence.
+// Note event data used in the test must be CloudEventBaseData, and this Pod as a Subscriber will receive the event,
+// and return a new event with eventMsgAppender added to data.Message.
+func SequenceStepperPod(name, eventMsgAppender string) *corev1.Pod {
+	const imageName = "sequencestepper"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-msg-appender",
+					eventMsgAppender,
+				},
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+}
+
 // EventLatencyPod creates a Pod that measures events transfer latency.
 func EventLatencyPod(name, sink string, eventCount int) *corev1.Pod {
 	const imageName = "latency"
@@ -171,6 +196,11 @@ func Service(name string, selector map[string]string) *corev1.Service {
 			}},
 		},
 	}
+}
+
+// ServiceRef returns a Service ObjectReference for a given Service name.
+func ServiceRef(name string) *corev1.ObjectReference {
+	return pkgTest.CoreV1ObjectReference(ServiceKind, CoreAPIVersion, name)
 }
 
 // ServiceAccount creates a Kubernetes ServiceAccount with the given name and namespace.

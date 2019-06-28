@@ -22,47 +22,38 @@ import (
 	"log"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/knative/eventing/test/base/resources"
 )
 
 var (
-	eventType   string
-	eventSource string
-	eventData   string
+	eventMsgAppender string
 )
 
 func init() {
-	flag.StringVar(&eventType, "event-type", "", "The Event Type to use.")
-	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
-	flag.StringVar(&eventData, "event-data", "", "Cloudevent data body.")
+	flag.StringVar(&eventMsgAppender, "msg-appender", "", "a string we want to append on the event message")
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	ctx := event.Context.AsV02()
 
-	dataBytes, err := event.DataBytes()
-	if err != nil {
+	data := &resources.CloudEventBaseData{}
+	if err := event.DataAs(data); err != nil {
 		log.Printf("Got Data Error: %s\n", err.Error())
 		return err
 	}
-	log.Println("Received a new event: ")
-	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
 
-	if eventSource != "" {
-		ctx.SetSource(eventSource)
-	}
-	if eventType != "" {
-		ctx.SetType(eventType)
-	}
-	if eventData != "" {
-		dataBytes = []byte(eventData)
-	}
+	log.Println("Received a new event: ")
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
+
+	// append eventMsgAppender to message of the data
+	data.Message = data.Message + eventMsgAppender
 	r := cloudevents.Event{
 		Context: ctx,
-		Data:    string(dataBytes),
+		Data:    data,
 	}
 
 	log.Println("Transform the event to: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
 
 	resp.RespondWith(200, &r)
 	return nil

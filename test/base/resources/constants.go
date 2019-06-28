@@ -58,6 +58,8 @@ const (
 	InMemoryChannelKind string = "InMemoryChannel"
 	KafkaChannelKind    string = "KafkaChannel"
 	NatssChannelKind    string = "NatssChannel"
+
+	SequenceKind string = "Sequence"
 )
 
 // Kind for sources resources.
