@@ -44,19 +44,17 @@ func TestSequence(t *testing.T) {
 	}{{
 		podName:     "e2e-stepper1",
 		msgAppender: "-step1",
-		// }, {
-		// 	podName:     "e2e-stepper2",
-		// 	msgAppender: "- step2",
-		// }, {
-		// 	podName:     "e2e-stepper3",
-		// 	msgAppender: "- step3",
+	}, {
+		podName:     "e2e-stepper2",
+		msgAppender: "-step2",
+	}, {
+		podName:     "e2e-stepper3",
+		msgAppender: "-step3",
 	}}
 	channelTypeMeta := common.InMemoryChannelTypeMeta
 
 	client := setup(t, true)
 	defer tearDown(client)
-
-	client.WaitForAllTestResourcesReady()
 
 	// construct steps for the sequence
 	steps := make([]eventingv1alpha1.SubscriberSpec, 0)
@@ -65,6 +63,7 @@ func TestSequence(t *testing.T) {
 		podName := config.podName
 		msgAppender := config.msgAppender
 		stepperPod := resources.SequenceStepperPod(podName, msgAppender)
+
 		client.CreatePodOrFail(stepperPod, common.WithService(podName))
 		// create a new step
 		step := eventingv1alpha1.SubscriberSpec{
@@ -80,9 +79,9 @@ func TestSequence(t *testing.T) {
 	}
 
 	// create channel as reply of the Sequence
-	// TODO(Fredy-Z): now we'll have to use a channel plus its subscription here, since reply of the Sequence must be Addressable.
-	//                In the future if we use Knative Serving, we can make the logger service as a Knative service,
-	//                and remove the channel and subscription.
+	// TODO(Fredy-Z): now we'll have to use a channel plus its subscription here, as reply of the Sequence
+	//                must be Addressable. In the future if we use Knative Serving in the tests, we can
+	//                make the logger service as a Knative service, and remove the channel and subscription.
 	client.CreateChannelOrFail(channelName, channelTypeMeta, "")
 	// create logger service as the subscriber
 	loggerPod := resources.EventLoggerPod(loggerPodName)
@@ -107,7 +106,8 @@ func TestSequence(t *testing.T) {
 
 	// send fake CloudEvent to the Sequence
 	msg := fmt.Sprintf("TestSequence %s", uuid.NewUUID())
-	eventData := resources.CloudEventBaseData{Sequence: 0, Message: msg}
+	// NOTE: the eventData format must be CloudEventBaseData, as it needs to be correctly parsed in the stepper service.
+	eventData := resources.CloudEventBaseData{Message: msg}
 	eventDataBytes, err := json.Marshal(eventData)
 	if err != nil {
 		t.Fatalf("Failed to convert %v to json: %v", eventData, err)

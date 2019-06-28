@@ -58,11 +58,11 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	}
 	r := cloudevents.Event{
 		Context: ctx,
-		Data:    string(eventData),
+		Data:    string(dataBytes),
 	}
 
 	log.Println("Transform the event to: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), eventData)
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
 
 	resp.RespondWith(200, &r)
 	return nil

@@ -136,7 +136,8 @@ func SequenceStepperPod(name, eventMsgAppender string) *corev1.Pod {
 	const imageName = "sequencestepper"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
