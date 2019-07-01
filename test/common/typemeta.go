@@ -21,9 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ChannelTypeMeta is the TypeMeta ref for Channel.
-var ChannelTypeMeta = EventingTypeMeta(resources.ChannelKind)
-
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.
 var SubscriptionTypeMeta = EventingTypeMeta(resources.SubscriptionKind)
 

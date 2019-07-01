@@ -26,16 +26,6 @@ export E2E_MAX_CLUSTER_NODES=1
 
 source $(dirname $0)/e2e-common.sh
 
-# Override the default install_test_resources function by only installing Channel CRDs
-function install_test_resources() {
-  install_channel_crds || return 1
-}
-
-# Override the default uninstall_test_resources function by only uninstalling Channel CRDs
-function uninstall_test_resources() {
-  uninstall_channel_crds
-}
-
 initialize $@ --skip-istio-addon
 
 # Run performance tests

@@ -34,17 +34,9 @@ var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
 // CreateChannelOrFail will create a Channel Resource in Eventing.
-func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
+func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
 	switch channelTypeMeta.Kind {
-	case resources.ChannelKind:
-		channel := resources.Channel(name, provisionerName)
-		channels := client.Eventing.EventingV1alpha1().Channels(namespace)
-		channel, err := channels.Create(channel)
-		if err != nil {
-			client.T.Fatalf("Failed to create channel %q: %v", name, err)
-		}
-		client.Tracker.AddObj(channel)
 	case resources.InMemoryChannelKind:
 		channel := resources.InMemoryChannel(name)
 		channels := client.Eventing.MessagingV1alpha1().InMemoryChannels(namespace)
@@ -73,9 +65,9 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.
-func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
+func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
 	for _, name := range names {
-		client.CreateChannelOrFail(name, channelTypeMeta, provisionerName)
+		client.CreateChannelOrFail(name, channelTypeMeta)
 	}
 }
 
@@ -110,14 +102,9 @@ func (client *Client) CreateSubscriptionsOrFail(
 }
 
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
-func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
+func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
-	var broker *eventingv1alpha1.Broker
-	if channelTypeMeta.Kind == resources.ChannelKind {
-		broker = resources.Broker(name, resources.WithDeprecatedChannelTemplateForBroker(provisionerName))
-	} else {
-		broker = resources.Broker(name, resources.WithChannelTemplateForBroker(*channelTypeMeta))
-	}
+	broker := resources.Broker(name, resources.WithChannelTemplateForBroker(*channelTypeMeta))
 
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
 	// update broker with the new reference
@@ -129,9 +116,9 @@ func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.Ty
 }
 
 // CreateBrokersOrFail will create a list of Brokers.
-func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta, provisionerName string) {
+func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
 	for _, name := range names {
-		client.CreateBrokerOrFail(name, channelTypeMeta, provisionerName)
+		client.CreateBrokerOrFail(name, channelTypeMeta)
 	}
 }
 
