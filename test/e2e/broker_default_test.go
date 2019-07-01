@@ -28,7 +28,6 @@ import (
 	pkgResources "github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/logging"
@@ -74,10 +73,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 	// Wait for default broker ready.
 	if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
-		brokers := client.Eventing.EventingV1alpha1().Brokers(client.Namespace)
-		broker, _ := brokers.Get("default", v1.GetOptions{})
-		t.Logf("############default broker : %v", broker)
-
 		t.Fatalf("Error waiting for default broker to become ready: %v", err)
 	}
 
