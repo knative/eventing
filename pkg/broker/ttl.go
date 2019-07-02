@@ -27,22 +27,45 @@ const (
 	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
 	v02TTLAttribute = "knativebrokerttl"
+
+	v02UniqueTriggerAttribute = "knativeuniquetrigger"
 )
 
 // GetTTL finds the TTL in the EventContext using a case insensitive comparison
 // for the key. The second return param, is the case preserved key that matched.
 // Depending on the encoding/transport, the extension case could be changed.
 func GetTTL(ctx cloudevents.EventContext) (interface{}, string) {
-	for k, v := range ctx.AsV02().Extensions {
-		if lower := strings.ToLower(k); lower == v02TTLAttribute {
-			return v, k
-		}
-	}
-	return nil, v02TTLAttribute
+	return getAttribute(ctx, v02TTLAttribute)
 }
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
 func SetTTL(ctx cloudevents.EventContext, ttl interface{}) (cloudevents.EventContext, error) {
-	err := ctx.SetExtension(v02TTLAttribute, ttl)
+	return setAttribute(ctx, v02TTLAttribute, ttl)
+}
+
+func getAttribute(ctx cloudevents.EventContext, attribute string) (interface{}, string) {
+	attribute = strings.ToLower(attribute)
+	for k, v := range ctx.AsV02().Extensions {
+		if lower := strings.ToLower(k); lower == attribute {
+			return v, k
+		}
+	}
+	return nil, attribute
+}
+
+func setAttribute(ctx cloudevents.EventContext, attribute string, value interface{}) (cloudevents.EventContext, error) {
+	err := ctx.SetExtension(attribute, value)
 	return ctx, err
+}
+
+func GetUniqueTrigger(ctx cloudevents.EventContext) (string, string) {
+	v, k := getAttribute(ctx, v02UniqueTriggerAttribute)
+	if s, ok := v.(string); ok {
+		return s, k
+	}
+	return "", k
+}
+
+func SetUniqueTrigger(ctx cloudevents.EventContext, trigger string) (cloudevents.EventContext, error) {
+	return setAttribute(ctx, v02UniqueTriggerAttribute, trigger)
 }
