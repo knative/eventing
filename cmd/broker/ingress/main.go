@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -226,7 +227,15 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	// tctx.URI is actually the path...
-	if tctx.URI != "/" {
+	if triggerName := strings.TrimPrefix(tctx.URI, "/triggers/"); tctx.URI != triggerName {
+		var err error
+		event.Context, err = broker.SetUniqueTrigger(event.Context, triggerName)
+		if err != nil {
+			ctx, _ = tag.New(ctx, tag.Insert(TagResult, "errorAddingUniqueTrigger"))
+			resp.Status = http.StatusInternalServerError
+			return nil
+		}
+	} else if tctx.URI != "/" {
 		resp.Status = http.StatusNotFound
 		return nil
 	}

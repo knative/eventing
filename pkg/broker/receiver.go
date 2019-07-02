@@ -149,6 +149,12 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
+	uniqueTrigger := GetUniqueTrigger(event.Context)
+	if uniqueTrigger != "" && uniqueTrigger != triggerRef.Name {
+		r.logger.Debug("Message not sent to this trigger")
+		return nil
+	}
+
 	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
 	if err != nil {
 		r.logger.Error("Error sending the event", zap.Error(err))
