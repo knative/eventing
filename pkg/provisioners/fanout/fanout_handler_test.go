@@ -65,6 +65,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		channel        func(http.ResponseWriter, *http.Request)
 		expectedStatus int
 		asyncHandler   bool
+		skip           string
 	}{
 		"rejected by receiver": {
 			receiverFunc: func(provisioners.ChannelReference, *provisioners.Message) error {
@@ -159,6 +160,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
+			skip: "FLAKE This test is flaky on constrained nodes.",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
@@ -204,6 +206,9 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			if tc.skip != "" {
+				t.Skip(tc.skip)
+			}
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.subscriber,
 			})
