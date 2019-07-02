@@ -94,21 +94,6 @@ rules:
     verbs:
       - "update"
 
-  # Source resources and statuses we care about.
-  - apiGroups:
-      - "sources.eventing.knative.dev"
-    resources:
-      - "cronjobsources"
-      - "cronjobsources/status"
-      - "cronjobsources/finalizers"
-      - "containersources"
-      - "containersources/status"
-      - "containersources/finalizers"
-      - "apiserversources"
-      - "apiserversources/status"
-      - "apiserversources/finalizers"
-    verbs: *everything
-
   # The subscription controller needs to retrieve and watch CustomResourceDefinitions.
   - apiGroups:
       - "apiextensions.k8s.io"
