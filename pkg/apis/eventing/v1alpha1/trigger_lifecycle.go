@@ -80,3 +80,13 @@ func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *SubscriptionStatus) {
 func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, reason, messageFormat, messageA...)
 }
+
+func (ts *TriggerStatus) SetAddress(url *apis.URL) {
+	if url != nil {
+		ts.Address.URL = url
+		brokerCondSet.Manage(ts).MarkTrue(BrokerConditionAddressable)
+	} else {
+		ts.Address.URL = nil
+		brokerCondSet.Manage(ts).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
+	}
+}

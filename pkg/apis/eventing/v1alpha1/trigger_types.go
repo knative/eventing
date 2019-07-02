@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
@@ -94,6 +95,8 @@ type TriggerStatus struct {
 
 	// SubscriberURI is the resolved URI of the receiver for this Trigger.
 	SubscriberURI string `json:"subscriberURI,omitempty"`
+
+	Address duckv1alpha1.Addressable `json:"address,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

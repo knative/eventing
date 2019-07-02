@@ -796,6 +796,7 @@ func (in *TriggerSpec) DeepCopy() *TriggerSpec {
 func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
+	in.Address.DeepCopyInto(&out.Address)
 	return
 }
 

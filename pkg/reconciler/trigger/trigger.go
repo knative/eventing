@@ -24,6 +24,8 @@ import (
 	"reflect"
 	"time"
 
+	"knative.dev/pkg/apis"
+
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
@@ -201,6 +203,10 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
+	if b.Status.IsReady() {
+		r.addAddressable(ctx, t, b.Status.Address.GetURL())
+	}
+
 	return nil
 }
 
@@ -315,4 +321,10 @@ func (r *Reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 	}
 
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
+}
+
+func (r *Reconciler) addAddressable(ctx context.Context, t *v1alpha1.Trigger, brokerURL apis.URL) {
+	triggerURL := brokerURL
+	triggerURL.Path += fmt.Sprintf("%s/triggers/%s", brokerURL.Path, t.Name)
+	t.Status.SetAddress(&triggerURL)
 }
