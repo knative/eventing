@@ -18,7 +18,7 @@ kind: ClusterRole
 metadata:
   name: channelable-manipulator
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:

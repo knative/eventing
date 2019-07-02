@@ -17,7 +17,7 @@ kind: ClusterRole
 metadata:
   name: eventing-broker-filter
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - ""
@@ -44,7 +44,7 @@ kind: ClusterRole
 metadata:
   name: eventing-broker-ingress
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - ""
@@ -62,7 +62,7 @@ kind: ClusterRole
 metadata:
   name: eventing-config-reader
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - ""

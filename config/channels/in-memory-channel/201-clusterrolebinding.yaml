@@ -16,7 +16,7 @@ kind: ClusterRoleBinding
 metadata:
   name: imc-controller
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 subjects:
   - kind: ServiceAccount
     name: imc-controller
@@ -33,7 +33,7 @@ kind: ClusterRoleBinding
 metadata:
   name: imc-dispatcher
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 subjects:
   - kind: ServiceAccount
     name: imc-dispatcher

@@ -17,7 +17,7 @@ kind: ClusterRole
 metadata:
   name: knative-eventing-controller
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - ""

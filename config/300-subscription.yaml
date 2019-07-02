@@ -16,7 +16,7 @@ kind: CustomResourceDefinition
 metadata:
   name: subscriptions.eventing.knative.dev
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev

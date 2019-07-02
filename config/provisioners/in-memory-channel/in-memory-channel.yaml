@@ -17,7 +17,7 @@ kind: ClusterChannelProvisioner
 metadata:
   name: in-memory
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 spec: {}
 
 ---
@@ -28,7 +28,7 @@ metadata:
   name: in-memory-channel-controller
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 
 ---
 
@@ -37,7 +37,7 @@ kind: ClusterRole
 metadata:
   name: in-memory-channel-controller
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -89,7 +89,7 @@ kind: ClusterRoleBinding
 metadata:
   name: in-memory-channel-controller
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-controller
@@ -107,7 +107,7 @@ metadata:
   name: in-memory-channel-controller
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 spec:
   replicas: 1
   selector:
@@ -136,7 +136,7 @@ metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 
 ---
 
@@ -145,7 +145,7 @@ kind: ClusterRole
 metadata:
   name: in-memory-channel-dispatcher
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - "eventing.knative.dev"
@@ -172,7 +172,7 @@ kind: ClusterRoleBinding
 metadata:
   name: in-memory-channel-dispatcher
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-dispatcher
@@ -190,7 +190,7 @@ metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 rules:
   - apiGroups:
       - ""
@@ -209,7 +209,7 @@ metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 subjects:
   - kind: ServiceAccount
     name: in-memory-channel-dispatcher
@@ -227,7 +227,7 @@ metadata:
   name: in-memory-channel-dispatcher
   namespace: knative-eventing
   labels:
-    eventing.knative.dev/release: "v0.7.0"
+    eventing.knative.dev/release: "v0.7.1"
 spec:
   replicas: 1
   selector:
