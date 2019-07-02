@@ -25,8 +25,6 @@ rules:
       - "secrets"
       - "configmaps"
       - "services"
-      - "events"
-      - "eventtypes"
     verbs: &everything
       - "get"
       - "list"
@@ -56,4 +54,25 @@ rules:
       - "apiserversources"
       - "apiserversources/status"
       - "apiserversources/finalizers"
+    verbs: *everything
+
+  # Knative Services admin
+  - apiGroups:
+      - serving.knative.dev
+    resources:
+      - services
+    verbs: *everything
+
+  # EventTypes admin
+  - apiGroups:
+      - eventing.knative.dev
+    resources:
+      - eventtypes
+    verbs: *everything
+
+  # Events admin
+  - apiGroups:
+      - ""
+    resources:
+      - events
     verbs: *everything
