@@ -128,11 +128,11 @@ type SequenceStatus struct {
 
 	// SubscriptionStatuses is an array of corresponding Subscription statuses.
 	// Matches the Spec.Steps array in the order.
-	SubscriptionStatuses []SequenceSubscriptionStatus
+	SubscriptionStatuses []SequenceSubscriptionStatus `json:"subscriptionStatuses"`
 
 	// ChannelStatuses is an array of corresponding Channel statuses.
 	// Matches the Spec.Steps array in the order.
-	ChannelStatuses []SequenceChannelStatus
+	ChannelStatuses []SequenceChannelStatus `json:"channelStatuses"`
 
 	// AddressStatus is the starting point to this Sequence. Sending to this
 	// will target the first subscriber.
