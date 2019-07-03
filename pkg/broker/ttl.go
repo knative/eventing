@@ -58,12 +58,15 @@ func setAttribute(ctx cloudevents.EventContext, attribute string, value interfac
 	return ctx, err
 }
 
-func GetUniqueTrigger(ctx cloudevents.EventContext) string {
-	v, _ := getAttribute(ctx, v02UniqueTriggerAttribute)
+func GetAndRemoveUniqueTrigger(ctx cloudevents.EventContext) (cloudevents.EventContext, string) {
+	v, k := getAttribute(ctx, v02UniqueTriggerAttribute)
 	if s, ok := v.(string); ok {
-		return s
+		cc := ctx.Clone()
+		delete(cc.AsV02().Extensions, k)
+		return cc, s
 	}
-	return ""
+
+	return ctx, ""
 }
 
 func SetUniqueTrigger(ctx cloudevents.EventContext, trigger string) (cloudevents.EventContext, error) {
