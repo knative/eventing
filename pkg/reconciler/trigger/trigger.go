@@ -207,6 +207,11 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		r.addAddressable(ctx, t, b.Status.Address.GetURL())
 	}
 
+	if err = r.reconcileImporters(ctx, t); err != nil {
+		t.Status.MarkImportersFailed(err)
+		return fmt.Errorf("reconciling importers: %v", err)
+	}
+
 	return nil
 }
 
@@ -327,4 +332,43 @@ func (r *Reconciler) addAddressable(ctx context.Context, t *v1alpha1.Trigger, br
 	triggerURL := brokerURL
 	triggerURL.Path += fmt.Sprintf("%s/uniqueTriggers/%s", brokerURL.Path, t.UID)
 	t.Status.SetAddress(&triggerURL)
+}
+
+func (r *Reconciler) reconcileImporters(ctx context.Context, t *v1alpha1.Trigger) error {
+	for i, importer := range t.Spec.Importers {
+		name := fmt.Sprintf("%s-%s-%d", t.Name, t.UID, i) // TODO: Make sure it is short enough.
+		if err := r.reconcileImporter(ctx, *t, name, importer); err != nil {
+			return fmt.Errorf("error creating importer '%d': %v", i, err)
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) reconcileImporter(ctx context.Context, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) error {
+	client := r.DynamicClientSet.Resource(apis.KindToResource(importer.GetObjectKind().GroupVersionKind())).Namespace(t.Namespace)
+	i, err := client.Get(name, metav1.GetOptions{})
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			newImporter, err := resources.NewImporter(t, name, importer)
+			if err != nil {
+				logging.FromContext(ctx).Error("Failed to generate new importer", zap.Error(err), zap.String("importer.Name", name))
+				return err
+			}
+			logging.FromContext(ctx).Info("Creating Importer", zap.Any("importer", newImporter))
+			created, err := client.Create(newImporter, metav1.CreateOptions{})
+			if err != nil {
+				logging.FromContext(ctx).Error("Failed to create importer", zap.Error(err))
+				return err
+			}
+			logging.FromContext(ctx).Info("Created importer", zap.Any("importer", created))
+			return nil
+		} else {
+			logging.FromContext(ctx).Error("Failed to get importer", zap.Error(err), zap.String("importer.Name", name))
+			return err
+		}
+	}
+	logging.FromContext(ctx).Debug("Found Importer", zap.Any("importer.UID", i.GetUID()))
+	// TODO propagate status
+	// TODO watch the importer
+	return nil
 }

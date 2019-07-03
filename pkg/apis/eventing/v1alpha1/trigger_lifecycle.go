@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -89,4 +90,15 @@ func (ts *TriggerStatus) SetAddress(url *apis.URL) {
 		ts.Address.URL = nil
 		brokerCondSet.Manage(ts).MarkFalse(BrokerConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
+}
+
+func (ts *TriggerStatus) MarkImporter(index int, importer v1.ObjectReference) {
+	if index >= len(ts.Importers) {
+		ts.Importers = append(ts.Importers, make([]TriggerImporterStatus, index-len(ts.Importers)+1)...)
+	}
+	ts.Importers[index].Ref = importer
+}
+
+func (ts *TriggerStatus) MarkImportersFailed(err error) {
+	// something
 }

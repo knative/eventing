@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -63,6 +64,8 @@ type TriggerSpec struct {
 	// to 'default'.
 	Broker string `json:"broker,omitempty"`
 
+	Importers []TriggerImporterSpec `json:"importers,omitempty"`
+
 	// Filter is the filter to apply against all events from the Broker. Only events that pass this
 	// filter will be sent to the Subscriber. If not specified, will default to allowing all events.
 	//
@@ -72,6 +75,16 @@ type TriggerSpec struct {
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type TriggerImporterSpec struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Spec defines the Spec to use for each channel created. Passed
+	// in verbatim to the Channel CRD as Spec section.
+	// +optional
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
 }
 
 type TriggerFilter struct {
@@ -97,6 +110,14 @@ type TriggerStatus struct {
 	SubscriberURI string `json:"subscriberURI,omitempty"`
 
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
+
+	Importers []TriggerImporterStatus `json:"importers,omitempty"`
+}
+
+type TriggerImporterStatus struct {
+	Ref    v1.ObjectReference    `json:"ref,omitempty"`
+	Error  string                `json:"error,omitempty"`
+	Status *runtime.RawExtension `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

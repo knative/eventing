@@ -58,6 +58,10 @@ spec:
           properties:
             broker:
               type: string
+            importers:
+              type: array
+              items:
+                type: object
             filter:
               type: object
               properties:

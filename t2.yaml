@@ -1,0 +1,15 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: t-cron
+spec:
+  importers:
+   - apiVersion: sources.eventing.knative.dev/v1alpha1
+     kind: CronJobSource
+     spec:
+       schedule: "* * * * *"
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper-alpha
