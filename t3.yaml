@@ -1,0 +1,62 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: t-cron
+spec:
+  importers:
+   - apiVersion: sources.eventing.knative.dev/v1alpha1
+     kind: CronJobSource
+     spec:
+       schedule: "* * * * *"
+   - apiVersion: sources.eventing.knative.dev/v1alpha1
+     kind: ApiServerSource
+     spec:
+       serviceAccountName: events-sa
+       mode: Resource
+       resources:
+        - apiVersion: v1
+          kind: Event
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: mutator-svc
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: events-sa
+  namespace: default
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: event-watcher
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-ra-event-watcher
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: event-watcher
+subjects:
+  - kind: ServiceAccount
+    name: events-sa
+    namespace: default
