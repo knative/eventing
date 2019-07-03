@@ -18,6 +18,9 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
+# If gcloud is not available make it a no-op, not an error.
+which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
+
 # Eventing main config.
 readonly EVENTING_CONFIG="config/"
 
