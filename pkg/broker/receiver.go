@@ -24,6 +24,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/knative/eventing/pkg/logging"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	cloudevents "github.com/cloudevents/sdk-go"
@@ -133,6 +135,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		r.logger.Info("Unable to parse path as a trigger", zap.Error(err), zap.String("path", tctx.URI))
 		return errors.New("unable to parse path as a Trigger")
 	}
+	ctx = logging.With(ctx, zap.Any("triggerRef", triggerRef))
 
 	// Remove the TTL attribute that is used by the Broker.
 	originalV2 := event.Context.AsV02()
@@ -151,14 +154,18 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
+	broadcast := true
 	var uniqueTrigger string
 	event.Context, uniqueTrigger = GetAndRemoveUniqueTrigger(event.Context)
-	if uniqueTrigger != "" && types.UID(uniqueTrigger) != triggerRef.UID {
-		r.logger.Debug("Message not sent to this trigger", zap.Any("UID", types.UID(uniqueTrigger)), zap.Any("triggerRef.UID", triggerRef.UID))
-		return nil
+	if uniqueTrigger != "" {
+		broadcast = false
+		if types.UID(uniqueTrigger) != triggerRef.UID {
+			r.logger.Debug("Message not sent to this trigger", zap.Any("UID", types.UID(uniqueTrigger)), zap.Any("triggerRef.UID", triggerRef.UID))
+			return nil
+		}
 	}
 
-	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
+	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event, broadcast)
 	if err != nil {
 		r.logger.Error("Error sending the event", zap.Error(err))
 		return err
@@ -183,11 +190,16 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event, broadcast bool) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
 		return nil, err
+	}
+
+	if broadcast && !t.Spec.ReceivesBroadcastEvents() {
+		logging.FromContext(ctx).Debug("Trigger does not receive broadcast events")
+		return nil, nil
 	}
 
 	// Set up the metrics context

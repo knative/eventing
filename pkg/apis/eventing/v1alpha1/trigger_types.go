@@ -77,6 +77,10 @@ type TriggerSpec struct {
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 }
 
+func (ts *TriggerSpec) ReceivesBroadcastEvents() bool {
+	return len(ts.Importers) == 0
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TriggerImporterSpec struct {
 	metav1.TypeMeta `json:",inline"`
