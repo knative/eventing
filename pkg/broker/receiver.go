@@ -24,6 +24,8 @@ import (
 	"net/url"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -151,7 +153,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	var uniqueTrigger string
 	event.Context, uniqueTrigger = GetAndRemoveUniqueTrigger(event.Context)
-	if uniqueTrigger != "" && uniqueTrigger != triggerRef.Name {
+	if uniqueTrigger != "" && types.UID(uniqueTrigger) != triggerRef.UID {
 		r.logger.Debug("Message not sent to this trigger")
 		return nil
 	}

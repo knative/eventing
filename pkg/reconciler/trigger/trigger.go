@@ -325,6 +325,6 @@ func (r *Reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (
 
 func (r *Reconciler) addAddressable(ctx context.Context, t *v1alpha1.Trigger, brokerURL apis.URL) {
 	triggerURL := brokerURL
-	triggerURL.Path += fmt.Sprintf("%s/triggers/%s", brokerURL.Path, t.Name)
+	triggerURL.Path += fmt.Sprintf("%s/uniqueTriggers/%s", brokerURL.Path, t.UID)
 	t.Status.SetAddress(&triggerURL)
 }

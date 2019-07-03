@@ -227,9 +227,9 @@ func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	// tctx.URI is actually the path...
-	if triggerName := strings.TrimPrefix(tctx.URI, "/triggers/"); tctx.URI != triggerName {
+	if triggerUID := strings.TrimPrefix(tctx.URI, "/uniqueTriggers/"); tctx.URI != triggerUID {
 		var err error
-		event.Context, err = broker.SetUniqueTrigger(event.Context, triggerName)
+		event.Context, err = broker.SetUniqueTrigger(event.Context, triggerUID)
 		if err != nil {
 			ctx, _ = tag.New(ctx, tag.Insert(TagResult, "errorAddingUniqueTrigger"))
 			resp.Status = http.StatusInternalServerError
