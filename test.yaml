@@ -1,0 +1,151 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: t-alpha
+spec:
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper-alpha
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: message-dumper-alpha
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: message-dumper-alpha
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: message-dumper-alpha
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      app: message-dumper-alpha
+      message: dumper
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      containers:
+        - image: github.com/knative/playground/cmd/dumper
+          name: user-container
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: t-beta
+spec:
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: message-dumper-beta
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: message-dumper-beta
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: message-dumper-beta
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: message-dumper-beta
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      app: message-dumper-beta
+      message: dumper
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      containers:
+        - image: github.com/knative/playground/cmd/dumper
+          name: user-container
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Trigger
+metadata:
+  name: mutator-t
+spec:
+  filter:
+    sourceAndType:
+      type: com.example.someevent
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: mutator-svc
+
+---
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mutator-svc
+spec:
+  selector:
+    app: event-mutator
+    message: dumper
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-mutator
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      app: event-mutator
+      message: dumper
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      containers:
+        - name: user-container
+          image: github.com/knative/playground/cmd/event_mutator
+          ports:
+            - containerPort: 8080
+
