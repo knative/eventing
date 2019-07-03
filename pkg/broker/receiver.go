@@ -154,7 +154,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	var uniqueTrigger string
 	event.Context, uniqueTrigger = GetAndRemoveUniqueTrigger(event.Context)
 	if uniqueTrigger != "" && types.UID(uniqueTrigger) != triggerRef.UID {
-		r.logger.Debug("Message not sent to this trigger")
+		r.logger.Debug("Message not sent to this trigger", zap.Any("UID", types.UID(uniqueTrigger)), zap.Any("triggerRef.UID", triggerRef.UID))
 		return nil
 	}
 
