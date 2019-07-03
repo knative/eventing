@@ -12,4 +12,4 @@ spec:
     ref:
       apiVersion: v1
       kind: Service
-      name: message-dumper-alpha
+      name: mutator-svc

@@ -97,19 +97,19 @@ spec:
 
 ---
 
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Trigger
-metadata:
-  name: mutator-t
-spec:
-  filter:
-    sourceAndType:
-      type: com.example.someevent
-  subscriber:
-    ref:
-      apiVersion: v1
-      kind: Service
-      name: mutator-svc
+# apiVersion: eventing.knative.dev/v1alpha1
+# kind: Trigger
+# metadata:
+#   name: mutator-t
+# spec:
+#   filter:
+#     sourceAndType:
+#       type: com.example.someevent
+#   subscriber:
+#     ref:
+#       apiVersion: v1
+#       kind: Service
+#       name: mutator-svc
 
 ---
 
