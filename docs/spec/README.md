@@ -14,6 +14,7 @@ Docs in this directory:
 - [Resource type overview](overview.md)
 - [Interface contracts](interfaces.md)
 - [Object model specification](spec.md)
+- [Channel specification](channel.md) and [older channel (0.6.0) spec](channel_060.md)
 
 <!-- TODO(n3wscott): * [Error conditions and reporting](errors.md) -->
 <!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
