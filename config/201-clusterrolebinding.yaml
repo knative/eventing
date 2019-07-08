@@ -77,3 +77,37 @@ roleRef:
   kind: ClusterRole
   name: knative-eventing-webhook
   apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-source-controller
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-source-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-source-controller
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-source-controller-resolver
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-source-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: addressable-resolver
+  apiGroup: rbac.authorization.k8s.io
