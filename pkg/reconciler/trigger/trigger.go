@@ -24,6 +24,14 @@ import (
 	"reflect"
 	"time"
 
+	v1alpha12 "knative.dev/pkg/apis/duck/v1alpha1"
+
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+
+	duck2 "knative.dev/pkg/apis/duck"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"knative.dev/pkg/apis"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -72,6 +80,7 @@ type Reconciler struct {
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister
 	addressableTracker duck.AddressableTracker
+	resourceTracker    duck.ResourceTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -337,14 +346,30 @@ func (r *Reconciler) addAddressable(ctx context.Context, t *v1alpha1.Trigger, br
 func (r *Reconciler) reconcileImporters(ctx context.Context, t *v1alpha1.Trigger) error {
 	for i, importer := range t.Spec.Importers {
 		name := fmt.Sprintf("%s-%s-%d", t.Name, t.UID, i) // TODO: Make sure it is short enough.
-		if err := r.reconcileImporter(ctx, *t, name, importer); err != nil {
+		_, err := r.reconcileImporter(ctx, *t, name, importer)
+		if err != nil {
 			return fmt.Errorf("error creating importer '%d': %v", i, err)
 		}
+
 	}
 	return nil
 }
 
-func (r *Reconciler) reconcileImporter(ctx context.Context, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) error {
+func (r *Reconciler) reconcileImporter(ctx context.Context, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
+	i, err := r.createImporter(ctx, t, name, importer)
+	if err != nil {
+		return nil, fmt.Errorf("error creating importer: %v", err)
+	}
+	if err = r.trackImporter(t, i); err != nil {
+		return nil, fmt.Errorf("tracking importer: %v", err)
+	}
+	if err = r.propagateImporterStatus(t, name, i); err != nil {
+		return nil, fmt.Errorf("propagating importer status: %v", err)
+	}
+	return i, nil
+}
+
+func (r *Reconciler) createImporter(ctx context.Context, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
 	client := r.DynamicClientSet.Resource(apis.KindToResource(importer.GetObjectKind().GroupVersionKind())).Namespace(t.Namespace)
 	i, err := client.Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -352,23 +377,60 @@ func (r *Reconciler) reconcileImporter(ctx context.Context, t v1alpha1.Trigger, 
 			newImporter, err := resources.NewImporter(t, name, importer)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to generate new importer", zap.Error(err), zap.String("importer.Name", name))
-				return err
+				return nil, err
 			}
 			logging.FromContext(ctx).Info("Creating Importer", zap.Any("importer", newImporter))
 			created, err := client.Create(newImporter, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to create importer", zap.Error(err))
-				return err
+				return nil, err
 			}
 			logging.FromContext(ctx).Info("Created importer", zap.Any("importer", created))
-			return nil
+			return created, nil
 		} else {
 			logging.FromContext(ctx).Error("Failed to get importer", zap.Error(err), zap.String("importer.Name", name))
-			return err
+			return nil, err
 		}
 	}
 	logging.FromContext(ctx).Debug("Found Importer", zap.Any("importer.UID", i.GetUID()))
-	// TODO propagate status
-	// TODO watch the importer
+	// TODO Update importer as needed.
+	return i, nil
+}
+
+func (r *Reconciler) trackImporter(t v1alpha1.Trigger, importer *unstructured.Unstructured) error {
+	resource := &duckv1alpha1.Resource{}
+	if err := duck2.FromUnstructured(importer, resource); err != nil {
+		return fmt.Errorf("error making resource: %v", err)
+	}
+	if err := r.resourceTracker.TrackInNamespace(&t)(utils.ObjectRef(resource, resource.GroupVersionKind())); err != nil {
+		return fmt.Errorf("error tracking resource: %v", err)
+	}
 	return nil
+}
+
+func (r *Reconciler) propagateImporterStatus(t v1alpha1.Trigger, importerName string, importer *unstructured.Unstructured) error {
+	c, err := r.extractReadyCondition(importer)
+	if err != nil {
+		return err
+	}
+	t.Status.PropagateImporterReadyCondition(importerName, c)
+	return nil
+}
+
+func (r *Reconciler) extractReadyCondition(importer *unstructured.Unstructured) (v1alpha12.Condition, error) {
+	// We use the Knative style readiness check: ".status.conditions[?(@.type==\"Ready\")].status" == True.
+	kr := &v1alpha12.KResource{}
+	if err := duck2.FromUnstructured(importer, kr); err != nil {
+		return v1alpha12.Condition{}, fmt.Errorf("error making kresource: %v", err)
+	}
+	for _, c := range kr.Status.Conditions {
+		if c.Type == v1alpha12.ConditionReady {
+			return c, nil
+		}
+	}
+	return v1alpha12.Condition{
+		Status:  corev1.ConditionUnknown,
+		Reason:  "NotFound",
+		Message: "Ready condition not found",
+	}, nil
 }

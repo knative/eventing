@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/duck/v1alpha1"
 )
 
 var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
@@ -101,4 +102,8 @@ func (ts *TriggerStatus) MarkImporter(index int, importer v1.ObjectReference) {
 
 func (ts *TriggerStatus) MarkImportersFailed(err error) {
 	// something
+}
+
+func (ts *TriggerStatus) PropagateImporterReadyCondition(name string, c v1alpha1.Condition) {
+	// TODO fill in
 }
