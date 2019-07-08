@@ -153,6 +153,12 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return nil
 	}
 
+	if t.Spec.ReceivesBroadcastEvents() {
+		t.Status.MarkBroadcast()
+	} else {
+		t.Status.MarkTargeted()
+	}
+
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))

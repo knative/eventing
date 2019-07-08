@@ -123,3 +123,11 @@ func (ts *TriggerStatus) MarkImporterError(index int, err error) {
 	ts.extendImporters(index)
 	ts.Importers[index].Error = err.Error()
 }
+
+func (ts *TriggerStatus) MarkBroadcast() {
+	ts.Type = TriggerTypeBroadcast
+}
+
+func (ts *TriggerStatus) MarkTargeted() {
+	ts.Type = TriggerTypeTargeted
+}

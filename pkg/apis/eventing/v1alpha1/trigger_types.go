@@ -115,8 +115,17 @@ type TriggerStatus struct {
 
 	Address duckv1alpha1.Addressable `json:"address,omitempty"`
 
+	Type TriggerType `json:"type,omitempty"`
+
 	Importers []TriggerImporterStatus `json:"importers,omitempty"`
 }
+
+type TriggerType string
+
+var (
+	TriggerTypeBroadcast TriggerType = "Broadcast"
+	TriggerTypeTargeted  TriggerType = "Targeted"
+)
 
 type TriggerImporterStatus struct {
 	Ref    *v1.ObjectReference   `json:"ref,omitempty"`
