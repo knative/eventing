@@ -119,7 +119,7 @@ type TriggerStatus struct {
 }
 
 type TriggerImporterStatus struct {
-	Ref    v1.ObjectReference    `json:"ref,omitempty"`
+	Ref    *v1.ObjectReference   `json:"ref,omitempty"`
 	Error  string                `json:"error,omitempty"`
 	Status *runtime.RawExtension `json:"status,omitempty"`
 }

@@ -17,9 +17,10 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/duck/v1alpha1"
 )
 
 var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
@@ -93,17 +94,32 @@ func (ts *TriggerStatus) SetAddress(url *apis.URL) {
 	}
 }
 
-func (ts *TriggerStatus) MarkImporter(index int, importer v1.ObjectReference) {
+func (ts *TriggerStatus) extendImporters(index int) {
 	if index >= len(ts.Importers) {
 		ts.Importers = append(ts.Importers, make([]TriggerImporterStatus, index-len(ts.Importers)+1)...)
 	}
-	ts.Importers[index].Ref = importer
+}
+
+func (ts *TriggerStatus) MarkImporter(index int, importer v1.ObjectReference) {
+	ts.extendImporters(index)
+	ts.Importers[index].Ref = &importer
 }
 
 func (ts *TriggerStatus) MarkImportersFailed(err error) {
 	// something
 }
 
-func (ts *TriggerStatus) PropagateImporterReadyCondition(name string, c v1alpha1.Condition) {
-	// TODO fill in
+func (ts *TriggerStatus) MarkImporterRef(index int, importer corev1.ObjectReference) {
+	ts.extendImporters(index)
+	ts.Importers[index].Ref = &importer
+}
+
+func (ts *TriggerStatus) PropagateImporterStatus(index int, status runtime.RawExtension) {
+	ts.extendImporters(index)
+	ts.Importers[index].Status = &status
+}
+
+func (ts *TriggerStatus) MarkImporterError(index int, err error) {
+	ts.extendImporters(index)
+	ts.Importers[index].Error = err.Error()
 }

@@ -18,11 +18,14 @@ package trigger
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
 	"time"
+
+	"k8s.io/apimachinery/pkg/runtime"
 
 	v1alpha12 "knative.dev/pkg/apis/duck/v1alpha1"
 
@@ -345,31 +348,51 @@ func (r *Reconciler) addAddressable(ctx context.Context, t *v1alpha1.Trigger, br
 
 func (r *Reconciler) reconcileImporters(ctx context.Context, t *v1alpha1.Trigger) error {
 	for i, importer := range t.Spec.Importers {
+		mir := func(ref corev1.ObjectReference) {
+			t.Status.MarkImporterRef(i, ref)
+		}
+		pis := func(s runtime.RawExtension) {
+			t.Status.PropagateImporterStatus(i, s)
+		}
+		mie := func(e error) {
+			t.Status.MarkImporterError(i, e)
+		}
 		name := fmt.Sprintf("%s-%s-%d", t.Name, t.UID, i) // TODO: Make sure it is short enough.
-		_, err := r.reconcileImporter(ctx, *t, name, importer)
+		_, err := r.reconcileImporter(ctx, mir, pis, mie, *t, name, importer)
 		if err != nil {
 			return fmt.Errorf("error creating importer '%d': %v", i, err)
 		}
-
 	}
 	return nil
 }
 
-func (r *Reconciler) reconcileImporter(ctx context.Context, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
-	i, err := r.createImporter(ctx, t, name, importer)
+type markImporterRef func(corev1.ObjectReference)
+type propagateImporterStatusFunc func(status runtime.RawExtension)
+type markImporterError func(error)
+
+func (r *Reconciler) reconcileImporter(ctx context.Context, mir markImporterRef, pis propagateImporterStatusFunc, mie markImporterError, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
+	i, err := r.createImporter(ctx, mie, t, name, importer)
 	if err != nil {
 		return nil, fmt.Errorf("error creating importer: %v", err)
 	}
+	ref := corev1.ObjectReference{
+		APIVersion: i.GetAPIVersion(),
+		Kind:       i.GetKind(),
+		Namespace:  i.GetNamespace(),
+		Name:       i.GetName(),
+		UID:        i.GetUID(),
+	}
+	mir(ref)
 	if err = r.trackImporter(t, i); err != nil {
 		return nil, fmt.Errorf("tracking importer: %v", err)
 	}
-	if err = r.propagateImporterStatus(t, name, i); err != nil {
+	if err = r.propagateImporterStatus(pis, i); err != nil {
 		return nil, fmt.Errorf("propagating importer status: %v", err)
 	}
 	return i, nil
 }
 
-func (r *Reconciler) createImporter(ctx context.Context, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
+func (r *Reconciler) createImporter(ctx context.Context, mie markImporterError, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
 	client := r.DynamicClientSet.Resource(apis.KindToResource(importer.GetObjectKind().GroupVersionKind())).Namespace(t.Namespace)
 	i, err := client.Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -389,6 +412,7 @@ func (r *Reconciler) createImporter(ctx context.Context, t v1alpha1.Trigger, nam
 			return created, nil
 		} else {
 			logging.FromContext(ctx).Error("Failed to get importer", zap.Error(err), zap.String("importer.Name", name))
+			mie(err)
 			return nil, err
 		}
 	}
@@ -408,13 +432,23 @@ func (r *Reconciler) trackImporter(t v1alpha1.Trigger, importer *unstructured.Un
 	return nil
 }
 
-func (r *Reconciler) propagateImporterStatus(t v1alpha1.Trigger, importerName string, importer *unstructured.Unstructured) error {
-	c, err := r.extractReadyCondition(importer)
+func (r *Reconciler) propagateImporterStatus(ps propagateImporterStatusFunc, importer *unstructured.Unstructured) error {
+	s := importer.Object["status"]
+	sj, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	t.Status.PropagateImporterReadyCondition(importerName, c)
+	sre := runtime.RawExtension{
+		Raw: sj,
+	}
+	ps(sre)
 	return nil
+	// TODO try checking the knative standard ready condition. If present, propagate it.
+	// c, err := r.extractReadyCondition(importer)
+	// if err != nil {
+	// 	return err
+	// }
+	// return nil
 }
 
 func (r *Reconciler) extractReadyCondition(importer *unstructured.Unstructured) (v1alpha12.Condition, error) {
