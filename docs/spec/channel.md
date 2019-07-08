@@ -28,9 +28,9 @@ A different example for the `InMemoryChannel`:
 
 ```
 apiVersion: messaging.knative.dev/v1alpha1
-  kind: InMemoryChannel
-  metadata:
-    name: my-channel
+kind: InMemoryChannel
+metadata:
+  name: my-channel
 ```
 
 Each _Channel Controller_ ensures the required tasks on the backing technology are applied. In this case a Kafka topic with the desired configuration is being created, backing all messages from the channel.
