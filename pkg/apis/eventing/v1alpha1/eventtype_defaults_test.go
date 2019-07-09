@@ -31,43 +31,30 @@ func TestEventTypeDefaults(t *testing.T) {
 		"nil spec": {
 			initial: EventType{},
 			expected: EventType{
-				Spec: EventTypeSpec{
-					Broker: "default",
-				},
+				Spec: EventTypeSpec{},
 			},
 		},
 		"broker empty": {
 			initial: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: "test-source",
-					Broker: "",
-					Schema: "test-schema",
+					Type: "test-type",
 				},
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: "test-source",
-					Broker: "default",
-					Schema: "test-schema",
+					Type: "test-type",
 				},
 			},
 		},
 		"broker not set": {
 			initial: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: "test-source",
-					Schema: "test-schema",
+					Type: "test-type",
 				},
 			},
 			expected: EventType{
 				Spec: EventTypeSpec{
-					Type:   "test-type",
-					Source: "test-source",
-					Broker: "default",
-					Schema: "test-schema",
+					Type: "test-type",
 				},
 			},
 		},

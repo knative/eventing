@@ -316,7 +316,7 @@ func asMap(eventTypes []eventingv1alpha1.EventType, keyFunc func(*eventingv1alph
 }
 
 func keyFromEventType(eventType *eventingv1alpha1.EventType) string {
-	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
+	return fmt.Sprintf(eventType.Spec.Type)
 }
 
 func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {

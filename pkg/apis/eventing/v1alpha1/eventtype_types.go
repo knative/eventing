@@ -51,17 +51,19 @@ var _ webhook.GenericCRD = (*EventType)(nil)
 type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
 	Type string `json:"type"`
-	// Source is a URI, it represents the CloudEvents source.
-	Source string `json:"source"`
-	// Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
-	// It may be a JSON schema, a protobuf schema, etc. It is optional.
-	// +optional
-	Schema string `json:"schema,omitempty"`
-	// Broker refers to the Broker that can provide the EventType.
-	Broker string `json:"broker"`
-	// Description is an optional field used to describe the EventType, in any meaningful way.
-	// +optional
-	Description string `json:"description,omitempty"`
+
+	Importer EventTypeImporter `json:"importer"`
+}
+
+type EventTypeImporter struct {
+	metav1.TypeMeta `json:",inline"`
+
+	Parameters []EventTypeParameter `json:"parameters"`
+}
+
+type EventTypeParameter struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // EventTypeStatus represents the current state of a EventType.

@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/knative/eventing/pkg/utils"
 	"knative.dev/pkg/tracker"
 
 	"k8s.io/client-go/tools/cache"
@@ -113,26 +112,29 @@ func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 		return nil
 	}
 
-	b, err := r.getBroker(ctx, et)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		et.Status.MarkBrokerDoesNotExist()
-		return err
-	}
-	et.Status.MarkBrokerExists()
+	// TODO properly reconcile and update status?
+	et.Status.MarkReady()
+
+	//b, err := r.getBroker(ctx, et)
+	//if err != nil {
+	//	logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
+	//	et.Status.MarkBrokerDoesNotExist()
+	//	return err
+	//}
+	// et.Status.MarkBrokerExists()
 
 	// Tell tracker to reconcile this EventType whenever the Broker changes.
-	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), et); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
-		return err
-	}
-
-	if !b.Status.IsReady() {
-		logging.FromContext(ctx).Error("Broker is not ready", zap.String("broker", b.Name))
-		et.Status.MarkBrokerNotReady()
-		return nil
-	}
-	et.Status.MarkBrokerReady()
+	//if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), et); err != nil {
+	//	logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+	//	return err
+	//}
+	//
+	//if !b.Status.IsReady() {
+	//	logging.FromContext(ctx).Error("Broker is not ready", zap.String("broker", b.Name))
+	//	et.Status.MarkBrokerNotReady()
+	//	return nil
+	//}
+	// et.Status.MarkBrokerReady()
 
 	return nil
 }
@@ -164,9 +166,4 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.EventTy
 	}
 
 	return et, err
-}
-
-// getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.
-func (r *Reconciler) getBroker(ctx context.Context, et *v1alpha1.EventType) (*v1alpha1.Broker, error) {
-	return r.brokerLister.Brokers(et.Namespace).Get(et.Spec.Broker)
 }

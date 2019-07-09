@@ -20,7 +20,7 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-var eventTypeCondSet = apis.NewLivingConditionSet(EventTypeConditionBrokerExists, EventTypeConditionBrokerReady)
+var eventTypeCondSet = apis.NewLivingConditionSet()
 
 const (
 	EventTypeConditionReady                           = apis.ConditionReady
@@ -57,4 +57,8 @@ func (et *EventTypeStatus) MarkBrokerReady() {
 
 func (et *EventTypeStatus) MarkBrokerNotReady() {
 	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, "BrokerNotReady", "Broker is not ready")
+}
+
+func (et *EventTypeStatus) MarkReady() {
+	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionReady)
 }

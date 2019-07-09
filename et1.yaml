@@ -1,0 +1,16 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventType
+metadata:
+  name: gcs-object-finalize
+spec:
+  type: com.google.storage.finalize
+  importer:
+    apiVersion: sources.aikas.org/v1alpha1
+    kind: GCSSource
+    parameters:
+      - name: gcsCredsSecret
+        description: "Name of a Secret containing a GCP service account key with permission to create a GCP notification. Must be at the `key.json` key in JSON format (see https://cloud.google.com/iam/docs/creating-managing-service-account-keys)."
+      - name: googleCloudProject
+        description: "Google Cloud Project ID where the GCS bucket resides"
+      - name: bucket
+        description: "GCS bucket to subscribe to. For example my-test-bucket"

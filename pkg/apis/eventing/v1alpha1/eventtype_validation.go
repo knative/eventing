@@ -18,8 +18,7 @@ package v1alpha1
 
 import (
 	"context"
-
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"fmt"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -35,16 +34,29 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 		fe := apis.ErrMissingField("type")
 		errs = errs.Also(fe)
 	}
-	if ets.Source == "" {
-		// TODO validate is a valid URI.
-		fe := apis.ErrMissingField("source")
+	if ets.Importer.Kind == "" {
+		fe := apis.ErrMissingField("importer.kind")
 		errs = errs.Also(fe)
 	}
-	if ets.Broker == "" {
-		fe := apis.ErrMissingField("broker")
+	if ets.Importer.APIVersion == "" {
+		fe := apis.ErrMissingField("importer.apiVersion")
 		errs = errs.Also(fe)
 	}
-	// TODO validate Schema is a valid URI.
+	if len(ets.Importer.Parameters) == 0 {
+		fe := apis.ErrMissingField("importer.parameters")
+		errs = errs.Also(fe)
+	} else {
+		for i, p := range ets.Importer.Parameters {
+			if p.Name == "" {
+				fe := apis.ErrMissingField(fmt.Sprintf("importer.parameters[%d].name", i))
+				errs = errs.Also(fe)
+			}
+			if p.Description == "" {
+				fe := apis.ErrMissingField(fmt.Sprintf("importer.parameters[%d].description", i))
+				errs = errs.Also(fe)
+			}
+		}
+	}
 	return errs
 }
 
@@ -58,9 +70,7 @@ func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable
 		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
-	// All but Description field immutable.
-	ignoreArguments := cmpopts.IgnoreFields(EventTypeSpec{}, "Description")
-	if diff, err := kmp.ShortDiff(original.Spec, et.Spec, ignoreArguments); err != nil {
+	if diff, err := kmp.ShortDiff(original.Spec, et.Spec); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff EventType",
 			Paths:   []string{"spec"},
