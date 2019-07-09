@@ -72,7 +72,7 @@ type Reconciler struct {
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister eventinglisters.SubscriptionLister
 
-	addressableTracker duck.AddressableTracker
+	resourceTracker duck.ResourceTracker
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -276,7 +276,7 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 	}
 
 	// Tell tracker to reconcile this Broker whenever my channels change.
-	track := r.addressableTracker.TrackInNamespace(b)
+	track := r.resourceTracker.TrackInNamespace(b)
 
 	// Start tracking trigger channel...
 	if err = track(utils.ObjectRef(triggerChan, triggerChan.GroupVersionKind())); err != nil {

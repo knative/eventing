@@ -38,9 +38,6 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	"time"
-
-	"github.com/knative/eventing/pkg/duck"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
@@ -759,29 +756,16 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:             listers.GetSubscriptionLister(),
-			addressableTracker:             fakeAddressableTracker{},
+			resourceTracker:                fakeResourceTracker{},
 			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	}, false))
 }
 
-type fakeAddressableInformer struct{}
+type fakeResourceTracker struct{}
 
-func (fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.AddressableTracker {
-	return fakeAddressableTracker{}
-}
-
-type fakeAddressableTracker struct{}
-
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
+func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
 	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
 }
 
 func TestFinalizers(t *testing.T) {

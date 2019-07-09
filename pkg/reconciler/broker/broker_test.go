@@ -1667,7 +1667,7 @@ func TestReconcileCRD(t *testing.T) {
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
-			addressableTracker:        fakeAddressableTracker{},
+			resourceTracker:           fakeAddressableTracker{},
 		}
 	},
 		false,
