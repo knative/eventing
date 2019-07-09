@@ -41,8 +41,6 @@ type AddressableInformer interface {
 
 // A tracker capable of tracking Addressables.
 type AddressableTracker interface {
-	tracker.Interface
-
 	// TrackInNamespace returns a function that can be used to watch arbitrary Addressables in the same
 	// namespace as obj. Any change will cause a callback for obj.
 	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
@@ -163,17 +161,9 @@ func (t *addressableTracker) TrackInNamespace(obj metav1.Object) func(corev1.Obj
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
 		// specify the namespace.
 		ref.Namespace = obj.GetNamespace()
-		return t.Track(ref, obj)
+		if err := t.ensureTracking(ref); err != nil {
+			return err
+		}
+		return t.tracker.Track(ref, obj)
 	}
-}
-
-func (t *addressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	if err := t.ensureTracking(ref); err != nil {
-		return err
-	}
-	return t.tracker.Track(ref, obj)
-}
-
-func (t *addressableTracker) OnChanged(obj interface{}) {
-	t.tracker.OnChanged(obj)
 }
