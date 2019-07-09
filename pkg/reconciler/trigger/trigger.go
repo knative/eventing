@@ -396,6 +396,12 @@ func (r *Reconciler) reconcileImporter(ctx context.Context, mir markImporterRef,
 func (r *Reconciler) createImporter(ctx context.Context, mie markImporterError, t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
 	eventType, err := r.eventTypeLister.EventTypes(t.Namespace).Get(importer.EventTypeName)
 	if err != nil {
+		logging.FromContext(ctx).Error("Failed to get eventType", zap.Error(err), zap.String("importer.EventTypeName", importer.EventTypeName))
+		return nil, err
+	}
+	client := r.DynamicClientSet.Resource(apis.KindToResource(eventType.Spec.Importer.GetObjectKind().GroupVersionKind())).Namespace(t.Namespace)
+	i, err := client.Get(name, metav1.GetOptions{})
+	if err != nil {
 		if apierrs.IsNotFound(err) {
 			newImporter, err := resources.NewImporter(t, name, importer)
 			if err != nil {
@@ -403,7 +409,6 @@ func (r *Reconciler) createImporter(ctx context.Context, mie markImporterError, 
 				return nil, err
 			}
 			logging.FromContext(ctx).Info("Creating Importer", zap.Any("importer", newImporter))
-			client := r.DynamicClientSet.Resource(apis.KindToResource(eventType.Spec.Importer.GetObjectKind().GroupVersionKind())).Namespace(t.Namespace)
 			created, err := client.Create(newImporter, metav1.CreateOptions{})
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to create importer", zap.Error(err))
@@ -417,8 +422,6 @@ func (r *Reconciler) createImporter(ctx context.Context, mie markImporterError, 
 			return nil, err
 		}
 	}
-	client := r.DynamicClientSet.Resource(apis.KindToResource(eventType.Spec.Importer.GetObjectKind().GroupVersionKind())).Namespace(t.Namespace)
-	i, err := client.Get(name, metav1.GetOptions{})
 	logging.FromContext(ctx).Debug("Found Importer", zap.Any("importer.UID", i.GetUID()))
 	// TODO Update importer as needed.
 	return i, nil
