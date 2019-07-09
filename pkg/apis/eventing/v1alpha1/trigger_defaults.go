@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	"context"
+
+	"github.com/knative/pkg/ptr"
 )
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
@@ -35,7 +37,6 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	}
 
 	if ts.StructuredEncoding == nil {
-		defaultVal := false
-		ts.StructuredEncoding = &defaultVal
+		ts.StructuredEncoding = ptr.Bool(false)
 	}
 }

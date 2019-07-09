@@ -73,7 +73,7 @@ type TriggerSpec struct {
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
 
 	// StructuredEncoding when true causes events to be delivered using the cloudevents
-	// structued encoding over HTTP. The default is BinaryEncoding.
+	// structured encoding over HTTP. The default is BinaryEncoding.
 	StructuredEncoding *bool `json:"structuredEncoding,omitempty"`
 }
 
