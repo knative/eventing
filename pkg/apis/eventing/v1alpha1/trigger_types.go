@@ -83,7 +83,7 @@ func (ts *TriggerSpec) ReceivesBroadcastEvents() bool {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TriggerImporterSpec struct {
-	metav1.TypeMeta `json:",inline"`
+	EventTypeName string `json:"eventTypeName"`
 
 	// Spec defines the Spec to use for each channel created. Passed
 	// in verbatim to the Channel CRD as Spec section.

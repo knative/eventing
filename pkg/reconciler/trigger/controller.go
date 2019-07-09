@@ -31,6 +31,7 @@ import (
 
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
+	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	"github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 )
@@ -55,6 +56,7 @@ func NewController(
 	channelInformer := channel.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
+	eventTypeInformer := eventtype.Get(ctx)
 	serviceInformer := service.Get(ctx)
 	addressableInformer := duck.NewAddressableInformer(ctx)
 	kresourceInformer := duck.NewResourceInformer(ctx)
@@ -66,6 +68,7 @@ func NewController(
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		serviceLister:      serviceInformer.Lister(),
+		eventTypeLister:    eventTypeInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -90,5 +93,7 @@ func NewController(
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
+
+	// TODO watch for EventType changes.
 	return impl
 }
