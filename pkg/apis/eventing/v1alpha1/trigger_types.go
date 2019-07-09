@@ -71,6 +71,10 @@ type TriggerSpec struct {
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
 	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+
+	// StructuredEncoding when true causes events to be delivered using the cloudevents
+	// structued encoding over HTTP. The default is BinaryEncoding.
+	StructuredEncoding *bool `json:"structuredEncoding,omitempty"`
 }
 
 type TriggerFilter struct {

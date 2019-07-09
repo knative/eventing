@@ -32,11 +32,14 @@ var (
 			Type:   "other_type",
 			Source: "other_source"},
 	}
+	binaryEncoding     = false
+	structuredEncoding = true
 
 	defaultTrigger = Trigger{
 		Spec: TriggerSpec{
-			Broker: defaultBroker,
-			Filter: defaultTriggerFilter,
+			Broker:             defaultBroker,
+			Filter:             defaultTriggerFilter,
+			StructuredEncoding: &binaryEncoding,
 		},
 	}
 )
@@ -48,15 +51,19 @@ func TestTriggerDefaults(t *testing.T) {
 	}{
 		"nil broker": {
 			initial:  Trigger{Spec: TriggerSpec{Filter: otherTriggerFilter}},
-			expected: Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: otherTriggerFilter}},
+			expected: Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: otherTriggerFilter, StructuredEncoding: &binaryEncoding}},
 		},
 		"nil filter": {
 			initial:  Trigger{Spec: TriggerSpec{Broker: otherBroker}},
-			expected: Trigger{Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter}},
+			expected: Trigger{Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter, StructuredEncoding: &binaryEncoding}},
 		},
 		"nil broker and nil filter": {
 			initial:  Trigger{},
 			expected: defaultTrigger,
+		},
+		"with structured encoding": {
+			initial:  Trigger{Spec: TriggerSpec{StructuredEncoding: &structuredEncoding}},
+			expected: Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter, StructuredEncoding: &structuredEncoding}},
 		},
 	}
 	for n, tc := range testCases {

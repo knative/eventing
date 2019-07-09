@@ -33,4 +33,9 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	if ts.Filter == nil {
 		ts.Filter = &TriggerFilter{}
 	}
+
+	if ts.StructuredEncoding == nil {
+		defaultVal := false
+		ts.StructuredEncoding = &defaultVal
+	}
 }
