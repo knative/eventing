@@ -79,7 +79,12 @@ func main() {
 	configMapWatcher.Watch(channeldefaulter.ConfigMapName, channelDefaulter.UpdateConfigMap)
 
 	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
+		logger.Fatalf("failed to start webhook configmap watcher: %v", zap.Error(err))
+	}
+
+	stats, err := webhook.NewStatsReporter()
+	if err != nil {
+		logger.Fatalw("failed to initialize the stats reporter", zap.Error(err))
 	}
 
 	options := webhook.ControllerOptions{
@@ -91,8 +96,9 @@ func main() {
 		WebhookName:    "webhook.eventing.knative.dev",
 	}
 	controller := webhook.AdmissionController{
-		Client:  kubeClient,
-		Options: options,
+		Client:        kubeClient,
+		Options:       options,
+		StatsReporter: stats,
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group eventing.knative.dev,
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):                    &eventingv1alpha1.Broker{},
