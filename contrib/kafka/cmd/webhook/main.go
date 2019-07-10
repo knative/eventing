@@ -80,11 +80,12 @@ func main() {
 		Port:           8443,
 		SecretName:     "messaging-webhook-certs",
 		WebhookName:    "webhook.messaging.knative.dev",
+		StatsReporter:  stats,
 	}
 	controller := webhook.AdmissionController{
-		Client:        kubeClient,
-		Options:       options,
-		StatsReporter: stats,
+		Client:  kubeClient,
+		Options: options,
+
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group messaging.knative.dev
 			messagingv1alpha1.SchemeGroupVersion.WithKind("KafkaChannel"): &messagingv1alpha1.KafkaChannel{},

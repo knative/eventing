@@ -94,11 +94,11 @@ func main() {
 		Port:           8443,
 		SecretName:     "eventing-webhook-certs",
 		WebhookName:    "webhook.eventing.knative.dev",
+		StatsReporter:  stats,
 	}
 	controller := webhook.AdmissionController{
-		Client:        kubeClient,
-		Options:       options,
-		StatsReporter: stats,
+		Client:  kubeClient,
+		Options: options,
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group eventing.knative.dev,
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):                    &eventingv1alpha1.Broker{},
