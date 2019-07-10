@@ -28,6 +28,7 @@ import (
 type MessagingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ChannelsGetter
+	ChoicesGetter
 	InMemoryChannelsGetter
 	SequencesGetter
 }
@@ -39,6 +40,10 @@ type MessagingV1alpha1Client struct {
 
 func (c *MessagingV1alpha1Client) Channels(namespace string) ChannelInterface {
 	return newChannels(c, namespace)
+}
+
+func (c *MessagingV1alpha1Client) Choices(namespace string) ChoiceInterface {
+	return newChoices(c, namespace)
 }
 
 func (c *MessagingV1alpha1Client) InMemoryChannels(namespace string) InMemoryChannelInterface {

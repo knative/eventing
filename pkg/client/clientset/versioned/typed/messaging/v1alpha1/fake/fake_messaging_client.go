@@ -32,6 +32,10 @@ func (c *FakeMessagingV1alpha1) Channels(namespace string) v1alpha1.ChannelInter
 	return &FakeChannels{c, namespace}
 }
 
+func (c *FakeMessagingV1alpha1) Choices(namespace string) v1alpha1.ChoiceInterface {
+	return &FakeChoices{c, namespace}
+}
+
 func (c *FakeMessagingV1alpha1) InMemoryChannels(namespace string) v1alpha1.InMemoryChannelInterface {
 	return &FakeInMemoryChannels{c, namespace}
 }
