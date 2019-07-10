@@ -42,12 +42,12 @@ type triggerImporterSpecInternal struct {
 	Spec *runtime.RawExtension `json:"spec,omitempty"`
 }
 
-func NewImporter(t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec) (*unstructured.Unstructured, error) {
+func NewImporter(t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImporterSpec, eventType v1alpha1.EventTypeSpec) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := triggerImporterSpecInternal{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: importer.APIVersion,
-			Kind:       importer.Kind,
+			APIVersion: eventType.Importer.APIVersion,
+			Kind:       eventType.Importer.Kind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
@@ -58,7 +58,7 @@ func NewImporter(t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImpor
 		},
 	}
 
-	spec, err := injectSink(t, *importer.Spec)
+	spec, err := injectSinkAndEventType(t, *importer.Arguments, eventType.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +76,9 @@ func NewImporter(t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImpor
 	return u, nil
 }
 
-func injectSink(t v1alpha1.Trigger, spec runtime.RawExtension) (runtime.RawExtension, error) {
+func injectSinkAndEventType(t v1alpha1.Trigger, arguments runtime.RawExtension, eventType string) (runtime.RawExtension, error) {
 	m := make(map[string]interface{})
-	if err := json.Unmarshal(spec.Raw, &m); err != nil {
+	if err := json.Unmarshal(arguments.Raw, &m); err != nil {
 		return runtime.RawExtension{}, err
 	}
 	m["sink"] = v1.ObjectReference{
@@ -86,7 +86,9 @@ func injectSink(t v1alpha1.Trigger, spec runtime.RawExtension) (runtime.RawExten
 		Kind:       t.GetGroupVersionKind().Kind,
 		Name:       t.Name,
 	}
-	log.Printf("injectSink***********: %+v", m)
+	// TODO rethink. This assumes a single eventType and that the importers' spec can be configured with eventType.
+	m["eventType"] = eventType
+	log.Printf("injectSinkAndEventType***********: %+v", m)
 	j, err := json.Marshal(m)
 	if err != nil {
 		return runtime.RawExtension{}, err

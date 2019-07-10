@@ -1,0 +1,12 @@
+apiVersion: eventing.knative.dev/v1alpha1
+kind: EventType
+metadata:
+  name: cronjob-et
+spec:
+  type: dev.knative.cronjob.event
+  importer:
+    apiVersion: sources.eventing.knative.dev/v1alpha1
+    kind: CronJobSource
+    parameters:
+      - name: schedule
+        description: "The cron job schedule"

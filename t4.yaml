@@ -1,12 +1,16 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Trigger
 metadata:
-  name: t-cron
+  name: t-gcs
 spec:
   importers:
-   - eventTypeName: cronjob-et
-     arguments:
-       schedule: "* * * * *"
+    - eventTypeName: gcs-object-finalize
+      arguments:
+        googleCloudProject: knative-project-228222
+        gcsCredsSecret:
+          name: gcssource-key
+          key: key.json
+        bucket: knative-demo
   subscriber:
     ref:
       apiVersion: v1

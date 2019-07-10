@@ -403,7 +403,7 @@ func (r *Reconciler) createImporter(ctx context.Context, mie markImporterError, 
 	i, err := client.Get(name, metav1.GetOptions{})
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newImporter, err := resources.NewImporter(t, name, importer)
+			newImporter, err := resources.NewImporter(t, name, importer, eventType.Spec)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to generate new importer", zap.Error(err), zap.String("importer.Name", name))
 				return nil, err

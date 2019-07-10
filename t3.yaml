@@ -1,21 +1,19 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Trigger
 metadata:
-  name: t-cron
+  name: t-cron-api
 spec:
   importers:
-   - apiVersion: sources.eventing.knative.dev/v1alpha1
-     kind: CronJobSource
-     spec:
-       schedule: "* * * * *"
-   - apiVersion: sources.eventing.knative.dev/v1alpha1
-     kind: ApiServerSource
-     spec:
-       serviceAccountName: events-sa
-       mode: Resource
-       resources:
-        - apiVersion: v1
-          kind: Event
+    - eventTypeName: cronjob-et
+      arguments:
+        schedule: "* * * * *"
+    - eventTypeName: apiserver-et
+      arguments:
+        serviceAccountName: events-sa
+        mode: Resource
+        resources:
+          - apiVersion: v1
+            kind: Event
   subscriber:
     ref:
       apiVersion: v1

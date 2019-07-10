@@ -81,14 +81,11 @@ func (ts *TriggerSpec) ReceivesBroadcastEvents() bool {
 	return len(ts.Importers) == 0
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TriggerImporterSpec struct {
 	EventTypeName string `json:"eventTypeName"`
 
-	// Spec defines the Spec to use for each channel created. Passed
-	// in verbatim to the Channel CRD as Spec section.
 	// +optional
-	Spec *runtime.RawExtension `json:"spec,omitempty"`
+	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
 }
 
 type TriggerFilter struct {
