@@ -18,7 +18,7 @@ spec:
     ref:
       apiVersion: v1
       kind: Service
-      name: mutator-svc
+      name: event-display
 
 ---
 
