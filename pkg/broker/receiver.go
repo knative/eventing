@@ -197,7 +197,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, err
 	}
 
-	if broadcast && !t.Spec.ReceivesBroadcastEvents() {
+	if broadcast && t.Status.Type == eventingv1alpha1.TriggerTypeTargeted {
 		logging.FromContext(ctx).Debug("Trigger does not receive broadcast events")
 		return nil, nil
 	}
