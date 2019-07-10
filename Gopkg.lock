@@ -451,7 +451,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "f7f13f8e3a8af17943e1a44102607f1d3fc4751d"
+  revision = "d976261d75101cab99291409641dc999c7baec68"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1357,7 +1357,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ed15fad369d1d253ebcae3defd279859d26e54d83e1e601fb3cf40d192377404"
+  digest = "1:4563adec376c56f3441da3767facc1d6c733d93a39f593495c009fed54dbb76c"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1433,7 +1433,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "84d3910c565e397fa044f246398f94712da53303"
+  revision = "e2418a08c195ff0acda037c11c21882ca5453d96"
 
 [[projects]]
   digest = "1:a8495647d9f03401c36b801a0644207a434f76ed9d4fc4ea80c46700f0ccc575"
