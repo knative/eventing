@@ -51,10 +51,11 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 				fe := apis.ErrMissingField(fmt.Sprintf("importer.parameters[%d].name", i))
 				errs = errs.Also(fe)
 			}
-			if p.Description == "" {
-				fe := apis.ErrMissingField(fmt.Sprintf("importer.parameters[%d].description", i))
-				errs = errs.Also(fe)
-			}
+			// Allowing description to be empty
+			//if p.Description == "" {
+			//	fe := apis.ErrMissingField(fmt.Sprintf("importer.parameters[%d].description", i))
+			//	errs = errs.Also(fe)
+			//}
 		}
 	}
 	return errs
