@@ -4,7 +4,7 @@ metadata:
   name: t-cron
 spec:
   importers:
-    - eventTypeName: cronjob-et
+    - eventTypeName: cron
       arguments:
         schedule: "* * * * *"
   subscriber:
