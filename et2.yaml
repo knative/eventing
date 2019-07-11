@@ -1,7 +1,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
 metadata:
-  name: cronjob-et
+  name: cron
 spec:
   type: dev.knative.cronjob.event
   importer:
