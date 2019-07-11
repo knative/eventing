@@ -6,9 +6,9 @@ spec:
   importers:
     - eventTypeName: gcs-object-finalize
       arguments:
-        googleCloudProject: knative-project-228222
-        gcsCredsSecret: gcssource-key
-        bucket: knative-demo
+        googleCloudProject: PROJECT_ID
+        gcsCredsSecret: google-cloud-key
+        bucket: BUCKET
   subscriber:
     ref:
       apiVersion: serving.knative.dev/v1alpha1
