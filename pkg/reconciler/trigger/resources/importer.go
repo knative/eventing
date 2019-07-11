@@ -58,7 +58,7 @@ func NewImporter(t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImpor
 		},
 	}
 
-	spec, err := injectSinkAndEventType(t, *importer.Arguments, eventType.Type)
+	spec, err := injectSinkAndEventType(t, importer.Arguments, eventType.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +76,10 @@ func NewImporter(t v1alpha1.Trigger, name string, importer v1alpha1.TriggerImpor
 	return u, nil
 }
 
-func injectSinkAndEventType(t v1alpha1.Trigger, arguments runtime.RawExtension, eventType string) (runtime.RawExtension, error) {
+func injectSinkAndEventType(t v1alpha1.Trigger, arguments map[string]string, eventType string) (runtime.RawExtension, error) {
 	m := make(map[string]interface{})
-	if err := json.Unmarshal(arguments.Raw, &m); err != nil {
-		return runtime.RawExtension{}, err
+	for k, v := range arguments {
+		m[k] = v
 	}
 	m["sink"] = v1.ObjectReference{
 		APIVersion: t.GetGroupVersionKind().GroupVersion().String(),

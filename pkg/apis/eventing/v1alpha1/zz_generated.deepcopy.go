@@ -777,8 +777,10 @@ func (in *TriggerImporterSpec) DeepCopyInto(out *TriggerImporterSpec) {
 	*out = *in
 	if in.Arguments != nil {
 		in, out := &in.Arguments, &out.Arguments
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 	return
 }

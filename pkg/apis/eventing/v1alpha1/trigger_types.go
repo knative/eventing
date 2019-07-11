@@ -85,7 +85,7 @@ type TriggerImporterSpec struct {
 	EventTypeName string `json:"eventTypeName"`
 
 	// +optional
-	Arguments *runtime.RawExtension `json:"arguments,omitempty"`
+	Arguments map[string]string `json:"arguments,omitempty"`
 }
 
 type TriggerFilter struct {
