@@ -24,6 +24,14 @@
   version = "v0.39.0"
 
 [[projects]]
+  digest = "1:642cf8e80572f9dc0677b0f241c8ab2e715c9dccc215270ea873c86ddca0062c"
+  name = "contrib.go.opencensus.io/exporter/prometheus"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f4a2c1e53ec45636355d35fb9022b64e4bdd4a91"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:43fbf05ea84c860a4e86b557d156b1e72511cd29375d3f71adb522362710aea7"
   name = "contrib.go.opencensus.io/exporter/stackdriver"
   packages = [
@@ -688,7 +696,7 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:b8baa7541ef444be218da02d3a7b607d33513263660e489d86d429afbffcdd86"
+  digest = "1:8d139113d12de3552feb7fe4cb99a053fca1cb71323605e989a435481d1ace58"
   name = "go.opencensus.io"
   packages = [
     ".",
@@ -697,6 +705,7 @@
     "internal",
     "internal/tagencoding",
     "metric/metricdata",
+    "metric/metricexport",
     "metric/metricproducer",
     "plugin/ocgrpc",
     "plugin/ochttp",
@@ -1477,6 +1486,7 @@
   analyzer-version = 1
   input-imports = [
     "cloud.google.com/go/pubsub",
+    "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/cloudevents/sdk-go",
@@ -1496,7 +1506,6 @@
     "github.com/openzipkin/zipkin-go",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
-    "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/stats",
