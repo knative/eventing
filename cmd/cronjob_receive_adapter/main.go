@@ -22,10 +22,11 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/adapter/cronjobevents"
-	"github.com/knative/pkg/signals"
+	"github.com/knative/eventing/pkg/tracing"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/net/context"
+	"knative.dev/pkg/signals"
 )
 
 type envConfig struct {
@@ -61,6 +62,12 @@ func main() {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
 
+	if err = tracing.SetupStaticZipkinPublishing("cronjobsource", tracing.OnePercentSampling); err != nil {
+		// If tracing doesn't work, we will log an error, but allow the importer to continue to
+		// start.
+		logger.Error("Error setting up Zipkin publishing", zap.Error(err))
+	}
+
 	adapter := &cronjobevents.Adapter{
 		Schedule:  env.Schedule,
 		Data:      env.Data,
@@ -69,7 +76,7 @@ func main() {
 		Namespace: env.Namespace,
 	}
 
-	logger.Info("Starting Receive Adapter", zap.Reflect("adapter", adapter))
+	logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
 
 	stopCh := signals.SetupSignalHandler()
 

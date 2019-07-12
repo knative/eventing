@@ -60,11 +60,12 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		receiverFunc   func(provisioners.ChannelReference, *provisioners.Message) error
 		timeout        time.Duration
-		subs           []eventingduck.ChannelSubscriberSpec
+		subs           []eventingduck.SubscriberSpec
 		subscriber     func(http.ResponseWriter, *http.Request)
 		channel        func(http.ResponseWriter, *http.Request)
 		expectedStatus int
 		asyncHandler   bool
+		skip           string
 	}{
 		"rejected by receiver": {
 			receiverFunc: func(provisioners.ChannelReference, *provisioners.Message) error {
@@ -74,7 +75,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		},
 		"fanout times out": {
 			timeout: time.Millisecond,
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 				},
@@ -86,17 +87,17 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"zero subs succeed": {
-			subs:           []eventingduck.ChannelSubscriberSpec{},
+			subs:           []eventingduck.SubscriberSpec{},
 			expectedStatus: http.StatusAccepted,
 		},
 		"empty sub succeeds": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{},
 			},
 			expectedStatus: http.StatusAccepted,
 		},
 		"reply fails": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					ReplyURI: replaceChannel,
 				},
@@ -107,7 +108,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"subscriber fails": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 				},
@@ -118,7 +119,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"subscriber succeeds, result fails": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 					ReplyURI:      replaceChannel,
@@ -131,7 +132,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"one sub succeeds": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 					ReplyURI:      replaceChannel,
@@ -144,7 +145,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 					ReplyURI:      replaceChannel,
@@ -159,7 +160,8 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		"all subs succeed": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			skip: "FLAKE This test is flaky on constrained nodes.",
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 					ReplyURI:      replaceChannel,
@@ -180,7 +182,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"all subs succeed with async handler": {
-			subs: []eventingduck.ChannelSubscriberSpec{
+			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
 					ReplyURI:      replaceChannel,
@@ -204,6 +206,9 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			if tc.skip != "" {
+				t.Skip(tc.skip)
+			}
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.subscriber,
 			})
@@ -214,7 +219,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			defer channelServer.Close()
 
 			// Rewrite the subs to use the servers we just started.
-			subs := make([]eventingduck.ChannelSubscriberSpec, 0)
+			subs := make([]eventingduck.SubscriberSpec, 0)
 			for _, sub := range tc.subs {
 				if sub.SubscriberURI == replaceSubscriber {
 					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'

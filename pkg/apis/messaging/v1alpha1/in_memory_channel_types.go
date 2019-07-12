@@ -18,13 +18,13 @@ package v1alpha1
 
 import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -71,12 +71,15 @@ type InMemoryChannelStatus struct {
 	// provided targets from inside the cluster.
 	//
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	Address duckv1alpha1.Addressable `json:"address,omitempty"`
+	duckv1alpha1.AddressStatus `json:",inline"`
+
+	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
+	eventingduck.SubscribableTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChannelList is a collection of Channels.
+// InMemoryChannelList is a collection of in-memory channels.
 type InMemoryChannelList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

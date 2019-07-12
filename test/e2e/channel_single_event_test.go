@@ -22,17 +22,17 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 func TestSingleBinaryEventForChannel(t *testing.T) {
-	singleEvent(t, base.CloudEventEncodingBinary)
+	singleEvent(t, resources.CloudEventEncodingBinary)
 }
 
 func TestSingleStructuredEventForChannel(t *testing.T) {
-	singleEvent(t, base.CloudEventEncodingStructured)
+	singleEvent(t, resources.CloudEventEncodingStructured)
 }
 
 /*
@@ -47,30 +47,26 @@ func singleEvent(t *testing.T, encoding string) {
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
 	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
+	runTests(t, provisioners, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
 		st.Logf("Run test with provisioner %q", provisioner)
-		client := Setup(st, provisioner, true)
-		defer TearDown(client)
+		client := setup(st, true)
+		defer tearDown(client)
 
 		// create channel
-		if err := client.CreateChannel(channelName, provisioner); err != nil {
-			st.Fatalf("Failed to create channel: %v", err)
-		}
+		channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+		client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
 
 		// create logger service as the subscriber
-		pod := base.EventLoggerPod(loggerPodName)
-		if err := client.CreatePod(pod, common.WithService(loggerPodName)); err != nil {
-			st.Fatalf("Failed to create logger service: %v", err)
-		}
+		pod := resources.EventLoggerPod(loggerPodName)
+		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
-		if err := client.CreateSubscription(
+		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
-			base.WithSubscriberForSubscription(loggerPodName),
-		); err != nil {
-			st.Fatalf("Failed to create subscription: %v", err)
-		}
+			channelTypeMeta,
+			resources.WithSubscriberForSubscription(loggerPodName),
+		)
 
 		// wait for all test resources to be ready, so that we can start sending events
 		if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -79,13 +75,14 @@ func singleEvent(t *testing.T, encoding string) {
 
 		// send fake CloudEvent to the channel
 		body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-		event := &base.CloudEvent{
+		event := &resources.CloudEvent{
 			Source:   senderName,
-			Type:     base.CloudEventDefaultType,
+			Type:     resources.CloudEventDefaultType,
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
 			Encoding: encoding,
 		}
-		if err := client.SendFakeEventToChannel(senderName, channelName, event); err != nil {
+
+		if err := client.SendFakeEventToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 

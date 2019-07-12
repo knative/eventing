@@ -20,42 +20,61 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func TestGetFullType(t *testing.T) {
+func TestSubscribableGetFullType(t *testing.T) {
 	s := &Subscribable{}
 	switch s.GetFullType().(type) {
-	case *Channel:
+	case *SubscribableType:
 		// expected
 	default:
-		t.Errorf("expected GetFullType to return *Channel, got %T", s.GetFullType())
+		t.Errorf("expected GetFullType to return *SubscribableType, got %T", s.GetFullType())
 	}
 }
 
-func TestGetListType(t *testing.T) {
-	c := &Channel{}
+func TestSubscribableGetListType(t *testing.T) {
+	c := &SubscribableType{}
 	switch c.GetListType().(type) {
-	case *ChannelList:
+	case *SubscribableTypeList:
 		// expected
 	default:
-		t.Errorf("expected GetFullType to return *ChannelList, got %T", c.GetListType())
+		t.Errorf("expected GetListType to return *SubscribableTypeList, got %T", c.GetListType())
 	}
 }
 
-func TestPopulate(t *testing.T) {
-	got := &Channel{}
+func TestSubscribablePopulate(t *testing.T) {
+	got := &SubscribableType{}
 
-	want := &Channel{
-		Spec: ChannelSpec{
+	want := &SubscribableType{
+		Spec: SubscribableTypeSpec{
 			Subscribable: &Subscribable{
-				Subscribers: []ChannelSubscriberSpec{{
+				Subscribers: []SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					Generation:    1,
 					SubscriberURI: "call1",
 					ReplyURI:      "sink2",
 				}, {
 					UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					Generation:    2,
 					SubscriberURI: "call2",
 					ReplyURI:      "sink2",
+				}},
+			},
+		},
+		Status: SubscribableTypeStatus{
+			SubscribableStatus: &SubscribableStatus{
+				// Populate ALL fields
+				Subscribers: []SubscriberStatus{{
+					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 1,
+					Ready:              corev1.ConditionTrue,
+					Message:            "Some message",
+				}, {
+					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 2,
+					Ready:              corev1.ConditionFalse,
+					Message:            "Some message",
 				}},
 			},
 		},

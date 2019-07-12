@@ -22,9 +22,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/knative/pkg/tracing"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/pkg/tracing"
 )
 
 const (

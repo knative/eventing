@@ -21,8 +21,8 @@ import (
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/kmp"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 func (et *EventType) Validate(ctx context.Context) *apis.FieldError {

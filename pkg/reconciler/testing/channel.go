@@ -25,7 +25,7 @@ import (
 
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 // ChannelOption enables further configuration of a Channel.
@@ -34,6 +34,10 @@ type ChannelOption func(*v1alpha1.Channel)
 // NewChannel creates a Channel with ChannelOptions
 func NewChannel(name, namespace string, o ...ChannelOption) *v1alpha1.Channel {
 	c := &v1alpha1.Channel{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Channel",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -104,7 +108,7 @@ func WithChannelReady(c *v1alpha1.Channel) {
 	c.Status = *v1alpha1.TestHelper.ReadyChannelStatus()
 }
 
-func WithChannelSubscribers(subscribers []duckv1alpha1.ChannelSubscriberSpec) ChannelOption {
+func WithChannelSubscribers(subscribers []duckv1alpha1.SubscriberSpec) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
 			Subscribers: subscribers,

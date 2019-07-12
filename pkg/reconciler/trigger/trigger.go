@@ -25,19 +25,15 @@ import (
 	"time"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/broker"
 	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/controller"
-	"github.com/knative/pkg/tracker"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -45,19 +41,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/controller"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Triggers"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "trigger-controller"
-
 	finalizerName = controllerAgentName
 
 	// Name of the corev1.Events emitted from the reconciliation process.
@@ -75,65 +64,18 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	triggerLister       listers.TriggerLister
-	channelLister       listers.ChannelLister
-	subscriptionLister  listers.SubscriptionLister
-	brokerLister        listers.BrokerLister
-	serviceLister       corev1listers.ServiceLister
-	tracker             tracker.Interface
-	addressableInformer duck.AddressableInformer
+	triggerLister      listers.TriggerLister
+	channelLister      listers.ChannelLister
+	subscriptionLister listers.SubscriptionLister
+	brokerLister       listers.BrokerLister
+	serviceLister      corev1listers.ServiceLister
+	addressableTracker duck.AddressableTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
 // Check that our Reconciler implements controller.Reconciler.
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code.
-// Registers event handlers to enqueue events.
-func NewController(
-	opt reconciler.Options,
-	triggerInformer eventinginformers.TriggerInformer,
-	channelInformer eventinginformers.ChannelInformer,
-	subscriptionInformer eventinginformers.SubscriptionInformer,
-	brokerInformer eventinginformers.BrokerInformer,
-	serviceInformer corev1informers.ServiceInformer,
-	addressableInformer duck.AddressableInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:                reconciler.NewBase(opt, controllerAgentName),
-		triggerLister:       triggerInformer.Lister(),
-		channelLister:       channelInformer.Lister(),
-		subscriptionLister:  subscriptionInformer.Lister(),
-		brokerLister:        brokerInformer.Lister(),
-		serviceLister:       serviceInformer.Lister(),
-		addressableInformer: addressableInformer,
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	r.Logger.Info("Setting up event handlers")
-	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Tracker is used to notify us that a Trigger's Broker has changed so that
-	// we can reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		// Call the tracker's OnChanged method, but we've seen the objects
-		// coming through this path missing TypeMeta, so ensure it is properly
-		// populated.
-		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
-		),
-	))
-
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Trigger resource
@@ -209,36 +151,25 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
 
-	// Tell tracker to reconcile this Trigger whenever the Broker changes.
-	track := r.addressableInformer.TrackInNamespace(r.tracker, t)
+	// Tell addressableTracker to reconcile this Trigger whenever the Broker changes.
+	track := r.addressableTracker.TrackInNamespace(t)
 	if err = track(utils.ObjectRef(b, brokerGVK)); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
 
-	brokerTrigger, err := r.getBrokerTriggerChannel(ctx, b)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("can not find Broker's Trigger Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
-			return errors.New("failed to find Broker's Trigger channel")
-		} else {
-			logging.FromContext(ctx).Error("failed to get Broker's Trigger Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Failed to get Broker's Trigger channel")
-			return err
-		}
+	brokerTrigger := b.Status.TriggerChannel
+	if brokerTrigger == nil {
+		logging.FromContext(ctx).Error("Broker TriggerChannel not populated")
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
+		return errors.New("failed to find Broker's Trigger channel")
 	}
-	brokerIngress, err := r.getBrokerIngressChannel(ctx, b)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("can not find Broker's Ingress Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
-			return errors.New("failed to find Broker's Ingress channel")
-		} else {
-			logging.FromContext(ctx).Error("failed to get Broker's Ingress Channel", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Failed to get Broker's Ingress channel")
-			return err
-		}
+
+	brokerIngress := b.Status.IngressChannel
+	if brokerIngress == nil {
+		logging.FromContext(ctx).Error("Broker IngressrChannel not populated")
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
+		return errors.New("failed to find Broker's Ingress channel")
 	}
 
 	// Get Broker filter service.
@@ -302,35 +233,6 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	return trig, err
 }
 
-// getBrokerTriggerChannel return the Broker's Trigger Channel if it exists, otherwise it returns an
-// error.
-func (r *Reconciler) getBrokerTriggerChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.TriggerChannelLabels(b.Name)))
-}
-
-// getBrokerIngressChannel return the Broker's Ingress Channel if it exists, otherwise it returns an
-// error.
-func (r *Reconciler) getBrokerIngressChannel(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Channel, error) {
-	return r.getChannel(ctx, b, labels.SelectorFromSet(broker.IngressChannelLabels(b.Name)))
-}
-
-// getChannel returns the Broker's channel based on the provided label selector if it exists, otherwise it returns an error.
-func (r *Reconciler) getChannel(ctx context.Context, b *v1alpha1.Broker, ls labels.Selector) (*v1alpha1.Channel, error) {
-	channels, err := r.channelLister.Channels(b.Namespace).List(ls)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: If there's more than one, should that be treated as an error. This seems a bit wonky
-	// but that's how it was before.
-	for _, c := range channels {
-		if metav1.IsControlledBy(c, b) {
-			return c, nil
-		}
-	}
-	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
-}
-
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
@@ -348,7 +250,7 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, svc *corev1.Service) (*v1alpha1.Subscription, error) {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),

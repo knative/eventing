@@ -3,7 +3,6 @@ package provisioners
 import (
 	"context"
 
-	"github.com/knative/pkg/kmeta"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -11,13 +10,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/pkg/kmeta"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"fmt"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/system"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/system"
 )
 
 // ServiceOption can be used to optionally modify the K8s default that gets created for the Dispatcher in CreateDispatcherService

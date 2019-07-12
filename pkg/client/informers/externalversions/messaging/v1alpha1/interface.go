@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// InMemoryChannels returns a InMemoryChannelInformer.
 	InMemoryChannels() InMemoryChannelInformer
+	// Sequences returns a SequenceInformer.
+	Sequences() SequenceInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // InMemoryChannels returns a InMemoryChannelInformer.
 func (v *version) InMemoryChannels() InMemoryChannelInformer {
 	return &inMemoryChannelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Sequences returns a SequenceInformer.
+func (v *version) Sequences() SequenceInformer {
+	return &sequenceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/apis"
 )
 
 var validationTests = []struct {
@@ -141,7 +141,7 @@ func TestIsValidObjectReference(t *testing.T) {
 			for _, fe := range test.want {
 				allWanted = allWanted.Also(fe)
 			}
-			got := isValidObjectReference(test.ref)
+			got := IsValidObjectReference(test.ref)
 			if diff := cmp.Diff(allWanted.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: validation (-want, +got) = %v", test.name, diff)
 			}

@@ -86,7 +86,7 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "default",
 						Name:      "c1",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									SubscriberURI: "event-changer.default.svc." + utils.GetClusterDomainName(),
 									ReplyURI:      "message-dumper-bar.default.svc." + utils.GetClusterDomainName(),
@@ -104,7 +104,7 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "default",
 						Name:      "c2",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									ReplyURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
 								},
@@ -115,7 +115,7 @@ func TestConfigMapData(t *testing.T) {
 						Namespace: "other",
 						Name:      "c3",
 						FanoutConfig: fanout.Config{
-							Subscriptions: []eventingduck.ChannelSubscriberSpec{
+							Subscriptions: []eventingduck.SubscriberSpec{
 								{
 									ReplyURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
 								},

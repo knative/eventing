@@ -278,6 +278,7 @@ func TestTTL_DeleteIfPresent(t *testing.T) {
 }
 
 func TestTTL_Start(t *testing.T) {
+	t.Skip("FLAKE This test is flaky on constrained nodes.")
 	// Test to ensure start continuously culls in the background.
 	cache := NewTTL()
 	tc := &testClock{

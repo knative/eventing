@@ -19,17 +19,10 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
-	"os"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 )
-
-type example struct {
-	ID      string `json:"sequence"`
-	Message string `json:"msg"`
-}
 
 var (
 	eventType   string
@@ -38,32 +31,38 @@ var (
 )
 
 func init() {
-	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
+	flag.StringVar(&eventType, "event-type", "", "The Event Type to use.")
 	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
-	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
+	flag.StringVar(&eventData, "event-data", "", "Cloudevent data body.")
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	ctx := event.Context.AsV02()
 
-	data := &example{}
-	if err := event.DataAs(data); err != nil {
-		fmt.Printf("Got Data Error: %s\n", err.Error())
+	dataBytes, err := event.DataBytes()
+	if err != nil {
+		log.Printf("Got Data Error: %s\n", err.Error())
 		return err
 	}
-
 	log.Println("Received a new event: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
+	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
 
-	ctx.SetSource(eventSource)
-	ctx.SetType(eventType)
+	if eventSource != "" {
+		ctx.SetSource(eventSource)
+	}
+	if eventType != "" {
+		ctx.SetType(eventType)
+	}
+	if eventData != "" {
+		dataBytes = []byte(eventData)
+	}
 	r := cloudevents.Event{
 		Context: ctx,
-		Data:    eventData,
+		Data:    string(dataBytes),
 	}
 
 	log.Println("Transform the event to: ")
-	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), eventData)
+	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)
 
 	resp.RespondWith(200, &r)
 	return nil
@@ -72,15 +71,6 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 func main() {
 	// parse the command line flags
 	flag.Parse()
-
-	// default eventSource to the current machine's hostname
-	if eventSource == "" {
-		if hostname, err := os.Hostname(); err != nil {
-			eventSource = hostname
-		} else {
-			eventSource = "localhost"
-		}
-	}
 
 	c, err := cloudevents.NewDefaultClient()
 	if err != nil {

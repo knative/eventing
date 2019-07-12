@@ -65,6 +65,12 @@ func WithSubscriptionUID(uid types.UID) SubscriptionOption {
 	}
 }
 
+func WithSubscriptionGeneration(gen int64) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Generation = gen
+	}
+}
+
 func WithSubscriptionGenerateName(generateName string) SubscriptionOption {
 	return func(c *v1alpha1.Subscription) {
 		c.ObjectMeta.GenerateName = generateName
@@ -141,6 +147,7 @@ func WithSubscriptionFinalizers(finalizers ...string) SubscriptionOption {
 func MarkSubscriptionReady(s *v1alpha1.Subscription) {
 	s.Status.MarkChannelReady()
 	s.Status.MarkReferencesResolved()
+	s.Status.MarkAddedToChannel()
 }
 
 func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOption {

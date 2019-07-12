@@ -19,7 +19,8 @@ package resources
 import (
 	"fmt"
 
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -63,12 +64,30 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 							Image: args.Image,
 							Env: []corev1.EnvVar{
 								{
+									Name:  system.NamespaceEnvKey,
+									Value: system.Namespace(),
+								},
+								{
 									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
 											FieldPath: "metadata.namespace",
 										},
 									},
+								},
+								{
+									Name:  "BROKER",
+									Value: args.Broker.Name,
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 8080,
+									Name:          "http",
+								},
+								{
+									ContainerPort: 9090,
+									Name:          "metrics",
 								},
 							},
 						},
@@ -97,6 +116,10 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 					Name:       "http",
 					Port:       80,
 					TargetPort: intstr.FromInt(8080),
+				},
+				{
+					Name: "metrics",
+					Port: 9090,
 				},
 			},
 		},

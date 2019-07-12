@@ -28,11 +28,11 @@ import (
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
 var (
@@ -60,7 +60,7 @@ func TestDomainToURL(t *testing.T) {
 }
 
 func TestResourceInterface_BadDynamicInterface(t *testing.T) {
-	actual, err := ResourceInterface(&badDynamicInterface{}, testNS, &corev1.ObjectReference{})
+	actual, err := ResourceInterface(&badDynamicInterface{}, testNS, schema.GroupVersionKind{})
 	if err.Error() != "failed to create dynamic client resource" {
 		t.Fatalf("Unexpected error '%v'", err)
 	}

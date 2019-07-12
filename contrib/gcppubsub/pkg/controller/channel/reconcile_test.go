@@ -31,15 +31,15 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/system"
-	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -68,7 +68,7 @@ var (
 	truePointer = true
 
 	subscribers = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: "sub-name",
@@ -485,7 +485,7 @@ func TestReconcile(t *testing.T) {
 			WantPresent: []runtime.Object{
 				makeChannelWithFinalizerAndSubscriberWithoutUID(),
 			},
-			WantErrMsg: "empty reference UID: {nil  http://foo/ }",
+			WantErrMsg: "empty reference UID: {nil  0 http://foo/ }",
 			WantEvent: []corev1.Event{
 				events[gcpResourcesPlanFailed],
 			},
@@ -831,6 +831,7 @@ func makeChannelWithSubscribersAndFinalizerAndPCSAndAddress() *eventingv1alpha1.
 func makeChannelWithFinalizer() *eventingv1alpha1.Channel {
 	c := makeChannel()
 	c.Finalizers = []string{finalizerName}
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -869,24 +870,28 @@ func makeDeletingChannelWithoutPCS() *eventingv1alpha1.Channel {
 func makeDeletingChannelWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	c.Finalizers = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithoutFinalizerOrPCS() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithoutFinalizer()
 	c.Status.Internal = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithSubscribers() *eventingv1alpha1.Channel {
 	c := makeDeletingChannel()
 	addSubscribers(c, subscribers)
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
 func makeDeletingChannelWithSubscribersWithoutFinalizer() *eventingv1alpha1.Channel {
 	c := makeDeletingChannelWithSubscribers()
 	c.Finalizers = nil
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -902,7 +907,7 @@ func makeChannelWithBadInternalStatus() *eventingv1alpha1.Channel {
 func makeChannelWithFinalizerAndSubscriberWithoutUID() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizer()
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				UID:           "",
 				SubscriberURI: "http://foo/",
@@ -933,7 +938,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 	}
 	for _, plannedSubUID := range plannedSubUIDs {
 		sub := pubsubutil.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: string(plannedSubUID),
 					UID:  plannedSubUID,
@@ -955,7 +960,7 @@ func makeChannelWithFinalizerAndPossiblyOutdatedPlan(outdated bool) *eventingv1a
 
 	// Overwrite the spec subs.
 	c.Spec.Subscribable = &v1alpha1.Subscribable{
-		Subscribers: []v1alpha1.ChannelSubscriberSpec{
+		Subscribers: []v1alpha1.SubscriberSpec{
 			{
 				DeprecatedRef: &corev1.ObjectReference{
 					Name: "keep-sub",
@@ -984,7 +989,7 @@ func addSubscribers(c *eventingv1alpha1.Channel, subscribable *v1alpha1.Subscrib
 	}
 	for _, sub := range subscribable.Subscribers {
 		pcs.Subscriptions = append(pcs.Subscriptions, pubsubutil.GcpPubSubSubscriptionStatus{
-			ChannelSubscriberSpec: v1alpha1.ChannelSubscriberSpec{
+			SubscriberSpec: v1alpha1.SubscriberSpec{
 				DeprecatedRef: sub.DeprecatedRef,
 				UID:           sub.UID,
 				ReplyURI:      sub.ReplyURI,

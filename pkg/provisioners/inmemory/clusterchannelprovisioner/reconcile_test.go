@@ -22,21 +22,21 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/pkg/apis"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	util "github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/pkg/system"
-	_ "github.com/knative/pkg/system/testing"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 )
 
 const (

@@ -17,13 +17,13 @@
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-	"github.com/knative/pkg/kmeta"
-	"github.com/knative/pkg/webhook"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -109,4 +109,9 @@ type TriggerList struct {
 // GetGroupVersionKind returns GroupVersionKind for Triggers
 func (t *Trigger) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Trigger")
+}
+
+// GetSpec returns the spec of the Trigger.
+func (t *Trigger) GetSpec() interface{} {
+	return t.Spec
 }

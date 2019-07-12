@@ -21,16 +21,18 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/knative/eventing/contrib/kafka/pkg/utils"
+
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/pkg/apis"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	_ "knative.dev/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -198,8 +200,8 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfig() *KafkaProvisionerConfig {
-	return &KafkaProvisionerConfig{
+func getControllerConfig() *utils.KafkaConfig {
+	return &utils.KafkaConfig{
 		Brokers: []string{"test-broker"},
 	}
 }

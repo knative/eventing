@@ -22,35 +22,27 @@ import (
 
 	"github.com/knative/eventing/pkg/reconciler/namespace/resources"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/tracker"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
-	corev1informers "k8s.io/client-go/informers/core/v1"
-	rbacv1informers "k8s.io/client-go/informers/rbac/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/controller"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName       = "knative-eventing-namespace-controller"
 	namespaceReconciled       = "NamespaceReconciled"
 	namespaceReconcileFailure = "NamespaceReconcileFailure"
 
@@ -79,43 +71,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	namespaceInformer corev1informers.NamespaceInformer,
-	serviceAccountInformer corev1informers.ServiceAccountInformer,
-	roleBindingInformer rbacv1informers.RoleBindingInformer,
-	brokerInformer eventinginformers.BrokerInformer,
-) *controller.Impl {
-
-	r := &Reconciler{
-		Base:            reconciler.NewBase(opt, controllerAgentName),
-		namespaceLister: namespaceInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	// TODO: filter label selector: on InjectionEnabledLabels()
-
-	r.Logger.Info("Setting up event handlers")
-	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	// Tracker is used to notify us the namespace's resources we need to reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, opt.GetTrackerLease())
-
-	// Watch all the resources that this reconciler reconciles.
-	serviceAccountInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
-	))
-	roleBindingInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
-	))
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
-	))
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Namespace resource
@@ -162,10 +117,11 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 	if ns.DeletionTimestamp != nil {
 		return nil
 	}
-	if err := r.reconcileServiceAccountAndRoleBinding(ctx, ns, resources.IngressServiceAccountName, resources.IngressRoleBindingName, resources.IngressClusterRoleName); err != nil {
+	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.IngressServiceAccountName, resources.IngressRoleBindingName, resources.IngressClusterRoleName, resources.ConfigClusterRoleName); err != nil {
 		return fmt.Errorf("broker ingress: %v", err)
 	}
-	if err := r.reconcileServiceAccountAndRoleBinding(ctx, ns, resources.FilterServiceAccountName, resources.FilterRoleBindingName, resources.FilterClusterRoleName); err != nil {
+
+	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.FilterServiceAccountName, resources.FilterRoleBindingName, resources.FilterClusterRoleName, resources.ConfigClusterRoleName); err != nil {
 		return fmt.Errorf("broker filter: %v", err)
 	}
 
@@ -184,7 +140,7 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 
 // reconcileServiceAccountAndRoleBinding reconciles the service account and role binding for
 // Namespace 'ns'.
-func (r *Reconciler) reconcileServiceAccountAndRoleBinding(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName string) error {
+func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName, configClusterRoleName string) error {
 	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
 	if err != nil {
 		return fmt.Errorf("service account '%s': %v", saName, err)
@@ -195,7 +151,20 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBinding(ctx context.Context, 
 		return fmt.Errorf("track service account '%s': %v", sa.Name, err)
 	}
 
-	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, sa, clusterRoleName))
+	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
+	if err != nil {
+		return fmt.Errorf("role binding '%s': %v", rbName, err)
+	}
+
+	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
+	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
+		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
+	}
+
+	// Reconcile the RoleBinding allowing read access to the shared configmaps.
+	// Note this RoleBinding is created in the system namespace and points to a
+	// subject in the Broker's namespace.
+	rb, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(resources.ConfigRoleBindingName(sa.Name, ns.Name), system.Namespace(), sa, configClusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %v", rbName, err)
 	}
@@ -219,7 +188,7 @@ func (r *Reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *core
 			return nil, err
 		}
 		r.Recorder.Event(ns, corev1.EventTypeNormal, serviceAccountCreated,
-			fmt.Sprintf("Service account '%s' created for the Broker", sa.Name))
+			fmt.Sprintf("ServiceAccount '%s' created for the Broker", sa.Name))
 		return sa, nil
 	} else if err != nil {
 		return nil, err
@@ -230,16 +199,16 @@ func (r *Reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *core
 
 // reconcileBrokerRBAC reconciles the Broker's service account RBAC for the Namespace 'ns'.
 func (r *Reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount, rb *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error) {
-	current, err := r.KubeClientSet.RbacV1().RoleBindings(ns.Name).Get(rb.Name, metav1.GetOptions{})
+	current, err := r.KubeClientSet.RbacV1().RoleBindings(rb.Namespace).Get(rb.Name, metav1.GetOptions{})
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		rb, err = r.KubeClientSet.RbacV1().RoleBindings(ns.Name).Create(rb)
+		rb, err = r.KubeClientSet.RbacV1().RoleBindings(rb.Namespace).Create(rb)
 		if err != nil {
 			return nil, err
 		}
 		r.Recorder.Event(ns, corev1.EventTypeNormal, serviceAccountRBACCreated,
-			fmt.Sprintf("Service account RBAC '%s' created for the Broker", rb.Name))
+			fmt.Sprintf("RoleBinding '%s/%s' created for the Broker", rb.Namespace, rb.Name))
 		return rb, nil
 	} else if err != nil {
 		return nil, err

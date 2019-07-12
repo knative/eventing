@@ -17,9 +17,6 @@ kind: ConfigMap
 metadata:
   name: config-observability
   namespace: knative-eventing
-  labels:
-    eventing.knative.dev/release: devel
-
 data:
   _example: |
     ################################

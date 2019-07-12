@@ -8,6 +8,7 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
+  "knative.dev/pkg/codegen/cmd/injection-gen",
   "github.com/knative/test-infra/scripts",
   "github.com/knative/test-infra/tools/dep-collector",
 ]
@@ -24,6 +25,11 @@ required = [
 
 [[prune.project]]
   name = "github.com/knative/test-infra"
+  non-go = false
+
+[[prune.project]]
+  name = "knative.dev/pkg"
+  unused-packages = false
   non-go = false
 
 # TODO why is this overridden?
@@ -76,12 +82,10 @@ required = [
   name = "github.com/json-iterator/go"
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
-# Constrain the version of knative/pkg we would like to import.
-# This controls when we upgrade apis independently of Serving.
+# Our master branch tracks kantive/pkg master.
 [[override]]
-  name = "github.com/knative/pkg"
-  # HEAD as of 2019-05-30
-  revision = "5fe2b490af198572a89d128259f25e4aa4f16123"
+  name = "knative.dev/pkg"
+  branch = "master"
 
 # TODO why is this overridden?
 [[override]]

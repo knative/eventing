@@ -25,14 +25,14 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/apis"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-	"github.com/knative/pkg/system"
-	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -162,6 +162,7 @@ func makeNewChannel(name, provisioner string) *eventingv1alpha1.Channel {
 func makeNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := makeNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	c.Status.SetAddress(&apis.URL{
 		Scheme: "http",
 		Host:   serviceAddress,

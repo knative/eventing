@@ -26,21 +26,21 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/contrib/kafka/pkg/controller"
+	. "github.com/knative/eventing/contrib/kafka/pkg/utils"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/provisioners"
 	util "github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/apis"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-	"github.com/knative/pkg/system"
-	_ "github.com/knative/pkg/system/testing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -454,6 +454,7 @@ func getNewChannelWithFinalizer(name, provisioner string) *eventingv1alpha1.Chan
 func getNewChannelWithStatusAndFinalizer(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannelWithFinalizer(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	return c
 }
 
@@ -469,6 +470,7 @@ func getNewChannelWithArgs(name string, args map[string]interface{}) *eventingv1
 func getNewChannelProvisionedStatus(name, provisioner string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	c.Status.SetAddress(&apis.URL{
 		Scheme: "http",
 		Host:   serviceAddress,
@@ -487,6 +489,7 @@ func getNewChannelDeleted(name, provisioner string) *eventingv1alpha1.Channel {
 func getNewChannelNotProvisionedStatus(name, provisioner, msg string) *eventingv1alpha1.Channel {
 	c := getNewChannel(name, provisioner)
 	c.Status.InitializeConditions()
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 	c.Status.MarkNotProvisioned("NotProvisioned", msg)
 	return c
 }
@@ -535,8 +538,8 @@ func om(namespace, name string) metav1.ObjectMeta {
 	}
 }
 
-func getControllerConfig() *controller.KafkaProvisionerConfig {
-	return &controller.KafkaProvisionerConfig{
+func getControllerConfig() *KafkaConfig {
+	return &KafkaConfig{
 		Brokers: []string{"test-broker"},
 	}
 }

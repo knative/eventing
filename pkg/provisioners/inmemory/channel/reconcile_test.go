@@ -32,13 +32,13 @@ import (
 	"github.com/knative/eventing/pkg/reconciler/names"
 	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/knative/eventing/pkg/utils"
-	"github.com/knative/pkg/system"
-	_ "github.com/knative/pkg/system/testing"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -76,7 +76,7 @@ var (
 				Namespace: cNamespace,
 				Name:      "c1",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "foo",
 						},
@@ -94,7 +94,7 @@ var (
 				Namespace: cNamespace,
 				Name:      "c3",
 				FanoutConfig: fanout.Config{
-					Subscriptions: []eventingduck.ChannelSubscriberSpec{
+					Subscriptions: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "steve",
 						},
@@ -118,7 +118,7 @@ var (
 					Name: ccpName,
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
+					Subscribers: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "foo",
 						},
@@ -146,7 +146,7 @@ var (
 					Name: "some-other-provisioner",
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
+					Subscribers: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "anything",
 						},
@@ -167,7 +167,7 @@ var (
 					Name: ccpName,
 				},
 				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.ChannelSubscriberSpec{
+					Subscribers: []eventingduck.SubscriberSpec{
 						{
 							SubscriberURI: "steve",
 						},

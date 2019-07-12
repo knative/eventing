@@ -25,3 +25,11 @@ type InMemoryChannelListerExpansion interface{}
 // InMemoryChannelNamespaceListerExpansion allows custom methods to be added to
 // InMemoryChannelNamespaceLister.
 type InMemoryChannelNamespaceListerExpansion interface{}
+
+// SequenceListerExpansion allows custom methods to be added to
+// SequenceLister.
+type SequenceListerExpansion interface{}
+
+// SequenceNamespaceListerExpansion allows custom methods to be added to
+// SequenceNamespaceLister.
+type SequenceNamespaceListerExpansion interface{}

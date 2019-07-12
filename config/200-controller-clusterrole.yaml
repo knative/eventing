@@ -16,6 +16,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: knative-eventing-controller
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - ""
@@ -76,20 +78,21 @@ rules:
     verbs:
       - "update"
 
-  # Source resources and statuses we care about.
+  # Our own resources and statuses we care about.
   - apiGroups:
-      - "sources.eventing.knative.dev"
+      - "messaging.knative.dev"
     resources:
-      - "cronjobsources"
-      - "cronjobsources/status"
-      - "cronjobsources/finalizers"
-      - "containersources"
-      - "containersources/status"
-      - "containersources/finalizers"
-      - "apiserversources"
-      - "apiserversources/status"
-      - "apiserversources/finalizers"
+      - "sequences"
+      - "sequences/status"
     verbs: *everything
+
+  # Messaging resources and finalizers we care about.
+  - apiGroups:
+      - "messaging.knative.dev"
+    resources:
+      - "sequences/finalizers"
+    verbs:
+      - "update"
 
   # The subscription controller needs to retrieve and watch CustomResourceDefinitions.
   - apiGroups:

@@ -21,11 +21,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/knative/pkg/apis"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/apis"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 var condReady = apis.Condition{
@@ -340,19 +340,22 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 						},
 					},
 				},
+				AddressStatus: duckv1alpha1.AddressStatus{Address: &duckv1alpha1.Addressable{}},
 			},
 		},
 		"has domain": {
 			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &InMemoryChannelStatus{
-				Address: duckv1alpha1.Addressable{
-					Addressable: duckv1beta1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
+				AddressStatus: duckv1alpha1.AddressStatus{
+					Address: &duckv1alpha1.Addressable{
+						duckv1beta1.Addressable{
+							URL: &apis.URL{
+								Scheme: "http",
+								Host:   "test-domain",
+							},
 						},
+						"test-domain",
 					},
-					Hostname: "test-domain",
 				},
 				Status: duckv1beta1.Status{
 					Conditions: []apis.Condition{{

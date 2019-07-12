@@ -16,6 +16,7 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   labels:
+    eventing.knative.dev/release: devel
     eventing.knative.dev/source: "true"
     knative.dev/crd-install: "true"
   name: cronjobsources.sources.eventing.knative.dev
@@ -27,6 +28,7 @@ spec:
     - knative
     - eventing
     - sources
+    - importers
     kind: CronJobSource
     plural: cronjobsources
   scope: Namespaced
@@ -50,6 +52,23 @@ spec:
             serviceAccountName:
               type: string
             sink:
+              type: object
+            resources:
+              properties:
+                limits:
+                  properties:
+                    cpu:
+                      type: string
+                    memory:
+                      type: string
+                  type: object
+                requests:
+                  properties:
+                    cpu:
+                      type: string
+                    memory:
+                      type: string
+                  type: object
               type: object
           required:
           - schedule

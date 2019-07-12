@@ -19,8 +19,8 @@ package v1alpha1
 import (
 	"context"
 
-	"github.com/knative/pkg/apis"
-	"github.com/knative/pkg/kmp"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
@@ -47,7 +47,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
 		fe := apis.ErrMissingField("subscriber")
 		errs = errs.Also(fe)
-	} else if fe := isValidSubscriberSpec(*ts.Subscriber); fe != nil {
+	} else if fe := IsValidSubscriberSpec(*ts.Subscriber); fe != nil {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 

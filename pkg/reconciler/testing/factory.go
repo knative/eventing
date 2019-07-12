@@ -21,21 +21,24 @@ import (
 	"encoding/json"
 	"testing"
 
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/logging"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	fakedynamicclientset "k8s.io/client-go/dynamic/fake"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
-	clientgotesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/record"
 
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
+	ktesting "k8s.io/client-go/testing"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
 
-	. "github.com/knative/pkg/reconciler/testing"
+	fakeeventingclient "github.com/knative/eventing/pkg/client/injection/client/fake"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	fakekubeclient "knative.dev/pkg/injection/clients/kubeclient/fake"
+
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -45,15 +48,21 @@ const (
 )
 
 // Ctor functions create a k8s controller with given params.
-type Ctor func(*Listers, reconciler.Options) controller.Reconciler
+type Ctor func(context.Context, *Listers, configmap.Watcher) controller.Reconciler
 
 // MakeFactory creates a reconciler factory with fake clients and controller created by `ctor`.
 func MakeFactory(ctor Ctor, unstructured bool) Factory {
 	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList, *FakeStatsReporter) {
 		ls := NewListers(r.Objects)
 
-		kubeClient := fakekubeclientset.NewSimpleClientset(ls.GetKubeObjects()...)
-		client := fakeclientset.NewSimpleClientset(ls.GetEventingObjects()...)
+		ctx := context.Background()
+		logger := logtesting.TestLogger(t)
+		ctx = logging.WithLogger(ctx, logger)
+
+		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
+		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
+		ctx, dynamicClient := fakedynamicclient.With(ctx,
+			NewScheme(), ToUnstructured(t, r.Objects)...)
 
 		dynamicScheme := runtime.NewScheme()
 		for _, addTo := range clientSetSchemes {
@@ -65,22 +74,24 @@ func MakeFactory(ctor Ctor, unstructured bool) Factory {
 			allObjects = ToUnstructured(t, allObjects)
 		}
 
-		dynamicClient := fakedynamicclientset.NewSimpleDynamicClient(dynamicScheme, allObjects...)
+		// The dynamic client's support for patching is BS.  Implement it
+		// here via PrependReactor (this can be overridden below by the
+		// provided reactors).
+		dynamicClient.PrependReactor("patch", "*",
+			func(action ktesting.Action) (bool, runtime.Object, error) {
+				return true, nil, nil
+			})
+
 		eventRecorder := record.NewFakeRecorder(maxEventBufferSize)
+		ctx = controller.WithEventRecorder(ctx, eventRecorder)
 		statsReporter := &FakeStatsReporter{}
+		//ctx = reconciler.WithStatsReporter(ctx, statsReporter) // TODO: upstream stats interface from eventing to PKG
 
 		PrependGenerateNameReactor(&client.Fake)
 		PrependGenerateNameReactor(&dynamicClient.Fake)
 
 		// Set up our Controller from the fakes.
-		c := ctor(&ls, reconciler.Options{
-			KubeClientSet:     kubeClient,
-			DynamicClientSet:  dynamicClient,
-			EventingClientSet: client,
-			Recorder:          eventRecorder,
-			//StatsReporter:    statsReporter,
-			Logger: logtesting.TestLogger(t),
-		})
+		c := ctor(ctx, &ls, configmap.NewFixedWatcher())
 
 		for _, reactor := range r.WithReactors {
 			kubeClient.PrependReactor("*", "*", reactor)
@@ -88,12 +99,12 @@ func MakeFactory(ctor Ctor, unstructured bool) Factory {
 			dynamicClient.PrependReactor("*", "*", reactor)
 		}
 
-		// Validate all Create operations through the eventing client.
-		client.PrependReactor("create", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-			return ValidateCreates(context.Background(), action)
+		// Validate all Create operations through the serving client.
+		client.PrependReactor("create", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			return ValidateCreates(ctx, action)
 		})
-		client.PrependReactor("update", "*", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-			return ValidateUpdates(context.Background(), action)
+		client.PrependReactor("update", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			return ValidateUpdates(ctx, action)
 		})
 
 		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}

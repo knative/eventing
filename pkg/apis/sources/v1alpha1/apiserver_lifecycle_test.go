@@ -21,8 +21,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/knative/pkg/apis"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/apis"
 )
 
 func TestApiServerSourceStatusIsReady(t *testing.T) {

@@ -17,13 +17,13 @@
 package v1alpha1
 
 import (
-	"github.com/knative/pkg/apis"
-	duckv1beta1 "github.com/knative/pkg/apis/duck/v1beta1"
-	"github.com/knative/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -199,4 +199,9 @@ type SubscriptionList struct {
 // GetGroupVersionKind returns GroupVersionKind for Subscriptions
 func (t *Subscription) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Subscription")
+}
+
+// GetSpec returns the spec of the Subscription.
+func (s *Subscription) GetSpec() interface{} {
+	return s.Spec
 }

@@ -16,6 +16,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: knative-eventing-webhook
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   # For watching logging configuration and getting certs.
   - apiGroups:

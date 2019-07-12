@@ -17,13 +17,10 @@ limitations under the License.
 package reconciler
 
 import (
-	"time"
+	"context"
 
 	clientset "github.com/knative/eventing/pkg/client/clientset/versioned"
 	eventingScheme "github.com/knative/eventing/pkg/client/clientset/versioned/scheme"
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/logging/logkey"
-	"github.com/knative/pkg/system"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -32,58 +29,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/logging/logkey"
+
+	eventingclient "github.com/knative/eventing/pkg/client/injection/client"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/injection/clients/kubeclient"
 )
-
-// Options defines the common reconciler options.
-// We define this to reduce the boilerplate argument list when
-// creating our controllers.
-type Options struct {
-	KubeClientSet    kubernetes.Interface
-	DynamicClientSet dynamic.Interface
-
-	EventingClientSet      clientset.Interface
-	ApiExtensionsClientSet apiextensionsclientset.Interface
-	//CachingClientSet cachingclientset.Interface
-
-	Recorder      record.EventRecorder
-	StatsReporter StatsReporter
-
-	ConfigMapWatcher configmap.Watcher
-	Logger           *zap.SugaredLogger
-
-	ResyncPeriod time.Duration
-	StopChannel  <-chan struct{}
-}
-
-func NewOptionsOrDie(cfg *rest.Config, logger *zap.SugaredLogger, stopCh <-chan struct{}) Options {
-	kubeClient := kubernetes.NewForConfigOrDie(cfg)
-	eventingClient := clientset.NewForConfigOrDie(cfg)
-	dynamicClient := dynamic.NewForConfigOrDie(cfg)
-	apiExtensionsClient := apiextensionsclientset.NewForConfigOrDie(cfg)
-
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-
-	return Options{
-		KubeClientSet:          kubeClient,
-		DynamicClientSet:       dynamicClient,
-		EventingClientSet:      eventingClient,
-		ApiExtensionsClientSet: apiExtensionsClient,
-		ConfigMapWatcher:       configMapWatcher,
-		Logger:                 logger,
-		ResyncPeriod:           10 * time.Hour, // Based on controller-runtime default.
-		StopChannel:            stopCh,
-	}
-}
-
-// GetTrackerLease returns a multiple of the resync period to use as the
-// duration for tracker leases. This attempts to ensure that resyncs happen to
-// refresh leases frequently enough that we don't miss updates to tracked
-// objects.
-func (o Options) GetTrackerLease() time.Duration {
-	return o.ResyncPeriod * 3
-}
 
 // Base implements the core controller logic, given a Reconciler.
 type Base struct {
@@ -119,11 +74,15 @@ type Base struct {
 
 // NewBase instantiates a new instance of Base implementing
 // the common & boilerplate code between our reconcilers.
-func NewBase(opt Options, controllerAgentName string) *Base {
+func NewBase(ctx context.Context, controllerAgentName string, cmw configmap.Watcher) *Base {
 	// Enrich the logs with controller name
-	logger := opt.Logger.Named(controllerAgentName).With(zap.String(logkey.ControllerType, controllerAgentName))
+	logger := logging.FromContext(ctx).
+		Named(controllerAgentName).
+		With(zap.String(logkey.ControllerType, controllerAgentName))
 
-	recorder := opt.Recorder
+	kubeClient := kubeclient.Get(ctx)
+
+	recorder := controller.GetEventRecorder(ctx)
 	if recorder == nil {
 		// Create event broadcaster
 		logger.Debug("Creating event broadcaster")
@@ -131,19 +90,19 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 		watches := []watch.Interface{
 			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
 			eventBroadcaster.StartRecordingToSink(
-				&typedcorev1.EventSinkImpl{Interface: opt.KubeClientSet.CoreV1().Events("")}),
+				&typedcorev1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")}),
 		}
 		recorder = eventBroadcaster.NewRecorder(
 			scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 		go func() {
-			<-opt.StopChannel
+			<-ctx.Done()
 			for _, w := range watches {
 				w.Stop()
 			}
 		}()
 	}
 
-	statsReporter := opt.StatsReporter
+	statsReporter := GetStatsReporter(ctx)
 	if statsReporter == nil {
 		logger.Debug("Creating stats reporter")
 		var err error
@@ -154,14 +113,14 @@ func NewBase(opt Options, controllerAgentName string) *Base {
 	}
 
 	base := &Base{
-		KubeClientSet:          opt.KubeClientSet,
-		EventingClientSet:      opt.EventingClientSet,
-		ApiExtensionsClientSet: opt.ApiExtensionsClientSet,
-		DynamicClientSet:       opt.DynamicClientSet,
-		ConfigMapWatcher:       opt.ConfigMapWatcher,
-		Recorder:               recorder,
-		StatsReporter:          statsReporter,
-		Logger:                 logger,
+		KubeClientSet:     kubeClient,
+		EventingClientSet: eventingclient.Get(ctx),
+		//ApiExtensionsClientSet: apiextclient.Get(ctx),
+		DynamicClientSet: dynamicclient.Get(ctx),
+		ConfigMapWatcher: cmw,
+		Recorder:         recorder,
+		StatsReporter:    statsReporter,
+		Logger:           logger,
 	}
 
 	return base

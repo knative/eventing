@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MakeBroker creates a default Broker object for Namespace 'ns'.
+// MakeBroker creates a default Broker object for Namespace 'namespace'.
 func MakeBroker(namespace string) *v1alpha1.Broker {
 	return &v1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{

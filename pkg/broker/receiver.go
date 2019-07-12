@@ -25,9 +25,13 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.uber.org/zap"
+	"knative.dev/pkg/tracing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,7 +49,11 @@ type Receiver struct {
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned MessageReceiver.
 func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
-	ceClient, err := cloudevents.NewDefaultClient()
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanMiddleware))
+	if err != nil {
+		return nil, err
+	}
+	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +134,8 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	// Remove the TTL attribute that is used by the Broker.
 	originalV2 := event.Context.AsV02()
-	ttl, present := originalV2.Extensions[V02TTLAttribute]
-	if !present {
+	ttl, ttlKey := GetTTL(event.Context)
+	if ttl == nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
 		r.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
@@ -136,7 +144,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
 		return nil
 	}
-	delete(originalV2.Extensions, V02TTLAttribute)
+	delete(originalV2.Extensions, ttlKey)
 	event.Context = originalV2
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
@@ -173,9 +181,22 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, err
 	}
 
+	// Set up the metrics context
+	ctx, _ = tag.New(ctx,
+		tag.Insert(TagTrigger, trigger.String()),
+		tag.Insert(TagBroker, fmt.Sprintf("%s/%s", trigger.Namespace, t.Spec.Broker)),
+	)
+	// Record event count and filtering time
+	startTS := time.Now()
+	defer func() {
+		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		stats.Record(ctx, MeasureTriggerDispatchTime.M(dispatchTimeMS))
+		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
+	}()
+
 	subscriberURIString := t.Status.SubscriberURI
 	if subscriberURIString == "" {
-		r.logger.Error("Unable to read subscriberURI")
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "error"))
 		return nil, errors.New("unable to read subscriberURI")
 	}
 	// We could just send the request to this URI regardless, but let's just check to see if it well
@@ -183,16 +204,24 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 	subscriberURI, err := url.Parse(subscriberURIString)
 	if err != nil {
 		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "error"))
 		return nil, err
 	}
 
-	if !r.shouldSendMessage(&t.Spec, event) {
+	if !r.shouldSendMessage(ctx, &t.Spec, event) {
 		r.logger.Debug("Message did not pass filter", zap.Any("triggerRef", trigger))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "drop"))
 		return nil, nil
 	}
 
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
-	return r.ceClient.Send(sendingCTX, *event)
+	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
+	if err == nil {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))
+	} else {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "error"))
+	}
+	return replyEvent, err
 }
 
 func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
@@ -209,14 +238,24 @@ func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (
 
 // shouldSendMessage determines whether message 'm' should be sent based on the triggerSpec 'ts'.
 // Currently it supports exact matching on type and/or source of events.
-func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
+func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
 	if ts.Filter == nil || ts.Filter.SourceAndType == nil {
 		r.logger.Error("No filter specified")
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "empty-fail"))
 		return false
 	}
+
+	// Record event count and filtering time
+	startTS := time.Now()
+	defer func() {
+		filterTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		stats.Record(ctx, MeasureTriggerFilterTime.M(filterTimeMS))
+	}()
+
 	filterType := ts.Filter.SourceAndType.Type
 	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != event.Type() {
 		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.sourceAndType.type", filterType), zap.String("event.Type()", event.Type()))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "fail"))
 		return false
 	}
 	filterSource := ts.Filter.SourceAndType.Source
@@ -224,7 +263,11 @@ func (r *Receiver) shouldSendMessage(ts *eventingv1alpha1.TriggerSpec, event *cl
 	actualSource := s.String()
 	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != actualSource {
 		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", actualSource))
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "fail"))
+
 		return false
 	}
+
+	ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "pass"))
 	return true
 }

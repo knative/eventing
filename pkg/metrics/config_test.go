@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/system"
 
-	. "github.com/knative/pkg/configmap/testing"
-	_ "github.com/knative/pkg/system/testing"
+	. "knative.dev/pkg/configmap/testing"
+	_ "knative.dev/pkg/system/testing"
 )
 
 func TestOurObservability(t *testing.T) {

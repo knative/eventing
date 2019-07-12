@@ -16,6 +16,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: eventing-controller
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: eventing-controller
@@ -31,6 +33,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: eventing-controller-resolver
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: eventing-controller
@@ -45,7 +49,26 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  name: eventing-controller-manipulator
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: channelable-manipulator
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
   name: eventing-webhook
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: eventing-webhook
@@ -53,4 +76,38 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: knative-eventing-webhook
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-source-controller
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-source-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: knative-eventing-source-controller
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eventing-source-controller-resolver
+  labels:
+    eventing.knative.dev/release: devel
+subjects:
+  - kind: ServiceAccount
+    name: eventing-source-controller
+    namespace: knative-eventing
+roleRef:
+  kind: ClusterRole
+  name: addressable-resolver
   apiGroup: rbac.authorization.k8s.io

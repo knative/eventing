@@ -17,35 +17,32 @@ limitations under the License.
 package apiserversource
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
-
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	fakeclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	informers "github.com/knative/eventing/pkg/client/informers/externalversions"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
 	"github.com/knative/eventing/pkg/utils"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-	logtesting "github.com/knative/pkg/logging/testing"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
 
 	. "github.com/knative/eventing/pkg/reconciler/testing"
-	. "github.com/knative/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 var (
@@ -370,44 +367,18 @@ func TestReconcile(t *testing.T) {
 	}
 
 	defer logtesting.ClearAll()
-	table.Test(t, MakeFactory(func(listers *Listers, opt reconciler.Options) controller.Reconciler {
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:                  reconciler.NewBase(opt, controllerAgentName),
+			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(opt, func(string) {})
+		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,
 	))
-}
-func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
-	kubeClient := fakekubeclientset.NewSimpleClientset()
-	eventingClient := fakeclientset.NewSimpleClientset()
-	eventingInformer := informers.NewSharedInformerFactory(eventingClient, 0)
-	kubeInformer := kubeinformers.NewSharedInformerFactory(kubeClient, 0)
-
-	apiserverInformer := eventingInformer.Sources().V1alpha1().ApiServerSources()
-	deploymentInformer := kubeInformer.Apps().V1().Deployments()
-	eventTypeInformer := eventingInformer.Eventing().V1alpha1().EventTypes()
-
-	c := NewController(reconciler.Options{
-		KubeClientSet:     kubeClient,
-		EventingClientSet: eventingClient,
-		Logger:            logtesting.TestLogger(t),
-	},
-		apiserverInformer,
-		deploymentInformer,
-		eventTypeInformer,
-		source,
-	)
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {

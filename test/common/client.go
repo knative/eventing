@@ -20,10 +20,13 @@ limitations under the License.
 package common
 
 import (
+	"testing"
+
+	kafkachannel "github.com/knative/eventing/contrib/kafka/pkg/client/clientset/versioned"
+	natsschannel "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
-	"github.com/knative/pkg/test"
-	"github.com/knative/pkg/test/logging"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/pkg/test"
 )
 
 // Client holds instances of interfaces for making requests to Knative.
@@ -31,15 +34,17 @@ type Client struct {
 	Kube     *test.KubeClient
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
+	Kafka    *kafkachannel.Clientset
+	Natss    *natsschannel.Clientset
 
 	Namespace string
-	Logf      logging.FormatLogger
-	Cleaner   *Cleaner
+	T         *testing.T
+	Tracker   *Tracker
 }
 
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
-func NewClient(configPath string, clusterName string, namespace string, logger logging.FormatLogger) (*Client, error) {
+func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
 	client := &Client{}
 	cfg, err := test.BuildClientConfig(configPath, clusterName)
 	if err != nil {
@@ -60,8 +65,18 @@ func NewClient(configPath string, clusterName string, namespace string, logger l
 		return nil, err
 	}
 
+	client.Kafka, err = kafkachannel.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Natss, err = natsschannel.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	client.Namespace = namespace
-	client.Logf = logger
-	client.Cleaner = NewCleaner(logger, client.Dynamic)
+	client.T = t
+	client.Tracker = NewTracker(t.Logf, client.Dynamic)
 	return client, nil
 }

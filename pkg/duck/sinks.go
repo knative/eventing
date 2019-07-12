@@ -17,18 +17,19 @@ limitations under the License.
 package duck
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 
-	pkgapisduck "github.com/knative/pkg/apis/duck"
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
-	"github.com/knative/pkg/controller"
-
-	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/tracker"
+	pkgapisduck "knative.dev/pkg/apis/duck"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
+
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // SinkReconciler is a helper for Sources. It triggers
@@ -39,17 +40,37 @@ type SinkReconciler struct {
 }
 
 // NewSinkReconciler creates and initializes a new SinkReconciler
-func NewSinkReconciler(opt reconciler.Options, callback func(string)) *SinkReconciler {
+func NewSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
 	ret := &SinkReconciler{}
 
-	ret.tracker = tracker.New(callback, opt.GetTrackerLease())
+	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
 	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
 		Delegate: &pkgapisduck.EnqueueInformerFactory{
 			Delegate: &pkgapisduck.TypedInformerFactory{
-				Client:       opt.DynamicClientSet,
+				Client:       dynamicclient.Get(ctx),
 				Type:         &duckv1alpha1.AddressableType{},
-				ResyncPeriod: opt.ResyncPeriod,
-				StopChannel:  opt.StopChannel,
+				ResyncPeriod: controller.GetResyncPeriod(ctx),
+				StopChannel:  ctx.Done(),
+			},
+			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
+		},
+	}
+
+	return ret
+}
+
+// NewSinkReconciler creates and initializes a new SinkReconciler
+func NewInjectionSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
+	ret := &SinkReconciler{}
+
+	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
+	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
+		Delegate: &pkgapisduck.EnqueueInformerFactory{
+			Delegate: &pkgapisduck.TypedInformerFactory{
+				Client:       dynamicclient.Get(ctx),
+				Type:         &duckv1alpha1.AddressableType{},
+				ResyncPeriod: controller.GetResyncPeriod(ctx),
+				StopChannel:  ctx.Done(),
 			},
 			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
 		},

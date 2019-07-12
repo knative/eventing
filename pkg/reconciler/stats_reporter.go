@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/knative/pkg/metrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"knative.dev/pkg/metrics"
 )
 
 type Measurement int
@@ -64,6 +64,11 @@ const (
 	ApiServerSourceReadyCountN = "api_server_source_ready_count"
 	// ApiServerSourceReadyLatencyN is the time it takes for an api server source to become ready since the resource is created.
 	ApiServerSourceReadyLatencyN = "api_server_source_ready_latency"
+
+	// InMemoryChannelReadyCountN is the number of in memory channels that have become ready.
+	InMemoryChannelReadyCountN = "inmemorychannel_ready_count"
+	// InMemoryChannelReadyLatencyN is the time it takes for an in memory channel to become ready since the resource is created.
+	InMemoryChannelReadyLatencyN = "inmemorychannel_ready_latency"
 )
 
 var (
@@ -81,6 +86,10 @@ var (
 		"Channel": {
 			ReadyLatencyKey: ChannelReadyLatencyN,
 			ReadyCountKey:   ChannelReadyCountN,
+		},
+		"InMemoryChannel": {
+			ReadyLatencyKey: InMemoryChannelReadyLatencyN,
+			ReadyCountKey:   InMemoryChannelReadyCountN,
 		},
 		"Subscription": {
 			ReadyLatencyKey: SubscriptionReadyLatencyN,
@@ -174,6 +183,25 @@ func init() {
 type StatsReporter interface {
 	// ReportReady reports the time it took a resource to become Ready.
 	ReportReady(kind, namespace, service string, d time.Duration) error
+}
+
+// srKey is used to associate StatsReporters with contexts.
+type srKey struct{}
+
+// WithStatsReporter attaches the given StatsReporter to the provided context
+// in the returned context.
+func WithStatsReporter(ctx context.Context, sr StatsReporter) context.Context {
+	return context.WithValue(ctx, srKey{}, sr)
+}
+
+// GetStatsReporter attempts to look up the StatsReporter on a given context.
+// It may return nil if none is found.
+func GetStatsReporter(ctx context.Context) StatsReporter {
+	untyped := ctx.Value(srKey{})
+	if untyped == nil {
+		return nil
+	}
+	return untyped.(StatsReporter)
 }
 
 type reporter struct {

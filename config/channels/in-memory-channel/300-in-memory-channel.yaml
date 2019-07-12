@@ -16,6 +16,7 @@ kind: CustomResourceDefinition
 metadata:
  name: inmemorychannels.messaging.knative.dev
  labels:
+    eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
     messaging.knative.dev/subscribable: "true"
 spec:
@@ -29,6 +30,7 @@ spec:
     - all
     - knative
     - messaging
+    - channel
     shortNames:
     - imc
   scope: Namespaced

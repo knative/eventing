@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -34,10 +34,10 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testChannelChain)
+	runTests(t, provisioners, common.FeatureBasic, testChannelChain)
 }
 
-func testChannelChain(t *testing.T, provisioner string) {
+func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channelchain-logger-pod"
@@ -48,29 +48,32 @@ func testChannelChain(t *testing.T, provisioner string) {
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 
-	client := Setup(t, provisioner, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
 
 	// create channels
-	if err := client.CreateChannels(channelNames, provisioner); err != nil {
-		t.Fatalf("Failed to create channels %q: %v", channelNames, err)
-	}
-	client.WaitForChannelsReady()
+	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+	client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+	client.WaitForResourcesReady(channelTypeMeta)
 
 	// create loggerPod and expose it as a service
-	pod := base.EventLoggerPod(loggerPodName)
-	if err := client.CreatePod(pod, common.WithService(loggerPodName)); err != nil {
-		t.Fatalf("Failed to create logger service: %v", err)
-	}
+	pod := resources.EventLoggerPod(loggerPodName)
+	client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
 	// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-	if err := client.CreateSubscriptions(subscriptionNames1, channelNames[0], base.WithReply(channelNames[1])); err != nil {
-		t.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames1, channelNames[0], err)
-	}
+	client.CreateSubscriptionsOrFail(
+		subscriptionNames1,
+		channelNames[0],
+		channelTypeMeta,
+		resources.WithReplyForSubscription(channelNames[1], channelTypeMeta),
+	)
 	// create subscriptions that subscribe the second channel, and call the logging service
-	if err := client.CreateSubscriptions(subscriptionNames2, channelNames[1], base.WithSubscriberForSubscription(loggerPodName)); err != nil {
-		t.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames2, channelNames[1], err)
-	}
+	client.CreateSubscriptionsOrFail(
+		subscriptionNames2,
+		channelNames[1],
+		channelTypeMeta,
+		resources.WithSubscriberForSubscription(loggerPodName),
+	)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -79,13 +82,13 @@ func testChannelChain(t *testing.T, provisioner string) {
 
 	// send fake CloudEvent to the first channel
 	body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
-	event := &base.CloudEvent{
+	event := &resources.CloudEvent{
 		Source:   senderName,
-		Type:     base.CloudEventDefaultType,
+		Type:     resources.CloudEventDefaultType,
 		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: base.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToChannel(senderName, channelNames[0], event); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 	}
 

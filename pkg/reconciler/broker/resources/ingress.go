@@ -19,7 +19,8 @@ package resources
 import (
 	"fmt"
 
-	"github.com/knative/pkg/kmeta"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -63,6 +64,18 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 							Image: args.Image,
 							Name:  "ingress",
 							Env: []corev1.EnvVar{
+								{
+									Name:  system.NamespaceEnvKey,
+									Value: system.Namespace(),
+								},
+								{
+									Name: "NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
 								{
 									Name:  "FILTER",
 									Value: "", // TODO Add one.

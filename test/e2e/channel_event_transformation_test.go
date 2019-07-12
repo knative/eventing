@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -48,52 +48,45 @@ func TestEventTransformationForSubscription(t *testing.T) {
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
-	RunTests(t, common.FeatureBasic, func(st *testing.T, provisioner string) {
-		client := Setup(st, provisioner, true)
-		defer TearDown(client)
+	runTests(t, provisioners, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
+		client := setup(st, true)
+		defer tearDown(client)
 
 		// create channels
-		if err := client.CreateChannels(channelNames, provisioner); err != nil {
-			st.Fatalf("Failed to create channels %q: %v", channelNames, err)
-		}
-		client.WaitForChannelsReady()
+		channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+		client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+		client.WaitForResourcesReady(channelTypeMeta)
 
 		// create transformation pod and service
 		transformedEventBody := fmt.Sprintf("eventBody %s", uuid.NewUUID())
-		eventAfterTransformation := &base.CloudEvent{
+		eventAfterTransformation := &resources.CloudEvent{
 			Source:   senderName,
-			Type:     base.CloudEventDefaultType,
+			Type:     resources.CloudEventDefaultType,
 			Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-			Encoding: base.CloudEventDefaultEncoding,
+			Encoding: resources.CloudEventDefaultEncoding,
 		}
-		transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
-		if err := client.CreatePod(transformationPod, common.WithService(transformationPodName)); err != nil {
-			st.Fatalf("Failed to create transformation service %q: %v", transformationPodName, err)
-		}
+		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
+		client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
 		// create logger pod and service
-		loggerPod := base.EventLoggerPod(loggerPodName)
-		if err := client.CreatePod(loggerPod, common.WithService(loggerPodName)); err != nil {
-			st.Fatalf("Failed to create logger service %q: %v", loggerPodName, err)
-		}
+		loggerPod := resources.EventLoggerPod(loggerPodName)
+		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 		// create subscriptions that subscribe the first channel, use the transformation service to transform the events and then forward the transformed events to the second channel
-		if err := client.CreateSubscriptions(
+		client.CreateSubscriptionsOrFail(
 			subscriptionNames1,
 			channelNames[0],
-			base.WithSubscriberForSubscription(transformationPodName),
-			base.WithReply(channelNames[1]),
-		); err != nil {
-			st.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames1, channelNames[0], err)
-		}
+			channelTypeMeta,
+			resources.WithSubscriberForSubscription(transformationPodName),
+			resources.WithReplyForSubscription(channelNames[1], channelTypeMeta),
+		)
 		// create subscriptions that subscribe the second channel, and forward the received events to the logger service
-		if err := client.CreateSubscriptions(
+		client.CreateSubscriptionsOrFail(
 			subscriptionNames2,
 			channelNames[1],
-			base.WithSubscriberForSubscription(loggerPodName),
-		); err != nil {
-			st.Fatalf("Failed to create subscriptions %q for channel %q: %v", subscriptionNames2, channelNames[1], err)
-		}
+			channelTypeMeta,
+			resources.WithSubscriberForSubscription(loggerPodName),
+		)
 
 		// wait for all test resources to be ready, so that we can start sending events
 		if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -102,13 +95,13 @@ func TestEventTransformationForSubscription(t *testing.T) {
 
 		// send fake CloudEvent to the first channel
 		eventBody := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
-		eventToSend := &base.CloudEvent{
+		eventToSend := &resources.CloudEvent{
 			Source:   senderName,
-			Type:     base.CloudEventDefaultType,
+			Type:     resources.CloudEventDefaultType,
 			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-			Encoding: base.CloudEventDefaultEncoding,
+			Encoding: resources.CloudEventDefaultEncoding,
 		}
-		if err := client.SendFakeEventToChannel(senderName, channelNames[0], eventToSend); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}
 

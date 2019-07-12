@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/test/base"
+	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -48,19 +48,13 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlow(t *testing.T) {
-	RunTests(t, common.FeatureBasic, testBrokerChannelFlow)
+	runTests(t, provisioners, common.FeatureBasic, testBrokerChannelFlow)
 }
 
-func testBrokerChannelFlow(t *testing.T, provisioner string) {
+func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	const (
-		senderName    = "e2e-brokerchannel-sender"
-		brokerName    = "e2e-brokerchannel-broker"
-		saIngressName = "eventing-broker-ingress"
-		saFilterName  = "eventing-broker-filter"
-
-		// This ClusterRole is installed in Knative Eventing setup, see https://github.com/knative/eventing/tree/master/docs/broker#manual-setup.
-		crIngressName = "eventing-broker-ingress"
-		crFilterName  = "eventing-broker-filter"
+		senderName = "e2e-brokerchannel-sender"
+		brokerName = "e2e-brokerchannel-broker"
 
 		any          = v1alpha1.TriggerAnyFilter
 		eventType1   = "type1"
@@ -81,98 +75,77 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
-	client := Setup(t, provisioner, true)
-	defer TearDown(client)
+	client := setup(t, true)
+	defer tearDown(client)
+	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
 
-	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	if err := client.CreateServiceAccountAndBinding(saIngressName, crIngressName); err != nil {
-		t.Fatalf("Failed to create the Ingress ServiceAccount and ServiceAccountRoleBinding: %v", err)
-	}
-	if err := client.CreateServiceAccountAndBinding(saFilterName, crFilterName); err != nil {
-		t.Fatalf("Failed to create the Filter ServiceAccount and ServiceAccountRoleBinding: %v", err)
-	}
+	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
-	if err := client.CreateBroker(brokerName, provisioner); err != nil {
-		t.Fatalf("Failed to create the Broker: %q, %v", brokerName, err)
-	}
-	client.WaitForBrokerReady(brokerName)
+	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)
+	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to
 	transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-	eventAfterTransformation := &base.CloudEvent{
+	eventAfterTransformation := &resources.CloudEvent{
 		Source:   eventSource2,
 		Type:     eventType2,
 		Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-		Encoding: base.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
 
 	// create the transformation service for trigger1
-	transformationPod := base.EventTransformationPod(transformationPodName, eventAfterTransformation)
-	if err := client.CreatePod(transformationPod, common.WithService(transformationPodName)); err != nil {
-		t.Fatalf("Failed to create transformation service %q: %v", transformationPodName, err)
-	}
+	transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
+	client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
 	// create trigger1 to receive the original event, and do event transformation
-	if err := client.CreateTrigger(
+	client.CreateTriggerOrFail(
 		triggerName1,
-		base.WithBroker(brokerName),
-		base.WithTriggerFilter(eventSource1, eventType1),
-		base.WithSubscriberRefForTrigger(transformationPodName),
-	); err != nil {
-		t.Fatalf("Error creating trigger %q: %v", triggerName1, err)
-	}
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(eventSource1, eventType1),
+		resources.WithSubscriberRefForTrigger(transformationPodName),
+	)
 
 	// create logger pod and service for trigger2
-	loggerPod1 := base.EventLoggerPod(loggerPodName1)
-	if err := client.CreatePod(loggerPod1, common.WithService(loggerPodName1)); err != nil {
-		t.Fatalf("Failed to create logger service %q: %v", loggerPodName1, err)
-	}
+	loggerPod1 := resources.EventLoggerPod(loggerPodName1)
+	client.CreatePodOrFail(loggerPod1, common.WithService(loggerPodName1))
 
 	// create trigger2 to receive all the events
-	if err := client.CreateTrigger(
+	client.CreateTriggerOrFail(
 		triggerName2,
-		base.WithBroker(brokerName),
-		base.WithTriggerFilter(any, any),
-		base.WithSubscriberRefForTrigger(loggerPodName1),
-	); err != nil {
-		t.Fatalf("Error creating trigger %q: %v", triggerName2, err)
-	}
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(any, any),
+		resources.WithSubscriberRefForTrigger(loggerPodName1),
+	)
 
 	// create channel for trigger3
-	if err := client.CreateChannel(channelName, provisioner); err != nil {
-		t.Fatalf("Failed to create channel %q: %v", channelName, err)
-	}
-	client.WaitForChannelReady(channelName)
+	client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
+	client.WaitForResourceReady(channelName, channelTypeMeta)
 
 	// create trigger3 to receive the transformed event, and send it to the channel
-	channelURL, err := client.GetChannelURL(channelName)
+	channelURL, err := client.GetAddressableURI(channelName, channelTypeMeta)
 	if err != nil {
 		t.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
 	}
-	if err := client.CreateTrigger(
+	client.CreateTriggerOrFail(
 		triggerName3,
-		base.WithBroker(brokerName),
-		base.WithTriggerFilter(eventSource2, eventType2),
-		base.WithSubscriberURIForTrigger(channelURL),
-	); err != nil {
-		t.Fatalf("Error creating trigger %q: %v", triggerName3, err)
-	}
+		resources.WithBroker(brokerName),
+		resources.WithTriggerFilter(eventSource2, eventType2),
+		resources.WithSubscriberURIForTrigger(channelURL),
+	)
 
 	// create logger pod and service for subscription
-	loggerPod2 := base.EventLoggerPod(loggerPodName2)
-	if err := client.CreatePod(loggerPod2, common.WithService(loggerPodName2)); err != nil {
-		t.Fatalf("Failed to create logger service %q: %v", loggerPodName2, err)
-	}
+	loggerPod2 := resources.EventLoggerPod(loggerPodName2)
+	client.CreatePodOrFail(loggerPod2, common.WithService(loggerPodName2))
 
 	// create subscription
-	if err := client.CreateSubscription(
+	client.CreateSubscriptionOrFail(
 		subscriptionName,
 		channelName,
-		base.WithSubscriberForSubscription(loggerPodName2),
-	); err != nil {
-		t.Fatalf("Error creating subscription %q: %v", subscriptionName, err)
-	}
+		channelTypeMeta,
+		resources.WithSubscriberForSubscription(loggerPodName2),
+	)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -180,13 +153,13 @@ func testBrokerChannelFlow(t *testing.T, provisioner string) {
 	}
 
 	// send fake CloudEvent to the broker
-	eventToSend := &base.CloudEvent{
+	eventToSend := &resources.CloudEvent{
 		Source:   eventSource1,
 		Type:     eventType1,
 		Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-		Encoding: base.CloudEventDefaultEncoding,
+		Encoding: resources.CloudEventDefaultEncoding,
 	}
-	if err := client.SendFakeEventToBroker(senderName, brokerName, eventToSend); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 	}
 

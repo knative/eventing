@@ -26,36 +26,28 @@ import (
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	eventinginformers "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	sourceinformers "github.com/knative/eventing/pkg/client/informers/externalversions/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/cronjobsource/resources"
-	"github.com/knative/pkg/controller"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1informers "k8s.io/client-go/informers/apps/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/controller"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "CronJobSources"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "cronjob-source-controller"
-
 	// Name of the corev1.Events emitted from the reconciliation process
 	cronjobReconciled         = "CronJobSourceReconciled"
 	cronJobReadinessChanged   = "CronJobSourceReadinessChanged"
@@ -82,39 +74,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// NewController initializes the controller and is called by the generated code
-// Registers event handlers to enqueue events
-func NewController(
-	opt reconciler.Options,
-	cronjobsourceInformer sourceinformers.CronJobSourceInformer,
-	deploymentInformer appsv1informers.DeploymentInformer,
-	eventTypeInformer eventinginformers.EventTypeInformer,
-) *controller.Impl {
-	r := &Reconciler{
-		Base:             reconciler.NewBase(opt, controllerAgentName),
-		cronjobLister:    cronjobsourceInformer.Lister(),
-		deploymentLister: deploymentInformer.Lister(),
-		eventTypeLister:  eventTypeInformer.Lister(),
-	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	r.sinkReconciler = duck.NewSinkReconciler(opt, impl.EnqueueKey)
-
-	r.Logger.Info("Setting up event handlers")
-	cronjobsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	return impl
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the CronJobSource
@@ -226,7 +185,42 @@ func (r *Reconciler) getReceiveAdapterImage() string {
 	return r.receiveAdapterImage
 }
 
+func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
+
+	for _, rsrc := range []struct {
+		key   string
+		field string
+	}{{
+		key:   "Request.CPU",
+		field: src.Spec.Resources.Requests.ResourceCPU,
+	}, {
+		key:   "Request.Memory",
+		field: src.Spec.Resources.Requests.ResourceMemory,
+	}, {
+		key:   "Limit.CPU",
+		field: src.Spec.Resources.Limits.ResourceCPU,
+	}, {
+		key:   "Limit.Memory",
+		field: src.Spec.Resources.Limits.ResourceMemory,
+	}} {
+		// In the event the field isn't specified, we assign a default in the receive_adapter
+		if rsrc.field != "" {
+			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
+				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %s, Error: %s", rsrc.key, rsrc.field, err)
+				return err
+			}
+		}
+	}
+	src.Status.MarkResourcesCorrect()
+	return nil
+}
+
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource, sinkURI string) (*appsv1.Deployment, error) {
+
+	if err := checkResourcesStatus(src); err != nil {
+		return nil, err
+	}
+
 	ra, err := r.getReceiveAdapter(ctx, src)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get an existing receive adapter", zap.Error(err))

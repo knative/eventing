@@ -17,29 +17,27 @@
 package main
 
 import (
+	"github.com/knative/eventing/pkg/broker"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 )
 
-const (
-	metricsNamespace = "broker_ingress"
-)
-
 var (
-	// MeasureMessagesTotal is a counter which records the number of messages received
-	// by the ingress. The value of the Result tag indicates whether the message
-	// was filtered or dispatched.
-	MeasureMessagesTotal = stats.Int64(
-		"knative.dev/eventing/broker/ingress/measures/messages_total",
-		"Total number of messages received",
+	// MeasureEventsTotal is a counter which records the number of events received
+	// by the ingress. The value of the Result tag indicates whether the event
+	// was filtered or dispatched by the ingress.
+	MeasureEventsTotal = stats.Int64(
+		"knative.dev/eventing/broker/measures/events_total",
+		"Total number of events received",
 		stats.UnitNone,
 	)
 
-	// MeasureDispatchTime records the time spent dispatching a message, in milliseconds.
+	// MeasureDispatchTime records the time spent dispatching an event, in
+	// milliseconds.
 	MeasureDispatchTime = stats.Int64(
-		"knative.dev/eventing/broker/ingress/measures/dispatch_time",
-		"Time spent dispatching a message",
+		"knative.dev/eventing/broker/measures/dispatch_time",
+		"Time spent dispatching an event",
 		stats.UnitMilliseconds,
 	)
 
@@ -61,15 +59,15 @@ func init() {
 	// previously registered view has the same name with a different value.
 	err := view.Register(
 		&view.View{
-			Name:        "messages_total",
-			Measure:     MeasureMessagesTotal,
+			Name:        "broker_events_total",
+			Measure:     MeasureEventsTotal,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 		&view.View{
-			Name:        "dispatch_time",
+			Name:        "broker_dispatch_time",
 			Measure:     MeasureDispatchTime,
-			Aggregation: view.Distribution(10, 100, 1000, 10000),
+			Aggregation: view.Distribution(broker.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 	)

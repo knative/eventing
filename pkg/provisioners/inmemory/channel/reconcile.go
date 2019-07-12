@@ -30,7 +30,7 @@ import (
 	util "github.com/knative/eventing/pkg/provisioners"
 	ccpcontroller "github.com/knative/eventing/pkg/provisioners/inmemory/clusterchannelprovisioner"
 	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/pkg/apis"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -39,6 +39,8 @@ const (
 	channelReconciled         = "ChannelReconciled"
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 	k8sServiceCreateFailed    = "K8sServiceCreateFailed"
+
+	deprecatedMessage = "The `in-memory` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `InMemoryChannel` CRD."
 )
 
 type reconciler struct {
@@ -128,6 +130,8 @@ func (r *reconciler) reconcile(ctx context.Context, c *eventingv1alpha1.Channel)
 	logger := r.logger.With(zap.Any("channel", c))
 
 	c.Status.InitializeConditions()
+
+	c.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", deprecatedMessage)
 
 	// We are syncing K8s Service to talk to this Channel.
 	svc, err := util.CreateK8sService(ctx, r.client, c, util.ExternalService(c))

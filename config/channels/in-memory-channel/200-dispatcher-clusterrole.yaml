@@ -15,6 +15,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: imc-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - messaging.knative.dev
@@ -25,3 +27,18 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - "" # Core API group.
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+# Updates the status to reflect subscribable status.
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels/status
+    verbs:
+      - update

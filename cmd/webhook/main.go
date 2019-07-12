@@ -23,19 +23,18 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/knative/pkg/configmap"
-	"github.com/knative/pkg/logging"
-	"github.com/knative/pkg/logging/logkey"
-	"github.com/knative/pkg/signals"
-	"github.com/knative/pkg/webhook"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
-	"github.com/knative/pkg/system"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/logging/logkey"
+	"knative.dev/pkg/signals"
+	"knative.dev/pkg/system"
+	"knative.dev/pkg/webhook"
 )
 
 func main() {
@@ -45,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading logging configuration: %v", err)
 	}
-	config, err := logging.NewConfigFromMap(cm, logconfig.WebhookName())
+	config, err := logging.NewConfigFromMap(cm)
 	if err != nil {
 		log.Fatalf("Error parsing logging configuration: %v", err)
 	}
@@ -71,7 +70,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName(), logconfig.WebhookName()))
+	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
 
 	// Watch the default-channel-webhook ConfigMap and dynamically update the default
 	// ClusterChannelProvisioner.
@@ -102,6 +101,9 @@ func main() {
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):              &eventingv1alpha1.Subscription{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):                   &eventingv1alpha1.Trigger{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"):                 &eventingv1alpha1.EventType{},
+			// For group messaging.knative.dev.
+			messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
+			messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
 		},
 		Logger: logger,
 	}

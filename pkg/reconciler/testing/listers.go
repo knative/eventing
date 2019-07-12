@@ -24,8 +24,6 @@ import (
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
 	sourcelisters "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
-	fakesharedclientset "github.com/knative/pkg/client/clientset/versioned/fake"
-	"github.com/knative/pkg/reconciler/testing"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -40,6 +38,8 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
+	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
+	"knative.dev/pkg/reconciler/testing"
 )
 
 var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
@@ -50,7 +50,6 @@ var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakesharedclientset.AddToScheme,
-	fakeeventingclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
@@ -134,6 +133,10 @@ func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLis
 
 func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
+}
+
+func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
+	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
 }
 
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {
