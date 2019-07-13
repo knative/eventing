@@ -143,10 +143,9 @@ func (aws *AWSEC2Instance) MonitoredResource() (resType string, labels map[strin
 // For resource definition go to https://cloud.google.com/monitoring/api/resources
 func Autodetect() Interface {
 	return func() Interface {
-		var autoDetected Interface
-		var awsIdentityDoc *awsIdentityDocument
-		var gcpMetadata *gcpMetadata
 		detectOnce.Do(func() {
+			var awsIdentityDoc *awsIdentityDocument
+			var gcpMetadata *gcpMetadata
 
 			// First attempts to retrieve AWS Identity Doc and GCP metadata.
 			// It then determines the resource type
@@ -213,6 +212,9 @@ func createGKEContainerMonitoredResource(gcpMetadata *gcpMetadata) *GKEContainer
 
 // detectOnce is used to make sure GCP and AWS metadata detect function executes only once.
 var detectOnce sync.Once
+
+// autoDetected is the metadata detected after the first execution of Autodetect function.
+var autoDetected Interface
 
 // detectResourceType determines the resource type.
 // awsIdentityDoc contains AWS EC2 attributes. nil if it is not AWS EC2 environment

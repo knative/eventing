@@ -24,23 +24,31 @@
   version = "v0.39.0"
 
 [[projects]]
-  digest = "1:43fbf05ea84c860a4e86b557d156b1e72511cd29375d3f71adb522362710aea7"
+  digest = "1:642cf8e80572f9dc0677b0f241c8ab2e715c9dccc215270ea873c86ddca0062c"
+  name = "contrib.go.opencensus.io/exporter/prometheus"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f4a2c1e53ec45636355d35fb9022b64e4bdd4a91"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:83bd9ccdcc61bb43f45e4336cf9622849b5a867ef137f8b53303968202970225"
   name = "contrib.go.opencensus.io/exporter/stackdriver"
   packages = [
     ".",
     "monitoredresource",
   ]
   pruneopts = "NUT"
-  revision = "ab5a58af316a529613aadf9f50eeed1b6f044b2f"
-  version = "v0.9.2"
+  revision = "68e3d742b03c099c35428443886e65d9587c8d76"
+  version = "v0.12.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:cef70b547ce62d12ea8e5dcb9905bccb57ea1bb253ee6809fd79a17c29ca3cd5"
-  name = "contrib.go.opencensus.io/resource"
-  packages = ["resourcekeys"]
+  digest = "1:7b5f423f5b0dd3dfa32a19a6183b0ab9129bff371ebf3f9efae32f87e4986d8f"
+  name = "contrib.go.opencensus.io/exporter/zipkin"
+  packages = ["."]
   pruneopts = "NUT"
-  revision = "21591786a5e0c21806209b266cc6dfdfa85b3cdb"
+  revision = "30f9fad5db2c8944c21d223496e2543aeb445d4c"
+  version = "v0.1.1"
 
 [[projects]]
   digest = "1:a074ae0f4788ea4c4c7045ab37f21943920bc20cf6ff8afcb2d971154cfa87ab"
@@ -121,7 +129,7 @@
   version = "v2.1.15"
 
 [[projects]]
-  digest = "1:fa965c1fd0f17153f608037e109e62104058bc1d08d44849867795fd306fa8b8"
+  digest = "1:06bd9f98d7cf2097c16f820f980709eb4d04e1c7369132c351fbf1ffb54d3117"
   name = "github.com/census-instrumentation/opencensus-proto"
   packages = [
     "gen-go/agent/common/v1",
@@ -129,8 +137,8 @@
     "gen-go/resource/v1",
   ]
   pruneopts = "NUT"
-  revision = "7f2434bc10da710debe5c4315ed6d4df454b4024"
-  version = "v0.1.0"
+  revision = "a105b96453fe85139acc07b68de48f2cbdd71249"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:0b2ffe5c17b0a3d49cc0a0cc20a13f7e1223fca1cd26587248a6b65c801dd46e"
@@ -255,7 +263,7 @@
   revision = "24b0969c4cb722950103eed87108c8d291a8df00"
 
 [[projects]]
-  digest = "1:2f01b7e14109d05096661dcb8bab93736d7ba97b4b6a54e1f415282ca3162297"
+  digest = "1:f5a98770ab68c1146ee5cc14ed24aafa2bb1a2b3c89cbeadc9eb913b1f9d930a"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -269,8 +277,8 @@
     "ptypes/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
@@ -688,20 +696,20 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:b8baa7541ef444be218da02d3a7b607d33513263660e489d86d429afbffcdd86"
+  digest = "1:0e3fd52087079d1289983e4fef32268ca965973f5370b69204e2934185527baa"
   name = "go.opencensus.io"
   packages = [
     ".",
-    "exporter/prometheus",
-    "exporter/zipkin",
     "internal",
     "internal/tagencoding",
     "metric/metricdata",
+    "metric/metricexport",
     "metric/metricproducer",
     "plugin/ocgrpc",
     "plugin/ochttp",
     "plugin/ochttp/propagation/b3",
     "resource",
+    "resource/resourcekeys",
     "stats",
     "stats/internal",
     "stats/view",
@@ -712,8 +720,8 @@
     "trace/tracestate",
   ]
   pruneopts = "NUT"
-  revision = "75c0cca22312e51bfd4fafdbe9197ae399e18b38"
-  version = "v0.20.2"
+  revision = "9c377598961b706d1542bd2d84d538b5094d596e"
+  version = "v0.22.0"
 
 [[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
@@ -905,10 +913,10 @@
   version = "v1.3.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:4d5dd26f06ad3b8a1bb834f69a82e18cde28b311832b7de00504ef181cbb9b1c"
+  digest = "1:870823dd85a84228c78de88838fbe9255cae24037d47337ece47dcc76976946f"
   name = "google.golang.org/genproto"
   packages = [
+    "googleapis/api",
     "googleapis/api/annotations",
     "googleapis/api/distribution",
     "googleapis/api/label",
@@ -924,7 +932,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = "NUT"
-  revision = "b5d43981345bdb2c233eb4bf3277847b48c6fdc6"
+  revision = "357c62f0e4bbba7e6cc403ae09edcf3e2b9028fe"
 
 [[projects]]
   digest = "1:e289f85ba02e2df4965a3e92f04c8266b09b8a41171bf33488865e3f94f1fa69"
@@ -1357,7 +1365,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:45a635362a586b2729559eceffcc1ba62dd3f79c0fbb2a666b6f4410f46515ab"
+  digest = "1:560c793223385e12a3a4202cc93d96d063d20786b335973ac3f753dd0436701d"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1433,7 +1441,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "76da19bbc6f409dba9017f60003560e03aeff6e7"
+  revision = "d5915547d9db02c20f3dd1a16a1f62698ea43781"
 
 [[projects]]
   digest = "1:a8495647d9f03401c36b801a0644207a434f76ed9d4fc4ea80c46700f0ccc575"
@@ -1477,6 +1485,7 @@
   analyzer-version = 1
   input-imports = [
     "cloud.google.com/go/pubsub",
+    "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
     "github.com/cloudevents/sdk-go",
@@ -1496,7 +1505,6 @@
     "github.com/openzipkin/zipkin-go",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
-    "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/stats",
