@@ -98,7 +98,7 @@ func main() {
 		hb.Sequence++
 
 		event := cloudevents.Event{
-			Context: cloudevents.EventContextV02{
+			Context: cloudevents.EventContextV03{
 				Type:   "dev.knative.eventing.samples.heartbeat",
 				Source: *source,
 				Extensions: map[string]interface{}{
@@ -106,7 +106,7 @@ func main() {
 					"heart": "yes",
 					"beats": true,
 				},
-			}.AsV02(),
+			}.AsV03(),
 			Data: hb,
 		}
 
