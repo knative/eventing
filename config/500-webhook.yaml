@@ -50,6 +50,8 @@ spec:
           value: config-logging
         - name: WEBHOOK_NAME
           value: eventing-webhook
+        - name: REG_DELAY_TIME
+          value: "10"
       volumes:
         - name: config-logging
           configMap:
