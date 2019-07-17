@@ -410,7 +410,7 @@ func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
 
 func makeEventWithoutTTL() *cloudevents.Event {
 	return &cloudevents.Event{
-		Context: cloudevents.EventContextV03{
+		Context: cloudevents.EventContextV02{
 			Type: eventType,
 			Source: cloudevents.URLRef{
 				URL: url.URL{
@@ -435,7 +435,7 @@ func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
 
 func makeDifferentEvent() *cloudevents.Event {
 	return &cloudevents.Event{
-		Context: cloudevents.EventContextV03{
+		Context: cloudevents.EventContextV02{
 			Type: "some-other-type",
 			Source: cloudevents.URLRef{
 				URL: url.URL{

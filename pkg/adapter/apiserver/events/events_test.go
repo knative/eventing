@@ -82,7 +82,7 @@ func TestMakeAddEvent(t *testing.T) {
 			source: "unit-test",
 			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.resource.add",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -119,7 +119,7 @@ func TestMakeUpdateEvent(t *testing.T) {
 			source: "unit-test",
 			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.resource.update",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -156,7 +156,7 @@ func TestMakeDeleteEvent(t *testing.T) {
 			source: "unit-test",
 			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.resource.delete",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -194,7 +194,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 			source: "unit-test",
 			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.add",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -209,7 +209,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 			obj:          simpleOwnedPod("unit", "test"),
 			asController: true,
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.add",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -247,7 +247,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 			source: "unit-test",
 			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.update",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -262,7 +262,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 			obj:          simpleOwnedPod("unit", "test"),
 			asController: true,
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.update",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -300,7 +300,7 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 			source: "unit-test",
 			obj:    simplePod("unit", "test"),
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.delete",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
@@ -315,7 +315,7 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 			obj:          simpleOwnedPod("unit", "test"),
 			asController: true,
 			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV03{
+				Context: cloudevents.EventContextV02{
 					Type:   "dev.knative.apiserver.ref.delete",
 					Source: *cloudevents.ParseURLRef("unit-test"),
 					Extensions: map[string]interface{}{
