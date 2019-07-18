@@ -69,7 +69,7 @@ type Reconciler struct {
 	subscriptionLister listers.SubscriptionLister
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister
-	addressableTracker duck.AddressableTracker
+	resourceTracker    duck.ResourceTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -151,8 +151,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
 
-	// Tell addressableTracker to reconcile this Trigger whenever the Broker changes.
-	track := r.addressableTracker.TrackInNamespace(t)
+	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
+	track := r.resourceTracker.TrackInNamespace(t)
 	if err = track(utils.ObjectRef(b, brokerGVK)); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err

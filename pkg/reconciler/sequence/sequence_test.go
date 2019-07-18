@@ -34,11 +34,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	"time"
-
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/sequence/resources"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
@@ -58,23 +55,10 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-type fakeAddressableInformer struct{}
+type fakeResourceTracker struct{}
 
-func (*fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.AddressableTracker {
-	return fakeAddressableTracker{}
-}
-
-type fakeAddressableTracker struct{}
-
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
+func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
 	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
 }
 
 func createReplyChannel(channelName string) *corev1.ObjectReference {
@@ -495,7 +479,7 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			sequenceLister:     listers.GetSequenceLister(),
-			addressableTracker: fakeAddressableTracker{},
+			resourceTracker:    fakeResourceTracker{},
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false))
