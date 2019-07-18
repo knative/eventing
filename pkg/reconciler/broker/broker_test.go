@@ -325,6 +325,7 @@ func TestReconcile(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.FilterAnnotations()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(filterContainerName, 8080))),
 			},
@@ -524,6 +525,7 @@ func TestReconcile(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.IngressAnnotations()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
 			},
@@ -1127,6 +1129,7 @@ func TestReconcileCRD(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.FilterAnnotations()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(filterContainerName, 8080))),
 			},
@@ -1302,6 +1305,7 @@ func TestReconcileCRD(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.IngressAnnotations()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
 			},
