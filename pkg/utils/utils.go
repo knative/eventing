@@ -110,3 +110,14 @@ func ToDNS1123Subdomain(name string) string {
 	}
 	return name
 }
+
+// GenerateFixedName generates a fixed name for the given owning resource and human readable prefix.
+// The name's length will be short enough to be valid for K8s Services.
+func GenerateFixedName(owner metav1.Object, prefix string) string {
+	uid := string(owner.GetUID())
+	pl := validation.DNS1123LabelMaxLength - len(uid)
+	if pl > len(prefix) {
+		pl = len(prefix)
+	}
+	return prefix[:pl] + uid
+}

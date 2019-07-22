@@ -19,6 +19,10 @@ package utils
 import (
 	"strings"
 	"testing"
+
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestGetDomainName(t *testing.T) {
@@ -59,5 +63,36 @@ options ndots:5
 		if got != tt.want {
 			t.Errorf("Test %s failed expected: %s but got: %s", tt.name, tt.want, got)
 		}
+	}
+}
+
+func TestGenerateFixedName(t *testing.T) {
+	testCases := map[string]struct {
+		uid      string
+		prefix   string
+		expected string
+	}{
+		"standard": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "default-text-extractor-",
+			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"too long": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "this-is-an-extremely-long-prefix-which-will-make-the-generated-name-too-long-",
+			expected: "this-is-an-extremely-long-p2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			owner := &v1alpha1.Broker{
+				ObjectMeta: v1.ObjectMeta{
+					UID: types.UID(tc.uid),
+				},
+			}
+			if actual := GenerateFixedName(owner, tc.prefix); actual != tc.expected {
+				t.Errorf("Expected %q, actual %q", tc.expected, actual)
+			}
+		})
 	}
 }
