@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -29,6 +30,14 @@ func (c *Channel) Validate(ctx context.Context) *apis.FieldError {
 
 func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
+
+	if cs.ChannelTemplate == nil {
+		errs = errs.Also(apis.ErrMissingField("channelTemplate"))
+	} else {
+		if cte := isValidChannelTemplate(cs.ChannelTemplate); cte != nil {
+			errs = errs.Also(cte.ViaField("channelTemplate"))
+		}
+	}
 
 	if cs.Subscribable != nil {
 		for i, subscriber := range cs.Subscribable.Subscribers {
@@ -40,5 +49,16 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
+	return errs
+}
+
+func isValidChannelTemplate(ct *eventingduck.ChannelTemplateSpec) *apis.FieldError {
+	var errs *apis.FieldError
+	if ct.Kind == "" {
+		errs = errs.Also(apis.ErrMissingField("kind"))
+	}
+	if ct.APIVersion == "" {
+		errs = errs.Also(apis.ErrMissingField("apiVersion"))
+	}
 	return errs
 }
