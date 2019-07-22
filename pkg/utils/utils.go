@@ -95,7 +95,8 @@ func ObjectRef(obj metav1.Object, gvk schema.GroupVersionKind) corev1.ObjectRefe
 	}
 }
 
-// Converts 'name' to a valid DNS1123 subdomain, required for object names in K8s.
+// ToDNS1123Subdomain converts 'name' to a valid DNS1123 subdomain, required for object names in
+// K8s.
 func ToDNS1123Subdomain(name string) string {
 	// If it is not a valid DNS1123 subdomain, make it a valid one.
 	if msgs := validation.IsDNS1123Subdomain(name); len(msgs) != 0 {

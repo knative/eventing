@@ -748,8 +748,8 @@ func (r *Reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Bro
 func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
-			GenerateName: fmt.Sprintf("internal-ingress-%s-", b.Name),
+			Namespace: b.Namespace,
+			Name:      utils.GenerateFixedName(b, fmt.Sprintf("internal-ingress-%s-", b.Name)),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},

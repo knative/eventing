@@ -26,13 +26,11 @@ import (
 )
 
 func TestGetDomainName(t *testing.T) {
-	tests := []struct {
-		name       string
+	testCases := map[string]struct {
 		resolvConf string
 		want       string
 	}{
-		{
-			name: "all good",
+		"all good": {
 			resolvConf: `
 nameserver 1.1.1.1
 search default.svc.abc.com svc.abc.com abc.com
@@ -40,16 +38,14 @@ options ndots:5
 `,
 			want: "abc.com",
 		},
-		{
-			name: "missing search line",
+		"missing search line": {
 			resolvConf: `
 nameserver 1.1.1.1
 options ndots:5
 `,
 			want: defaultDomainName,
 		},
-		{
-			name: "non k8s resolv.conf format",
+		"non k8s resolv.conf format": {
 			resolvConf: `
 nameserver 1.1.1.1
 search  abc.com xyz.com
@@ -58,11 +54,13 @@ options ndots:5
 			want: defaultDomainName,
 		},
 	}
-	for _, tt := range tests {
-		got := getClusterDomainName(strings.NewReader(tt.resolvConf))
-		if got != tt.want {
-			t.Errorf("Test %s failed expected: %s but got: %s", tt.name, tt.want, got)
-		}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			got := getClusterDomainName(strings.NewReader(tc.resolvConf))
+			if got != tc.want {
+				t.Errorf("Expected: %s but got: %s", tc.want, got)
+			}
+		})
 	}
 }
 
