@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
 )
@@ -30,7 +31,7 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	if bs.DeprecatedChannelTemplate != nil && !equality.Semantic.DeepEqual(bs.ChannelTemplate, ChannelTemplateSpec{}) {
+	if bs.DeprecatedChannelTemplate != nil && !equality.Semantic.DeepEqual(bs.ChannelTemplate, eventingduckv1alpha1.ChannelTemplateSpec{}) {
 		errs = errs.Also(apis.ErrMultipleOneOf("channelTemplate", "channelTemplateSpec"))
 		return errs
 	}
@@ -39,7 +40,7 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(dcte.ViaField("channelTemplate"))
 	}
 
-	if !equality.Semantic.DeepEqual(bs.ChannelTemplate, ChannelTemplateSpec{}) {
+	if !equality.Semantic.DeepEqual(bs.ChannelTemplate, eventingduckv1alpha1.ChannelTemplateSpec{}) {
 		if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
 			errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 		}
@@ -64,7 +65,7 @@ func isValidDeprecatedChannelTemplate(dct *ChannelSpec) *apis.FieldError {
 	return errs
 }
 
-func isValidChannelTemplate(dct ChannelTemplateSpec) *apis.FieldError {
+func isValidChannelTemplate(dct eventingduckv1alpha1.ChannelTemplateSpec) *apis.FieldError {
 	var errs *apis.FieldError
 	if dct.Kind == "" {
 		errs = errs.Also(apis.ErrMissingField("kind"))

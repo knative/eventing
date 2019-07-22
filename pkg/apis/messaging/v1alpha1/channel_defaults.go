@@ -16,12 +16,35 @@ limitations under the License.
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+)
+
+// ChannelDefaulter sets the default Channel CRD and Arguments on Channels that do not
+// specify any implementation.
+type ChannelDefaulter interface {
+	// GetDefault determines the default Channel CRD for the given Channel. It does
+	// not modify the given Channel.
+	GetDefault(c *Channel) *eventingduckv1alpha1.ChannelTemplateSpec
+}
+
+var (
+	// ChannelDefaulterSingleton is the global singleton used to default Channels that do not
+	// specify a Channel CRD.
+	ChannelDefaulterSingleton ChannelDefaulter
+)
 
 func (c *Channel) SetDefaults(ctx context.Context) {
+	if c != nil && c.Spec.ChannelTemplate == nil {
+		// The singleton may not have been set, if so ignore it and validation will reject the
+		// Channel.
+		if cd := ChannelDefaulterSingleton; cd != nil {
+			channelTemplate := cd.GetDefault(c.DeepCopy())
+			c.Spec.ChannelTemplate = channelTemplate
+		}
+	}
 	c.Spec.SetDefaults(ctx)
 }
 
-func (dcs *ChannelSpec) SetDefaults(ctx context.Context) {
-	// TODO: Nothing to default here...
-}
+func (cs *ChannelSpec) SetDefaults(ctx context.Context) {}

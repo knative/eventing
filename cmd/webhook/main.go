@@ -20,6 +20,7 @@ import (
 	"log"
 
 	"github.com/knative/eventing/pkg/channeldefaulter"
+	"github.com/knative/eventing/pkg/defaultchannel"
 
 	"go.uber.org/zap"
 
@@ -78,6 +79,12 @@ func main() {
 	eventingv1alpha1.ChannelDefaulterSingleton = channelDefaulter
 	configMapWatcher.Watch(channeldefaulter.ConfigMapName, channelDefaulter.UpdateConfigMap)
 
+	// Watch the default-ch-webhook ConfigMap and dynamically update the default
+	// Channel CRD.
+	chDefaulter := defaultchannel.New(logger.Desugar())
+	messagingv1alpha1.ChannelDefaulterSingleton = chDefaulter
+	configMapWatcher.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
+
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
 	}
@@ -104,6 +111,7 @@ func main() {
 			// For group messaging.knative.dev.
 			messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
 			messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
+			messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
 		},
 		Logger: logger,
 	}

@@ -51,9 +51,13 @@ var _ apis.Defaultable = (*Channel)(nil)
 var _ runtime.Object = (*Channel)(nil)
 var _ webhook.GenericCRD = (*Channel)(nil)
 
-// ChannelSpec defines which subscribers have expressed interest in
-// receiving events from this Channel.
+// ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel.
+// It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
 type ChannelSpec struct {
+
+	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
+	ChannelTemplate *eventingduck.ChannelTemplateSpec `json:"channelTemplateSpec"`
+
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }
@@ -74,6 +78,8 @@ type ChannelStatus struct {
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	eventingduck.SubscribableTypeStatus `json:",inline"`
+
+	// TODO add backing channel object ref.
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
