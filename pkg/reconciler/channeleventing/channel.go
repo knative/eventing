@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package channeleventing
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
+	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	listers "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
@@ -50,6 +50,8 @@ type Reconciler struct {
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
 
+// Reconcile will check if the channel is being watched by provisioner's channel controller
+// This will improve UX. See https://github.com/knative/eventing/issues/779
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -97,9 +99,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ch *v1alpha1.Channel) error {
+	// Do not Initialize() Status in channel-default-controller. It will set ChannelConditionProvisionerInstalled=True
+	// Directly call GetCondition(). If the Status was never initialized then GetCondition() will return nil and
+	// IsUnknown() will return true
+	c := ch.Status.GetCondition(v1alpha1.ChannelConditionProvisionerInstalled)
 
-	// TODO reconcile the channel
-	logging.FromContext(ctx).Sugar().Infof("Reconciling Channel: %s", ch.Name)
+	if c == nil || c.IsUnknown() {
+
+		var proName string
+		var proKind string
+		if ch.Spec.Provisioner != nil {
+			proName = ch.Spec.Provisioner.Name
+			proKind = ch.Spec.Provisioner.Kind
+		}
+
+		ch.Status.MarkProvisionerNotInstalled(
+			"Provisioner not found.",
+			"Specified provisioner [Name:%s Kind:%s] is not installed or not controlling the channel.",
+			proName,
+			proKind,
+		)
+	}
 	return nil
 }
 
@@ -120,7 +140,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel
 	existing := channel.DeepCopy()
 	existing.Status = desired.Status
 
-	c, err := r.EventingClientSet.MessagingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
+	c, err := r.EventingClientSet.EventingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
 
 	if err == nil && becomesReady {
 		duration := time.Since(c.ObjectMeta.CreationTimestamp.Time)

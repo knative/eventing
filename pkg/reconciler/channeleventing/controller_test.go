@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package channeleventing
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel/fake"
+	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel/fake"
 )
 
 func TestNew(t *testing.T) {

@@ -1,4 +1,4 @@
-# Copyright 2019 The Knative Authors
+# Copyright 2018 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,33 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# TODO rename file to 300-channel.yaml once we remove the eventing Channel.
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: channels.messaging.knative.dev
+  name: channels.eventing.knative.dev
   labels:
     eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
-    messaging.knative.dev/subscribable: "true"
 spec:
-  group: messaging.knative.dev
+  group: eventing.knative.dev
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
+  - name: v1alpha1
+    served: true
+    storage: true
   names:
     kind: Channel
     plural: channels
     singular: channel
     categories:
-      - all
-      - knative
-      - messaging
-      - channel
+    - all
+    - knative
+    - eventing
     shortNames:
-      - ch
+    - chan
   scope: Namespaced
   subresources:
     status: {}
@@ -48,9 +44,6 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
-    - name: Hostname
-      type: string
-      JSONPath: .status.address.hostname
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
@@ -59,6 +52,24 @@ spec:
       properties:
         spec:
           properties:
+            provisioner:
+              type: object
+              required:
+                - apiVersion
+                - kind
+                - name
+              properties:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                  minLength: 1
+                name:
+                  type: string
+                  minLength: 1
+            arguments:
+              type: object
             subscribable:
               type: object
               properties:
@@ -88,6 +99,8 @@ spec:
                           uid:
                             type: string
                             minLength: 1
+                      generation:
+                        type: integer
                       uid:
                         type: string
                         minLength: 1

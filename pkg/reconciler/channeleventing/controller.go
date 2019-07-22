@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package channeleventing
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
+	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 	ReconcilerName = "Channels"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "ch-default-controller"
+	controllerAgentName = "channel-default-controller"
 )
 
 // NewController initializes the controller and is called by the generated code
