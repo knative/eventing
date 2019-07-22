@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+	"github.com/knative/eventing/pkg/duck"
 
 	"github.com/knative/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
@@ -42,12 +43,15 @@ func NewController(
 ) *controller.Impl {
 
 	channelInformer := channelinformer.Get(ctx)
+	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
 		channelLister: channelInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+
+	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	r.Logger.Info("Setting up event handlers")
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

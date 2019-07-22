@@ -17,39 +17,23 @@
 package v1alpha1
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-var chCondSet = apis.NewLivingConditionSet(ChannelConditionDispatcherReady, ChannelConditionServiceReady, ChannelConditionEndpointsReady, ChannelConditionAddressable, ChannelConditionChannelServiceReady)
+var chCondSet = apis.NewLivingConditionSet(ChannelConditionBackingChannelReady, ChannelConditionAddressable)
 
 const (
 	// ChannelConditionReady has status True when all subconditions below have been set to True.
 	ChannelConditionReady = apis.ConditionReady
 
-	// ChannelConditionDispatcherReady has status True when a Dispatcher deployment is ready
-	// Keyed off appsv1.DeploymentAvailable, which means minimum available replicas required are up
-	// and running for at least minReadySeconds.
-	ChannelConditionDispatcherReady apis.ConditionType = "DispatcherReady"
-
-	// ChannelConditionServiceReady has status True when a k8s Service is ready. This
-	// basically just means it exists because there's no meaningful status in Service. See Endpoints
-	// below.
-	ChannelConditionServiceReady apis.ConditionType = "ServiceReady"
-
-	// ChannelConditionEndpointsReady has status True when a k8s Service Endpoints are backed
-	// by at least one endpoint.
-	ChannelConditionEndpointsReady apis.ConditionType = "EndpointsReady"
-
 	// ChannelConditionAddressable has status true when this Channel meets
 	// the Addressable contract and has a non-empty hostname.
 	ChannelConditionAddressable apis.ConditionType = "Addressable"
 
-	// ChannelConditionServiceReady has status True when a k8s Service representing the channel is ready.
-	// Because this uses ExternalName, there are no endpoints to check.
-	ChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
+	// ChannelConditionBackingChannelReady has status True when the backing Channel CRD is ready.
+	ChannelConditionBackingChannelReady apis.ConditionType = "BackingChannelReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -82,43 +66,16 @@ func (cs *ChannelStatus) SetAddress(url *apis.URL) {
 	}
 }
 
-func (cs *ChannelStatus) MarkDispatcherFailed(reason, messageFormat string, messageA ...interface{}) {
-	chCondSet.Manage(cs).MarkFalse(ChannelConditionDispatcherReady, reason, messageFormat, messageA...)
+func (cs *ChannelStatus) MarkBackingChannelFailed(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkFalse(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
 }
 
-// TODO: Unify this with the ones from Eventing. Say: Broker, Trigger.
-func (cs *ChannelStatus) PropagateDispatcherStatus(ds *appsv1.DeploymentStatus) {
-	for _, cond := range ds.Conditions {
-		if cond.Type == appsv1.DeploymentAvailable {
-			if cond.Status != corev1.ConditionTrue {
-				cs.MarkDispatcherFailed("DispatcherNotReady", "Dispatcher Deployment is not ready: %s : %s", cond.Reason, cond.Message)
-			} else {
-				chCondSet.Manage(cs).MarkTrue(ChannelConditionDispatcherReady)
-			}
-		}
+func (cs *ChannelStatus) PropagateChannelReadiness(chs *eventingduck.ChannelableStatus) {
+	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
+	address := cs.AddressStatus.Address
+	if address != nil {
+		chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
+	} else {
+		cs.MarkBackingChannelFailed("ChannelNotReady", "Channel is not ready: not addressable")
 	}
-}
-
-func (cs *ChannelStatus) MarkServiceFailed(reason, messageFormat string, messageA ...interface{}) {
-	chCondSet.Manage(cs).MarkFalse(ChannelConditionServiceReady, reason, messageFormat, messageA...)
-}
-
-func (cs *ChannelStatus) MarkServiceTrue() {
-	chCondSet.Manage(cs).MarkTrue(ChannelConditionServiceReady)
-}
-
-func (cs *ChannelStatus) MarkChannelServiceFailed(reason, messageFormat string, messageA ...interface{}) {
-	chCondSet.Manage(cs).MarkFalse(ChannelConditionChannelServiceReady, reason, messageFormat, messageA...)
-}
-
-func (cs *ChannelStatus) MarkChannelServiceTrue() {
-	chCondSet.Manage(cs).MarkTrue(ChannelConditionChannelServiceReady)
-}
-
-func (cs *ChannelStatus) MarkEndpointsFailed(reason, messageFormat string, messageA ...interface{}) {
-	chCondSet.Manage(cs).MarkFalse(ChannelConditionEndpointsReady, reason, messageFormat, messageA...)
-}
-
-func (cs *ChannelStatus) MarkEndpointsTrue() {
-	chCondSet.Manage(cs).MarkTrue(ChannelConditionEndpointsReady)
 }

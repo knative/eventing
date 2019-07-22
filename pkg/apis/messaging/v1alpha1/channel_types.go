@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -79,7 +80,8 @@ type ChannelStatus struct {
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	eventingduck.SubscribableTypeStatus `json:",inline"`
 
-	// TODO add backing channel object ref.
+	// Channel is an ObjectReference to the object for the Channel CRD.
+	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
