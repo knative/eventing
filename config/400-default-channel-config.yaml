@@ -30,3 +30,13 @@ data:
         apiversion: eventing.knative.dev/v1alpha1
         kind: ClusterChannelProvisioner
         name: some-other-provisioner
+  # Configuration for defaulting channels that do not specify the channel CRD. All field names are
+  # lowercase.
+  default-ch-config: |
+    clusterdefault:
+      apiversion: messaging.knative.dev/v1alpha1
+      kind: InMemoryChannel
+    namespacedefaults:
+      some-namespace:
+        apiversion: messaging.knative.dev/v1alpha1
+        kind: InMemoryChannel

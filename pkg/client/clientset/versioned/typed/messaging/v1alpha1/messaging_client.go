@@ -27,6 +27,7 @@ import (
 
 type MessagingV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ChannelsGetter
 	InMemoryChannelsGetter
 	SequencesGetter
 }
@@ -34,6 +35,10 @@ type MessagingV1alpha1Interface interface {
 // MessagingV1alpha1Client is used to interact with features provided by the messaging.knative.dev group.
 type MessagingV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *MessagingV1alpha1Client) Channels(namespace string) ChannelInterface {
+	return newChannels(c, namespace)
 }
 
 func (c *MessagingV1alpha1Client) InMemoryChannels(namespace string) InMemoryChannelInterface {

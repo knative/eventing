@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// ChannelListerExpansion allows custom methods to be added to
+// ChannelLister.
+type ChannelListerExpansion interface{}
+
+// ChannelNamespaceListerExpansion allows custom methods to be added to
+// ChannelNamespaceLister.
+type ChannelNamespaceListerExpansion interface{}
+
 // InMemoryChannelListerExpansion allows custom methods to be added to
 // InMemoryChannelLister.
 type InMemoryChannelListerExpansion interface{}
