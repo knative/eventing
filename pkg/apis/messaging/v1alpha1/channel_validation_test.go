@@ -17,7 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -150,4 +153,133 @@ func TestChannelValidation(t *testing.T) {
 	}}
 
 	doValidateTest(t, tests)
+}
+
+func TestChannelImmutableFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		current  apis.Immutable
+		original apis.Immutable
+		want     *apis.FieldError
+	}{{
+		name: "good (no change)",
+		current: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+			},
+		},
+		original: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+			},
+		},
+		want: nil,
+	}, {
+		name: "new nil is ok",
+		current: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+			},
+		},
+		original: nil,
+		want:     nil,
+	}, {
+		name: "bad (channelTemplate change)",
+		current: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "OtherChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+			},
+		},
+		original: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+					Spec: &runtime.RawExtension{
+						Raw: []byte(`"foo":"baz"`),
+					},
+				},
+			},
+		},
+		want: &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec"},
+			Details: `{v1alpha1.ChannelSpec}.ChannelTemplate.TypeMeta.Kind:
+	-: "InMemoryChannel"
+	+: "OtherChannel"
+`,
+		},
+	}, {
+		name: "good (subscribable change)",
+		current: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+				},
+				Subscribable: &eventingduck.Subscribable{
+					Subscribers: []eventingduck.SubscriberSpec{{
+						SubscriberURI: "subscriberendpoint",
+						ReplyURI:      "replyendpoint",
+					}},
+				},
+			},
+		},
+		original: &Channel{
+			Spec: ChannelSpec{
+				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "InMemoryChannel",
+						APIVersion: SchemeGroupVersion.String(),
+					},
+				},
+			},
+		},
+		want: nil,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.current.CheckImmutableFields(context.TODO(), test.original)
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+			}
+		})
+	}
 }

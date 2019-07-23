@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/pkg/kmp"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -74,9 +75,8 @@ func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *
 		return &apis.FieldError{Message: "The provided original was not a Channel"}
 	}
 
-	// All spec fields are immutable. We do this especially for the channelTemplate, as changing it once is set
-	// will require to delete the backing channel and recreating it.
-	if diff, err := kmp.ShortDiff(original.Spec, c.Spec); err != nil {
+	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Subscribable")
+	if diff, err := kmp.ShortDiff(original.Spec, c.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff Channel",
 			Paths:   []string{"spec"},
