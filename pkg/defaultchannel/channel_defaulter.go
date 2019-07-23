@@ -18,6 +18,7 @@ package defaultchannel
 
 import (
 	"encoding/json"
+	"github.com/ghodss/yaml"
 	"sync/atomic"
 
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
@@ -87,16 +88,20 @@ func (cd *ChannelDefaulter) UpdateConfigMap(cm *corev1.ConfigMap) {
 		return
 	}
 
-	cd.logger.Info("ConfigMap's value", zap.String("value", defaultChannelConfig))
+	defaultChannelConfigJson, err := yaml.YAMLToJSON([]byte(defaultChannelConfig))
+	if err != nil {
+		cd.logger.Error("ConfigMap's value could not be converted to JSON.", zap.Error(err), zap.String("defaultChannelConfig", defaultChannelConfig))
+		return
+	}
 
-	config := Config{}
-	if err := json.Unmarshal([]byte(defaultChannelConfig), &config); err != nil {
+	config := &Config{}
+	if err := json.Unmarshal([]byte(defaultChannelConfigJson), config); err != nil {
 		cd.logger.Error("ConfigMap's value could not be unmarshaled.", zap.Error(err), zap.Any("configMap", cm))
 		return
 	}
 
 	cd.logger.Info("Updated channelDefaulter config", zap.Any("config", config))
-	cd.setConfig(&config)
+	cd.setConfig(config)
 }
 
 // setConfig is a typed wrapper around config.
@@ -114,7 +119,6 @@ func (cd *ChannelDefaulter) getConfig() *Config {
 
 // GetDefault determines the default Channel CRD and arguments for the provided Channel.
 func (cd *ChannelDefaulter) GetDefault(c *messagingv1alpha1.Channel) *eventingduckv1alpha1.ChannelTemplateSpec {
-	cd.logger.Info("Calling this guyyyyy", zap.Any("channel", c))
 	if c == nil {
 		return nil
 	}
