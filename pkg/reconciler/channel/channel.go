@@ -146,13 +146,6 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		Namespace:  backingChannel.Namespace,
 	}
 
-	c.Status.PropagateChannelReadiness(&backingChannel.Status)
-
-	if !c.Status.IsReady() {
-		logging.FromContext(ctx).Error("Channel is not ready. Cannot update subscriber status")
-		return nil
-	}
-
 	err = r.patchBackingChannelSubscriptions(ctx, channelResourceInterface, c, backingChannel)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem patching subscriptions in the backing channel", zap.Error(err))
@@ -160,8 +153,7 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		return err
 	}
 
-	c.Status.SubscribableStatus = backingChannel.Status.SubscribableStatus
-
+	c.Status.PropagateStatuses(&backingChannel.Status)
 	return nil
 }
 

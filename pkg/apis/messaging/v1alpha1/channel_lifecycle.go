@@ -18,15 +18,19 @@ package v1alpha1
 
 import (
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-var chCondSet = apis.NewLivingConditionSet(ChannelConditionAddressable)
+var chCondSet = apis.NewLivingConditionSet(ChannelConditionBackingChannelReady, ChannelConditionAddressable)
 
 const (
 	// ChannelConditionReady has status True when all subconditions below have been set to True.
 	ChannelConditionReady = apis.ConditionReady
+
+	// ChannelConditionBackingChannelReady has status True when the backing Channel CRD is ready.
+	ChannelConditionBackingChannelReady apis.ConditionType = "BackingChannelReady"
 
 	// ChannelConditionAddressable has status true when this Channel meets
 	// the Addressable contract and has a non-empty hostname.
@@ -48,13 +52,13 @@ func (cs *ChannelStatus) InitializeConditions() {
 	chCondSet.Manage(cs).InitializeConditions()
 }
 
-func (cs *ChannelStatus) SetAddress(url *apis.URL) {
+func (cs *ChannelStatus) SetAddress(address *v1alpha1.Addressable) {
 	if cs.Address == nil {
 		cs.Address = &v1alpha1.Addressable{}
 	}
-	if url != nil {
-		cs.Address.Hostname = url.Host
-		cs.Address.URL = url
+	if address != nil && address.URL != nil {
+		cs.Address.Hostname = address.URL.Host
+		cs.Address.URL = address.URL
 		chCondSet.Manage(cs).MarkTrue(ChannelConditionAddressable)
 	} else {
 		cs.Address.Hostname = ""
@@ -63,12 +67,26 @@ func (cs *ChannelStatus) SetAddress(url *apis.URL) {
 	}
 }
 
-func (cs *ChannelStatus) PropagateChannelReadiness(chs *eventingduck.ChannelableStatus) {
+func (cs *ChannelStatus) MarkBackingChannelFailed(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkFalse(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
+}
+
+func (cs *ChannelStatus) MarkBackingChannelReady() {
+	chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
+}
+
+func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
-	address := chs.AddressStatus.Address
-	if address != nil {
-		cs.SetAddress(address.URL)
-	} else {
-		cs.SetAddress(nil)
+	readyCondition := chs.Status.GetCondition(apis.ConditionReady)
+	if readyCondition != nil {
+		if readyCondition.Status != corev1.ConditionTrue {
+			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
+		} else {
+			cs.MarkBackingChannelReady()
+		}
 	}
+	// Set the address and update the Addressable conditions.
+	cs.SetAddress(chs.AddressStatus.Address)
+	// Set the subscribable status.
+	cs.SubscribableStatus = chs.SubscribableStatus
 }
