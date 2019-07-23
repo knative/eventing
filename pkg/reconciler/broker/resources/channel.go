@@ -27,10 +27,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// BrokerChannelName creates a name for the Channel for a Broker for a given
-// Channel teyp
-func BrokerChannelName(brokerName, channelType string) string {
+// NonCRDBrokerChannelName creates a name for the non-CRD based Channel for a Broker for the given
+// Channel type.
+func NonCRDBrokerChannelName(brokerName, channelType string) string {
 	return fmt.Sprintf("%s-kn-%s", brokerName, channelType)
+}
+
+// BrokerChannelName creates a name for the Channel for a Broker for a given
+// Channel type.
+func BrokerChannelName(brokerName, channelType string) string {
+	// TODO Come up with a better name than kn2.
+	return fmt.Sprintf("%s-kn2-%s", brokerName, channelType)
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
@@ -38,11 +45,11 @@ func BrokerChannelName(brokerName, channelType string) string {
 func NewChannel(channelType string, b *v1alpha1.Broker, l map[string]string) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := v1alpha1.ChannelTemplateSpecInternal{
-		metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       b.Spec.ChannelTemplate.Kind,
 			APIVersion: b.Spec.ChannelTemplate.APIVersion,
 		},
-		metav1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
@@ -50,7 +57,7 @@ func NewChannel(channelType string, b *v1alpha1.Broker, l map[string]string) (*u
 			Namespace: b.Namespace,
 			Labels:    l,
 		},
-		b.Spec.ChannelTemplate.Spec,
+		Spec: b.Spec.ChannelTemplate.Spec,
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {
