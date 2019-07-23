@@ -22,7 +22,6 @@ import (
 	"sync/atomic"
 
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -58,7 +57,7 @@ type ChannelDefaulter struct {
 	logger *zap.Logger
 }
 
-var _ messagingv1alpha1.ChannelDefaulter = &ChannelDefaulter{}
+var _ eventingduckv1alpha1.ChannelDefaulter = &ChannelDefaulter{}
 
 // New creates a new ChannelDefaulter. The caller is expected to set this as the global singleton.
 //

@@ -24,6 +24,7 @@ import (
 
 	"go.uber.org/zap"
 
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/logconfig"
@@ -82,7 +83,7 @@ func main() {
 	// Watch the default-ch-webhook ConfigMap and dynamically update the default
 	// Channel CRD.
 	chDefaulter := defaultchannel.New(logger.Desugar())
-	messagingv1alpha1.ChannelDefaulterSingleton = chDefaulter
+	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
 	configMapWatcher.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	if err = configMapWatcher.Start(stopCh); err != nil {
