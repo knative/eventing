@@ -61,6 +61,8 @@ const (
 
 var (
 	trueVal = true
+
+	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 )
 
 func init() {
@@ -235,6 +237,35 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "Subscription not owned by Trigger",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeIngressSubscriptionNotOwnedByTrigger(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: trigger %q does not own subscription %q", triggerName, subscriptionName)},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("NotSubscribed", fmt.Sprintf("trigger %q does not own subscription %q", triggerName, subscriptionName)),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+		}, {
 			Name: "Subscription create fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -302,10 +333,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			// Name being "" is NOT a bug. Because we use generate name, the object created
-			// does not have a name...
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "",
+				Name: subscriptionName,
 			}},
 		}, {
 			Name: "Subscription create after delete fail",
@@ -340,10 +369,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			// Name being "" is NOT a bug. Because we use generate name, the object created
-			// does not have a name...
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "",
+				Name: subscriptionName,
 			}},
 			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
@@ -378,10 +405,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			// Name being "" is NOT a bug. Because we use generate name, the object created
-			// does not have a name...
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "",
+				Name: subscriptionName,
 			}},
 			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
@@ -663,6 +688,12 @@ func makeServiceURI() *url.URL {
 
 func makeIngressSubscription() *v1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
+}
+
+func makeIngressSubscriptionNotOwnedByTrigger() *v1alpha1.Subscription {
+	sub := makeIngressSubscription()
+	sub.OwnerReferences = []metav1.OwnerReference{}
+	return sub
 }
 
 // Just so we can test subscription updates

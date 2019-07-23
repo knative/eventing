@@ -273,7 +273,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1alpha1.Trigger, expected, actual *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = actual.Spec.DeprecatedGeneration
-	if equality.Semantic.DeepDerivative(expected.Spec, expected.Spec) {
+	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
 		return actual, nil
 	}
 
