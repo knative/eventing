@@ -34,6 +34,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler"
@@ -105,12 +106,12 @@ func createSubscriber(stepNumber int) eventingv1alpha1.SubscriberSpec {
 
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + sequenceName
-	imc := v1alpha1.ChannelTemplateSpec{
-		metav1.TypeMeta{
+	imc := eventingduckv1alpha1.ChannelTemplateSpec{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 		},
-		&runtime.RawExtension{Raw: []byte("{}")},
+		Spec: &runtime.RawExtension{Raw: []byte("{}")},
 	}
 
 	table := TableTest{
