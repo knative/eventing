@@ -19,8 +19,6 @@ package v1alpha1
 import (
 	"context"
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"go.uber.org/zap"
 )
 
 // ChannelDefaulter sets the default Channel CRD and Arguments on Channels that do not
@@ -41,11 +39,8 @@ func (c *Channel) SetDefaults(ctx context.Context) {
 	if c != nil && c.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
-		logging.FromContext(ctx).Info("Hereeee template == nil")
 		if cd := ChannelDefaulterSingleton; cd != nil {
-			logging.FromContext(ctx).Info("Hereeee got channelDefaulter")
 			channelTemplate := cd.GetDefault(c.DeepCopy())
-			logging.FromContext(ctx).Sugar().Info("ChannelTemplate retrieved", zap.Any("channelTemplate", channelTemplate))
 			c.Spec.ChannelTemplate = channelTemplate
 		}
 	}
