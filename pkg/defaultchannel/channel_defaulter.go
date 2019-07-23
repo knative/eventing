@@ -17,12 +17,12 @@ limitations under the License.
 package defaultchannel
 
 import (
+	"encoding/json"
 	"sync/atomic"
 
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -87,8 +87,10 @@ func (cd *ChannelDefaulter) UpdateConfigMap(cm *corev1.ConfigMap) {
 		return
 	}
 
+	cd.logger.Info("ConfigMap's value", zap.String("value", defaultChannelConfig))
+
 	config := Config{}
-	if err := yaml.UnmarshalStrict([]byte(defaultChannelConfig), &config); err != nil {
+	if err := json.Unmarshal([]byte(defaultChannelConfig), &config); err != nil {
 		cd.logger.Error("ConfigMap's value could not be unmarshaled.", zap.Error(err), zap.Any("configMap", cm))
 		return
 	}
@@ -112,6 +114,7 @@ func (cd *ChannelDefaulter) getConfig() *Config {
 
 // GetDefault determines the default Channel CRD and arguments for the provided Channel.
 func (cd *ChannelDefaulter) GetDefault(c *messagingv1alpha1.Channel) *eventingduckv1alpha1.ChannelTemplateSpec {
+	cd.logger.Info("Calling this guyyyyy", zap.Any("channel", c))
 	if c == nil {
 		return nil
 	}
