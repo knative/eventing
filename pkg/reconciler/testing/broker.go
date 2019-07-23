@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +67,7 @@ func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOpt
 // WithBrokerChannelCRD sets the Broker's ChannelTemplateSpec to the specified CRD.
 func WithBrokerChannelCRD(crdType metav1.TypeMeta) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Spec.ChannelTemplate = v1alpha1.ChannelTemplateSpec{
+		b.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
 			TypeMeta: crdType,
 		}
 	}

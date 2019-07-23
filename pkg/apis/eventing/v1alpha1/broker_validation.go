@@ -20,7 +20,6 @@ import (
 	"context"
 
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
 )
 
@@ -31,32 +30,33 @@ func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	if bs.DeprecatedChannelTemplate != nil && !equality.Semantic.DeepEqual(bs.ChannelTemplate, eventingduckv1alpha1.ChannelTemplateSpec{}) {
+	if bs.DeprecatedChannelTemplate != nil && bs.ChannelTemplate != nil {
 		errs = errs.Also(apis.ErrMultipleOneOf("channelTemplate", "channelTemplateSpec"))
 		return errs
 	}
 
-	if dcte := isValidDeprecatedChannelTemplate(bs.DeprecatedChannelTemplate); dcte != nil {
-		errs = errs.Also(dcte.ViaField("channelTemplate"))
+	if bs.DeprecatedChannelTemplate == nil && bs.ChannelTemplate == nil {
+		errs = errs.Also(apis.ErrMissingOneOf("channelTemplate", "channelTemplateSpec"))
+		return errs
 	}
 
-	if !equality.Semantic.DeepEqual(bs.ChannelTemplate, eventingduckv1alpha1.ChannelTemplateSpec{}) {
-		if bs.ChannelTemplate == nil {
-			errs = errs.Also(apis.ErrMissingField("channelTemplate"))
-			return errs
+	if bs.ChannelTemplate == nil {
+		// If the new channelTemplate is nil it means that the DeprecatedChannelTemplate is not, validate it then.
+		if dcte := isValidDeprecatedChannelTemplate(bs.DeprecatedChannelTemplate); dcte != nil {
+			errs = errs.Also(dcte.ViaField("channelTemplate"))
 		}
+	} else {
+		// Validate the new channelTemplate.
 		if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
 			errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 		}
 	}
+
 	// TODO validate that the channelTemplate only specifies the provisioner and arguments.
 	return errs
 }
 
 func isValidDeprecatedChannelTemplate(dct *ChannelSpec) *apis.FieldError {
-	if dct == nil {
-		return nil
-	}
 	var errs *apis.FieldError
 	if dct.DeprecatedGeneration != 0 {
 		errs = errs.Also(apis.ErrDisallowedFields("deprecatedGeneration"))

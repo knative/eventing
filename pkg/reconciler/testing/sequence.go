@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,7 +55,7 @@ func WithSequenceDeleted(p *v1alpha1.Sequence) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithSequenceChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) SequenceOption {
+func WithSequenceChannelTemplateSpec(cts eventingduckv1alpha1.ChannelTemplateSpec) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.ChannelTemplate = cts
 	}
