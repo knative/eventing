@@ -16,4 +16,5 @@ kind: Namespace
 metadata:
   name: knative-eventing
   labels:
+    istio-injection: enabled
     eventing.knative.dev/release: devel
