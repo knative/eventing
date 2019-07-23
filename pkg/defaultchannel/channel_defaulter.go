@@ -117,11 +117,9 @@ func (cd *ChannelDefaulter) getConfig() *Config {
 	return nil
 }
 
-// GetDefault determines the default Channel CRD and arguments for the provided Channel.
-func (cd *ChannelDefaulter) GetDefault(c *messagingv1alpha1.Channel) *eventingduckv1alpha1.ChannelTemplateSpec {
-	if c == nil {
-		return nil
-	}
+// GetDefault determines the default Channel CRD and arguments for the provided namespace. If there is no default
+// for the provided namespace, then use the cluster default.
+func (cd *ChannelDefaulter) GetDefault(namespace string) *eventingduckv1alpha1.ChannelTemplateSpec {
 	// Because we are treating this as a singleton, be tolerant to it having not been setup at all.
 	if cd == nil {
 		return nil
@@ -130,7 +128,7 @@ func (cd *ChannelDefaulter) GetDefault(c *messagingv1alpha1.Channel) *eventingdu
 	if config == nil {
 		return nil
 	}
-	channelTemplate := getDefaultChannelTemplate(config, c.Namespace)
+	channelTemplate := getDefaultChannelTemplate(config, namespace)
 	cd.logger.Info("Defaulting the Channel", zap.Any("defaultChannelTemplate", channelTemplate))
 	return channelTemplate
 }

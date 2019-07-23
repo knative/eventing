@@ -18,9 +18,17 @@ package v1alpha1
 
 import (
 	"context"
+	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 func (b *Broker) SetDefaults(ctx context.Context) {
+	if b != nil && b.Spec.ChannelTemplate == nil {
+		// The singleton may not have been set, if so ignore it and validation will reject the Broker.
+		if cd := messagingv1alpha1.ChannelDefaulterSingleton; cd != nil {
+			channelTemplate := cd.GetDefault(b.Namespace)
+			b.Spec.ChannelTemplate = channelTemplate
+		}
+	}
 	b.Spec.SetDefaults(ctx)
 	setUserInfoAnnotations(b, ctx)
 }

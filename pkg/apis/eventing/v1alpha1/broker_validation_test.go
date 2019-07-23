@@ -102,7 +102,7 @@ func TestValidSpec(t *testing.T) {
 			DeprecatedChannelTemplate: &ChannelSpec{
 				Provisioner: &corev1.ObjectReference{},
 			},
-			ChannelTemplate: eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -113,7 +113,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "invalid templatespec, missing kind",
 		spec: BrokerSpec{
-			ChannelTemplate: eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}},
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -124,7 +124,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "invalid templatespec, missing apiVersion",
 		spec: BrokerSpec{
-			ChannelTemplate: eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -135,7 +135,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "valid templatespec",
 		spec: BrokerSpec{
-			ChannelTemplate: eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind", APIVersion: "myapiversion"}},
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind", APIVersion: "myapiversion"}},
 		},
 		want: nil,
 	}}

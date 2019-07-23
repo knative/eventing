@@ -41,11 +41,14 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !equality.Semantic.DeepEqual(bs.ChannelTemplate, eventingduckv1alpha1.ChannelTemplateSpec{}) {
+		if bs.ChannelTemplate == nil {
+			errs = errs.Also(apis.ErrMissingField("channelTemplate"))
+			return errs
+		}
 		if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
 			errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 		}
 	}
-
 	// TODO validate that the channelTemplate only specifies the provisioner and arguments.
 	return errs
 }
@@ -65,7 +68,7 @@ func isValidDeprecatedChannelTemplate(dct *ChannelSpec) *apis.FieldError {
 	return errs
 }
 
-func isValidChannelTemplate(dct eventingduckv1alpha1.ChannelTemplateSpec) *apis.FieldError {
+func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis.FieldError {
 	var errs *apis.FieldError
 	if dct.Kind == "" {
 		errs = errs.Also(apis.ErrMissingField("kind"))

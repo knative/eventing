@@ -73,7 +73,7 @@ type BrokerSpec struct {
 
 	// ChannelTemplate specifies which Channel CRD to use to create all the Channels used internally by the
 	// Broker.
-	ChannelTemplate eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec"`
+	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
 }
 
 // BrokerStatus represents the current state of a Broker.

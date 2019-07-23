@@ -24,9 +24,8 @@ import (
 // ChannelDefaulter sets the default Channel CRD and Arguments on Channels that do not
 // specify any implementation.
 type ChannelDefaulter interface {
-	// GetDefault determines the default Channel CRD for the given Channel. It does
-	// not modify the given Channel.
-	GetDefault(c *Channel) *eventingduckv1alpha1.ChannelTemplateSpec
+	// GetDefault determines the default Channel CRD for the given namespace.
+	GetDefault(namespace string) *eventingduckv1alpha1.ChannelTemplateSpec
 }
 
 var (
@@ -40,7 +39,7 @@ func (c *Channel) SetDefaults(ctx context.Context) {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
 		if cd := ChannelDefaulterSingleton; cd != nil {
-			channelTemplate := cd.GetDefault(c.DeepCopy())
+			channelTemplate := cd.GetDefault(c.Namespace)
 			c.Spec.ChannelTemplate = channelTemplate
 		}
 	}
