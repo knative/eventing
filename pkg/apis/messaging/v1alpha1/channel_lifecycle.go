@@ -72,10 +72,12 @@ func (cs *ChannelStatus) MarkBackingChannelFailed(reason, messageFormat string, 
 
 func (cs *ChannelStatus) PropagateChannelReadiness(chs *eventingduck.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
-	address := cs.AddressStatus.Address
+	address := chs.AddressStatus.Address
 	if address != nil {
+		cs.SetAddress(address.URL)
 		chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
 	} else {
-		cs.MarkBackingChannelFailed("ChannelNotReady", "Channel is not ready: not addressable")
+		cs.SetAddress(nil)
+		cs.MarkBackingChannelFailed("ChannelNotReady", "Backing channel is not ready: not addressable")
 	}
 }
