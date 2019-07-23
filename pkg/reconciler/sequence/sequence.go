@@ -57,7 +57,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	sequenceLister     listers.SequenceLister
 	tracker            tracker.Interface
-	addressableTracker duck.AddressableTracker
+	resourceTracker    duck.ResourceTracker
 	subscriptionLister eventinglisters.SubscriptionLister
 }
 
@@ -135,7 +135,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Sequence) error 
 	}
 
 	// Tell tracker to reconcile this Sequence whenever my channels change.
-	track := r.addressableTracker.TrackInNamespace(p)
+	track := r.resourceTracker.TrackInNamespace(p)
 
 	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Steps))
 	for i := 0; i < len(p.Spec.Steps); i++ {

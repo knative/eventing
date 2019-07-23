@@ -37,18 +37,18 @@ func SequenceChannelName(sequenceName string, step int) string {
 func NewChannel(name string, p *v1alpha1.Sequence) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := v1alpha1.ChannelTemplateSpecInternal{
-		metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       p.Spec.ChannelTemplate.Kind,
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 		},
-		metav1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(p),
 			},
 			Name:      name,
 			Namespace: p.Namespace,
 		},
-		p.Spec.ChannelTemplate.Spec,
+		Spec: p.Spec.ChannelTemplate.Spec,
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {

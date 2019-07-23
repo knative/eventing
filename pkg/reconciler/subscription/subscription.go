@@ -31,7 +31,6 @@ import (
 	"github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionslisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -70,13 +69,11 @@ type Reconciler struct {
 	// listers index properties about resources
 	subscriptionLister             listers.SubscriptionLister
 	customResourceDefinitionLister apiextensionslisters.CustomResourceDefinitionLister
-	addressableTracker             eventingduck.AddressableTracker
+	resourceTracker                eventingduck.ResourceTracker
 }
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-var customResourceDefinitionGVK = apiextensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Subscription resource
@@ -130,11 +127,11 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	// Track the channel using the addressableTracker.
+	// Track the channel using the resourceTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	track := r.addressableTracker.TrackInNamespace(subscription)
+	track := r.resourceTracker.TrackInNamespace(subscription)
 	if err := track(subscription.Spec.Channel); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
 	}
