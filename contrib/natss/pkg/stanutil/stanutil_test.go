@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/nats-io/nats-streaming-server/server"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/provisioners"
 	_ "knative.dev/pkg/system/testing"
 )
 

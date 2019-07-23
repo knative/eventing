@@ -24,15 +24,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/provisioners"
 	stan "github.com/nats-io/go-nats-streaming"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/eventing/contrib/natss/pkg/stanutil"
+	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/provisioners"
 )
 
 const (

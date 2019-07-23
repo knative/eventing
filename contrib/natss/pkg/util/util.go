@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	eventingutils "github.com/knative/eventing/pkg/utils"
+	eventingutils "knative.dev/eventing/pkg/utils"
 )
 
 const (

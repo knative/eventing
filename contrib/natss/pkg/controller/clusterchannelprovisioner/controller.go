@@ -17,15 +17,15 @@ limitations under the License.
 package clusterchannelprovisioner
 
 import (
-	"github.com/knative/eventing/contrib/natss/pkg/stanutil"
 	"go.uber.org/zap"
+	"knative.dev/eventing/contrib/natss/pkg/stanutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (

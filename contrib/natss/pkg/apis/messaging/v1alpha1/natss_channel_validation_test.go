@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/pkg/webhook"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 

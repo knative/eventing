@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/contrib/natss/pkg/dispatcher"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (

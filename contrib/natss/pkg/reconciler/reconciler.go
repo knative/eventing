@@ -19,8 +19,6 @@ package reconciler
 import (
 	"time"
 
-	clientset "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
-	natssScheme "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned/scheme"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -30,6 +28,8 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	clientset "knative.dev/eventing/contrib/natss/pkg/client/clientset/versioned"
+	natssScheme "knative.dev/eventing/contrib/natss/pkg/client/clientset/versioned/scheme"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/logging/logkey"
 	"knative.dev/pkg/system"

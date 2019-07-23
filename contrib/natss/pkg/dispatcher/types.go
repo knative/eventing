@@ -19,7 +19,7 @@ package dispatcher
 import (
 	"fmt"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
 type subscriptionReference struct {
