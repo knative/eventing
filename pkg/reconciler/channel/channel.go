@@ -129,13 +129,6 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		return err
 	}
 
-	err = r.patchBackingChannelSubscriptions(ctx, channelResourceInterface, c, backingChannel)
-	if err != nil {
-		logging.FromContext(ctx).Error("Problem patching subscriptions in the backing channel", zap.Error(err))
-		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
-		return err
-	}
-
 	// Tell tracker to reconcile this Channel whenever the backing Channel CRD changes.
 	track := r.resourceTracker.TrackInNamespace(c)
 
@@ -151,9 +144,23 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		Name:       backingChannel.Name,
 		Namespace:  backingChannel.Namespace,
 	}
-	c.Status.SubscribableStatus = backingChannel.Status.SubscribableStatus
 
 	c.Status.PropagateChannelReadiness(&backingChannel.Status)
+
+	if !c.Status.IsReady() {
+		logging.FromContext(ctx).Error("Channel is not ready. Cannot update subscriber status")
+		return nil
+	}
+
+	err = r.patchBackingChannelSubscriptions(ctx, channelResourceInterface, c, backingChannel)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem patching subscriptions in the backing channel", zap.Error(err))
+		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
+		return err
+	}
+
+	c.Status.SubscribableStatus = backingChannel.Status.SubscribableStatus
+
 	return nil
 }
 
@@ -227,7 +234,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, resourceClient
 
 func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, resourceClient dynamic.ResourceInterface, channel *v1alpha1.Channel, backingChannel *duckv1alpha1.Channelable) error {
 	if equality.Semantic.DeepEqual(channel.Spec.Subscribable, backingChannel.Spec.Subscribable) {
-		logging.FromContext(ctx).Info("Subscribables in sync")
+		logging.FromContext(ctx).Info("Subscribable in sync, no need to patch")
 		return nil
 	}
 
@@ -237,13 +244,10 @@ func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, resou
 	patch, err := duck.CreateMergePatch(backingChannel, after)
 
 	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to create mergePatch", zap.Error(err))
 		return err
 	}
 
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
-		return err
-	}
 	patched, err := resourceClient.Patch(backingChannel.GetName(), types.MergePatchType, patch, metav1.UpdateOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
