@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/kmp"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
@@ -61,4 +62,32 @@ func isValidChannelTemplate(ct *eventingduck.ChannelTemplateSpec) *apis.FieldErr
 		errs = errs.Also(apis.ErrMissingField("apiVersion"))
 	}
 	return errs
+}
+
+func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+	if og == nil {
+		return nil
+	}
+
+	original, ok := og.(*Channel)
+	if !ok {
+		return &apis.FieldError{Message: "The provided original was not a Channel"}
+	}
+
+	// All spec fields are immutable. We do this especially for the channelTemplate, as changing it once is set
+	// will require to delete the backing channel and recreating it.
+	if diff, err := kmp.ShortDiff(original.Spec, c.Spec); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Channel",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
+		return &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec"},
+			Details: diff,
+		}
+	}
+	return nil
 }
