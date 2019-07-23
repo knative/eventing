@@ -22,7 +22,7 @@ import (
 	"knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-var chCondSet = apis.NewLivingConditionSet(ChannelConditionBackingChannelReady, ChannelConditionAddressable)
+var chCondSet = apis.NewLivingConditionSet(ChannelConditionAddressable)
 
 const (
 	// ChannelConditionReady has status True when all subconditions below have been set to True.
@@ -31,9 +31,6 @@ const (
 	// ChannelConditionAddressable has status true when this Channel meets
 	// the Addressable contract and has a non-empty hostname.
 	ChannelConditionAddressable apis.ConditionType = "Addressable"
-
-	// ChannelConditionBackingChannelReady has status True when the backing Channel CRD is ready.
-	ChannelConditionBackingChannelReady apis.ConditionType = "BackingChannelReady"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -66,18 +63,12 @@ func (cs *ChannelStatus) SetAddress(url *apis.URL) {
 	}
 }
 
-func (cs *ChannelStatus) MarkBackingChannelFailed(reason, messageFormat string, messageA ...interface{}) {
-	chCondSet.Manage(cs).MarkFalse(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
-}
-
 func (cs *ChannelStatus) PropagateChannelReadiness(chs *eventingduck.ChannelableStatus) {
-	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
+	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
 	address := chs.AddressStatus.Address
 	if address != nil {
 		cs.SetAddress(address.URL)
-		chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
 	} else {
 		cs.SetAddress(nil)
-		cs.MarkBackingChannelFailed("ChannelNotReady", "Backing channel is not ready: not addressable")
 	}
 }
