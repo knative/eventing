@@ -126,7 +126,7 @@ func createReceiverFunction(s *SubscriptionsSupervisor, logger *zap.SugaredLogge
 			}
 			return err
 		}
-		logger.Infof("Published [%s] : '%s'", channel.String(), m.Headers)
+		logger.Debugf("Published [%s] : '%s'", channel.String(), m.Headers)
 		return nil
 	}
 }
