@@ -18,13 +18,12 @@ metadata:
   name: default-ch-webhook
   namespace: knative-eventing
 data:
-  # Configuration for defaulting channels that do not specify CRD implementations. All field names are
-  # lowercase.
-  default-channel-config: |
+  # Configuration for defaulting channels that do not specify CRD implementations.
+  default-ch-config: |
     clusterdefault:
-      apiversion: messaging.knative.dev/v1alpha1
+      apiVersion: messaging.knative.dev/v1alpha1
       kind: InMemoryChannel
     namespacedefaults:
       some-namespace:
-        apiversion: messaging.knative.dev/v1alpha1
+        apiVersion: messaging.knative.dev/v1alpha1
         kind: InMemoryChannel
