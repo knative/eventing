@@ -21,8 +21,8 @@ package inmemorychannel
 import (
 	"context"
 
-	v1alpha1 "github.com/knative/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
-	factory "github.com/knative/eventing/pkg/client/injection/informers/messaging/factory"
+	v1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
+	factory "knative.dev/eventing/pkg/client/injection/informers/messaging/factory"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"

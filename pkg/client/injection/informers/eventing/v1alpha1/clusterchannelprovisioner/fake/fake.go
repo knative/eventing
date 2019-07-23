@@ -21,8 +21,8 @@ package fake
 import (
 	"context"
 
-	fake "github.com/knative/eventing/pkg/client/injection/informers/eventing/factory/fake"
-	clusterchannelprovisioner "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/clusterchannelprovisioner"
+	fake "knative.dev/eventing/pkg/client/injection/informers/eventing/factory/fake"
+	clusterchannelprovisioner "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/clusterchannelprovisioner"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 )
