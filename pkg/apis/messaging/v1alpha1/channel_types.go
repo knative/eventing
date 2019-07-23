@@ -57,7 +57,7 @@ var _ webhook.GenericCRD = (*Channel)(nil)
 type ChannelSpec struct {
 
 	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
-	ChannelTemplate *eventingduck.ChannelTemplateSpec `json:"channelTemplateSpec"`
+	ChannelTemplate *eventingduck.ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`

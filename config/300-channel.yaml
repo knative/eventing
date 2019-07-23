@@ -58,6 +58,20 @@ spec:
       properties:
         spec:
           properties:
+            channelTemplate:
+              type: object
+              properties:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                  minLength: 1
+                spec:
+                  type: object
+              required:
+                - apiVersion
+                - kind
             subscribable:
               type: object
               properties:

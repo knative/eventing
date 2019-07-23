@@ -140,6 +140,8 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 
 	c.Status.PropagateChannelReadiness(&backingChannel.Status)
 
+	return nil
+
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel) (*v1alpha1.Channel, error) {
