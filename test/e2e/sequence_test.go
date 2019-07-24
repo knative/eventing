@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -74,7 +74,7 @@ func TestSequence(t *testing.T) {
 	}
 
 	// create channelTemplate for the Sequence
-	channelTemplate := messagingv1alpha1.ChannelTemplateSpec{
+	channelTemplate := eventingduckv1alpha1.ChannelTemplateSpec{
 		TypeMeta: *(channelTypeMeta),
 	}
 
