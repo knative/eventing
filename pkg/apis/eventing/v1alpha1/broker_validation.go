@@ -35,13 +35,8 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 		return errs
 	}
 
-	if bs.DeprecatedChannelTemplate == nil && bs.ChannelTemplate == nil {
-		errs = errs.Also(apis.ErrMissingOneOf("channelTemplate", "channelTemplateSpec"))
-		return errs
-	}
-
 	if bs.ChannelTemplate == nil {
-		// If the new channelTemplate is nil it means that the DeprecatedChannelTemplate is not, validate it then.
+		// If the new channelTemplate is nil, validate the DeprecatedChannelTemplate.
 		if dcte := isValidDeprecatedChannelTemplate(bs.DeprecatedChannelTemplate); dcte != nil {
 			errs = errs.Also(dcte.ViaField("channelTemplate"))
 		}
@@ -58,6 +53,9 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 
 func isValidDeprecatedChannelTemplate(dct *ChannelSpec) *apis.FieldError {
 	var errs *apis.FieldError
+	if dct == nil {
+		return nil
+	}
 	if dct.DeprecatedGeneration != 0 {
 		errs = errs.Also(apis.ErrDisallowedFields("deprecatedGeneration"))
 	}
