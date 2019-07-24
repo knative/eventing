@@ -66,13 +66,14 @@ var (
 type BrokerSpec struct {
 	// DeprecatedChannelTemplate, if specified will be used to create all the Channels used internally by the
 	// Broker. Only Provisioner and Arguments may be specified. If left unspecified, the default
-	// Channel for the namespace will be used.
+	// Channel CRD for the namespace will be used using the new ChannelTemplate attribute.
 	//
 	// +optional
 	DeprecatedChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 
 	// ChannelTemplate specifies which Channel CRD to use to create all the Channels used internally by the
-	// Broker.
+	// Broker. If left unspecified, the default Channel CRD for the namespace will be used.
+	// +optional
 	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
 }
 
