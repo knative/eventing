@@ -148,7 +148,7 @@ func WithBrokerIngressChannelReady() BrokerOption {
 
 func WithBrokerDeprecated() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
+		b.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
 	}
 }
 

@@ -89,7 +89,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 
 func (t testHelper) ReadyBrokerStatusDeprecated() *BrokerStatus {
 	bs := &BrokerStatus{}
-	bs.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
+	bs.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
 	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())

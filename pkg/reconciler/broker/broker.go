@@ -59,7 +59,7 @@ const (
 	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
-	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
+	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
 )
 
 type Reconciler struct {
