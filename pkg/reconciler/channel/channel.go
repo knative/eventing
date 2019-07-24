@@ -48,6 +48,7 @@ import (
 const (
 	channelReadinessChanged   = "ChannelReadinessChanged"
 	channelReconciled         = "ChannelReconciled"
+	channelReconcileError     = "ChannelReconcileError"
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 )
 
@@ -93,6 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	reconcileErr := r.reconcile(ctx, channel)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Channel", zap.Error(reconcileErr))
+		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelReconcileError, fmt.Sprintf("Channel reconcile error: %v", reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("Successfully reconciled Channel")
 		r.Recorder.Eventf(channel, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", key)

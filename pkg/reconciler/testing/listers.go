@@ -135,6 +135,10 @@ func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
 
+func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
+	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
+}
+
 func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
 	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
 }
