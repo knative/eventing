@@ -21,6 +21,7 @@ package resources
 import (
 	kafkamessagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	natssmessagingv1alpha1 "github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,7 +71,7 @@ func WithReplyForSequence(name string, typemeta *metav1.TypeMeta) SequenceOption
 func Sequence(
 	name string,
 	steps []eventingv1alpha1.SubscriberSpec,
-	channelTemplate messagingv1alpha1.ChannelTemplateSpec,
+	channelTemplate eventingduckv1alpha1.ChannelTemplateSpec,
 	options ...SequenceOption,
 ) *messagingv1alpha1.Sequence {
 	sequence := &messagingv1alpha1.Sequence{
