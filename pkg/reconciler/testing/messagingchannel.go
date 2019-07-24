@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"k8s.io/api/core/v1"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,10 +32,10 @@ import (
 
 // TODO once we remove Channel from eventing, we should rename this to be just Channel.
 
-// ChannelOption enables further configuration of a Channel.
+// MessagingChannelOption enables further configuration of a Channel.
 type MessagingChannelOption func(*v1alpha1.Channel)
 
-// NewMessagingChannel creates a Channel with ChannelOptions
+// NewMessagingChannel creates a Channel with MessagingChannelOptions
 func NewMessagingChannel(name, namespace string, o ...MessagingChannelOption) *v1alpha1.Channel {
 	c := &v1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
@@ -54,8 +55,8 @@ func NewMessagingChannel(name, namespace string, o ...MessagingChannelOption) *v
 }
 
 // WithInitMessagingChannelConditions initializes the Channel's conditions.
-func WithInitMessagingChannelConditions(s *v1alpha1.Channel) {
-	s.Status.InitializeConditions()
+func WithInitMessagingChannelConditions(c *v1alpha1.Channel) {
+	c.Status.InitializeConditions()
 }
 
 func WithMessagingChannelDeleted(c *v1alpha1.Channel) {
@@ -71,10 +72,19 @@ func WithMessagingChannelTemplate(typeMeta metav1.TypeMeta) MessagingChannelOpti
 	}
 }
 
-// WithBackingChannelFailed calls .Status.MarkBackingChannelFailed on the Broker.
 func WithBackingChannelFailed(reason, msg string) MessagingChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.MarkBackingChannelFailed(reason, msg)
+	}
+}
+
+func WithBackingChannelReady(c *v1alpha1.Channel) {
+	c.Status.MarkBackingChannelReady()
+}
+
+func WithBackingChannelObjRef(objRef *v1.ObjectReference) MessagingChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.Channel = objRef
 	}
 }
 
@@ -92,24 +102,18 @@ func WithMessagingChannelAddress(hostname string) MessagingChannelOption {
 	}
 }
 
-func WithMessagingChannelReady(c *v1alpha1.Channel) {
-	cs := v1alpha1.ChannelStatus{}
-	cs.MarkBackingChannelReady()
-	cs.SetAddress(&duck.Addressable{
-		Addressable: v1beta1.Addressable{
-			URL: &apis.URL{
-				Scheme: "http",
-				Host:   "foo",
-			},
-		},
-	})
-	c.Status = cs
-}
-
 func WithMessagingChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) MessagingChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
 			Subscribers: subscribers,
+		}
+	}
+}
+
+func WithMesssagingChannelSubscriberStatuses(subscriberStatuses []eventingduckv1alpha1.SubscriberStatus) MessagingChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.SubscribableStatus = &eventingduckv1alpha1.SubscribableStatus{
+			Subscribers: subscriberStatuses,
 		}
 	}
 }
