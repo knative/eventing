@@ -52,10 +52,10 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 }
 
 func isValidDeprecatedChannelTemplate(dct *ChannelSpec) *apis.FieldError {
-	var errs *apis.FieldError
 	if dct == nil {
 		return nil
 	}
+	var errs *apis.FieldError
 	if dct.DeprecatedGeneration != 0 {
 		errs = errs.Also(apis.ErrDisallowedFields("deprecatedGeneration"))
 	}
