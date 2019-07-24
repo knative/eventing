@@ -1855,7 +1855,6 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 				},
 				"labels": labels,
 			},
-			"spec": nil,
 		},
 	}
 }

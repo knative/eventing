@@ -112,9 +112,8 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 	c.Status.InitializeConditions()
 
 	// 1. Create the backing Channel CRD, if it doesn't exist.
-	// 2. Propagate the backing Channel CRD status into this Channel.
-	// 3. Patch the subscriptions from this Channel into the backing Channel CRD.
-	// 4. Propagate the backing Channel CRD Subscribable status into this Channel.
+	// 2. Patch the subscriptions from this Channel into the backing Channel CRD.
+	// 3. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
 	if c.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
