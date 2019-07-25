@@ -73,6 +73,7 @@ func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
 func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
 	ss := &SubscriptionStatus{}
 	ss.MarkReferencesResolved()
+	ss.MarkChannelNotReady("testInducedError", "test induced %s", "error")
 	return ss
 }
 
@@ -84,6 +85,12 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
 	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
 	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
+	return bs
+}
+
+func (t testHelper) NotReadyBrokerStatus() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.PropagateIngressChannelReadinessCRD(&duckv1alpha1.ChannelableStatus{})
 	return bs
 }
 
