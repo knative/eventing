@@ -153,7 +153,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 func (client *Client) CreateSequenceOrFail(
 	name string,
 	steps []eventingv1alpha1.SubscriberSpec,
-	channelTemplate eventingduckv1alpha1.ChannelTemplateSpec,
+	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec,
 	options ...resources.SequenceOption,
 ) {
 	namespace := client.Namespace
