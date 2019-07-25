@@ -65,7 +65,7 @@ func makeInvalidReply(channelName string) *corev1.ObjectReference {
 
 func TestSequenceSpecValidation(t *testing.T) {
 	subscriberURI := "http://example.com"
-	validChannelTemplate := eventingduck.ChannelTemplateSpec{
+	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
@@ -104,7 +104,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &SequenceSpec{
-			ChannelTemplate: eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
+			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {
@@ -114,7 +114,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &SequenceSpec{
-			ChannelTemplate: eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
+			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
 			Steps:           []eventingv1alpha1.SubscriberSpec{{URI: &subscriberURI}},
 		},
 		want: func() *apis.FieldError {

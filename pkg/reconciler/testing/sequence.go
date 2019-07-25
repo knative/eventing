@@ -55,7 +55,7 @@ func WithSequenceDeleted(p *v1alpha1.Sequence) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithSequenceChannelTemplateSpec(cts eventingduckv1alpha1.ChannelTemplateSpec) SequenceOption {
+func WithSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTemplateSpec) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.ChannelTemplate = cts
 	}

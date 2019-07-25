@@ -106,7 +106,7 @@ func createSubscriber(stepNumber int) eventingv1alpha1.SubscriberSpec {
 
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + sequenceName
-	imc := eventingduckv1alpha1.ChannelTemplateSpec{
+	imc := &eventingduckv1alpha1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
