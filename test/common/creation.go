@@ -17,8 +17,8 @@ limitations under the License.
 package common
 
 import (
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
@@ -153,7 +153,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 func (client *Client) CreateSequenceOrFail(
 	name string,
 	steps []eventingv1alpha1.SubscriberSpec,
-	channelTemplate messagingv1alpha1.ChannelTemplateSpec,
+	channelTemplate eventingduckv1alpha1.ChannelTemplateSpec,
 	options ...resources.SequenceOption,
 ) {
 	namespace := client.Namespace

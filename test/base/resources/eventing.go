@@ -19,6 +19,7 @@ package resources
 // This file contains functions that construct Eventing resources.
 
 import (
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,7 +115,7 @@ func WithDeprecatedChannelTemplateForBroker(provisionerName string) BrokerOption
 // WithChannelTemplateForBroker returns a function that adds a ChannelTemplate for the given Broker.
 func WithChannelTemplateForBroker(channelTypeMeta metav1.TypeMeta) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
-		channelTemplate := eventingv1alpha1.ChannelTemplateSpec{
+		channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
 			TypeMeta: channelTypeMeta,
 		}
 		b.Spec.ChannelTemplate = channelTemplate

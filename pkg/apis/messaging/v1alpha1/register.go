@@ -49,6 +49,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&InMemoryChannelList{},
 		&Sequence{},
 		&SequenceList{},
+		&Channel{},
+		&ChannelList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

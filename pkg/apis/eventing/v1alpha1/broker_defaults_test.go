@@ -18,11 +18,105 @@ package v1alpha1
 
 import (
 	"context"
+	"github.com/google/go-cmp/cmp"
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
-// No-op test because method does nothing.
-func TestBrokerDefaults(t *testing.T) {
-	b := Broker{}
-	b.SetDefaults(context.TODO())
+var (
+	defaultChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: SchemeGroupVersion.String(),
+			Kind:       "InMemoryChannel",
+		},
+	}
+)
+
+func TestBrokerSetDefaults(t *testing.T) {
+	testCases := map[string]struct {
+		nilChannelDefaulter bool
+		channelTemplate     *eventingduckv1alpha1.ChannelTemplateSpec
+		initial             Broker
+		expected            Broker
+	}{
+		"nil ChannelDefaulter": {
+			nilChannelDefaulter: true,
+			expected:            Broker{},
+		},
+		"unset ChannelDefaulter": {
+			expected: Broker{},
+		},
+		"set ChannelDefaulter": {
+			channelTemplate: defaultChannelTemplate,
+			expected: Broker{
+				Spec: BrokerSpec{
+					ChannelTemplate: defaultChannelTemplate,
+				},
+			},
+		},
+		"deprecated template already set": {
+			channelTemplate: defaultChannelTemplate,
+			initial: Broker{
+				Spec: BrokerSpec{
+					DeprecatedChannelTemplate: &ChannelSpec{
+						Provisioner: &corev1.ObjectReference{Kind: "mykind", APIVersion: "mapiversion"},
+					},
+				},
+			},
+			expected: Broker{
+				Spec: BrokerSpec{
+					DeprecatedChannelTemplate: &ChannelSpec{
+						Provisioner: &corev1.ObjectReference{Kind: "mykind", APIVersion: "mapiversion"},
+					},
+				},
+			},
+		},
+		"template already specified": {
+			channelTemplate: defaultChannelTemplate,
+			initial: Broker{
+				Spec: BrokerSpec{
+					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+						TypeMeta: v1.TypeMeta{
+							APIVersion: SchemeGroupVersion.String(),
+							Kind:       "OtherChannel",
+						},
+					},
+				},
+			},
+			expected: Broker{
+				Spec: BrokerSpec{
+					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+						TypeMeta: v1.TypeMeta{
+							APIVersion: SchemeGroupVersion.String(),
+							Kind:       "OtherChannel",
+						},
+					},
+				},
+			},
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			if !tc.nilChannelDefaulter {
+				eventingduckv1alpha1.ChannelDefaulterSingleton = &brokerChannelDefaulter{
+					channelTemplate: tc.channelTemplate,
+				}
+				defer func() { eventingduckv1alpha1.ChannelDefaulterSingleton = nil }()
+			}
+			tc.initial.SetDefaults(context.TODO())
+			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
+				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
+			}
+		})
+	}
+}
+
+type brokerChannelDefaulter struct {
+	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec
+}
+
+func (cd *brokerChannelDefaulter) GetDefault(_ string) *eventingduckv1alpha1.ChannelTemplateSpec {
+	return cd.channelTemplate
 }

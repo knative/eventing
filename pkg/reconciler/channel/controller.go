@@ -18,12 +18,13 @@ package channel
 
 import (
 	"context"
+	"github.com/knative/eventing/pkg/duck"
 
 	"github.com/knative/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
+	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 	ReconcilerName = "Channels"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "channel-default-controller"
+	controllerAgentName = "ch-default-controller"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -42,12 +43,15 @@ func NewController(
 ) *controller.Impl {
 
 	channelInformer := channelinformer.Get(ctx)
+	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
 		channelLister: channelInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+
+	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	r.Logger.Info("Setting up event handlers")
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
