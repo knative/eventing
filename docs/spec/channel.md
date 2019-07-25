@@ -124,7 +124,7 @@ exclusively communicate using CloudEvents.
 
 Every Channel must expose either an HTTP or HTTPS endpoint. It MAY expose both.
 The endpoint(s) MUST conform to
-[HTTP Transport Binding for CloudEvents - Version 0.2](https://github.com/cloudevents/spec/blob/v0.2/http-transport-binding.md).
+[HTTP Transport Binding for CloudEvents - Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md).
 It MUST support both Binary Content mode and Structured Content mode. The
 HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443. Channels
 MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion
@@ -143,9 +143,9 @@ Broker ingress verification, which is being
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
 In particular, it MUST translate any incoming OpenTracing or B3 headers to the
-[Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v0.2/extensions/distributed-tracing.md).
+[Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md).
 The Channel SHOULD sample and write traces to the location specified in
-[`config-tracing`](https://github.com/cloudevents/spec/blob/v0.2/extensions/distributed-tracing.md).
+[`config-tracing`](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md).
 
 ##### HTTP
 
@@ -174,14 +174,14 @@ provided bearer token fails to validate, then the Channel must respond with
 
 Channels MUST output CloudEvents. The output MUST be via a binding specified in
 the
-[CloudEvents specification](https://github.com/cloudevents/spec/tree/v0.2#cloudevents-documents).
+[CloudEvents specification](https://github.com/cloudevents/spec/tree/v0.3#cloudevents-documents).
 Every Channel MUST support sending events via Structured Content Mode HTTP
 Transport Binding.
 
 Channels MUST NOT alter an event that goes through them. All CloudEvent
 attributes, including the data attribute, MUST be received at the subscriber
 identical to how they were received by the Channel. The only exception is the
-[Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v0.2/extensions/distributed-tracing.md),
+[Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md),
 which is expected to change as the span id will be altered at every network hop.
 
 Channels MUST attach a bearer token to all outgoing requests, likely in the form
