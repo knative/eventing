@@ -20,7 +20,8 @@ package v1alpha1
 //  Context: there is a cyclic dependency between eventing and messaging if we place this in messaging. Broker needs to
 //  depend on this, which is fine. But the problem arises due to messaging depending on eventing, mainly on
 //  Subscription-related objects for the Sequence type. We should first move Subscription down to messaging and then we
-//  can move this down.
+//  can move this down. See https://github.com/knative/eventing/issues/1562.
+//
 
 // ChannelDefaulter sets the default Channel CRD and Arguments on Channels that do not
 // specify any implementation.
