@@ -43,12 +43,13 @@ Each _Channel Controller_ ensures the required tasks on the backing technology
 are applied. In this case a Kafka topic with the desired configuration is being
 created, backing all messages from the channel.
 
-#### Aggregated Channelable ClusterRole
+#### Aggregated Channelable Manipulator ClusterRole
 
 Every CRD must create a corresponding ClusterRole, that will be aggregated into
-the `channelable-manipulator` ClusterRole. This ClusterRole must include
-permissions to create, read, patch, and update the CRD's custom objects. Below
-is an example for the `KafkaChannel`:
+the `channelable-manipulator` ClusterRole. This ClusterRole must
+include permissions to create, list, watch, patch, and update the
+CRD's custom objects and their status. Below is an example for the
+`KafkaChannel`:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -139,7 +140,8 @@ Every event queueing request to the Channel will come with a bearer token,
 likely a JWT. The bearer token MUST be validated before any other work is done
 on the request. The specifics of how and what to validate will be identical to
 Broker ingress verification, which is being
-[defined](https://github.com/knative/eventing/issues/705#issuecomment-496722527).
+[defined](https://github.com/knative/eventing/issues/705#issuecomment-496722527)
+and planned for be formalized as of `v0.8`.
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
 In particular, it MUST translate any incoming OpenTracing or B3 headers to the
