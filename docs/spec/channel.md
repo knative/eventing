@@ -189,3 +189,14 @@ which is expected to change as the span id will be altered at every network hop.
 Channels MUST attach a bearer token to all outgoing requests, likely in the form
 of a JWT. This bearer token MUST use an identity associated with the Channel,
 not the individual Subscription.
+
+#### Metrics
+
+Channels SHOULD expose a variety of metrics, including, but not limited to:
+- Number of malformed incoming event queueing events (`400 Bad Requests` responses)
+- Number of unauthorized or malformed bearer token requests (`403 Forbidden` responses)
+- Number of accepted incoming event queuing events (`202 Accpeted` responses)
+- Number of egress cloudevent produced (with the former metric, used to derive channel queue size)
+
+Metrics SHOULD be enabled by default, but a configuration parameter included to
+disable if desired.
