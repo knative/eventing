@@ -238,7 +238,6 @@ func TestTriggerIsReady(t *testing.T) {
 			if test.subscriptionStatus != nil {
 				ts.PropagateSubscriptionStatus(test.subscriptionStatus)
 			}
-			ts.PropagateSubscriptionStatus(TestHelper.ReadySubscriptionStatus())
 			got := ts.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)

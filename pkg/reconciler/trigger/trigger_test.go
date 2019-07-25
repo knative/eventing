@@ -444,7 +444,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: test induced [error]"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},

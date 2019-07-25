@@ -73,7 +73,7 @@ func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
 func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
 	ss := &SubscriptionStatus{}
 	ss.MarkReferencesResolved()
-	ss.MarkChannelNotReady("testInducedError", "test induced error")
+	ss.MarkChannelNotReady("testInducedError", "test induced %s", "error")
 	return ss
 }
 
