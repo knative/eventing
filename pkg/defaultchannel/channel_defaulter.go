@@ -128,7 +128,7 @@ func (cd *ChannelDefaulter) GetDefault(namespace string) *eventingduckv1alpha1.C
 		return nil
 	}
 	channelTemplate := getDefaultChannelTemplate(config, namespace)
-	cd.logger.Info("Defaulting the Channel", zap.Any("defaultChannelTemplate", channelTemplate))
+	cd.logger.Debug("Defaulting the Channel", zap.Any("defaultChannelTemplate", channelTemplate))
 	return channelTemplate
 }
 

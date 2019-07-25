@@ -20,10 +20,10 @@ metadata:
 data:
   # Configuration for defaulting channels that do not specify CRD implementations.
   default-ch-config: |
-    clusterdefault:
+    clusterDefault:
       apiVersion: messaging.knative.dev/v1alpha1
       kind: InMemoryChannel
-    namespacedefaults:
+    namespaceDefaults:
       some-namespace:
         apiVersion: messaging.knative.dev/v1alpha1
         kind: InMemoryChannel

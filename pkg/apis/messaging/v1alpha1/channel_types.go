@@ -31,7 +31,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel is a resource representing a Channel.
+// Channel represents a generic Channel. It is normally used when we want a Channel, but don't need a specific Channel implementation.
 type Channel struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -57,6 +57,7 @@ var _ webhook.GenericCRD = (*Channel)(nil)
 type ChannelSpec struct {
 
 	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
+	// This is immutable after creation. Normally this is set by the Channel defaulter, not directly by the user.
 	ChannelTemplate *eventingduck.ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Channel conforms to Duck type Subscribable.

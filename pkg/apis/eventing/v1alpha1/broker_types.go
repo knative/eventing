@@ -66,7 +66,7 @@ var (
 type BrokerSpec struct {
 	// DeprecatedChannelTemplate, if specified will be used to create all the Channels used internally by the
 	// Broker. Only Provisioner and Arguments may be specified. If left unspecified, the default
-	// Channel CRD for the namespace will be used using the new ChannelTemplate attribute.
+	// Channel CRD for the namespace will be used using the channelTemplateSpec attribute.
 	//
 	// +optional
 	DeprecatedChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`

@@ -129,7 +129,7 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: %v", "inducing failure for create inmemorychannels"),
+				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: problem reconciling the backing channel: %v", "inducing failure for create inmemorychannels"),
 			},
 			WantErr: true,
 		},
@@ -159,7 +159,7 @@ func TestReconcile(t *testing.T) {
 					WithBackingChannelFailed("ChannelFailure", "inducing failure for patch inmemorychannels")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: %v", "inducing failure for patch inmemorychannels"),
+				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: problem patching subscriptions in the backing channel: %v", "inducing failure for patch inmemorychannels"),
 			},
 			WantErr: true,
 		},

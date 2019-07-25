@@ -129,15 +129,13 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 
 	backingChannel, err := r.reconcileBackingChannel(ctx, channelResourceInterface, c)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling the backing channel", zap.Error(err))
 		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
-		return err
+		return fmt.Errorf("problem reconciling the backing channel: %v", err)
 	}
 
 	// Start tracking the backing Channel CRD...
 	if err = track(utils.ObjectRef(backingChannel, backingChannel.GroupVersionKind())); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
-		return err
+		return fmt.Errorf("unable to track changes to the backing channel: %v", err)
 	}
 
 	c.Status.Channel = &corev1.ObjectReference{
@@ -149,9 +147,8 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 
 	err = r.patchBackingChannelSubscriptions(ctx, channelResourceInterface, c, backingChannel)
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem patching subscriptions in the backing channel", zap.Error(err))
 		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
-		return err
+		return fmt.Errorf("problem patching subscriptions in the backing channel: %v", err)
 	}
 
 	c.Status.PropagateStatuses(&backingChannel.Status)
@@ -191,7 +188,6 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
 func (r *Reconciler) reconcileBackingChannel(ctx context.Context, resourceClient dynamic.ResourceInterface, c *v1alpha1.Channel) (*duckv1alpha1.Channelable, error) {
-
 	channel, err := resourceClient.Get(c.Name, metav1.GetOptions{})
 	channelable := &duckv1alpha1.Channelable{}
 
@@ -203,24 +199,21 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, resourceClient
 				logging.FromContext(ctx).Error("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel CRD Object: %+v", newChannel))
 			channel, err = resourceClient.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", c.Namespace, c.Name), zap.Error(err))
+				logging.FromContext(ctx).Error("Failed to create Channel", zap.Any("channel", newChannel), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", c.Namespace, c.Name), zap.Any("channel", newChannel))
+			logging.FromContext(ctx).Info("Created Channel", zap.Any("channel", newChannel))
 		} else {
 			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", c.Namespace, c.Name), zap.Error(err))
 			return nil, err
 		}
-	} else {
-		logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", c.Namespace, c.Name), zap.Any("channel", c))
 	}
-
+	logging.FromContext(ctx).Debug("Found Channel", zap.Any("channel", c))
 	err = duckapis.FromUnstructured(channel, channelable)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", c.Namespace, c.Name), zap.Error(err))
+		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Error(err), zap.Any("channel", channel))
 		return nil, err
 	}
 	return channelable, nil
@@ -228,7 +221,7 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, resourceClient
 
 func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, resourceClient dynamic.ResourceInterface, channel *v1alpha1.Channel, backingChannel *duckv1alpha1.Channelable) error {
 	if equality.Semantic.DeepEqual(channel.Spec.Subscribable, backingChannel.Spec.Subscribable) {
-		logging.FromContext(ctx).Info("Subscribable in sync, no need to patch")
+		logging.FromContext(ctx).Debug("Subscribable in sync, no need to patch")
 		return nil
 	}
 
