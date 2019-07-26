@@ -237,7 +237,18 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiS
 		}
 	}
 
-	return err
+	// TODO Delete this after 0.8 is cut.
+	oldEventTypes, err := r.getOldEventTypes(ctx, src)
+	if err != nil {
+		return fmt.Errorf("getting old event types: %v", err)
+	}
+	for _, eventType := range oldEventTypes {
+		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+			return fmt.Errorf("deleting old eventType: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
@@ -247,6 +258,22 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerS
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
+	}
+	eventTypes := make([]eventingv1alpha1.EventType, 0)
+	for _, et := range etl.Items {
+		if metav1.IsControlledBy(&et, src) {
+			eventTypes = append(eventTypes, et)
+		}
+	}
+	return eventTypes, nil
+}
+
+func (r *Reconciler) getOldEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
+	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing event types: %v", err)
 	}
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
 	for _, et := range etl.Items {
