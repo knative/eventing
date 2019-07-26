@@ -149,6 +149,12 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	// Update source status
 	source.Status.MarkDeployed()
 
+	// TODO Delete this after 0.8 is cut.
+	_, err = r.deleteOldReceiveAdapter(ctx, source, sinkURI)
+	if err != nil {
+		return fmt.Errorf("deleting old receive adapter: %v", err)
+	}
+
 	err = r.reconcileEventTypes(ctx, source)
 	if err != nil {
 		source.Status.MarkNoEventTypes("EventTypesReconcileFailed", "")
