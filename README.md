@@ -28,8 +28,8 @@ For complete Knative Eventing documentation, see
 If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
 [Knative WORKING-GROUPS.md](https://www.knative.dev/contributing/working-groups/#eventing).
+Please read the [roadmap](./docs/planning/roadmap.md) to see what we're working
+on right now and what is planed for upcoming releases.
 
-Please join
-[knative-users](https://groups.google.com/forum/#!forum/knative-users) to view
-planned project releases in
-[roadmap](https://docs.google.com/document/d/1z0z412rL9FsBsF8kwKxG6w7sflJLKe9hIECkc7jWfOY/edit#).
+Interested users should join
+[knative-users](https://groups.google.com/forum/#!forum/knative-users),
