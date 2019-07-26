@@ -451,8 +451,8 @@ func om(namespace, name string, uid types.UID) metav1.ObjectMeta {
 func makeK8sService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-channel-", channelName),
-			Namespace:    testNS,
+			Name:      fmt.Sprintf("%s-channel-%s", channelName, channelUID),
+			Namespace: testNS,
 			Labels: map[string]string{
 				EventingChannelLabel:        channelName,
 				OldEventingChannelLabel:     channelName,

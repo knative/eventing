@@ -782,11 +782,10 @@ func makeChannel() *eventingv1alpha1.Channel {
 
 func makeChannelWithFinalizerAndPCSAndAddress() *eventingv1alpha1.Channel {
 	c := makeChannelWithFinalizerAndPCS()
-	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
-	// does not fill in Name, so the name is the empty string.
+	// serviceAddress is the address of the K8s Service.
 	c.Status.SetAddress(&apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf(".%s.svc.%s", c.Namespace, utils.GetClusterDomainName()),
+		Host:   fmt.Sprintf("%s-channel-%s.%s.svc.%s", c.Name, c.UID, c.Namespace, utils.GetClusterDomainName()),
 	})
 	return c
 }
@@ -1011,8 +1010,8 @@ func makeK8sService() *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-channel-", cName),
-			Namespace:    cNamespace,
+			Name:      fmt.Sprintf("%s-channel-%s", cName, cUID),
+			Namespace: cNamespace,
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,

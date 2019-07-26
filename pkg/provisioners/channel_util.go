@@ -232,9 +232,9 @@ func newK8sService(c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*core
 	// Add annotations
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: channelServiceName(c.ObjectMeta.Name),
-			Namespace:    c.Namespace,
-			Labels:       k8sServiceLabels(c),
+			Name:      utils.GenerateFixedName(c, channelServiceName(c.Name)),
+			Namespace: c.Namespace,
+			Labels:    k8sServiceLabels(c),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(c),
 			},
@@ -290,7 +290,7 @@ func NewHostNameToChannelRefMap(cList []eventingv1alpha1.Channel) (map[string]Ch
 		url := c.Status.Address.GetURL()
 		if cr, ok := hostToChanMap[url.Host]; ok {
 			return nil, fmt.Errorf(
-				"Duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
+				"duplicate hostName found. Each channel must have a unique host header. HostName:%s, channel:%s.%s, channel:%s.%s",
 				url.Host,
 				c.Namespace,
 				c.Name,
