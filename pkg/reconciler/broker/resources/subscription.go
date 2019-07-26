@@ -26,7 +26,7 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
-// makeSubscriptionCRD returns a placeholder subscription for broker 'b', channelable 'c', and service 'svc'.
+// MakeSubscriptionCRD returns a placeholder subscription for broker 'b', channelable 'c', and service 'svc'.
 func MakeSubscriptionCRD(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
