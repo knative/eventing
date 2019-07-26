@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// v03TTLAttribute is the name of the CloudEvents 0.2 extension attribute used to store the
+	// v03TTLAttribute is the name of the CloudEvents 0.3 extension attribute used to store the
 	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
 	v03TTLAttribute = "knativebrokerttl"
