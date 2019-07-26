@@ -523,6 +523,7 @@ func TestReconcile(t *testing.T) {
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
+			resourceTracker:       &MockResourceTracker{},
 		}
 		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
 		return r

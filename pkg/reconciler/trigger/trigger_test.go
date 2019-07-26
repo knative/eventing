@@ -69,12 +69,6 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-type fakeResourceTracker struct{}
-
-func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
 func TestAllCases(t *testing.T) {
 	triggerKey := testNS + "/" + triggerName
 	table := TableTest{
@@ -491,7 +485,7 @@ func TestAllCases(t *testing.T) {
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
 			serviceLister:      listers.GetK8sServiceLister(),
-			resourceTracker:    fakeResourceTracker{},
+			resourceTracker:    &MockResourceTracker{},
 		}
 	},
 		false,
