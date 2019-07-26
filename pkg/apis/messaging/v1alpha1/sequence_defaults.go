@@ -16,12 +16,21 @@ limitations under the License.
 
 package v1alpha1
 
-import "context"
+import (
+	"context"
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+)
 
 func (s *Sequence) SetDefaults(ctx context.Context) {
+	if s != nil && s.Spec.ChannelTemplate == nil {
+		// The singleton may not have been set, if so ignore it and validation will reject the
+		// Channel.
+		if cd := eventingduckv1alpha1.ChannelDefaulterSingleton; cd != nil {
+			channelTemplate := cd.GetDefault(s.Namespace)
+			s.Spec.ChannelTemplate = channelTemplate
+		}
+	}
 	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *SequenceSpec) SetDefaults(ctx context.Context) {
-	// TODO anything?
-}
+func (ss *SequenceSpec) SetDefaults(ctx context.Context) {}

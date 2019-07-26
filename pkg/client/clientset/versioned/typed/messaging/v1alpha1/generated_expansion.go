@@ -18,6 +18,8 @@ limitations under the License.
 
 package v1alpha1
 
+type ChannelExpansion interface{}
+
 type InMemoryChannelExpansion interface{}
 
 type SequenceExpansion interface{}

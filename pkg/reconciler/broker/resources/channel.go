@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"knative.dev/pkg/kmeta"
-
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"knative.dev/pkg/kmeta"
 )
 
 // NonCRDBrokerChannelName creates a name for the non-CRD based Channel for a Broker for the given
@@ -44,7 +44,7 @@ func BrokerChannelName(brokerName, channelType string) string {
 // for a given Broker.
 func NewChannel(channelType string, b *v1alpha1.Broker, l map[string]string) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := v1alpha1.ChannelTemplateSpecInternal{
+	template := eventingduck.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       b.Spec.ChannelTemplate.Kind,
 			APIVersion: b.Spec.ChannelTemplate.APIVersion,

@@ -45,7 +45,7 @@ const (
 	dispatcherReconcileFailed    = "DispatcherReconcileFailed"
 	dispatcherUpdateStatusFailed = "DispatcherUpdateStatusFailed"
 
-	deprecatedMessage = "The `kafka` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `KafkaChannel` CRD."
+	deprecatedMessage = "The `kafka` ClusterChannelProvisioner is deprecated and will be removed in 0.9. Recommended replacement is using `KafkaChannel` CRD."
 )
 
 type channelArgs struct {
