@@ -63,7 +63,6 @@ var (
 const (
 	image      = "github.com/knative/test/image"
 	sourceName = "test-apiserver-source"
-	sourceUID  = "1234-5678-90"
 	testNS     = "testnamespace"
 
 	sinkName = "testsink"
@@ -124,6 +123,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -150,6 +150,152 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "valid - deployment update due to env",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeReceiveAdapterWithDifferentEnv(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeReceiveAdapter(),
+			}},
+		},
+		{
+			Name: "valid - deployment update due to service account",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink:               &sinkRef,
+						ServiceAccountName: "malin",
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeReceiveAdapterWithDifferentServiceAccount("morgan"),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink:               &sinkRef,
+						ServiceAccountName: "malin",
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeReceiveAdapterWithDifferentServiceAccount("malin"),
+			}},
+		},
+		{
+			Name: "valid - deployment update due to container count",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeReceiveAdapterWithDifferentContainerCount(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkRef,
+					}),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceEventTypes,
+				),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: makeReceiveAdapter(),
+			}},
+		},
+		{
 			Name: "valid with event types to delete",
 			Objects: []runtime.Object{
 				NewApiServerSource(sourceName, testNS,
@@ -171,6 +317,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -220,6 +367,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -275,6 +423,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -330,6 +479,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -406,6 +556,27 @@ func makeReceiveAdapter() *appsv1.Deployment {
 		SinkURI: sinkURI,
 	}
 	return resources.MakeReceiveAdapter(&args)
+}
+
+func makeReceiveAdapterWithDifferentEnv() *appsv1.Deployment {
+	ra := makeReceiveAdapter()
+	ra.Spec.Template.Spec.Containers[0].Env = append(ra.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "not-in",
+		Value: "the-original",
+	})
+	return ra
+}
+
+func makeReceiveAdapterWithDifferentServiceAccount(name string) *appsv1.Deployment {
+	ra := makeReceiveAdapter()
+	ra.Spec.Template.Spec.ServiceAccountName = name
+	return ra
+}
+
+func makeReceiveAdapterWithDifferentContainerCount() *appsv1.Deployment {
+	ra := makeReceiveAdapter()
+	ra.Spec.Template.Spec.Containers = append(ra.Spec.Template.Spec.Containers, corev1.Container{})
+	return ra
 }
 
 func makeEventTypeWithName(eventType, name string) *v1alpha1.EventType {
