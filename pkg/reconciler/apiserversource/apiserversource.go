@@ -244,7 +244,7 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiS
 	}
 	for _, eventType := range oldEventTypes {
 		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
-			return fmt.Errorf("deleting old eventType: %v", err)
+			return fmt.Errorf("deleting old eventType %q: %v", eventType.Name, err)
 		}
 	}
 

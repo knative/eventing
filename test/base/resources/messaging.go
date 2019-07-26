@@ -71,7 +71,7 @@ func WithReplyForSequence(name string, typemeta *metav1.TypeMeta) SequenceOption
 func Sequence(
 	name string,
 	steps []eventingv1alpha1.SubscriberSpec,
-	channelTemplate eventingduckv1alpha1.ChannelTemplateSpec,
+	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec,
 	options ...SequenceOption,
 ) *messagingv1alpha1.Sequence {
 	sequence := &messagingv1alpha1.Sequence{

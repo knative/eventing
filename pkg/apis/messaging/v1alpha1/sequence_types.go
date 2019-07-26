@@ -61,8 +61,10 @@ type SequenceSpec struct {
 	// provided.
 	Steps []eventingv1alpha1.SubscriberSpec `json:"steps"`
 
-	// ChannelTemplate specifies which Channel CRD to use
-	ChannelTemplate eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate"`
+	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
+	// for the namespace (or cluster, in case there are no defaults for the namespace).
+	// +optional
+	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate,omitempty"`
 
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
 	//

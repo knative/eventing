@@ -29,7 +29,7 @@ import (
 )
 
 // BrokerChannelName creates a name for the Channel for a Broker for a given
-// Channel teyp
+// Channel type.
 func BrokerChannelName(brokerName, channelType string) string {
 	return fmt.Sprintf("%s-kn-%s", brokerName, channelType)
 }

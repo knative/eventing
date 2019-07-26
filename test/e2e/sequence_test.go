@@ -74,7 +74,7 @@ func TestSequence(t *testing.T) {
 	}
 
 	// create channelTemplate for the Sequence
-	channelTemplate := eventingduckv1alpha1.ChannelTemplateSpec{
+	channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
 		TypeMeta: *(channelTypeMeta),
 	}
 
