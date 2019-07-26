@@ -37,7 +37,7 @@ func init() {
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	ctx := event.Context.AsV02()
+	ctx := event.Context.AsV03()
 
 	dataBytes, err := event.DataBytes()
 	if err != nil {
