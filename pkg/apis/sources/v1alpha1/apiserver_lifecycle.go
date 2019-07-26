@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/eventing/pkg/apis/duck"
+	appsv1 "k8s.io/api/apps/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -64,9 +66,16 @@ func (s *ApiServerSourceStatus) MarkNoSink(reason, messageFormat string, message
 	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, reason, messageFormat, messageA...)
 }
 
-// MarkDeployed sets the condition that the source has been deployed.
-func (s *ApiServerSourceStatus) MarkDeployed() {
-	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionDeployed)
+// PropagateDeploymentAvailability uses the availability of the provided Deployment to determine if
+// ApiServerConditionDeployed should be marked as true or false.
+func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment) {
+	if duck.DeploymentIsAvailable(&d.Status, false) {
+		apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionDeployed)
+	} else {
+		// I don't know how to propagate the status well, so just give the name of the Deployment
+		// for now.
+		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+	}
 }
 
 // MarkEventTypes sets the condition that the source has set its event type.

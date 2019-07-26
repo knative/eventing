@@ -58,7 +58,7 @@ func WithApiServerSourceSink(uri string) ApiServerSourceOption {
 }
 
 func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
-	s.Status.MarkDeployed()
+	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
 
 func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
