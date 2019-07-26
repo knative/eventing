@@ -158,6 +158,45 @@ func TestAllCases(t *testing.T) {
 					}})),
 			}},
 		}, {
+			Name: "singlecase, with filter",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewChoice(choiceName, testNS,
+					reconciletesting.WithInitChoiceConditions,
+					reconciletesting.WithChoiceChannelTemplateSpec(imc),
+					reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+						{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+					}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(choiceName),
+				createCaseChannel(choiceName, 0),
+				resources.NewFilterSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+					{Filter: createFilter(0), Subscriber: createSubscriber(0)},
+				}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewChoice(choiceName, testNS,
+					reconciletesting.WithInitChoiceConditions,
+					reconciletesting.WithChoiceChannelTemplateSpec(imc),
+					reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					reconciletesting.WithChoiceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithChoiceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithChoiceIngressChannelStatus(createChoiceChannelStatus(choiceName, corev1.ConditionFalse)),
+					reconciletesting.WithChoiceCaseStatuses([]v1alpha1.ChoiceCaseStatus{{
+						FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		}, {
 			Name: "singlecase, no filter, with global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
@@ -188,6 +227,49 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithChoiceChannelTemplateSpec(imc),
 					reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
 						{Subscriber: createSubscriber(0)},
+					}),
+					reconciletesting.WithChoiceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithChoiceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithChoiceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithChoiceIngressChannelStatus(createChoiceChannelStatus(choiceName, corev1.ConditionFalse)),
+					reconciletesting.WithChoiceCaseStatuses([]v1alpha1.ChoiceCaseStatus{{
+						FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+					}})),
+			}},
+		}, {
+			Name: "singlecase, no filter, with case and global reply",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewChoice(choiceName, testNS,
+					reconciletesting.WithInitChoiceConditions,
+					reconciletesting.WithChoiceChannelTemplateSpec(imc),
+					reconciletesting.WithChoiceReply(createReplyChannel(replyChannelName)),
+					reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+						{Subscriber: createSubscriber(0), Reply: createCaseReplyChannel(0)},
+					}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(choiceName),
+				createCaseChannel(choiceName, 0),
+				resources.NewFilterSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+					{Subscriber: createSubscriber(0)},
+				}))),
+				resources.NewSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+					{Subscriber: createSubscriber(0), Reply: createCaseReplyChannel(0)},
+				}), reconciletesting.WithChoiceReply(createReplyChannel(replyChannelName)))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewChoice(choiceName, testNS,
+					reconciletesting.WithInitChoiceConditions,
+					reconciletesting.WithChoiceChannelTemplateSpec(imc),
+					reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
+						{Subscriber: createSubscriber(0), Reply: createCaseReplyChannel(0)},
 					}),
 					reconciletesting.WithChoiceReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
@@ -336,6 +418,14 @@ func TestAllCases(t *testing.T) {
 	}, false))
 }
 
+func createCaseReplyChannel(caseNumber int) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "inmemorychannel",
+		Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+	}
+}
+
 func createReplyChannel(channelName string) *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1alpha1",
@@ -453,6 +543,13 @@ func createChoiceSubscriptionStatus(choiceName string, caseNumber int, status co
 func createSubscriber(caseNumber int) eventingv1alpha1.SubscriberSpec {
 	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
 	return eventingv1alpha1.SubscriberSpec{
+		URI: &uriString,
+	}
+}
+
+func createFilter(caseNumber int) *eventingv1alpha1.SubscriberSpec {
+	uriString := fmt.Sprintf("http://example.com/filter-%d", caseNumber)
+	return &eventingv1alpha1.SubscriberSpec{
 		URI: &uriString,
 	}
 }
