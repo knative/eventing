@@ -57,7 +57,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	choiceLister       listers.ChoiceLister
 	tracker            tracker.Interface
-	addressableTracker duck.AddressableTracker
+	resourceTracker    duck.ResourceTracker
 	subscriptionLister eventinglisters.SubscriptionLister
 }
 
@@ -114,12 +114,12 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Choice) error {
 	p.Status.InitializeConditions()
 
 	// Reconciling choice is pretty straightforward, it does the following things:
-	// 1. Create a channel fronting the whole choice
+	// 1. Create a channel fronting the whole choice and one filter channel per case.
 	// 2. For each of the Cases:
-	//     2.1 create a Subscription to the previous Channel and subscribe the filter
-	//     2.2 create a Subscription to the filter Channel and subcribe the subscriber
+	//     2.1 create a Subscription to the fronting Channel, subscribe the filter and send reply to the filter Channel
+	//     2.2 create a Subscription to the filter Channel, subcribe the subscriber and send reply to
+	//         either the case Reply. If not present, send reply to the global Reply. If not present, do not send reply.
 	// 3. Rinse and repeat step #2 above for each Case in the list
-	// 4. If there's a Reply, then wire all last subscriptions will be configured to send the reply to that.
 	if p.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
 		return nil
@@ -134,14 +134,21 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Choice) error {
 	}
 
 	// Tell tracker to reconcile this Choice whenever my channels change.
-	track := r.addressableTracker.TrackInNamespace(p)
+	track := r.resourceTracker.TrackInNamespace(p)
 
-	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Cases)+1)
+	var ingressChannel *duckv1alpha1.Channelable
+	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Cases))
 	for i := -1; i < len(p.Spec.Cases); i++ {
-		ingressChannelName := resources.ChoiceChannelName(p.Name, i)
-		c, err := r.reconcileChannel(ctx, ingressChannelName, channelResourceInterface, p)
+		var channelName string
+		if i == -1 {
+			channelName = resources.ChoiceChannelName(p.Name)
+		} else {
+			channelName = resources.ChoiceCaseChannelName(p.Name, i)
+		}
+
+		c, err := r.reconcileChannel(ctx, channelName, channelResourceInterface, p)
 		if err != nil {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, channelName), zap.Error(err))
 			return err
 
 		}
@@ -149,30 +156,37 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Choice) error {
 		channelable := &duckv1alpha1.Channelable{}
 		err = duckapis.FromUnstructured(c, channelable)
 		if err != nil {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", p.Namespace, ingressChannelName), zap.Error(err))
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", p.Namespace, channelName), zap.Error(err))
 			return err
 
 		}
 		// Track channels and enqueue choice when they change.
-		channels = append(channels, channelable)
 		if err = track(utils.ObjectRef(channelable, channelable.GroupVersionKind())); err != nil {
 			logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
 			return err
 		}
-		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, ingressChannelName, c))
-	}
-	p.Status.PropagateChannelStatuses(channels)
+		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, channelName, c))
 
-	subs := make([]*eventingv1alpha1.Subscription, 0, len(p.Spec.Cases)*2)
+		if i == -1 {
+			ingressChannel = channelable
+		} else {
+			channels = append(channels, channelable)
+		}
+	}
+	p.Status.PropagateChannelStatuses(ingressChannel, channels)
+
+	filterSubs := make([]*eventingv1alpha1.Subscription, 0, len(p.Spec.Cases))
+	subs := make([]*eventingv1alpha1.Subscription, 0, len(p.Spec.Cases))
 	for i := 0; i < len(p.Spec.Cases); i++ {
 		filterSub, sub, err := r.reconcileCase(ctx, i, p)
 		if err != nil {
 			return fmt.Errorf("Failed to reconcile Subscription Objects for case: %d : %s", i, err)
 		}
-		subs = append(subs, filterSub, sub)
+		subs = append(subs, sub)
+		filterSubs = append(filterSubs, filterSub)
 		logging.FromContext(ctx).Debug(fmt.Sprintf("Reconciled Subscription Objects for case: %d: %+v, %+v", i, filterSub, sub))
 	}
-	p.Status.PropagateSubscriptionStatuses(subs)
+	p.Status.PropagateSubscriptionStatuses(filterSubs, subs)
 
 	return nil
 }
@@ -212,10 +226,10 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, c
 			}
 			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", newChannel))
 			return created, nil
-		} else {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
-			return nil, err
 		}
+
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
+		return nil, err
 	}
 	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", c))
 	return c, nil

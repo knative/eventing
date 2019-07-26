@@ -47,7 +47,7 @@ type Choice struct {
 	Status ChoiceStatus `json:"status,omitempty"`
 }
 
-// Check that Sequence can be validated, can be defaulted, and has immutable fields.
+// Check that Choice can be validated, can be defaulted, and has immutable fields.
 var _ apis.Validatable = (*Choice)(nil)
 var _ apis.Defaultable = (*Choice)(nil)
 
@@ -64,7 +64,8 @@ type ChoiceSpec struct {
 	// ChannelTemplate specifies which Channel CRD to use
 	ChannelTemplate eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate"`
 
-	// Reply is a Reference to where the result of the last Subscriber of a given branch gets sent to.
+	// Reply is a Reference to where the result of a case Subscriber gets sent to
+	// when the case does not have a Reply
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
@@ -84,6 +85,52 @@ type ChoiceCase struct {
 
 	// Subscriber receiving the event when the filter passes
 	Subscriber eventingv1alpha1.SubscriberSpec `json:"subscriber"`
+
+	// Reply is a Reference to where the result of Subscriber of this case gets sent to.
+	// If not specified, sent the result to the Choice Reply
+	//
+	// You can specify only the following fields of the ObjectReference:
+	//   - Kind
+	//   - APIVersion
+	//   - Name
+	//
+	//  The resource pointed by this ObjectReference must meet the Addressable contract
+	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
+	//  it will be reflected in the Subscription's status.
+	// +optional
+	Reply *corev1.ObjectReference `json:"reply,omitempty"`
+}
+
+// ChoiceStatus represents the current state of a Choice.
+type ChoiceStatus struct {
+	// inherits duck/v1alpha1 Status, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
+	// * Conditions - the latest available observations of a resource's current state.
+	duckv1beta1.Status `json:",inline"`
+
+	// IngressChannelStatus corresponds to the ingress channel status.
+	IngressChannelStatus ChoiceChannelStatus `json:"ingressChannelStatus"`
+
+	// CaseStatuses is an array of corresponding to cases status.
+	// Matches the Spec.Cases array in the order.
+	CaseStatuses []ChoiceCaseStatus `json:"caseStatuses"`
+
+	// AddressStatus is the starting point to this Choice. Sending to this
+	// will target the first subscriber.
+	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
+	duckv1alpha1.AddressStatus `json:",inline"`
+}
+
+// ChoiceCaseStatus represents the current state of a Choice case
+type ChoiceCaseStatus struct {
+	// FilterSubscriptionStatus corresponds to the filter subscription status.
+	FilterSubscriptionStatus ChoiceSubscriptionStatus `json:"filterSubscriptionStatus"`
+
+	// ChannelStatus corresponds to the filter channel status.
+	FilterChannelStatus ChoiceChannelStatus `json:"filterChannelStatus"`
+
+	// SubscriptionStatus corresponds to the subscriber subscription status.
+	SubscriptionStatus ChoiceSubscriptionStatus `json:"subscriberSubscriptionStatus"`
 }
 
 type ChoiceChannelStatus struct {
@@ -102,30 +149,9 @@ type ChoiceSubscriptionStatus struct {
 	ReadyCondition apis.Condition `json:"ready"`
 }
 
-// ChoiceStatus represents the current state of a Choice.
-type ChoiceStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1beta1.Status `json:",inline"`
-
-	// ChoiceStatuses is an array of corresponding Subscription statuses.
-	// Matches the Spec.Cases array in the order.
-	SubscriptionStatuses []ChoiceSubscriptionStatus `json:"subscriptionStatuses"`
-
-	// ChannelStatuses is an array of corresponding Channel statuses.
-	// Matches the Spec.Cases array in the order.
-	ChannelStatuses []ChoiceChannelStatus `json:"channelStatuses"`
-
-	// AddressStatus is the starting point to this Choice. Sending to this
-	// will target the first subscriber.
-	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	duckv1alpha1.AddressStatus `json:",inline"`
-}
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChoiceList is a collection of Sequences.
+// ChoiceList is a collection of Choices.
 type ChoiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

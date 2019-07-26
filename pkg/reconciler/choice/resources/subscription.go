@@ -53,7 +53,7 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       ChoiceChannelName(p.Name, -1),
+				Name:       ChoiceChannelName(p.Name),
 			},
 			Subscriber: p.Spec.Cases[caseNumber].Filter,
 		},
@@ -62,7 +62,7 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1
 		Channel: &corev1.ObjectReference{
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 			Kind:       p.Spec.ChannelTemplate.Kind,
-			Name:       ChoiceChannelName(p.Name, caseNumber),
+			Name:       ChoiceCaseChannelName(p.Name, caseNumber),
 		}}
 	return r
 }
@@ -85,13 +85,15 @@ func NewSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1.Subsc
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       ChoiceChannelName(p.Name, caseNumber),
+				Name:       ChoiceCaseChannelName(p.Name, caseNumber),
 			},
 			Subscriber: &p.Spec.Cases[caseNumber].Subscriber,
 		},
 	}
 
-	if p.Spec.Reply != nil {
+	if p.Spec.Cases[caseNumber].Reply != nil {
+		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{Channel: p.Spec.Cases[caseNumber].Reply}
+	} else if p.Spec.Reply != nil {
 		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
 	}
 	return r

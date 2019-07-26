@@ -47,7 +47,7 @@ func NewController(
 
 	choiceInformer := choice.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	addressableInformer := duck.NewAddressableInformer(ctx)
+	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -58,7 +58,7 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	choiceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Choice, so that

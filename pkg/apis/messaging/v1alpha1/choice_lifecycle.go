@@ -30,12 +30,12 @@ const (
 	// ChoiceConditionReady has status True when all subconditions below have been set to True.
 	ChoiceConditionReady = apis.ConditionReady
 
-	// ChoiceChannelsReady has status True when all the channels created as part of
-	// this sequence are ready.
+	// ChoiceConditionChannelsReady has status True when all the channels created as part of
+	// this choice are ready.
 	ChoiceConditionChannelsReady apis.ConditionType = "ChannelsReady"
 
-	// ChoiceSubscriptionsReady has status True when all the subscriptions created as part of
-	// this sequence are ready.
+	// ChoiceConditionSubscriptionsReady has status True when all the subscriptions created as part of
+	// this choice are ready.
 	ChoiceConditionSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
 
 	// ChoiceConditionAddressable has status true when this Choice meets
@@ -58,18 +58,20 @@ func (ps *ChoiceStatus) InitializeConditions() {
 	pChoiceCondSet.Manage(ps).InitializeConditions()
 }
 
-// PropagateSubscriptionStatuses sets the SubscriptionStatuses and ChoiceConditionSubscriptionsReady based on
+// PropagateSubscriptionStatuses sets the ChoiceConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *ChoiceStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv1alpha1.Subscription) {
-	ps.SubscriptionStatuses = make([]ChoiceSubscriptionStatus, len(subscriptions))
+func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*eventingv1alpha1.Subscription, subscriptions []*eventingv1alpha1.Subscription) {
+	if ps.CaseStatuses == nil {
+		ps.CaseStatuses = make([]ChoiceCaseStatus, len(subscriptions))
+	}
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
 		allReady = false
-
 	}
+
 	for i, s := range subscriptions {
-		ps.SubscriptionStatuses[i] = ChoiceSubscriptionStatus{
+		ps.CaseStatuses[i].SubscriptionStatus = ChoiceSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: s.APIVersion,
 				Kind:       s.Kind,
@@ -77,9 +79,29 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv
 				Namespace:  s.Namespace,
 			},
 		}
+
 		readyCondition := s.Status.GetCondition(eventingv1alpha1.SubscriptionConditionReady)
 		if readyCondition != nil {
-			ps.SubscriptionStatuses[i].ReadyCondition = *readyCondition
+			ps.CaseStatuses[i].SubscriptionStatus.ReadyCondition = *readyCondition
+			if readyCondition.Status != corev1.ConditionTrue {
+				allReady = false
+			}
+		} else {
+			allReady = false
+		}
+
+		fs := filterSubscriptions[i]
+		ps.CaseStatuses[i].FilterSubscriptionStatus = ChoiceSubscriptionStatus{
+			Subscription: corev1.ObjectReference{
+				APIVersion: fs.APIVersion,
+				Kind:       fs.Kind,
+				Name:       fs.Name,
+				Namespace:  fs.Namespace,
+			},
+		}
+		readyCondition = fs.Status.GetCondition(eventingv1alpha1.SubscriptionConditionReady)
+		if readyCondition != nil {
+			ps.CaseStatuses[i].FilterSubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
 				allReady = false
 			}
@@ -97,16 +119,29 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv
 
 // PropagateChannelStatuses sets the ChannelStatuses and ChoiceConditionChannelsReady based on the
 // status of the incoming channels.
-func (ps *ChoiceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
-	ps.ChannelStatuses = make([]ChoiceChannelStatus, len(channels))
-	allReady := true
-	// If there are no channels, treat that as a False case. Could go either way, but this seems right.
-	if len(channels) == 0 {
-		allReady = false
-
+func (ps *ChoiceStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Channelable, channels []*duckv1alpha1.Channelable) {
+	if ps.CaseStatuses == nil {
+		ps.CaseStatuses = make([]ChoiceCaseStatus, len(channels))
 	}
+	allReady := true
+
+	ps.IngressChannelStatus.Channel = corev1.ObjectReference{
+		APIVersion: ingressChannel.APIVersion,
+		Kind:       ingressChannel.Kind,
+		Name:       ingressChannel.Name,
+		Namespace:  ingressChannel.Namespace,
+	}
+
+	address := ingressChannel.Status.AddressStatus.Address
+	if address != nil {
+		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
+	} else {
+		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
+		allReady = false
+	}
+
 	for i, c := range channels {
-		ps.ChannelStatuses[i] = ChoiceChannelStatus{
+		ps.CaseStatuses[i].FilterChannelStatus = ChoiceChannelStatus{
 			Channel: corev1.ObjectReference{
 				APIVersion: c.APIVersion,
 				Kind:       c.Kind,
@@ -118,9 +153,9 @@ func (ps *ChoiceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channe
 		// addressable, because it might be addressable but not ready.
 		address := c.Status.AddressStatus.Address
 		if address != nil {
-			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
+			ps.CaseStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
 		} else {
-			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
+			ps.CaseStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 			allReady = false
 		}
 

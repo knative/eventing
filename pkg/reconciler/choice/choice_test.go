@@ -36,6 +36,7 @@ import (
 
 	"time"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
@@ -60,68 +61,26 @@ func init() {
 
 type fakeAddressableInformer struct{}
 
-func (*fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.AddressableTracker {
-	return fakeAddressableTracker{}
+func (*fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.ResourceTracker {
+	return fakeResourceTracker{}
 }
 
-type fakeAddressableTracker struct{}
+type fakeResourceTracker struct{}
 
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
+func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
 	return func(corev1.ObjectReference) error { return nil }
 }
 
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
+func (fakeResourceTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
 	return nil
 }
 
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
-}
-
-func createReplyChannel(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       channelName,
-	}
-
-}
-
-func createChannel(choiceName string, caseNumber int) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "messaging.knative.dev/v1alpha1",
-			"kind":       "inmemorychannel",
-			"metadata": map[string]interface{}{
-				"creationTimestamp": nil,
-				"namespace":         testNS,
-				"name":              resources.ChoiceChannelName(choiceName, caseNumber),
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         "messaging.knative.dev/v1alpha1",
-						"blockOwnerDeletion": true,
-						"controller":         true,
-						"kind":               "Choice",
-						"name":               choiceName,
-						"uid":                "",
-					},
-				},
-			},
-			"spec": map[string]interface{}{},
-		},
-	}
-
-}
-
-func createSubscriber(caseNumber int) eventingv1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
-	return eventingv1alpha1.SubscriberSpec{
-		URI: &uriString,
-	}
+func (fakeResourceTracker) OnChanged(obj interface{}) {
 }
 
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + choiceName
-	imc := v1alpha1.ChannelTemplateSpec{
+	imc := eventingduck.ChannelTemplateSpec{
 		metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
@@ -160,7 +119,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
 			},
 		}, {
-			Name: "singlecase",
+			Name: "singlecase, no filter",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewChoice(choiceName, testNS,
@@ -174,8 +133,8 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(choiceName, -1),
-				createChannel(choiceName, 0),
+				createChannel(choiceName),
+				createCaseChannel(choiceName, 0),
 				resources.NewFilterSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
 					{Subscriber: createSubscriber(0)},
 				}))),
@@ -191,57 +150,15 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithChoiceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithChoiceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithChoiceChannelStatuses([]v1alpha1.ChoiceChannelStatus{
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, -1),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, 0),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-					}),
-					reconciletesting.WithChoiceSubscriptionStatuses([]v1alpha1.ChoiceSubscriptionStatus{
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceFilterSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-					})),
+					reconciletesting.WithChoiceIngressChannelStatus(createChoiceChannelStatus(choiceName, corev1.ConditionFalse)),
+					reconciletesting.WithChoiceCaseStatuses([]v1alpha1.ChoiceCaseStatus{{
+						FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+					}})),
 			}},
 		}, {
-			Name: "singlecasewithreply",
+			Name: "singlecase, no filter, with global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewChoice(choiceName, testNS,
@@ -256,8 +173,8 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(choiceName, -1),
-				createChannel(choiceName, 0),
+				createChannel(choiceName),
+				createCaseChannel(choiceName, 0),
 				resources.NewFilterSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
 					{Subscriber: createSubscriber(0)},
 				}))),
@@ -276,58 +193,16 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithChoiceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithChoiceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithChoiceChannelStatuses([]v1alpha1.ChoiceChannelStatus{
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, -1),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, 0),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-					}),
-					reconciletesting.WithChoiceSubscriptionStatuses([]v1alpha1.ChoiceSubscriptionStatus{
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceFilterSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-					})),
+					reconciletesting.WithChoiceIngressChannelStatus(createChoiceChannelStatus(choiceName, corev1.ConditionFalse)),
+					reconciletesting.WithChoiceCaseStatuses([]v1alpha1.ChoiceCaseStatus{{
+						FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+					}})),
 			}},
 		},
 		{
-			Name: "twocases",
+			Name: "two cases, no filters",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewChoice(choiceName, testNS,
@@ -342,9 +217,9 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(choiceName, -1),
-				createChannel(choiceName, 0),
-				createChannel(choiceName, 1),
+				createChannel(choiceName),
+				createCaseChannel(choiceName, 0),
+				createCaseChannel(choiceName, 1),
 				resources.NewFilterSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
@@ -372,87 +247,21 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithChoiceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithChoiceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithChoiceChannelStatuses([]v1alpha1.ChoiceChannelStatus{
+					reconciletesting.WithChoiceIngressChannelStatus(createChoiceChannelStatus(choiceName, corev1.ConditionFalse)),
+					reconciletesting.WithChoiceCaseStatuses([]v1alpha1.ChoiceCaseStatus{
 						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, -1),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
+							FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+							FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 0, corev1.ConditionFalse),
+							SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
 						},
 						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, 0),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, 1),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-					}),
-					reconciletesting.WithChoiceSubscriptionStatuses([]v1alpha1.ChoiceSubscriptionStatus{
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceFilterSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceFilterSubscriptionName(choiceName, 1),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceSubscriptionName(choiceName, 1),
-								Namespace:  testNS,
-							},
-						},
-					})),
+							FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 1, corev1.ConditionFalse),
+							FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 1, corev1.ConditionFalse),
+							SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 1, corev1.ConditionFalse),
+						}})),
 			}},
 		}, {
-			Name: "twocaseswithreply",
+			Name: "two cases with global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewChoice(choiceName, testNS,
@@ -468,9 +277,9 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Choice reconciled"),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(choiceName, -1),
-				createChannel(choiceName, 0),
-				createChannel(choiceName, 1),
+				createChannel(choiceName),
+				createCaseChannel(choiceName, 0),
+				createCaseChannel(choiceName, 1),
 				resources.NewFilterSubscription(0, reconciletesting.NewChoice(choiceName, testNS, reconciletesting.WithChoiceChannelTemplateSpec(imc), reconciletesting.WithChoiceCases([]v1alpha1.ChoiceCase{
 					{Subscriber: createSubscriber(0)},
 					{Subscriber: createSubscriber(1)},
@@ -500,84 +309,18 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithChoiceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithChoiceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithChoiceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithChoiceChannelStatuses([]v1alpha1.ChoiceChannelStatus{
+					reconciletesting.WithChoiceIngressChannelStatus(createChoiceChannelStatus(choiceName, corev1.ConditionFalse)),
+					reconciletesting.WithChoiceCaseStatuses([]v1alpha1.ChoiceCaseStatus{
 						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, -1),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
+							FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
+							FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 0, corev1.ConditionFalse),
+							SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 0, corev1.ConditionFalse),
 						},
 						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, 0),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-						{
-							Channel: corev1.ObjectReference{
-								APIVersion: "messaging.knative.dev/v1alpha1",
-								Kind:       "inmemorychannel",
-								Name:       resources.ChoiceChannelName(choiceName, 1),
-								Namespace:  testNS,
-							},
-							ReadyCondition: apis.Condition{
-								Type:    apis.ConditionReady,
-								Status:  corev1.ConditionFalse,
-								Reason:  "NotAddressable",
-								Message: "Channel is not addressable",
-							},
-						},
-					}),
-					reconciletesting.WithChoiceSubscriptionStatuses([]v1alpha1.ChoiceSubscriptionStatus{
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceFilterSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceSubscriptionName(choiceName, 0),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceFilterSubscriptionName(choiceName, 1),
-								Namespace:  testNS,
-							},
-						},
-						{
-							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
-								Kind:       "Subscription",
-								Name:       resources.ChoiceSubscriptionName(choiceName, 1),
-								Namespace:  testNS,
-							},
-						},
-					})),
+							FilterSubscriptionStatus: createChoiceFilterSubscriptionStatus(choiceName, 1, corev1.ConditionFalse),
+							FilterChannelStatus:      createChoiceCaseChannelStatus(choiceName, 1, corev1.ConditionFalse),
+							SubscriptionStatus:       createChoiceSubscriptionStatus(choiceName, 1, corev1.ConditionFalse),
+						}})),
 			}},
 		},
 	}
@@ -587,8 +330,129 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			choiceLister:       listers.GetChoiceLister(),
-			addressableTracker: fakeAddressableTracker{},
+			resourceTracker:    fakeResourceTracker{},
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false))
+}
+
+func createReplyChannel(channelName string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "inmemorychannel",
+		Name:       channelName,
+	}
+}
+
+func createChannel(choiceName string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "messaging.knative.dev/v1alpha1",
+			"kind":       "inmemorychannel",
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         testNS,
+				"name":              resources.ChoiceChannelName(choiceName),
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "messaging.knative.dev/v1alpha1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "Choice",
+						"name":               choiceName,
+						"uid":                "",
+					},
+				},
+			},
+			"spec": map[string]interface{}{},
+		},
+	}
+}
+
+func createCaseChannel(choiceName string, caseNumber int) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "messaging.knative.dev/v1alpha1",
+			"kind":       "inmemorychannel",
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         testNS,
+				"name":              resources.ChoiceCaseChannelName(choiceName, caseNumber),
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "messaging.knative.dev/v1alpha1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "Choice",
+						"name":               choiceName,
+						"uid":                "",
+					},
+				},
+			},
+			"spec": map[string]interface{}{},
+		},
+	}
+}
+
+func createChoiceCaseChannelStatus(choiceName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ChoiceChannelStatus {
+	return v1alpha1.ChoiceChannelStatus{
+		Channel: corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       resources.ChoiceCaseChannelName(choiceName, caseNumber),
+			Namespace:  testNS,
+		},
+		ReadyCondition: apis.Condition{
+			Type:    apis.ConditionReady,
+			Status:  status,
+			Reason:  "NotAddressable",
+			Message: "Channel is not addressable",
+		},
+	}
+}
+
+func createChoiceChannelStatus(choiceName string, status corev1.ConditionStatus) v1alpha1.ChoiceChannelStatus {
+	return v1alpha1.ChoiceChannelStatus{
+		Channel: corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       resources.ChoiceChannelName(choiceName),
+			Namespace:  testNS,
+		},
+		ReadyCondition: apis.Condition{
+			Type:    apis.ConditionReady,
+			Status:  status,
+			Reason:  "NotAddressable",
+			Message: "Channel is not addressable",
+		},
+	}
+}
+
+func createChoiceFilterSubscriptionStatus(choiceName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ChoiceSubscriptionStatus {
+	return v1alpha1.ChoiceSubscriptionStatus{
+		Subscription: corev1.ObjectReference{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Subscription",
+			Name:       resources.ChoiceFilterSubscriptionName(choiceName, caseNumber),
+			Namespace:  testNS,
+		},
+	}
+}
+
+func createChoiceSubscriptionStatus(choiceName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ChoiceSubscriptionStatus {
+	return v1alpha1.ChoiceSubscriptionStatus{
+		Subscription: corev1.ObjectReference{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Subscription",
+			Name:       resources.ChoiceSubscriptionName(choiceName, caseNumber),
+			Namespace:  testNS,
+		},
+	}
+}
+
+func createSubscriber(caseNumber int) eventingv1alpha1.SubscriberSpec {
+	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
+	return eventingv1alpha1.SubscriberSpec{
+		URI: &uriString,
+	}
 }

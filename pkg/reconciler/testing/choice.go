@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +54,7 @@ func WithChoiceDeleted(p *v1alpha1.Choice) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithChoiceChannelTemplateSpec(cts v1alpha1.ChannelTemplateSpec) ChoiceOption {
+func WithChoiceChannelTemplateSpec(cts eventingduck.ChannelTemplateSpec) ChoiceOption {
 	return func(p *v1alpha1.Choice) {
 		p.Spec.ChannelTemplate = cts
 	}
@@ -71,15 +72,15 @@ func WithChoiceReply(reply *corev1.ObjectReference) ChoiceOption {
 	}
 }
 
-func WithChoiceSubscriptionStatuses(subscriptionStatuses []v1alpha1.ChoiceSubscriptionStatus) ChoiceOption {
+func WithChoiceCaseStatuses(caseStatuses []v1alpha1.ChoiceCaseStatus) ChoiceOption {
 	return func(p *v1alpha1.Choice) {
-		p.Status.SubscriptionStatuses = subscriptionStatuses
+		p.Status.CaseStatuses = caseStatuses
 	}
 }
 
-func WithChoiceChannelStatuses(channelStatuses []v1alpha1.ChoiceChannelStatus) ChoiceOption {
+func WithChoiceIngressChannelStatus(status v1alpha1.ChoiceChannelStatus) ChoiceOption {
 	return func(p *v1alpha1.Choice) {
-		p.Status.ChannelStatuses = channelStatuses
+		p.Status.IngressChannelStatus = status
 	}
 }
 

@@ -23,35 +23,38 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"knative.dev/pkg/kmeta"
 
+	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ChoiceChannelName creates a name for the Channel fronting a specific case or choice.
-func ChoiceChannelName(choiceName string, caseNumber int) string {
-	if caseNumber >= 0 {
-		return fmt.Sprintf("%s-kn-choice-%d", choiceName, caseNumber)
-	}
+// ChoiceChannelName creates a name for the Channel fronting choice.
+func ChoiceChannelName(choiceName string) string {
 	return fmt.Sprintf("%s-kn-choice", choiceName)
+}
+
+// ChoiceCaseChannelName creates a name for the Channel fronting a specific case
+func ChoiceCaseChannelName(choiceName string, caseNumber int) string {
+	return fmt.Sprintf("%s-kn-choice-%d", choiceName, caseNumber)
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
 // for a given choice.
 func NewChannel(name string, p *v1alpha1.Choice) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := v1alpha1.ChannelTemplateSpecInternal{
-		metav1.TypeMeta{
+	template := eventingduck.ChannelTemplateSpecInternal{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       p.Spec.ChannelTemplate.Kind,
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 		},
-		metav1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(p),
 			},
 			Name:      name,
 			Namespace: p.Namespace,
 		},
-		p.Spec.ChannelTemplate.Spec,
+		Spec: p.Spec.ChannelTemplate.Spec,
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {
