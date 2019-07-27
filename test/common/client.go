@@ -22,7 +22,6 @@ package common
 import (
 	"testing"
 
-	natsschannel "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
 	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"k8s.io/client-go/dynamic"
 	"knative.dev/pkg/test"
@@ -33,7 +32,6 @@ type Client struct {
 	Kube     *test.KubeClient
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
-	Natss    *natsschannel.Clientset
 
 	Namespace string
 	T         *testing.T
@@ -59,11 +57,6 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	}
 
 	client.Dynamic, err = dynamic.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	client.Natss, err = natsschannel.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
