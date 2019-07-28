@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+
 	"github.com/knative/eventing/pkg/duck"
 
 	"github.com/knative/eventing/pkg/reconciler"
