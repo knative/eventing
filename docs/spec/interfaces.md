@@ -11,7 +11,7 @@ an _Addressable_ is a _Channel_.
 
 ### Control Plane
 
-An **Addressable** resource MUST expose a `status.address.hostname` field. The
+An **Addressable** resource MUST expose a `status.address.url` field. The
 _hostname_ value is a cluster-resolvable DNS name which is capable of receiving
 event deliveries. _Addressable_ resources may be referenced in the `reply`
 section of a _Subscription_, and also by other custom resources acting as an
@@ -36,10 +36,10 @@ _Addressable_ resources are _Callable_.
 
 ### Control Plane
 
-A **Callable** resource MUST expose a `status.address.hostname` field (like
+A **Callable** resource MUST expose a `status.address.url` field (like
 _Addressable_). The _hostname_ value is a cluster-resolvable DNS name which is
 capable of receiving event deliveries and returning a resulting event in the
-reply.. _Callable_ resources may be referenced in the `subscriber` section of a
+reply. _Callable_ resources may be referenced in the `subscriber` section of a
 _Subscription_.
 
 <!-- TODO(evankanderson):
@@ -49,6 +49,18 @@ about using an annotation like `eventing.knative.dev/returnType = any` to
 represent the return type of the _Callable_.
 
 --->
+
+## Composable
+
+A **Composable** resource represents an _Addressable_ endpoint which receives
+events and optionally directly forward events to downstream sink. One example of a
+_Composable_ is Sequence.
+
+### Control Plane
+
+A **Callable** resource MUST expose a `status.address.url` field (like
+_Addressable_). It must also expose a `spec.reply` field where to forward
+events.
 
 ### Data Plane
 
