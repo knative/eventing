@@ -46,10 +46,9 @@ created, backing all messages from the channel.
 #### Aggregated Channelable Manipulator ClusterRole
 
 Every CRD must create a corresponding ClusterRole, that will be aggregated into
-the `channelable-manipulator` ClusterRole. This ClusterRole must
-include permissions to create, list, watch, patch, and update the
-CRD's custom objects and their status. Below is an example for the
-`KafkaChannel`:
+the `channelable-manipulator` ClusterRole. This ClusterRole must include
+permissions to create, list, watch, patch, and update the CRD's custom objects
+and their status. Below is an example for the `KafkaChannel`:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -193,10 +192,14 @@ not the individual Subscription.
 #### Metrics
 
 Channels SHOULD expose a variety of metrics, including, but not limited to:
-- Number of malformed incoming event queueing events (`400 Bad Requests` responses)
-- Number of unauthorized or malformed bearer token requests (`403 Forbidden` responses)
+
+- Number of malformed incoming event queueing events (`400 Bad Requests`
+  responses)
+- Number of unauthorized or malformed bearer token requests (`403 Forbidden`
+  responses)
 - Number of accepted incoming event queuing events (`202 Accpeted` responses)
-- Number of egress cloudevent produced (with the former metric, used to derive channel queue size)
+- Number of egress cloudevent produced (with the former metric, used to derive
+  channel queue size)
 
 Metrics SHOULD be enabled by default, but a configuration parameter included to
 disable if desired.
