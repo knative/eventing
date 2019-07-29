@@ -24,9 +24,6 @@ which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
 # Eventing main config.
 readonly EVENTING_CONFIG="config/"
 
-# In-memory provisioner config.
-readonly IN_MEMORY_CHANNEL_CONFIG="config/provisioners/in-memory-channel/in-memory-channel.yaml"
-
 # In-memory channel CRD config.
 readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 
@@ -89,25 +86,11 @@ function test_teardown() {
 }
 
 function install_test_resources() {
-  install_provisioners || return 1
   install_channel_crds || return 1
 }
 
 function uninstall_test_resources() {
-  uninstall_provisioners
   uninstall_channel_crds
-}
-
-# TODO(Fredy-Z): remove this once default broker does not rely on In-Memory ClusterChannelProvisioner
-function install_provisioners() {
-  echo "Installing In-Memory ClusterChannelProvisioner"
-  ko apply -f ${IN_MEMORY_CHANNEL_CONFIG} || return 1
-  wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory ClusterChannelProvisioner"
-}
-
-function uninstall_provisioners() {
-  echo "Uninstalling In-Memory ClusterChannelProvisioner"
-  ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CONFIG}
 }
 
 function install_channel_crds() {
