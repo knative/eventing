@@ -126,7 +126,7 @@ type ChoiceCaseStatus struct {
 	// FilterSubscriptionStatus corresponds to the filter subscription status.
 	FilterSubscriptionStatus ChoiceSubscriptionStatus `json:"filterSubscriptionStatus"`
 
-	// ChannelStatus corresponds to the filter channel status.
+	// FilterChannelStatus corresponds to the filter channel status.
 	FilterChannelStatus ChoiceChannelStatus `json:"filterChannelStatus"`
 
 	// SubscriptionStatus corresponds to the subscriber subscription status.
