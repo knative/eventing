@@ -21,11 +21,9 @@ package base
 import (
 	"github.com/knative/eventing/test/base/resources"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/labels"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 )
@@ -37,11 +35,20 @@ func GetGenericObject(
 	obj *resources.MetaResource,
 	rtype apis.Listable,
 ) (runtime.Object, error) {
-	lister, err := getGenericLister(dynamicClient, obj.GroupVersionKind(), obj.Namespace, rtype)
+	// get the resource's namespace and gvr
+	gvr, _ := meta.UnsafeGuessKindToResource(obj.GroupVersionKind())
+	u, err := dynamicClient.Resource(gvr).Namespace(obj.Namespace).Get(obj.Name, metav1.GetOptions{})
+
 	if err != nil {
 		return nil, err
 	}
-	return lister.Get(obj.Name)
+
+	res := rtype.DeepCopyObject()
+	if err := duck.FromUnstructured(u, res); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // GetGenericObjectList returns a generic object list representing a list of Kubernetes resource.
@@ -50,31 +57,22 @@ func GetGenericObjectList(
 	objList *resources.MetaResourceList,
 	rtype apis.Listable,
 ) ([]runtime.Object, error) {
-	lister, err := getGenericLister(dynamicClient, objList.GroupVersionKind(), objList.Namespace, rtype)
-	if err != nil {
-		return nil, err
-	}
-	return lister.List(labels.Everything())
-}
-
-// getGenericLister returns a GenericNamespacedLister, which can be used to get resources in the namespace.
-func getGenericLister(
-	dynamicClient dynamic.Interface,
-	gvk schema.GroupVersionKind,
-	namespace string,
-	rtype apis.Listable,
-) (cache.GenericNamespaceLister, error) {
 	// get the resource's namespace and gvr
-	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	gvr, _ := meta.UnsafeGuessKindToResource(objList.GroupVersionKind())
+	ul, err := dynamicClient.Resource(gvr).Namespace(objList.Namespace).List(metav1.ListOptions{})
 
-	stopChannel := make(chan struct{})
-	// defer close the stopChannel to stop the informer created in tif.Get(gvr)
-	defer close(stopChannel)
-	// use the helper functions to convert the resource to the given duck-type
-	tif := &duck.TypedInformerFactory{Client: dynamicClient, Type: rtype, StopChannel: stopChannel}
-	_, lister, err := tif.Get(gvr)
 	if err != nil {
 		return nil, err
 	}
-	return lister.ByNamespace(namespace), nil
+
+	objs := make([]runtime.Object, 0, len(ul.Items))
+	for _, u := range ul.Items {
+		res := rtype.DeepCopyObject()
+		if err := duck.FromUnstructured(&u, res); err != nil {
+			return nil, err
+		}
+		objs = append(objs, res)
+	}
+
+	return objs, nil
 }

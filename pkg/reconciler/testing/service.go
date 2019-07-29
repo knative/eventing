@@ -57,3 +57,9 @@ func WithServicePorts(ports []corev1.ServicePort) ServiceOption {
 		s.Spec.Ports = ports
 	}
 }
+
+func WithServiceAnnotations(annotations map[string]string) ServiceOption {
+	return func(s *corev1.Service) {
+		s.ObjectMeta.Annotations = annotations
+	}
+}

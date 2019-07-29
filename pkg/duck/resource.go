@@ -19,57 +19,47 @@ package duck
 import (
 	"context"
 	"sync"
-
 	"time"
 
+	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/tracker"
 )
 
-// AddressableInformer is an informer that allows tracking arbitrary Addressables.
-type AddressableInformer interface {
-	NewTracker(callback func(string), lease time.Duration) AddressableTracker
+// ResourceInformer is an informer that allows tracking arbitrary Resources.
+type ResourceInformer interface {
+	NewTracker(callback func(string), lease time.Duration) ResourceTracker
 }
 
-// A tracker capable of tracking Addressables.
-type AddressableTracker interface {
-	tracker.Interface
-
-	// TrackInNamespace returns a function that can be used to watch arbitrary Addressables in the same
+// ResourceTracker is a tracker capable of tracking Resources.
+type ResourceTracker interface {
+	// TrackInNamespace returns a function that can be used to watch arbitrary Resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
 	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
 }
 
-// addressableInformer is a concrete implementation of AddressableInformer. It caches informers and ensures TypeMeta.
-// TODO: Once the pkg/apis/duck code properly ensures the TypeMeta, this struct can be removed entirely and replaced
-// with:
-// duck.CachingInformerFactory{
-//   Delegate: duck.EnqueueInformerFactory {
-//      Delegate: duck.TypeInformerFactory { ... },
-//      EventHandler: EnsureTypeMeta,
-//   },
-// }
-type addressableInformer struct {
+// resourceInformer is a concrete implementation of ResourceInformer. It caches informers and
+// ensures TypeMeta.
+type resourceInformer struct {
 	duck duck.InformerFactory
 
 	concrete     map[schema.GroupVersionResource]cache.SharedIndexInformer
 	concreteLock sync.RWMutex
 }
 
-// NewAddressableInformer creates a new AddressableInformer.
-func NewAddressableInformer(ctx context.Context) AddressableInformer {
-	return &addressableInformer{
+// NewResourceInformer creates a new ResourceInformer.
+func NewResourceInformer(ctx context.Context) ResourceInformer {
+	return &resourceInformer{
 		duck: &duck.TypedInformerFactory{
 			Client:       dynamicclient.Get(ctx),
-			Type:         &v1alpha1.AddressableType{},
+			Type:         &duckv1alpha1.Resource{},
 			ResyncPeriod: controller.GetResyncPeriod(ctx),
 			StopChannel:  ctx.Done(),
 		},
@@ -77,8 +67,9 @@ func NewAddressableInformer(ctx context.Context) AddressableInformer {
 	}
 }
 
-func (i *addressableInformer) NewTracker(callback func(string), lease time.Duration) AddressableTracker {
-	return &addressableTracker{
+// NewTracker creates a new ResourceTracker, backed by this ResourceInformer.
+func (i *resourceInformer) NewTracker(callback func(string), lease time.Duration) ResourceTracker {
+	return &resourceTracker{
 		informer: i,
 		tracker:  tracker.New(callback, lease),
 		concrete: map[schema.GroupVersionResource]struct{}{},
@@ -86,7 +77,7 @@ func (i *addressableInformer) NewTracker(callback func(string), lease time.Durat
 }
 
 // ensureInformer ensures that there is an informer watching on a concrete GVK.
-func (i *addressableInformer) ensureInformer(ref corev1.ObjectReference) (cache.SharedIndexInformer, error) {
+func (i *resourceInformer) ensureInformer(ref corev1.ObjectReference) (cache.SharedIndexInformer, error) {
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
@@ -113,8 +104,8 @@ func (i *addressableInformer) ensureInformer(ref corev1.ObjectReference) (cache.
 	return informer, nil
 }
 
-type addressableTracker struct {
-	informer *addressableInformer
+type resourceTracker struct {
+	informer *resourceInformer
 	tracker  tracker.Interface
 
 	concrete     map[schema.GroupVersionResource]struct{}
@@ -123,7 +114,7 @@ type addressableTracker struct {
 
 // ensureInformer ensures that there is an informer watching and sending events to tracker for the
 // concrete GVK.
-func (t *addressableTracker) ensureTracking(ref corev1.ObjectReference) error {
+func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
@@ -158,22 +149,15 @@ func (t *addressableTracker) ensureTracking(ref corev1.ObjectReference) error {
 	return nil
 }
 
-func (t *addressableTracker) TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error {
+// TrackInNamespace satisfies the ResourceTracker interface.
+func (t *resourceTracker) TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error {
 	return func(ref corev1.ObjectReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
 		// specify the namespace.
 		ref.Namespace = obj.GetNamespace()
-		return t.Track(ref, obj)
+		if err := t.ensureTracking(ref); err != nil {
+			return err
+		}
+		return t.tracker.Track(ref, obj)
 	}
-}
-
-func (t *addressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	if err := t.ensureTracking(ref); err != nil {
-		return err
-	}
-	return t.tracker.Track(ref, obj)
-}
-
-func (t *addressableTracker) OnChanged(obj interface{}) {
-	t.tracker.OnChanged(obj)
 }

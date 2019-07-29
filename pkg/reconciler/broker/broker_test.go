@@ -108,19 +108,6 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-type fakeAddressableTracker struct{}
-
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
-}
-
 func TestReconcile(t *testing.T) {
 	table := TableTest{
 		{
@@ -325,6 +312,7 @@ func TestReconcile(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.FilterAnnotations()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(filterContainerName, 8080))),
 			},
@@ -524,6 +512,7 @@ func TestReconcile(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.IngressAnnotations()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
 			},
@@ -1127,6 +1116,7 @@ func TestReconcileCRD(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.FilterAnnotations()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(filterContainerName, 8080))),
 			},
@@ -1302,6 +1292,7 @@ func TestReconcileCRD(t *testing.T) {
 			WantCreates: []runtime.Object{
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceAnnotations(resources.IngressAnnotations()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
 			},
@@ -1667,7 +1658,7 @@ func TestReconcileCRD(t *testing.T) {
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
-			addressableTracker:        fakeAddressableTracker{},
+			resourceTracker:           &MockResourceTracker{},
 		}
 	},
 		false,
@@ -1851,7 +1842,6 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 				},
 				"labels": labels,
 			},
-			"spec": nil,
 		},
 	}
 }

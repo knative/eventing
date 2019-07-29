@@ -23,7 +23,7 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-func TestImMemoryChannelValidation(t *testing.T) {
+func TestInMemoryChannelValidation(t *testing.T) {
 	tests := []CRDTest{{
 		name: "empty",
 		cr: &InMemoryChannel{

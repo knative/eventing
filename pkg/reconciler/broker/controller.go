@@ -68,7 +68,7 @@ func NewController(
 	channelInformer := channelinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
-	addressableInformer := duck.NewAddressableInformer(ctx)
+	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -86,7 +86,7 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

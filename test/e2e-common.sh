@@ -18,6 +18,9 @@
 
 source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/e2e-tests.sh
 
+# If gcloud is not available make it a no-op, not an error.
+which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
+
 # Eventing main config.
 readonly EVENTING_CONFIG="config/"
 
@@ -62,6 +65,7 @@ function knative_teardown() {
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
+  wait_until_object_does_not_exist namespaces knative-eventing
 }
 
 # Setup resources common to all eventing tests.
@@ -82,7 +86,6 @@ function test_teardown() {
   kafka_teardown
 
   uninstall_test_resources
-  wait_until_object_does_not_exist namespaces knative-eventing
 }
 
 function install_test_resources() {

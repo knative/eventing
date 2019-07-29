@@ -84,6 +84,8 @@ rules:
     resources:
       - "sequences"
       - "sequences/status"
+      - "channels"
+      - "channels/status"
     verbs: *everything
 
   # Messaging resources and finalizers we care about.

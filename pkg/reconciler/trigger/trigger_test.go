@@ -44,9 +44,6 @@ import (
 
 	. "knative.dev/pkg/reconciler/testing"
 
-	"time"
-
-	"github.com/knative/eventing/pkg/duck"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
@@ -70,25 +67,6 @@ func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-}
-
-type fakeAddressableInformer struct{}
-
-func (fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.AddressableTracker {
-	return fakeAddressableTracker{}
-}
-
-type fakeAddressableTracker struct{}
-
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
 }
 
 func TestAllCases(t *testing.T) {
@@ -460,7 +438,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: test induced [error]"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
@@ -507,7 +485,7 @@ func TestAllCases(t *testing.T) {
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
 			serviceLister:      listers.GetK8sServiceLister(),
-			addressableTracker: fakeAddressableTracker{},
+			resourceTracker:    &MockResourceTracker{},
 		}
 	},
 		false,

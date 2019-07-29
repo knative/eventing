@@ -56,7 +56,7 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 	serviceInformer := service.Get(ctx)
-	addressableInformer := duck.NewAddressableInformer(ctx)
+	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -73,16 +73,7 @@ func NewController(
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
-	r.addressableTracker = addressableInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		// Call the tracker's OnChanged method, but we've seen the objects
-		// coming through this path missing TypeMeta, so ensure it is properly
-		// populated.
-		controller.EnsureTypeMeta(
-			r.addressableTracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
-		),
-	))
+	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),

@@ -99,6 +99,10 @@ type ControllerOptions struct {
 	// TLS Client Authentication.
 	// The default value is tls.NoClientCert.
 	ClientAuth tls.ClientAuthType
+
+	// StatsReporter reports metrics about the webhook.
+	// This will be automatically initialized by the constructor if left uninitialized.
+	StatsReporter StatsReporter
 }
 
 // ResourceCallback defines a signature for resource specific (Route, Configuration, etc.)
@@ -123,16 +127,39 @@ type AdmissionController struct {
 	DisallowUnknownFields bool
 }
 
-func nop(ctx context.Context) context.Context {
-	return ctx
-}
-
 // GenericCRD is the interface definition that allows us to perform the generic
 // CRD actions like deciding whether to increment generation and so forth.
 type GenericCRD interface {
 	apis.Defaultable
 	apis.Validatable
 	runtime.Object
+}
+
+// NewAdmissionController constructs an AdmissionController
+func NewAdmissionController(
+	client kubernetes.Interface,
+	opts ControllerOptions,
+	handlers map[schema.GroupVersionKind]GenericCRD,
+	logger *zap.SugaredLogger,
+	ctx func(context.Context) context.Context,
+	disallowUnknownFields bool) (*AdmissionController, error) {
+
+	if opts.StatsReporter == nil {
+		reporter, err := NewStatsReporter()
+		if err != nil {
+			return nil, err
+		}
+		opts.StatsReporter = reporter
+	}
+
+	return &AdmissionController{
+		Client:                client,
+		Options:               opts,
+		Handlers:              handlers,
+		Logger:                logger,
+		WithContext:           ctx,
+		DisallowUnknownFields: disallowUnknownFields,
+	}, nil
 }
 
 // GetAPIServerExtensionCACert gets the Kubernetes aggregate apiserver
@@ -183,13 +210,15 @@ func getOrGenerateKeyCertsFromSecret(ctx context.Context, client kubernetes.Inte
 			return nil, nil, nil, err
 		}
 		secret, err = client.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return nil, nil, nil, err
-		}
-		// Ok, so something else might have created, try fetching it one more time
-		secret, err = client.CoreV1().Secrets(options.Namespace).Get(options.SecretName, metav1.GetOptions{})
 		if err != nil {
-			return nil, nil, nil, err
+			if !apierrors.IsAlreadyExists(err) {
+				return nil, nil, nil, err
+			}
+			// OK, so something else might have created, try fetching it instead.
+			secret, err = client.CoreV1().Secrets(options.Namespace).Get(options.SecretName, metav1.GetOptions{})
+			if err != nil {
+				return nil, nil, nil, err
+			}
 		}
 	}
 
@@ -408,6 +437,7 @@ func (ac *AdmissionController) register(
 // ServeHTTP implements the external admission webhook for mutating
 // serving resources.
 func (ac *AdmissionController) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var ttStart = time.Now()
 	logger := ac.Logger
 	logger.Infof("Webhook ServeHTTP request=%#v", r)
 
@@ -451,6 +481,11 @@ func (ac *AdmissionController) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("could encode response: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	if ac.Options.StatsReporter != nil {
+		// Only report valid requests
+		ac.Options.StatsReporter.ReportRequest(review.Request, response.Response, time.Since(ttStart))
 	}
 }
 

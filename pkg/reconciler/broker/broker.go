@@ -59,7 +59,7 @@ const (
 	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
-	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.8. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
+	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
 )
 
 type Reconciler struct {
@@ -72,7 +72,7 @@ type Reconciler struct {
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister eventinglisters.SubscriptionLister
 
-	addressableTracker duck.AddressableTracker
+	resourceTracker duck.ResourceTracker
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -137,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
-	if b.Spec.ChannelTemplate.Kind != "" && b.Spec.ChannelTemplate.APIVersion != "" {
+	if b.Spec.ChannelTemplate != nil {
 		return r.reconcileCRD(ctx, b)
 	} else {
 		return r.reconcileLegacy(ctx, b)
@@ -276,7 +276,7 @@ func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error
 	}
 
 	// Tell tracker to reconcile this Broker whenever my channels change.
-	track := r.addressableTracker.TrackInNamespace(b)
+	track := r.resourceTracker.TrackInNamespace(b)
 
 	// Start tracking trigger channel...
 	if err = track(utils.ObjectRef(triggerChan, triggerChan.GroupVersionKind())); err != nil {
