@@ -48,13 +48,13 @@ func TestEventTransformationForSubscription(t *testing.T) {
 	transformationPodName := "e2e-eventtransformation-transformation-pod"
 	loggerPodName := "e2e-eventtransformation-logger-pod"
 
-	runTests(t, provisioners, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
+	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
 		client := setup(st, true)
 		defer tearDown(client)
 
 		// create channels
-		channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
-		client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+		channelTypeMeta := getChannelTypeMeta(channel)
+		client.CreateChannelsOrFail(channelNames, channelTypeMeta)
 		client.WaitForResourcesReady(channelTypeMeta)
 
 		// create transformation pod and service

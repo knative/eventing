@@ -34,38 +34,38 @@ import (
 // EventingFlags holds the command line flags specific to knative/eventing.
 var EventingFlags = initializeEventingFlags()
 
-// Provisioners holds the ClusterChannelProvisioners we want to run test against.
-type Provisioners []string
+// Channels holds the Channels we want to run test against.
+type Channels []string
 
-func (ps *Provisioners) String() string {
-	return fmt.Sprint(*ps)
+func (channels *Channels) String() string {
+	return fmt.Sprint(*channels)
 }
 
-// Set converts the input string to Provisioners.
-// The default CCP we will test against is in-memory.
-func (ps *Provisioners) Set(value string) error {
-	// We'll test against all valid provisioners if we pass "all" through the flag.
+// Set converts the input string to Channels.
+// The default Channel we will test against is InMemoryChannel.
+func (channels *Channels) Set(value string) error {
+	// We'll test against all valid channels if we pass "all" through the flag.
 	if value == "all" {
-		for provisioner := range common.ValidProvisionersMap {
-			*ps = append(*ps, provisioner)
+		for channel := range common.ValidChannelsMap {
+			*channels = append(*channels, channel)
 		}
 		return nil
 	}
 
-	for _, provisioner := range strings.Split(value, ",") {
-		provisioner := strings.TrimSpace(provisioner)
-		if !isValid(provisioner) {
-			log.Fatalf("The given provisioner %q is not supported, tests cannot be run.\n", provisioner)
+	for _, channel := range strings.Split(value, ",") {
+		channel := strings.TrimSpace(channel)
+		if !isValid(channel) {
+			log.Fatalf("The given channel %q is not supported, tests cannot be run.\n", channel)
 		}
 
-		*ps = append(*ps, provisioner)
+		*channels = append(*channels, channel)
 	}
 	return nil
 }
 
-// Check if the provisioner is a valid one.
-func isValid(provisioner string) bool {
-	if _, ok := common.ValidProvisionersMap[provisioner]; ok {
+// Check if the channel is a valid one.
+func isValid(channel string) bool {
+	if _, ok := common.ValidChannelsMap[channel]; ok {
 		return true
 	}
 	return false
@@ -73,19 +73,19 @@ func isValid(provisioner string) bool {
 
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
 type EventingEnvironmentFlags struct {
-	Provisioners
+	Channels
 }
 
 func initializeEventingFlags() *EventingEnvironmentFlags {
 	f := EventingEnvironmentFlags{}
 
-	flag.Var(&f.Provisioners, "clusterChannelProvisioners", "The names of the Channel's clusterChannelProvisioners, which are separated by comma.")
+	flag.Var(&f.Channels, "channels", "The names of the channels, which are separated by comma.")
 
 	flag.Parse()
 
-	// If no provisioner is passed through the flag, initialize it as the DefaultClusterChannelProvisioner.
-	if f.Provisioners == nil || len(f.Provisioners) == 0 {
-		f.Provisioners = []string{common.DefaultClusterChannelProvisioner}
+	// If no provisioner is passed through the flag, initialize it as the DefaultChannel.
+	if f.Channels == nil || len(f.Channels) == 0 {
+		f.Channels = []string{common.DefaultChannel}
 	}
 
 	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)

@@ -37,27 +37,21 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-// RunTests will use all provisioners that support the given feature, to run
+// RunTests will use all channels that support the given feature, to run
 // a test for the testFunc.
 func RunTests(
 	t *testing.T,
-	provisioners []string,
+	channels []string,
 	feature Feature,
-	testFunc func(st *testing.T, provisioner string, isCRD bool),
+	testFunc func(st *testing.T, channel string),
 ) {
 	t.Parallel()
-	for _, provisioner := range provisioners {
-		channelConfig := ValidProvisionersMap[provisioner]
+	for _, channel := range channels {
+		channelConfig := ValidChannelsMap[channel]
 		if contains(channelConfig.Features, feature) {
-			t.Run(fmt.Sprintf("%s-%s", t.Name(), provisioner), func(st *testing.T) {
-				testFunc(st, provisioner, false)
+			t.Run(fmt.Sprintf("%s-%s", t.Name(), channel), func(st *testing.T) {
+				testFunc(st, channel)
 			})
-
-			if channelConfig.CRDSupported {
-				t.Run(fmt.Sprintf("%s-crd-%s", t.Name(), provisioner), func(st *testing.T) {
-					testFunc(st, provisioner, true)
-				})
-			}
 		}
 	}
 }
@@ -115,15 +109,9 @@ func contains(features []Feature, feature Feature) bool {
 	return false
 }
 
-// GetChannelTypeMeta gets the actual typemeta of the Channel type.
-// TODO(Fredy-Z): This function is a workaround when there are both provisioner and Channel CRD in this repo.
-//                It needs to be removed when the provisioner implementation is removed.
-func GetChannelTypeMeta(provisioner string, isCRD bool) *metav1.TypeMeta {
-	channelTypeMeta := ChannelTypeMeta
-	if isCRD {
-		channelTypeMeta = ProvisionerChannelMap[provisioner]
-	}
-	return channelTypeMeta
+// GetChannelTypeMeta gets the actual typemeta of the channel.
+func GetChannelTypeMeta(channelName string) *metav1.TypeMeta {
+	return MessagingTypeMeta(channelName)
 }
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.

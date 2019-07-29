@@ -65,7 +65,7 @@ func testLatencyForBrokerTrigger(t *testing.T, channelTypeMeta *metav1.TypeMeta)
 	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
-	client.CreateBrokerOrFail(brokerName, channelTypeMeta, "")
+	client.CreateBrokerOrFail(brokerName, channelTypeMeta)
 	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 	brokerURL, err := client.GetAddressableURI(brokerName, common.BrokerTypeMeta)
 	if err != nil {

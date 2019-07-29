@@ -47,14 +47,14 @@ func singleEvent(t *testing.T, encoding string) {
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
 	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	runTests(t, provisioners, common.FeatureBasic, func(st *testing.T, provisioner string, isCRD bool) {
-		st.Logf("Run test with provisioner %q", provisioner)
+	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
+		st.Logf("Run test with channel %q", channel)
 		client := setup(st, true)
 		defer tearDown(client)
 
 		// create channel
-		channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
-		client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
+		channelTypeMeta := getChannelTypeMeta(channel)
+		client.CreateChannelOrFail(channelName, channelTypeMeta)
 
 		// create logger service as the subscriber
 		pod := resources.EventLoggerPod(loggerPodName)
