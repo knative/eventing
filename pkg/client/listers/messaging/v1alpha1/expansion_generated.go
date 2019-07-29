@@ -26,6 +26,14 @@ type ChannelListerExpansion interface{}
 // ChannelNamespaceLister.
 type ChannelNamespaceListerExpansion interface{}
 
+// ChoiceListerExpansion allows custom methods to be added to
+// ChoiceLister.
+type ChoiceListerExpansion interface{}
+
+// ChoiceNamespaceListerExpansion allows custom methods to be added to
+// ChoiceNamespaceLister.
+type ChoiceNamespaceListerExpansion interface{}
+
 // InMemoryChannelListerExpansion allows custom methods to be added to
 // InMemoryChannelLister.
 type InMemoryChannelListerExpansion interface{}

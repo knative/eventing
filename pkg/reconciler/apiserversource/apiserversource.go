@@ -42,6 +42,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
+	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -50,10 +51,16 @@ const (
 	apiserversourceReconciled         = "ApiServerSourceReconciled"
 	apiServerSourceReadinessChanged   = "ApiServerSourceReadinessChanged"
 	apiserversourceUpdateStatusFailed = "ApiServerSourceUpdateStatusFailed"
+	apiserversourceDeploymentCreated  = "ApiServerSourceDeploymentCreated"
+	apiserversourceDeploymentUpdated  = "ApiServerSourceDeploymentUpdated"
 
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
 	// image. It must be defined.
 	raImageEnvVar = "APISERVER_RA_IMAGE"
+)
+
+var (
+	deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 )
 
 var apiServerEventTypes = []string{
@@ -76,6 +83,8 @@ type Reconciler struct {
 	apiserversourceLister listers.ApiServerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
+
+	resourceTracker duck.ResourceTracker
 
 	source         string
 	sinkReconciler *duck.SinkReconciler
@@ -128,6 +137,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
 	source.Status.InitializeConditions()
 
+	track := r.resourceTracker.TrackInNamespace(source)
+
 	sinkObjRef := source.Spec.Sink
 	if sinkObjRef.Namespace == "" {
 		sinkObjRef.Namespace = source.Namespace
@@ -141,13 +152,16 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	}
 	source.Status.MarkSink(sinkURI)
 
-	_, err = r.createReceiveAdapter(ctx, source, sinkURI)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
 		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
 	// Update source status
-	source.Status.MarkDeployed()
+	source.Status.PropagateDeploymentAvailability(ra)
+	if err = track(utils.ObjectRef(ra, deploymentGVK)); err != nil {
+		return fmt.Errorf("unable to track receive adapter: %v", err)
+	}
 
 	// TODO Delete this after 0.8 is cut.
 	_, err = r.deleteOldReceiveAdapter(ctx, source, sinkURI)
@@ -179,15 +193,6 @@ func (r *Reconciler) getReceiveAdapterImage() string {
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
-	ra, err := r.getReceiveAdapter(ctx, src)
-	if err != nil && !apierrors.IsNotFound(err) {
-		logging.FromContext(ctx).Error("Unable to get an existing receive adapter", zap.Error(err))
-		return nil, err
-	}
-	if ra != nil {
-		logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
-		return ra, nil
-	}
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:   r.getReceiveAdapterImage(),
 		Source:  src,
@@ -195,24 +200,25 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		SinkURI: sinkURI,
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
-	if ra != nil {
-		if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
-			ra.Spec.Template.Spec = expected.Spec.Template.Spec
-			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
-				return ra, err
-			}
-			logging.FromContext(ctx).Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
-		} else {
-			logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
-		}
-		return ra, nil
-	}
 
-	if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected); err != nil {
-		return nil, err
+	ra, err := r.getReceiveAdapter(ctx, src)
+	if apierrors.IsNotFound(err) {
+		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentCreated, "Deployment created, error: %v", err)
+		return ra, err
+	} else if err != nil {
+		return nil, fmt.Errorf("error getting receive adapter: %v", err)
+	} else if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
+		ra.Spec.Template.Spec = expected.Spec.Template.Spec
+		if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
+			return ra, err
+		}
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentUpdated, "Deployment updated")
+		return ra, nil
+	} else {
+		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
-	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
-	return ra, err
+	return ra, nil
 }
 
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {

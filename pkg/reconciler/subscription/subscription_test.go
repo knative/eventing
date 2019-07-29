@@ -756,16 +756,10 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:             listers.GetSubscriptionLister(),
-			resourceTracker:                fakeResourceTracker{},
+			resourceTracker:                &MockResourceTracker{},
 			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	}, false))
-}
-
-type fakeResourceTracker struct{}
-
-func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
 }
 
 func TestFinalizers(t *testing.T) {

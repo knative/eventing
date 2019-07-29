@@ -20,18 +20,24 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"knative.dev/pkg/kmeta"
-
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"knative.dev/pkg/kmeta"
 )
+
+// NonCRDBrokerChannelName creates a name for the non-CRD based Channel for a Broker for the given
+// Channel type.
+func NonCRDBrokerChannelName(brokerName, channelType string) string {
+	return fmt.Sprintf("%s-kn-%s", brokerName, channelType)
+}
 
 // BrokerChannelName creates a name for the Channel for a Broker for a given
 // Channel type.
 func BrokerChannelName(brokerName, channelType string) string {
-	return fmt.Sprintf("%s-kn-%s", brokerName, channelType)
+	// TODO Come up with a better name than kn2.
+	return fmt.Sprintf("%s-kn2-%s", brokerName, channelType)
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec

@@ -198,6 +198,7 @@ func TestTriggerIsReady(t *testing.T) {
 		brokerStatus                *BrokerStatus
 		markKubernetesServiceExists bool
 		markVirtualServiceExists    bool
+		subscriptionOwned           bool
 		subscriptionStatus          *SubscriptionStatus
 		wantReady                   bool
 	}{{
@@ -205,6 +206,7 @@ func TestTriggerIsReady(t *testing.T) {
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
+		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		wantReady:                   true,
 	}, {
@@ -212,6 +214,7 @@ func TestTriggerIsReady(t *testing.T) {
 		brokerStatus:                TestHelper.NotReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
+		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		wantReady:                   false,
 	}, {
@@ -219,13 +222,23 @@ func TestTriggerIsReady(t *testing.T) {
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
+		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
+		wantReady:                   false,
+	}, {
+		name:                        "subscription not owned",
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
+		markKubernetesServiceExists: true,
+		markVirtualServiceExists:    true,
+		subscriptionOwned:           false,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		wantReady:                   false,
 	}, {
 		name:                        "all sad",
 		brokerStatus:                TestHelper.NotReadyBrokerStatus(),
 		markKubernetesServiceExists: false,
 		markVirtualServiceExists:    false,
+		subscriptionOwned:           false,
 		subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
 		wantReady:                   false,
 	}}
@@ -235,7 +248,9 @@ func TestTriggerIsReady(t *testing.T) {
 			if test.brokerStatus != nil {
 				ts.PropagateBrokerStatus(test.brokerStatus)
 			}
-			if test.subscriptionStatus != nil {
+			if !test.subscriptionOwned {
+				ts.MarkSubscriptionNotOwned(&Subscription{})
+			} else if test.subscriptionStatus != nil {
 				ts.PropagateSubscriptionStatus(test.subscriptionStatus)
 			}
 			got := ts.IsReady()

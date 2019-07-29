@@ -21,8 +21,22 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
+)
+
+var (
+	availableDeployment = &appsv1.Deployment{
+		Status: appsv1.DeploymentStatus{
+			Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
 )
 
 func TestApiServerSourceStatusIsReady(t *testing.T) {
@@ -47,7 +61,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkDeployed()
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		want: false,
@@ -75,7 +89,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
-			s.MarkDeployed()
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		want: true,
@@ -85,7 +99,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
-			s.MarkDeployed()
+			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
 			return s
 		}(),
@@ -130,7 +144,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkDeployed()
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -157,7 +171,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
-			s.MarkDeployed()
+			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -171,7 +185,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
-			s.MarkDeployed()
+			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
 			return s
 		}(),

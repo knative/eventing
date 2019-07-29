@@ -69,19 +69,6 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-type fakeResourceTracker struct{}
-
-func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeResourceTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeResourceTracker) OnChanged(obj interface{}) {
-}
-
 func TestReconcile(t *testing.T) {
 
 	table := TableTest{
@@ -262,7 +249,7 @@ func TestReconcile(t *testing.T) {
 		return &Reconciler{
 			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 			channelLister:   listers.GetMessagingChannelLister(),
-			resourceTracker: fakeResourceTracker{},
+			resourceTracker: &MockResourceTracker{},
 		}
 	},
 		false,

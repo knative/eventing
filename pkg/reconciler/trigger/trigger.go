@@ -39,16 +39,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/controller"
 )
 
 const (
-	finalizerName = controllerAgentName
-
 	// Name of the corev1.Events emitted from the reconciliation process.
 	triggerReconciled         = "TriggerReconciled"
 	triggerReadinessChanged   = "TriggerReadinessChanged"
@@ -56,6 +52,7 @@ const (
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
+	subscriptionGetFailed     = "SubscriptionGetFailed"
 	triggerChannelFailed      = "TriggerChannelFailed"
 	ingressChannelFailed      = "IngressChannelFailed"
 	triggerServiceFailed      = "TriggerServiceFailed"
@@ -167,7 +164,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 
 	brokerIngress := b.Status.IngressChannel
 	if brokerIngress == nil {
-		logging.FromContext(ctx).Error("Broker IngressrChannel not populated")
+		logging.FromContext(ctx).Error("Broker IngressChannel not populated")
 		r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
 		return errors.New("failed to find Broker's Ingress channel")
 	}
@@ -236,17 +233,8 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
-	services, err := r.serviceLister.Services(b.Namespace).List(labels.SelectorFromSet(brokerresources.FilterLabels(b.Name)))
-	if err != nil {
-		return nil, err
-	}
-	for _, svc := range services {
-		if metav1.IsControlledBy(svc, b) {
-			return svc, nil
-		}
-	}
-
-	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
+	svcName := brokerresources.MakeFilterService(b).Name
+	return r.serviceLister.Services(b.Namespace).Get(svcName)
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
@@ -258,61 +246,52 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.T
 	}
 	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
 
-	sub, err := r.getSubscription(ctx, t)
-
+	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
-		sub = expected
 		logging.FromContext(ctx).Info("Creating subscription")
-		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
+		sub, err = r.EventingClientSet.EventingV1alpha1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {
 			r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
-		return newSub, nil
+		return sub, nil
 	} else if err != nil {
 		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionGetFailed, "Getting the Trigger's Subscription failed: %v", err)
 		return nil, err
-	}
-
-	// Update Subscription if it has changed. Ignore the generation.
-	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
-	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
-		// it and re-create it instead.
-		logging.FromContext(ctx).Info("Deleting subscription", zap.String("namespace", sub.Namespace), zap.String("name", sub.Name))
-		err = r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
-			return nil, err
-		}
-		sub = expected
-		logging.FromContext(ctx).Info("Creating subscription")
-		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
-		if err != nil {
-			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
-			return nil, err
-		}
-		return newSub, nil
+	} else if !metav1.IsControlledBy(sub, t) {
+		t.Status.MarkSubscriptionNotOwned(sub)
+		return nil, fmt.Errorf("trigger %q does not own subscription %q", t.Name, sub.Name)
+	} else if sub, err = r.reconcileSubscription(ctx, t, expected, sub); err != nil {
+		// TODO Add logging
+		return nil, err
 	}
 	return sub, nil
 }
 
-// getSubscription returns the subscription of trigger 't' if exists,
-// otherwise it returns an error.
-func (r *Reconciler) getSubscription(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Subscription, error) {
-	subs, err := r.subscriptionLister.Subscriptions(t.Namespace).List(labels.SelectorFromSet(resources.SubscriptionLabels(t)))
-	if err != nil {
-		return nil, err
-	}
-	for _, s := range subs {
-		if metav1.IsControlledBy(s, t) {
-			return s, nil
-		}
+func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1alpha1.Trigger, expected, actual *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	// Update Subscription if it has changed. Ignore the generation.
+	expected.Spec.DeprecatedGeneration = actual.Spec.DeprecatedGeneration
+	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
+		return actual, nil
 	}
 
-	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
+	// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
+	// it and re-create it instead.
+	logging.FromContext(ctx).Info("Deleting subscription", zap.String("namespace", actual.Namespace), zap.String("name", actual.Name))
+	err := r.EventingClientSet.EventingV1alpha1().Subscriptions(t.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
+		return nil, err
+	}
+	logging.FromContext(ctx).Info("Creating subscription")
+	newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(t.Namespace).Create(expected)
+	if err != nil {
+		logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+		return nil, err
+	}
+	return newSub, nil
 }

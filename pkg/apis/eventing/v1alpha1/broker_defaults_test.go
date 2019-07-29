@@ -18,11 +18,12 @@ package v1alpha1
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (

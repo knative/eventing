@@ -256,6 +256,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady      *bool
 		markFilterReady              *bool
 		address                      *apis.URL
+		markIngressSubscriptionOwned bool
 		markIngressSubscriptionReady *bool
 		markDeprecated               bool
 		wantReady                    bool
@@ -266,6 +267,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               false,
 		wantReady:                    true,
@@ -276,6 +278,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               true,
 		wantReady:                    true,
@@ -286,6 +289,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               false,
 		wantReady:                    false,
@@ -296,6 +300,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               false,
 		wantReady:                    false,
@@ -306,6 +311,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &falseVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               false,
 		wantReady:                    false,
@@ -316,6 +322,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               false,
 		wantReady:                    false,
@@ -326,6 +333,7 @@ func TestBrokerIsReady(t *testing.T) {
 		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      nil,
+		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		markDeprecated:               false,
 		wantReady:                    false,
@@ -340,13 +348,24 @@ func TestBrokerIsReady(t *testing.T) {
 		markDeprecated:               false,
 		wantReady:                    false,
 	}, {
+		name:                         "ingress subscription not owned",
+		markIngressReady:             &trueVal,
+		markTriggerChannelReady:      &trueVal,
+		markIngressChannelReady:      &trueVal,
+		markFilterReady:              &trueVal,
+		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
+		markIngressSubscriptionOwned: false,
+		markDeprecated:               false,
+		wantReady:                    false,
+	}, {
 		name:                         "all sad",
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &falseVal,
-		markIngressChannelReady:      &trueVal,
+		markIngressChannelReady:      &falseVal,
 		markFilterReady:              &falseVal,
 		address:                      nil,
-		markIngressSubscriptionReady: &trueVal,
+		markIngressSubscriptionOwned: true,
+		markIngressSubscriptionReady: &falseVal,
 		markDeprecated:               false,
 		wantReady:                    false,
 	}}
@@ -402,7 +421,9 @@ func TestBrokerIsReady(t *testing.T) {
 					}
 					bs.PropagateIngressChannelReadiness(c)
 				}
-				if test.markIngressSubscriptionReady != nil {
+				if !test.markIngressSubscriptionOwned {
+					bs.MarkIngressSubscriptionNotOwned(&Subscription{})
+				} else if test.markIngressSubscriptionReady != nil {
 					var sub *SubscriptionStatus
 					if *test.markIngressSubscriptionReady {
 						sub = TestHelper.ReadySubscriptionStatus()
