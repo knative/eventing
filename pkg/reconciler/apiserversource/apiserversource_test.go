@@ -583,9 +583,9 @@ func makeEventTypeWithName(eventType, name string) *v1alpha1.EventType {
 func makeEventType(eventType string) *v1alpha1.EventType {
 	return &v1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(eventType)),
-			Labels:       resources.Labels(sourceName),
-			Namespace:    testNS,
+			Name:      fmt.Sprintf("%s", eventType),
+			Labels:    resources.Labels(sourceName),
+			Namespace: testNS,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(makeApiServerSource(), schema.GroupVersionKind{
 					Group:   sourcesv1alpha1.SchemeGroupVersion.Group,

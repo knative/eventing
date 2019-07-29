@@ -34,6 +34,7 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
+	status "github.com/knative/eventing/pkg/apis/duck"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -164,9 +165,11 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	}
 
 	// TODO Delete this after 0.8 is cut.
-	_, err = r.deleteOldReceiveAdapter(ctx, source, sinkURI)
-	if err != nil {
-		return fmt.Errorf("deleting old receive adapter: %v", err)
+	if status.DeploymentIsAvailable(&ra.Status, true) {
+		err = r.deleteOldReceiveAdapter(ctx, source)
+		if err != nil {
+			return fmt.Errorf("deleting old receive adapter: %v", err)
+		}
 	}
 
 	err = r.reconcileEventTypes(ctx, source)
@@ -219,6 +222,24 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
+}
+
+func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource) error {
+	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
+	})
+	if err != nil {
+		return fmt.Errorf("listing old receive adapter: %v", err)
+	}
+	for _, ora := range dl.Items {
+		if metav1.IsControlledBy(&ora, src) {
+			err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
+			}
+		}
+	}
+	return nil
 }
 
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
