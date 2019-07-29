@@ -95,7 +95,8 @@ func ObjectRef(obj metav1.Object, gvk schema.GroupVersionKind) corev1.ObjectRefe
 	}
 }
 
-// Converts 'name' to a valid DNS1123 subdomain, required for object names in K8s.
+// ToDNS1123Subdomain converts 'name' to a valid DNS1123 subdomain, required for object names in
+// K8s.
 func ToDNS1123Subdomain(name string) string {
 	// If it is not a valid DNS1123 subdomain, make it a valid one.
 	if msgs := validation.IsDNS1123Subdomain(name); len(msgs) != 0 {
@@ -109,4 +110,15 @@ func ToDNS1123Subdomain(name string) string {
 		name = strings.Trim(name, "-.")
 	}
 	return name
+}
+
+// GenerateFixedName generates a fixed name for the given owning resource and human readable prefix.
+// The name's length will be short enough to be valid for K8s Services.
+func GenerateFixedName(owner metav1.Object, prefix string) string {
+	uid := string(owner.GetUID())
+	pl := validation.DNS1123LabelMaxLength - len(uid)
+	if pl > len(prefix) {
+		pl = len(prefix)
+	}
+	return prefix[:pl] + uid
 }

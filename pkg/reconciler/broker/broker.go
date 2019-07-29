@@ -59,6 +59,7 @@ const (
 	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
+	ingressSubscriptionGetFailed    = "IngressSubscriptionGetFailed"
 	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
 )
 
@@ -493,7 +494,7 @@ func newChannel(channelType string, b *v1alpha1.Broker, l map[string]string) *v1
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
-			Name:      resources.BrokerChannelName(b.Name, channelType),
+			Name:      resources.NonCRDBrokerChannelName(b.Name, channelType),
 			Labels:    l,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
@@ -657,7 +658,7 @@ func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Br
 }
 
 func (r *Reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) (*v1alpha1.Subscription, error) {
-	expected := makeSubscription(b, c, svc)
+	expected := makeNonCRDSubscription(b, c, svc)
 
 	sub, err := r.getIngressSubscription(ctx, b)
 	// If the resource doesn't exist, we'll create it
@@ -695,37 +696,50 @@ func (r *Reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alph
 func (r *Reconciler) reconcileIngressSubscriptionCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) (*v1alpha1.Subscription, error) {
 	expected := resources.MakeSubscriptionCRD(b, c, svc)
 
-	sub, err := r.getIngressSubscription(ctx, b)
+	sub, err := r.subscriptionLister.Subscriptions(b.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it
 	if apierrs.IsNotFound(err) {
+		logging.FromContext(ctx).Info("Creating subscription")
 		sub, err = r.EventingClientSet.EventingV1alpha1().Subscriptions(expected.Namespace).Create(expected)
 		if err != nil {
+			r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Broker's subscription create failed: %v", err)
 			return nil, err
 		}
 		return sub, nil
 	} else if err != nil {
+		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
+		r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionGetFailed, "Getting the Broker's Subscription failed: %v", err)
+		return nil, err
+	} else if !metav1.IsControlledBy(sub, b) {
+		b.Status.MarkIngressSubscriptionNotOwned(sub)
+		return nil, fmt.Errorf("broker %q does not own subscription %q", b.Name, sub.Name)
+	} else if sub, err = r.reconcileExistingIngressSubscription(ctx, b, expected, sub); err != nil {
 		return nil, err
 	}
-
-	// Update Subscription if it has changed. Ignore the generation.
-	expected.Spec.DeprecatedGeneration = sub.Spec.DeprecatedGeneration
-	if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
-		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
-		// it instead, and re-create it.
-		err = r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
-			r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "Delete Broker Ingress' subscription failed: %v", err)
-			return nil, err
-		}
-		sub, err = r.EventingClientSet.EventingV1alpha1().Subscriptions(expected.Namespace).Create(expected)
-		if err != nil {
-			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
-			r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Create Broker Ingress' subscription failed: %v", err)
-			return nil, err
-		}
-	}
 	return sub, nil
+}
+
+func (r *Reconciler) reconcileExistingIngressSubscription(ctx context.Context, b *v1alpha1.Broker, expected, actual *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	// Update Subscription if it has changed. Ignore the generation.
+	expected.Spec.DeprecatedGeneration = actual.Spec.DeprecatedGeneration
+	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
+		return actual, nil
+	}
+	// Given that spec.channel is immutable, we cannot just update the subscription. We delete
+	// it instead, and re-create it.
+	err := r.EventingClientSet.EventingV1alpha1().Subscriptions(b.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
+		r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "Delete Broker Ingress' subscription failed: %v", err)
+		return nil, err
+	}
+	newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(b.Namespace).Create(expected)
+	if err != nil {
+		logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
+		r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Create Broker Ingress' subscription failed: %v", err)
+		return nil, err
+	}
+	return newSub, nil
 }
 
 // getSubscription returns the first subscription controlled by Broker b
@@ -744,11 +758,13 @@ func (r *Reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Bro
 	return nil, apierrs.NewNotFound(schema.GroupResource{}, "")
 }
 
-// makeSubscription returns a placeholder subscription for trigger 't', channel 'c', and service 'svc'.
-func makeSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
+// makeNonCRDSubscription returns a placeholder subscription for trigger 't', channel 'c', and
+// service 'svc'. It only supports classic provisioner based Channels.
+func makeNonCRDSubscription(b *v1alpha1.Broker, c *v1alpha1.Channel, svc *corev1.Service) *v1alpha1.Subscription {
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    b.Namespace,
+			Namespace: b.Namespace,
+			// Legacy, non-CRD based path. GenerateName is still allowed.
 			GenerateName: fmt.Sprintf("internal-ingress-%s-", b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),

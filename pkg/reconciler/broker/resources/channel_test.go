@@ -26,10 +26,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+func TestNonCRDBrokerChannelName(t *testing.T) {
+	brokerName := "default"
+	channelType := "ingress"
+
+	nonCRD := NonCRDBrokerChannelName(brokerName, channelType)
+	crd := BrokerChannelName(brokerName, channelType)
+	if nonCRD == crd {
+		t.Fatalf("NonCRD and CRD Channel names should be different: %q == %q", nonCRD, crd)
+	}
+}
+
 func TestBrokerChannelName(t *testing.T) {
 	// Any changes to this name are breaking changes, this test is here so that changes can't be
 	// made by accident.
-	expected := "default-kn-ingress"
+	expected := "default-kn2-ingress"
 	if actual := BrokerChannelName("default", "ingress"); actual != expected {
 		t.Errorf("expected %q, actual %q", expected, actual)
 	}
@@ -104,7 +115,7 @@ func TestNewChannel(t *testing.T) {
 			if md["namespace"] != b.Namespace {
 				t.Errorf("expected namespace %q, actually %q", b.Namespace, md["namespace"])
 			}
-			if name := md["name"]; name != "my-broker-kn-ingress" {
+			if name := md["name"]; name != "my-broker-kn2-ingress" {
 				t.Errorf("Expected name %q, actually %q", "my-broker-kn-ingress", name)
 			}
 			if l := md["labels"].(map[string]interface{}); len(l) != len(labels) {

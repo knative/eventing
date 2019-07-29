@@ -135,6 +135,10 @@ func (bs *BrokerStatus) MarkIngressSubscriptionFailed(reason, format string, arg
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, reason, format, args...)
 }
 
+func (bs *BrokerStatus) MarkIngressSubscriptionNotOwned(sub *Subscription) {
+	bs.MarkIngressSubscriptionFailed("SubscriptionNotOwned", "Subscription %q is not owned by this Broker.", sub.Name)
+}
+
 func (bs *BrokerStatus) PropagateIngressSubscriptionReadiness(ss *SubscriptionStatus) {
 	if ss.IsReady() {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)

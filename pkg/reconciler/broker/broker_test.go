@@ -60,6 +60,8 @@ const (
 
 	triggerChannelName = "test-broker-kn-trigger"
 	ingressChannelName = "test-broker-kn-ingress"
+
+	ingressCRDChannelName = "test-broker-kn2-ingress"
 )
 
 var (
@@ -1438,11 +1440,10 @@ func TestReconcileCRD(t *testing.T) {
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
 			},
 			WantCreates: []runtime.Object{
-				NewSubscription("", testNS,
-					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(imcGVK, ingressChannelName),
+					WithSubscriptionChannel(imcGVK, ingressCRDChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -1460,6 +1461,7 @@ func TestReconcileCRD(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Broker's subscription create failed: %v", "inducing failure for create subscriptions"),
 				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create subscriptions"),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
@@ -1494,15 +1496,14 @@ func TestReconcileCRD(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
-				NewSubscription("subs", testNS,
-					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(channelGVK, ingressChannelName),
+					WithSubscriptionChannel(channelGVK, ingressCRDChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, "")),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "subs",
+				Name: ingressSubscriptionGenerateName,
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -1554,22 +1555,20 @@ func TestReconcileCRD(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
-				NewSubscription("subs", testNS,
-					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(channelGVK, ingressChannelName),
+					WithSubscriptionChannel(channelGVK, ingressCRDChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, "")),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "subs",
+				Name: ingressSubscriptionGenerateName,
 			}},
 			WantCreates: []runtime.Object{
-				NewSubscription("", testNS,
-					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(imcGVK, ingressChannelName),
+					WithSubscriptionChannel(imcGVK, ingressCRDChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -1622,11 +1621,10 @@ func TestReconcileCRD(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(ingressContainerName, 8080))),
-				NewSubscription("", testNS,
-					WithSubscriptionGenerateName(ingressSubscriptionGenerateName),
+				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(imcGVK, ingressChannelName),
+					WithSubscriptionChannel(imcGVK, ingressCRDChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName),
 					WithSubscriptionReady),
 			},
@@ -1775,7 +1773,7 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 	var hostname string
 	var url string
 	if t == triggerChannel {
-		name = fmt.Sprintf("%s-kn-trigger", brokerName)
+		name = fmt.Sprintf("%s-kn2-trigger", brokerName)
 		labels = map[string]interface{}{
 			"eventing.knative.dev/broker":           brokerName,
 			"eventing.knative.dev/brokerEverything": "true",
@@ -1783,7 +1781,7 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 		hostname = triggerChannelHostname
 		url = fmt.Sprintf("http://%s", triggerChannelHostname)
 	} else {
-		name = fmt.Sprintf("%s-kn-ingress", brokerName)
+		name = fmt.Sprintf("%s-kn2-ingress", brokerName)
 		labels = map[string]interface{}{
 			"eventing.knative.dev/broker":        brokerName,
 			"eventing.knative.dev/brokerIngress": "true",
@@ -1869,7 +1867,7 @@ func createTriggerChannelCRDRef() *corev1.ObjectReference {
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
+		Name:       fmt.Sprintf("%s-kn2-trigger", brokerName),
 	}
 }
 
@@ -1878,6 +1876,6 @@ func createIngressChannelCRDRef() *corev1.ObjectReference {
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
+		Name:       fmt.Sprintf("%s-kn2-ingress", brokerName),
 	}
 }
