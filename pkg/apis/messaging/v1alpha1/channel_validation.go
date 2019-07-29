@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/pkg/kmp"
 

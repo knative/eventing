@@ -18,8 +18,9 @@ package defaultchannel
 
 import (
 	"encoding/json"
-	"github.com/ghodss/yaml"
 	"sync/atomic"
+
+	"github.com/ghodss/yaml"
 
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
