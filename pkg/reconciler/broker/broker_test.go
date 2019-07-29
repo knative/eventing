@@ -108,19 +108,6 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-type fakeAddressableTracker struct{}
-
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
-}
-
 func TestReconcile(t *testing.T) {
 	table := TableTest{
 		{
@@ -1671,7 +1658,7 @@ func TestReconcileCRD(t *testing.T) {
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
-			resourceTracker:           fakeAddressableTracker{},
+			resourceTracker:           &MockResourceTracker{},
 		}
 	},
 		false,

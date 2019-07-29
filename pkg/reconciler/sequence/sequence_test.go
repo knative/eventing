@@ -56,12 +56,6 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-type fakeResourceTracker struct{}
-
-func (fakeResourceTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
 func createReplyChannel(channelName string) *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1alpha1",
@@ -480,7 +474,7 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			sequenceLister:     listers.GetSequenceLister(),
-			resourceTracker:    fakeResourceTracker{},
+			resourceTracker:    &MockResourceTracker{},
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false))

@@ -42,6 +42,7 @@ import (
 	"github.com/knative/eventing/pkg/logging"
 	"github.com/knative/eventing/pkg/reconciler"
 	"github.com/knative/eventing/pkg/reconciler/apiserversource/resources"
+	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -56,6 +57,10 @@ const (
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
 	// image. It must be defined.
 	raImageEnvVar = "APISERVER_RA_IMAGE"
+)
+
+var (
+	deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 )
 
 var apiServerEventTypes = []string{
@@ -78,6 +83,8 @@ type Reconciler struct {
 	apiserversourceLister listers.ApiServerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
+
+	resourceTracker duck.ResourceTracker
 
 	source         string
 	sinkReconciler *duck.SinkReconciler
@@ -130,6 +137,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
 	source.Status.InitializeConditions()
 
+	track := r.resourceTracker.TrackInNamespace(source)
+
 	sinkObjRef := source.Spec.Sink
 	if sinkObjRef.Namespace == "" {
 		sinkObjRef.Namespace = source.Namespace
@@ -143,13 +152,16 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	}
 	source.Status.MarkSink(sinkURI)
 
-	_, err = r.createReceiveAdapter(ctx, source, sinkURI)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
 		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
 	// Update source status
 	source.Status.MarkDeployed()
+	if err = track(utils.ObjectRef(ra, deploymentGVK)); err != nil {
+		return fmt.Errorf("unable to track receive adapter: %v", err)
+	}
 
 	err = r.reconcileEventTypes(ctx, source)
 	if err != nil {
