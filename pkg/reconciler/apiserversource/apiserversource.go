@@ -158,7 +158,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		return err
 	}
 	// Update source status
-	source.Status.MarkDeployed()
+	source.Status.PropagateDeploymentAvailability(ra)
 	if err = track(utils.ObjectRef(ra, deploymentGVK)); err != nil {
 		return fmt.Errorf("unable to track receive adapter: %v", err)
 	}

@@ -42,7 +42,7 @@ func NewApiServerSource(name, namespace string, o ...ApiServerSourceOption) *v1a
 	return c
 }
 
-// WithInitApiServerConditions initializes the ApiServerSource's conditions.
+// WithInitApiServerSourceConditions initializes the ApiServerSource's conditions.
 func WithInitApiServerSourceConditions(s *v1alpha1.ApiServerSource) {
 	s.Status.InitializeConditions()
 }
@@ -57,8 +57,13 @@ func WithApiServerSourceSink(uri string) ApiServerSourceOption {
 	}
 }
 
+func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
+	// The Deployment uses GenerateName, so its name is empty.
+	s.Status.PropagateDeploymentAvailability(NewDeployment("", "any"))
+}
+
 func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
-	s.Status.MarkDeployed()
+	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
 
 func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {

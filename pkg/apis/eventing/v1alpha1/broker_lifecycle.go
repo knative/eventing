@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"time"
 
+	"github.com/knative/eventing/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -70,7 +71,7 @@ func (bs *BrokerStatus) MarkIngressFailed(reason, format string, args ...interfa
 }
 
 func (bs *BrokerStatus) PropagateIngressDeploymentAvailability(d *appsv1.Deployment) {
-	if deploymentIsAvailable(&d.Status) {
+	if duck.DeploymentIsAvailable(&d.Status, true) {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
 	} else {
 		// I don't know how to propagate the status well, so just give the name of the Deployment
@@ -156,24 +157,13 @@ func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interfac
 }
 
 func (bs *BrokerStatus) PropagateFilterDeploymentAvailability(d *appsv1.Deployment) {
-	if deploymentIsAvailable(&d.Status) {
+	if duck.DeploymentIsAvailable(&d.Status, true) {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 	} else {
 		// I don't know how to propagate the status well, so just give the name of the Deployment
 		// for now.
 		bs.MarkFilterFailed("DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
-}
-
-func deploymentIsAvailable(d *appsv1.DeploymentStatus) bool {
-	// Check if the Deployment is available.
-	for _, cond := range d.Conditions {
-		if cond.Type == appsv1.DeploymentAvailable {
-			return cond.Status == "True"
-		}
-	}
-	// Unable to find the Available condition, fail open.
-	return true
 }
 
 // SetAddress makes this Broker addressable by setting the hostname. It also

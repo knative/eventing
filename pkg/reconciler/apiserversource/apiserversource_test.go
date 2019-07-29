@@ -120,10 +120,10 @@ func TestReconcile(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
+				makeAvailableReceiveAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -145,12 +145,9 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceEventTypes,
 				),
 			}},
-			WantCreates: []runtime.Object{
-				makeReceiveAdapter(),
-			},
 		},
 		{
-			Name: "valid - deployment update due to env",
+			Name: "deployment update due to env",
 			Objects: []runtime.Object{
 				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
@@ -173,7 +170,6 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,
@@ -188,9 +184,9 @@ func TestReconcile(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitApiServerSourceConditions,
-					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceDeploymentUnavailable,
 				),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -198,7 +194,7 @@ func TestReconcile(t *testing.T) {
 			}},
 		},
 		{
-			Name: "valid - deployment update due to service account",
+			Name: "deployment update due to service account",
 			Objects: []runtime.Object{
 				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
@@ -222,7 +218,6 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,
@@ -238,7 +233,7 @@ func TestReconcile(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitApiServerSourceConditions,
-					WithApiServerSourceDeployed,
+					WithApiServerSourceDeploymentUnavailable,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
 				),
@@ -248,7 +243,7 @@ func TestReconcile(t *testing.T) {
 			}},
 		},
 		{
-			Name: "valid - deployment update due to container count",
+			Name: "deployment update due to container count",
 			Objects: []runtime.Object{
 				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
@@ -271,7 +266,6 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,
@@ -286,7 +280,7 @@ func TestReconcile(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitApiServerSourceConditions,
-					WithApiServerSourceDeployed,
+					WithApiServerSourceDeploymentUnavailable,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
 				),
@@ -314,10 +308,10 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddress(sinkDNS),
 				),
 				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceAddEventType, "name-1"),
+				makeAvailableReceiveAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -342,9 +336,6 @@ func TestReconcile(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: "name-1"},
 			},
-			WantCreates: []runtime.Object{
-				makeReceiveAdapter(),
-			},
 		},
 		{
 			Name: "valid with broker sink",
@@ -364,10 +355,10 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerAddress(sinkDNS),
 				),
+				makeAvailableReceiveAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -396,7 +387,6 @@ func TestReconcile(t *testing.T) {
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
-				makeReceiveAdapter(),
 			},
 		},
 		{
@@ -420,10 +410,10 @@ func TestReconcile(t *testing.T) {
 				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceAddEventType, "name-1"),
 				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceDeleteEventType, "name-2"),
 				makeEventTypeWithName(sourcesv1alpha1.ApiServerSourceUpdateEventType, "name-3"),
+				makeAvailableReceiveAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -449,7 +439,6 @@ func TestReconcile(t *testing.T) {
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
-				makeReceiveAdapter(),
 			},
 		},
 		{
@@ -476,10 +465,10 @@ func TestReconcile(t *testing.T) {
 				// WantDeletes requires the order to be correct, so will be flaky if we add more
 				// than one EventType here.
 				makeEventTypeWithName("type1", "name-1"),
+				makeAvailableReceiveAdapter(),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentCreated", "Deployment created, error: <nil>"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
@@ -511,7 +500,6 @@ func TestReconcile(t *testing.T) {
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteRefEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateRefEventType),
-				makeReceiveAdapter(),
 			},
 		},
 	}
@@ -557,6 +545,12 @@ func makeReceiveAdapter() *appsv1.Deployment {
 		SinkURI: sinkURI,
 	}
 	return resources.MakeReceiveAdapter(&args)
+}
+
+func makeAvailableReceiveAdapter() *appsv1.Deployment {
+	ra := makeReceiveAdapter()
+	WithDeploymentAvailable()(ra)
+	return ra
 }
 
 func makeReceiveAdapterWithDifferentEnv() *appsv1.Deployment {
