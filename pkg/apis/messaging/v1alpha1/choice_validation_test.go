@@ -48,7 +48,7 @@ func TestChoiceValidation(t *testing.T) {
 
 func TestChoiceSpecValidation(t *testing.T) {
 	subscriberURI := "http://example.com"
-	validChannelTemplate := eventingduck.ChannelTemplateSpec{
+	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
 		metav1.TypeMeta{
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
@@ -87,7 +87,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &ChoiceSpec{
-			ChannelTemplate: eventingduck.ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, &runtime.RawExtension{}},
+			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, &runtime.RawExtension{}},
 			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
@@ -97,7 +97,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &ChoiceSpec{
-			ChannelTemplate: eventingduck.ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, &runtime.RawExtension{}},
+			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, &runtime.RawExtension{}},
 			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {

@@ -62,7 +62,7 @@ type ChoiceSpec struct {
 	Cases []ChoiceCase `json:"cases"`
 
 	// ChannelTemplate specifies which Channel CRD to use
-	ChannelTemplate eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate"`
+	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Reply is a Reference to where the result of a case Subscriber gets sent to
 	// when the case does not have a Reply

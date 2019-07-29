@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +34,6 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
-
-	"time"
 
 	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -80,7 +79,7 @@ func (fakeResourceTracker) OnChanged(obj interface{}) {
 
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + choiceName
-	imc := eventingduck.ChannelTemplateSpec{
+	imc := &eventingduck.ChannelTemplateSpec{
 		metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",

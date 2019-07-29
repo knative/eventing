@@ -54,7 +54,7 @@ func WithChoiceDeleted(p *v1alpha1.Choice) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithChoiceChannelTemplateSpec(cts eventingduck.ChannelTemplateSpec) ChoiceOption {
+func WithChoiceChannelTemplateSpec(cts *eventingduck.ChannelTemplateSpec) ChoiceOption {
 	return func(p *v1alpha1.Choice) {
 		p.Spec.ChannelTemplate = cts
 	}

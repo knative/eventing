@@ -273,7 +273,11 @@ func (in *ChoiceSpec) DeepCopyInto(out *ChoiceSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.ChannelTemplate.DeepCopyInto(&out.ChannelTemplate)
+	if in.ChannelTemplate != nil {
+		in, out := &in.ChannelTemplate, &out.ChannelTemplate
+		*out = new(duckv1alpha1.ChannelTemplateSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Reply != nil {
 		in, out := &in.Reply, &out.Reply
 		*out = new(v1.ObjectReference)
