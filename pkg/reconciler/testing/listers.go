@@ -143,6 +143,10 @@ func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
 	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
 }
 
+func (l *Listers) GetChoiceLister() messaginglisters.ChoiceLister {
+	return messaginglisters.NewChoiceLister(l.indexerFor(&messagingv1alpha1.Choice{}))
+}
+
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {
 	return sourcelisters.NewCronJobSourceLister(l.indexerFor(&sourcesv1alpha1.CronJobSource{}))
 }
