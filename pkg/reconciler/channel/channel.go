@@ -19,6 +19,9 @@ package channel
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler/channel/resources"
@@ -28,8 +31,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"knative.dev/pkg/apis/duck"
 	duckapis "knative.dev/pkg/apis/duck"
-	"reflect"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
