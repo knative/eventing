@@ -42,10 +42,10 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
-	runTests(t, provisioners, common.FeatureBasic, testEventTransformationForTrigger)
+	runTests(t, channels, common.FeatureBasic, testEventTransformationForTrigger)
 }
 
-func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD bool) {
+func testEventTransformationForTrigger(t *testing.T, channel string) {
 	const (
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"
@@ -66,13 +66,13 @@ func testEventTransformationForTrigger(t *testing.T, provisioner string, isCRD b
 
 	client := setup(t, true)
 	defer tearDown(client)
-	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+	channelTypeMeta := getChannelTypeMeta(channel)
 
 	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
-	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)
+	client.CreateBrokerOrFail(brokerName, channelTypeMeta)
 	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to

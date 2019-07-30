@@ -77,7 +77,7 @@ var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
 
 var ignoreLastTransitionTime = cmpopts.IgnoreFields(apis.Condition{}, "LastTransitionTime")
 
-func TestChannelGetCondition(t *testing.T) {
+func TestInMemoryChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
 		cs        *InMemoryChannelStatus
@@ -117,7 +117,7 @@ func TestChannelGetCondition(t *testing.T) {
 	}
 }
 
-func TestChannelInitializeConditions(t *testing.T) {
+func TestInMemoryChannelInitializeConditions(t *testing.T) {
 	tests := []struct {
 		name string
 		cs   *InMemoryChannelStatus
@@ -226,7 +226,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}
 }
 
-func TestChannelIsReady(t *testing.T) {
+func TestInMemoryChannelIsReady(t *testing.T) {
 	tests := []struct {
 		name                    string
 		markServiceReady        bool

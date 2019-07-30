@@ -82,3 +82,15 @@ func WithDeploymentContainer(name, image string, envVars []corev1.EnvVar, contai
 		d.Spec.Template.Spec.Containers[0].Ports = containerPorts
 	}
 }
+
+// WithDeploymentAvailable marks the Deployment as available.
+func WithDeploymentAvailable() DeploymentOption {
+	return func(d *appsv1.Deployment) {
+		d.Status.Conditions = []appsv1.DeploymentCondition{
+			{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionTrue,
+			},
+		}
+	}
+}

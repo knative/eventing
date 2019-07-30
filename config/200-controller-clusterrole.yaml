@@ -84,6 +84,10 @@ rules:
     resources:
       - "sequences"
       - "sequences/status"
+      - "channels"
+      - "channels/status"
+      - "choices"
+      - "choices/status"
     verbs: *everything
 
   # Messaging resources and finalizers we care about.
@@ -91,6 +95,7 @@ rules:
       - "messaging.knative.dev"
     resources:
       - "sequences/finalizers"
+      - "choices/finalizers"
     verbs:
       - "update"
 

@@ -48,10 +48,10 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlow(t *testing.T) {
-	runTests(t, provisioners, common.FeatureBasic, testBrokerChannelFlow)
+	runTests(t, channels, common.FeatureBasic, testBrokerChannelFlow)
 }
 
-func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
+func testBrokerChannelFlow(t *testing.T, channel string) {
 	const (
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
@@ -77,13 +77,13 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 
 	client := setup(t, true)
 	defer tearDown(client)
-	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
+	channelTypeMeta := getChannelTypeMeta(channel)
 
 	// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 	client.CreateRBACResourcesForBrokers()
 
 	// create a new broker
-	client.CreateBrokerOrFail(brokerName, channelTypeMeta, provisioner)
+	client.CreateBrokerOrFail(brokerName, channelTypeMeta)
 	client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 	// create the event we want to transform to
@@ -120,7 +120,7 @@ func testBrokerChannelFlow(t *testing.T, provisioner string, isCRD bool) {
 	)
 
 	// create channel for trigger3
-	client.CreateChannelOrFail(channelName, channelTypeMeta, provisioner)
+	client.CreateChannelOrFail(channelName, channelTypeMeta)
 	client.WaitForResourceReady(channelName, channelTypeMeta)
 
 	// create trigger3 to receive the transformed event, and send it to the channel

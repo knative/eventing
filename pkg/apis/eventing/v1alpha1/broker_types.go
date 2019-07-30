@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,43 +63,19 @@ var (
 	_ kmeta.OwnerRefable = (*Broker)(nil)
 )
 
-// This should be duck so that Broker can also use this
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type ChannelTemplateSpec struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// Spec defines the Spec to use for each channel created. Passed
-	// in verbatim to the Channel CRD as Spec section.
-	// +optional
-	Spec runtime.RawExtension `json:"spec"`
-}
-
-// Internal version of ChannelTemplateSpec that includes ObjectMeta so that
-// we can easily create new Channels off of it.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type ChannelTemplateSpecInternal struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// Spec defines the Spec to use for each channel created. Passed
-	// in verbatim to the Channel CRD as Spec section.
-	// +optional
-	Spec runtime.RawExtension `json:"spec"`
-}
-
 type BrokerSpec struct {
 	// DeprecatedChannelTemplate, if specified will be used to create all the Channels used internally by the
 	// Broker. Only Provisioner and Arguments may be specified. If left unspecified, the default
-	// Channel for the namespace will be used.
+	// Channel CRD for the namespace will be used using the channelTemplateSpec attribute.
 	//
 	// +optional
 	DeprecatedChannelTemplate *ChannelSpec `json:"channelTemplate,omitempty"`
 
 	// ChannelTemplate specifies which Channel CRD to use to create all the Channels used internally by the
-	// Broker.
-	ChannelTemplate ChannelTemplateSpec `json:"channelTemplateSpec"`
+	// Broker. If left unspecified, it is set to the default Channel CRD for the namespace (or cluster, in case there
+	// are no defaults for the namespace).
+	// +optional
+	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
 }
 
 // BrokerStatus represents the current state of a Broker.

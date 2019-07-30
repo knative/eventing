@@ -80,3 +80,7 @@ func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *SubscriptionStatus) {
 func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, reason, messageFormat, messageA...)
 }
+
+func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *Subscription) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
+}

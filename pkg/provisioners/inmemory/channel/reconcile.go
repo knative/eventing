@@ -40,7 +40,7 @@ const (
 	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
 	k8sServiceCreateFailed    = "K8sServiceCreateFailed"
 
-	deprecatedMessage = "The `in-memory` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `InMemoryChannel` CRD."
+	deprecatedMessage = "The `in-memory` ClusterChannelProvisioner is deprecated and will be removed in 0.9. Recommended replacement is using `InMemoryChannel` CRD."
 )
 
 type reconciler struct {
