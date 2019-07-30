@@ -68,8 +68,8 @@ You can run it simply with:
 test/performance-tests.sh
 ```
 
-The steps and flags are exactly the same as e2e tests described above.
-After the tests are done, test results named as `artifacts` will be saved under
+The steps and flags are exactly the same as e2e tests described above. After the
+tests are done, test results named as `artifacts` will be saved under
 `./performance`. You can also check the historic test result through
 [testgrid](https://testgrid.knative.dev/eventing#performance).
 
@@ -100,8 +100,8 @@ go test -v -tags=e2e -count=1 ./test/e2e
 By default, it will run all applicable tests against the cluster's default
 `channel`.
 
-If you want to run tests against other `channels`, you can
-specify them through `-channels`.
+If you want to run tests against other `channels`, you can specify them through
+`-channels`.
 
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e -channels=InMemoryChannel,KafkaChannel
