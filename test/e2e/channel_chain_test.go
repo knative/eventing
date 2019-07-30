@@ -34,10 +34,10 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	runTests(t, provisioners, common.FeatureBasic, testChannelChain)
+	runTests(t, channels, common.FeatureBasic, testChannelChain)
 }
 
-func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
+func testChannelChain(t *testing.T, channel string) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channelchain-logger-pod"
@@ -52,8 +52,8 @@ func testChannelChain(t *testing.T, provisioner string, isCRD bool) {
 	defer tearDown(client)
 
 	// create channels
-	channelTypeMeta := getChannelTypeMeta(provisioner, isCRD)
-	client.CreateChannelsOrFail(channelNames, channelTypeMeta, provisioner)
+	channelTypeMeta := getChannelTypeMeta(channel)
+	client.CreateChannelsOrFail(channelNames, channelTypeMeta)
 	client.WaitForResourcesReady(channelTypeMeta)
 
 	// create loggerPod and expose it as a service

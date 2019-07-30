@@ -87,7 +87,12 @@ func main() {
 	configMapWatcher.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start webhook configmap watcher: %v", err)
+		logger.Fatalf("failed to start webhook configmap watcher: %v", zap.Error(err))
+	}
+
+	stats, err := webhook.NewStatsReporter()
+	if err != nil {
+		logger.Fatalw("failed to initialize the stats reporter", zap.Error(err))
 	}
 
 	options := webhook.ControllerOptions{
@@ -97,6 +102,7 @@ func main() {
 		Port:           8443,
 		SecretName:     "eventing-webhook-certs",
 		WebhookName:    "webhook.eventing.knative.dev",
+		StatsReporter:  stats,
 	}
 	controller := webhook.AdmissionController{
 		Client:  kubeClient,

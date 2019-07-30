@@ -19,17 +19,6 @@ package resources
 // SystemNamespace is the namespace where Eventing is installed, it's default to be knative-eventing.
 const SystemNamespace = "knative-eventing"
 
-const (
-	// InMemoryProvisioner is the in-memory provisioner, which is also the default one.
-	InMemoryProvisioner = "in-memory"
-	// GCPPubSubProvisioner is the gcp-pubsub provisioner, which is under contrib/gcppubsub.
-	GCPPubSubProvisioner = "gcp-pubsub"
-	// KafkaProvisioner is the kafka provisioner, which is under contrib/kafka.
-	KafkaProvisioner = "kafka"
-	// NatssProvisioner is the natss provisioner, which is under contrib/natss
-	NatssProvisioner = "natss"
-)
-
 // API versions for the resources.
 const (
 	CoreAPIVersion      = "v1"
@@ -45,9 +34,7 @@ const (
 
 // Kind for eventing resources.
 const (
-	ChannelKind                   string = "Channel"
-	SubscriptionKind              string = "Subscription"
-	ClusterChannelProvisionerKind string = "ClusterChannelProvisioner"
+	SubscriptionKind string = "Subscription"
 
 	BrokerKind  string = "Broker"
 	TriggerKind string = "Trigger"

@@ -22,4 +22,4 @@ var runTests = common.RunTests
 var setup = common.Setup
 var tearDown = common.TearDown
 var getChannelTypeMeta = common.GetChannelTypeMeta
-var provisioners = test.EventingFlags.Provisioners
+var channels = test.EventingFlags.Channels

@@ -30,6 +30,6 @@ source $(dirname $0)/e2e-common.sh
 
 initialize $@ --skip-istio-addon
 
-go_test_e2e -timeout=20m -parallel=12 ./test/e2e -clusterChannelProvisioners=in-memory,natss,kafka || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/e2e -channels=InMemoryChannel,KafkaChannel,NatssChannel || fail_test
 
 success
