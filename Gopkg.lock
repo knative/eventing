@@ -13,9 +13,6 @@
     "internal/trace",
     "internal/version",
     "monitoring/apiv3",
-    "pubsub",
-    "pubsub/apiv1",
-    "pubsub/internal/distribution",
     "storage",
     "trace/apiv2",
   ]
@@ -926,7 +923,6 @@
     "googleapis/devtools/cloudtrace/v2",
     "googleapis/iam/v1",
     "googleapis/monitoring/v3",
-    "googleapis/pubsub/v1",
     "googleapis/rpc/code",
     "googleapis/rpc/status",
     "protobuf/field_mask",
@@ -1484,7 +1480,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "cloud.google.com/go/pubsub",
     "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/Shopify/sarama",
     "github.com/bsm/sarama-cluster",
