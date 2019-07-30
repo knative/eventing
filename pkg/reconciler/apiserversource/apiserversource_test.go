@@ -374,7 +374,7 @@ func TestReconcile(t *testing.T) {
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 		}
-		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
+		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,

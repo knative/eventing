@@ -54,7 +54,7 @@ func NewController(
 		deploymentLister:      deploymentInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, impl.EnqueueKey)
+	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	containerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

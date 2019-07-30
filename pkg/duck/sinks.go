@@ -59,26 +59,6 @@ func NewSinkReconciler(ctx context.Context, callback func(string)) *SinkReconcil
 	return ret
 }
 
-// NewSinkReconciler creates and initializes a new SinkReconciler
-func NewInjectionSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
-	ret := &SinkReconciler{}
-
-	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
-	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
-		Delegate: &pkgapisduck.EnqueueInformerFactory{
-			Delegate: &pkgapisduck.TypedInformerFactory{
-				Client:       dynamicclient.Get(ctx),
-				Type:         &duckv1alpha1.AddressableType{},
-				ResyncPeriod: controller.GetResyncPeriod(ctx),
-				StopChannel:  ctx.Done(),
-			},
-			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
-		},
-	}
-
-	return ret
-}
-
 // GetSinkURI registers the given object reference with the tracker and if possible,
 // retrieves the sink URI
 func (r *SinkReconciler) GetSinkURI(sinkObjRef *corev1.ObjectReference, source interface{}, sourceDesc string) (string, error) {
