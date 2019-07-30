@@ -19,9 +19,8 @@ package resources
 import (
 	"fmt"
 
-	"github.com/knative/eventing/pkg/utils"
-
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
