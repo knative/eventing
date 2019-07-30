@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	deprecatedMessage = "The `natss` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `NatssChannel` CRD."
+	deprecatedMessage = "The `natss` ClusterChannelProvisioner is deprecated and will be removed in 0.9. Recommended replacement is using `NatssChannel` CRD."
 )
 
 type reconciler struct {

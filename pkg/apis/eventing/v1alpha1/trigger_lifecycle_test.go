@@ -195,48 +195,63 @@ func TestTriggerInitializeConditions(t *testing.T) {
 func TestTriggerIsReady(t *testing.T) {
 	tests := []struct {
 		name                        string
-		markBrokerExists            bool
+		brokerStatus                *BrokerStatus
 		markKubernetesServiceExists bool
 		markVirtualServiceExists    bool
-		markSubscribed              bool
+		subscriptionOwned           bool
+		subscriptionStatus          *SubscriptionStatus
 		wantReady                   bool
 	}{{
 		name:                        "all happy",
-		markBrokerExists:            true,
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		markSubscribed:              true,
+		subscriptionOwned:           true,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		wantReady:                   true,
 	}, {
 		name:                        "broker sad",
-		markBrokerExists:            false,
+		brokerStatus:                TestHelper.NotReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		markSubscribed:              true,
+		subscriptionOwned:           true,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		wantReady:                   false,
 	}, {
 		name:                        "subscribed sad",
-		markBrokerExists:            true,
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		markSubscribed:              false,
+		subscriptionOwned:           true,
+		subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
+		wantReady:                   false,
+	}, {
+		name:                        "subscription not owned",
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
+		markKubernetesServiceExists: true,
+		markVirtualServiceExists:    true,
+		subscriptionOwned:           false,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		wantReady:                   false,
 	}, {
 		name:                        "all sad",
-		markBrokerExists:            false,
+		brokerStatus:                TestHelper.NotReadyBrokerStatus(),
 		markKubernetesServiceExists: false,
 		markVirtualServiceExists:    false,
-		markSubscribed:              false,
+		subscriptionOwned:           false,
+		subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
 		wantReady:                   false,
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
-			if test.markBrokerExists {
-				ts.PropagateBrokerStatus(TestHelper.ReadyBrokerStatus())
+			if test.brokerStatus != nil {
+				ts.PropagateBrokerStatus(test.brokerStatus)
 			}
-			if test.markSubscribed {
-				ts.PropagateSubscriptionStatus(TestHelper.ReadySubscriptionStatus())
+			if !test.subscriptionOwned {
+				ts.MarkSubscriptionNotOwned(&Subscription{})
+			} else if test.subscriptionStatus != nil {
+				ts.PropagateSubscriptionStatus(test.subscriptionStatus)
 			}
 			got := ts.IsReady()
 			if test.wantReady != got {

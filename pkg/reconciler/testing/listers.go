@@ -135,8 +135,16 @@ func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
 	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
 
+func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
+	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
+}
+
 func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
 	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
+}
+
+func (l *Listers) GetChoiceLister() messaginglisters.ChoiceLister {
+	return messaginglisters.NewChoiceLister(l.indexerFor(&messagingv1alpha1.Choice{}))
 }
 
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {

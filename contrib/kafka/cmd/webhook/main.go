@@ -68,6 +68,11 @@ func main() {
 
 	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
 
+	stats, err := webhook.NewStatsReporter()
+	if err != nil {
+		logger.Fatalw("failed to initialize the stats reporter", zap.Error(err))
+	}
+
 	options := webhook.ControllerOptions{
 		ServiceName:    logconfig.WebhookName(),
 		DeploymentName: logconfig.WebhookName(),
@@ -75,10 +80,12 @@ func main() {
 		Port:           8443,
 		SecretName:     "messaging-webhook-certs",
 		WebhookName:    "webhook.messaging.knative.dev",
+		StatsReporter:  stats,
 	}
 	controller := webhook.AdmissionController{
 		Client:  kubeClient,
 		Options: options,
+
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group messaging.knative.dev
 			messagingv1alpha1.SchemeGroupVersion.WithKind("KafkaChannel"): &messagingv1alpha1.KafkaChannel{},

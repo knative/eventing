@@ -44,9 +44,6 @@ import (
 
 	. "knative.dev/pkg/reconciler/testing"
 
-	"time"
-
-	"github.com/knative/eventing/pkg/duck"
 	. "github.com/knative/eventing/pkg/reconciler/testing"
 )
 
@@ -64,31 +61,14 @@ const (
 
 var (
 	trueVal = true
+
+	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 )
 
 func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-}
-
-type fakeAddressableInformer struct{}
-
-func (fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.AddressableTracker {
-	return fakeAddressableTracker{}
-}
-
-type fakeAddressableTracker struct{}
-
-func (fakeAddressableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
-	return func(corev1.ObjectReference) error { return nil }
-}
-
-func (fakeAddressableTracker) Track(ref corev1.ObjectReference, obj interface{}) error {
-	return nil
-}
-
-func (fakeAddressableTracker) OnChanged(obj interface{}) {
 }
 
 func TestAllCases(t *testing.T) {
@@ -251,6 +231,35 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "Subscription not owned by Trigger",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeTriggerChannel(),
+				makeIngressChannel(),
+				makeBrokerFilterService(),
+				makeIngressSubscriptionNotOwnedByTrigger(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: trigger %q does not own subscription %q", triggerName, subscriptionName)},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("NotSubscribed", fmt.Sprintf("trigger %q does not own subscription %q", triggerName, subscriptionName)),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+				),
+			}},
+		}, {
 			Name: "Subscription create fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -318,10 +327,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			// Name being "" is NOT a bug. Because we use generate name, the object created
-			// does not have a name...
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "",
+				Name: subscriptionName,
 			}},
 		}, {
 			Name: "Subscription create after delete fail",
@@ -356,10 +363,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			// Name being "" is NOT a bug. Because we use generate name, the object created
-			// does not have a name...
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "",
+				Name: subscriptionName,
 			}},
 			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
@@ -394,10 +399,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
-			// Name being "" is NOT a bug. Because we use generate name, the object created
-			// does not have a name...
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "",
+				Name: subscriptionName,
 			}},
 			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
@@ -460,7 +463,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: test induced [error]"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 				),
 			}},
@@ -507,7 +510,7 @@ func TestAllCases(t *testing.T) {
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
 			serviceLister:      listers.GetK8sServiceLister(),
-			addressableTracker: fakeAddressableTracker{},
+			resourceTracker:    &MockResourceTracker{},
 		}
 	},
 		false,
@@ -679,6 +682,12 @@ func makeServiceURI() *url.URL {
 
 func makeIngressSubscription() *v1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
+}
+
+func makeIngressSubscriptionNotOwnedByTrigger() *v1alpha1.Subscription {
+	sub := makeIngressSubscription()
+	sub.OwnerReferences = []metav1.OwnerReference{}
+	return sub
 }
 
 // Just so we can test subscription updates

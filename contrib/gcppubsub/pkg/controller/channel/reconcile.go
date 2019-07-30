@@ -62,7 +62,7 @@ const (
 	subscriptionSyncFailed    = "SubscriptionSyncFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
 
-	deprecatedMessage = "The `gcp-pubsub` ClusterChannelProvisioner is deprecated and will be removed in 0.8. Recommended replacement is using `Channel` CRD from https://github.com/GoogleCloudPlatform/cloud-run-events."
+	deprecatedMessage = "The `gcp-pubsub` ClusterChannelProvisioner is deprecated and will be removed in 0.9. Recommended replacement is using `Channel` CRD from https://github.com/GoogleCloudPlatform/cloud-run-events."
 )
 
 // reconciler reconciles GCP-PubSub Channels by creating the K8s Service (ExternalName)

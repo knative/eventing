@@ -19,6 +19,7 @@ package resources
 // This file contains functions that construct Eventing resources.
 
 import (
+	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,29 +35,9 @@ type TriggerOption func(*eventingv1alpha1.Trigger)
 // SubscriptionOption enables further configuration of a Subscription.
 type SubscriptionOption func(*eventingv1alpha1.Subscription)
 
-// clusterChannelProvisioner returns a ClusterChannelProvisioner for a given name.
-func clusterChannelProvisioner(name string) *corev1.ObjectReference {
-	if name == "" {
-		return nil
-	}
-	return pkgTest.CoreV1ObjectReference(ClusterChannelProvisionerKind, EventingAPIVersion, name)
-}
-
 // channelRef returns an ObjectReference for a given Channel name.
 func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
-}
-
-// Channel returns a Channel with the specified provisioner.
-func Channel(name, provisioner string) *eventingv1alpha1.Channel {
-	return &eventingv1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: eventingv1alpha1.ChannelSpec{
-			Provisioner: clusterChannelProvisioner(provisioner),
-		},
-	}
 }
 
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
@@ -101,20 +82,10 @@ func Subscription(
 	return subscription
 }
 
-// WithDeprecatedChannelTemplateForBroker returns a function that adds a DeprecatedChannelTemplate for the given Broker.
-func WithDeprecatedChannelTemplateForBroker(provisionerName string) BrokerOption {
-	return func(b *eventingv1alpha1.Broker) {
-		deprecatedChannelTemplate := &eventingv1alpha1.ChannelSpec{
-			Provisioner: clusterChannelProvisioner(provisionerName),
-		}
-		b.Spec.DeprecatedChannelTemplate = deprecatedChannelTemplate
-	}
-}
-
 // WithChannelTemplateForBroker returns a function that adds a ChannelTemplate for the given Broker.
 func WithChannelTemplateForBroker(channelTypeMeta metav1.TypeMeta) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
-		channelTemplate := eventingv1alpha1.ChannelTemplateSpec{
+		channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
 			TypeMeta: channelTypeMeta,
 		}
 		b.Spec.ChannelTemplate = channelTemplate

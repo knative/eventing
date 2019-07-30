@@ -16,6 +16,9 @@
 
 set -o errexit
 
+# If gcloud is not available make it a no-op, not an error.
+which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
+
 function upload_test_images() {
   echo ">> Publishing test images"
   local image_dirs="$(find $(dirname $0)/test_images -mindepth 1 -maxdepth 1 -type d)"

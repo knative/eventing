@@ -15,8 +15,10 @@
 package stackdriver // import "contrib.go.opencensus.io/exporter/stackdriver"
 
 import (
-	"contrib.go.opencensus.io/resource/resourcekeys"
+	"fmt"
+
 	"go.opencensus.io/resource"
+	"go.opencensus.io/resource/resourcekeys"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
 
@@ -39,71 +41,72 @@ const (
 )
 
 // Mappings for the well-known OpenCensus resources to applicable Stackdriver resources.
-var resourceMappings = []resourceMap{
-	{
-		srcType: resourcekeys.K8STypeContainer,
-		dstType: "k8s_container",
-		labels: map[string]string{
-			"project_id":     stackdriverProjectID,
-			"location":       stackdriverLocation,
-			"cluster_name":   resourcekeys.K8SKeyClusterName,
-			"namespace_name": resourcekeys.K8SKeyNamespaceName,
-			"pod_name":       resourcekeys.K8SKeyPodName,
-			"container_name": resourcekeys.K8SKeyContainerName,
-		},
-	},
-	{
-		srcType: resourcekeys.GCPTypeGCEInstance,
-		dstType: "gce_instance",
-		labels: map[string]string{
-			"project_id":  resourcekeys.GCPKeyGCEProjectID,
-			"instance_id": resourcekeys.GCPKeyGCEInstanceID,
-			"zone":        resourcekeys.GCPKeyGCEZone,
-		},
-	},
-	{
-		srcType: resourcekeys.AWSTypeEC2Instance,
-		dstType: "aws_ec2_instance",
-		labels: map[string]string{
-			"project_id":  stackdriverProjectID,
-			"instance_id": resourcekeys.AWSKeyEC2InstanceID,
-			"region":      resourcekeys.AWSKeyEC2Region,
-			"aws_account": resourcekeys.AWSKeyEC2AccountID,
-		},
-	},
-	// Fallback to generic task resource.
-	{
-		srcType: "",
-		dstType: "generic_task",
-		labels: map[string]string{
-			"project_id": stackdriverProjectID,
-			"location":   stackdriverLocation,
-			"namespace":  stackdriverGenericTaskNamespace,
-			"job":        stackdriverGenericTaskJob,
-			"task_id":    stackdriverGenericTaskID,
-		},
-	},
+var k8sResourceMap = map[string]string{
+	"project_id":     stackdriverProjectID,
+	"location":       resourcekeys.CloudKeyZone,
+	"cluster_name":   resourcekeys.K8SKeyClusterName,
+	"namespace_name": resourcekeys.K8SKeyNamespaceName,
+	"pod_name":       resourcekeys.K8SKeyPodName,
+	"container_name": resourcekeys.ContainerKeyName,
 }
 
-func DefaultMapResource(res *resource.Resource) *monitoredrespb.MonitoredResource {
-Outer:
-	for _, rm := range resourceMappings {
-		if res.Type != rm.srcType {
-			continue
+var gcpResourceMap = map[string]string{
+	"project_id":  stackdriverProjectID,
+	"instance_id": resourcekeys.HostKeyID,
+	"zone":        resourcekeys.CloudKeyZone,
+}
+
+var awsResourceMap = map[string]string{
+	"project_id":  stackdriverProjectID,
+	"instance_id": resourcekeys.HostKeyID,
+	"region":      resourcekeys.CloudKeyRegion,
+	"aws_account": resourcekeys.CloudKeyAccountID,
+}
+
+// Generic task resource.
+var genericResourceMap = map[string]string{
+	"project_id": stackdriverProjectID,
+	"location":   stackdriverLocation,
+	"namespace":  stackdriverGenericTaskNamespace,
+	"job":        stackdriverGenericTaskJob,
+	"task_id":    stackdriverGenericTaskID,
+}
+
+func transformResource(match, input map[string]string) map[string]string {
+	output := make(map[string]string, len(input))
+	for dst, src := range match {
+		if v, ok := input[src]; ok {
+			output[dst] = v
 		}
-		result := &monitoredrespb.MonitoredResource{
-			Type:   rm.dstType,
-			Labels: make(map[string]string, len(rm.labels)),
-		}
-		for dst, src := range rm.labels {
-			if v, ok := res.Labels[src]; ok {
-				result.Labels[dst] = v
-			} else {
-				// A required label wasn't filled at all. Try subsequent mappings.
-				continue Outer
-			}
-		}
+	}
+	return output
+}
+
+func defaultMapResource(res *resource.Resource) *monitoredrespb.MonitoredResource {
+	match := genericResourceMap
+	result := &monitoredrespb.MonitoredResource{
+		Type: "global",
+	}
+	if res == nil || res.Labels == nil {
 		return result
 	}
-	return nil
+	if res.Type == resourcekeys.ContainerType {
+		result.Type = "k8s_container"
+		match = k8sResourceMap
+	} else if v, ok := res.Labels[resourcekeys.CloudKeyProvider]; ok {
+		if v == resourcekeys.CloudProviderGCP {
+			result.Type = "gce_instance"
+			match = gcpResourceMap
+		} else if v == resourcekeys.CloudProviderAWS {
+			result.Type = "aws_ec2_instance"
+			match = awsResourceMap
+		}
+	}
+	result.Labels = transformResource(match, res.Labels)
+	if result.Type == "aws_ec2_instance" {
+		if v, ok := result.Labels["region"]; ok {
+			result.Labels["region"] = fmt.Sprintf("aws:%s", v)
+		}
+	}
+	return result
 }
