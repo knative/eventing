@@ -81,6 +81,7 @@ metadata:
 rules:
 - apiGroups:
   - eventing.knative.dev
+  - messaging.knative.dev
   resources:
   - channels
   - channels/status
