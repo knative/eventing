@@ -18,12 +18,15 @@ package main
 import (
 	"flag"
 	"log"
+	"strconv"
+	"time"
 
 	"github.com/knative/eventing/pkg/channeldefaulter"
 	"github.com/knative/eventing/pkg/defaultchannel"
 
 	"go.uber.org/zap"
 
+	"github.com/kelseyhightower/envconfig"
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
@@ -38,6 +41,25 @@ import (
 	"knative.dev/pkg/system"
 	"knative.dev/pkg/webhook"
 )
+
+type envConfig struct {
+	RegistrationDelayTime string `envconfig:"REG_DELAY_TIME" required:"false"`
+}
+
+func getRegistrationDelayTime(rdt string) time.Duration {
+	var RegistrationDelay time.Duration
+
+	if rdt != "" {
+		rdtime, err := strconv.ParseInt(rdt, 10, 64)
+		if err != nil {
+			log.Fatalf("Error ParseInt: %v", err)
+		}
+
+		RegistrationDelay = time.Duration(rdtime)
+	}
+
+	return RegistrationDelay
+}
 
 func main() {
 	flag.Parse()
@@ -55,6 +77,12 @@ func main() {
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.WebhookName()))
 
 	logger.Infow("Starting the Eventing Webhook")
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+	RegistrationDelay := getRegistrationDelayTime(env.RegistrationDelayTime)
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -96,13 +124,14 @@ func main() {
 	}
 
 	options := webhook.ControllerOptions{
-		ServiceName:    logconfig.WebhookName(),
-		DeploymentName: logconfig.WebhookName(),
-		Namespace:      system.Namespace(),
-		Port:           8443,
-		SecretName:     "eventing-webhook-certs",
-		WebhookName:    "webhook.eventing.knative.dev",
-		StatsReporter:  stats,
+		ServiceName:       logconfig.WebhookName(),
+		DeploymentName:    logconfig.WebhookName(),
+		Namespace:         system.Namespace(),
+		Port:              8443,
+		SecretName:        "eventing-webhook-certs",
+		WebhookName:       "webhook.eventing.knative.dev",
+		StatsReporter:     stats,
+		RegistrationDelay: RegistrationDelay * time.Second,
 	}
 	controller := webhook.AdmissionController{
 		Client:  kubeClient,
