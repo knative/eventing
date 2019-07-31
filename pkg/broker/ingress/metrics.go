@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package ingress
 
 import (
 	"github.com/knative/eventing/pkg/broker"
