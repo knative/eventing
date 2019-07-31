@@ -26,8 +26,8 @@ import (
 
 	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
-	"github.com/knative/test-infra/shared/junit"
-	"github.com/knative/test-infra/shared/testgrid"
+	"knative.dev/test-infra/shared/junit"
+	"knative.dev/test-infra/shared/testgrid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
