@@ -49,9 +49,8 @@ const (
 var (
 	truePointer = true
 
-	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
-	// does not fill in Name, so the name is the empty string.
-	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
+	// serviceAddress is the address of the K8s Service.
+	serviceAddress = fmt.Sprintf("%s-channel-%s.%s.svc.%s", channelName, testUID, testNS, utils.GetClusterDomainName())
 )
 
 func init() {
@@ -229,8 +228,8 @@ func makeK8sService(channelName string, clusterChannelProvisionerName string) *c
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-channel-", channelName),
-			Namespace:    testNS,
+			Name:      fmt.Sprintf("%s-channel-%s", channelName, testUID),
+			Namespace: testNS,
 			Labels: map[string]string{
 				provisioners.EventingChannelLabel:        channelName,
 				provisioners.OldEventingChannelLabel:     channelName,

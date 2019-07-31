@@ -192,7 +192,7 @@ func TestUpdateHostToChannelMap(t *testing.T) {
 				makeChannel(withName("chan1"), withNamespace("ns1"), withStatusReady("host.name")),
 				makeChannel(withName("chan2"), withNamespace("ns2"), withStatusReady("host.name")),
 			},
-			expectedErrMsg: "Duplicate hostName found. Each channel must have a unique host header. HostName:host.name, channel:ns2.chan2, channel:ns1.chan1",
+			expectedErrMsg: "duplicate hostName found. Each channel must have a unique host header. HostName:host.name, channel:ns2.chan2, channel:ns1.chan1",
 			expectedMap:    map[string]provisioners.ChannelReference{},
 		},
 		{

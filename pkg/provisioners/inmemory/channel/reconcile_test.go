@@ -404,8 +404,8 @@ func makeK8sService(pn ...string) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-channel-", cName),
-			Namespace:    cNamespace,
+			Name:      fmt.Sprintf("%s-channel-%s", cName, cUID),
+			Namespace: cNamespace,
 			Labels: map[string]string{
 				util.EventingChannelLabel:        cName,
 				util.OldEventingChannelLabel:     cName,
