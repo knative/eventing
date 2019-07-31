@@ -447,19 +447,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:926c62d34c0812cd6cb8dd7ade9d5ce8321b36e0afa63bff1ce23a36867fa9bb"
+  digest = "1:0660cb15a307ae5b72b2830648a51d8e0bd0d58783ab5f009df5df218529112c"
   name = "github.com/knative/test-infra"
   packages = [
     "scripts",
-    "shared/common",
-    "shared/gcs",
     "shared/junit",
-    "shared/prow",
     "shared/testgrid",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "88caf452c91594b30b06b2b62c1ece171d77415c"
+  revision = "17f2331e80ad0d3e170ea2bae45c3922744f83af"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -1365,7 +1362,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:552f31c039d33d163776e7ef843513f599b1ceefcee7a3e4245c910f60904387"
+  digest = "1:07df09a3b0f6d02733f09c9739ea9561f63e6cc5a2692cf17f05cd4bd3611b08"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1441,7 +1438,20 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "cb7014ea6ef60a6dfe23f5506703f84dd6310e15"
+  revision = "972acd413fb96750dc6a4b98e4ba344c594a385b"
+
+[[projects]]
+  branch = "master"
+  digest = "1:da1b16743720df98f3f6fc14b037fd0294398de8e95d4593c96122537e9a9eca"
+  name = "knative.dev/test-infra"
+  packages = [
+    "shared/common",
+    "shared/gcs",
+    "shared/junit",
+    "shared/prow",
+  ]
+  pruneopts = "NUT"
+  revision = "17f2331e80ad0d3e170ea2bae45c3922744f83af"
 
 [[projects]]
   digest = "1:a8495647d9f03401c36b801a0644207a434f76ed9d4fc4ea80c46700f0ccc575"
