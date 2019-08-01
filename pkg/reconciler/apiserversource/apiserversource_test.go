@@ -521,7 +521,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {
-	source := NewApiServerSource(sourceName, testNS,
+	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha1.ApiServerResource{
 				{
@@ -540,7 +540,7 @@ func makeReceiveAdapter() *appsv1.Deployment {
 
 	args := resources.ReceiveAdapterArgs{
 		Image:   image,
-		Source:  source,
+		Source:  src,
 		Labels:  resources.Labels(sourceName),
 		SinkURI: sinkURI,
 	}

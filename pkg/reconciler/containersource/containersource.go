@@ -151,7 +151,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 	deploy, err := r.getDeployment(ctx, source)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			deploy, err = r.createDeployment(ctx, source, nil, args)
+			deploy, err = r.createDeployment(ctx, source, args)
 			if err != nil {
 				r.markNotDeployedRecordEvent(source, corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: %v", err)
 				return err
@@ -258,7 +258,7 @@ func (r *Reconciler) getDeployment(ctx context.Context, source *v1alpha1.Contain
 	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, org *appsv1.Deployment, args resources.ContainerArguments) (*appsv1.Deployment, error) {
+func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, args resources.ContainerArguments) (*appsv1.Deployment, error) {
 	deployment := resources.MakeDeployment(args)
 	return r.KubeClientSet.AppsV1().Deployments(source.Namespace).Create(deployment)
 }
