@@ -18,6 +18,7 @@ package containersource
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -26,7 +27,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -150,8 +150,8 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 
 	deploy, err := r.getDeployment(ctx, source)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			deploy, err = r.createDeployment(ctx, source, nil, args)
+		if apierrors.IsNotFound(err) {
+			deploy, err = r.createDeployment(ctx, source, args)
 			if err != nil {
 				r.markNotDeployedRecordEvent(source, corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: %v", err)
 				return err
@@ -174,14 +174,12 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 	// are set in expected.
 	if !equality.Semantic.DeepDerivative(expected.Spec, deploy.Spec) {
 		deploy.Spec = expected.Spec
-		deploy, err := r.KubeClientSet.AppsV1().Deployments(deploy.Namespace).Update(deploy)
-		if err != nil {
+		if _, err = r.KubeClientSet.AppsV1().Deployments(deploy.Namespace).Update(deploy); err != nil {
 			r.markDeployingAndRecordEvent(source, corev1.EventTypeWarning, "DeploymentUpdateFailed", "Failed to update deployment %q: %v", deploy.Name, err)
-		} else {
-			r.markDeployingAndRecordEvent(source, corev1.EventTypeNormal, "DeploymentUpdated", "Updated deployment %q", deploy.Name)
+			return fmt.Errorf("updating deployment: %v", err)
 		}
-		// Return after this update or error and reconcile again
-		return err
+		r.markDeployingAndRecordEvent(source, corev1.EventTypeNormal, "DeploymentUpdated", "Updated deployment %q", deploy.Name)
+		return nil
 	}
 
 	// Update source status
@@ -206,7 +204,7 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 
 	if source.Spec.Sink == nil {
 		source.Status.MarkNoSink("Missing", "Sink missing from spec")
-		return fmt.Errorf("Sink missing from spec")
+		return errors.New("sink missing from spec")
 	}
 
 	sinkObjRef := source.Spec.Sink
@@ -227,7 +225,7 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 }
 
 func sinkArg(source *v1alpha1.ContainerSource) (string, bool) {
-	args := []string{}
+	var args []string
 
 	if source.Spec.Template != nil {
 		for _, c := range source.Spec.Template.Spec.Containers {
@@ -257,10 +255,10 @@ func (r *Reconciler) getDeployment(ctx context.Context, source *v1alpha1.Contain
 			return &c, nil
 		}
 	}
-	return nil, errors.NewNotFound(schema.GroupResource{}, "")
+	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
 }
 
-func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, org *appsv1.Deployment, args resources.ContainerArguments) (*appsv1.Deployment, error) {
+func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, args resources.ContainerArguments) (*appsv1.Deployment, error) {
 	deployment := resources.MakeDeployment(args)
 	return r.KubeClientSet.AppsV1().Deployments(source.Namespace).Create(deployment)
 }
@@ -297,8 +295,8 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Contain
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("ContainerSource %q became ready after %v", source.Name, duration)
 		r.Recorder.Event(source, corev1.EventTypeNormal, sourceReadinessChanged, fmt.Sprintf("ContainerSource %q became ready", source.Name))
-		if err := r.StatsReporter.ReportReady("ContainerSource", source.Namespace, source.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ContainerSource, %v", err)
+		if reportErr := r.StatsReporter.ReportReady("ContainerSource", source.Namespace, source.Name, duration); reportErr != nil {
+			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ContainerSource, %v", reportErr)
 		}
 	}
 
