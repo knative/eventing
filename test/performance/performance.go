@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"knative.dev/test-infra/shared/junit"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/pkg/test"
+	"knative.dev/test-infra/shared/junit"
 
 	// Mysteriously required to support GCP auth (required by k8s libs). Apparently just importing it is enough. @_@ side effects @_@. https://github.com/kubernetes/client-go/issues/242
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
