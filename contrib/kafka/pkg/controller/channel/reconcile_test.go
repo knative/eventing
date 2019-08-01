@@ -59,9 +59,8 @@ var (
 
 	deletedTs = metav1.Now().Rfc3339Copy()
 
-	// serviceAddress is the address of the K8s Service. It uses a GeneratedName and the fake client
-	// does not fill in Name, so the name is the empty string.
-	serviceAddress = fmt.Sprintf("%s.%s.svc.%s", "", testNS, utils.GetClusterDomainName())
+	// serviceAddress is the address of the K8s Service.
+	serviceAddress = fmt.Sprintf("%s-channel-%s.%s.svc.%s", channelName, testUID, testNS, utils.GetClusterDomainName())
 
 	// map of events to set test cases' expectations easier
 	events = map[string]corev1.Event{
@@ -551,8 +550,8 @@ func makeK8sService() *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-channel-", channelName),
-			Namespace:    testNS,
+			Name:      fmt.Sprintf("%s-channel-%s", channelName, testUID),
+			Namespace: testNS,
 			Labels: map[string]string{
 				util.EventingChannelLabel:        channelName,
 				util.OldEventingChannelLabel:     channelName,

@@ -446,22 +446,6 @@
   version = "v1.3.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:926c62d34c0812cd6cb8dd7ade9d5ce8321b36e0afa63bff1ce23a36867fa9bb"
-  name = "github.com/knative/test-infra"
-  packages = [
-    "scripts",
-    "shared/common",
-    "shared/gcs",
-    "shared/junit",
-    "shared/prow",
-    "shared/testgrid",
-    "tools/dep-collector",
-  ]
-  pruneopts = "UT"
-  revision = "88caf452c91594b30b06b2b62c1ece171d77415c"
-
-[[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
   name = "github.com/markbates/inflect"
   packages = ["."]
@@ -1444,6 +1428,22 @@
   revision = "cb7014ea6ef60a6dfe23f5506703f84dd6310e15"
 
 [[projects]]
+  branch = "master"
+  digest = "1:efa592a68e9bbb11d29d78293bbaa356aca26a2e1cb1cf9618e4a0f72eab1dde"
+  name = "knative.dev/test-infra"
+  packages = [
+    "scripts",
+    "shared/common",
+    "shared/gcs",
+    "shared/junit",
+    "shared/prow",
+    "shared/testgrid",
+    "tools/dep-collector",
+  ]
+  pruneopts = "UT"
+  revision = "17f2331e80ad0d3e170ea2bae45c3922744f83af"
+
+[[projects]]
   digest = "1:a8495647d9f03401c36b801a0644207a434f76ed9d4fc4ea80c46700f0ccc575"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
@@ -1497,10 +1497,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
-    "github.com/knative/test-infra/scripts",
-    "github.com/knative/test-infra/shared/junit",
-    "github.com/knative/test-infra/shared/testgrid",
-    "github.com/knative/test-infra/tools/dep-collector",
     "github.com/nats-io/go-nats-streaming",
     "github.com/nats-io/nats-streaming-server/server",
     "github.com/openzipkin/zipkin-go",
@@ -1622,6 +1618,10 @@
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
     "knative.dev/pkg/webhook",
+    "knative.dev/test-infra/scripts",
+    "knative.dev/test-infra/shared/junit",
+    "knative.dev/test-infra/shared/testgrid",
+    "knative.dev/test-infra/tools/dep-collector",
     "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",

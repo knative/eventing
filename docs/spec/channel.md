@@ -11,6 +11,10 @@ subscribers. Below is a specification for the generic parts of each _Channel_.
 
 A typical channel consists of a _Controller_ and a _Dispatcher_ pod.
 
+## Conformance
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in [RFC2119][rfc2119].
+
 ## Channel Spec Parts
 
 ### Control Plane
@@ -189,6 +193,15 @@ Channels MUST attach a bearer token to all outgoing requests, likely in the form
 of a JWT. This bearer token MUST use an identity associated with the Channel,
 not the individual Subscription.
 
+##### Retries
+
+Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.
+
+Channels SHOULD support various retry configuration parameters, including, but not limited to:
+- the maximum number of retries
+- the time in-between retries
+- the backoff rate
+
 #### Metrics
 
 Channels SHOULD expose a variety of metrics, including, but not limited to:
@@ -197,7 +210,7 @@ Channels SHOULD expose a variety of metrics, including, but not limited to:
   responses)
 - Number of unauthorized or malformed bearer token requests (`403 Forbidden`
   responses)
-- Number of accepted incoming event queuing events (`202 Accpeted` responses)
+- Number of accepted incoming event queuing events (`202 Accepted` responses)
 - Number of egress cloudevent produced (with the former metric, used to derive
   channel queue size)
 
