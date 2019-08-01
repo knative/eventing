@@ -197,7 +197,7 @@ not the individual Subscription.
 
 Channels SHOULD retry resending CloudEvents when they fail to either connect or send CloudEvents to subscribers.
 
-Channels SHOULD support various retry configuration parameters, including, but not limiting to:
+Channels SHOULD support various retry configuration parameters, including, but not limited to:
 - the maximum number of retries
 - the time in-between retries
 - the backoff rate
