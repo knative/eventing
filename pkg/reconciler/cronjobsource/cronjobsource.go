@@ -167,6 +167,16 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	}
 	cronjob.Status.MarkEventType()
 
+	// TODO Delete this after 0.8 is cut.
+	oldEventType, err := r.getOldEventType(ctx, cronjob)
+	if err != nil {
+		return fmt.Errorf("getting old event type: %v", err)
+	} else if oldEventType != nil {
+		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(cronjob.Namespace).Delete(oldEventType.Name, nil); err != nil {
+			return fmt.Errorf("deleting old event type: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -255,7 +265,7 @@ func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 
 func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource) (*appsv1.Deployment, error) {
 	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: r.getLabelSelector(src).String(),
+		LabelSelector: r.getOldLabelSelector(src).String(),
 	})
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list CronJobs: %v", zap.Error(err))
@@ -270,7 +280,8 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJo
 }
 
 func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
-	current, err := r.getEventType(ctx, src)
+	expected := resources.MakeEventType(src)
+	current, err := r.eventTypeLister.EventTypes(src.Namespace).Get(expected.Name)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
 		return nil, fmt.Errorf("getting event types: %v", err)
@@ -289,7 +300,6 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 		return nil, nil
 	}
 
-	expected := resources.MakeEventType(src)
 	if current != nil {
 		if equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
 			return current, nil
@@ -300,6 +310,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 			return nil, fmt.Errorf("deleting event type: %v", err)
 		}
 	}
+
 	current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
@@ -309,9 +320,9 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 	return current, nil
 }
 
-func (r *Reconciler) getEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
+func (r *Reconciler) getOldEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
 	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: r.getLabelSelector(src).String(),
+		LabelSelector: r.getOldLabelSelector(src).String(),
 	})
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
@@ -322,11 +333,11 @@ func (r *Reconciler) getEventType(ctx context.Context, src *v1alpha1.CronJobSour
 			return &et, nil
 		}
 	}
-	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
+	return nil, nil
 }
 
-func (r *Reconciler) getLabelSelector(src *v1alpha1.CronJobSource) labels.Selector {
-	return labels.SelectorFromSet(resources.Labels(src.Name))
+func (r *Reconciler) getOldLabelSelector(src *v1alpha1.CronJobSource) labels.Selector {
+	return labels.SelectorFromSet(resources.OldLabels(src.Name))
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJobSource) (*v1alpha1.CronJobSource, error) {

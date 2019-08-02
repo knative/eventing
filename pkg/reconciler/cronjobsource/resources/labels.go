@@ -22,9 +22,18 @@ const (
 	controllerAgentName = "cronjob-source-controller"
 )
 
-func Labels(name string) map[string]string {
+// OldLabels are the pre-0.8 labels.
+// TODO Delete after 0.8 is cut.
+func OldLabels(name string) map[string]string {
 	return map[string]string{
 		"knative-eventing-source":      controllerAgentName,
 		"knative-eventing-source-name": name,
+	}
+}
+
+// Labels are the labels attached to all resources based on a CronJobSource.
+func Labels(name string) map[string]string {
+	return map[string]string{
+		"sources.eventing.knative.dev/cronJobSource": name,
 	}
 }
