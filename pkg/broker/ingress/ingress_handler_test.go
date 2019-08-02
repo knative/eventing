@@ -50,22 +50,20 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 	}
 
 	for n, tc := range testCases {
-		logger := zap.NewNop()
-		channelURI := &url.URL{
-			Scheme: urlScheme,
-			Host:   urlHost,
-			Path:   urlPath,
-		}
-		event := cloudevents.NewEvent()
-		resp := new(cloudevents.EventResponse)
-		client, _ := cloudevents.NewDefaultClient()
 		t.Run(n, func(t *testing.T) {
+			client, _ := cloudevents.NewDefaultClient()
 			handler := Handler{
-				Logger:     logger,
-				CeClient:   client,
-				ChannelURI: channelURI,
+				Logger:   zap.NewNop(),
+				CeClient: client,
+				ChannelURI: &url.URL{
+					Scheme: urlScheme,
+					Host:   urlHost,
+					Path:   urlPath,
+				},
 				BrokerName: brokerName,
 			}
+			event := cloudevents.NewEvent()
+			resp := new(cloudevents.EventResponse)
 			tctx := http.TransportContext{Method: tc.httpmethod, URI: tc.URI}
 			ctx := http.WithTransportContext(context.Background(), tctx)
 			_ = handler.serveHTTP(ctx, event, resp)
@@ -77,22 +75,19 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 }
 
 func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
-	logger := zap.NewNop()
-	channelURI := &url.URL{
-		Scheme: urlScheme,
-		Host:   urlHost,
-		Path:   urlPath,
+	client := &fakeClient{}
+	handler := Handler{
+		Logger:   zap.NewNop(),
+		CeClient: client,
+		ChannelURI: &url.URL{
+			Scheme: urlScheme,
+			Host:   urlHost,
+			Path:   urlPath,
+		},
+		BrokerName: brokerName,
 	}
 	event := cloudevents.NewEvent()
 	resp := new(cloudevents.EventResponse)
-	client := &fakeClient{}
-	handler := Handler{
-		Logger:     logger,
-		CeClient:   client,
-		ChannelURI: channelURI,
-		BrokerName: brokerName,
-	}
-
 	tctx := http.TransportContext{Method: validHTTPMethod, URI: validURI}
 	ctx := http.WithTransportContext(context.Background(), tctx)
 	_ = handler.serveHTTP(ctx, event, resp)
