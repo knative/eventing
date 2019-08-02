@@ -11,8 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
-const brokerName = "testBroker"
-const validURI = "/"
+const (
+	brokerName      = "testBroker"
+	validURI        = "/"
+	urlHost         = "testHost"
+	urlPath         = "/"
+	urlScheme       = "http"
+	validHTTPMethod = nethttp.MethodPost
+)
 
 type fakeClient struct{ sent bool }
 
@@ -37,7 +43,7 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 			expectedStatus: nethttp.StatusMethodNotAllowed,
 		},
 		"invalid url": {
-			httpmethod:     nethttp.MethodPost,
+			httpmethod:     validHTTPMethod,
 			URI:            "invalidURI",
 			expectedStatus: nethttp.StatusNotFound,
 		},
@@ -46,9 +52,9 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 	for n, tc := range testCases {
 		logger := zap.NewNop()
 		channelURI := &url.URL{
-			Scheme: "http",
-			Host:   "testChannel",
-			Path:   "/",
+			Scheme: urlScheme,
+			Host:   urlHost,
+			Path:   urlPath,
 		}
 		event := cloudevents.NewEvent()
 		resp := new(cloudevents.EventResponse)
@@ -73,9 +79,9 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 	logger := zap.NewNop()
 	channelURI := &url.URL{
-		Scheme: "http",
-		Host:   "testChannel",
-		Path:   "/",
+		Scheme: urlScheme,
+		Host:   urlHost,
+		Path:   urlPath,
 	}
 	event := cloudevents.NewEvent()
 	resp := new(cloudevents.EventResponse)
@@ -87,7 +93,7 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 		BrokerName: brokerName,
 	}
 
-	tctx := http.TransportContext{Method: nethttp.MethodPost, URI: "/"}
+	tctx := http.TransportContext{Method: validHTTPMethod, URI: validURI}
 	ctx := http.WithTransportContext(context.Background(), tctx)
 	_ = handler.serveHTTP(ctx, event, resp)
 	if !client.sent {
