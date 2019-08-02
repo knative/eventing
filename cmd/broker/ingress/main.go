@@ -25,8 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/knative/eventing/pkg/broker/ingress"
-
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -35,6 +33,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	"github.com/knative/eventing/pkg/broker/ingress"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/eventing/pkg/utils"

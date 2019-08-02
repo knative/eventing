@@ -7,23 +7,12 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"go.uber.org/zap"
-
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"go.uber.org/zap"
 )
 
-var (
-	logger     = zap.NewNop()
-	channelURI = &url.URL{
-		Scheme: "http",
-		Host:   "testChannel",
-		Path:   "/",
-	}
-	brokerName = "testBroker"
-	validURI   = "/"
-	event      = cloudevents.NewEvent()
-	resp       = new(cloudevents.EventResponse)
-)
+const brokerName = "testBroker"
+const validURI = "/"
 
 type fakeClient struct{ sent bool }
 
@@ -55,6 +44,14 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 	}
 
 	for n, tc := range testCases {
+		logger := zap.NewNop()
+		channelURI := &url.URL{
+			Scheme: "http",
+			Host:   "testChannel",
+			Path:   "/",
+		}
+		event := cloudevents.NewEvent()
+		resp := new(cloudevents.EventResponse)
 		client, _ := cloudevents.NewDefaultClient()
 		t.Run(n, func(t *testing.T) {
 			handler := Handler{
@@ -69,15 +66,20 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 			if resp.Status != tc.expectedStatus {
 				t.Errorf("Unexpected status code. Expected %v, Actual %v", tc.expectedStatus, resp.Status)
 			}
-
 		})
 	}
-
 }
 
 func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
-
-	client := &fakeClient{false}
+	logger := zap.NewNop()
+	channelURI := &url.URL{
+		Scheme: "http",
+		Host:   "testChannel",
+		Path:   "/",
+	}
+	event := cloudevents.NewEvent()
+	resp := new(cloudevents.EventResponse)
+	client := &fakeClient{}
 	handler := Handler{
 		Logger:     logger,
 		CeClient:   client,
