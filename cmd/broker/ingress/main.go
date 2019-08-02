@@ -19,12 +19,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/knative/eventing/pkg/broker/ingress"
 	"log"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/knative/eventing/pkg/broker/ingress"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -56,7 +57,6 @@ type envConfig struct {
 }
 
 var (
-
 	metricsPort = 9090
 
 	writeTimeout    = 1 * time.Minute
@@ -176,4 +176,3 @@ func main() {
 	wg.Wait()
 	logger.Info("Done.")
 }
-
