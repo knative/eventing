@@ -32,6 +32,11 @@ required = [
   unused-packages = false
   non-go = false
 
+# Our master branch tracks kantive/pkg master or a release.
+[[override]]
+  name = "knative.dev/pkg"
+  branch = "release-0.8"
+
 # TODO why is this overridden?
 [[override]]
   name = "gopkg.in/yaml.v2"
@@ -81,11 +86,6 @@ required = [
 [[override]]
   name = "github.com/json-iterator/go"
   revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
-
-# Our master branch tracks kantive/pkg master.
-[[override]]
-  name = "knative.dev/pkg"
-  branch = "master"
 
 # TODO why is this overridden?
 [[override]]
