@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"testing"
 
-	cloudevents2 "github.com/cloudevents/sdk-go/pkg/cloudevents"
-
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 
@@ -29,7 +27,7 @@ var (
 
 type fakeClient struct{ sent bool }
 
-func (f *fakeClient) Send(ctx context.Context, event cloudevents2.Event) (*cloudevents2.Event, error) {
+func (f *fakeClient) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
 	f.sent = true
 	return &event, nil
 }
