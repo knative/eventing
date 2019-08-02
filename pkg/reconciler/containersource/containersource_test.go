@@ -65,6 +65,11 @@ var (
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS
 
+	deploymentName = fmt.Sprintf("containersource-%s-%s", sourceName, sourceUID)
+
+	// We cannot take the address of constants, so copy it into a var.
+	conditionTrue = corev1.ConditionTrue
+
 	// TODO: k8s service does not work, fix.
 	//serviceRef = corev1.ObjectReference{
 	//	Name:       sinkName,
@@ -221,7 +226,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment "%s"`, deploymentName), // TODO on noes
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -244,7 +249,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
-					WithContainerSourceDeploying(`Created deployment ""`),
+					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -253,7 +258,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 0, nil, nil),
+				), nil, nil, nil),
 			},
 		}, {
 			Name: "valid first pass without template",
@@ -271,7 +276,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment "%s"`, deploymentName), // TODO on noes
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -284,7 +289,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
-					WithContainerSourceDeploying(`Created deployment ""`),
+					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -293,7 +298,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 0, nil, nil),
+				), nil, nil, nil),
 			},
 		}, {
 			Name: "valid, with ready deployment with template",
@@ -326,11 +331,11 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 1, nil, nil),
+				), &conditionTrue, nil, nil),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "" has 1 ready replicas`),
+				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "%s" has 1 ready replicas`, deploymentName),
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReadinessChanged", `ContainerSource "test-container-source" became ready`),
 			},
@@ -378,11 +383,11 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 1, nil, nil),
+				), &conditionTrue, nil, nil),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "" has 1 ready replicas`),
+				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "%s" has 1 ready replicas`, deploymentName),
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReadinessChanged", `ContainerSource "test-container-source" became ready`),
 			},
@@ -427,7 +432,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment "%s"`, deploymentName), // TODO on noes
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -452,7 +457,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
-					WithContainerSourceDeploying(`Created deployment ""`),
+					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -461,7 +466,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 0, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
+				), nil, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
 			},
 		}, {
 			Name: "valid first pass, with annotations and labels without template",
@@ -481,7 +486,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment ""`), // TODO on noes
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment "%s"`, deploymentName), // TODO on noes
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -496,7 +501,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
-					WithContainerSourceDeploying(`Created deployment ""`),
+					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -505,7 +510,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 0, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
+				), nil, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
 			},
 		}, {
 			Name: "error for create deployment",
@@ -548,7 +553,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), 0, nil, nil),
+				), nil, nil, nil),
 			},
 		},
 		//{ // TODO: k8s service does not work, fix.
@@ -605,15 +610,28 @@ func TestAllCases(t *testing.T) {
 	))
 }
 
-func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
+func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.ConditionStatus, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
 	args := append(source.Spec.DeprecatedArgs, fmt.Sprintf("--sink=%s", sinkURI))
 	env := append(source.Spec.DeprecatedEnv, corev1.EnvVar{Name: "SINK", Value: sinkURI})
 
 	labs := map[string]string{
-		"eventing.knative.dev/source": source.Name,
+		"sources.eventing.knative.dev/containerSource": source.Name,
 	}
 	for k, v := range labels {
 		labs[k] = v
+	}
+
+	status := appsv1.DeploymentStatus{}
+	if available != nil {
+		status.Conditions = []appsv1.DeploymentCondition{
+			{
+				Type:   appsv1.DeploymentAvailable,
+				Status: *available,
+			},
+		}
+		if *available == corev1.ConditionTrue {
+			status.ReadyReplicas = 1
+		}
 	}
 
 	return &appsv1.Deployment{
@@ -622,14 +640,17 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, lab
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName:    fmt.Sprintf("%s-", source.Name),
+			Name:            deploymentName,
 			Namespace:       source.Namespace,
 			OwnerReferences: getOwnerReferences(),
+			Labels: map[string]string{
+				"sources.eventing.knative.dev/containerSource": source.Name,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"eventing.knative.dev/source": source.Name,
+					"sources.eventing.knative.dev/containerSource": source.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -649,9 +670,7 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, replicas int32, lab
 				},
 			},
 		},
-		Status: appsv1.DeploymentStatus{
-			ReadyReplicas: replicas,
-		},
+		Status: status,
 	}
 }
 

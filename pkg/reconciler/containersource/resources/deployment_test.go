@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
@@ -25,6 +26,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	name = "test-name"
+	uid  = "uid"
 )
 
 func TestMakeDeployment_template(t *testing.T) {
@@ -38,9 +44,9 @@ func TestMakeDeployment_template(t *testing.T) {
 			name: "sink override and annotation label not allowed",
 			args: ContainerArguments{
 				Source: &v1alpha1.ContainerSource{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+					ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 				},
-				Name:      "test-name",
+				Name:      name,
 				Namespace: "test-namespace",
 				Template: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -71,8 +77,8 @@ func TestMakeDeployment_template(t *testing.T) {
 				},
 				Sink: "test-sink",
 				Labels: map[string]string{
-					"eventing.knative.dev/source": "not-allowed",
-					"anotherlabel":                "extra-label",
+					"sources.eventing.knative.dev/containerSource": "not-allowed",
+					"anotherlabel":                                 "extra-label",
 				},
 				Annotations: map[string]string{
 					"sidecar.istio.io/inject": "false",
@@ -85,21 +91,24 @@ func TestMakeDeployment_template(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "test-name-",
-					Namespace:    "test-namespace",
+					Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 						Kind:               "ContainerSource",
-						Name:               "test-name",
-						UID:                "TEST_UID",
+						Name:               name,
+						UID:                uid,
 						Controller:         &yes,
 						BlockOwnerDeletion: &yes,
 					}},
+					Labels: map[string]string{
+						"sources.eventing.knative.dev/containerSource": name,
+					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"eventing.knative.dev/source": "test-name",
+							"sources.eventing.knative.dev/containerSource": name,
 						},
 					},
 					Template: corev1.PodTemplateSpec{
@@ -109,8 +118,8 @@ func TestMakeDeployment_template(t *testing.T) {
 								"anotherannotation":       "extra-annotation",
 							},
 							Labels: map[string]string{
-								"eventing.knative.dev/source": "test-name",
-								"anotherlabel":                "extra-label",
+								"sources.eventing.knative.dev/containerSource": name,
+								"anotherlabel":                                 "extra-label",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -152,9 +161,9 @@ func TestMakeDeployment_template(t *testing.T) {
 			name: "sink",
 			args: ContainerArguments{
 				Source: &v1alpha1.ContainerSource{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+					ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 				},
-				Name:      "test-name",
+				Name:      name,
 				Namespace: "test-namespace",
 				Template: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -207,27 +216,30 @@ func TestMakeDeployment_template(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "test-name-",
-					Namespace:    "test-namespace",
+					Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 						Kind:               "ContainerSource",
-						Name:               "test-name",
-						UID:                "TEST_UID",
+						Name:               name,
+						UID:                uid,
 						Controller:         &yes,
 						BlockOwnerDeletion: &yes,
 					}},
+					Labels: map[string]string{
+						"sources.eventing.knative.dev/containerSource": name,
+					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"eventing.knative.dev/source": "test-name",
+							"sources.eventing.knative.dev/containerSource": name,
 						},
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"eventing.knative.dev/source": "test-name",
+								"sources.eventing.knative.dev/containerSource": name,
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -296,9 +308,9 @@ func TestMakeDeployment_template(t *testing.T) {
 			name: "sink in args",
 			args: ContainerArguments{
 				Source: &v1alpha1.ContainerSource{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+					ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 				},
-				Name:      "test-name",
+				Name:      name,
 				Namespace: "test-namespace",
 				Template: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -343,7 +355,7 @@ func TestMakeDeployment_template(t *testing.T) {
 						},
 					},
 				},
-				Labels: map[string]string{"eventing.knative.dev/source": "test-name"},
+				Labels: map[string]string{"sources.eventing.knative.dev/containerSource": name},
 			},
 			want: &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
@@ -351,27 +363,30 @@ func TestMakeDeployment_template(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "test-name-",
-					Namespace:    "test-namespace",
+					Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 						Kind:               "ContainerSource",
-						Name:               "test-name",
-						UID:                "TEST_UID",
+						Name:               name,
+						UID:                uid,
 						Controller:         &yes,
 						BlockOwnerDeletion: &yes,
 					}},
+					Labels: map[string]string{
+						"sources.eventing.knative.dev/containerSource": name,
+					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"eventing.knative.dev/source": "test-name",
+							"sources.eventing.knative.dev/containerSource": name,
 						},
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"eventing.knative.dev/source": "test-name",
+								"sources.eventing.knative.dev/containerSource": name,
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -440,9 +455,9 @@ func TestMakeDeployment_template(t *testing.T) {
 			name: "template takes precedence",
 			args: ContainerArguments{
 				Source: &v1alpha1.ContainerSource{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+					ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 				},
-				Name:      "test-name",
+				Name:      name,
 				Namespace: "test-namespace",
 				Template: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -494,27 +509,30 @@ func TestMakeDeployment_template(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "test-name-",
-					Namespace:    "test-namespace",
+					Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 						Kind:               "ContainerSource",
-						Name:               "test-name",
-						UID:                "TEST_UID",
+						Name:               name,
+						UID:                uid,
 						Controller:         &yes,
 						BlockOwnerDeletion: &yes,
 					}},
+					Labels: map[string]string{
+						"sources.eventing.knative.dev/containerSource": name,
+					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"eventing.knative.dev/source": "test-name",
+							"sources.eventing.knative.dev/containerSource": name,
 						},
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"eventing.knative.dev/source": "test-name",
+								"sources.eventing.knative.dev/containerSource": name,
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -571,9 +589,9 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 	yes := true
 	got := MakeDeployment(ContainerArguments{
 		Source: &v1alpha1.ContainerSource{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+			ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 		},
-		Name:      "test-name",
+		Name:      name,
 		Namespace: "test-namespace",
 		Image:     "test-image",
 		Args:      []string{"--test1=args1", "--test2=args2"},
@@ -591,8 +609,8 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 		ServiceAccountName: "test-service-account",
 		Sink:               "test-sink",
 		Labels: map[string]string{
-			"eventing.knative.dev/source": "not-allowed",
-			"anotherlabel":                "extra-label",
+			"sources.eventing.knative.dev/containerSource": "not-allowed",
+			"anotherlabel":                                 "extra-label",
 		},
 		Annotations: map[string]string{
 			"sidecar.istio.io/inject": "false",
@@ -606,21 +624,24 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-name-",
-			Namespace:    "test-namespace",
+			Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+			Namespace: "test-namespace",
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 				Kind:               "ContainerSource",
-				Name:               "test-name",
-				UID:                "TEST_UID",
+				Name:               name,
+				UID:                uid,
 				Controller:         &yes,
 				BlockOwnerDeletion: &yes,
 			}},
+			Labels: map[string]string{
+				"sources.eventing.knative.dev/containerSource": name,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"eventing.knative.dev/source": "test-name",
+					"sources.eventing.knative.dev/containerSource": name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -630,8 +651,8 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 						"anotherannotation":       "extra-annotation",
 					},
 					Labels: map[string]string{
-						"eventing.knative.dev/source": "test-name",
-						"anotherlabel":                "extra-label",
+						"sources.eventing.knative.dev/containerSource": name,
+						"anotherlabel":                                 "extra-label",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -677,9 +698,9 @@ func TestMakeDeployment_sink(t *testing.T) {
 	yes := true
 	got := MakeDeployment(ContainerArguments{
 		Source: &v1alpha1.ContainerSource{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+			ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 		},
-		Name:      "test-name",
+		Name:      name,
 		Namespace: "test-namespace",
 		Image:     "test-image",
 		Args:      []string{"--test1=args1", "--test2=args2"},
@@ -703,27 +724,30 @@ func TestMakeDeployment_sink(t *testing.T) {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-name-",
-			Namespace:    "test-namespace",
+			Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+			Namespace: "test-namespace",
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 				Kind:               "ContainerSource",
-				Name:               "test-name",
-				UID:                "TEST_UID",
+				Name:               name,
+				UID:                uid,
 				Controller:         &yes,
 				BlockOwnerDeletion: &yes,
 			}},
+			Labels: map[string]string{
+				"sources.eventing.knative.dev/containerSource": name,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"eventing.knative.dev/source": "test-name",
+					"sources.eventing.knative.dev/containerSource": name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"eventing.knative.dev/source": "test-name",
+						"sources.eventing.knative.dev/containerSource": name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -769,9 +793,9 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 	yes := true
 	got := MakeDeployment(ContainerArguments{
 		Source: &v1alpha1.ContainerSource{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-name", UID: "TEST_UID"},
+			ObjectMeta: metav1.ObjectMeta{Name: name, UID: uid},
 		},
-		Name:      "test-name",
+		Name:      name,
 		Namespace: "test-namespace",
 		Image:     "test-image",
 		Args:      []string{"--test1=args1", "--test2=args2", "--sink=test-sink"},
@@ -787,7 +811,7 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 			},
 		}},
 		ServiceAccountName: "test-service-account",
-		Labels:             map[string]string{"eventing.knative.dev/source": "test-name"},
+		Labels:             map[string]string{"sources.eventing.knative.dev/containerSource": name},
 	})
 
 	want := &appsv1.Deployment{
@@ -796,27 +820,30 @@ func TestMakeDeployment_sinkinargs(t *testing.T) {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-name-",
-			Namespace:    "test-namespace",
+			Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+			Namespace: "test-namespace",
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 				Kind:               "ContainerSource",
-				Name:               "test-name",
-				UID:                "TEST_UID",
+				Name:               name,
+				UID:                uid,
 				Controller:         &yes,
 				BlockOwnerDeletion: &yes,
 			}},
+			Labels: map[string]string{
+				"sources.eventing.knative.dev/containerSource": name,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"eventing.knative.dev/source": "test-name",
+					"sources.eventing.knative.dev/containerSource": name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"eventing.knative.dev/source": "test-name",
+						"sources.eventing.knative.dev/containerSource": name,
 					},
 				},
 				Spec: corev1.PodSpec{
