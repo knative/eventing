@@ -48,9 +48,11 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	cronjobReconciled         = "CronJobSourceReconciled"
-	cronJobReadinessChanged   = "CronJobSourceReadinessChanged"
-	cronjobUpdateStatusFailed = "CronJobSourceUpdateStatusFailed"
+	cronJobReconciled              = "CronJobSourceReconciled"
+	cronJobReadinessChanged        = "CronJobSourceReadinessChanged"
+	cronJobUpdateStatusFailed      = "CronJobSourceUpdateStatusFailed"
+	cronJobSourceDeploymentCreated = "CronJobSurceDeploymentCreated"
+	cronJobSourceDeploymentUpdated = "CronJobSourceDeploymentUpdated"
 
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
 	// image. It must be defined.
@@ -104,12 +106,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		logging.FromContext(ctx).Warn("Error reconciling CronJobSource", zap.Error(err))
 	} else {
 		logging.FromContext(ctx).Debug("CronJobSource reconciled")
-		r.Recorder.Eventf(cronjob, corev1.EventTypeNormal, cronjobReconciled, `CronJobSource reconciled: "%s/%s"`, cronjob.Namespace, cronjob.Name)
+		r.Recorder.Eventf(cronjob, corev1.EventTypeNormal, cronJobReconciled, `CronJobSource reconciled: "%s/%s"`, cronjob.Namespace, cronjob.Name)
 	}
 
 	if _, updateStatusErr := r.updateStatus(ctx, cronjob.DeepCopy()); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the CronJobSource", zap.Error(err))
-		r.Recorder.Eventf(cronjob, corev1.EventTypeWarning, cronjobUpdateStatusFailed, "Failed to update CronJobSource's status: %v", err)
+		r.Recorder.Eventf(cronjob, corev1.EventTypeWarning, cronJobUpdateStatusFailed, "Failed to update CronJobSource's status: %v", err)
 		return updateStatusErr
 	}
 
@@ -233,7 +235,11 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	ra, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
-		r.Recorder.Eventf(src, corev1.EventTypeNormal, cronJobSourceDeploymentCreated, "Deployment created, error: %v", err)
+		msg := "Deployment created"
+		if err != nil {
+			msg = fmt.Sprintf("Deployment created, error: %v", err)
+		}
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, cronJobSourceDeploymentCreated, "%s", msg)
 		return ra, err
 	} else if err != nil {
 		return nil, fmt.Errorf("error getting receive adapter: %v", err)

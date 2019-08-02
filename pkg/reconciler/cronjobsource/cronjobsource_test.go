@@ -65,11 +65,13 @@ var (
 		Controller:         &trueVal,
 		BlockOwnerDeletion: &trueVal,
 	}
+	eventTypeName = fmt.Sprintf("dev.knative.cronjob.event-%s", sourceUID)
 )
 
 const (
 	image        = "github.com/knative/test/image"
 	sourceName   = "test-cronjob-source"
+	sourceUID    = "1234"
 	testNS       = "testnamespace"
 	testSchedule = "*/2 * * * *"
 	testData     = "data"
@@ -223,7 +225,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantCreates: []runtime.Object{
-				NewEventType("", testNS,
+				NewEventType(eventTypeName, testNS,
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
@@ -245,7 +247,7 @@ func TestAllCases(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerAddress(sinkDNS),
 				),
-				NewEventType("name-1", testNS,
+				NewEventType(eventTypeName, testNS,
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType("type-1"),
 					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
@@ -278,7 +280,7 @@ func TestAllCases(t *testing.T) {
 				Name: "name-1",
 			}},
 			WantCreates: []runtime.Object{
-				NewEventType("", testNS,
+				NewEventType(eventTypeName, testNS,
 					WithEventTypeGenerateName(fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(sourcesv1alpha1.CronJobEventType))),
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
