@@ -75,13 +75,23 @@ func TestGenerateFixedName(t *testing.T) {
 	}{
 		"standard": {
 			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
-			prefix:   "default-text-extractor-",
+			prefix:   "default-text-extractor",
 			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
 		},
 		"too long": {
 			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
 			prefix:   "this-is-an-extremely-long-prefix-which-will-make-the-generated-name-too-long-",
-			expected: "this-is-an-extremely-long-p2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			expected: "this-is-an-extremely-long--2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"uid starts with dash": {
+			uid:      "-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "this-is-an-extremely-long-prefix-which-will-make-the-generated-name-too-long-",
+			expected: "this-is-an-extremely-long--2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"prefix ends with dash": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "default-text-extractor-",
+			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
 		},
 	}
 	for n, tc := range testCases {
