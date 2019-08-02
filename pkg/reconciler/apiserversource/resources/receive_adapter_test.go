@@ -64,7 +64,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
-			Name:      "apiserversource-source-name1234",
+			Name:      "apiserversource-source-name-1234",
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",

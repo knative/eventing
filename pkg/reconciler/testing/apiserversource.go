@@ -23,17 +23,19 @@ import (
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // ApiServerSourceOption enables further configuration of a ApiServer.
 type ApiServerSourceOption func(*v1alpha1.ApiServerSource)
 
 // NewApiServerSource creates a ApiServer with ApiServerOptions
-func NewApiServerSource(name, namespace string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
+func NewApiServerSource(name, namespace, uid string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
 	c := &v1alpha1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			UID:       types.UID(uid),
 		},
 	}
 	for _, opt := range o {

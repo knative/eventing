@@ -276,7 +276,7 @@ func k8sServiceLabels(c *eventingv1alpha1.Channel) map[string]string {
 }
 
 func channelServiceName(channelName string) string {
-	return fmt.Sprintf("%s-channel-", channelName)
+	return fmt.Sprintf("%s-channel", channelName)
 }
 
 func channelHostName(channelName, namespace string) string {

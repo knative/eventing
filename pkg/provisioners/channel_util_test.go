@@ -296,7 +296,7 @@ func TestChannelNames(t *testing.T) {
 		F: func() string {
 			return channelServiceName("foo")
 		},
-		Want: "foo-channel-",
+		Want: "foo-channel",
 	}, {
 		Name: "channelHostName",
 		F: func() string {
