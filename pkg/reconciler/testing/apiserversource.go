@@ -17,11 +17,12 @@ limitations under the License.
 package testing
 
 import (
+	"fmt"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ApiServerSourceOption enables further configuration of a ApiServer.
@@ -59,7 +60,8 @@ func WithApiServerSourceSink(uri string) ApiServerSourceOption {
 
 func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
-	s.Status.PropagateDeploymentAvailability(NewDeployment("", "any"))
+	name := utils.GenerateFixedName(s, fmt.Sprintf("apiserversource-%s", s.Name))
+	s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
 }
 
 func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {

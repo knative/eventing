@@ -31,6 +31,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "source-name",
 			Namespace: "source-namespace",
+			UID:       "1234",
 		},
 		Spec: v1alpha1.ApiServerSourceSpec{
 			ServiceAccountName: "source-svc-acct",
@@ -62,8 +63,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	trueValue := true
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    "source-namespace",
-			GenerateName: "apiserversource-source-name-",
+			Namespace: "source-namespace",
+			Name:      "apiserversource-source-name1234",
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
@@ -73,6 +74,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 					APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 					Kind:               "ApiServerSource",
 					Name:               "source-name",
+					UID:                "1234",
 					Controller:         &trueValue,
 					BlockOwnerDeletion: &trueValue,
 				},
