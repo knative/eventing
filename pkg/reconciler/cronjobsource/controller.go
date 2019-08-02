@@ -51,10 +51,11 @@ func NewController(
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
-		cronjobLister:    cronJobSourceInformer.Lister(),
-		deploymentLister: deploymentInformer.Lister(),
-		eventTypeLister:  eventTypeInformer.Lister(),
+		Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
+		cronjobLister:       cronJobSourceInformer.Lister(),
+		deploymentLister:    deploymentInformer.Lister(),
+		eventTypeLister:     eventTypeInformer.Lister(),
+		receiveAdapterImage: newEnvLookup(raImageEnvVar),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, impl.EnqueueKey)

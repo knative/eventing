@@ -19,7 +19,6 @@ package cronjobsource
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -83,8 +82,6 @@ func init() {
 	_ = appsv1.AddToScheme(scheme.Scheme)
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-
-	_ = os.Setenv("CRONJOB_RA_IMAGE", image)
 }
 
 func TestAllCases(t *testing.T) {
@@ -396,10 +393,11 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
-			cronjobLister:    listers.GetCronJobSourceLister(),
-			deploymentLister: listers.GetDeploymentLister(),
-			eventTypeLister:  listers.GetEventTypeLister(),
+			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
+			cronjobLister:       listers.GetCronJobSourceLister(),
+			deploymentLister:    listers.GetDeploymentLister(),
+			eventTypeLister:     listers.GetEventTypeLister(),
+			receiveAdapterImage: FinishedEnvLookup(image),
 		}
 		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
 		return r
