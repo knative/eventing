@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"time"
 
+	status "github.com/knative/eventing/pkg/apis/duck"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -40,7 +41,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/controller"
@@ -160,6 +160,13 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	}
 	cronjob.Status.PropagateDeploymentAvailability(ra)
 
+	// TODO Delete this after 0.8 is cut.
+	if status.DeploymentIsAvailable(&ra.Status, true) {
+		err = r.deleteOldReceiveAdapter(ctx, cronjob)
+		if err != nil {
+			return fmt.Errorf("deleting old receive adapter: %v", err)
+		}
+	}
 	_, err = r.reconcileEventType(ctx, cronjob)
 	if err != nil {
 		cronjob.Status.MarkNoEventType("EventTypeReconcileFailed", "")
@@ -211,16 +218,10 @@ func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource, sinkURI string) (*appsv1.Deployment, error) {
-
 	if err := checkResourcesStatus(src); err != nil {
 		return nil, err
 	}
 
-	ra, err := r.getReceiveAdapter(ctx, src)
-	if err != nil && !apierrors.IsNotFound(err) {
-		logging.FromContext(ctx).Error("Unable to get an existing receive adapter", zap.Error(err))
-		return nil, fmt.Errorf("getting receive adapter: %v", err)
-	}
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:   r.env.Image,
 		Source:  src,
@@ -228,23 +229,26 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 		SinkURI: sinkURI,
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
-	if ra != nil {
-		if podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
-			ra.Spec.Template.Spec = expected.Spec.Template.Spec
-			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
-				return ra, fmt.Errorf("updating receive adapter: %v", err)
-			}
-			logging.FromContext(ctx).Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
-		}
-		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
-		return ra, nil
-	}
 
-	ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
-	if err != nil {
-		return nil, fmt.Errorf("creating receive adapter: %v", err)
+	ra, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, cronJobSourceDeploymentCreated, "Deployment created, error: %v", err)
+		return ra, err
+	} else if err != nil {
+		return nil, fmt.Errorf("error getting receive adapter: %v", err)
+	} else if !metav1.IsControlledBy(ra, src) {
+		return nil, fmt.Errorf("deployment %q is not owned by CronJobSource %q", ra.Name, src.Name)
+	} else if podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
+		ra.Spec.Template.Spec = expected.Spec.Template.Spec
+		if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
+			return ra, err
+		}
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, cronJobSourceDeploymentUpdated, "Deployment %q updated", ra.Name)
+		return ra, nil
+	} else {
+		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
-	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", ra))
 	return ra, nil
 }
 
@@ -263,20 +267,22 @@ func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	return false
 }
 
-func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource) error {
 	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: r.getOldLabelSelector(src).String(),
+		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to list CronJobs: %v", zap.Error(err))
-		return nil, fmt.Errorf("listing CronJobs: %v", err)
+		return fmt.Errorf("listing old receive adapter: %v", err)
 	}
-	for _, dep := range dl.Items {
-		if metav1.IsControlledBy(&dep, src) {
-			return &dep, nil
+	for _, ora := range dl.Items {
+		if metav1.IsControlledBy(&ora, src) {
+			err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
+			}
 		}
 	}
-	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
+	return nil
 }
 
 func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {

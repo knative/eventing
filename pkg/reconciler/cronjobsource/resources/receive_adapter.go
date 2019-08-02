@@ -19,14 +19,13 @@ package resources
 import (
 	"fmt"
 
-	"knative.dev/pkg/kmeta"
-
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/pkg/kmeta"
 )
 
 var (
@@ -76,9 +75,9 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    args.Source.Namespace,
-			GenerateName: fmt.Sprintf("cronjob-%s-", args.Source.Name),
-			Labels:       args.Labels,
+			Namespace: args.Source.Namespace,
+			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("cronjobsource-%s", args.Source.Name)),
+			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),
 			},
