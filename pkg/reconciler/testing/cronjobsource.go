@@ -66,7 +66,7 @@ func WithCronJobSourceSink(uri string) CronJobSourceOption {
 }
 
 func WithCronJobSourceDeployed(s *v1alpha1.CronJobSource) {
-	s.Status.MarkDeployed()
+	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
 
 func WithCronJobSourceEventType(s *v1alpha1.CronJobSource) {

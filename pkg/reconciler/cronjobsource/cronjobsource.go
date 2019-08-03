@@ -153,12 +153,12 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	}
 	cronjob.Status.MarkSink(sinkURI)
 
-	_, err = r.createReceiveAdapter(ctx, cronjob, sinkURI)
+	ra, err := r.createReceiveAdapter(ctx, cronjob, sinkURI)
 	if err != nil {
 		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
 		return fmt.Errorf("creating receive adapter: %v", err)
 	}
-	cronjob.Status.MarkDeployed()
+	cronjob.Status.PropagateDeploymentAvailability(ra)
 
 	_, err = r.reconcileEventType(ctx, cronjob)
 	if err != nil {
