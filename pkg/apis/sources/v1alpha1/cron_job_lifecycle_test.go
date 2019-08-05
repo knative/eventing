@@ -101,7 +101,6 @@ func TestCronJobSourceStatusIsReady(t *testing.T) {
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
 			s.PropagateDeploymentAvailability(availableDeployment)
-			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		want: false,

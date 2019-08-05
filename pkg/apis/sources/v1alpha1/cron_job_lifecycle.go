@@ -93,11 +93,11 @@ func (s *CronJobSourceStatus) MarkNoSink(reason, messageFormat string, messageA 
 // CronJobConditionDeployed should be marked as true or false.
 func (s *CronJobSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment) {
 	if duck.DeploymentIsAvailable(&d.Status, false) {
-		apiserverCondSet.Manage(s).MarkTrue(CronJobConditionDeployed)
+		cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionDeployed)
 	} else {
 		// I don't know how to propagate the status well, so just give the name of the Deployment
 		// for now.
-		apiserverCondSet.Manage(s).MarkFalse(CronJobConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+		cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
 }
 
