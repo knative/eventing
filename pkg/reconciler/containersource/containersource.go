@@ -29,10 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
+	status "github.com/knative/eventing/pkg/apis/duck"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	"github.com/knative/eventing/pkg/duck"
@@ -148,44 +148,20 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		return err
 	}
 
-	deploy, err := r.getDeployment(ctx, source)
+	ra, err := r.reconcileReceiveAdapter(ctx, source, args)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			deploy, err = r.createDeployment(ctx, source, args)
-			if err != nil {
-				r.markNotDeployedRecordEvent(source, corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: %v", err)
-				return err
-			}
-			r.markDeployingAndRecordEvent(source, corev1.EventTypeNormal, "DeploymentCreated", "Created deployment %q", deploy.Name)
-			// Since the Deployment has just been created, there's nothing more
-			// to do until it gets a status. This ContainerSource will be reconciled
-			// again when the Deployment is updated.
-			return nil
-		}
-		// Something unexpected happened getting the deployment.
-		r.markDeployingAndRecordEvent(source, corev1.EventTypeWarning, "DeploymentGetFailed", "Error getting deployment: %v", err)
-		return err
+		return fmt.Errorf("reconciling receive adapter: %v", err)
 	}
-
-	// Update Deployment spec if it's changed
-	expected := resources.MakeDeployment(args)
-	// Since the Deployment spec has fields defaulted by the webhook, it won't
-	// be equal to expected. Use DeepDerivative to compare only the fields that
-	// are set in expected.
-	if !equality.Semantic.DeepDerivative(expected.Spec, deploy.Spec) {
-		deploy.Spec = expected.Spec
-		if _, err = r.KubeClientSet.AppsV1().Deployments(deploy.Namespace).Update(deploy); err != nil {
-			r.markDeployingAndRecordEvent(source, corev1.EventTypeWarning, "DeploymentUpdateFailed", "Failed to update deployment %q: %v", deploy.Name, err)
-			return fmt.Errorf("updating deployment: %v", err)
+	// TODO Delete this after 0.8 is cut.
+	if status.DeploymentIsAvailable(&ra.Status, false) {
+		err = r.deleteOldReceiveAdapter(ctx, source, ra.Name)
+		if err != nil {
+			return fmt.Errorf("deleting old receive adapter: %v", err)
 		}
-		r.markDeployingAndRecordEvent(source, corev1.EventTypeNormal, "DeploymentUpdated", "Updated deployment %q", deploy.Name)
-		return nil
 	}
-
-	// Update source status
-	if deploy.Status.ReadyReplicas > 0 && !source.Status.IsDeployed() {
+	if status.DeploymentIsAvailable(&ra.Status, false) {
 		source.Status.MarkDeployed()
-		r.Recorder.Eventf(source, corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", deploy.Name, deploy.Status.ReadyReplicas)
+		r.Recorder.Eventf(source, corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
 	}
 
 	return nil
@@ -244,23 +220,75 @@ func sinkArg(source *v1alpha1.ContainerSource) (string, bool) {
 	return "", false
 }
 
-func (r *Reconciler) getDeployment(ctx context.Context, source *v1alpha1.ContainerSource) (*appsv1.Deployment, error) {
-	dl, err := r.KubeClientSet.AppsV1().Deployments(source.Namespace).List(metav1.ListOptions{})
-	if err != nil {
-		r.Logger.Errorf("Unable to list deployments: %v", zap.Error(err))
-		return nil, err
-	}
-	for _, c := range dl.Items {
-		if metav1.IsControlledBy(&c, source) {
-			return &c, nil
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, src *v1alpha1.ContainerSource, args resources.ContainerArguments) (*appsv1.Deployment, error) {
+	expected := resources.MakeDeployment(args)
+
+	ra, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
+		if err != nil {
+			r.markNotDeployedRecordEvent(src, corev1.EventTypeWarning, "DeploymentCreateFailed", "Could not create deployment: %v", err)
+			return nil, fmt.Errorf("creating new deployment: %v", err)
 		}
+		r.markDeployingAndRecordEvent(src, corev1.EventTypeNormal, "DeploymentCreated", "Created deployment %q", ra.Name)
+		return ra, nil
+	} else if err != nil {
+		r.markDeployingAndRecordEvent(src, corev1.EventTypeWarning, "DeploymentGetFailed", "Error getting deployment: %v", err)
+		return nil, fmt.Errorf("getting deployment: %v", err)
+	} else if !metav1.IsControlledBy(ra, src) {
+		r.markDeployingAndRecordEvent(src, corev1.EventTypeWarning, "DeploymentNotOwned", "Deployment %q is not owned by this ContainerSource", ra.Name)
+		return nil, fmt.Errorf("deployment %q is not owned by ContainerSource %q", ra.Name, src.Name)
+	} else if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
+		ra.Spec.Template.Spec = expected.Spec.Template.Spec
+		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra)
+		if err != nil {
+			return ra, fmt.Errorf("updating deployment: %v", err)
+		}
+		return ra, nil
+	} else {
+		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
-	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
+	return ra, nil
 }
 
-func (r *Reconciler) createDeployment(ctx context.Context, source *v1alpha1.ContainerSource, args resources.ContainerArguments) (*appsv1.Deployment, error) {
-	deployment := resources.MakeDeployment(args)
-	return r.KubeClientSet.AppsV1().Deployments(source.Namespace).Create(deployment)
+func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
+	// Since the Deployment spec has fields defaulted by the webhook, it won't
+	// be equal to expected. Use DeepDerivative to compare only the fields that
+	// are set in newPodSpec.
+	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
+		return true
+	}
+	if len(oldPodSpec.Containers) != len(newPodSpec.Containers) {
+		return true
+	}
+	for i := range newPodSpec.Containers {
+		if !equality.Semantic.DeepEqual(newPodSpec.Containers[i].Env, oldPodSpec.Containers[i].Env) {
+			return true
+		}
+	}
+	return false
+}
+
+// TODO Delete this after 0.8 is cut.
+func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.ContainerSource, currentName string) error {
+	// Sadly there were no labels attached to the Deployment itself.
+	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("listing old receive adapter: %v", err)
+	}
+	for _, ora := range dl.Items {
+		// Note that this will match the new receive adapter as well.
+		if metav1.IsControlledBy(&ora, src) {
+			// Ignore the current receive adapter.
+			if ora.Name != currentName {
+				err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
+				if err != nil {
+					return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (r *Reconciler) markDeployingAndRecordEvent(source *v1alpha1.ContainerSource, evType string, reason string, messageFmt string, args ...interface{}) {
