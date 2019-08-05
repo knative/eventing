@@ -37,12 +37,22 @@ spec:
   validation:
     openAPIV3Schema:
       properties:
-        apiVersion:
-          type: string
-        kind:
-          type: string
-        metadata:
+        registry:
           type: object
+          description: "Internal information, users should not set this property"
+          properties:
+            eventTypes:
+              type: object
+              description: "Event types that CronJobSource can produce"
+              properties:
+                cron:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.cronjob.event"
+                    schema:
+                      type: string
         spec:
           properties:
             data:

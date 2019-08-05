@@ -17,14 +17,11 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
-	"reflect"
 	"sync"
 	"time"
 
@@ -36,13 +33,11 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/kelseyhightower/envconfig"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/broker"
+	"github.com/knative/eventing/pkg/broker/ingress"
 	"github.com/knative/eventing/pkg/provisioners"
 	"github.com/knative/eventing/pkg/tracing"
 	"github.com/knative/eventing/pkg/utils"
-	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/configmap"
@@ -61,8 +56,6 @@ type envConfig struct {
 }
 
 var (
-	defaultTTL = 255
-
 	metricsPort = 9090
 
 	writeTimeout    = 1 * time.Minute
@@ -119,11 +112,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
-	h := &handler{
-		logger:     logger,
-		ceClient:   ceClient,
-		channelURI: channelURI,
-		brokerName: env.Broker,
+	h := &ingress.Handler{
+		Logger:     logger,
+		CeClient:   ceClient,
+		ChannelURI: channelURI,
+		BrokerName: env.Broker,
 	}
 
 	// Run the event handler with the manager.
@@ -181,117 +174,4 @@ func main() {
 	// goroutine will exit the process if it takes longer than shutdownTimeout.
 	wg.Wait()
 	logger.Info("Done.")
-}
-
-type handler struct {
-	logger     *zap.Logger
-	ceClient   cloudevents.Client
-	channelURI *url.URL
-	brokerName string
-}
-
-func (h *handler) Start(stopCh <-chan struct{}) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- h.ceClient.StartReceiver(ctx, h.serveHTTP)
-	}()
-
-	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
-	select {
-	case err := <-errCh:
-		return err
-	case <-stopCh:
-		break
-	}
-
-	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
-	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
-	cancel()
-	select {
-	case err := <-errCh:
-		return err
-	case <-time.After(shutdownTimeout):
-		return errors.New("timeout shutting down ceClient")
-	}
-}
-
-func (h *handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	if tctx.Method != http.MethodPost {
-		resp.Status = http.StatusMethodNotAllowed
-		return nil
-	}
-
-	// tctx.URI is actually the path...
-	if tctx.URI != "/" {
-		resp.Status = http.StatusNotFound
-		return nil
-	}
-
-	ctx, _ = tag.New(ctx, tag.Insert(TagBroker, h.brokerName))
-	defer func() {
-		stats.Record(ctx, MeasureEventsTotal.M(1))
-	}()
-
-	send := h.decrementTTL(&event)
-	if !send {
-		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "droppedDueToTTL"))
-		return nil
-	}
-
-	// TODO Filter.
-
-	ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
-	return h.sendEvent(ctx, tctx, event)
-}
-
-func (h *handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, event cloudevents.Event) error {
-	sendingCTX := broker.SendingContext(ctx, tctx, h.channelURI)
-
-	startTS := time.Now()
-	defer func() {
-		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
-		stats.Record(sendingCTX, MeasureDispatchTime.M(dispatchTimeMS))
-	}()
-
-	_, err := h.ceClient.Send(sendingCTX, event)
-	if err != nil {
-		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
-	} else {
-		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "ok"))
-	}
-	return err
-}
-
-func (h *handler) decrementTTL(event *cloudevents.Event) bool {
-	ttl := h.getTTLToSet(event)
-	if ttl <= 0 {
-		// TODO send to some form of dead letter queue rather than dropping.
-		h.logger.Error("Dropping message due to TTL", zap.Any("event", event))
-		return false
-	}
-
-	var err error
-	event.Context, err = broker.SetTTL(event.Context, ttl)
-	if err != nil {
-		h.logger.Error("failed to set TTL", zap.Error(err))
-	}
-	return true
-}
-
-func (h *handler) getTTLToSet(event *cloudevents.Event) int {
-	ttlInterface, _ := broker.GetTTL(event.Context)
-	if ttlInterface == nil {
-		h.logger.Debug("No TTL found, defaulting")
-		return defaultTTL
-	}
-	// This should be a JSON number, which json.Unmarshalls as a float64.
-	ttl, ok := ttlInterface.(float64)
-	if !ok {
-		h.logger.Info("TTL attribute wasn't a float64, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOf(ttlInterface)", reflect.TypeOf(ttlInterface)))
-	}
-	return int(ttl) - 1
 }

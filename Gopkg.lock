@@ -1105,7 +1105,7 @@
   version = "kubernetes-1.12.6"
 
 [[projects]]
-  digest = "1:f15a0d552b80277323d01ee8acc6750bb57bdae997bc63bf192d84fb1f0b9136"
+  digest = "1:e41f040a7dada94e29b62420a80fd02caddfc4f9dfa63ab38a9151545aa422ae"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1254,6 +1254,7 @@
     "pkg/version",
     "plugin/pkg/client/auth/exec",
     "plugin/pkg/client/auth/gcp",
+    "plugin/pkg/client/auth/oidc",
     "rest",
     "rest/watch",
     "restmapper",
@@ -1348,7 +1349,7 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  branch = "master"
+  branch = "release-0.8"
   digest = "1:bb229ac008f2b7ddcd122f857584627de4cf78f31f3001ca79560f48659db88f"
   name = "knative.dev/pkg"
   packages = [
@@ -1560,6 +1561,7 @@
     "k8s.io/client-go/listers/core/v1",
     "k8s.io/client-go/listers/rbac/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
+    "k8s.io/client-go/plugin/pkg/client/auth/oidc",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/cache",

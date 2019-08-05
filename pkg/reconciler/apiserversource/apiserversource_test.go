@@ -508,13 +508,13 @@ func TestReconcile(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
+			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
 			resourceTracker:       &MockResourceTracker{},
 		}
-		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
+		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,
