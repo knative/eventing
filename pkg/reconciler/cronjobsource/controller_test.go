@@ -17,6 +17,7 @@ limitations under the License.
 package cronjobsource
 
 import (
+	"os"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -30,12 +31,41 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	testCases := map[string]struct {
+		setEnv bool
+	}{
+		"image not set": {},
+		"image set": {
+			setEnv: true,
+		},
+	}
 	defer logtesting.ClearAll()
-	ctx, _ := SetupFakeContext(t)
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			if tc.setEnv {
+				if err := os.Setenv("CRONJOB_RA_IMAGE", "anything"); err != nil {
+					t.Fatalf("Failed to set env var: %v", err)
+				}
+				defer func() {
+					if err := os.Unsetenv("CRONJOB_RA_IMAGE"); err != nil {
+						t.Fatalf("Failed to unset env var: %v", err)
+					}
+				}()
+			} else {
+				defer func() {
+					r := recover()
+					if r == nil {
+						t.Errorf("Expected NewController to panic, nothing recovered.")
+					}
+				}()
+			}
 
-	c := NewController(ctx, configmap.NewFixedWatcher())
+			ctx, _ := SetupFakeContext(t)
+			c := NewController(ctx, configmap.NewFixedWatcher())
 
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
+			if c == nil {
+				t.Fatal("Expected NewController to return a non-nil value")
+			}
+		})
 	}
 }

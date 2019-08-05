@@ -60,7 +60,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	receiveAdapterImage EnvLookup
+	env env
 
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
@@ -72,6 +72,10 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
+
+type env struct {
+	Image string `envconfig:"CRONJOB_RA_IMAGE" required:"true"`
+}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the CronJobSource
@@ -212,7 +216,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 		return nil, fmt.Errorf("getting receive adapter: %v", err)
 	}
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.receiveAdapterImage.GetValue(),
+		Image:   r.env.Image,
 		Source:  src,
 		Labels:  resources.Labels(src.Name),
 		SinkURI: sinkURI,
