@@ -157,7 +157,7 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 
 	ra, err := r.createReceiveAdapter(ctx, cronjob, sinkURI)
 	if err != nil {
-		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
 		return fmt.Errorf("creating receive adapter: %v", err)
 	}
 	cronjob.Status.PropagateDeploymentAvailability(ra)
@@ -304,7 +304,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 	if src.Spec.Sink.Kind != "Broker" {
 		if current != nil {
 			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
-				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
+				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))
 				return nil, fmt.Errorf("deleting event type: %v", err)
 			}
 		}
@@ -318,14 +318,14 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 		}
 		// EventTypes are immutable, delete it and create it again.
 		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
-			logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
+			logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))
 			return nil, fmt.Errorf("deleting event type: %v", err)
 		}
 	}
 
 	current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected)
 	if err != nil {
-		logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
+		logging.FromContext(ctx).Error("Error creating event type", zap.Error(err), zap.Any("eventType", expected))
 		return nil, fmt.Errorf("creating event type: %v", err)
 	}
 	logging.FromContext(ctx).Debug("EventType created", zap.Any("eventType", current))
@@ -372,7 +372,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJob
 	cj, err := r.EventingClientSet.SourcesV1alpha1().CronJobSources(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("CronJobSource %q became ready after %v", cronjob.Name, duration)
+		logging.FromContext(ctx).Info("CronJobSource because ready after", zap.Duration("duration", duration))
 		r.Recorder.Event(cronjob, corev1.EventTypeNormal, cronJobReadinessChanged, fmt.Sprintf("CronJobSource %q became ready", cronjob.Name))
 		if recorderErr := r.StatsReporter.ReportReady("CronJobSource", cronjob.Namespace, cronjob.Name, duration); recorderErr != nil {
 			logging.FromContext(ctx).Error("Failed to record ready for CronJobSource", zap.Error(recorderErr))
