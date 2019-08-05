@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/knative/eventing/pkg/logging"
 	"net/http"
 	"net/url"
 	"time"
@@ -238,6 +239,7 @@ func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (
 
 // shouldSendMessage determines whether message 'm' should be sent based on the triggerSpec 'ts'.
 // Currently it supports exact matching on event context attributes.
+// If no filter is present, shouldSendMessage returns false.
 // If no filter strategy is present, shouldSendMessage returns true.
 func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
 	if ts.Filter == nil {
@@ -269,7 +271,7 @@ func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.T
 		attrs = map[string]string(*ts.Filter.Attributes)
 	}
 
-	result := r.filterEventByAttributes(attrs, event)
+	result := r.filterEventByAttributes(ctx, attrs, event)
 	if result {
 		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "pass"))
 	} else {
@@ -278,8 +280,7 @@ func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.T
 	return result
 }
 
-// filterEventByAttributes
-func (r *Receiver) filterEventByAttributes(attrs map[string]string, event *cloudevents.Event) bool {
+func (r *Receiver) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) bool {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
@@ -307,12 +308,12 @@ func (r *Receiver) filterEventByAttributes(attrs map[string]string, event *cloud
 		value, ok := ce[k]
 		// If the attribute does not exist in the event, return false.
 		if !ok {
-			r.logger.Debug("No attribute", zap.String("attribute", k))
+			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
 			return false
 		}
 		// If the attribute is not set to any and is different than the one from the event, return false.
 		if v != eventingv1alpha1.TriggerAnyFilter && v != value {
-			r.logger.Debug("Wrong attribute", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
+			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
 			return false
 		}
 	}

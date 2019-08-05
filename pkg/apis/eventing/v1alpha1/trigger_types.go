@@ -86,8 +86,7 @@ type TriggerFilter struct {
 	// context. An event passes the filter if all values are equal to the
 	// specified values.
 	//
-	// Nested context attributes are not supported as keys. Numeric values are
-	// not supported.
+	// Nested context attributes are not supported as keys. Only string values are supported.
 	//
 	// +optional
 	Attributes *TriggerFilterAttributes `json:"attributes,omitempty"`

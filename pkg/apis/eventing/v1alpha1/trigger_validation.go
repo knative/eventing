@@ -18,9 +18,16 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+)
+
+var (
+	// Only allow alphanumeric, starting with letters.
+	validAttributeName = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
 )
 
 // Validate the Trigger.
@@ -56,6 +63,17 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 					Paths:   []string{"filter.attributes"},
 				}
 				errs = errs.Also(fe)
+			} else {
+				attrs := map[string]string(*ts.Filter.Attributes)
+				for attr := range attrs {
+					if !validAttributeName.MatchString(attr) {
+						fe := &apis.FieldError{
+							Message: fmt.Sprintf("Invalid attribute name: %s", attr),
+							Paths:   []string{"filter.attributes"},
+						}
+						errs = errs.Also(fe)
+					}
+				}
 			}
 		}
 
