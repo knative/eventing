@@ -51,7 +51,7 @@ func NewController(
 	cronJobSourceInformer := cronjobsourceinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
-	env := &env{}
+	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
 		panic(fmt.Errorf("unable to process CronJobSource's required environment variables: %v", err))
 	}

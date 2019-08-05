@@ -60,7 +60,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	env env
+	env envConfig
 
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
@@ -73,7 +73,7 @@ type Reconciler struct {
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
 
-type env struct {
+type envConfig struct {
 	Image string `envconfig:"CRONJOB_RA_IMAGE" required:"true"`
 }
 

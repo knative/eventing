@@ -397,7 +397,7 @@ func TestAllCases(t *testing.T) {
 			cronjobLister:    listers.GetCronJobSourceLister(),
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),
-			env: env{
+			env: envConfig{
 				Image: image,
 			},
 		}
