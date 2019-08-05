@@ -17,6 +17,8 @@ kind: Deployment
 metadata:
   name: kafka-ch-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:

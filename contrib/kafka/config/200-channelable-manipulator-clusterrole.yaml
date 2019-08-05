@@ -17,6 +17,7 @@ kind: ClusterRole
 metadata:
   name: kafka-channelable-manipulator
   labels:
+    eventing.knative.dev/release: devel
     duck.knative.dev/channelable: "true"
 # Do not use this role directly. These rules will be added to the "channelable-manipulator" role.
 rules:

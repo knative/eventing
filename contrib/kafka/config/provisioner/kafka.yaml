@@ -16,6 +16,8 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
   name: kafka
+  labels:
+    eventing.knative.dev/release: devel
 spec: {}
 ---
 
@@ -24,12 +26,16 @@ kind: ServiceAccount
 metadata:
   name: kafka-channel-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 ---
 
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kafka-channel-controller
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -88,6 +94,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kafka-channel-controller-manage
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: kafka-channel-controller
@@ -119,6 +127,8 @@ kind: Deployment
 metadata:
   name: kafka-channel-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
@@ -151,6 +161,8 @@ kind: ServiceAccount
 metadata:
   name: kafka-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 
 ---
 
@@ -158,6 +170,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kafka-channel-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - "" # Core API group.
@@ -181,6 +195,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kafka-channel-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: kafka-channel-dispatcher
@@ -197,6 +213,8 @@ kind: Deployment
 metadata:
   name: kafka-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:

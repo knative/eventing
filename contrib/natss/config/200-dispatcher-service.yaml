@@ -18,13 +18,14 @@ metadata:
   name: natss-ch-dispatcher
   namespace: knative-eventing
   labels:
-      messaging.knative.dev/channel: natss-channel
-      messaging.knative.dev/role: dispatcher
+    eventing.knative.dev/release: devel
+    messaging.knative.dev/channel: natss-channel
+    messaging.knative.dev/role: dispatcher
 spec:
   selector:
-      messaging.knative.dev/channel: natss-channel
-      messaging.knative.dev/role: dispatcher
+    messaging.knative.dev/channel: natss-channel
+    messaging.knative.dev/role: dispatcher
   ports:
-    - port: 80
-      protocol: TCP
-      targetPort: 8080
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
