@@ -401,7 +401,7 @@ func TestAllCases(t *testing.T) {
 			deploymentLister: listers.GetDeploymentLister(),
 			eventTypeLister:  listers.GetEventTypeLister(),
 		}
-		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
+		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,

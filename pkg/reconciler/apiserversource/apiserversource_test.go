@@ -514,7 +514,7 @@ func TestReconcile(t *testing.T) {
 			source:                source,
 			resourceTracker:       &MockResourceTracker{},
 		}
-		r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, func(string) {})
+		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(string) {})
 		return r
 	},
 		true,
