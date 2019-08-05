@@ -449,12 +449,6 @@ func makeAvailableReceiveAdapter(ref corev1.ObjectReference) *appsv1.Deployment 
 	return ra
 }
 
-func makeAvailableReceiveAdapter(ref corev1.ObjectReference) *appsv1.Deployment {
-	ra := makeReceiveAdapterWithSink(ref)
-	WithDeploymentAvailable()(ra)
-	return ra
-}
-
 func makeReceiveAdapterWithSink(ref corev1.ObjectReference) *appsv1.Deployment {
 	source := NewCronJobSource(sourceName, testNS, sourceUID,
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
