@@ -234,11 +234,10 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, src *v1alpha1.
 		return ra, nil
 	} else if err != nil {
 		r.markDeployingAndRecordEvent(src, corev1.EventTypeWarning, "DeploymentGetFailed", "Error getting deployment: %v", err)
-
 		return nil, fmt.Errorf("getting deployment: %v", err)
 	} else if !metav1.IsControlledBy(ra, src) {
 		r.markDeployingAndRecordEvent(src, corev1.EventTypeWarning, "DeploymentNotOwned", "Deployment %q is not owned by this ContainerSource", ra.Name)
-		return nil, fmt.Errorf("deploymtn %q is not owned by ContainerSource %q", ra.Name, src.Name)
+		return nil, fmt.Errorf("deployment %q is not owned by ContainerSource %q", ra.Name, src.Name)
 	} else if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
 		ra.Spec.Template.Spec = expected.Spec.Template.Spec
 		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra)
@@ -255,7 +254,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, src *v1alpha1.
 func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	// Since the Deployment spec has fields defaulted by the webhook, it won't
 	// be equal to expected. Use DeepDerivative to compare only the fields that
-	// are set in expected.
+	// are set in newPodSpec.
 	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
 		return true
 	}
@@ -270,6 +269,7 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 	return false
 }
 
+// TODO Delete this after 0.8 is cut.
 func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.ContainerSource, currentName string) error {
 	// Sadly there were no labels attached to the Deployment itself.
 	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{})
