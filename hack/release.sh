@@ -38,12 +38,21 @@ RELEASES=(
 readonly RELEASES
 
 function build_release() {
+  # Update release labels if this is a tagged release
+  if [[ -n "${TAG}" ]]; then
+    echo "Tagged release, updating release labels to eventing.knative.dev/release: \"${TAG}\""
+    LABEL_YAML_CMD=(sed -e "s|eventing.knative.dev/release: devel|eventing.knative.dev/release: \"${TAG}\"|")
+  else
+    echo "Untagged release, will NOT update release labels"
+    LABEL_YAML_CMD=(cat)
+  fi
+
   # Build the components
   local all_yamls=()
   for yaml in "${!COMPONENTS[@]}"; do
     local config="${COMPONENTS[${yaml}]}"
     echo "Building Knative Eventing - ${config}"
-    ko resolve ${KO_FLAGS} -f ${config}/ > ${yaml}
+    ko resolve ${KO_FLAGS} -f ${config}/ | "${LABEL_YAML_CMD[@]}" > ${yaml}
     all_yamls+=(${yaml})
   done
   # Assemble the release
