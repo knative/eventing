@@ -260,15 +260,11 @@ func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.T
 	}
 
 	attrs := map[string]string{}
+	// Since the filters cannot distinguish presence, filtering for an empty
+	// string is impossible.
 	if ts.Filter.DeprecatedSourceAndType != nil {
-		// Since this filter cannot distinguish presence, filtering for an empty
-		// string is impossible.
-		if ts.Filter.DeprecatedSourceAndType.Type != "" {
-			attrs["type"] = ts.Filter.DeprecatedSourceAndType.Type
-		}
-		if ts.Filter.DeprecatedSourceAndType.Source != "" {
-			attrs["source"] = ts.Filter.DeprecatedSourceAndType.Source
-		}
+		attrs["type"] = ts.Filter.DeprecatedSourceAndType.Type
+		attrs["source"] = ts.Filter.DeprecatedSourceAndType.Source
 	} else if ts.Filter.Attributes != nil {
 		attrs = map[string]string(*ts.Filter.Attributes)
 	}
@@ -284,7 +280,7 @@ func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.T
 
 // filterEventByAttributes
 func (r *Receiver) filterEventByAttributes(attrs map[string]string, event *cloudevents.Event) bool {
-	// Set baseline context attributes. The attributes available may not be
+	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
 	ce := map[string]interface{}{

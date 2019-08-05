@@ -88,6 +88,8 @@ type TriggerFilter struct {
 	//
 	// Nested context attributes are not supported as keys. Numeric values are
 	// not supported.
+	//
+	// +optional
 	Attributes *TriggerFilterAttributes `json:"attributes,omitempty"`
 }
 
