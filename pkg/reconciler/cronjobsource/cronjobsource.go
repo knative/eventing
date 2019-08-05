@@ -223,7 +223,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 	if ra != nil {
-		if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
+		if podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
 			ra.Spec.Template.Spec = expected.Spec.Template.Spec
 			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
 				return ra, fmt.Errorf("updating receive adapter: %v", err)
@@ -242,7 +242,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	return ra, nil
 }
 
-func (*Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
+func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
 		return true
 	}
