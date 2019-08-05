@@ -43,7 +43,7 @@ spec:
           description: "Internal information, users should not set this property"
           properties:
             eventTypes:
-              # TODO: set the schemas.
+              # TODO: set the schemas' patterns.
               type: object
               description: "Event types that ApiServerSource can produce"
               properties:
@@ -55,7 +55,6 @@ spec:
                       pattern: "dev.knative.apiserver.resource.add"
                     schema:
                       type: string
-                      pattern: ""
                 deleteResource:
                   type: object
                   properties:
@@ -64,7 +63,6 @@ spec:
                       pattern: "dev.knative.apiserver.resource.delete"
                     schema:
                       type: string
-                      pattern: ""
                 updateResource:
                   type: object
                   properties:
@@ -73,7 +71,6 @@ spec:
                       pattern: "dev.knative.apiserver.resource.update"
                     schema:
                       type: string
-                      pattern: ""
                 addRef:
                   type: object
                   properties:
@@ -82,7 +79,6 @@ spec:
                       pattern: "dev.knative.apiserver.ref.add"
                     schema:
                       type: string
-                      pattern: ""
                 deleteRef:
                   type: object
                   properties:
@@ -91,7 +87,6 @@ spec:
                       pattern: "dev.knative.apiserver.ref.delete"
                     schema:
                       type: string
-                      pattern: ""
                 updateRef:
                   type: object
                   properties:
@@ -100,7 +95,6 @@ spec:
                       pattern: "dev.knative.apiserver.ref.update"
                     schema:
                       type: string
-                      pattern: ""
         spec:
           properties:
             serviceAccountName:
