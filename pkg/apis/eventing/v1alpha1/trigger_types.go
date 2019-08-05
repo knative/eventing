@@ -95,14 +95,15 @@ type TriggerFilter struct {
 
 // TriggerFilterSourceAndType filters events based on exact matches on the cloud event's type and
 // source attributes. Only exact matches will pass the filter. Either or both type and source can
-// use the value 'Any' to indicate all strings match.
+// use the value '' to indicate all strings match.
 type TriggerFilterSourceAndType struct {
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
 }
 
 // TriggerFilterAttributes is a map of context attribute names to values for
-// filtering by equality.
+// filtering by equality. Only exact matches will pass the filter. You can use the value ''
+// to indicate all strings match.
 type TriggerFilterAttributes map[string]string
 
 // TriggerStatus represents the current state of a Trigger.
