@@ -3,15 +3,16 @@ package ingress
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/url"
+	"reflect"
+	"time"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/knative/eventing/pkg/broker"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"reflect"
-	"time"
 )
 
 var (
