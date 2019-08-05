@@ -73,10 +73,6 @@ type Reconciler struct {
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
 
-type envConfig struct {
-	Image string `envconfig:"CRONJOB_RA_IMAGE" required:"true"`
-}
-
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the CronJobSource
 // resource with the current status of the resource.
@@ -356,7 +352,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJob
 		r.Logger.Infof("CronJobSource %q became ready after %v", cronjob.Name, duration)
 		r.Recorder.Event(cronjob, corev1.EventTypeNormal, cronJobReadinessChanged, fmt.Sprintf("CronJobSource %q became ready", cronjob.Name))
 		if recorderErr := r.StatsReporter.ReportReady("CronJobSource", cronjob.Namespace, cronjob.Name, duration); recorderErr != nil {
-			logging.FromContext(ctx).Info("Failed to record ready for CronJobSource", zap.Error(recorderErr))
+			logging.FromContext(ctx).Error("Failed to record ready for CronJobSource", zap.Error(recorderErr))
 		}
 	}
 
