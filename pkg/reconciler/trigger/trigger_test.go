@@ -531,7 +531,7 @@ func makeTrigger() *v1alpha1.Trigger {
 		Spec: v1alpha1.TriggerSpec{
 			Broker: brokerName,
 			Filter: &v1alpha1.TriggerFilter{
-				SourceAndType: &v1alpha1.TriggerFilterSourceAndType{
+				DeprecatedSourceAndType: &v1alpha1.TriggerFilterSourceAndType{
 					Source: "Any",
 					Type:   "Any",
 				},
