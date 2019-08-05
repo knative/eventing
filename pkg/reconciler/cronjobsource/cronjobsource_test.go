@@ -162,6 +162,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
+				makeAvailableReceiveAdapter(sinkRef),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -184,9 +185,6 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceEventType,
 				),
 			}},
-			WantCreates: []runtime.Object{
-				makeReceiveAdapter(),
-			},
 		}, {
 			Name: "valid with event type creation",
 			Objects: []runtime.Object{
@@ -201,6 +199,7 @@ func TestAllCases(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerAddress(sinkDNS),
 				),
+				makeAvailableReceiveAdapter(brokerRef),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -231,7 +230,6 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
 					WithEventTypeBroker(sinkName),
 					WithEventTypeOwnerReference(ownerRef)),
-				makeReceiveAdapterWithSink(brokerRef),
 			},
 		}, {
 			Name: "valid with event type deletion and creation",
@@ -253,6 +251,7 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
 					WithEventTypeBroker(sinkName),
 					WithEventTypeOwnerReference(ownerRef)),
+				makeAvailableReceiveAdapter(brokerRef),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -286,7 +285,6 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
 					WithEventTypeBroker(sinkName),
 					WithEventTypeOwnerReference(ownerRef)),
-				makeReceiveAdapterWithSink(brokerRef),
 			},
 		}, {
 			Name: "valid, existing ra",
@@ -302,7 +300,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeReceiveAdapter(),
+				makeAvailableReceiveAdapter(sinkRef),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -345,7 +343,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeReceiveAdapter(),
+				makeAvailableReceiveAdapter(sinkRef),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -372,7 +370,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeReceiveAdapter(),
+				makeAvailableReceiveAdapter(sinkRef),
 				NewEventType("name-1", testNS,
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
@@ -410,6 +408,12 @@ func TestAllCases(t *testing.T) {
 
 func makeReceiveAdapter() *appsv1.Deployment {
 	return makeReceiveAdapterWithSink(sinkRef)
+}
+
+func makeAvailableReceiveAdapter(ref corev1.ObjectReference) *appsv1.Deployment {
+	ra := makeReceiveAdapterWithSink(ref)
+	WithDeploymentAvailable()(ra)
+	return ra
 }
 
 func makeReceiveAdapterWithSink(ref corev1.ObjectReference) *appsv1.Deployment {
