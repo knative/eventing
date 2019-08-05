@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	// Only allow alphanumeric, starting with letters.
+	// Only allow lowercase alphanumeric, starting with letters.
 	validAttributeName = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
 )
 

@@ -119,7 +119,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
-		name: "invalid attribute name",
+		name: "invalid attribute name, start with number",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
 			Filter: &TriggerFilter{
@@ -131,6 +131,21 @@ func TestTriggerSpecValidation(t *testing.T) {
 		},
 		want: &apis.FieldError{
 			Message: "Invalid attribute name: 0invalid",
+			Paths:   []string{"filter.attributes"},
+		},
+	}, {
+		name: "invalid attribute name, capital letters",
+		ts: &TriggerSpec{
+			Broker: "test_broker",
+			Filter: &TriggerFilter{
+				Attributes: &TriggerFilterAttributes{
+					"invALID": "my-value",
+				},
+			},
+			Subscriber: validSubscriber,
+		},
+		want: &apis.FieldError{
+			Message: "Invalid attribute name: invALID",
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
