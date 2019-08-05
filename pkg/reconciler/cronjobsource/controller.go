@@ -18,16 +18,17 @@ package cronjobsource
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
+	cronjobsourceinformer "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
 	"github.com/knative/eventing/pkg/duck"
 	"github.com/knative/eventing/pkg/reconciler"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-
-	eventtypeinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
-	cronjobsourceinformer "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
 	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 )
 
@@ -38,6 +39,13 @@ const (
 	// itself when creating events.
 	controllerAgentName = "cronjob-source-controller"
 )
+
+// envConfig will be used to extract the required environment variables using
+// github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
+// NewController will panic.
+type envConfig struct {
+	Image string `envconfig:"CRONJOB_RA_IMAGE" required:"true"`
+}
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -50,11 +58,17 @@ func NewController(
 	cronJobSourceInformer := cronjobsourceinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		panic(fmt.Errorf("unable to process CronJobSource's required environment variables: %v", err))
+	}
+
 	r := &Reconciler{
 		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 		cronjobLister:    cronJobSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
+		env:              *env,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)

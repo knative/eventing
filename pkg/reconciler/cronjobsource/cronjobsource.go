@@ -18,10 +18,9 @@ package cronjobsource
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
 	"reflect"
-	"sync"
 	"time"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -61,8 +60,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	receiveAdapterImage string
-	once                sync.Once
+	env envConfig
 
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
@@ -133,13 +131,13 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	_, err := cron.ParseStandard(cronjob.Spec.Schedule)
 	if err != nil {
 		cronjob.Status.MarkInvalidSchedule("Invalid", "")
-		return err
+		return fmt.Errorf("invalid schedule: %v", err)
 	}
 	cronjob.Status.MarkSchedule()
 
 	if cronjob.Spec.Sink == nil {
 		cronjob.Status.MarkNoSink("Missing", "Sink missing from spec")
-		return fmt.Errorf("Sink missing from spec")
+		return errors.New("spec.sink missing")
 	}
 
 	sinkObjRef := cronjob.Spec.Sink
@@ -147,42 +145,29 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		sinkObjRef.Namespace = cronjob.Namespace
 	}
 
-	cronjobDesc := cronjob.Namespace + "/" + cronjob.Name + ", " + cronjob.GroupVersionKind().String()
+	cronjobDesc := fmt.Sprintf("%s/%s,%s", cronjob.Namespace, cronjob.Name, cronjob.GroupVersionKind().String())
 	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, cronjob, cronjobDesc)
 	if err != nil {
 		cronjob.Status.MarkNoSink("NotFound", "")
-		return err
+		return fmt.Errorf("getting sink URI: %v", err)
 	}
 	cronjob.Status.MarkSink(sinkURI)
 
 	_, err = r.createReceiveAdapter(ctx, cronjob, sinkURI)
 	if err != nil {
 		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
-		return err
+		return fmt.Errorf("creating receive adapter: %v", err)
 	}
 	cronjob.Status.MarkDeployed()
 
 	_, err = r.reconcileEventType(ctx, cronjob)
 	if err != nil {
 		cronjob.Status.MarkNoEventType("EventTypeReconcileFailed", "")
-		return err
+		return fmt.Errorf("reconciling event types: %v", err)
 	}
 	cronjob.Status.MarkEventType()
 
 	return nil
-}
-
-func (r *Reconciler) getReceiveAdapterImage() string {
-	if r.receiveAdapterImage == "" {
-		r.once.Do(func() {
-			raImage, defined := os.LookupEnv(raImageEnvVar)
-			if !defined {
-				panic(fmt.Errorf("required environment variable %q not defined", raImageEnvVar))
-			}
-			r.receiveAdapterImage = raImage
-		})
-	}
-	return r.receiveAdapterImage
 }
 
 func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
@@ -206,8 +191,8 @@ func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
 		// In the event the field isn't specified, we assign a default in the receive_adapter
 		if rsrc.field != "" {
 			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
-				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %s, Error: %s", rsrc.key, rsrc.field, err)
-				return err
+				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %q, Error: %s", rsrc.key, rsrc.field, err)
+				return fmt.Errorf("incorrect resource specification, %s: %q: %v", rsrc.key, rsrc.field, err)
 			}
 		}
 	}
@@ -224,36 +209,36 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	ra, err := r.getReceiveAdapter(ctx, src)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get an existing receive adapter", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("getting receive adapter: %v", err)
 	}
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.getReceiveAdapterImage(),
+		Image:   r.env.Image,
 		Source:  src,
 		Labels:  resources.Labels(src.Name),
 		SinkURI: sinkURI,
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 	if ra != nil {
-		if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
+		if podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
 			ra.Spec.Template.Spec = expected.Spec.Template.Spec
 			if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
-				return ra, err
+				return ra, fmt.Errorf("updating receive adapter: %v", err)
 			}
 			logging.FromContext(ctx).Info("Receive Adapter updated.", zap.Any("receiveAdapter", ra))
-		} else {
-			logging.FromContext(ctx).Info("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		}
+		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 		return ra, nil
 	}
 
-	if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected); err != nil {
-		return nil, err
+	ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
+	if err != nil {
+		return nil, fmt.Errorf("creating receive adapter: %v", err)
 	}
-	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", expected))
-	return ra, err
+	logging.FromContext(ctx).Info("Receive Adapter created.", zap.Any("receiveAdapter", ra))
+	return ra, nil
 }
 
-func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
+func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
 		return true
 	}
@@ -273,8 +258,8 @@ func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.CronJo
 		LabelSelector: r.getLabelSelector(src).String(),
 	})
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to list cronjobs: %v", zap.Error(err))
-		return nil, err
+		logging.FromContext(ctx).Error("Unable to list CronJobs: %v", zap.Error(err))
+		return nil, fmt.Errorf("listing CronJobs: %v", err)
 	}
 	for _, dep := range dl.Items {
 		if metav1.IsControlledBy(&dep, src) {
@@ -288,7 +273,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 	current, err := r.getEventType(ctx, src)
 	if err != nil && !apierrors.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("getting event types: %v", err)
 	}
 
 	// Only create EventTypes for Broker sinks. But if there is an EventType and the src has a non-Broker sink
@@ -297,7 +282,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 		if current != nil {
 			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
 				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
-				return nil, err
+				return nil, fmt.Errorf("deleting event type: %v", err)
 			}
 		}
 		// No current and no error.
@@ -306,24 +291,22 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 
 	expected := resources.MakeEventType(src)
 	if current != nil {
-		if !equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
-			// As is immutable, delete it and create it again.
-			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
-				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
-				return nil, err
-			}
-			if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
-				logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
-				return nil, err
-			}
+		if equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
+			return current, nil
 		}
-		return current, nil
+		// EventTypes are immutable, delete it and create it again.
+		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
+			logging.FromContext(ctx).Error("Error deleting existing event type", zap.Any("eventType", current))
+			return nil, fmt.Errorf("deleting event type: %v", err)
+		}
 	}
-	if current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected); err != nil {
-		return nil, err
+	current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected)
+	if err != nil {
+		logging.FromContext(ctx).Error("Error creating event type", zap.Any("eventType", current))
+		return nil, fmt.Errorf("creating event type: %v", err)
 	}
-	logging.FromContext(ctx).Info("EventType created", zap.Any("eventType", current))
-	return current, err
+	logging.FromContext(ctx).Debug("EventType created", zap.Any("eventType", current))
+	return current, nil
 }
 
 func (r *Reconciler) getEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
@@ -368,8 +351,8 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJob
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("CronJobSource %q became ready after %v", cronjob.Name, duration)
 		r.Recorder.Event(cronjob, corev1.EventTypeNormal, cronJobReadinessChanged, fmt.Sprintf("CronJobSource %q became ready", cronjob.Name))
-		if err := r.StatsReporter.ReportReady("CronJobSource", cronjob.Namespace, cronjob.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for CronJobSource, %v", err)
+		if recorderErr := r.StatsReporter.ReportReady("CronJobSource", cronjob.Namespace, cronjob.Name, duration); recorderErr != nil {
+			logging.FromContext(ctx).Error("Failed to record ready for CronJobSource", zap.Error(recorderErr))
 		}
 	}
 
