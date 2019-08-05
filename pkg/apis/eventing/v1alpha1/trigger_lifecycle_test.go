@@ -300,14 +300,14 @@ func TestTriggerAnnotateUserInfo(t *testing.T) {
 		}, {
 			name:       "update trigger which has no annotations without diff",
 			user:       u1,
-			this:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}},
-			prev:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}},
+			this:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
+			prev:       &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
 			wantedAnns: map[string]string{},
 		}, {
 			name: "update trigger which has annotations without diff",
 			user: u2,
-			this: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}}),
-			prev: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter()}}),
+			this: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}}),
+			prev: withUserAnns(u1, u1, &Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}}),
 			wantedAnns: map[string]string{
 				eventing.CreatorAnnotation: u1,
 				eventing.UpdaterAnnotation: u1,

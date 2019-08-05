@@ -27,10 +27,18 @@ import (
 )
 
 var (
-	validTriggerFilter = &TriggerFilter{
-		SourceAndType: &TriggerFilterSourceAndType{
+	validEmptyFilter         = &TriggerFilter{}
+	validSourceAndTypeFilter = &TriggerFilter{
+		DeprecatedSourceAndType: &TriggerFilterSourceAndType{
 			Type:   "other_type",
-			Source: "other_source"},
+			Source: "other_source",
+		},
+	}
+	validAttributesFilter = &TriggerFilter{
+		Attributes: &TriggerFilterAttributes{
+			"type":   "other_type",
+			"source": "other_source",
+		},
 	}
 	validSubscriber = &SubscriberSpec{
 		Ref: &corev1.ObjectReference{
@@ -80,7 +88,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "missing broker",
 		ts: &TriggerSpec{
 			Broker:     "",
-			Filter:     validTriggerFilter,
+			Filter:     validSourceAndTypeFilter,
 			Subscriber: validSubscriber,
 		},
 		want: func() *apis.FieldError {
@@ -98,21 +106,42 @@ func TestTriggerSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing filter.sourceAndType",
+		name: "missing attributes keys",
 		ts: &TriggerSpec{
-			Broker:     "test_broker",
-			Filter:     &TriggerFilter{},
+			Broker: "test_broker",
+			Filter: &TriggerFilter{
+				Attributes: &TriggerFilterAttributes{},
+			},
+			Subscriber: validSubscriber,
+		},
+		want: &apis.FieldError{
+			Message: "At least one filtered attribute must be specified",
+			Paths:   []string{"filter.attributes"},
+		},
+	}, {
+		name: "multiple oneof sourceAndType and attributes",
+		ts: &TriggerSpec{
+			Broker: "test_broker",
+			Filter: &TriggerFilter{
+				DeprecatedSourceAndType: &TriggerFilterSourceAndType{
+					Type:   "other_type",
+					Source: "other_source",
+				},
+				Attributes: &TriggerFilterAttributes{
+					"type": "other_type",
+				},
+			},
 			Subscriber: validSubscriber,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("filter.sourceAndType")
+			fe := apis.ErrMultipleOneOf("filter.sourceAndType", "filter.attributes")
 			return fe
 		}(),
 	}, {
 		name: "missing subscriber",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
-			Filter: validTriggerFilter,
+			Filter: validSourceAndTypeFilter,
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("subscriber")
@@ -122,15 +151,49 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "missing subscriber.ref.name",
 		ts: &TriggerSpec{
 			Broker:     "test_broker",
-			Filter:     validTriggerFilter,
+			Filter:     validSourceAndTypeFilter,
 			Subscriber: invalidSubscriber,
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("subscriber.ref.name")
 			return fe
 		}(),
-	},
-	}
+	}, {
+		name: "missing broker",
+		ts: &TriggerSpec{
+			Broker:     "",
+			Filter:     validSourceAndTypeFilter,
+			Subscriber: validSubscriber,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("broker")
+			return fe
+		}(),
+	}, {
+		name: "valid empty filter",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validEmptyFilter,
+			Subscriber: validSubscriber,
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "valid SourceAndType filter",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validSourceAndTypeFilter,
+			Subscriber: validSubscriber,
+		},
+		want: &apis.FieldError{},
+	}, {
+		name: "valid Attributes filter",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validAttributesFilter,
+			Subscriber: validSubscriber,
+		},
+		want: &apis.FieldError{},
+	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -191,7 +254,7 @@ func TestTriggerImmutableFields(t *testing.T) {
 		original: &Trigger{
 			Spec: TriggerSpec{
 				Broker: "broker",
-				Filter: validTriggerFilter,
+				Filter: validSourceAndTypeFilter,
 			},
 		},
 		want: nil,

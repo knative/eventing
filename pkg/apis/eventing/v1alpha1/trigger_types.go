@@ -74,7 +74,21 @@ type TriggerSpec struct {
 }
 
 type TriggerFilter struct {
-	SourceAndType *TriggerFilterSourceAndType `json:"sourceAndType,omitempty"`
+	// DeprecatedSourceAndType filters events based on exact matches on the
+	// CloudEvents type and source attributes. This field has been replaced by the
+	// Attributes field.
+	//
+	// +optional
+	DeprecatedSourceAndType *TriggerFilterSourceAndType `json:"sourceAndType,omitempty"`
+
+	// Attributes filters events by exact match on event context attributes.
+	// Each key in the map is compared with the equivalent key in the event
+	// context. An event passes the filter if all values are equal to the
+	// specified values.
+	//
+	// Nested context attributes are not supported as keys. Numeric values are
+	// not supported.
+	Attributes *TriggerFilterAttributes `json:"attributes,omitempty"`
 }
 
 // TriggerFilterSourceAndType filters events based on exact matches on the cloud event's type and
@@ -84,6 +98,10 @@ type TriggerFilterSourceAndType struct {
 	Type   string `json:"type,omitempty"`
 	Source string `json:"source,omitempty"`
 }
+
+// TriggerFilterAttributes is a map of context attribute names to values for
+// filtering by equality.
+type TriggerFilterAttributes map[string]string
 
 // TriggerStatus represents the current state of a Trigger.
 type TriggerStatus struct {

@@ -109,7 +109,7 @@ func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
 func WithTriggerFilter(eventSource, eventType string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		triggerFilter := &eventingv1alpha1.TriggerFilter{
-			SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+			DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
 				Type:   eventType,
 				Source: eventSource,
 			},
