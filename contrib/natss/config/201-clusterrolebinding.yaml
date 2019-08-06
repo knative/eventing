@@ -16,6 +16,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: natss-ch-controller
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: natss-ch-controller
@@ -31,6 +33,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: natss-ch-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: natss-ch-dispatcher

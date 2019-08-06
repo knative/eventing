@@ -16,6 +16,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kafka-ch-controller
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: kafka-ch-controller
@@ -31,6 +33,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kafka-ch-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: kafka-ch-dispatcher
@@ -46,6 +50,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kafka-webhook
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: kafka-webhook

@@ -16,6 +16,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: natss-ch-controller
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - messaging.knative.dev

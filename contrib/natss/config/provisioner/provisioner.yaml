@@ -16,6 +16,8 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: ClusterChannelProvisioner
 metadata:
   name: natss
+  labels:
+    eventing.knative.dev/release: devel
 spec: {}
 
 ---
@@ -25,6 +27,8 @@ kind: ServiceAccount
 metadata:
   name: natss-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 
 ---
 
@@ -32,6 +36,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: natss-controller
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -62,6 +68,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: natss-channel-controller
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: natss-controller
@@ -78,6 +86,8 @@ kind: Deployment
 metadata:
   name: natss-controller
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
@@ -105,6 +115,8 @@ kind: ServiceAccount
 metadata:
   name: natss-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 
 ---
 
@@ -112,6 +124,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: natss-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - eventing.knative.dev
@@ -135,6 +149,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: natss-dispatcher
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: natss-dispatcher
@@ -151,6 +167,8 @@ kind: Role
 metadata:
   name: natss-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 rules:
   - apiGroups:
       - "" # Core API group.
@@ -168,6 +186,8 @@ kind: RoleBinding
 metadata:
   name: natss-channel-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 subjects:
   - kind: ServiceAccount
     name: natss-dispatcher
@@ -184,6 +204,8 @@ kind: Deployment
 metadata:
   name: natss-dispatcher
   namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
 spec:
   replicas: 1
   selector:
