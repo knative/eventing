@@ -19,30 +19,31 @@ package testing
 import (
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // CronJobSourceOption enables further configuration of a CronJob.
 type CronJobSourceOption func(*v1alpha1.CronJobSource)
 
-// NewCronJob creates a CronJob with CronJobOptions
-func NewCronSourceJob(name, namespace string, o ...CronJobSourceOption) *v1alpha1.CronJobSource {
+// NewCronJobSource creates a CronJobSource with CronJobOptions.
+func NewCronJobSource(name, namespace, uid string, o ...CronJobSourceOption) *v1alpha1.CronJobSource {
 	c := &v1alpha1.CronJobSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			UID:       types.UID(uid),
 		},
 	}
 	for _, opt := range o {
 		opt(c)
 	}
-	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
+	// c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
 	return c
 }
 
-// WithInitCronJobConditions initializes the CronJobSource's conditions.
+// WithInitCronJobSourceConditions initializes the CronJobSource's conditions.
 func WithInitCronJobSourceConditions(s *v1alpha1.CronJobSource) {
 	s.Status.InitializeConditions()
 }

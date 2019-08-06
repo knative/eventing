@@ -47,12 +47,6 @@ func WithInitEventTypeConditions(et *v1alpha1.EventType) {
 	et.Status.InitializeConditions()
 }
 
-func WithEventTypeGenerateName(generateName string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
-		et.ObjectMeta.GenerateName = generateName
-	}
-}
-
 func WithEventTypeSource(source string) EventTypeOption {
 	return func(et *v1alpha1.EventType) {
 		et.Spec.Source = source

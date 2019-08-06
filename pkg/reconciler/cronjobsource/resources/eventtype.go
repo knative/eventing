@@ -17,8 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"fmt"
-
 	"knative.dev/pkg/kmeta"
 
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -31,9 +29,9 @@ import (
 func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(v1alpha1.CronJobEventType)),
-			Labels:       Labels(src.Name),
-			Namespace:    src.Namespace,
+			Name:      utils.GenerateFixedName(src, utils.ToDNS1123Subdomain(v1alpha1.CronJobEventType)),
+			Labels:    Labels(src.Name),
+			Namespace: src.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(src),
 			},
