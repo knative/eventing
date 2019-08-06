@@ -47,6 +47,7 @@ const (
 	NatssChannelKind    string = "NatssChannel"
 
 	SequenceKind string = "Sequence"
+	ChoiceKind   string = "Choice"
 )
 
 // Kind for sources resources.
