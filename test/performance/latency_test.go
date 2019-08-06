@@ -35,10 +35,6 @@ func TestLatencyForNatssBrokerTrigger(t *testing.T) {
 	testLatencyForBrokerTrigger(t, common.NatssChannelTypeMeta)
 }
 
-func TestLatencyForKafkaBrokerTrigger(t *testing.T) {
-	testLatencyForBrokerTrigger(t, common.KafkaChannelTypeMeta)
-}
-
 func TestLatencyForInMemoryBrokerTrigger(t *testing.T) {
 	testLatencyForBrokerTrigger(t, common.InMemoryChannelTypeMeta)
 }

@@ -19,7 +19,6 @@ package resources
 // This file contains functions that construct Messaging resources.
 
 import (
-	kafkamessagingv1alpha1 "github.com/knative/eventing/contrib/kafka/pkg/apis/messaging/v1alpha1"
 	natssmessagingv1alpha1 "github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
@@ -30,15 +29,6 @@ import (
 
 // SequenceOption enables further configuration of a Sequence.
 type SequenceOption func(*messagingv1alpha1.Sequence)
-
-// KafkaChannel returns a KafkaChannel resource.
-func KafkaChannel(name string) *kafkamessagingv1alpha1.KafkaChannel {
-	return &kafkamessagingv1alpha1.KafkaChannel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-}
 
 // InMemoryChannel returns an InMemoryChannel resource.
 func InMemoryChannel(name string) *messagingv1alpha1.InMemoryChannel {

@@ -43,7 +43,6 @@ const (
 // Kind for messaging resources.
 const (
 	InMemoryChannelKind string = "InMemoryChannel"
-	KafkaChannelKind    string = "KafkaChannel"
 	NatssChannelKind    string = "NatssChannel"
 
 	SequenceKind string = "Sequence"

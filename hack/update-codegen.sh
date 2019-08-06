@@ -45,7 +45,7 @@ ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
-CONTRIB_DIRS=(contrib/kafka/pkg contrib/natss/pkg)
+CONTRIB_DIRS=(contrib/natss/pkg)
 
 for DIR in "${CONTRIB_DIRS[@]}"; do
     # generate the code with:
