@@ -38,6 +38,10 @@ import (
 
 const (
 	writeTimeout = 1 * time.Minute
+	// TimeInFlightMetadataName is used to access the metadata stored on a
+	// CloudEvent to measure the time difference between when an event is
+	// received and when it is dispatched to the trigger function.
+	TimeInFlightMetadataName = "kn00timeinflight"
 )
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -190,9 +194,16 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 	// Record event count and filtering time
 	startTS := time.Now()
 	defer func() {
-		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		var deliveryTime time.Time
+		now := time.Now()
+		dispatchTimeMS := int64(now.Sub(startTS) / time.Millisecond)
 		stats.Record(ctx, MeasureTriggerDispatchTime.M(dispatchTimeMS))
 		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
+		if err := event.ExtensionAs(TimeInFlightMetadataName, &deliveryTime); err != nil {
+			return
+		}
+		timeInFlightMS := int64(now.Sub(deliveryTime) / time.Millisecond)
+		stats.Record(ctx, MeasureDeliveryTime.M(timeInFlightMS))
 	}()
 
 	subscriberURIString := t.Status.SubscriberURI
