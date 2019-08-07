@@ -30,10 +30,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
+	status "github.com/knative/eventing/pkg/apis/duck"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -163,6 +163,14 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		return fmt.Errorf("unable to track receive adapter: %v", err)
 	}
 
+	// TODO Delete this after 0.8 is cut.
+	if status.DeploymentIsAvailable(&ra.Status, true) {
+		err = r.deleteOldReceiveAdapter(ctx, source)
+		if err != nil {
+			return fmt.Errorf("deleting old receive adapter: %v", err)
+		}
+	}
+
 	err = r.reconcileEventTypes(ctx, source)
 	if err != nil {
 		source.Status.MarkNoEventTypes("EventTypesReconcileFailed", "")
@@ -195,13 +203,15 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 
-	ra, err := r.getReceiveAdapter(ctx, src)
+	ra, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
 		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentCreated, "Deployment created, error: %v", err)
 		return ra, err
 	} else if err != nil {
 		return nil, fmt.Errorf("error getting receive adapter: %v", err)
+	} else if !metav1.IsControlledBy(ra, src) {
+		return nil, fmt.Errorf("deployment %q is not owned by ApiServerSource %q", ra.Name, src.Name)
 	} else if r.podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
 		ra.Spec.Template.Spec = expected.Spec.Template.Spec
 		if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
@@ -213,6 +223,24 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
+}
+
+func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource) error {
+	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
+	})
+	if err != nil {
+		return fmt.Errorf("listing old receive adapter: %v", err)
+	}
+	for _, ora := range dl.Items {
+		if metav1.IsControlledBy(&ora, src) {
+			err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
+			}
+		}
+	}
+	return nil
 }
 
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
@@ -243,7 +271,18 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiS
 		}
 	}
 
-	return err
+	// TODO Delete this after 0.8 is cut.
+	oldEventTypes, err := r.getOldEventTypes(ctx, src)
+	if err != nil {
+		return fmt.Errorf("getting old event types: %v", err)
+	}
+	for _, eventType := range oldEventTypes {
+		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+			return fmt.Errorf("deleting old eventType %q: %v", eventType.Name, err)
+		}
+	}
+
+	return nil
 }
 
 func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
@@ -253,6 +292,22 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerS
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
+	}
+	eventTypes := make([]eventingv1alpha1.EventType, 0)
+	for _, et := range etl.Items {
+		if metav1.IsControlledBy(&et, src) {
+			eventTypes = append(eventTypes, et)
+		}
+	}
+	return eventTypes, nil
+}
+
+func (r *Reconciler) getOldEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
+	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing event types: %v", err)
 	}
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
 	for _, et := range etl.Items {
@@ -338,22 +393,6 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 		}
 	}
 	return false
-}
-
-func (r *Reconciler) getReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource) (*appsv1.Deployment, error) {
-	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: r.getLabelSelector(src).String(),
-	})
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to list deployments: %v", zap.Error(err))
-		return nil, err
-	}
-	for _, dep := range dl.Items {
-		if metav1.IsControlledBy(&dep, src) {
-			return &dep, nil
-		}
-	}
-	return nil, apierrors.NewNotFound(schema.GroupResource{}, "")
 }
 
 func (r *Reconciler) getLabelSelector(src *v1alpha1.ApiServerSource) labels.Selector {

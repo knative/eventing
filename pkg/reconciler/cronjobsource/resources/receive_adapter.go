@@ -19,14 +19,18 @@ package resources
 import (
 	"fmt"
 
-	"knative.dev/pkg/kmeta"
-
+	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/kmeta"
+)
 
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+var (
+	// one is a form of int32(1) that you can take the address of.
+	one = int32(1)
 )
 
 // ReceiveAdapterArgs are the arguments needed to create a Cron Job Source Receive Adapter. Every
@@ -41,8 +45,6 @@ type ReceiveAdapterArgs struct {
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
 // Cron Job Sources.
 func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
-	replicas := int32(1)
-
 	RequestResourceCPU, err := resource.ParseQuantity(args.Source.Spec.Resources.Requests.ResourceCPU)
 	if err != nil {
 		RequestResourceCPU = resource.MustParse("250m")
@@ -73,9 +75,9 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    args.Source.Namespace,
-			GenerateName: fmt.Sprintf("cronjob-%s-", args.Source.Name),
-			Labels:       args.Labels,
+			Namespace: args.Source.Namespace,
+			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("cronjobsource-%s", args.Source.Name)),
+			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),
 			},
@@ -84,7 +86,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: args.Labels,
 			},
-			Replicas: &replicas,
+			Replicas: &one,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: args.Labels,

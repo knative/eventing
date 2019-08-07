@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/pkg/utils"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,9 +42,9 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	replicas := int32(1)
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    args.Source.Namespace,
-			GenerateName: fmt.Sprintf("apiserversource-%s-", args.Source.Name),
-			Labels:       args.Labels,
+			Namespace: args.Source.Namespace,
+			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("apiserversource-%s", args.Source.Name)),
+			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),
 			},

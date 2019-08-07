@@ -22,9 +22,16 @@ const (
 	controllerAgentName = "apiserver-source-controller"
 )
 
-func Labels(name string) map[string]string {
+func OldLabels(name string) map[string]string {
 	return map[string]string{
 		"knative-eventing-source":      controllerAgentName,
 		"knative-eventing-source-name": name,
+	}
+}
+
+func Labels(name string) map[string]string {
+	return map[string]string{
+		"eventing.knative.dev/source":     controllerAgentName,
+		"eventing.knative.dev/sourceName": name,
 	}
 }

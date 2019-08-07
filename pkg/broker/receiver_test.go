@@ -41,11 +41,13 @@ import (
 )
 
 const (
-	testNS      = "test-namespace"
-	triggerName = "test-trigger"
-	triggerUID  = "test-trigger-uid"
-	eventType   = `com.example.someevent`
-	eventSource = `/mycontext`
+	testNS         = "test-namespace"
+	triggerName    = "test-trigger"
+	triggerUID     = "test-trigger-uid"
+	eventType      = `com.example.someevent`
+	eventSource    = `/mycontext`
+	extensionName  = `my-extension`
+	extensionValue = `my-extension-value`
 
 	toBeReplaced = "toBeReplaced"
 )
@@ -147,23 +149,38 @@ func TestReceiver(t *testing.T) {
 		},
 		"No TTL": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			event: makeEventWithoutTTL(),
 		},
 		"Wrong type": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("some-other-type", ""),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("some-other-type", "")),
+			},
+		},
+		"Wrong type with attribs": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
 			},
 		},
 		"Wrong source": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", "some-other-source"),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "some-other-source")),
+			},
+		},
+		"Wrong source with attribs": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
+			},
+		},
+		"Wrong extension": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			requestFails:     true,
 			expectedErr:      true,
@@ -171,26 +188,51 @@ func TestReceiver(t *testing.T) {
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
+			},
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Any with attribs": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
 			expectedDispatch: true,
 		},
 		"Dispatch succeeded - Specific": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger(eventType, eventSource),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType(eventType, eventSource)),
 			},
 			expectedDispatch: true,
 		},
+		"Dispatch succeeded - Specific with attribs": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
+			},
+			expectedDispatch: true,
+		},
+		"Dispatch succeeded - Extension with attribs": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, extensionValue)),
+			},
+			event:            makeEventWithExtension(),
+			expectedDispatch: true,
+		},
+		"Dispatch failed - Extension with attribs": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
+			},
+			event: makeEventWithExtension(),
+		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			expectedDispatch: true,
 			returnedEvent:    makeDifferentEvent(),
 		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1alpha1.Trigger{
-				makeTrigger("", ""),
+				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
 			tctx: &cloudevents.HTTPTransportContext{
 				Method: "POST",
@@ -363,7 +405,35 @@ func getClient(initial []runtime.Object, mocks controllertesting.Mocks) *control
 	return controllertesting.NewMockClient(innerClient, mocks)
 }
 
-func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
+func makeTriggerFilterWithDeprecatedSourceAndType(t, s string) *eventingv1alpha1.TriggerFilter {
+	return &eventingv1alpha1.TriggerFilter{
+		DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
+			Type:   t,
+			Source: s,
+		},
+	}
+}
+
+func makeTriggerFilterWithAttributes(t, s string) *eventingv1alpha1.TriggerFilter {
+	return &eventingv1alpha1.TriggerFilter{
+		Attributes: &eventingv1alpha1.TriggerFilterAttributes{
+			"type":   t,
+			"source": s,
+		},
+	}
+}
+
+func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1alpha1.TriggerFilter {
+	return &eventingv1alpha1.TriggerFilter{
+		Attributes: &eventingv1alpha1.TriggerFilterAttributes{
+			"type":        t,
+			"source":      s,
+			extensionName: e,
+		},
+	}
+}
+
+func makeTrigger(filter *eventingv1alpha1.TriggerFilter) *eventingv1alpha1.Trigger {
 	return &eventingv1alpha1.Trigger{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -375,12 +445,7 @@ func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
 			UID:       triggerUID,
 		},
 		Spec: eventingv1alpha1.TriggerSpec{
-			Filter: &eventingv1alpha1.TriggerFilter{
-				SourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
-					Type:   t,
-					Source: s,
-				},
-			},
+			Filter: filter,
 		},
 		Status: eventingv1alpha1.TriggerStatus{
 			SubscriberURI: "toBeReplaced",
@@ -389,19 +454,19 @@ func makeTrigger(t, s string) *eventingv1alpha1.Trigger {
 }
 
 func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
-	t := makeTrigger("", "")
+	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
 	t.Spec.Filter = nil
 	return t
 }
 
 func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger("", "")
+	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
 	t.Status = eventingv1alpha1.TriggerStatus{}
 	return t
 }
 
 func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger("", "")
+	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
 	// This should fail url.Parse(). It was taken from the unit tests for url.Parse(), it violates
 	// rfc3986 3.2.3, namely that the port must be digits.
 	t.Status.SubscriberURI = "http://[::1]:namedport"
@@ -445,4 +510,23 @@ func makeDifferentEvent() *cloudevents.Event {
 			ContentType: cloudevents.StringOfApplicationJSON(),
 		}.AsV03(),
 	}
+}
+
+func makeEventWithExtension() *cloudevents.Event {
+	noTTL := &cloudevents.Event{
+		Context: cloudevents.EventContextV02{
+			Type: eventType,
+			Source: cloudevents.URLRef{
+				URL: url.URL{
+					Path: eventSource,
+				},
+			},
+			ContentType: cloudevents.StringOfApplicationJSON(),
+			Extensions: map[string]interface{}{
+				extensionName: extensionValue,
+			},
+		}.AsV03(),
+	}
+	e := addTTLToEvent(*noTTL)
+	return &e
 }

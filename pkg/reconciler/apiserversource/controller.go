@@ -61,7 +61,7 @@ func NewController(
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.sinkReconciler = duck.NewInjectionSinkReconciler(ctx, impl.EnqueueKey)
+	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

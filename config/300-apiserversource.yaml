@@ -38,12 +38,63 @@ spec:
   validation:
     openAPIV3Schema:
       properties:
-        apiVersion:
-          type: string
-        kind:
-          type: string
-        metadata:
+        registry:
           type: object
+          description: "Internal information, users should not set this property"
+          properties:
+            eventTypes:
+              # TODO: set the schemas' patterns.
+              type: object
+              description: "Event types that ApiServerSource can produce"
+              properties:
+                addResource:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.apiserver.resource.add"
+                    schema:
+                      type: string
+                deleteResource:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.apiserver.resource.delete"
+                    schema:
+                      type: string
+                updateResource:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.apiserver.resource.update"
+                    schema:
+                      type: string
+                addRef:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.apiserver.ref.add"
+                    schema:
+                      type: string
+                deleteRef:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.apiserver.ref.delete"
+                    schema:
+                      type: string
+                updateRef:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      pattern: "dev.knative.apiserver.ref.update"
+                    schema:
+                      type: string
         spec:
           properties:
             serviceAccountName:

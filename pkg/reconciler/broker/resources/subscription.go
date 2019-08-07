@@ -32,7 +32,7 @@ func MakeSubscriptionCRD(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *c
 	return &v1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
-			Name:      utils.GenerateFixedName(b, fmt.Sprintf("internal-ingress-%s-", b.Name)),
+			Name:      utils.GenerateFixedName(b, fmt.Sprintf("internal-ingress-%s", b.Name)),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},

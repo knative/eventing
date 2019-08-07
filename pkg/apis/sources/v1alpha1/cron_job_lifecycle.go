@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/knative/eventing/pkg/apis/duck"
+	appsv1 "k8s.io/api/apps/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -87,19 +89,16 @@ func (s *CronJobSourceStatus) MarkNoSink(reason, messageFormat string, messageA 
 	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionSinkProvided, reason, messageFormat, messageA...)
 }
 
-// MarkDeployed sets the condition that the source has been deployed.
-func (s *CronJobSourceStatus) MarkDeployed() {
-	cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionDeployed)
-}
-
-// MarkDeploying sets the condition that the source is deploying.
-func (s *CronJobSourceStatus) MarkDeploying(reason, messageFormat string, messageA ...interface{}) {
-	cronJobSourceCondSet.Manage(s).MarkUnknown(CronJobConditionDeployed, reason, messageFormat, messageA...)
-}
-
-// MarkNotDeployed sets the condition that the source has not been deployed.
-func (s *CronJobSourceStatus) MarkNotDeployed(reason, messageFormat string, messageA ...interface{}) {
-	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionDeployed, reason, messageFormat, messageA...)
+// PropagateDeploymentAvailability uses the availability of the provided Deployment to determine if
+// CronJobConditionDeployed should be marked as true or false.
+func (s *CronJobSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment) {
+	if duck.DeploymentIsAvailable(&d.Status, false) {
+		cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionDeployed)
+	} else {
+		// I don't know how to propagate the status well, so just give the name of the Deployment
+		// for now.
+		cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+	}
 }
 
 // MarkEventType sets the condition that the source has set its event type.

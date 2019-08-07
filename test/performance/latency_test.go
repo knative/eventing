@@ -26,18 +26,10 @@ import (
 
 	"github.com/knative/eventing/test/base/resources"
 	"github.com/knative/eventing/test/common"
-	"github.com/knative/test-infra/shared/junit"
-	"github.com/knative/test-infra/shared/testgrid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/test-infra/shared/junit"
+	"knative.dev/test-infra/shared/testgrid"
 )
-
-func TestLatencyForNatssBrokerTrigger(t *testing.T) {
-	testLatencyForBrokerTrigger(t, common.NatssChannelTypeMeta)
-}
-
-func TestLatencyForKafkaBrokerTrigger(t *testing.T) {
-	testLatencyForBrokerTrigger(t, common.KafkaChannelTypeMeta)
-}
 
 func TestLatencyForInMemoryBrokerTrigger(t *testing.T) {
 	testLatencyForBrokerTrigger(t, common.InMemoryChannelTypeMeta)

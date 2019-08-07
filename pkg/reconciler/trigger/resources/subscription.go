@@ -34,7 +34,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 	return &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
-			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name)),
+			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(t),
 			},

@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"testing"
 
 	v1 "k8s.io/api/apps/v1"
@@ -33,6 +34,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "source-name",
 			Namespace: "source-namespace",
+			UID:       "source-uid",
 		},
 		Spec: v1alpha1.CronJobSourceSpec{
 			ServiceAccountName: "source-svc-acct",
@@ -55,8 +57,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	yes := true
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    "source-namespace",
-			GenerateName: "cronjob-source-name-",
+			Namespace: "source-namespace",
+			Name:      fmt.Sprintf("cronjobsource-%s-%s", src.Name, src.UID),
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
@@ -64,7 +66,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 				Kind:               "CronJobSource",
-				Name:               "source-name",
+				Name:               src.Name,
+				UID:                src.UID,
 				Controller:         &yes,
 				BlockOwnerDeletion: &yes,
 			}},
@@ -130,59 +133,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	}
 
 	if diff, err := kmp.SafeDiff(want, got); err != nil {
-		t.Errorf("unexpected cron job (-want, +got) = %v", diff)
+		t.Errorf("unexpected cron job resources (-want, +got) = %v", err)
+	} else if diff != "" {
+		t.Errorf("Unexpected deployment (-want +got) = %v", diff)
 	}
-	src.Spec.Resources = v1alpha1.CronJobResourceSpec{
-		Requests: v1alpha1.CronJobRequestsSpec{
-			ResourceCPU:    "101m",
-			ResourceMemory: "200Mi",
-		},
-		Limits: v1alpha1.CronJobLimitsSpec{
-			ResourceCPU:    "102m",
-			ResourceMemory: "500Mi",
-		},
-	}
-	want.Spec.Template.Spec.Containers = []corev1.Container{
-		{
-			Name:  "receive-adapter",
-			Image: "test-image",
-			Env: []corev1.EnvVar{
-				{
-					Name:  "SCHEDULE",
-					Value: "*/2 * * * *",
-				},
-				{
-					Name:  "DATA",
-					Value: "data",
-				},
-				{
-					Name:  "SINK_URI",
-					Value: "sink-uri",
-				},
-				{
-					Name:  "NAME",
-					Value: "source-name",
-				},
-				{
-					Name:  "NAMESPACE",
-					Value: "source-namespace",
-				},
-			},
-			Resources: corev1.ResourceRequirements{
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("101m"),
-					corev1.ResourceMemory: resource.MustParse("200Mi"),
-				},
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("102m"),
-					corev1.ResourceMemory: resource.MustParse("500Mi"),
-				},
-			},
-		},
-	}
-
-	if diff, err := kmp.SafeDiff(want, got); err != nil {
-		t.Errorf("unexpected cron job resources (-want, +got) = %v", diff)
-	}
-
 }
