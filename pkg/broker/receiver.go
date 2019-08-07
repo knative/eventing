@@ -20,12 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/knative/eventing/pkg/logging"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/cloudevents/sdk-go"
+	"github.com/knative/eventing/pkg/logging"
+
+	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"github.com/knative/eventing/pkg/reconciler/trigger/path"
