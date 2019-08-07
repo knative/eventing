@@ -20,16 +20,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/knative/eventing/pkg/inmemorychannel"
-	"github.com/knative/eventing/pkg/provisioners/swappable"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/inmemorychannel"
+	"knative.dev/eventing/pkg/provisioners/swappable"
+	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/tracing"
 
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	inmemorychannelinformer "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
+	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 )
 
 const (

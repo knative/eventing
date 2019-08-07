@@ -30,8 +30,8 @@ import (
 	"net/http"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/provisioners/fanout"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/provisioners/fanout"
 )
 
 // makeChannelKeyFromConfig creates the channel key for a given channelConfig. It is a helper around

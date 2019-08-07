@@ -19,14 +19,14 @@ package containersource
 import (
 	"context"
 
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/reconciler"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	containersourceinformer "github.com/knative/eventing/pkg/client/injection/informers/sources/v1alpha1/containersource"
+	containersourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/containersource"
 	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 )
 

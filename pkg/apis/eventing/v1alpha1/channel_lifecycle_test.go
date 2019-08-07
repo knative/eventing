@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/eventing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

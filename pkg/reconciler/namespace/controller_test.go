@@ -24,7 +24,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
 	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/namespace/fake"
 	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/serviceaccount/fake"
 	_ "knative.dev/pkg/injection/informers/kubeinformers/rbacv1/rolebinding/fake"

@@ -21,11 +21,11 @@ import (
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/knative/eventing/pkg/adapter/cronjobevents"
-	"github.com/knative/eventing/pkg/tracing"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/net/context"
+	"knative.dev/eventing/pkg/adapter/cronjobevents"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/signals"
 )
 

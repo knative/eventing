@@ -32,14 +32,14 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 
-	status "github.com/knative/eventing/pkg/apis/duck"
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/containersource/resources"
 	"go.uber.org/zap"
+	status "knative.dev/eventing/pkg/apis/duck"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	"knative.dev/pkg/controller"
 )
 

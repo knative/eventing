@@ -21,17 +21,17 @@ import (
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	brokerinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
-	subscriptioninformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
+	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
+	channelinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 	serviceinformer "knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
 )
