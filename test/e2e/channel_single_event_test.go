@@ -36,7 +36,7 @@ func TestSingleStructuredEventForChannel(t *testing.T) {
 }
 
 /*
-SingleEvent tests the following scenario:
+SingleEventForChannelTestHelper tests the following scenario:
 
 EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
