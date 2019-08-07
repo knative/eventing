@@ -28,20 +28,20 @@ import (
 )
 
 func TestSingleBinaryEventForChannel(t *testing.T) {
-	singleEvent(t, resources.CloudEventEncodingBinary)
+	SingleEvent(t, resources.CloudEventEncodingBinary)
 }
 
 func TestSingleStructuredEventForChannel(t *testing.T) {
-	singleEvent(t, resources.CloudEventEncodingStructured)
+	SingleEvent(t, resources.CloudEventEncodingStructured)
 }
 
 /*
-singleEvent tests the following scenario:
+SingleEvent tests the following scenario:
 
 EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
-func singleEvent(t *testing.T, encoding string) {
+func SingleEvent(t *testing.T, encoding string) {
 	channelName := "e2e-singleevent-channel-" + encoding
 	senderName := "e2e-singleevent-sender-" + encoding
 	subscriptionName := "e2e-singleevent-subscription-" + encoding

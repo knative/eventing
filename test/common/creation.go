@@ -20,6 +20,7 @@ import (
 	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"github.com/knative/eventing/test/base"
 	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -36,32 +37,12 @@ var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 // CreateChannelOrFail will create a Channel Resource in Eventing.
 func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
-	switch channelTypeMeta.Kind {
-	case resources.InMemoryChannelKind:
-		channel := resources.InMemoryChannel(name)
-		channels := client.Eventing.MessagingV1alpha1().InMemoryChannels(namespace)
-		channel, err := channels.Create(channel)
-		if err != nil {
-			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
-		}
-		client.Tracker.AddObj(channel)
-	case resources.KafkaChannelKind:
-		channel := resources.KafkaChannel(name)
-		channels := client.Kafka.MessagingV1alpha1().KafkaChannels(namespace)
-		channel, err := channels.Create(channel)
-		if err != nil {
-			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
-		}
-		client.Tracker.AddObj(channel)
-	case resources.NatssChannelKind:
-		channel := resources.NatssChannel(name)
-		channels := client.Natss.MessagingV1alpha1().NatssChannels(namespace)
-		channel, err := channels.Create(channel)
-		if err != nil {
-			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
-		}
-		client.Tracker.AddObj(channel)
+	metaResource := resources.NewMetaResource(name, namespace, channelTypeMeta)
+	gvr, err := base.CreateGenericChannelObject(client.Dynamic, metaResource)
+	if err != nil {
+		client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 	}
+	client.Tracker.Add(gvr.Group, gvr.Version, gvr.Resource, namespace, name)
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.

@@ -42,10 +42,10 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
-	runTests(t, channels, common.FeatureBasic, testEventTransformationForTrigger)
+	runTests(t, channels, common.FeatureBasic, TestEventTransformationForTrigger)
 }
 
-func testEventTransformationForTrigger(t *testing.T, channel string) {
+func TestEventTransformationForTrigger(t *testing.T, channel string) {
 	const (
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"

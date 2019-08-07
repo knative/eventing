@@ -34,10 +34,10 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	runTests(t, channels, common.FeatureBasic, testChannelChain)
+	runTests(t, channels, common.FeatureBasic, TestChannelChain)
 }
 
-func testChannelChain(t *testing.T, channel string) {
+func TestChannelChain(t *testing.T, channel string) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channelchain-logger-pod"
