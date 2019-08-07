@@ -29,9 +29,6 @@ var ValidChannelsMap = map[string]ChannelConfig{
 	resources.InMemoryChannelKind: {
 		Features: []Feature{FeatureBasic},
 	},
-	resources.NatssChannelKind: {
-		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	},
 }
 
 // ChannelConfig includes general configuration for a channel.

@@ -32,11 +32,6 @@ readonly EVENTING_CONFIG="config/"
 # In-memory channel CRD config.
 readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 
-# NATS Streaming installation config.
-readonly NATSS_INSTALLATION_CONFIG="contrib/natss/config/broker/natss.yaml"
-# NATSS channel CRD config directory.
-readonly NATSS_CRD_CONFIG_DIR="contrib/natss/config"
-
 # Setup the Knative environment for running tests.
 function knative_setup() {
   # Install the latest Knative/eventing in the current cluster.
@@ -56,8 +51,6 @@ function knative_teardown() {
 
 # Setup resources common to all eventing tests.
 function test_setup() {
-  natss_setup || return 1
-
   install_test_resources || return 1
 
   # Publish test images.
@@ -67,8 +60,6 @@ function test_setup() {
 
 # Tear down resources used in the eventing tests.
 function test_teardown() {
-  natss_teardown
-
   uninstall_test_resources
 }
 
@@ -84,33 +75,11 @@ function install_channel_crds() {
   echo "Installing In-Memory Channel CRD"
   ko apply -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory Channel CRD"
-
-  echo "Installing NATSS Channel CRD"
-  ko apply -f ${NATSS_CRD_CONFIG_DIR} || return 1
-  wait_until_pods_running knative-eventing || fail_test "Failed to install the NATSS Channel CRD"
 }
 
 function uninstall_channel_crds() {
   echo "Uninstalling In-Memory Channel CRD"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}
-
-  echo "Uninstalling NATSS Channel CRD"
-  ko delete --ignore-not-found=true --now --timeout 60s -f ${NATSS_CRD_CONFIG_DIR}
-}
-
-# Create resources required for NATSS provisioner setup
-function natss_setup() {
-  echo "Installing NATS Streaming"
-  kubectl create namespace natss || return 1
-  kubectl apply -n natss -f ${NATSS_INSTALLATION_CONFIG} || return 1
-  wait_until_pods_running natss || fail_test "Failed to start up a NATSS cluster"
-}
-
-# Delete resources used for NATSS provisioner setup
-function natss_teardown() {
-  echo "Uninstalling NATS Streaming"
-  kubectl delete -f ${NATSS_INSTALLATION_CONFIG}
-  kubectl delete namespace natss
 }
 
 function dump_extra_cluster_state() {

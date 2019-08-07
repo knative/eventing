@@ -46,14 +46,6 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 		}
 		client.Tracker.AddObj(channel)
-	case resources.NatssChannelKind:
-		channel := resources.NatssChannel(name)
-		channels := client.Natss.MessagingV1alpha1().NatssChannels(namespace)
-		channel, err := channels.Create(channel)
-		if err != nil {
-			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
-		}
-		client.Tracker.AddObj(channel)
 	}
 }
 
