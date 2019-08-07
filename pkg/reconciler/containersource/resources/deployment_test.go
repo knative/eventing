@@ -78,7 +78,7 @@ func TestMakeDeployment_template(t *testing.T) {
 				Sink: "test-sink",
 				Labels: map[string]string{
 					"sources.eventing.knative.dev/containerSource": "not-allowed",
-					"anotherlabel":                                 "extra-label",
+					"anotherlabel": "extra-label",
 				},
 				Annotations: map[string]string{
 					"sidecar.istio.io/inject": "false",
@@ -119,7 +119,7 @@ func TestMakeDeployment_template(t *testing.T) {
 							},
 							Labels: map[string]string{
 								"sources.eventing.knative.dev/containerSource": name,
-								"anotherlabel":                                 "extra-label",
+								"anotherlabel": "extra-label",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -610,7 +610,7 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 		Sink:               "test-sink",
 		Labels: map[string]string{
 			"sources.eventing.knative.dev/containerSource": "not-allowed",
-			"anotherlabel":                                 "extra-label",
+			"anotherlabel": "extra-label",
 		},
 		Annotations: map[string]string{
 			"sidecar.istio.io/inject": "false",
@@ -652,7 +652,7 @@ func TestMakeDeployment_sinkoverrideannotationlabelnotallowed(t *testing.T) {
 					},
 					Labels: map[string]string{
 						"sources.eventing.knative.dev/containerSource": name,
-						"anotherlabel":                                 "extra-label",
+						"anotherlabel": "extra-label",
 					},
 				},
 				Spec: corev1.PodSpec{
