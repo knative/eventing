@@ -73,21 +73,6 @@ You can access the Eventing Controller's logs with:
 kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
 ```
 
-## Installing a Channel Provisioner
-
-You'll need a `ClusterChannelProvisioner` installed before you can use any
-Channels. Eventing release artifacts include the
-[in-memory-channel](./config/provisioners/in-memory-channel/) out of the box.
-You can install it during development with:
-
-```shell
-ko apply -f config/provisioners/in-memory-channel/
-```
-
-There are other `ClusterChannelProvisioner` implementations available under the
-[contrib](./contrib/) subdirectory, but those likely aren't needed for
-development unless you're working on one of them directly.
-
 ## Iterating
 
 As you make changes to the code-base, there are two special cases to be aware
