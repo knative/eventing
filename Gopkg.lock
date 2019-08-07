@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:99a39c7f9416a3217b9310e74d5fb76475c0c037ced8b0dd5dc406b14815d92a"
+  digest = "1:1fcfe718410c4fa878eca5e13fd79abc2e897e68f92cd8ca9c05328e3d93c34e"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
@@ -13,9 +13,6 @@
     "internal/trace",
     "internal/version",
     "monitoring/apiv3",
-    "pubsub",
-    "pubsub/apiv1",
-    "pubsub/internal/distribution",
     "storage",
     "trace/apiv2",
   ]
@@ -732,7 +729,6 @@
     "googleapis/devtools/cloudtrace/v2",
     "googleapis/iam/v1",
     "googleapis/monitoring/v3",
-    "googleapis/pubsub/v1",
     "googleapis/rpc/code",
     "googleapis/rpc/status",
     "protobuf/field_mask",
@@ -1306,7 +1302,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "cloud.google.com/go/pubsub",
     "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
@@ -1330,9 +1325,7 @@
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
-    "golang.org/x/oauth2/google",
     "golang.org/x/sync/errgroup",
-    "google.golang.org/api/option",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/authentication/v1",
@@ -1381,7 +1374,6 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/util/flowcontrol",
-    "k8s.io/client-go/util/workqueue",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "k8s.io/code-generator/cmd/defaulter-gen",
@@ -1442,7 +1434,6 @@
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
     "sigs.k8s.io/controller-runtime/pkg/controller",
-    "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
