@@ -19,11 +19,11 @@ limitations under the License.
 package base
 
 import (
-	"github.com/knative/eventing/test/base/resources"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 )

@@ -21,14 +21,14 @@ package v1alpha1
 import (
 	time "time"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
+	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 )
 
 // TriggerInformer provides access to a shared informer and lister for

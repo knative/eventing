@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/knative/eventing/contrib/gcppubsub/pkg/util/testcreds"
 	v1 "k8s.io/api/core/v1"
+	"knative.dev/eventing/contrib/gcppubsub/pkg/util/testcreds"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 

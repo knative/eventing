@@ -20,13 +20,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
 )
 
 // GcpPubSubChannelStatus is the struct saved to Channel's status.internal if the Channel's provisioner

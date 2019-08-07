@@ -116,7 +116,7 @@ spec:
    And you should see something like this:
 
    ```shell
-   vaikas@penguin:~/projects/go/src/github.com/knative/eventing$ kubectl get channels foo -oyaml
+   vaikas@penguin:~/projects/go/src/knative.dev/eventing$ kubectl get channels foo -oyaml
    apiVersion: eventing.knative.dev/v1alpha1
    kind: Channel
    metadata:

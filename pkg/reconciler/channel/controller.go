@@ -19,13 +19,13 @@ package channel
 import (
 	"context"
 
-	"github.com/knative/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/duck"
 
-	"github.com/knative/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
+	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 )
 
 const (

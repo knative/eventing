@@ -17,10 +17,10 @@ limitations under the License.
 package channel
 
 import (
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/utils"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/provisioners/utils"
 
-	eventduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
 // Underscore is used as a separator so the concatenated version can't accidentally overlap.

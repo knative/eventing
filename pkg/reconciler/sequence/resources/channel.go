@@ -23,9 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"knative.dev/pkg/kmeta"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	v1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 // SequenceChannelName creates a name for the Channel fronting a specific step.

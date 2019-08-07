@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/knative/eventing/pkg/apis/duck"
 	appsv1 "k8s.io/api/apps/v1"
+	"knative.dev/eventing/pkg/apis/duck"
 	"knative.dev/pkg/apis"
 )
 

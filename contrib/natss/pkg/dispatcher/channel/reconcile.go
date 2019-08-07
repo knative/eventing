@@ -19,17 +19,17 @@ package channel
 import (
 	"context"
 
-	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
-	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/eventing/contrib/natss/pkg/dispatcher"
+	"knative.dev/eventing/pkg/provisioners"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	ccpcontroller "github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/channelwatcher"
+	ccpcontroller "knative.dev/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/channelwatcher"
 )
 
 type reconciler struct {

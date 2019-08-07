@@ -35,16 +35,16 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler"
-	brokerresources "github.com/knative/eventing/pkg/reconciler/broker/resources"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
-	"github.com/knative/eventing/pkg/reconciler/trigger/resources"
-	"github.com/knative/eventing/pkg/utils"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/reconciler"
+	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/pkg/reconciler/trigger/resources"
+	"knative.dev/eventing/pkg/utils"
 
 	. "knative.dev/pkg/reconciler/testing"
 
-	. "github.com/knative/eventing/pkg/reconciler/testing"
+	. "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 const (

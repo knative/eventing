@@ -19,10 +19,10 @@ package resources
 import (
 	"fmt"
 
-	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
 )
 

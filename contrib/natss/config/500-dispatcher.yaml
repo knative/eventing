@@ -32,7 +32,7 @@ spec:
       serviceAccountName: natss-ch-dispatcher
       containers:
         - name: dispatcher
-          image: github.com/knative/eventing/contrib/natss/cmd/channel_dispatcher
+          image: knative.dev/eventing/contrib/natss/cmd/channel_dispatcher
           env:
             - name: CONFIG_LOGGING_NAME
               value: config-logging

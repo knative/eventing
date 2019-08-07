@@ -28,8 +28,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/knative/eventing/test/performance"
 	"golang.org/x/sync/errgroup"
+	"knative.dev/eventing/test/performance"
 )
 
 const (

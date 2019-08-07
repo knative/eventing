@@ -20,17 +20,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/knative/eventing/pkg/provisioners"
-	"github.com/knative/eventing/pkg/reconciler/names"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/eventing/pkg/provisioners"
+	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	ccpcontroller "github.com/knative/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	ccpcontroller "knative.dev/eventing/contrib/natss/pkg/controller/clusterchannelprovisioner"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (

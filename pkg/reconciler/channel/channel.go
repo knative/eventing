@@ -22,13 +22,13 @@ import (
 	"reflect"
 	"time"
 
-	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingduck "github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/reconciler/channel/resources"
-	"github.com/knative/eventing/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/channel/resources"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis/duck"
 	duckapis "knative.dev/pkg/apis/duck"
 
@@ -38,11 +38,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	duckroot "knative.dev/pkg/apis"
 
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
 )
 

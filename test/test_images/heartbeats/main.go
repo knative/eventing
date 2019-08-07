@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/knative/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/kncloudevents"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
@@ -86,7 +86,7 @@ func main() {
 	}
 
 	source := types.ParseURLRef(
-		fmt.Sprintf("https://github.com/knative/eventing/test/heartbeats/#%s/%s", env.Namespace, env.Name))
+		fmt.Sprintf("https://knative.dev/eventing/test/heartbeats/#%s/%s", env.Namespace, env.Name))
 	log.Printf("Heartbeats Source: %s", source)
 
 	hb := &Heartbeat{

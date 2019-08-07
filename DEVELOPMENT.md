@@ -26,7 +26,7 @@ You must have [`ko`](https://github.com/google/ko) installed.
 ### Checkout your fork
 
 The Go tools require that you clone the repository to the
-`src/github.com/knative/eventing` directory in your
+`src/knative.dev/eventing` directory in your
 [`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 
 To check out this repository:

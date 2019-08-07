@@ -16,10 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler/names"
-	"github.com/knative/eventing/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/reconciler/names"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/system"
 )
 

@@ -19,8 +19,8 @@ limitations under the License.
 package eventing
 
 import (
-	v1alpha1 "github.com/knative/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
+	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

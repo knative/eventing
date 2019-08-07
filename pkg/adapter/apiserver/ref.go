@@ -26,8 +26,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/knative/eventing/pkg/adapter/apiserver/events"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/adapter/apiserver/events"
 )
 
 type ref struct {

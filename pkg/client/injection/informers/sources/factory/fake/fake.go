@@ -21,9 +21,9 @@ package fake
 import (
 	"context"
 
-	externalversions "github.com/knative/eventing/pkg/client/informers/externalversions"
-	fake "github.com/knative/eventing/pkg/client/injection/client/fake"
-	factory "github.com/knative/eventing/pkg/client/injection/informers/sources/factory"
+	externalversions "knative.dev/eventing/pkg/client/informers/externalversions"
+	fake "knative.dev/eventing/pkg/client/injection/client/fake"
+	factory "knative.dev/eventing/pkg/client/injection/informers/sources/factory"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 )

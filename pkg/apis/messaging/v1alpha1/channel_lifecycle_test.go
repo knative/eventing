@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

@@ -19,13 +19,13 @@ package main
 import (
 	"log"
 
-	"github.com/knative/eventing/contrib/natss/pkg/dispatcher"
-	"github.com/knative/eventing/contrib/natss/pkg/dispatcher/channel"
-	"github.com/knative/eventing/contrib/natss/pkg/util"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/tracing"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
+	"knative.dev/eventing/contrib/natss/pkg/dispatcher"
+	"knative.dev/eventing/contrib/natss/pkg/dispatcher/channel"
+	"knative.dev/eventing/contrib/natss/pkg/util"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"

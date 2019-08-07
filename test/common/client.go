@@ -22,9 +22,9 @@ package common
 import (
 	"testing"
 
-	natsschannel "github.com/knative/eventing/contrib/natss/pkg/client/clientset/versioned"
-	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"k8s.io/client-go/dynamic"
+	natsschannel "knative.dev/eventing/contrib/natss/pkg/client/clientset/versioned"
+	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/pkg/test"
 )
 

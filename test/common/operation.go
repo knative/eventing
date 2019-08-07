@@ -19,9 +19,9 @@ package common
 import (
 	"time"
 
-	"github.com/knative/eventing/test/base"
-	"github.com/knative/eventing/test/base/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/base"
+	"knative.dev/eventing/test/base/resources"
 	pkgTest "knative.dev/pkg/test"
 )
 

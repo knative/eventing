@@ -22,15 +22,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/knative/eventing/pkg/reconciler/names"
+	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/apis"
 
-	"github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
-	messaginginformers "github.com/knative/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
-	listers "github.com/knative/eventing/contrib/natss/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/contrib/natss/pkg/reconciler"
-	"github.com/knative/eventing/contrib/natss/pkg/reconciler/controller/resources"
-	"github.com/knative/eventing/pkg/logging"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +35,12 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
+	messaginginformers "knative.dev/eventing/contrib/natss/pkg/client/informers/externalversions/messaging/v1alpha1"
+	listers "knative.dev/eventing/contrib/natss/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/contrib/natss/pkg/reconciler"
+	"knative.dev/eventing/contrib/natss/pkg/reconciler/controller/resources"
+	"knative.dev/eventing/pkg/logging"
 	"knative.dev/pkg/controller"
 )
 

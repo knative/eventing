@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"testing"
 
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/eventing/test/common"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 )
 
 func TestApiServerSource(t *testing.T) {
