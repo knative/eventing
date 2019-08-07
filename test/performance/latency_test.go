@@ -31,10 +31,6 @@ import (
 	"knative.dev/test-infra/shared/testgrid"
 )
 
-func TestLatencyForNatssBrokerTrigger(t *testing.T) {
-	testLatencyForBrokerTrigger(t, common.NatssChannelTypeMeta)
-}
-
 func TestLatencyForInMemoryBrokerTrigger(t *testing.T) {
 	testLatencyForBrokerTrigger(t, common.InMemoryChannelTypeMeta)
 }

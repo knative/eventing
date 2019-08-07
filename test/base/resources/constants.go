@@ -43,7 +43,6 @@ const (
 // Kind for messaging resources.
 const (
 	InMemoryChannelKind string = "InMemoryChannel"
-	NatssChannelKind    string = "NatssChannel"
 
 	SequenceKind string = "Sequence"
 	ChoiceKind   string = "Choice"

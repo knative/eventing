@@ -20,7 +20,6 @@ package resources
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	natssmessagingv1alpha1 "knative.dev/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -33,15 +32,6 @@ type SequenceOption func(*messagingv1alpha1.Sequence)
 // InMemoryChannel returns an InMemoryChannel resource.
 func InMemoryChannel(name string) *messagingv1alpha1.InMemoryChannel {
 	return &messagingv1alpha1.InMemoryChannel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-}
-
-// NatssChannel returns a NatssChannel resource.
-func NatssChannel(name string) *natssmessagingv1alpha1.NatssChannel {
-	return &natssmessagingv1alpha1.NatssChannel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
