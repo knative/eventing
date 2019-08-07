@@ -17,8 +17,8 @@ limitations under the License.
 package common
 
 import (
-	"github.com/knative/eventing/test/base/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/base/resources"
 )
 
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.

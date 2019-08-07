@@ -29,19 +29,19 @@ KNATIVE_CODEGEN_PKG=${KNATIVE_CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 ./ven
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/knative/eventing/pkg/client github.com/knative/eventing/pkg/apis \
+  knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
   "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Only deepcopy the Duck types, as they are not real resources.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
-  github.com/knative/eventing/pkg/client github.com/knative/eventing/pkg/apis \
+  knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
   "duck:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Knative Injection
 ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
-  github.com/knative/eventing/pkg/client github.com/knative/eventing/pkg/apis \
+  knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
   "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 

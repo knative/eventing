@@ -19,9 +19,9 @@ package testing
 import (
 	"time"
 
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 // CronJobSourceOption enables further configuration of a CronJob.

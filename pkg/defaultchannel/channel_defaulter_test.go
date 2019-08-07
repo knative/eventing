@@ -23,11 +23,11 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/google/go-cmp/cmp"
-	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 var (

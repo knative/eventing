@@ -26,7 +26,7 @@ import (
 
 	"log"
 
-	"github.com/knative/eventing/test/common"
+	"knative.dev/eventing/test/common"
 	pkgTest "knative.dev/pkg/test"
 	testLogging "knative.dev/pkg/test/logging"
 )

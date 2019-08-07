@@ -25,7 +25,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/google/go-cmp/cmp"
-	"github.com/knative/eventing/pkg/adapter/apiserver/events"
+	"knative.dev/eventing/pkg/adapter/apiserver/events"
 )
 
 func simplePod(name, namespace string) *unstructured.Unstructured {

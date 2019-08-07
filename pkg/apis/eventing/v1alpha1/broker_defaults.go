@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"context"
 
-	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
 func (b *Broker) SetDefaults(ctx context.Context) {

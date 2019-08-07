@@ -21,11 +21,11 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
+	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other

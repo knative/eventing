@@ -22,8 +22,8 @@ package common
 import (
 	"testing"
 
-	eventing "github.com/knative/eventing/pkg/client/clientset/versioned"
 	"k8s.io/client-go/dynamic"
+	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/pkg/test"
 )
 

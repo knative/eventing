@@ -15,7 +15,7 @@ import (
 
 	"fmt"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 )

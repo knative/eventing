@@ -20,8 +20,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	kncetesting "github.com/knative/eventing/pkg/kncloudevents/testing"
-	rectesting "github.com/knative/eventing/pkg/reconciler/testing"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
+	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 func TestNewAdaptor(t *testing.T) {

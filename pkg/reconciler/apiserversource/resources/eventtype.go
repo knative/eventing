@@ -17,11 +17,11 @@ limitations under the License.
 package resources
 
 import (
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // EventTypeArgs are the arguments needed to create an EventType for an Api Server Source.

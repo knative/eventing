@@ -21,10 +21,10 @@ import (
 	"encoding/json"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/kncloudevents"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/logging"
 )
 

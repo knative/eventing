@@ -48,7 +48,7 @@ _Service_ only when the _Trigger_ filter matches.
 
 Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
-[Knative Eventing Sources](https://github.com/knative/eventing-sources).
+[Knative Eventing Contrib](https://github.com/knative/eventing-contrib).
 
 ## Trigger
 

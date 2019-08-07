@@ -21,14 +21,14 @@ package v1alpha1
 import (
 	time "time"
 
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	versioned "github.com/knative/eventing/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/knative/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
+	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 )
 
 // ApiServerSourceInformer provides access to a shared informer and lister for

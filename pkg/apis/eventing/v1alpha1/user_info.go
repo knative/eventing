@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"context"
 
-	"github.com/knative/eventing/pkg/apis/eventing"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
 )
 

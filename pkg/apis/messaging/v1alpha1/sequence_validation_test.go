@@ -21,11 +21,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 

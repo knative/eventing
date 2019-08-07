@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // ApiServerSourceOption enables further configuration of a ApiServer.

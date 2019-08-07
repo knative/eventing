@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/eventing/test/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 	"knative.dev/test-infra/shared/junit"
 	"knative.dev/test-infra/shared/testgrid"
 )

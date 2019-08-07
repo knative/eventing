@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 
-	"github.com/knative/eventing/pkg/reconciler/names"
+	"knative.dev/eventing/pkg/reconciler/names"
 	pkgapisduck "knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"

@@ -21,8 +21,8 @@ package fake
 import (
 	"context"
 
-	fake "github.com/knative/eventing/pkg/client/injection/informers/messaging/factory/fake"
-	inmemorychannel "github.com/knative/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
+	fake "knative.dev/eventing/pkg/client/injection/informers/messaging/factory/fake"
+	inmemorychannel "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 )
