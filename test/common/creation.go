@@ -137,6 +137,7 @@ func (client *Client) CreateSequenceOrFail(
 	if err != nil {
 		client.T.Fatalf("Failed to create sequence %q: %v", name, err)
 	}
+
 	client.Tracker.AddObj(sequence)
 }
 
