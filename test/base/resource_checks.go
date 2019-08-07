@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/knative/eventing/test/base/resources"
 	"go.opencensus.io/trace"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )

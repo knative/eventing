@@ -24,8 +24,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duck "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck/v1beta1"

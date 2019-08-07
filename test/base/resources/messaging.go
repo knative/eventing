@@ -19,11 +19,11 @@ package resources
 // This file contains functions that construct Messaging resources.
 
 import (
-	natssmessagingv1alpha1 "github.com/knative/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
-	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	natssmessagingv1alpha1 "knative.dev/eventing/contrib/natss/pkg/apis/messaging/v1alpha1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	pkgTest "knative.dev/pkg/test"
 )
 

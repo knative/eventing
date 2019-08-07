@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 const (

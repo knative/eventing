@@ -17,14 +17,14 @@ limitations under the License.
 package common
 
 import (
-	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/test/base/resources"
 )
 
 // TODO(Fredy-Z): break this file into multiple files when it grows too large.

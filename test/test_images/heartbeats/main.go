@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/knative/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/kncloudevents"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"

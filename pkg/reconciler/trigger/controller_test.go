@@ -26,10 +26,10 @@ import (
 	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/service/fake"
 
 	// Fake injection informers
-	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
-	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel/fake"
-	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription/fake"
-	_ "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 )
 
 func TestNew(t *testing.T) {

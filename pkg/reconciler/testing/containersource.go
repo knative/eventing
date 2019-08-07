@@ -23,7 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 // ContainerSourceOption enables further configuration of a CronJob.
