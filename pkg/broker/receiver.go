@@ -24,19 +24,25 @@ import (
 	"net/url"
 	"time"
 
+	"knative.dev/eventing/pkg/logging"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/reconciler/trigger/path"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/tracing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	writeTimeout = 1 * time.Minute
+	// TimeInFlightMetadataName is used to access the metadata stored on a
+	// CloudEvent to measure the time difference between when an event is
+	// received and when it is dispatched to the trigger function.
+	TimeInFlightMetadataName = "kn00timeinflight"
 )
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -189,9 +195,16 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 	// Record event count and filtering time
 	startTS := time.Now()
 	defer func() {
-		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
+		var deliveryTime time.Time
+		now := time.Now()
+		dispatchTimeMS := int64(now.Sub(startTS) / time.Millisecond)
 		stats.Record(ctx, MeasureTriggerDispatchTime.M(dispatchTimeMS))
 		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
+		if err := event.ExtensionAs(TimeInFlightMetadataName, &deliveryTime); err != nil {
+			return
+		}
+		timeInFlightMS := int64(now.Sub(deliveryTime) / time.Millisecond)
+		stats.Record(ctx, MeasureDeliveryTime.M(timeInFlightMS))
 	}()
 
 	subscriberURIString := t.Status.SubscriberURI
@@ -237,37 +250,84 @@ func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (
 }
 
 // shouldSendMessage determines whether message 'm' should be sent based on the triggerSpec 'ts'.
-// Currently it supports exact matching on type and/or source of events.
+// Currently it supports exact matching on event context attributes.
+// If no filter is present, shouldSendMessage returns false.
+// If no filter strategy is present, shouldSendMessage returns true.
 func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
-	if ts.Filter == nil || ts.Filter.SourceAndType == nil {
+	if ts.Filter == nil {
 		r.logger.Error("No filter specified")
 		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "empty-fail"))
 		return false
 	}
 
-	// Record event count and filtering time
+	// Record event count and filtering time.
 	startTS := time.Now()
 	defer func() {
 		filterTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
 		stats.Record(ctx, MeasureTriggerFilterTime.M(filterTimeMS))
 	}()
 
-	filterType := ts.Filter.SourceAndType.Type
-	if filterType != eventingv1alpha1.TriggerAnyFilter && filterType != event.Type() {
-		r.logger.Debug("Wrong type", zap.String("trigger.spec.filter.sourceAndType.type", filterType), zap.String("event.Type()", event.Type()))
-		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "fail"))
-		return false
-	}
-	filterSource := ts.Filter.SourceAndType.Source
-	s := event.Context.AsV01().Source
-	actualSource := s.String()
-	if filterSource != eventingv1alpha1.TriggerAnyFilter && filterSource != actualSource {
-		r.logger.Debug("Wrong source", zap.String("trigger.spec.filter.sourceAndType.source", filterSource), zap.String("message.source", actualSource))
-		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "fail"))
-
-		return false
+	// No filter specified, default to passing everything.
+	if ts.Filter.DeprecatedSourceAndType == nil && ts.Filter.Attributes == nil {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "empty-pass"))
+		return true
 	}
 
-	ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "pass"))
+	attrs := map[string]string{}
+	// Since the filters cannot distinguish presence, filtering for an empty
+	// string is impossible.
+	if ts.Filter.DeprecatedSourceAndType != nil {
+		attrs["type"] = ts.Filter.DeprecatedSourceAndType.Type
+		attrs["source"] = ts.Filter.DeprecatedSourceAndType.Source
+	} else if ts.Filter.Attributes != nil {
+		attrs = map[string]string(*ts.Filter.Attributes)
+	}
+
+	result := r.filterEventByAttributes(ctx, attrs, event)
+	if result {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "pass"))
+	} else {
+		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "fail"))
+	}
+	return result
+}
+
+func (r *Receiver) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) bool {
+	// Set standard context attributes. The attributes available may not be
+	// exactly the same as the attributes defined in the current version of the
+	// CloudEvents spec.
+	ce := map[string]interface{}{
+		"specversion":         event.SpecVersion(),
+		"type":                event.Type(),
+		"source":              event.Source(),
+		"subject":             event.Subject(),
+		"id":                  event.ID(),
+		"time":                event.Time().String(),
+		"schemaurl":           event.SchemaURL(),
+		"datacontenttype":     event.DataContentType(),
+		"datamediatype":       event.DataMediaType(),
+		"datacontentencoding": event.DataContentEncoding(),
+	}
+	ext := event.Extensions()
+	if ext != nil {
+		for k, v := range ext {
+			ce[k] = v
+		}
+	}
+
+	for k, v := range attrs {
+		var value interface{}
+		value, ok := ce[k]
+		// If the attribute does not exist in the event, return false.
+		if !ok {
+			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
+			return false
+		}
+		// If the attribute is not set to any and is different than the one from the event, return false.
+		if v != eventingv1alpha1.TriggerAnyFilter && v != value {
+			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
+			return false
+		}
+	}
 	return true
 }

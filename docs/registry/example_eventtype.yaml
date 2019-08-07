@@ -15,7 +15,7 @@
 ---
 
 # This EventType creates an event type with type 'dev.knative.source.github.push', source
-# 'https://github.com/knative/eventing', for the 'default' Broker.
+# 'https://knative.dev/eventing', for the 'default' Broker.
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: EventType
@@ -23,13 +23,13 @@ metadata:
   name: dev.knative.source.github.push
 spec:
   type: dev.knative.source.github.push
-  source: https://github.com/knative/eventing
+  source: https://knative.dev/eventing
   broker: default
 
 ---
 
 # This Trigger matches all events of type 'dev.knative.source.github.push' and source
-# 'https://github.com/knative/eventing', that are sent to the 'default' Broker.
+# 'https://knative.dev/eventing', that are sent to the 'default' Broker.
 
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Trigger
@@ -39,7 +39,7 @@ spec:
   filter:
     sourceAndType:
       type: dev.knative.source.github.push
-      source: https://github.com/knative/eventing
+      source: https://knative.dev/eventing
   broker: default
   subscriber:
     ref:

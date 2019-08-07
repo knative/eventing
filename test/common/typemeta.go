@@ -17,8 +17,8 @@ limitations under the License.
 package common
 
 import (
-	"github.com/knative/eventing/test/base/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/test/base/resources"
 )
 
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.
@@ -55,17 +55,14 @@ func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	}
 }
 
-// KafkaChannelTypeMeta is the TypeMeta ref for KafkaChannel.
-var KafkaChannelTypeMeta = MessagingTypeMeta(resources.KafkaChannelKind)
-
 // InMemoryChannelTypeMeta is the TypeMeta ref for InMemoryChannel.
 var InMemoryChannelTypeMeta = MessagingTypeMeta(resources.InMemoryChannelKind)
 
-// NatssChannelTypeMeta is the TypeMeta ref for NatssChannel.
-var NatssChannelTypeMeta = MessagingTypeMeta(resources.NatssChannelKind)
-
 // SequenceTypeMeta is the TypeMeta ref for Sequence.
 var SequenceTypeMeta = MessagingTypeMeta(resources.SequenceKind)
+
+// ChoiceTypeMeta is the TypeMeta ref for Choice.
+var ChoiceTypeMeta = MessagingTypeMeta(resources.ChoiceKind)
 
 // MessagingTypeMeta returns the TypeMeta ref for an eventing messaing resource.
 func MessagingTypeMeta(kind string) *metav1.TypeMeta {

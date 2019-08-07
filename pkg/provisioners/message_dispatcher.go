@@ -25,12 +25,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/knative/eventing/pkg/utils"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const correlationIDHeaderName = "Knative-Correlation-Id"

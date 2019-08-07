@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	v1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/kmeta"
 )
 

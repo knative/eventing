@@ -19,11 +19,11 @@ package eventingchannel
 import (
 	"context"
 
-	"github.com/knative/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	channelinformer "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
+	channelinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
 )
 
 const (

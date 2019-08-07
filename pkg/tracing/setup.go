@@ -19,11 +19,11 @@ package tracing
 import (
 	"fmt"
 
-	eventingconfigmap "github.com/knative/eventing/pkg/configmap"
 	zipkin "github.com/openzipkin/zipkin-go"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingconfigmap "knative.dev/eventing/pkg/configmap"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"

@@ -43,7 +43,7 @@ func receive(event cloudevents.Event, resp *cloudevents.EventResponse) {
 	if event.Type() == pingType {
 		pong := cloudevents.NewEvent()
 		pong.SetType(pongType)
-		pong.SetSource("github.com/knative/eventing/cmd/pong/" + id)
+		pong.SetSource("knative.dev/eventing/cmd/pong/" + id)
 		if err := pong.SetData(event.Data); err != nil {
 			log.Printf("failed to set data on pong: %s", err)
 			resp.Error(400, "bad data")

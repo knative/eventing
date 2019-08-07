@@ -21,8 +21,8 @@ package fake
 import (
 	"context"
 
-	fake "github.com/knative/eventing/pkg/client/injection/informers/eventing/factory/fake"
-	subscription "github.com/knative/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
+	fake "knative.dev/eventing/pkg/client/injection/informers/eventing/factory/fake"
+	subscription "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 )

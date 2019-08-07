@@ -22,7 +22,7 @@ import (
 	"log"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/knative/eventing/test/base/resources"
+	"knative.dev/eventing/test/base/resources"
 )
 
 var (

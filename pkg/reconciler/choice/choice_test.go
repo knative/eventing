@@ -35,14 +35,14 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/duck"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/choice/resources"
-	. "github.com/knative/eventing/pkg/reconciler/testing"
-	reconciletesting "github.com/knative/eventing/pkg/reconciler/testing"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler/choice/resources"
+	. "knative.dev/eventing/pkg/reconciler/testing"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 const (

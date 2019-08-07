@@ -33,16 +33,4 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	if ts.Filter == nil {
 		ts.Filter = &TriggerFilter{}
 	}
-
-	// Note that this logic will need to change once there are other filtering options, as it should
-	// only apply if no other filter is applied.
-	if ts.Filter.SourceAndType == nil {
-		ts.Filter.SourceAndType = &TriggerFilterSourceAndType{}
-	}
-	if ts.Filter.SourceAndType.Type == "" {
-		ts.Filter.SourceAndType.Type = TriggerAnyFilter
-	}
-	if ts.Filter.SourceAndType.Source == "" {
-		ts.Filter.SourceAndType.Source = TriggerAnyFilter
-	}
 }

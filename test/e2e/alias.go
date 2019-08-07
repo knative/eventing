@@ -15,8 +15,8 @@ limitations under the License.
 
 package e2e
 
-import "github.com/knative/eventing/test/common"
-import "github.com/knative/eventing/test"
+import "knative.dev/eventing/test/common"
+import "knative.dev/eventing/test"
 
 var runTests = common.RunTests
 var setup = common.Setup

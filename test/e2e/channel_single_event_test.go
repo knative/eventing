@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/eventing/test/common"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 )
 
 func TestSingleBinaryEventForChannel(t *testing.T) {

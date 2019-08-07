@@ -17,7 +17,7 @@ limitations under the License.
 package common
 
 import (
-	"github.com/knative/eventing/test/base/resources"
+	"knative.dev/eventing/test/base/resources"
 )
 
 // DefaultChannel is the default channel we will run tests against.
@@ -28,12 +28,6 @@ const DefaultChannel = resources.InMemoryChannelKind
 var ValidChannelsMap = map[string]ChannelConfig{
 	resources.InMemoryChannelKind: {
 		Features: []Feature{FeatureBasic},
-	},
-	resources.KafkaChannelKind: {
-		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
-	},
-	resources.NatssChannelKind: {
-		Features: []Feature{FeatureBasic, FeatureRedelivery, FeaturePersistence},
 	},
 }
 

@@ -24,18 +24,19 @@ import (
 )
 
 var (
-	defaultBroker = "default"
-	otherBroker   = "other_broker"
-
-	otherTriggerFilter = &TriggerFilter{
-		SourceAndType: &TriggerFilterSourceAndType{
+	defaultBroker        = "default"
+	otherBroker          = "other_broker"
+	defaultTriggerFilter = &TriggerFilter{}
+	otherTriggerFilter   = &TriggerFilter{
+		DeprecatedSourceAndType: &TriggerFilterSourceAndType{
 			Type:   "other_type",
 			Source: "other_source"},
 	}
+
 	defaultTrigger = Trigger{
 		Spec: TriggerSpec{
 			Broker: defaultBroker,
-			Filter: defaultTriggerFilter(),
+			Filter: defaultTriggerFilter,
 		},
 	}
 )
@@ -51,7 +52,7 @@ func TestTriggerDefaults(t *testing.T) {
 		},
 		"nil filter": {
 			initial:  Trigger{Spec: TriggerSpec{Broker: otherBroker}},
-			expected: Trigger{Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter()}},
+			expected: Trigger{Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter}},
 		},
 		"nil broker and nil filter": {
 			initial:  Trigger{},
@@ -65,14 +66,5 @@ func TestTriggerDefaults(t *testing.T) {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}
 		})
-	}
-}
-
-func defaultTriggerFilter() *TriggerFilter {
-	// Can't just be a package level var because it gets mutated.
-	return &TriggerFilter{
-		SourceAndType: &TriggerFilterSourceAndType{
-			Type:   TriggerAnyFilter,
-			Source: TriggerAnyFilter},
 	}
 }

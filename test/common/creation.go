@@ -17,14 +17,15 @@ limitations under the License.
 package common
 
 import (
-	eventingduckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/test/base"
-	"github.com/knative/eventing/test/base/resources"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/test/base"
+	"knative.dev/eventing/test/base/resources"
 )
 
 // TODO(Fredy-Z): break this file into multiple files when it grows too large.
@@ -134,6 +135,17 @@ func (client *Client) CreateSequenceOrFail(
 		client.T.Fatalf("Failed to create sequence %q: %v", name, err)
 	}
 	client.Tracker.AddObj(sequence)
+}
+
+// CreateChoiceOrFail will create a Choice or fail the test if there is an error.
+func (client *Client) CreateChoiceOrFail(choice *messagingv1alpha1.Choice) {
+	choices := client.Eventing.MessagingV1alpha1().Choices(client.Namespace)
+	// create choice with the new reference
+	created, err := choices.Create(choice)
+	if err != nil {
+		client.T.Fatalf("Failed to create choice %q: %v", choice.Name, err)
+	}
+	client.Tracker.AddObj(created)
 }
 
 // CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.

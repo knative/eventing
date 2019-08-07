@@ -36,7 +36,7 @@ spec:
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: github.com/knative/eventing/cmd/controller
+        image: knative.dev/eventing/cmd/controller
         env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
@@ -49,11 +49,11 @@ spec:
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
           - name: BROKER_INGRESS_IMAGE
-            value: github.com/knative/eventing/cmd/broker/ingress
+            value: knative.dev/eventing/cmd/broker/ingress
           - name: BROKER_INGRESS_SERVICE_ACCOUNT
             value: eventing-broker-ingress
           - name: BROKER_FILTER_IMAGE
-            value: github.com/knative/eventing/cmd/broker/filter
+            value: knative.dev/eventing/cmd/broker/filter
           - name: BROKER_FILTER_SERVICE_ACCOUNT
             value: eventing-broker-filter
         ports:

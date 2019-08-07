@@ -21,14 +21,14 @@ package base
 import (
 	"encoding/json"
 
-	"github.com/knative/eventing/test/base/resources"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/test/base/resources"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
 // CreateGenericChannelObject create a generic channel object with the dynamic client and channel's meta data.
@@ -36,7 +36,7 @@ func CreateGenericChannelObject(
 	dynamicClient dynamic.Interface,
 	obj *resources.MetaResource,
 ) ( /*plural*/ schema.GroupVersionResource, error) {
-	// get the resource's namespace and gvr
+	// get the resource's gvr
 	gvr, _ := meta.UnsafeGuessKindToResource(obj.GroupVersionKind())
 	newChannel, err := newChannel(obj)
 	if err != nil {
@@ -47,7 +47,7 @@ func CreateGenericChannelObject(
 	return gvr, err
 }
 
-// newChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec for a given sequence.
+// newChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec for a given meta resource.
 func newChannel(obj *resources.MetaResource) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := eventingduck.ChannelTemplateSpecInternal{

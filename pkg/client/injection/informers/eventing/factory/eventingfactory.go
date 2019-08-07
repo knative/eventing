@@ -21,8 +21,8 @@ package eventingfactory
 import (
 	"context"
 
-	externalversions "github.com/knative/eventing/pkg/client/informers/externalversions"
-	client "github.com/knative/eventing/pkg/client/injection/client"
+	externalversions "knative.dev/eventing/pkg/client/informers/externalversions"
+	client "knative.dev/eventing/pkg/client/injection/client"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"

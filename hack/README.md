@@ -3,13 +3,13 @@
 This directory contains several scripts useful in the development process of
 Knative Eventing.
 
--   `boilerplate/add-boilerplate.sh` Adds license boilerplate to _txt_ or _go_
-    files in a directory, recursively.
--   `release.sh` Creates a new [release](#creating-a-release) of Knative Eventing.
--   `update-codegen.sh` Updates auto-generated client libraries.
--   `update-deps.sh` Updates Go dependencies.
--   `verify-codegen.sh` Verifies that auto-generated client libraries are
-    up-to-date.
+- `boilerplate/add-boilerplate.sh` Adds license boilerplate to _txt_ or _go_
+  files in a directory, recursively.
+- `release.sh` Creates a new [release](#creating-a-release) of Knative Eventing.
+- `update-codegen.sh` Updates auto-generated client libraries.
+- `update-deps.sh` Updates Go dependencies.
+- `verify-codegen.sh` Verifies that auto-generated client libraries are
+  up-to-date.
 
 ## Creating a release
 
@@ -24,15 +24,16 @@ creating releases.
 
 1. Click the Branch dropdown.
 1. Type the desired `release-X.Y` branch name into the search box.
-1. Click the `Create branch: release-X.Y from 'master'` button. _You must have write permissions to the repo to create a branch._
+1. Click the `Create branch: release-X.Y from 'master'` button. _You must have
+   write permissions to the repo to create a branch._
 
-    Prow will detect the new release branch and run the `release.sh` script. If
-    the build succeeds, a new tag `vX.Y.0` will be created and a GitHub release
-    published. If the build fails, logs can be retrieved from
-    https://testgrid.knative.dev/eventing#auto-release.
+   Prow will detect the new release branch and run the `release.sh` script. If
+   the build succeeds, a new tag `vX.Y.0` will be created and a GitHub release
+   published. If the build fails, logs can be retrieved from
+   https://testgrid.knative.dev/eventing#auto-release.
 
-1.  Write release notes and add them to
-    [the release](https://github.com/knative/eventing/releases).
+1. Write release notes and add them to
+   [the release](https://github.com/knative/eventing/releases).
 
 #### Git CLI
 

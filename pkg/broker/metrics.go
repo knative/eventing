@@ -47,6 +47,14 @@ var (
 		stats.UnitMilliseconds,
 	)
 
+	// MeasureDeliveryTime records the time spent between arrival at ingress
+	// and delivery to the trigger subscriber.
+	MeasureDeliveryTime = stats.Int64(
+		"knative.dev/eventing/trigger/measures/delivery_time",
+		"Time between an event arriving at ingress and delivery to the trigger subscriber",
+		stats.UnitMilliseconds,
+	)
+
 	// Tag keys must conform to the restrictions described in
 	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
 	// - length between 1 and 255 inclusive
@@ -89,6 +97,12 @@ func init() {
 			Measure:     MeasureTriggerFilterTime,
 			Aggregation: view.Distribution(Buckets125(0.1, 10)...), // 0.1, 0.2, 0.5, 1, 2, 5, 10
 			TagKeys:     []tag.Key{TagResult, TagFilterResult, TagBroker, TagTrigger},
+		},
+		&view.View{
+			Name:        "broker_to_function_delivery_time",
+			Measure:     MeasureDeliveryTime,
+			Aggregation: view.Distribution(Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
+			TagKeys:     []tag.Key{TagResult, TagBroker, TagTrigger},
 		},
 	)
 	if err != nil {

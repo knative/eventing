@@ -9,10 +9,10 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/knative/eventing/pkg/broker"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/broker"
 )
 
 var (
@@ -57,6 +57,7 @@ func (h *Handler) Start(stopCh <-chan struct{}) error {
 }
 
 func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	event.SetExtension(broker.TimeInFlightMetadataName, time.Now())
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed

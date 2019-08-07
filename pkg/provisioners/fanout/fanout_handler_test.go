@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/provisioners"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP

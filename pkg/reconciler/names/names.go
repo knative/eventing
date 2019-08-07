@@ -19,7 +19,7 @@ package names
 import (
 	"fmt"
 
-	"github.com/knative/eventing/pkg/utils"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // ServiceHostName creates the hostname for a Kubernetes Service.

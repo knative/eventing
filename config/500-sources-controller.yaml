@@ -37,7 +37,7 @@ spec:
       - name: controller
         # This is the Go import path for the binary that is containerized
         # and substituted here.
-        image: github.com/knative/eventing/cmd/sources_controller
+        image: knative.dev/eventing/cmd/sources_controller
         resources:
           requests:
             cpu: 100m
@@ -62,9 +62,9 @@ spec:
           - name: CRONJOB_RA_IMAGE
             # This is the Go import path for cron job receive adapter binary
             # that is containerized and substituted here.
-            value: github.com/knative/eventing/cmd/cronjob_receive_adapter
+            value: knative.dev/eventing/cmd/cronjob_receive_adapter
           - name: APISERVER_RA_IMAGE
-            value: github.com/knative/eventing/cmd/apiserver_receive_adapter
+            value: knative.dev/eventing/cmd/apiserver_receive_adapter
       volumes:
         - name: config-logging
           configMap:

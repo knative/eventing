@@ -17,10 +17,10 @@
 package ingress
 
 import (
-	"github.com/knative/eventing/pkg/broker"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"knative.dev/eventing/pkg/broker"
 )
 
 var (
