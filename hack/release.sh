@@ -24,8 +24,6 @@ declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
   ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
-  ["gcp-pubsub.yaml"]="contrib/gcppubsub/config"
-  ["natss.yaml"]="contrib/natss/config"
 )
 readonly COMPONENTS
 
