@@ -28,11 +28,11 @@ import (
 )
 
 func TestSingleBinaryEventForChannel(t *testing.T) {
-	SingleEvent(t, resources.CloudEventEncodingBinary)
+	SingleEventForChannelTestHelper(t, resources.CloudEventEncodingBinary, channels)
 }
 
 func TestSingleStructuredEventForChannel(t *testing.T) {
-	SingleEvent(t, resources.CloudEventEncodingStructured)
+	SingleEventForChannelTestHelper(t, resources.CloudEventEncodingStructured, channels)
 }
 
 /*
@@ -41,13 +41,13 @@ SingleEvent tests the following scenario:
 EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
-func SingleEvent(t *testing.T, encoding string) {
-	channelName := "e2e-singleevent-channel-" + encoding
-	senderName := "e2e-singleevent-sender-" + encoding
-	subscriptionName := "e2e-singleevent-subscription-" + encoding
-	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
-
+func SingleEventForChannelTestHelper(t *testing.T, encoding string, channels []string) {
 	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
+		channelName := "e2e-singleevent-channel-" + encoding
+		senderName := "e2e-singleevent-sender-" + encoding
+		subscriptionName := "e2e-singleevent-subscription-" + encoding
+		loggerPodName := "e2e-singleevent-logger-pod-" + encoding
+
 		st.Logf("Run test with channel %q", channel)
 		client := setup(st, true)
 		defer tearDown(client)
