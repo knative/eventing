@@ -107,8 +107,8 @@ If you want to run tests against other `channels`, you can specify them through
 go test -v -tags=e2e -count=1 ./test/e2e -channels=InMemoryChannel,KafkaChannel
 ```
 
-By default, tests run against images with the `latest` tag. To override this bevavior
-you can specify a different tag through `-tag`:
+By default, tests run against images with the `latest` tag. To override this
+bevavior you can specify a different tag through `-tag`:
 
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e -tag e2e
@@ -162,7 +162,8 @@ To run the script for all end to end test images:
 ./test/upload-test-images.sh
 ```
 
-For images deployed in GCR, a docker tag is mandatory to avoid issues with using `latest` tag:
+For images deployed in GCR, a docker tag is mandatory to avoid issues with using
+`latest` tag:
 
 ```bash
 ./test/upload-test-images.sh e2e
