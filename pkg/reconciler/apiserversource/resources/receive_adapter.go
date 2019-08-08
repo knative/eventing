@@ -22,6 +22,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
@@ -80,6 +81,7 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 	apiversions := ""
 	kinds := ""
 	controlled := ""
+	selectors := ""
 	sep := ""
 
 	for _, res := range spec.Resources {
@@ -90,6 +92,15 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 		} else {
 			controlled += sep + "false"
 		}
+		if res.LabelSelector == nil {
+			selectors += sep
+		} else {
+			labelMap, _ := metav1.LabelSelectorAsMap(res.LabelSelector)
+			labelSelector := labels.SelectorFromSet(labelMap).String()
+
+			selectors += sep + labelSelector
+		}
+
 		sep = ","
 	}
 
@@ -108,6 +119,9 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 	}, {
 		Name:  "CONTROLLER",
 		Value: controlled,
+	}, {
+		Name:  "SELECTOR",
+		Value: selectors,
 	}, {
 		Name: "SYSTEM_NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{

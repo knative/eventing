@@ -42,12 +42,13 @@ var (
 )
 
 type envConfig struct {
-	Namespace  string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
-	Mode       string   `envconfig:"MODE"`
-	SinkURI    string   `split_words:"true" required:"true"`
-	ApiVersion []string `split_words:"true" required:"true"`
-	Kind       []string `required:"true"`
-	Controller []bool   `required:"true"`
+	Namespace     string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode          string   `envconfig:"MODE"`
+	SinkURI       string   `split_words:"true" required:"true"`
+	ApiVersion    []string `split_words:"true" required:"true"`
+	Kind          []string `required:"true"`
+	Controller    []bool   `required:"true"`
+	LabelSelector []string `envconfig:"SELECTOR" required:"true"`
 }
 
 // TODO: the controller should take the list of GVR
@@ -101,6 +102,7 @@ func main() {
 	for i, apiVersion := range env.ApiVersion {
 		kind := env.Kind[i]
 		controlled := env.Controller[i]
+		selector := env.LabelSelector[i]
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
@@ -109,8 +111,9 @@ func main() {
 		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
 		gvrcs = append(gvrcs, apiserver.GVRC{
-			GVR:        gvr,
-			Controller: controlled,
+			GVR:           gvr,
+			Controller:    controlled,
+			LabelSelector: selector,
 		})
 	}
 

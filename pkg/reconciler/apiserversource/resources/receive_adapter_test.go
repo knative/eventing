@@ -45,6 +45,13 @@ func TestMakeReceiveAdapter(t *testing.T) {
 					Kind:       "Pod",
 					Controller: true,
 				},
+				{
+					APIVersion: "",
+					Kind:       "Pod",
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"test-key1": "test-value1"},
+					},
+				},
 			},
 		},
 	}
@@ -112,13 +119,16 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name: "MODE",
 								}, {
 									Name:  "API_VERSION",
-									Value: ",",
+									Value: ",,",
 								}, {
 									Name:  "KIND",
-									Value: "Namespace,Pod",
+									Value: "Namespace,Pod,Pod",
 								}, {
 									Name:  "CONTROLLER",
-									Value: "false,true",
+									Value: "false,true,false",
+								}, {
+									Name:  "SELECTOR",
+									Value: ",,test-key1=test-value1",
 								}, {
 									Name: "SYSTEM_NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
