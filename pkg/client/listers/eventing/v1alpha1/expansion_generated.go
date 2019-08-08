@@ -34,10 +34,6 @@ type ChannelListerExpansion interface{}
 // ChannelNamespaceLister.
 type ChannelNamespaceListerExpansion interface{}
 
-// ClusterChannelProvisionerListerExpansion allows custom methods to be added to
-// ClusterChannelProvisionerLister.
-type ClusterChannelProvisionerListerExpansion interface{}
-
 // EventTypeListerExpansion allows custom methods to be added to
 // EventTypeLister.
 type EventTypeListerExpansion interface{}

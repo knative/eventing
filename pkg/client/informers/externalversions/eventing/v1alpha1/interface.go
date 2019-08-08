@@ -28,8 +28,6 @@ type Interface interface {
 	Brokers() BrokerInformer
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
-	// ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
-	ClusterChannelProvisioners() ClusterChannelProvisionerInformer
 	// EventTypes returns a EventTypeInformer.
 	EventTypes() EventTypeInformer
 	// Subscriptions returns a SubscriptionInformer.
@@ -57,11 +55,6 @@ func (v *version) Brokers() BrokerInformer {
 // Channels returns a ChannelInformer.
 func (v *version) Channels() ChannelInformer {
 	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// ClusterChannelProvisioners returns a ClusterChannelProvisionerInformer.
-func (v *version) ClusterChannelProvisioners() ClusterChannelProvisionerInformer {
-	return &clusterChannelProvisionerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // EventTypes returns a EventTypeInformer.

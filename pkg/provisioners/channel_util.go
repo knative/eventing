@@ -18,9 +18,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/system"
 )
 
 const (
@@ -78,17 +76,6 @@ func RemoveFinalizer(o metav1.Object, finalizerName string) RemoveFinalizerResul
 
 // K8sServiceOption is a functional option that can modify the K8s Service in CreateK8sService
 type K8sServiceOption func(*corev1.Service) error
-
-// ExternalService is a functional option for CreateK8sService to create a K8s service of type ExternalName.
-func ExternalService(c *eventingv1alpha1.Channel) K8sServiceOption {
-	return func(svc *corev1.Service) error {
-		svc.Spec = corev1.ServiceSpec{
-			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: names.ServiceHostName(channelDispatcherServiceName(c.Spec.Provisioner.Name), system.Namespace()),
-		}
-		return nil
-	}
-}
 
 func CreateK8sService(ctx context.Context, client runtimeClient.Client, c *eventingv1alpha1.Channel, opts ...K8sServiceOption) (*corev1.Service, error) {
 	getSvc := func() (*corev1.Service, error) {
