@@ -57,8 +57,6 @@ func TestKnownTypes(t *testing.T) {
 	for _, name := range []string{
 		"Channel",
 		"ChannelList",
-		"ClusterChannelProvisioner",
-		"ClusterChannelProvisionerList",
 		"Subscription",
 		"SubscriptionList",
 	} {
