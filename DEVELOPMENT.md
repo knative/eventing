@@ -11,8 +11,7 @@ This doc explains how to setup a development environment so you can get started
 1. [Create and checkout a repo fork](#checkout-your-fork)
 
 Once you meet these requirements, you can
-[start the eventing-controller](#starting-eventing-controller) and
-[install a channel provisioner](#installing-a-channel-provisioner)!
+[start the eventing-controller](#starting-eventing-controller).
 
 Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
