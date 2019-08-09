@@ -18,7 +18,8 @@ package resources
 
 import (
 	"fmt"
-	"net/url"
+
+	"knative.dev/pkg/apis"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +32,9 @@ import (
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, uri *url.URL) *messagingv1alpha1.Subscription {
-	uriString := uri.String()
+func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger,
+	brokerIngress *corev1.ObjectReference,
+	url *apis.URL) *messagingv1alpha1.Subscription {
 	return &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
@@ -49,7 +51,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 				Name:       brokerTrigger.Name,
 			},
 			Subscriber: &messagingv1alpha1.SubscriberSpec{
-				URI: &uriString,
+				URI: url,
 			},
 			Reply: &messagingv1alpha1.ReplyStrategy{
 				Channel: &corev1.ObjectReference{

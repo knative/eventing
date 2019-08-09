@@ -19,12 +19,10 @@ package trigger
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
@@ -41,6 +39,7 @@ import (
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 
 	. "knative.dev/pkg/reconciler/testing"
 
@@ -71,7 +70,6 @@ const (
 	subscriberAPIVersion = "v1"
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
-	subscriberURI        = "http://example.com/subscriber"
 
 	dependencyAnnotation    = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	cronJobSourceName       = "test-cronjob-source"
@@ -85,7 +83,8 @@ const (
 )
 
 var (
-	trueVal = true
+	subscriberURI = &apis.URL{Host: "example.com", Scheme: "http", Path: "subscriber"}
+	trueVal       = true
 
 	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 )
@@ -736,25 +735,12 @@ func makeIngressChannelRef() *corev1.ObjectReference {
 	}
 }
 
-func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Service",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      subscriberName,
-			},
-		},
-	}
-}
-
 func makeBrokerFilterService() *corev1.Service {
 	return brokerresources.MakeFilterService(makeBroker())
 }
 
-func makeServiceURI() *url.URL {
-	return &url.URL{
+func makeServiceURI() *apis.URL {
+	return &apis.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
@@ -773,9 +759,13 @@ func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription 
 
 // Just so we can test subscription updates
 func makeDifferentReadySubscription() *messagingv1alpha1.Subscription {
-	uri := "http://example.com/differenturi"
+	url := apis.URL{
+		Scheme: "http",
+		Host:   "example.com",
+		Path:   "differenturi",
+	}
 	s := makeIngressSubscription()
-	s.Spec.Subscriber.URI = &uri
+	s.Spec.Subscriber.URI = &url
 	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s
 }

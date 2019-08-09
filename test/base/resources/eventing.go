@@ -23,6 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 	pkgTest "knative.dev/pkg/test"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -157,10 +158,10 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 }
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
-func WithSubscriberURIForTrigger(uri string) TriggerOption {
+func WithSubscriberURIForTrigger(uri *apis.URL) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
-			URI: &uri,
+			URI: uri,
 		}
 	}
 }

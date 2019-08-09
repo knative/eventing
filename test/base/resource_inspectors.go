@@ -20,21 +20,20 @@ limitations under the License.
 package base
 
 import (
-	"fmt"
-
 	"k8s.io/client-go/dynamic"
 	"knative.dev/eventing/test/base/resources"
+	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-// GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.
-func GetAddressableURI(dynamicClient dynamic.Interface, obj *resources.MetaResource) (string, error) {
+// GetAddressableURL returns the uri for the given resource that implements Addressable duck-type.
+func GetAddressableURL(dynamicClient dynamic.Interface, obj *resources.MetaResource) (apis.URL, error) {
 	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1alpha1.AddressableType{})
 	if err != nil {
-		return "", err
+		return apis.URL{}, err
 	}
 
 	at := untyped.(*duckv1alpha1.AddressableType)
-	uri := fmt.Sprintf("http://%s", at.Status.Address.Hostname)
-	return uri, nil
+	url := apis.URL{Scheme: "http", Host: at.Status.Address.Hostname}
+	return url, nil
 }

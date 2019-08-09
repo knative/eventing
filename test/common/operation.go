@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
+	"knative.dev/pkg/apis"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -49,7 +50,7 @@ func (client *Client) SendFakeEventToAddressable(
 	typemeta *metav1.TypeMeta,
 	event *resources.CloudEvent,
 ) error {
-	uri, err := client.GetAddressableURI(addressableName, typemeta)
+	uri, err := client.GetAddressableURL(addressableName, typemeta)
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func (client *Client) SendFakeEventWithTracingToAddressable(
 	typemeta *metav1.TypeMeta,
 	event *resources.CloudEvent,
 ) error {
-	uri, err := client.GetAddressableURI(addressableName, typemeta)
+	uri, err := client.GetAddressableURL(addressableName, typemeta)
 	if err != nil {
 		return err
 	}
@@ -72,20 +73,20 @@ func (client *Client) SendFakeEventWithTracingToAddressable(
 
 // GetAddressableURI returns the URI of the addressable resource.
 // To use this function, the given resource must have implemented the Addressable duck-type.
-func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1.TypeMeta) (string, error) {
+func (client *Client) GetAddressableURL(addressableName string, typemeta *metav1.TypeMeta) (apis.URL, error) {
 	namespace := client.Namespace
 	metaAddressable := resources.NewMetaResource(addressableName, namespace, typemeta)
-	return base.GetAddressableURI(client.Dynamic, metaAddressable)
+	return base.GetAddressableURL(client.Dynamic, metaAddressable)
 }
 
 // sendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
 func (client *Client) sendFakeEventToAddress(
 	senderName string,
-	uri string,
+	uri apis.URL,
 	event *resources.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	pod, err := resources.EventSenderPod(senderName, uri, event)
+	pod, err := resources.EventSenderPod(senderName, uri.String(), event)
 	if err != nil {
 		return err
 	}
@@ -99,11 +100,11 @@ func (client *Client) sendFakeEventToAddress(
 // sendFakeEventWithTracingToAddress will create a sender pod, which will send the given event with tracing to the given url.
 func (client *Client) sendFakeEventWithTracingToAddress(
 	senderName string,
-	uri string,
+	uri apis.URL,
 	event *resources.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	pod, err := resources.EventSenderTracingPod(senderName, uri, event)
+	pod, err := resources.EventSenderTracingPod(senderName, uri.String(), event)
 	if err != nil {
 		return err
 	}

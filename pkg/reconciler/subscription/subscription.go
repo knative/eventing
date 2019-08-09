@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
+	apis "knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
@@ -190,7 +191,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-	logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
+	logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()))
 
 	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply, track)
 	if err != nil {
@@ -203,7 +204,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-	logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
+	logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI.String()))
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
@@ -373,15 +374,15 @@ func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy, track eventingduck.Track) (string, error) {
+func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy, track eventingduck.Track) (*apis.URL, error) {
 	if isNilOrEmptyReply(replyStrategy) {
-		return "", nil
+		return nil, nil
 	}
 
 	// Tell tracker to reconcile this Subscription whenever the Channel changes.
 	if err := track(*replyStrategy.Channel); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to spec.reply.channel", zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	obj, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, replyStrategy.Channel)
@@ -389,20 +390,20 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel",
 			zap.Error(err),
 			zap.Any("replyStrategy", replyStrategy))
-		return "", err
+		return nil, err
 	}
 	s := duckv1alpha1.AddressableType{}
 	err = duck.FromUnstructured(obj, &s)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
-		return "", err
+		return nil, err
 	}
 	if s.Status.Address != nil {
 		if url := s.Status.Address.GetURL(); url.Host != "" {
-			return url.String(), nil
+			return &url, nil
 		}
 	}
-	return "", fmt.Errorf("reply.status does not contain address")
+	return nil, fmt.Errorf("reply.status does not contain address")
 }
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable, isDeleted bool) error {

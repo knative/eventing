@@ -539,14 +539,14 @@ func createParallelSubscriptionStatus(parallelName string, caseNumber int, statu
 }
 
 func createSubscriber(caseNumber int) v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
+	uriString := apis.URL{Scheme: "http", Host: "example.com", Path: fmt.Sprintf("%d", caseNumber)}
 	return v1alpha1.SubscriberSpec{
 		URI: &uriString,
 	}
 }
 
 func createFilter(caseNumber int) *v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/filter-%d", caseNumber)
+	uriString := apis.URL{Scheme:"http", Host:"example.com", Path: fmt.Sprintf("filter-%d", caseNumber)}
 	return &v1alpha1.SubscriberSpec{
 		URI: &uriString,
 	}

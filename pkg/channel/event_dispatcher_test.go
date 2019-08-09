@@ -19,12 +19,15 @@ package channel
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"knative.dev/pkg/apis"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -350,6 +353,7 @@ func TestDispatchMessage(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			fmt.Println(n)
 			destHandler := &fakeHandler{
 				t:        t,
 				response: tc.fakeResponse,
@@ -379,8 +383,10 @@ func TestDispatchMessage(t *testing.T) {
 			ctx = cehttp.WithTransportContext(ctx, tctx)
 
 			md := NewEventDispatcher(zap.NewNop())
+
 			destination := getDomain(t, tc.sendToDestination, destServer.URL)
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
+
 			err := md.DispatchEvent(ctx, event, destination, reply)
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
@@ -403,15 +409,15 @@ func TestDispatchMessage(t *testing.T) {
 	}
 }
 
-func getDomain(t *testing.T, shouldSend bool, serverURL string) string {
+func getDomain(t *testing.T, shouldSend bool, serverURL string) *apis.URL {
 	if shouldSend {
-		server, err := url.Parse(serverURL)
+		server, err := apis.ParseURL(serverURL)
 		if err != nil {
 			t.Errorf("Bad serverURL: %q", serverURL)
 		}
-		return server.Host
+		return server
 	}
-	return ""
+	return nil
 }
 
 type requestValidation struct {

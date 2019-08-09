@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/webhook"
 )
@@ -149,7 +150,7 @@ type SubscriberSpec struct {
 	// http://k8s-service for example
 	// http://myexternalhandler.example.com/foo/bar
 	// +optional
-	URI *string `json:"uri,omitempty"`
+	URI *duckapis.URL `json:"uri,omitempty"`
 }
 
 // ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
@@ -181,10 +182,10 @@ type SubscriptionStatus struct {
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
 	// SubscriberURI is the fully resolved URI for spec.subscriber.
-	SubscriberURI string `json:"subscriberURI,omitempty"`
+	SubscriberURI *duckapis.URL `json:"subscriberURI,omitempty"`
 
 	// ReplyURI is the fully resolved URI for the spec.reply.
-	ReplyURI string `json:"replyURI,omitempty"`
+	ReplyURI *duckapis.URL `json:"replyURI,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -472,8 +472,9 @@ func TestValidChannel(t *testing.T) {
 }
 
 func TestValidgetValidSubscriber(t *testing.T) {
-	uri := "http://example.com"
+	uri := apis.URL{Host: "example.com", Scheme: "http"}
 	empty := ""
+	emptyURI := apis.URL{}
 	tests := []struct {
 		name string
 		s    SubscriberSpec
@@ -485,7 +486,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 	}, {
 		name: "valid dnsName",
 		s: SubscriberSpec{
-			DeprecatedDNSName: &uri,
+			DeprecatedDNSName: &uri.Host,
 		},
 		want: nil,
 	}, {
@@ -496,7 +497,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
-			DeprecatedDNSName: &uri,
+			DeprecatedDNSName: &uri.Host,
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMultipleOneOf("ref", "dnsName")
@@ -525,7 +526,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 	}, {
 		name: "both dnsName and uri given",
 		s: SubscriberSpec{
-			DeprecatedDNSName: &uri,
+			DeprecatedDNSName: &uri.Host,
 			URI:               &uri,
 		},
 		want: func() *apis.FieldError {
@@ -540,7 +541,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 				APIVersion: channelAPIVersion,
 				Kind:       channelKind,
 			},
-			DeprecatedDNSName: &uri,
+			DeprecatedDNSName: &uri.Host,
 			URI:               &uri,
 		},
 		want: func() *apis.FieldError {
@@ -552,7 +553,7 @@ func TestValidgetValidSubscriber(t *testing.T) {
 		s: SubscriberSpec{
 			Ref:               &corev1.ObjectReference{},
 			DeprecatedDNSName: &empty,
-			URI:               &empty,
+			URI:               &emptyURI,
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingOneOf("ref", "dnsName", "uri")

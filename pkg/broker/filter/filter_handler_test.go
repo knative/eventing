@@ -35,12 +35,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -52,11 +52,11 @@ const (
 	extensionName  = `my-extension`
 	extensionValue = `my-extension-value`
 
-	toBeReplaced = "toBeReplaced"
+	toBeReplaced = "http://toBeReplaced"
 )
 
 var (
-	host      = fmt.Sprintf("%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
+	host      = fmt.Sprintf("http://%s.%s.triggers.%s", triggerName, testNS, utils.GetClusterDomainName())
 	validPath = fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID)
 )
 
@@ -305,13 +305,17 @@ func TestReceiver(t *testing.T) {
 				t:             t,
 			}
 			s := httptest.NewServer(&fh)
+			url, err := apis.ParseURL(s.URL)
+			if err != nil {
+				t.Fatal("Cannot parse URL")
+			}
 			defer s.Client()
 
 			// Replace the SubscriberURI to point at our fake server.
 			correctURI := make([]runtime.Object, 0, len(tc.triggers))
 			for _, trig := range tc.triggers {
-				if trig.Status.SubscriberURI == toBeReplaced {
-					trig.Status.SubscriberURI = s.URL
+				if trig.Status.SubscriberURI.String() == toBeReplaced {
+					trig.Status.SubscriberURI = url
 				}
 				correctURI = append(correctURI, trig)
 			}
@@ -520,7 +524,7 @@ func makeTrigger(filter *eventingv1alpha1.TriggerFilter) *eventingv1alpha1.Trigg
 			Filter: filter,
 		},
 		Status: eventingv1alpha1.TriggerStatus{
-			SubscriberURI: "toBeReplaced",
+			SubscriberURI: &apis.URL{Scheme: "http", Host: "toBeReplaced"},
 		},
 	}
 }
@@ -541,7 +545,7 @@ func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
 	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
 	// This should fail url.Parse(). It was taken from the unit tests for url.Parse(), it violates
 	// rfc3986 3.2.3, namely that the port must be digits.
-	t.Status.SubscriberURI = "http://[::1]:namedport"
+	t.Status.SubscriberURI = &apis.URL{Scheme: "http", Host: "[::1]:namedport"}
 	return t
 }
 

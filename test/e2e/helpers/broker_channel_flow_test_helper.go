@@ -100,7 +100,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		client.WaitForResourceReady(channelName, channelTypeMeta)
 
 		// create trigger3 to receive the transformed event, and send it to the channel
-		channelURL, err := client.GetAddressableURI(channelName, channelTypeMeta)
+		channelURL, err := client.GetAddressableURL(channelName, channelTypeMeta)
 		if err != nil {
 			st.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
 		}
@@ -108,7 +108,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 			triggerName3,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
-			resources.WithSubscriberURIForTrigger(channelURL),
+			resources.WithSubscriberURIForTrigger(&channelURL),
 		)
 
 		// create logger pod and service for subscription

@@ -33,6 +33,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -268,13 +269,13 @@ func subscribers() []eventingduckv1alpha1.SubscriberSpec {
 	return []eventingduckv1alpha1.SubscriberSpec{{
 		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    1,
-		SubscriberURI: "call1",
-		ReplyURI:      "sink2",
+		SubscriberURI: &apis.URL{Host: "call1", Scheme: "http"},
+		ReplyURI:      &apis.URL{Host: "sink2", Scheme: "http"},
 	}, {
 		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 		Generation:    2,
-		SubscriberURI: "call2",
-		ReplyURI:      "sink2",
+		SubscriberURI: &apis.URL{Host: "call2", Scheme: "http"},
+		ReplyURI:      &apis.URL{Host: "sink2", Scheme: "http"},
 	}}
 }
 

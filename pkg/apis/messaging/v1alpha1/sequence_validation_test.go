@@ -63,7 +63,7 @@ func makeInvalidReply(channelName string) *corev1.ObjectReference {
 }
 
 func TestSequenceSpecValidation(t *testing.T) {
-	subscriberURI := "http://example.com"
+	subscriberURI := apis.URL{Host: "example.com", Scheme: "http"}
 	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",

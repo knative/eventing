@@ -78,8 +78,8 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: "subscriberendpoint",
-						ReplyURI:      "resultendpoint",
+						SubscriberURI: &apis.URL{Host: "subscriberendpoint", Scheme: "http"},
+						ReplyURI:      &apis.URL{Host: "resultendpoint", Scheme: "http"},
 					}},
 				}},
 		},
@@ -96,8 +96,8 @@ func TestChannelValidation(t *testing.T) {
 				},
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: "subscriberendpoint",
-						ReplyURI:      "replyendpoint",
+						SubscriberURI: &apis.URL{Host: "subscriberendpoint"},
+						ReplyURI:      &apis.URL{Host: "replyendpoint"},
 					}, {}},
 				}},
 		},
@@ -112,8 +112,8 @@ func TestChannelValidation(t *testing.T) {
 			Spec: ChannelSpec{
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: "subscriberendpoint",
-						ReplyURI:      "replyendpoint",
+						SubscriberURI: &apis.URL{Host: "subscriberendpoint"},
+						ReplyURI:      &apis.URL{Host: "replyendpoint"},
 					}, {}},
 				}},
 		},
@@ -256,8 +256,8 @@ func TestChannelImmutableFields(t *testing.T) {
 				},
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: "subscriberendpoint",
-						ReplyURI:      "replyendpoint",
+						SubscriberURI: &apis.URL{Host: "subscriberendpoint"},
+						ReplyURI:      &apis.URL{Host: "replyendpoint"},
 					}},
 				},
 			},

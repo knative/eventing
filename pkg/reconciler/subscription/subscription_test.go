@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/apis"
+
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,17 +60,13 @@ const (
 // subscriptions have: channel -> SUB -> subscriber -viaSub-> reply
 
 var (
-	channelDNS = "channel.mynamespace.svc." + utils.GetClusterDomainName()
-	channelURI = "http://" + channelDNS
-
+	channelDNS    = "channel.mynamespace.svc." + utils.GetClusterDomainName()
 	subscriberDNS = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
-	subscriberURI = "http://" + subscriberDNS
-
-	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
-	replyURI = "http://" + replyDNS
-
-	serviceDNS = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
-	serviceURI = "http://" + serviceDNS
+	subscriberURI = &apis.URL{Scheme: "http", Host: subscriberDNS}
+	replyDNS      = "reply.mynamespace.svc." + utils.GetClusterDomainName()
+	replyURI      = &apis.URL{Host: replyDNS, Scheme: "http"}
+	serviceDNS    = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
+	serviceURI    = &apis.URL{Host: serviceDNS, Scheme: "http", Path: "/"}
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -339,7 +337,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithPhysicalSubscriber(subscriberURI),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.messaging.knative.dev %q not found", replyName)),
 				),
 			}},
@@ -373,7 +371,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithPhysicalSubscriber(subscriberURI),
 					WithSubscriptionReply(nonAddressableGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
@@ -414,13 +412,22 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithPhysicalSubscriber(subscriberURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:           subscriptionUID,
+							SubscriberURI: subscriberURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -457,13 +464,22 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithPhysicalReply(replyURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:      subscriptionUID,
+							ReplyURI: replyURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -505,17 +521,28 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithPhysicalSubscriber(subscriberURI),
+					WithPhysicalReply(replyURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:           subscriptionUID,
+							SubscriberURI: subscriberURI,
+							ReplyURI:      replyURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
-		}, {
+		},
+		{
 			Name: "subscription, valid remove reply",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -525,8 +552,8 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithPhysicalSubscriber(subscriberURI),
+					WithPhysicalReply(replyURI),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
 					WithUnstructuredAddressable(subscriberDNS),
@@ -535,7 +562,16 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 					WithChannelSubscribers([]eventingduck.SubscriberSpec{
-						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+						{
+							UID:           subscriptionUID,
+							SubscriberURI: subscriberURI,
+							ReplyURI:      replyURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
 					}),
 					WithChannelReadySubscriberAndGeneration(subscriptionUID, subscriptionGeneration),
 				),
@@ -555,16 +591,27 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithPhysicalSubscriber(subscriberURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:           subscriptionUID,
+							Generation:    subscriptionGeneration,
+							SubscriberURI: subscriberURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
-		}, {
+		},
+		{
 			Name: "subscription, valid remove subscriber",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -574,14 +621,22 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					WithSubscriptionReply(channelGVK, replyName),
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithPhysicalSubscriber(subscriberURI),
+					WithPhysicalReply(replyURI),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 					WithChannelSubscribers([]eventingduck.SubscriberSpec{
-						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+						{
+							UID:      subscriptionUID,
+							ReplyURI: replyURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
 					}),
 					WithChannelReadySubscriberAndGeneration(subscriptionUID, subscriptionGeneration),
 				),
@@ -605,13 +660,24 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					//WithPhysicalSubscriber(&subscriberURI),
+					WithPhysicalReply(replyURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, Generation: subscriptionGeneration, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:        subscriptionUID,
+							Generation: subscriptionGeneration,
+							ReplyURI:   replyURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -675,13 +741,22 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI+"/"),
+					WithPhysicalSubscriber(serviceURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:           subscriptionUID,
+							SubscriberURI: serviceURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      subscriptionName,
+								Namespace: testNS,
+								UID:       subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
@@ -699,7 +774,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithPhysicalSubscriber(serviceURI),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -725,14 +800,31 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI+"/"),
+					WithPhysicalSubscriber(serviceURI),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: "a_" + subscriptionName, Namespace: testNS, UID: "a_" + subscriptionUID}},
-					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b_" + subscriptionName, Namespace: testNS, UID: "b_" + subscriptionUID}},
-				}),
+				patchSubscribers(testNS, channelName,
+					[]eventingduck.SubscriberSpec{
+						{
+							UID:           "a_" + subscriptionUID,
+							SubscriberURI: serviceURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      "a_" + subscriptionName,
+								Namespace: testNS,
+								UID:       "a_" + subscriptionUID,
+							},
+						},
+						{
+							UID:           "b_" + subscriptionUID,
+							SubscriberURI: serviceURI,
+							DeprecatedRef: &corev1.ObjectReference{
+								Name:      "b_" + subscriptionName,
+								Namespace: testNS,
+								UID:       "b_" + subscriptionUID,
+							},
+						},
+					}),
 				patchFinalizers(testNS, "a_"+subscriptionName),
 			},
 		}, {
@@ -746,7 +838,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithPhysicalSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
@@ -774,7 +866,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithPhysicalSubscriber(serviceURI),
 					WithSubscriptionDeleted,
 				),
 			}},

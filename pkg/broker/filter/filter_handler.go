@@ -214,7 +214,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		filterSource: triggerFilterAttribute(t.Spec.Filter, "source"),
 	}
 
-	subscriberURIString := t.Status.SubscriberURI
+	subscriberURIString := t.Status.SubscriberURI.String()
 	if subscriberURIString == "" {
 		err = errors.New("unable to read subscriberURI")
 		// Record the event count.
@@ -223,7 +223,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	}
 	// We could just send the request to this URI regardless, but let's just check to see if it well
 	// formed first, that way we can generate better error message if it isn't.
-	subscriberURI, err := url.Parse(subscriberURIString)
+	subscriberURI, err := url.Parse(t.Status.SubscriberURI.String())
 	if err != nil {
 		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
 		// Record the event count.

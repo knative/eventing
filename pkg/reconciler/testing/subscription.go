@@ -27,6 +27,7 @@ import (
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckapis "knative.dev/pkg/apis"
 )
 
 // SubscriptionOption enables further configuration of a Subscription.
@@ -128,15 +129,15 @@ func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) Sub
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionSubscriber(uri string) SubscriptionOption {
+func WithPhysicalSubscriber(url *duckapis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Status.PhysicalSubscription.SubscriberURI = uri
+		s.Status.PhysicalSubscription.SubscriberURI = url
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionReply(uri string) SubscriptionOption {
+func WithPhysicalReply(url *duckapis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Status.PhysicalSubscription.ReplyURI = uri
+		s.Status.PhysicalSubscription.ReplyURI = url
 	}
 }
 

@@ -45,8 +45,8 @@ func TestParallelValidation(t *testing.T) {
 	})
 }
 
-func TestParallelSpecValidation(t *testing.T) {
-	subscriberURI := "http://example.com"
+func TestChoiceSpecValidation(t *testing.T) {
+	subscriberURI := apis.URL{Host: "example.com", Scheme: "http"}
 	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
 		metav1.TypeMeta{
 			Kind:       "mykind",

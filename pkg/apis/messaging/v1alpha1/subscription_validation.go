@@ -88,7 +88,7 @@ func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
 		fieldsSet = append(fieldsSet, "dnsName")
 	}
-	if s.URI != nil && *s.URI != "" {
+	if s.URI != nil && (*s.URI).String() != "" {
 		fieldsSet = append(fieldsSet, "uri")
 	}
 	if len(fieldsSet) == 0 {

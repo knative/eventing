@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	duckapis "knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -37,8 +38,8 @@ import (
 )
 
 var (
-	uri = "http://example.com"
-
+	uri            = duckapis.URL{Host: "example.com", Scheme: "http"}
+	urlStr         = uri.String()
 	channelAddress = "test-channel.hostname"
 	channelURL     = fmt.Sprintf("http://%s", channelAddress)
 
@@ -105,15 +106,15 @@ func TestSubscriberSpec(t *testing.T) {
 		},
 		"DNS Name": {
 			Sub: &v1alpha1.SubscriberSpec{
-				DeprecatedDNSName: &uri,
+				DeprecatedDNSName: &urlStr,
 			},
-			Expected: uri,
+			Expected: urlStr,
 		},
 		"URI": {
 			Sub: &v1alpha1.SubscriberSpec{
 				URI: &uri,
 			},
-			Expected: uri,
+			Expected: urlStr,
 		},
 		"Doesn't exist": {
 			Sub: &v1alpha1.SubscriberSpec{
@@ -189,8 +190,8 @@ func TestSubscriberSpec(t *testing.T) {
 					t.Fatalf("Unexpected error. Expected '%s'. Actual '%s'.", tc.ExpectedErr, err.Error())
 				}
 			}
-			if tc.Expected != actual {
-				t.Fatalf("Unexpected URL. Expected '%s'. Actual '%s'", tc.Expected, actual)
+			if tc.Expected != actual.String() {
+				t.Fatalf("Unexpected URL. Expected '%s'. Actual '%s'", tc.Expected, actual.String())
 			}
 		})
 	}

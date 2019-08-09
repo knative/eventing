@@ -28,6 +28,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -48,7 +49,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.SubscriberSpec{
 									{
-										SubscriberURI: replaceDomain,
+										SubscriberURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 									},
 								},
 							},
@@ -62,7 +63,7 @@ func TestHandler(t *testing.T) {
 							FanoutConfig: fanout.Config{
 								Subscriptions: []eventingduck.SubscriberSpec{
 									{
-										ReplyURI: replaceDomain,
+										ReplyURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 									},
 								},
 							},
@@ -98,7 +99,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: replaceDomain,
+									SubscriberURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 								},
 							},
 						},
@@ -206,11 +207,11 @@ func (*successHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
 	for i, cc := range c.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.ReplyURI == replaceDomain {
-				sub.ReplyURI = replacement
+			if sub.ReplyURI != nil && sub.ReplyURI.Host == replaceDomain {
+				sub.ReplyURI.Host = replacement
 			}
-			if sub.SubscriberURI == replaceDomain {
-				sub.SubscriberURI = replacement
+			if sub.SubscriberURI != nil && sub.SubscriberURI.Host == replaceDomain {
+				sub.SubscriberURI.Host = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

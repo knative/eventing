@@ -19,6 +19,7 @@ package sequence
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -91,9 +92,14 @@ func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructur
 }
 
 func createSubscriber(stepNumber int) v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/%d", stepNumber)
+	url := apis.URL{
+		Scheme: "http",
+		Host:   "example.com",
+		Path:   fmt.Sprint("/", strconv.Itoa(stepNumber)),
+	}
+
 	return v1alpha1.SubscriberSpec{
-		URI: &uriString,
+		URI: &url,
 	}
 }
 

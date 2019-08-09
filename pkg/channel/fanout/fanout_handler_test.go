@@ -30,13 +30,14 @@ import (
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/pkg/apis"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
 // servers.
-const (
-	replaceSubscriber = "replaceSubscriber"
-	replaceChannel    = "replaceChannel"
+var (
+	replaceSubscriber = &apis.URL{Scheme: "http", Host: "replaceSubscriber"}
+	replaceChannel    = &apis.URL{Scheme: "http", Host: "replaceChannel"}
 )
 
 func makeCloudEvent() cloudevents.Event {
@@ -208,20 +209,24 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.subscriber,
 			})
+			callableServerURL := &apis.URL{Scheme: "http", Host: callableServer.URL[7:]} // strip the leading 'http://'
+
 			defer callableServer.Close()
 			channelServer := httptest.NewServer(&fakeHandler{
 				handler: tc.channel,
 			})
+			channelServerURL := &apis.URL{Scheme: "http", Host: channelServer.URL[7:]} // strip the leading 'http://'
+
 			defer channelServer.Close()
 
 			// Rewrite the subs to use the servers we just started.
 			subs := make([]eventingduck.SubscriberSpec, 0)
 			for _, sub := range tc.subs {
 				if sub.SubscriberURI == replaceSubscriber {
-					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'
+					sub.SubscriberURI = callableServerURL
 				}
 				if sub.ReplyURI == replaceChannel {
-					sub.ReplyURI = channelServer.URL[7:] // strip the leading 'http://'
+					sub.ReplyURI = channelServerURL
 				}
 				subs = append(subs, sub)
 			}

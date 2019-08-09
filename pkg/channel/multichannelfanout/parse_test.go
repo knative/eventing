@@ -25,6 +25,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 )
 
 func TestConfigMapData(t *testing.T) {
@@ -65,20 +66,20 @@ func TestConfigMapData(t *testing.T) {
 					name: c1
 					fanoutConfig:
 					  subscriptions:
-						- subscriberURI: event-changer.default.svc.` + utils.GetClusterDomainName() + `
-						  replyURI: message-dumper-bar.default.svc.` + utils.GetClusterDomainName() + `
-						- subscriberURI: message-dumper-foo.default.svc.` + utils.GetClusterDomainName() + `
-						- replyURI: message-dumper-bar.default.svc.` + utils.GetClusterDomainName() + `
+						- subscriberURI: http://event-changer.default.svc.` + utils.GetClusterDomainName() + `
+						  replyURI: http://message-dumper-bar.default.svc.` + utils.GetClusterDomainName() + `
+						- subscriberURI: http://message-dumper-foo.default.svc.` + utils.GetClusterDomainName() + `
+						- replyURI: http://message-dumper-bar.default.svc.` + utils.GetClusterDomainName() + `
 				  - namespace: default
 					name: c2
 					fanoutConfig:
 					  subscriptions:
-						- replyURI: message-dumper-foo.default.svc.` + utils.GetClusterDomainName() + `
+						- replyURI: http://message-dumper-foo.default.svc.` + utils.GetClusterDomainName() + `
 				  - namespace: other
 					name: c3
 					fanoutConfig:
 					  subscriptions:
-						- replyURI: message-dumper-foo.default.svc.` + utils.GetClusterDomainName(),
+						- replyURI: http://message-dumper-foo.default.svc.` + utils.GetClusterDomainName(),
 
 			expected: &Config{
 				ChannelConfigs: []ChannelConfig{
@@ -88,14 +89,14 @@ func TestConfigMapData(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: "event-changer.default.svc." + utils.GetClusterDomainName(),
-									ReplyURI:      "message-dumper-bar.default.svc." + utils.GetClusterDomainName(),
+									SubscriberURI: makeURL("event-changer"),
+									ReplyURI:      makeURL("message-dumper-bar"),
 								},
 								{
-									SubscriberURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
+									SubscriberURI: makeURL("message-dumper-foo"),
 								},
 								{
-									ReplyURI: "message-dumper-bar.default.svc." + utils.GetClusterDomainName(),
+									ReplyURI: makeURL("message-dumper-bar"),
 								},
 							},
 						},
@@ -106,7 +107,7 @@ func TestConfigMapData(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
+									ReplyURI: makeURL("message-dumper-foo"),
 								},
 							},
 						},
@@ -117,7 +118,7 @@ func TestConfigMapData(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: "message-dumper-foo.default.svc." + utils.GetClusterDomainName(),
+									ReplyURI: makeURL("message-dumper-foo"),
 								},
 							},
 						},
@@ -149,4 +150,8 @@ func formatData(config string) string {
 	// Golang editors tend to replace leading spaces with tabs. YAML is left whitespace
 	// sensitive and disallows tabs, so let's replace the tabs with four spaces.
 	return strings.Replace(config, "\t", "    ", -1)
+}
+
+func makeURL(service string) *apis.URL {
+	return &apis.URL{Scheme: "http", Host: service + ".default.svc." + utils.GetClusterDomainName()}
 }

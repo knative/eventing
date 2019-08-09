@@ -26,6 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -57,9 +58,9 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1alpha1.T
 	return t
 }
 
-func WithTriggerSubscriberURI(uri string) TriggerOption {
+func WithTriggerSubscriberURI(uri *apis.URL) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{URI: &uri}
+		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{URI: uri}
 	}
 }
 
@@ -106,7 +107,7 @@ func WithTriggerSubscribed() TriggerOption {
 	}
 }
 
-func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
+func WithTriggerStatusSubscriberURI(uri *apis.URL) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Status.SubscriberURI = uri
 	}

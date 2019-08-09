@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"knative.dev/pkg/apis"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
@@ -38,7 +40,7 @@ type Dispatcher interface {
 	// DispatchEvent dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
-	DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string) error
+	DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply *apis.URL) error
 }
 
 // EventDispatcher is the 'real' Dispatcher used everywhere except unit tests.
@@ -71,12 +73,12 @@ func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 // DispatchEvent dispatches an event to a destination over HTTP.
 //
 // The destination and reply are URLs.
-func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string) error {
+func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply *apis.URL) error {
 	var err error
 	// Default to replying with the original event. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
 	response := &event
-	if destination != "" {
+	if destination != nil {
 		destinationURL := d.resolveURL(destination)
 		ctx, response, err = d.executeRequest(ctx, destinationURL, event)
 		if err != nil {
@@ -84,12 +86,12 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 		}
 	}
 
-	if reply == "" && response != nil {
+	if reply == nil && response != nil {
 		d.logger.Debug("cannot forward response as reply is empty", zap.Any("response", response))
 		return nil
 	}
 
-	if reply != "" && response != nil {
+	if reply != nil && response != nil {
 		replyURL := d.resolveURL(reply)
 		_, _, err = d.executeRequest(ctx, replyURL, *response)
 		if err != nil {
@@ -146,14 +148,6 @@ func isFailure(statusCode int) bool {
 		statusCode >= http.StatusMultipleChoices /* 300 */
 }
 
-func (d *EventDispatcher) resolveURL(destination string) *url.URL {
-	if u, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(u.Scheme) {
-		// Already a URL with a known scheme.
-		return u
-	}
-	return &url.URL{
-		Scheme: "http",
-		Host:   destination,
-		Path:   "/",
-	}
+func (d *EventDispatcher) resolveURL(destination *apis.URL) *url.URL {
+	return destination.URL()
 }

@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -83,7 +84,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							SubscriberURI: "subscriberdomain",
+							SubscriberURI: &apis.URL{Host: "subscriberdomain"},
 						},
 					},
 				},
@@ -98,7 +99,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							ReplyURI: "replydomain",
+							ReplyURI: &apis.URL{Host: "replydomain"},
 						},
 					},
 				},
@@ -136,7 +137,7 @@ func TestConfigDiff(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							SubscriberURI: "subscriberdomain",
+							SubscriberURI: &apis.URL{Host: "subscriberdomain"},
 						},
 					},
 				},
@@ -166,7 +167,7 @@ func TestConfigDiff(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: "different",
+									SubscriberURI: &apis.URL{Host: "different"},
 								},
 							},
 						},
@@ -219,7 +220,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: replaceDomain,
+									ReplyURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 								},
 							},
 						},
@@ -241,7 +242,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: "first-to-domain",
+									ReplyURI: &apis.URL{Scheme: "http", Host: "first-to-domain"},
 								},
 							},
 						},
@@ -253,7 +254,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: replaceDomain,
+									SubscriberURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 								},
 							},
 						},
@@ -299,17 +300,19 @@ func TestServeHTTP(t *testing.T) {
 				t.Errorf("Expected nil event. Actual: %s", resp.Event.String())
 			}
 		})
+
 	}
 }
 
 func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
-			if sub.SubscriberURI == replaceDomain {
-				sub.SubscriberURI = replacement
+
+			if sub.SubscriberURI != nil && sub.SubscriberURI.Host == replaceDomain {
+				sub.SubscriberURI.Host = replacement
 			}
-			if sub.ReplyURI == replaceDomain {
-				sub.ReplyURI = replacement
+			if sub.ReplyURI != nil && sub.ReplyURI.Host == replaceDomain {
+				sub.ReplyURI.Host = replacement
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}
