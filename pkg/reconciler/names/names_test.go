@@ -19,7 +19,7 @@ package names
 import (
 	"testing"
 
-	"github.com/knative/eventing/pkg/utils"
+	"knative.dev/eventing/pkg/utils"
 )
 
 func TestNames(t *testing.T) {

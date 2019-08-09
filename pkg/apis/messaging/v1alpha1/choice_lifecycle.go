@@ -17,9 +17,9 @@
 package v1alpha1
 
 import (
-	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
@@ -139,6 +139,8 @@ func (ps *ChoiceStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Ch
 		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 		allReady = false
 	}
+	// Propagate ingress channel address to Choice
+	ps.setAddress(address)
 
 	for i, c := range channels {
 		ps.CaseStatuses[i].FilterChannelStatus = ChoiceChannelStatus{
@@ -157,11 +159,6 @@ func (ps *ChoiceStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Ch
 		} else {
 			ps.CaseStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 			allReady = false
-		}
-
-		// Mark the Choice address as the Address of the first channel.
-		if i == 0 {
-			ps.setAddress(address)
 		}
 	}
 	if allReady {

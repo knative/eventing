@@ -22,7 +22,7 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	inmemorychannel "github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller"
+	inmemorychannel "knative.dev/eventing/pkg/reconciler/inmemorychannel/controller"
 )
 
 func main() {

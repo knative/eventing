@@ -23,12 +23,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/reconciler"
-	"github.com/knative/eventing/pkg/reconciler/inmemorychannel/controller/resources"
-	"github.com/knative/eventing/pkg/utils"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +31,12 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/controller"
 )
@@ -219,7 +219,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
 	// We may change this name later, so we have to ensure we use proper addressable when resolving these.
-	svc, err := r.serviceLister.Services(imc.Namespace).Get(fmt.Sprintf("%s-kn-channel", imc.Name))
+	svc, err := r.serviceLister.Services(imc.Namespace).Get(resources.CreateChannelServiceName(imc.Name))
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			svc, err = resources.NewK8sService(imc, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))

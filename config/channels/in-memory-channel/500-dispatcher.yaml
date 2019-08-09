@@ -32,7 +32,7 @@ spec:
       serviceAccountName: imc-dispatcher
       containers:
       - name: dispatcher
-        image: github.com/knative/eventing/cmd/in_memory/channel_dispatcher
+        image: knative.dev/eventing/cmd/in_memory/channel_dispatcher
         env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging

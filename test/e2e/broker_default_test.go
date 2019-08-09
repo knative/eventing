@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	pkgResources "github.com/knative/eventing/pkg/reconciler/namespace/resources"
-	"github.com/knative/eventing/test/base/resources"
-	"github.com/knative/eventing/test/common"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/logging"

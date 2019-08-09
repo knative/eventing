@@ -18,15 +18,24 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 )
 
+var (
+	// Only allow lowercase alphanumeric, starting with letters.
+	validAttributeName = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
+)
+
+// Validate the Trigger.
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	return t.Spec.Validate(ctx).ViaField("spec")
 }
 
+// Validate the TriggerSpec.
 func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if ts.Broker == "" {
@@ -39,9 +48,39 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if ts.Filter != nil && ts.Filter.SourceAndType == nil {
-		fe := apis.ErrMissingField("filter.sourceAndType")
-		errs = errs.Also(fe)
+	if ts.Filter != nil {
+		filtersSpecified := make([]string, 0)
+
+		if ts.Filter.DeprecatedSourceAndType != nil {
+			filtersSpecified = append(filtersSpecified, "filter.sourceAndType")
+		}
+
+		if ts.Filter.Attributes != nil {
+			filtersSpecified = append(filtersSpecified, "filter.attributes")
+			if len(*ts.Filter.Attributes) == 0 {
+				fe := &apis.FieldError{
+					Message: "At least one filtered attribute must be specified",
+					Paths:   []string{"filter.attributes"},
+				}
+				errs = errs.Also(fe)
+			} else {
+				attrs := map[string]string(*ts.Filter.Attributes)
+				for attr := range attrs {
+					if !validAttributeName.MatchString(attr) {
+						fe := &apis.FieldError{
+							Message: fmt.Sprintf("Invalid attribute name: %s", attr),
+							Paths:   []string{"filter.attributes"},
+						}
+						errs = errs.Also(fe)
+					}
+				}
+			}
+		}
+
+		if len(filtersSpecified) > 1 {
+			fe := apis.ErrMultipleOneOf(filtersSpecified...)
+			errs = errs.Also(fe)
+		}
 	}
 
 	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
@@ -54,6 +93,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
+// CheckImmutableFields checks that any immutable fields were not changed.
 func (t *Trigger) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
 	if og == nil {
 		return nil

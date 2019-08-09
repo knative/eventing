@@ -19,11 +19,11 @@ package resources
 import (
 	"testing"
 
-	duckv1alpha1 "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 func TestNonCRDBrokerChannelName(t *testing.T) {

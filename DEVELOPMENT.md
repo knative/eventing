@@ -26,7 +26,7 @@ You must have [`ko`](https://github.com/google/ko) installed.
 ### Checkout your fork
 
 The Go tools require that you clone the repository to the
-`src/github.com/knative/eventing` directory in your
+`src/knative.dev/eventing` directory in your
 [`GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH).
 
 To check out this repository:
@@ -72,21 +72,6 @@ You can access the Eventing Controller's logs with:
 ```shell
 kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
 ```
-
-## Installing a Channel Provisioner
-
-You'll need a `ClusterChannelProvisioner` installed before you can use any
-Channels. Eventing release artifacts include the
-[in-memory-channel](./config/provisioners/in-memory-channel/) out of the box.
-You can install it during development with:
-
-```shell
-ko apply -f config/provisioners/in-memory-channel/
-```
-
-There are other `ClusterChannelProvisioner` implementations available under the
-[contrib](./contrib/) subdirectory, but those likely aren't needed for
-development unless you're working on one of them directly.
 
 ## Iterating
 

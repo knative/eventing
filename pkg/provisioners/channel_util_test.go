@@ -11,7 +11,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	controllertesting "knative.dev/eventing/pkg/reconciler/testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -22,8 +22,8 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 	_ "knative.dev/pkg/system/testing"
 )
 
@@ -296,7 +296,7 @@ func TestChannelNames(t *testing.T) {
 		F: func() string {
 			return channelServiceName("foo")
 		},
-		Want: "foo-channel-",
+		Want: "foo-channel",
 	}, {
 		Name: "channelHostName",
 		F: func() string {
@@ -451,8 +451,8 @@ func om(namespace, name string, uid types.UID) metav1.ObjectMeta {
 func makeK8sService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-channel-", channelName),
-			Namespace:    testNS,
+			Name:      fmt.Sprintf("%s-channel-%s", channelName, channelUID),
+			Namespace: testNS,
 			Labels: map[string]string{
 				EventingChannelLabel:        channelName,
 				OldEventingChannelLabel:     channelName,

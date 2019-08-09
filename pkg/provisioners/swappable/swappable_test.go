@@ -23,10 +23,10 @@ import (
 	"strings"
 	"testing"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/provisioners/fanout"
-	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
 	"go.uber.org/zap"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/provisioners/fanout"
+	"knative.dev/eventing/pkg/provisioners/multichannelfanout"
 )
 
 const (

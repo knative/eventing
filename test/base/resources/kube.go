@@ -154,6 +154,29 @@ func SequenceStepperPod(name, eventMsgAppender string) *corev1.Pod {
 	}
 }
 
+// EventFilteringPod creates a Pod that either filter or send the received CloudEvent
+func EventFilteringPod(name string, filter bool) *corev1.Pod {
+	const imageName = "filterevents"
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+	if filter {
+		pod.Spec.Containers[0].Args = []string{"-filter"}
+	}
+	return pod
+}
+
 // EventLatencyPod creates a Pod that measures events transfer latency.
 func EventLatencyPod(name, sink string, eventCount int) *corev1.Pod {
 	const imageName = "latency"

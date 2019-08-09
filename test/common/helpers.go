@@ -21,7 +21,7 @@ package common
 import (
 	"fmt"
 
-	"github.com/knative/eventing/test/base/resources"
+	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/test/helpers"
 )
 

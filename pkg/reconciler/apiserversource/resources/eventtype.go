@@ -17,13 +17,11 @@ limitations under the License.
 package resources
 
 import (
-	"fmt"
-
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // EventTypeArgs are the arguments needed to create an EventType for an Api Server Source.
@@ -37,9 +35,9 @@ type EventTypeArgs struct {
 func MakeEventType(args *EventTypeArgs) eventingv1alpha1.EventType {
 	return eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.ToDNS1123Subdomain(args.Type)),
-			Labels:       Labels(args.Src.Name),
-			Namespace:    args.Src.Namespace,
+			Name:      utils.GenerateFixedName(args.Src, utils.ToDNS1123Subdomain(args.Type)),
+			Labels:    Labels(args.Src.Name),
+			Namespace: args.Src.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(args.Src, schema.GroupVersionKind{
 					Group:   v1alpha1.SchemeGroupVersion.Group,

@@ -17,8 +17,8 @@ limitations under the License.
 package resources
 
 import (
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 type ContainerArguments struct {

@@ -9,11 +9,12 @@ Knative Eventing e2e tests
 to verify the behavior of this specific implementation.
 
 If you want to add tests for a new `channel` and reuse existing tests for it,
-please look into [config.go](../common/config.go) and make corresponding changes.
+please look into [config.go](../common/config.go) and make corresponding
+changes.
 
 If you want to add a new test case, please add one new test file under [e2e](.)
-and use the `RunTests` function to run against multiple `channels` that have
-the feature you want to test.
+and use the `RunTests` function to run against multiple `channels` that have the
+feature you want to test.
 
 ### Requirements
 

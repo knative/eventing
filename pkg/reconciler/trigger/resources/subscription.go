@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"net/url"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -34,7 +34,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 	return &eventingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
-			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s-", t.Spec.Broker, t.Name)),
+			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(t),
 			},

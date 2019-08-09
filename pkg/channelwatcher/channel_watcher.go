@@ -19,12 +19,12 @@ package channelwatcher
 import (
 	"context"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	"github.com/knative/eventing/pkg/provisioners/swappable"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/provisioners/multichannelfanout"
+	"knative.dev/eventing/pkg/provisioners/swappable"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

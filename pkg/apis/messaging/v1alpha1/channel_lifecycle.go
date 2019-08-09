@@ -17,8 +17,8 @@
 package v1alpha1
 
 import (
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 )

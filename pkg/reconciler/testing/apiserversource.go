@@ -17,22 +17,25 @@ limitations under the License.
 package testing
 
 import (
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/knative/eventing/pkg/apis/sources/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // ApiServerSourceOption enables further configuration of a ApiServer.
 type ApiServerSourceOption func(*v1alpha1.ApiServerSource)
 
 // NewApiServerSource creates a ApiServer with ApiServerOptions
-func NewApiServerSource(name, namespace string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
+func NewApiServerSource(name, namespace, uid string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
 	c := &v1alpha1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			UID:       types.UID(uid),
 		},
 	}
 	for _, opt := range o {
@@ -59,7 +62,8 @@ func WithApiServerSourceSink(uri string) ApiServerSourceOption {
 
 func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
-	s.Status.PropagateDeploymentAvailability(NewDeployment("", "any"))
+	name := utils.GenerateFixedName(s, fmt.Sprintf("apiserversource-%s", s.Name))
+	s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
 }
 
 func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {

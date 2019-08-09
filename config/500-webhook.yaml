@@ -37,7 +37,7 @@ spec:
         terminationMessagePolicy: FallbackToLogsOnError
         # This is the Go import path for the binary that is containerized
         # and substituted here.
-        image: github.com/knative/eventing/cmd/webhook
+        image: knative.dev/eventing/cmd/webhook
         volumeMounts:
         - name: config-logging
           mountPath: /etc/config-logging
@@ -50,6 +50,8 @@ spec:
           value: config-logging
         - name: WEBHOOK_NAME
           value: eventing-webhook
+        - name: REG_DELAY_TIME
+          value: "10"
       volumes:
         - name: config-logging
           configMap:

@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 // EventTypeOption enables further configuration of an EventType.
@@ -45,12 +45,6 @@ func NewEventType(name, namespace string, o ...EventTypeOption) *v1alpha1.EventT
 // WithInitEventTypeConditions initializes the EventType's conditions.
 func WithInitEventTypeConditions(et *v1alpha1.EventType) {
 	et.Status.InitializeConditions()
-}
-
-func WithEventTypeGenerateName(generateName string) EventTypeOption {
-	return func(et *v1alpha1.EventType) {
-		et.ObjectMeta.GenerateName = generateName
-	}
 }
 
 func WithEventTypeSource(source string) EventTypeOption {

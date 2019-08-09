@@ -17,13 +17,6 @@ limitations under the License.
 package testing
 
 import (
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "github.com/knative/eventing/pkg/apis/sources/v1alpha1"
-	fakeeventingclientset "github.com/knative/eventing/pkg/client/clientset/versioned/fake"
-	eventinglisters "github.com/knative/eventing/pkg/client/listers/eventing/v1alpha1"
-	messaginglisters "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	sourcelisters "github.com/knative/eventing/pkg/client/listers/sources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -38,6 +31,13 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
 	"knative.dev/pkg/reconciler/testing"
 )

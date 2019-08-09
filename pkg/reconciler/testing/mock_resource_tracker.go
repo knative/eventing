@@ -17,9 +17,9 @@ limitations under the License.
 package testing
 
 import (
-	"github.com/knative/eventing/pkg/duck"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/duck"
 )
 
 // MockResourceTracker is a mock AddressableTracker.

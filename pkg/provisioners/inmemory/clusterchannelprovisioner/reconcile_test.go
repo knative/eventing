@@ -32,9 +32,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	eventingv1alpha1 "github.com/knative/eventing/pkg/apis/eventing/v1alpha1"
-	util "github.com/knative/eventing/pkg/provisioners"
-	controllertesting "github.com/knative/eventing/pkg/reconciler/testing"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	util "knative.dev/eventing/pkg/provisioners"
+	controllertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 )

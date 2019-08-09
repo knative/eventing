@@ -68,7 +68,7 @@ spec:
   filter:
     expression: >
       ce.type == "com.github.pull.create" &&
-      ce.source == "https://github.com/knative/eventing/pulls/123"
+      ce.source == "https://knative.dev/eventing/pulls/123"
 ```
 <!-- prettier-ignore-end -->
 

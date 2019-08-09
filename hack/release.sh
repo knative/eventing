@@ -17,33 +17,38 @@
 # Documentation about this script and how to use it can be found
 # at https://github.com/knative/test-infra/tree/master/ci
 
-source $(dirname $0)/../vendor/github.com/knative/test-infra/scripts/release.sh
+source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 
 # Yaml files to generate, and the source config dir for them.
 declare -A COMPONENTS
 COMPONENTS=(
   ["eventing.yaml"]="config"
-  ["in-memory-channel-crd.yaml"]="config/channels/in-memory-channel"
-  ["in-memory-channel-provisioner.yaml"]="config/provisioners/in-memory-channel"
-  ["kafka.yaml"]="contrib/kafka/config"
-  ["gcp-pubsub.yaml"]="contrib/gcppubsub/config"
-  ["natss.yaml"]="contrib/natss/config"
+  ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
 )
 readonly COMPONENTS
 
 declare -A RELEASES
 RELEASES=(
-  ["release.yaml"]="eventing.yaml in-memory-channel-crd.yaml in-memory-channel-provisioner.yaml"
+  ["release.yaml"]="eventing.yaml in-memory-channel.yaml"
 )
 readonly RELEASES
 
 function build_release() {
+  # Update release labels if this is a tagged release
+  if [[ -n "${TAG}" ]]; then
+    echo "Tagged release, updating release labels to eventing.knative.dev/release: \"${TAG}\""
+    LABEL_YAML_CMD=(sed -e "s|eventing.knative.dev/release: devel|eventing.knative.dev/release: \"${TAG}\"|")
+  else
+    echo "Untagged release, will NOT update release labels"
+    LABEL_YAML_CMD=(cat)
+  fi
+
   # Build the components
   local all_yamls=()
   for yaml in "${!COMPONENTS[@]}"; do
     local config="${COMPONENTS[${yaml}]}"
     echo "Building Knative Eventing - ${config}"
-    ko resolve ${KO_FLAGS} -f ${config}/ > ${yaml}
+    ko resolve ${KO_FLAGS} -f ${config}/ | "${LABEL_YAML_CMD[@]}" > ${yaml}
     all_yamls+=(${yaml})
   done
   # Assemble the release

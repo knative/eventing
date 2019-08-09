@@ -21,20 +21,20 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/knative/eventing/pkg/inmemorychannel"
+	"knative.dev/eventing/pkg/inmemorychannel"
 
-	eventingduck "github.com/knative/eventing/pkg/apis/duck/v1alpha1"
-	"github.com/knative/eventing/pkg/apis/messaging/v1alpha1"
-	listers "github.com/knative/eventing/pkg/client/listers/messaging/v1alpha1"
-	"github.com/knative/eventing/pkg/logging"
-	"github.com/knative/eventing/pkg/provisioners/fanout"
-	"github.com/knative/eventing/pkg/provisioners/multichannelfanout"
-	"github.com/knative/eventing/pkg/reconciler"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/provisioners/fanout"
+	"knative.dev/eventing/pkg/provisioners/multichannelfanout"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
 )
 

@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 
-	"github.com/knative/eventing/pkg/reconciler/names"
+	"knative.dev/eventing/pkg/reconciler/names"
 	pkgapisduck "knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
@@ -41,26 +41,6 @@ type SinkReconciler struct {
 
 // NewSinkReconciler creates and initializes a new SinkReconciler
 func NewSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
-	ret := &SinkReconciler{}
-
-	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
-	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
-		Delegate: &pkgapisduck.EnqueueInformerFactory{
-			Delegate: &pkgapisduck.TypedInformerFactory{
-				Client:       dynamicclient.Get(ctx),
-				Type:         &duckv1alpha1.AddressableType{},
-				ResyncPeriod: controller.GetResyncPeriod(ctx),
-				StopChannel:  ctx.Done(),
-			},
-			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
-		},
-	}
-
-	return ret
-}
-
-// NewSinkReconciler creates and initializes a new SinkReconciler
-func NewInjectionSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
 	ret := &SinkReconciler{}
 
 	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
