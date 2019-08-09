@@ -43,7 +43,8 @@ func CreateGenericChannelObject(
 		return gvr, err
 	}
 
-	_, err = dynamicClient.Resource(gvr).Namespace(obj.Namespace).Create(newChannel, metav1.CreateOptions{})
+	channelResourceInterface := dynamicClient.Resource(gvr).Namespace(obj.Namespace)
+	_, err = channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 	return gvr, err
 }
 
