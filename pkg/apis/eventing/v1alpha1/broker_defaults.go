@@ -23,11 +23,9 @@ import (
 )
 
 func (b *Broker) SetDefaults(ctx context.Context) {
-	// If we are not using the deprecated channelTemplate and haven't configured the new one,
+	// If we haven't configured the new channelTemplate,
 	// then set the default channel to the new channelTemplate.
-	// This check is done to avoid having both the deprecated and the new channelTemplate set, which will cause
-	// validation problems.
-	if b != nil && b.Spec.DeprecatedChannelTemplate == nil && b.Spec.ChannelTemplate == nil {
+	if b != nil && b.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the Broker.
 		if cd := eventingduckv1alpha1.ChannelDefaulterSingleton; cd != nil {
 			channelTemplate := cd.GetDefault(b.Namespace)

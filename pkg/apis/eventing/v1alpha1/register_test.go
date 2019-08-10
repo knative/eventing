@@ -55,8 +55,6 @@ func TestKnownTypes(t *testing.T) {
 	types := scheme.KnownTypes(SchemeGroupVersion)
 
 	for _, name := range []string{
-		"Channel",
-		"ChannelList",
 		"Subscription",
 		"SubscriptionList",
 	} {

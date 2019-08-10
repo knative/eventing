@@ -17,7 +17,6 @@ limitations under the License.
 package multichannelfanout
 
 import (
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/provisioners/fanout"
 )
 
@@ -33,26 +32,4 @@ type ChannelConfig struct {
 	Name         string        `json:"name"`
 	HostName     string        `json:"hostname"`
 	FanoutConfig fanout.Config `json:"fanoutConfig"`
-}
-
-// NewConfigFromChannels creates a new Config from the list of channels.
-func NewConfigFromChannels(channels []v1alpha1.Channel) *Config {
-	cc := make([]ChannelConfig, 0)
-	for _, c := range channels {
-		channelConfig := ChannelConfig{
-			Namespace: c.Namespace,
-			Name:      c.Name,
-			HostName:  c.Status.Address.GetURL().Host,
-		}
-		if c.Spec.Subscribable != nil {
-			channelConfig.FanoutConfig = fanout.Config{
-				AsyncHandler:  true,
-				Subscriptions: c.Spec.Subscribable.Subscribers,
-			}
-		}
-		cc = append(cc, channelConfig)
-	}
-	return &Config{
-		ChannelConfigs: cc,
-	}
 }

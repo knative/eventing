@@ -26,14 +26,6 @@ type BrokerListerExpansion interface{}
 // BrokerNamespaceLister.
 type BrokerNamespaceListerExpansion interface{}
 
-// ChannelListerExpansion allows custom methods to be added to
-// ChannelLister.
-type ChannelListerExpansion interface{}
-
-// ChannelNamespaceListerExpansion allows custom methods to be added to
-// ChannelNamespaceLister.
-type ChannelNamespaceListerExpansion interface{}
-
 // EventTypeListerExpansion allows custom methods to be added to
 // EventTypeLister.
 type EventTypeListerExpansion interface{}

@@ -62,7 +62,6 @@ type Reconciler struct {
 	*reconciler.Base
 
 	triggerLister      listers.TriggerLister
-	channelLister      listers.ChannelLister
 	subscriptionLister listers.SubscriptionLister
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister

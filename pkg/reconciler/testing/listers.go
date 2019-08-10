@@ -131,10 +131,6 @@ func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLis
 	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
 }
 
-func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
-	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
-}
-
 func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
 	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
 }
