@@ -118,6 +118,9 @@ spec:
                   controller:
                     type: boolean
                     description: "If true, emits the managing controller ref. Only supported for mode=Ref. More info: https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/"
+                  labelSelector:
+                    type: object
+                    description: "Label selector restricting the list of objects to watch by their labels. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
               type: array
           required:
           - resources

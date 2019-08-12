@@ -54,12 +54,13 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion: "v1",
-						Kind:       "Event",
+						APIVersion:    "v1",
+						Kind:          "Event",
+						LabelSelector: &metav1.LabelSelector{},
 					},
+					Mode:               mode,
+					ServiceAccountName: serviceAccountName,
 				},
-				Mode:               mode,
-				ServiceAccountName: serviceAccountName,
 			},
 			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
 			expected: "Event",
