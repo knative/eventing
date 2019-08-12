@@ -163,7 +163,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} contains an empty hostname`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -173,7 +173,7 @@ func TestAllCases(t *testing.T) {
 					}),
 					// Status Update:
 					WithInitContainerSourceConditions,
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} contains an empty hostname"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
 				),
 			}},
 		}, {

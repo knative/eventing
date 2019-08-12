@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -108,6 +109,35 @@ func WithMessagingChannelSubscribers(subscribers []eventingduckv1alpha1.Subscrib
 		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
 			Subscribers: subscribers,
 		}
+	}
+}
+
+func WithMessagingChannelReadySubscriber(uid string) MessagingChannelOption {
+	return func(c *v1alpha1.Channel) {
+		if c.Status.SubscribableTypeStatus.SubscribableStatus == nil {
+			c.Status.SubscribableTypeStatus.SubscribableStatus = &eventingduckv1alpha1.SubscribableStatus{}
+		}
+		c.Status.SubscribableTypeStatus.SubscribableStatus.Subscribers = append(
+			c.Status.SubscribableTypeStatus.SubscribableStatus.Subscribers,
+			eventingduckv1alpha1.SubscriberStatus{
+				UID:   types.UID(uid),
+				Ready: v1.ConditionTrue,
+			})
+	}
+}
+
+func WithMessagingChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) MessagingChannelOption {
+	return func(c *v1alpha1.Channel) {
+		if c.Status.SubscribableTypeStatus.SubscribableStatus == nil {
+			c.Status.SubscribableTypeStatus.SubscribableStatus = &eventingduckv1alpha1.SubscribableStatus{}
+		}
+		c.Status.SubscribableTypeStatus.SubscribableStatus.Subscribers = append(
+			c.Status.SubscribableTypeStatus.SubscribableStatus.Subscribers,
+			eventingduckv1alpha1.SubscriberStatus{
+				UID:                types.UID(uid),
+				ObservedGeneration: observedGeneration,
+				Ready:              v1.ConditionTrue,
+			})
 	}
 }
 
