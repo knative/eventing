@@ -97,8 +97,8 @@ Trigger._
 ### group: messaging.knative.dev/v1alpha1
 
 _A Channel logically receives events on its input domain and forwards them to
-its subscribers. A custom channel implementation (other than the default InMemoryChannel)
-can be referenced via the channelTemplate. The concrete channel CRD can also be instantiated directly._
+its subscribers. A custom channel implementation (other than the default _InMemoryChannel_)
+can be referenced via the _channelTemplate_. The concrete channel CRD can also be instantiated directly._
 
 ### Object Schema
 
