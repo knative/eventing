@@ -30,7 +30,7 @@ broker._
 | ------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | broker       | String         | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
 | filter       | TriggerFilter  | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
-| subscriber\* | SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
+| subscriber\* | eventing.SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
 
 \*: Required
 
@@ -108,7 +108,7 @@ its subscribers._
 | ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
 | provisioner\*            | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
 | arguments                | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
-| subscribable.subscribers | SubscriberSpec[]                   | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
+| subscribable.subscribers | duck.SubscriberSpec[]                   | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
 \*: Required
 
@@ -160,7 +160,7 @@ channel._
 | Field                  | Type           | Description                                                                       | Constraints        |
 | ---------------------- | -------------- | --------------------------------------------------------------------------------- | ------------------ |
 | channel\*              | ObjectRef      | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
-| subscriber<sup>1</sup> | SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
+| subscriber<sup>1</sup> | eventing.SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
 | reply<sup>1</sup>      | ReplyStrategy  | The continuation for the link.                                                    |                    |
 
 \*: Required
@@ -232,7 +232,7 @@ a Channel system that receives and delivers events._
 
 ## Shared Object Schema
 
-### SubscriberSpec
+### eventing.SubscriberSpec
 
 | Field               | Type            | Description | Constraints              |
 | ------------------- | --------------- | ----------- | ------------------------ |
@@ -241,7 +241,7 @@ a Channel system that receives and delivers events._
 
 1: One of (ref, dnsName), Required.
 
-### SubscriberSpec
+### duck.SubscriberSpec
 
 | Field         | Type   | Description                                                 | Constraints    |
 | ------------- | ------ | ----------------------------------------------------------- | -------------- |
