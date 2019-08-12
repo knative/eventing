@@ -24,9 +24,10 @@ import (
 	"net/url"
 	"time"
 
-	"knative.dev/eventing/pkg/logging"
+	"github.com/knative/eventing/pkg/logging"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go"
+	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -47,10 +48,9 @@ const (
 
 // Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Receiver struct {
-	logger             *zap.Logger
-	client             client.Client
-	ceClient           cloudevents.Client
-	structuredCeClient cloudevents.Client
+	logger   *zap.Logger
+	client   client.Client
+	ceClient cloudevents.Client
 }
 
 // New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
@@ -65,20 +65,10 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 		return nil, err
 	}
 
-	structuredHTTPTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithStructuredEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanMiddleware))
-	if err != nil {
-		return nil, err
-	}
-	structuredCeClient, err := cloudevents.NewClient(structuredHTTPTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
-	if err != nil {
-		return nil, err
-	}
-
 	r := &Receiver{
-		logger:             logger,
-		client:             client,
-		ceClient:           ceClient,
-		structuredCeClient: structuredCeClient,
+		logger:   logger,
+		client:   client,
+		ceClient: ceClient,
 	}
 	err = r.initClient()
 	if err != nil {
@@ -190,14 +180,6 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	return nil
 }
 
-func (r *Receiver) getClient(t *eventingv1alpha1.Trigger) *cloudevents.Client {
-	if t.Spec.StructuredEncoding == nil || *(t.Spec.StructuredEncoding) == false {
-		return &r.ceClient
-	} else {
-		return &r.structuredCeClient
-	}
-}
-
 // sendEvent sends an event to a subscriber if the trigger filter passes.
 func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
@@ -246,8 +228,14 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, nil
 	}
 
+	// func (r *Receiver) getClient(t *eventingv1alpha1.Trigger) *cloudevents.Client {
+	// if t.Spec.StructuredEncoding == nil || *(t.Spec.StructuredEncoding) == false {
+
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
-	replyEvent, err := (*r.getClient(t)).Send(sendingCTX, *event)
+	if t.Spec.StructuredEncoding != nil && *(t.Spec.StructuredEncoding) {
+		sendingCTX = cecontext.WithEncoding("structured")
+	}
+	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	if err == nil {
 		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))
 	} else {
