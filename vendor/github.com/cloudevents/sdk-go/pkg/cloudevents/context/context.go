@@ -3,6 +3,7 @@ package context
 import (
 	"context"
 	"net/url"
+	"strings"
 )
 
 // Opaque key type used to store target
@@ -27,4 +28,27 @@ func TargetFrom(ctx context.Context) *url.URL {
 		}
 	}
 	return nil
+}
+
+// Opaque key type used to store encoding
+type encodingKeyType struct{}
+
+var encodingKey = encodingKeyType{}
+
+// WithEncoding returns back a new context with the given encoding. Encoding is intended to be transport dependent.
+// For http transport, `encoding` should be one of [binary, structured] and will be used to override the outbound
+// codec encoding setting. If the transport does not understand the encoding, it will be ignored.
+func WithEncoding(ctx context.Context, encoding string) context.Context {
+	return context.WithValue(ctx, encodingKey, strings.ToLower(encoding))
+}
+
+// EncodingFrom looks in the given context and returns `target` as a parsed url if found and valid, otherwise nil.
+func EncodingFrom(ctx context.Context) string {
+	c := ctx.Value(encodingKey)
+	if c != nil {
+		if s, ok := c.(string); ok && s != "" {
+			return s
+		}
+	}
+	return ""
 }

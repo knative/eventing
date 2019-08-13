@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -145,7 +146,7 @@ func ContextWithHeader(ctx context.Context, key, value string) context.Context {
 	return context.WithValue(ctx, headerKey, header)
 }
 
-// HeaderFrom extracts the header oject in the given context. Always returns a non-nil Header.
+// HeaderFrom extracts the header object in the given context. Always returns a non-nil Header.
 func HeaderFrom(ctx context.Context) http.Header {
 	ch := http.Header{}
 	header := ctx.Value(headerKey)
@@ -155,4 +156,30 @@ func HeaderFrom(ctx context.Context) http.Header {
 		}
 	}
 	return ch
+}
+
+// Opaque key type used to store long poll target.
+type longPollTargetKeyType struct{}
+
+var longPollTargetKey = longPollTargetKeyType{}
+
+// WithLongPollTarget returns a new context with the given long poll target.
+// `target` should be a full URL and will be injected into the long polling
+// http request within StartReceiver.
+func ContextWithLongPollTarget(ctx context.Context, target string) context.Context {
+	return context.WithValue(ctx, longPollTargetKey, target)
+}
+
+// LongPollTargetFrom looks in the given context and returns `target` as a
+// parsed url if found and valid, otherwise nil.
+func LongPollTargetFrom(ctx context.Context) *url.URL {
+	c := ctx.Value(longPollTargetKey)
+	if c != nil {
+		if s, ok := c.(string); ok && s != "" {
+			if target, err := url.Parse(s); err == nil {
+				return target
+			}
+		}
+	}
+	return nil
 }
