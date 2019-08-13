@@ -135,11 +135,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
-	return r.reconcileCRD(ctx, b)
-}
-
-// reconcileCRD reconciles channel CRD based implementations.
-func (r *Reconciler) reconcileCRD(ctx context.Context, b *v1alpha1.Broker) error {
 	b.Status.InitializeConditions()
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
