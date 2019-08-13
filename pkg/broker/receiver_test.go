@@ -383,7 +383,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	c := &cehttp.CodecV03{}
-	m, err := c.Encode(*h.returnedEvent)
+	m, err := c.Encode(context.Background(), *h.returnedEvent)
 	if err != nil {
 		h.t.Fatalf("Could not encode message: %v", err)
 	}

@@ -228,12 +228,9 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, nil
 	}
 
-	// func (r *Receiver) getClient(t *eventingv1alpha1.Trigger) *cloudevents.Client {
-	// if t.Spec.StructuredEncoding == nil || *(t.Spec.StructuredEncoding) == false {
-
 	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
 	if t.Spec.StructuredEncoding != nil && *(t.Spec.StructuredEncoding) {
-		sendingCTX = cecontext.WithEncoding("structured")
+		sendingCTX = cecontext.WithEncoding(sendingCTX, "structured")
 	}
 	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	if err == nil {
