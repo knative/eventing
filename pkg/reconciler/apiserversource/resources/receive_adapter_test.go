@@ -146,7 +146,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Value: "Namespace|Pod|Pod|Pod|Pod",
 								}, {
 									Name:  "CONTROLLER",
-									Value: "false|true|false|false|false",
+									Value: "false,true,false,false,false",
 								}, {
 									Name:  "SELECTOR",
 									Value: "||test-key1=test-value1|akey,!anotherkey|akey,!anotherkey,test-key2=test-value2",
