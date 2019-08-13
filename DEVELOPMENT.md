@@ -49,6 +49,17 @@ _Adding the `upstream` remote sets you up nicely for regularly
 Once you reach this point you are ready to do a full build and deploy as
 follows.
 
+## Install Channels
+
+Install the [In-Memory-Channel](https://github.com/knative/eventing/tree/master/config/channels/in-memory-channel) since this is the [default channel](
+https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md).
+
+```shell
+ko apply -f config/channels/in-memory-channel/
+```
+
+Depending on your needs you might want to install other [channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
+
 ## Starting Eventing Controller
 
 Once you've [setup your development environment](#getting-started), stand up
