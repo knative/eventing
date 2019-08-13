@@ -763,6 +763,11 @@ func (in *TriggerSpec) DeepCopyInto(out *TriggerSpec) {
 		*out = new(SubscriberSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.StructuredEncoding != nil {
+		in, out := &in.StructuredEncoding, &out.StructuredEncoding
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
