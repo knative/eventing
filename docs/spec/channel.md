@@ -15,15 +15,14 @@ A typical channel consists of a _Controller_ and a _Dispatcher_ pod.
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
-interpreted as described in [RFC2119][rfc2119].
+interpreted as described in [RFC2119](https://www.ietf.org/rfc/rfc2119.txt).
 
 ## Channel Spec Parts
 
 ### Control Plane
 
 Each Channel implementation is backed by its own CRD (e.g. `InMemoryChannel` or
-`KafkaChannel`). Unlike in earlier versions there is no concept for a _default
-channel_, using the different CRDs. Below is an example for a `KafkaChannel`
+`KafkaChannel`). Below is an example for a `KafkaChannel`
 object:
 
 ```
@@ -53,8 +52,8 @@ created, backing all messages from the channel.
 
 Every CRD must create a corresponding ClusterRole, that will be aggregated into
 the `channelable-manipulator` ClusterRole. This ClusterRole must include
-permissions to create, list, watch, patch, and update the CRD's custom objects
-and their status. Below is an example for the `KafkaChannel`:
+permissions to create, get, list, watch, patch, and update the CRD's custom
+objects and their status. Below is an example for the `KafkaChannel`:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -80,7 +79,38 @@ rules:
 ```
 
 Each channel MUST have the `duck.knative.dev/channelable: "true"` label on its
-`channelable-manipulator` CR file.
+`channelable-manipulator` ClusterRole.
+
+#### Aggregated Addressable Resolver ClusterRole
+
+Every CRD must create a corresponding ClusterRole, that will be aggregated into
+the `addressable-resolver` ClusterRole. This ClusterRole must include
+permissions to get, list, and watch the CRD's custom objects and their status.
+Below is an example for the `InMemoryChannel`:
+
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imc-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+# Do not use this role directly. These rules will be added to the "addressable-resolver" role.
+rules:
+  - apiGroups:
+      - messaging.knative.dev
+    resources:
+      - inmemorychannels
+      - inmemorychannels/status
+    verbs:
+      - get
+      - list
+      - watch
+```
+
+Each channel MUST have the `duck.knative.dev/addressable: "true"` label on its
+`addressable-resolver` ClusterRole.
 
 #### CustomResourceDefinition per Channel
 
@@ -117,10 +147,6 @@ Each channel is _namespaced_ and MUST have the following:
 - label of `messaging.knative.dev/subscribable: "true"`
 - The category `channel`.
 
-#### Broker and Triggers
-
-TODO
-
 ### Data Plane
 
 The data plane describes the input and output flow of a _Channel_. All Channels
@@ -140,13 +166,6 @@ MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion
 
 If a Channel receives an event queueing request and is unable to parse a valid
 CloudEvent, then it MUST reject the request.
-
-Every event queueing request to the Channel will come with a bearer token,
-likely a JWT. The bearer token MUST be validated before any other work is done
-on the request. The specifics of how and what to validate will be identical to
-Broker ingress verification, which is being
-[defined](https://github.com/knative/eventing/issues/705#issuecomment-496722527)
-and planned for be formalized as of `v0.8`.
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
 In particular, it MUST translate any incoming OpenTracing or B3 headers to the
@@ -173,10 +192,6 @@ accepted by the server.
 If a Channel receives an event queueing request and is unable to parse a valid
 CloudEvent, then it MUST respond with `400 Bad Request`.
 
-If a Channel receives an event queueing request without a bearer token or the
-provided bearer token fails to validate, then the Channel must respond with
-`403 Forbidden`.
-
 #### Output
 
 Channels MUST output CloudEvents. The output MUST be via a binding specified in
@@ -190,10 +205,6 @@ attributes, including the data attribute, MUST be received at the subscriber
 identical to how they were received by the Channel. The only exception is the
 [Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md),
 which is expected to change as the span id will be altered at every network hop.
-
-Channels MUST attach a bearer token to all outgoing requests, likely in the form
-of a JWT. This bearer token MUST use an identity associated with the Channel,
-not the individual Subscription.
 
 ##### Retries
 
@@ -213,11 +224,10 @@ Channels SHOULD expose a variety of metrics, including, but not limited to:
 
 - Number of malformed incoming event queueing events (`400 Bad Requests`
   responses)
-- Number of unauthorized or malformed bearer token requests (`403 Forbidden`
   responses)
 - Number of accepted incoming event queuing events (`202 Accepted` responses)
-- Number of egress cloudevent produced (with the former metric, used to derive
+- Number of egress CloudEvents produced (with the former metric, used to derive
   channel queue size)
 
-Metrics SHOULD be enabled by default, but a configuration parameter included to
-disable if desired.
+Metrics SHOULD be enabled by default, with a configuration parameter included to
+disable them if desired.
