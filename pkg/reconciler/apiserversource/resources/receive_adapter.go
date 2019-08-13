@@ -22,7 +22,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
@@ -95,13 +94,14 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 		if res.LabelSelector == nil {
 			selectors += sep
 		} else {
-			labelMap, _ := metav1.LabelSelectorAsMap(res.LabelSelector)
-			labelSelector := labels.SelectorFromSet(labelMap).String()
+			// No need to check for error here.
+			selector, _ := metav1.LabelSelectorAsSelector(res.LabelSelector)
+			labelSelector := selector.String()
 
 			selectors += sep + labelSelector
 		}
 
-		sep = ","
+		sep = "|"
 	}
 
 	return []corev1.EnvVar{{

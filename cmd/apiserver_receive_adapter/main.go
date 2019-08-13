@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"log"
+	"strings"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -41,14 +42,21 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+type StringList []string
+
+func (s *StringList) Decode(value string) error {
+	*s = strings.Split(value, "|")
+	return nil
+}
+
 type envConfig struct {
-	Namespace     string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
-	Mode          string   `envconfig:"MODE"`
-	SinkURI       string   `split_words:"true" required:"true"`
-	ApiVersion    []string `split_words:"true" required:"true"`
-	Kind          []string `required:"true"`
-	Controller    []bool   `required:"true"`
-	LabelSelector []string `envconfig:"SELECTOR" required:"true"`
+	Namespace     string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode          string     `envconfig:"MODE"`
+	SinkURI       string     `split_words:"true" required:"true"`
+	ApiVersion    StringList `split_words:"true" required:"true"`
+	Kind          StringList `required:"true"`
+	Controller    []bool     `required:"true"`
+	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
 }
 
 // TODO: the controller should take the list of GVR
