@@ -196,6 +196,14 @@ channel._
 
 ## Shared Object Schema
 
+### ChannelTemplateSpec
+
+| Field               | Type            | Description                                         | Constraints |
+| ------------------- | --------------- | --------------------------------------------------- | ----------- |
+| kind                | String          | The backing channel CRD                             |             |
+| apiVersion          | String          | API version of backing channel CRD                  |             |
+| spec                | RawExtension    | Spec to be passed to backing channel implementation |             |
+
 ### SubscriberSpec
 
 | Field               | Type            | Description | Constraints              |
