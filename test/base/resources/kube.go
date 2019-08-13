@@ -84,6 +84,25 @@ func EventLoggerPod(name string) *corev1.Pod {
 	}
 }
 
+// EventDetailsPod creates a Pod that vaalidates events received and log details about events.
+func EventDetailsPod(name string) *corev1.Pod {
+	const imageName = "eventdetails"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+}
+
 // EventTransformationPod creates a Pod that transforms events received.
 func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 	const imageName = "transformevents"
