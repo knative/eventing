@@ -28,9 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -182,7 +180,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBrokerNoIngressChannel(),
-				makeTriggerChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -208,8 +205,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -235,8 +230,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				makeIngressSubscriptionNotOwnedByTrigger(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -264,8 +257,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -299,8 +290,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -335,8 +324,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -374,8 +361,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -410,8 +395,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -442,8 +425,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				makeNotReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -472,8 +453,6 @@ func TestAllCases(t *testing.T) {
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
-				makeTriggerChannel(),
-				makeIngressChannel(),
 				makeBrokerFilterService(),
 				makeReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -506,7 +485,6 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			triggerLister:      listers.GetTriggerLister(),
-			channelLister:      listers.GetChannelLister(),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
 			serviceLister:      listers.GetK8sServiceLister(),
@@ -557,11 +535,7 @@ func makeBroker() *v1alpha1.Broker {
 			Namespace: testNS,
 			Name:      brokerName,
 		},
-		Spec: v1alpha1.BrokerSpec{
-			DeprecatedChannelTemplate: &v1alpha1.ChannelSpec{
-				Provisioner: makeChannelProvisioner(),
-			},
-		},
+		Spec: v1alpha1.BrokerSpec{},
 	}
 }
 
@@ -586,49 +560,6 @@ func makeReadyBroker() *v1alpha1.Broker {
 	return b
 }
 
-func makeChannelProvisioner() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "ClusterChannelProvisioner",
-		Name:       "my-provisioner",
-	}
-}
-
-func newChannel(name string, labels map[string]string) *v1alpha1.Channel {
-	return &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNS,
-			Name:      name,
-			Labels:    labels,
-			OwnerReferences: []metav1.OwnerReference{
-				getOwnerReference(),
-			},
-		},
-		Spec: v1alpha1.ChannelSpec{
-			Provisioner: makeChannelProvisioner(),
-		},
-		Status: v1alpha1.ChannelStatus{
-			Address: duckv1alpha1.Addressable{
-				Addressable: duckv1beta1.Addressable{
-					URL: &apis.URL{
-						Scheme: "http",
-						Host:   "any-non-empty-string",
-					},
-				},
-				Hostname: "any-non-empty-string",
-			},
-		},
-	}
-}
-
-func makeTriggerChannel() *v1alpha1.Channel {
-	labels := map[string]string{
-		"eventing.knative.dev/broker":           brokerName,
-		"eventing.knative.dev/brokerEverything": "true",
-	}
-	return newChannel(fmt.Sprintf("%s-broker", brokerName), labels)
-}
-
 func makeTriggerChannelRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "eventing.knative.dev/v1alpha1",
@@ -636,14 +567,6 @@ func makeTriggerChannelRef() *corev1.ObjectReference {
 		Namespace:  testNS,
 		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
 	}
-}
-
-func makeIngressChannel() *v1alpha1.Channel {
-	labels := map[string]string{
-		"eventing.knative.dev/broker":        brokerName,
-		"eventing.knative.dev/brokerIngress": "true",
-	}
-	return newChannel(fmt.Sprintf("%s-broker-ingress", brokerName), labels)
 }
 
 func makeIngressChannelRef() *corev1.ObjectReference {

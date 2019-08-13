@@ -55,15 +55,6 @@ func WithBrokerDeletionTimestamp(b *v1alpha1.Broker) {
 	b.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-// WithBrokerChannelProvisioner sets the Broker's ChannelTemplate provisioner.
-func WithBrokerChannelProvisioner(provisioner *corev1.ObjectReference) BrokerOption {
-	return func(b *v1alpha1.Broker) {
-		b.Spec.DeprecatedChannelTemplate = &v1alpha1.ChannelSpec{
-			Provisioner: provisioner,
-		}
-	}
-}
-
 // WithBrokerChannelCRD sets the Broker's ChannelTemplateSpec to the specified CRD.
 func WithBrokerChannelCRD(crdType metav1.TypeMeta) BrokerOption {
 	return func(b *v1alpha1.Broker) {
@@ -86,11 +77,6 @@ func WithBrokerAddress(address string) BrokerOption {
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1alpha1.Broker) {
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
-}
-
-// WithBrokerReadyDeprecated sets .Status to ready and sets the Deprecated field.
-func WithBrokerReadyDeprecated(b *v1alpha1.Broker) {
-	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatusDeprecated()
 }
 
 // WithTriggerChannelFailed calls .Status.MarkTriggerChannelFailed on the Broker.
@@ -124,7 +110,7 @@ func WithIngressChannelFailed(reason, msg string) BrokerOption {
 // WithTriggerChannelReady calls .Status.PropagateTriggerChannelReadiness on the Broker.
 func WithTriggerChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateTriggerChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
+		b.Status.PropagateTriggerChannelReadinessCRD(v1alpha1.TestHelper.ReadyChannelStatusCRD())
 	}
 }
 
@@ -142,13 +128,7 @@ func WithIngressDeploymentAvailable() BrokerOption {
 
 func WithBrokerIngressChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
-	}
-}
-
-func WithBrokerDeprecated() BrokerOption {
-	return func(b *v1alpha1.Broker) {
-		b.Status.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
+		b.Status.PropagateIngressChannelReadinessCRD(v1alpha1.TestHelper.ReadyChannelStatusCRD())
 	}
 }
 

@@ -236,7 +236,7 @@ func TestReconcile(t *testing.T) {
 					WithBackingChannelObjRef(backingChannelObjRef()),
 					WithBackingChannelReady,
 					WithMessagingChannelAddress(backingChannelHostname),
-					WithMesssagingChannelSubscriberStatuses(subscriberStatuses())),
+					WithMessagingChannelSubscriberStatuses(subscriberStatuses())),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
