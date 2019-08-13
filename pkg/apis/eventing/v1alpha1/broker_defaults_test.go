@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
@@ -54,23 +53,6 @@ func TestBrokerSetDefaults(t *testing.T) {
 			expected: Broker{
 				Spec: BrokerSpec{
 					ChannelTemplate: defaultChannelTemplate,
-				},
-			},
-		},
-		"deprecated template already set": {
-			channelTemplate: defaultChannelTemplate,
-			initial: Broker{
-				Spec: BrokerSpec{
-					DeprecatedChannelTemplate: &ChannelSpec{
-						Provisioner: &corev1.ObjectReference{Kind: "mykind", APIVersion: "mapiversion"},
-					},
-				},
-			},
-			expected: Broker{
-				Spec: BrokerSpec{
-					DeprecatedChannelTemplate: &ChannelSpec{
-						Provisioner: &corev1.ObjectReference{Kind: "mykind", APIVersion: "mapiversion"},
-					},
 				},
 			},
 		},

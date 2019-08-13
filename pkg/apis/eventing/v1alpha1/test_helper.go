@@ -29,20 +29,6 @@ type testHelper struct{}
 // TestHelper contains helpers for unit tests.
 var TestHelper = testHelper{}
 
-func (testHelper) ReadyChannelStatus() *ChannelStatus {
-	cs := &ChannelStatus{}
-	cs.MarkProvisionerInstalled()
-	cs.MarkProvisioned()
-	cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
-	return cs
-}
-
-func (t testHelper) NotReadyChannelStatus() *ChannelStatus {
-	cs := t.ReadyChannelStatus()
-	cs.MarkNotProvisioned("foo", "bar")
-	return cs
-}
-
 func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
 	cs := &duckv1alpha1.ChannelableStatus{
 		Status: duckv1beta1.Status{},
@@ -80,8 +66,8 @@ func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateIngressChannelReadinessCRD(t.ReadyChannelStatusCRD())
+	bs.PropagateTriggerChannelReadinessCRD(t.ReadyChannelStatusCRD())
 	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
 	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
 	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
@@ -91,18 +77,6 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 func (t testHelper) NotReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressChannelReadinessCRD(&duckv1alpha1.ChannelableStatus{})
-	return bs
-}
-
-func (t testHelper) ReadyBrokerStatusDeprecated() *BrokerStatus {
-	bs := &BrokerStatus{}
-	bs.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
-	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
-	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
-	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
 	return bs
 }
 

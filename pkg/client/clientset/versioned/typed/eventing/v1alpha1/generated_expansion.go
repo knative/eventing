@@ -20,10 +20,6 @@ package v1alpha1
 
 type BrokerExpansion interface{}
 
-type ChannelExpansion interface{}
-
-type ClusterChannelProvisionerExpansion interface{}
-
 type EventTypeExpansion interface{}
 
 type SubscriptionExpansion interface{}

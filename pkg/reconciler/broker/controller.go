@@ -30,7 +30,6 @@ import (
 	"knative.dev/pkg/controller"
 
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	channelinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 	serviceinformer "knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
@@ -65,7 +64,6 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
-	channelInformer := channelinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
 	resourceInformer := duck.NewResourceInformer(ctx)
@@ -73,7 +71,6 @@ func NewController(
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 		brokerLister:              brokerInformer.Lister(),
-		channelLister:             channelInformer.Lister(),
 		serviceLister:             serviceInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
@@ -89,11 +86,6 @@ func NewController(
 	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	channelInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),

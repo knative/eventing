@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"time"
 
-	"knative.dev/eventing/pkg/channeldefaulter"
 	"knative.dev/eventing/pkg/defaultchannel"
 
 	"go.uber.org/zap"
@@ -102,12 +101,6 @@ func main() {
 
 	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
 
-	// Watch the default-channel-webhook ConfigMap and dynamically update the default
-	// ClusterChannelProvisioner.
-	channelDefaulter := channeldefaulter.New(logger.Desugar())
-	eventingv1alpha1.ChannelDefaulterSingleton = channelDefaulter
-	configMapWatcher.Watch(channeldefaulter.ConfigMapName, channelDefaulter.UpdateConfigMap)
-
 	// Watch the default-ch-webhook ConfigMap and dynamically update the default
 	// Channel CRD.
 	chDefaulter := defaultchannel.New(logger.Desugar())
@@ -139,8 +132,6 @@ func main() {
 		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
 			// For group eventing.knative.dev,
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):                    &eventingv1alpha1.Broker{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Channel"):                   &eventingv1alpha1.Channel{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("ClusterChannelProvisioner"): &eventingv1alpha1.ClusterChannelProvisioner{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):              &eventingv1alpha1.Subscription{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):                   &eventingv1alpha1.Trigger{},
 			eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"):                 &eventingv1alpha1.EventType{},
