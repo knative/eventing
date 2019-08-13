@@ -9,6 +9,7 @@ This doc explains how to setup a development environment so you can get started
 
 1. Setup [Knative Serving](http://github.com/knative/serving)
 1. [Create and checkout a repo fork](#checkout-your-fork)
+1. [Install a channel implementation](#install-channels)
 
 Once you meet these requirements, you can
 [start the eventing-controller](#starting-eventing-controller).
