@@ -74,6 +74,8 @@ spec:
                 attributes:
                   type: object
                   description: "Map of CloudEvents attributes used for filtering events."
+                  additionalProperties:
+                    type: string
             subscriber:
               type: object
               properties:
