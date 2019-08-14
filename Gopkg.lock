@@ -1168,7 +1168,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:668f401ec93fc68a0cee8a1ff986301c748313b243e1cbf077db688b47806f75"
+  digest = "1:7d668b9ed0ede5e4a99aaed9c9f7c786920de47b2c609a88bcff96c1cd54e7da"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1180,6 +1180,7 @@
     "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
+    "apis/v1alpha1",
     "changeset",
     "client/clientset/versioned",
     "client/clientset/versioned/fake",
@@ -1244,7 +1245,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "a690d27530bdb0e8921805b7893bd4a7865bb215"
+  revision = "057c0dfb8f56cec704b8d54c1f0517596df78a55"
 
 [[projects]]
   branch = "master"
@@ -1260,7 +1261,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "debabfca4db6699ea762112d7bc439ce04a44690"
+  revision = "7fa4059a538fb5547e50f036db4e9f8d4eb998aa"
 
 [[projects]]
   digest = "1:db96fceb1477924a5e724ebfd355842c73805eb8e44bf7f325898c3116a1d852"
