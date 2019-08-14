@@ -83,7 +83,7 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 
 	flag.Parse()
 
-	// If no provisioner is passed through the flag, initialize it as the DefaultChannel.
+	// If no channel is passed through the flag, initialize it as the DefaultChannel.
 	if f.Channels == nil || len(f.Channels) == 0 {
 		f.Channels = []string{common.DefaultChannel}
 	}

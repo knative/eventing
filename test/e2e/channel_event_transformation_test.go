@@ -39,16 +39,20 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    -----------> Service(Transformation)
 */
 func TestEventTransformationForSubscription(t *testing.T) {
-	senderName := "e2e-eventtransformation-sender"
-	channelNames := []string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
-	// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
-	subscriptionNames1 := []string{"e2e-eventtransformation-subs11", "e2e-eventtransformation-subs12"}
-	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
-	subscriptionNames2 := []string{"e2e-eventtransformation-subs21", "e2e-eventtransformation-subs22"}
-	transformationPodName := "e2e-eventtransformation-transformation-pod"
-	loggerPodName := "e2e-eventtransformation-logger-pod"
+	EventTransformationForSubscriptionTestHelper(t, channels)
+}
 
+func EventTransformationForSubscriptionTestHelper(t *testing.T, channels []string) {
 	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
+		senderName := "e2e-eventtransformation-sender"
+		channelNames := []string{"e2e-eventtransformation1", "e2e-eventtransformation2"}
+		// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
+		subscriptionNames1 := []string{"e2e-eventtransformation-subs11", "e2e-eventtransformation-subs12"}
+		// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
+		subscriptionNames2 := []string{"e2e-eventtransformation-subs21", "e2e-eventtransformation-subs22"}
+		transformationPodName := "e2e-eventtransformation-transformation-pod"
+		loggerPodName := "e2e-eventtransformation-logger-pod"
+
 		client := setup(st, true)
 		defer tearDown(client)
 
