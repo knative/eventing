@@ -13,7 +13,6 @@ This document details our _Spec_ and _Status_ customizations.
 - [Broker](#kind-broker)
 - [Channel](#kind-channel)
 - [Subscription](#kind-subscription)
-- [ClusterChannelProvisioner](#kind-clusterchannelprovisioner)
 
 ## kind: Trigger
 
@@ -95,10 +94,11 @@ Trigger._
 
 ## kind: Channel
 
-### group: eventing.knative.dev/v1alpha1
+### group: messaging.knative.dev/v1alpha1
 
 _A Channel logically receives events on its input domain and forwards them to
-its subscribers._
+its subscribers. A custom channel implementation (other than the default _InMemoryChannel_)
+can be referenced via the _channelTemplate_. The concrete channel CRD can also be instantiated directly._
 
 ### Object Schema
 
@@ -106,43 +106,41 @@ its subscribers._
 
 | Field                    | Type                               | Description                                                                | Constraints                            |
 | ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
-| provisioner\*            | ObjectReference                    | The name of the provisioner to create the resources that back the Channel. | Immutable.                             |
-| arguments                | runtime.RawExtension (JSON object) | Arguments to be passed to the provisioner.                                 |                                        |
+| channelTemplate          | ChannelTemplateSpec                | Specifies which channel CRD to use.                                        | Immutable                              |
 | subscribable.subscribers | SubscriberSpec[]                   | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
 
 \*: Required
 
 #### Metadata
 
-##### Owner References
-
-- Owned (non-controlling) by the ClusterChannelProvisioner used to provision the
-  Channel.
-
 #### Status
 
-| Field      | Type        | Description                                                                                  | Constraints |
-| ---------- | ----------- | -------------------------------------------------------------------------------------------- | ----------- |
-| address    | Addressable | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions | Conditions  | Channel conditions.                                                                          |             |
+| Field      | Type             | Description                                                                                  | Constraints |
+| ---------- | ---------------- | -------------------------------------------------------------------------------------------- | ----------- |
+| address    | Addressable      | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions | Conditions       | Channel conditions.                                                                          |             |
+| channel    | ObjectReference  | The actual ObjectReference to the Channel CRD backing this Channel.                          |             |
 
 ##### Conditions
 
-- **Ready.** True when the Channel is provisioned and ready to accept events.
-- **Provisioned.** True when the Channel has been provisioned by a controller.
+- **BackingChannelReady.** True when the backing Channel CRD is ready.
+- **Addressable.** True when the Channel meets the Addressable contract and has a non-empty hostname.
+- **Ready.** True when the backing channel is ready to accept events.
 
 #### Events
 
-- Provisioned
-- Deprovisioned
+- ChannelReconcileError
+- ChannelReconciled
+- ChannelReadinessChanged
+- ChannelUpdateStatusFailed
 
 ### Life Cycle
 
-| Action | Reactions                                                                                                                                                                      | Constraints                                                                        |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Create | The ClusterChannelProvisioner referenced will take ownership of the Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one ClusterChannelProvisioner is allowed to be the Owner for a given Channel. |
-| Update | The ClusterChannelProvisioner will synchronize the Channel backing resources to reflect the update.                                                                            |                                                                                    |
-| Delete | The ClusterChannelProvisioner will deprovision the backing resources if no longer required depending on implementation.                                                        |                                                                                    |
+| Action | Reactions                                                                                                                                                             | Constraints                                                                               |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------| ------------------------------------------------------------------------------------------|
+| Create | The Channel referenced will take ownership of the concrete Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one Channel is allowed to be the Owner for a given Channel implementation (own CRD). |
+| Update | The Channel will synchronize the Channel backing resources to reflect the update.                                                                                     |                                                                                           |
+| Delete | The Channel will deprovision the backing resources if no longer required depending on the backing Channel implementation.                                             |                                                                                           |
 
 ---
 
@@ -196,41 +194,15 @@ channel._
 
 ---
 
-## kind: ClusterChannelProvisioner
-
-### group: eventing.knative.dev/v1alpha1
-
-_Describes an abstract configuration of a Source system which produces events or
-a Channel system that receives and delivers events._
-
-### Object Schema
-
-#### Spec
-
-| Field      | Type                               | Description                                                                                       | Constraints |
-| ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- | ----------- |
-| parameters | runtime.RawExtension (JSON object) | Description of the arguments able to be passed by the provisioned resource (not enforced in 0.1). | JSON Schema |
-
-\*: Required
-
-#### Status
-
-| Field      | Type       | Description                          | Constraints |
-| ---------- | ---------- | ------------------------------------ | ----------- |
-| conditions | Conditions | ClusterChannelProvisioner conditions |             |
-
-##### Conditions
-
-- **Ready.**
-
-#### Events
-
-- Resource Created.
-- Resource Removed.
-
----
-
 ## Shared Object Schema
+
+### ChannelTemplateSpec
+
+| Field               | Type            | Description                                         | Constraints |
+| ------------------- | --------------- | --------------------------------------------------- | ----------- |
+| kind                | String          | The backing channel CRD                             |             |
+| apiVersion          | String          | API version of backing channel CRD                  |             |
+| spec                | RawExtension    | Spec to be passed to backing channel implementation |             |
 
 ### SubscriberSpec
 

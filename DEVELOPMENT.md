@@ -9,10 +9,10 @@ This doc explains how to setup a development environment so you can get started
 
 1. Setup [Knative Serving](http://github.com/knative/serving)
 1. [Create and checkout a repo fork](#checkout-your-fork)
+1. [Install a channel implementation](#install-channels)
 
 Once you meet these requirements, you can
-[start the eventing-controller](#starting-eventing-controller) and
-[install a channel provisioner](#installing-a-channel-provisioner)!
+[start the eventing-controller](#starting-eventing-controller).
 
 Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
 
@@ -49,6 +49,17 @@ _Adding the `upstream` remote sets you up nicely for regularly
 
 Once you reach this point you are ready to do a full build and deploy as
 follows.
+
+## Install Channels
+
+Install the [In-Memory-Channel](https://github.com/knative/eventing/tree/master/config/channels/in-memory-channel) since this is the [default channel](
+https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md).
+
+```shell
+ko apply -f config/channels/in-memory-channel/
+```
+
+Depending on your needs you might want to install other [channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
 
 ## Starting Eventing Controller
 

@@ -3,10 +3,7 @@
 The API defines and provides a complete implementation for
 [Trigger](spec.md#kind-trigger), [Broker](spec.md#kind-broker),
 [Subscription](spec.md#kind-subscription) and abstract resource definitions for
-[Channels](spec.md#kind-channel) and
-[ClusterChannelProvisioners](spec.md#kind-clusterchannelprovisioner) which may
-be fulfilled by multiple backing implementations (much like the Kubernetes
-Ingress resource).
+[Channels](spec.md#kind-channel).
 
 With extensibility and composability as a goal of Knative Eventing, the eventing
 API defines several resources that can be reduced down to well understood
@@ -38,17 +35,10 @@ _Service_ only when the _Trigger_ filter matches.
 
 ![Resource Types Overview](images/resource-types-overview.svg)
 
-- **ClusterChannelProvisioners** implement strategies for realizing backing
-  resources for different implementations of _Channels_ currently active in the
-  eventing system.
-
-<!-- This image is sourced from https://drive.google.com/open?id=1o_0Xh5VjwpQ7Px08h_Q4qnaOdMjt4yCEPixRFwJQjh8 -->
-
-![Resource Types ClusterChannelProvisioners](images/resource-types-provisioner.png)
-
-Sources are defined by independent CRDs that can be installed into a cluster.
+Channels as well as Sources are defined by independent CRDs that can be installed into a cluster.
 For more information see
 [Knative Eventing Contrib](https://github.com/knative/eventing-contrib).
+Both Sources and Channels implementations can be created directly. A Channel however offers also a way to create the backing implementation as part of the generic Channel (using a _channelTemplate_).
 
 ## Trigger
 
@@ -90,26 +80,12 @@ events to multiple destinations via _Subscriptions_. A _Channel_ has a single
 inbound _Addressable_ interface which may accept events delivered directly or
 forwarded from multiple _Subscriptions_. Different _Channels_ may implement
 different degrees of persistence. Event delivery order is dependent on the
-backing implementation of the _Channel_ provided by the
-_ClusterChannelProvisioner_.
+backing implementation of the _Channel_.
 
 Event selection on a _Channel_ is 1:N – a single _Channel_ may fan out to
 multiple _Subscriptions_.
 
 See [Kind: Channel](spec.md#kind-channel).
-
-## ClusterChannelProvisioner
-
-**ClusterChannelProvisioner** catalogs available implementations of _Channels_.
-_ClusterChannelProvisioners_ hold a JSON Schema that is used to validate the
-_Channel_ input arguments. _ClusterChannelProvisioners_ make it possible to
-provide cluster wide defaults for the _Channels_ they provision.
-
-_ClusterChannelProvisioners_ do not directly handle events. They are 1:N with
-_Channels_.
-
-For more details, see
-[Kind: ClusterChannelProvisioner](spec.md#kind-clusterchannelprovisioner).
 
 ---
 
