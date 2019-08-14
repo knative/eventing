@@ -65,6 +65,42 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 	}
 }
 
+// EventSenderTracingPod creates a Pod that sends a single event to the given address.
+func EventSenderTracingPod(name string, sink string, event *CloudEvent) *corev1.Pod {
+	const imageName = "sendeventstracing"
+	if event.Encoding == "" {
+		event.Encoding = CloudEventEncodingBinary
+	}
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-event-id",
+					event.ID,
+					"-event-type",
+					event.Type,
+					"-event-source",
+					event.Source,
+					"-event-data",
+					event.Data,
+					"-event-encoding",
+					event.Encoding,
+					"-sink",
+					sink,
+				},
+			}},
+			//TODO restart on failure?
+			RestartPolicy: corev1.RestartPolicyNever,
+		},
+	}
+}
+
 // EventLoggerPod creates a Pod that logs events received.
 func EventLoggerPod(name string) *corev1.Pod {
 	const imageName = "logevents"

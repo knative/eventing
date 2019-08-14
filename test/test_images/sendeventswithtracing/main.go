@@ -123,7 +123,8 @@ func main() {
 	// Add output tracing.
 	t.Client = &gohttp.Client{
 		Transport: &ochttp.Transport{
-			Propagation: &b3.HTTPFormat{},
+			Propagation:    &b3.HTTPFormat{},
+			NewClientTrace: ochttp.NewSpanAnnotator,
 		},
 	}
 
