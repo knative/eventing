@@ -22,8 +22,7 @@ interpreted as described in [RFC2119](https://www.ietf.org/rfc/rfc2119.txt).
 ### Control Plane
 
 Each Channel implementation is backed by its own CRD (e.g. `InMemoryChannel` or
-`KafkaChannel`). Below is an example for a `KafkaChannel`
-object:
+`KafkaChannel`). Below is an example for a `KafkaChannel` object:
 
 ```
 apiVersion: messaging.knative.dev/v1alpha1
@@ -223,8 +222,7 @@ not limited to:
 Channels SHOULD expose a variety of metrics, including, but not limited to:
 
 - Number of malformed incoming event queueing events (`400 Bad Requests`
-  responses)
-  responses)
+  responses) responses)
 - Number of accepted incoming event queuing events (`202 Accepted` responses)
 - Number of egress CloudEvents produced (with the former metric, used to derive
   channel queue size)
