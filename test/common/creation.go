@@ -24,6 +24,7 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
 )
 
@@ -37,16 +38,12 @@ var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 // CreateChannelOrFail will create a Channel Resource in Eventing.
 func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
-	switch channelTypeMeta.Kind {
-	case resources.InMemoryChannelKind:
-		channel := resources.InMemoryChannel(name)
-		channels := client.Eventing.MessagingV1alpha1().InMemoryChannels(namespace)
-		channel, err := channels.Create(channel)
-		if err != nil {
-			client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
-		}
-		client.Tracker.AddObj(channel)
+	metaResource := resources.NewMetaResource(name, namespace, channelTypeMeta)
+	gvr, err := base.CreateGenericChannelObject(client.Dynamic, metaResource)
+	if err != nil {
+		client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 	}
+	client.Tracker.Add(gvr.Group, gvr.Version, gvr.Resource, namespace, name)
 }
 
 // CreateChannelsOrFail will create a list of Channel Resources in Eventing.

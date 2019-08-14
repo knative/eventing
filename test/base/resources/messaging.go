@@ -29,15 +29,6 @@ import (
 // SequenceOption enables further configuration of a Sequence.
 type SequenceOption func(*messagingv1alpha1.Sequence)
 
-// InMemoryChannel returns an InMemoryChannel resource.
-func InMemoryChannel(name string) *messagingv1alpha1.InMemoryChannel {
-	return &messagingv1alpha1.InMemoryChannel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-}
-
 // WithReplyForSequence returns an option that adds a Reply for the given Sequence.
 func WithReplyForSequence(name string, typemeta *metav1.TypeMeta) SequenceOption {
 	return func(seq *messagingv1alpha1.Sequence) {
