@@ -20,16 +20,15 @@ package e2e
 
 import (
 	"fmt"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 	"strings"
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
-
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/logging"
 )
 
@@ -63,103 +62,115 @@ type eventReceiver struct {
 // and sends different events to the broker's address. Finally, it verifies that only
 // the appropriate events are routed to the subscribers.
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
-	client := setup(t, true)
-	defer tearDown(client)
+	tests := []struct {
+		name            string
+		eventsToReceive []eventReceiver // These are the event types and sources that triggers will listen to, as well as the selectors
+		// to set  in the subscriber and services pods.
+		eventsToSend            []eventTypeAndSource   // These are the event types and sources that will be send.
+		deprecatedTriggerFilter bool                   //TriggerFilter with DeprecatedSourceAndType or not
+		extension               map[string]interface{} //optional event extension
+	}{{
+		name: "test default broker with many deprecated source and type triggers",
+		eventsToReceive: []eventReceiver{
+			{eventTypeAndSource{Type: any, Source: any}, newSelector()},
+			{eventTypeAndSource{Type: eventType1, Source: any}, newSelector()},
+			{eventTypeAndSource{Type: any, Source: eventSource1}, newSelector()},
+			{eventTypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
+		},
+		eventsToSend: []eventTypeAndSource{
+			{eventType1, eventSource1},
+			{eventType1, eventSource2},
+			{eventType2, eventSource1},
+			{eventType2, eventSource2},
+		},
+		deprecatedTriggerFilter: true,
+	},}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := setup(t, true)
+			defer tearDown(client)
 
-	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
-		t.Fatalf("Error annotating namespace: %v", err)
-	}
-
-	// Wait for default broker ready.
-	if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
-		t.Fatalf("Error waiting for default broker to become ready: %v", err)
-	}
-
-	// These are the event types and sources that triggers will listen to, as well as the selectors
-	// to set  in the subscriber and services pods.
-	eventsToReceive := []eventReceiver{
-		{eventTypeAndSource{Type: any, Source: any}, newSelector()},
-		{eventTypeAndSource{Type: eventType1, Source: any}, newSelector()},
-		{eventTypeAndSource{Type: any, Source: eventSource1}, newSelector()},
-		{eventTypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
-	}
-
-	// Create subscribers.
-	for _, event := range eventsToReceive {
-		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		pod := resources.EventLoggerPod(subscriberName)
-		client.CreatePodOrFail(pod, common.WithService(subscriberName))
-	}
-
-	// Create triggers.
-	for _, event := range eventsToReceive {
-		triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
-		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		client.CreateTriggerOrFail(triggerName,
-			resources.WithSubscriberRefForTrigger(subscriberName),
-			resources.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
-		)
-	}
-
-	// Wait for all test resources to become ready before sending the events.
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
-
-	// These are the event types and sources that will be send.
-	eventsToSend := []eventTypeAndSource{
-		{eventType1, eventSource1},
-		{eventType1, eventSource2},
-		{eventType2, eventSource1},
-		{eventType2, eventSource2},
-	}
-	// Map to save the expected events per dumper so that we can verify the delivery.
-	expectedEvents := make(map[string][]string)
-	// Map to save the unexpected events per dumper so that we can verify that they weren't delivered.
-	unexpectedEvents := make(map[string][]string)
-	for _, eventToSend := range eventsToSend {
-		// Create cloud event.
-		// Using event type and source as part of the body for easier debugging.
-		body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
-		cloudEvent := &resources.CloudEvent{
-			Source: eventToSend.Source,
-			Type:   eventToSend.Type,
-			Data:   fmt.Sprintf(`{"msg":%q}`, body),
-		}
-		// Create sender pod.
-		senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
-		if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
-			t.Fatalf("Error send cloud event to broker: %v", err)
-		}
-
-		// Check on every dumper whether we should expect this event or not, and add its body
-		// to the expectedEvents/unexpectedEvents maps.
-		for _, eventToReceive := range eventsToReceive {
-			subscriberName := name("dumper", eventToReceive.typeAndSource.Type, eventToReceive.typeAndSource.Source)
-			if shouldExpectEvent(&eventToSend, &eventToReceive, t.Logf) {
-				expectedEvents[subscriberName] = append(expectedEvents[subscriberName], body)
-			} else {
-				unexpectedEvents[subscriberName] = append(unexpectedEvents[subscriberName], body)
+			// Label namespace so that it creates the default broker.
+			if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+				t.Fatalf("Error annotating namespace: %v", err)
 			}
-		}
+
+			// Wait for default broker ready.
+			if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
+				t.Fatalf("Error waiting for default broker to become ready: %v", err)
+			}
+
+			// Create subscribers.
+			for _, event := range test.eventsToReceive {
+				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
+				pod := resources.EventLoggerPod(subscriberName)
+				client.CreatePodOrFail(pod, common.WithService(subscriberName))
+			}
+
+			// Create triggers.
+			for _, event := range test.eventsToReceive {
+				triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
+				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
+				client.CreateTriggerOrFail(triggerName,
+					resources.WithSubscriberRefForTrigger(subscriberName),
+					resources.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
+				)
+			}
+
+			// Wait for all test resources to become ready before sending the events.
+			if err := client.WaitForAllTestResourcesReady(); err != nil {
+				t.Fatalf("Failed to get all test resources ready: %v", err)
+			}
+
+			// Map to save the expected events per dumper so that we can verify the delivery.
+			expectedEvents := make(map[string][]string)
+			// Map to save the unexpected events per dumper so that we can verify that they weren't delivered.
+			unexpectedEvents := make(map[string][]string)
+			for _, eventToSend := range test.eventsToSend {
+				// Create cloud event.
+				// Using event type and source as part of the body for easier debugging.
+				body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
+				cloudEvent := &resources.CloudEvent{
+					Source: eventToSend.Source,
+					Type:   eventToSend.Type,
+					Data:   fmt.Sprintf(`{"msg":%q}`, body),
+				}
+				// Create sender pod.
+				senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
+				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
+					t.Fatalf("Error send cloud event to broker: %v", err)
+				}
+
+				// Check on every dumper whether we should expect this event or not, and add its body
+				// to the expectedEvents/unexpectedEvents maps.
+				for _, eventToReceive := range test.eventsToReceive {
+					subscriberName := name("dumper", eventToReceive.typeAndSource.Type, eventToReceive.typeAndSource.Source)
+					if shouldExpectEvent(&eventToSend, &eventToReceive, t.Logf) {
+						expectedEvents[subscriberName] = append(expectedEvents[subscriberName], body)
+					} else {
+						unexpectedEvents[subscriberName] = append(unexpectedEvents[subscriberName], body)
+					}
+				}
+			}
+
+			for _, event := range test.eventsToReceive {
+				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
+				if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
+					t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
+				}
+				// At this point all the events should have been received in the pod.
+				// We check whether we find unexpected events. If so, then we fail.
+				found, err := client.FindAnyLogContents(subscriberName, unexpectedEvents[subscriberName])
+				if err != nil {
+					t.Fatalf("Failed querying to find log contents in pod %q: %v", subscriberName, err)
+				}
+				if found {
+					t.Fatalf("Unexpected event(s) found in logs of subscriber pod %q", subscriberName)
+				}
+			}
+		})
 	}
 
-	for _, event := range eventsToReceive {
-		subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-		if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
-			t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
-		}
-		// At this point all the events should have been received in the pod.
-		// We check whether we find unexpected events. If so, then we fail.
-		found, err := client.FindAnyLogContents(subscriberName, unexpectedEvents[subscriberName])
-		if err != nil {
-			t.Fatalf("Failed querying to find log contents in pod %q: %v", subscriberName, err)
-		}
-		if found {
-			t.Fatalf("Unexpected event(s) found in logs of subscriber pod %q", subscriberName)
-		}
-	}
 }
 
 // Helper function to create names for different objects (e.g., triggers, services, etc.).
