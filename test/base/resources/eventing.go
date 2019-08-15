@@ -105,13 +105,39 @@ func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
 	return broker
 }
 
-// WithTriggerFilter returns an option that adds a TriggerFilter for the given Trigger.
-func WithTriggerFilter(eventSource, eventType string) TriggerOption {
+// WithDeprecatedSourceAndTypeTriggerFilter returns an option that adds a TriggerFilter with DeprecatedSourceAndType for the given Trigger.
+func WithDeprecatedSourceAndTypeTriggerFilter(eventSource, eventType string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		triggerFilter := &eventingv1alpha1.TriggerFilter{
 			DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
 				Type:   eventType,
 				Source: eventSource,
+			},
+		}
+		t.Spec.Filter = triggerFilter
+	}
+}
+
+// WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
+func WithAttributesTriggerFilter(eventSource, eventType string) TriggerOption {
+	return func(t *eventingv1alpha1.Trigger) {
+		triggerFilter := &eventingv1alpha1.TriggerFilter{
+			Attributes: &eventingv1alpha1.TriggerFilterAttributes{
+				"type": eventType,
+				"source": eventSource,
+			},
+		}
+		t.Spec.Filter = triggerFilter
+	}
+}
+// WithAttributesAndExtensionTriggerFilter returns an option that adds a TriggerFilter with Attributes AndExtension.
+func WithAttributesAndExtensionTriggerFilter(eventSource, eventType, extensionName, extensionValue string) TriggerOption {
+	return func(t *eventingv1alpha1.Trigger) {
+		triggerFilter := &eventingv1alpha1.TriggerFilter{
+			Attributes: &eventingv1alpha1.TriggerFilterAttributes{
+				"type": eventType,
+				"source": eventSource,
+				extensionName:extensionValue,
 			},
 		}
 		t.Spec.Filter = triggerFilter

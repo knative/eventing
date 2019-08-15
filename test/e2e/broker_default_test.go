@@ -44,10 +44,20 @@ const (
 	eventSource2      = "source2"
 )
 
+var (
+	emptyEventExtension = eventExtension{}
+)
+
 // eventTypeAndSource specifies the type and source of an Event.
 type eventTypeAndSource struct {
 	Type   string
 	Source string
+}
+
+// eventExtension specifies the name and value of an Event extension.
+type eventExtension struct {
+	name  string
+	value string
 }
 
 // Helper struct to tie the type and sources of the events we expect to receive
@@ -66,9 +76,9 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		name            string
 		eventsToReceive []eventReceiver // These are the event types and sources that triggers will listen to, as well as the selectors
 		// to set  in the subscriber and services pods.
-		eventsToSend            []eventTypeAndSource   // These are the event types and sources that will be send.
-		deprecatedTriggerFilter bool                   //TriggerFilter with DeprecatedSourceAndType or not
-		extension               map[string]interface{} //optional event extension
+		eventsToSend            []eventTypeAndSource // These are the event types and sources that will be send.
+		deprecatedTriggerFilter bool                 //TriggerFilter with DeprecatedSourceAndType or not
+		eventExtension          eventExtension       //optional event extension
 	}{{
 		name: "test default broker with many deprecated source and type triggers",
 		eventsToReceive: []eventReceiver{
@@ -84,7 +94,25 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			{eventType2, eventSource2},
 		},
 		deprecatedTriggerFilter: true,
-	},}
+		eventExtension:          emptyEventExtension,
+	}, {
+		name: "test default broker with many attribute triggers",
+		eventsToReceive: []eventReceiver{
+			{eventTypeAndSource{Type: any, Source: any}, newSelector()},
+			{eventTypeAndSource{Type: eventType1, Source: any}, newSelector()},
+			{eventTypeAndSource{Type: any, Source: eventSource1}, newSelector()},
+			{eventTypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
+		},
+		eventsToSend: []eventTypeAndSource{
+			{eventType1, eventSource1},
+			{eventType1, eventSource2},
+			{eventType2, eventSource1},
+			{eventType2, eventSource2},
+		},
+		deprecatedTriggerFilter: false,
+		eventExtension:          eventExtension{},
+	},
+	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			client := setup(t, true)
@@ -106,14 +134,16 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				pod := resources.EventLoggerPod(subscriberName)
 				client.CreatePodOrFail(pod, common.WithService(subscriberName))
 			}
+			extensionExists := test.eventExtension == eventExtension{}
 
 			// Create triggers.
 			for _, event := range test.eventsToReceive {
 				triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
 				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
+				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, extensionExists, event.typeAndSource, test.eventExtension)
 				client.CreateTriggerOrFail(triggerName,
 					resources.WithSubscriberRefForTrigger(subscriberName),
-					resources.WithTriggerFilter(event.typeAndSource.Source, event.typeAndSource.Type),
+					triggerOption,
 				)
 			}
 
@@ -171,6 +201,18 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		})
 	}
 
+}
+
+func getTriggerFilterOption(deprecatedTriggerFilter, extensionExists bool, typeAndSource eventTypeAndSource, extension eventExtension) resources.TriggerOption {
+	if deprecatedTriggerFilter {
+		return resources.WithDeprecatedSourceAndTypeTriggerFilter(typeAndSource.Source, typeAndSource.Type)
+	} else {
+		if extensionExists {
+			return resources.WithAttributesAndExtensionTriggerFilter(typeAndSource.Source, typeAndSource.Type, extension.name, extension.value)
+		} else {
+			return resources.WithAttributesTriggerFilter(typeAndSource.Source, typeAndSource.Type)
+		}
+	}
 }
 
 // Helper function to create names for different objects (e.g., triggers, services, etc.).
