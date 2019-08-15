@@ -97,17 +97,18 @@ Trigger._
 ### group: messaging.knative.dev/v1alpha1
 
 _A Channel logically receives events on its input domain and forwards them to
-its subscribers. A custom channel implementation (other than the default _InMemoryChannel_)
-can be referenced via the _channelTemplate_. The concrete channel CRD can also be instantiated directly._
+its subscribers. A custom channel implementation (other than the default
+\_InMemoryChannel_) can be referenced via the _channelTemplate_. The concrete
+channel CRD can also be instantiated directly.\_
 
 ### Object Schema
 
 #### Spec
 
-| Field                    | Type                               | Description                                                                | Constraints                            |
-| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- | -------------------------------------- |
-| channelTemplate          | ChannelTemplateSpec                | Specifies which channel CRD to use.                                        | Immutable                              |
-| subscribable.subscribers | SubscriberSpec[]                   | Information about subscriptions used to implement message forwarding.      | Filled out by Subscription Controller. |
+| Field                    | Type                | Description                                                           | Constraints                            |
+| ------------------------ | ------------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| channelTemplate          | ChannelTemplateSpec | Specifies which channel CRD to use.                                   | Immutable                              |
+| subscribable.subscribers | SubscriberSpec[]    | Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
 
 \*: Required
 
@@ -115,16 +116,17 @@ can be referenced via the _channelTemplate_. The concrete channel CRD can also b
 
 #### Status
 
-| Field      | Type             | Description                                                                                  | Constraints |
-| ---------- | ---------------- | -------------------------------------------------------------------------------------------- | ----------- |
-| address    | Addressable      | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions | Conditions       | Channel conditions.                                                                          |             |
-| channel    | ObjectReference  | The actual ObjectReference to the Channel CRD backing this Channel.                          |             |
+| Field      | Type            | Description                                                                                  | Constraints |
+| ---------- | --------------- | -------------------------------------------------------------------------------------------- | ----------- |
+| address    | Addressable     | Address of the endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions | Conditions      | Channel conditions.                                                                          |             |
+| channel    | ObjectReference | The actual ObjectReference to the Channel CRD backing this Channel.                          |             |
 
 ##### Conditions
 
 - **BackingChannelReady.** True when the backing Channel CRD is ready.
-- **Addressable.** True when the Channel meets the Addressable contract and has a non-empty hostname.
+- **Addressable.** True when the Channel meets the Addressable contract and has
+  a non-empty hostname.
 - **Ready.** True when the backing channel is ready to accept events.
 
 #### Events
@@ -137,7 +139,7 @@ can be referenced via the _channelTemplate_. The concrete channel CRD can also b
 ### Life Cycle
 
 | Action | Reactions                                                                                                                                                             | Constraints                                                                               |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------| ------------------------------------------------------------------------------------------|
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Create | The Channel referenced will take ownership of the concrete Channel and begin provisioning the backing resources required for the Channel depending on implementation. | Only one Channel is allowed to be the Owner for a given Channel implementation (own CRD). |
 | Update | The Channel will synchronize the Channel backing resources to reflect the update.                                                                                     |                                                                                           |
 | Delete | The Channel will deprovision the backing resources if no longer required depending on the backing Channel implementation.                                             |                                                                                           |
@@ -198,11 +200,11 @@ channel._
 
 ### ChannelTemplateSpec
 
-| Field               | Type            | Description                                         | Constraints |
-| ------------------- | --------------- | --------------------------------------------------- | ----------- |
-| kind                | String          | The backing channel CRD                             |             |
-| apiVersion          | String          | API version of backing channel CRD                  |             |
-| spec                | RawExtension    | Spec to be passed to backing channel implementation |             |
+| Field      | Type         | Description                                         | Constraints |
+| ---------- | ------------ | --------------------------------------------------- | ----------- |
+| kind       | String       | The backing channel CRD                             |             |
+| apiVersion | String       | API version of backing channel CRD                  |             |
+| spec       | RawExtension | Spec to be passed to backing channel implementation |             |
 
 ### SubscriberSpec
 
