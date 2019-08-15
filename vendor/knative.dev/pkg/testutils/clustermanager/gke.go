@@ -37,8 +37,6 @@ type GKECluster struct {
 	NeedCleanup bool
 	// TODO: evaluate returning "google.golang.org/api/container/v1.Cluster" when implementing the creation logic
 	Cluster *string
-	// Exec is the function used for execute standard shell functions, return stdout and stderr
-	Exec func(string, ...string) ([]byte, error)
 }
 
 // Setup sets up a GKECluster client.
@@ -47,9 +45,7 @@ type GKECluster struct {
 // region: default to regional cluster if not provided, and use default backup regions
 // zone: default is none, must be provided together with region
 func (gs *GKEClient) Setup(numNodes *int, nodeType *string, region *string, zone *string, project *string) (ClusterOperations, error) {
-	gc := &GKECluster{
-		Exec: standardExec,
-	}
+	gc := &GKECluster{}
 	// check for local run
 	if nil != project { // if project is supplied, use it and create cluster
 		gc.Project = project
@@ -102,7 +98,7 @@ func (gc *GKECluster) Delete() error {
 // if project can be derived from gcloud, sets it up as well
 func (gc *GKECluster) checkEnvironment() error {
 	// if kubeconfig is configured, use it
-	output, err := gc.Exec("kubectl", "config", "current-context")
+	output, err := common.StandardExec("kubectl", "config", "current-context")
 	if nil == err {
 		// output should be in the form of gke_PROJECT_REGION_CLUSTER
 		parts := strings.Split(string(output), "_")
@@ -119,7 +115,7 @@ func (gc *GKECluster) checkEnvironment() error {
 	}
 
 	// if gcloud is pointing to a project, use it
-	output, err = gc.Exec("gcloud", "config", "get-value", "project")
+	output, err = common.StandardExec("gcloud", "config", "get-value", "project")
 	if nil != err {
 		return fmt.Errorf("failed getting gcloud project: '%v'", err)
 	}
