@@ -16,8 +16,36 @@ limitations under the License.
 
 package common
 
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"strings"
+)
+
+var (
+	// GetOSEnv is for easier mocking in unit tests
+	GetOSEnv = os.Getenv
+	// StandardExec is for easier mocking in unit tests
+	StandardExec = standardExec
+)
+
+// standardExec executes shell command and returns stdout and stderr
+func standardExec(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).Output()
+}
+
 // IsProw checks if the process is initialized by Prow
 func IsProw() bool {
-	// TODO: Implement
-	return false
+	return "" != GetOSEnv("PROW_JOB_ID")
+}
+
+// GetRepoName gets repo name by the path where the repo cloned to
+func GetRepoName() (string, error) {
+	out, err := StandardExec("git", "rev-parse", "--show-toplevel")
+	if nil != err {
+		return "", fmt.Errorf("failed git rev-parse --show-toplevel: '%v'", err)
+	}
+	return strings.TrimSpace(path.Base(string(out))), nil
 }

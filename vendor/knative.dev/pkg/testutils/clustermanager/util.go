@@ -17,10 +17,37 @@ limitations under the License.
 package clustermanager
 
 import (
-	"os/exec"
+	"fmt"
+
+	"knative.dev/pkg/testutils/common"
 )
 
-// standardExec executes shell command and returns stdout and stderr
-func standardExec(name string, args ...string) ([]byte, error) {
-	return exec.Command(name, args...).Output()
+var (
+	ClusterResource ResourceType = "e2e-cls"
+)
+
+type ResourceType string
+
+// getResourceName defines how a resource should be named based on it's
+// type, the name follows: k{reponame}-{typename} for local user, and
+// append BUILD_NUMBER with up to 20 chars. This is best effort, as it
+// shouldn't fail
+func getResourceName(rt ResourceType) (string, error) {
+	var resName string
+	repoName, err := common.GetRepoName()
+	if nil != err {
+		return "", fmt.Errorf("failed getting reponame for forming resource name: '%v'", err)
+	}
+	resName = fmt.Sprintf("k%s-%s", repoName, string(rt))
+	if common.IsProw() {
+		buildNumStr := common.GetOSEnv("BUILD_NUMBER")
+		if "" == buildNumStr {
+			return "", fmt.Errorf("failed getting BUILD_NUMBER env var")
+		}
+		if len(buildNumStr) > 20 {
+			buildNumStr = string(buildNumStr[:20])
+		}
+		resName = fmt.Sprintf("%s-%s", resName, buildNumStr)
+	}
+	return resName, nil
 }
