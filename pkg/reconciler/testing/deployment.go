@@ -74,10 +74,12 @@ func WithDeploymentServiceAccount(serviceAccountName string) DeploymentOption {
 	}
 }
 
-func WithDeploymentContainer(name, image string, envVars []corev1.EnvVar, containerPorts []corev1.ContainerPort) DeploymentOption {
+func WithDeploymentContainer(name, image string, liveness *corev1.Probe, readiness *corev1.Probe, envVars []corev1.EnvVar, containerPorts []corev1.ContainerPort) DeploymentOption {
 	return func(d *appsv1.Deployment) {
 		d.Spec.Template.Spec.Containers[0].Name = name
 		d.Spec.Template.Spec.Containers[0].Image = image
+		d.Spec.Template.Spec.Containers[0].LivenessProbe = liveness
+		d.Spec.Template.Spec.Containers[0].ReadinessProbe = readiness
 		d.Spec.Template.Spec.Containers[0].Env = envVars
 		d.Spec.Template.Spec.Containers[0].Ports = containerPorts
 	}
