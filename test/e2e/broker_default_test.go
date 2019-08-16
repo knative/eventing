@@ -43,8 +43,8 @@ const (
 	eventSource1      = "source1"
 	eventSource2      = "source2"
 	nilString         = "nil"
-	extensionName     = `my-extension`
-	extensionValue    = `my-extension-value`
+	extensionName     = `myextname`
+	extensionValue    = `myextval`
 )
 
 // eventTypeAndSource specifies the type and source of an Event.
@@ -86,7 +86,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		deprecatedTriggerFilter bool        //TriggerFilter with DeprecatedSourceAndType or not
 		extensionExists         bool
 	}{{
-		name: "test default broker with many deprecated source and type triggers",
+		name: "test default broker with many deprecated triggers",
 		eventsToReceive: []eventReceiver{
 			{eventMeta{Type: any, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
 			{eventMeta{Type: eventType1, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
@@ -238,7 +238,7 @@ func getTriggerFilterOption(deprecatedTriggerFilter, extensionExists bool, event
 		return resources.WithDeprecatedSourceAndTypeTriggerFilter(eventMeta.Source, eventMeta.Type)
 	} else {
 		if extensionExists {
-			return resources.WithAttributesAndExtensionTriggerFilter(eventMeta.Source, eventMeta.Type, eventMeta.ExtensionValue, eventMeta.ExtensionValue)
+			return resources.WithAttributesAndExtensionTriggerFilter(eventMeta.Source, eventMeta.Type, eventMeta.ExtensionName, eventMeta.ExtensionValue)
 		} else {
 			return resources.WithAttributesTriggerFilter(eventMeta.Source, eventMeta.Type)
 		}
@@ -264,7 +264,7 @@ func name(obj, eventType, eventSource, eventExtensionName, eventExtensionValue s
 		eventExtensionValue = "not exists"
 	}
 	return strings.ToLower(fmt.Sprintf(
-		"obj[%s]-eventType[%s]-eventSource[%s]-eventExtensionName[%s]-eventExtensionValue[%s]",
+		"%s-%s-%s-%s-%s",
 		obj,
 		eventType,
 		eventSource,
