@@ -35,6 +35,8 @@ var (
 	eventID       string
 	eventType     string
 	eventSource   string
+	eventExtensionName     string
+	eventExtensionValue   string
 	eventData     string
 	eventEncoding string
 	periodStr     string
@@ -47,6 +49,8 @@ func init() {
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
 	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventExtensionName, "-event-extension-name", "", "The Event Type to use.")
+	flag.StringVar(&eventExtensionValue, "-event-extension-value", "", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
@@ -138,6 +142,9 @@ func main() {
 		}
 		event.SetType(eventType)
 		event.SetSource(eventSource)
+		if eventExtensionName != "" {
+			event.SetExtension(eventExtensionName, eventExtensionValue)
+		}
 		if err := event.SetData(untyped); err != nil {
 			log.Fatalf("failed to set data, %v", err)
 		}

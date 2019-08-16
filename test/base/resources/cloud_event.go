@@ -21,6 +21,8 @@ type CloudEvent struct {
 	ID       string
 	Type     string
 	Source   string
+	ExtensionName string
+	ExtensionValue string
 	Data     string // must be in json format
 	Encoding string // binary or structured
 }

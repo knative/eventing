@@ -42,29 +42,35 @@ const (
 	eventType2        = "type2"
 	eventSource1      = "source1"
 	eventSource2      = "source2"
-)
-
-var (
-	emptyEventExtension = eventExtension{}
+	nilString         = "nil"
+	extensionName     = `my-extension`
+	extensionValue    = `my-extension-value`
 )
 
 // eventTypeAndSource specifies the type and source of an Event.
-type eventTypeAndSource struct {
-	Type   string
-	Source string
-}
+//type eventTypeAndSource struct {
+//	Type   string
+//	Source string
+//}
 
 // eventExtension specifies the name and value of an Event extension.
-type eventExtension struct {
-	name  string
-	value string
+//type eventExtension struct {
+//	name  string
+//	value string
+//}
+
+type eventMeta struct {
+	Type           string
+	Source         string
+	ExtensionName  string
+	ExtensionValue string
 }
 
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
-	typeAndSource eventTypeAndSource
-	selector      map[string]string
+	meta     eventMeta
+	selector map[string]string
 }
 
 // This test annotates the testing namespace so that a default broker is created.
@@ -76,42 +82,59 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		name            string
 		eventsToReceive []eventReceiver // These are the event types and sources that triggers will listen to, as well as the selectors
 		// to set  in the subscriber and services pods.
-		eventsToSend            []eventTypeAndSource // These are the event types and sources that will be send.
-		deprecatedTriggerFilter bool                 //TriggerFilter with DeprecatedSourceAndType or not
-		eventExtension          eventExtension       //optional event extension
+		eventsToSend            []eventMeta // These are the event types and sources that will be send.
+		deprecatedTriggerFilter bool        //TriggerFilter with DeprecatedSourceAndType or not
+		extensionExists         bool
 	}{{
 		name: "test default broker with many deprecated source and type triggers",
 		eventsToReceive: []eventReceiver{
-			{eventTypeAndSource{Type: any, Source: any}, newSelector()},
-			{eventTypeAndSource{Type: eventType1, Source: any}, newSelector()},
-			{eventTypeAndSource{Type: any, Source: eventSource1}, newSelector()},
-			{eventTypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
+			{eventMeta{Type: any, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+			{eventMeta{Type: eventType1, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+			{eventMeta{Type: any, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+			{eventMeta{Type: eventType1, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
 		},
-		eventsToSend: []eventTypeAndSource{
-			{eventType1, eventSource1},
-			{eventType1, eventSource2},
-			{eventType2, eventSource1},
-			{eventType2, eventSource2},
+		eventsToSend: []eventMeta{
+			{eventType1, eventSource1, nilString, nilString},
+			{eventType1, eventSource2, nilString, nilString},
+			{eventType2, eventSource1, nilString, nilString},
+			{eventType2, eventSource2, nilString, nilString},
 		},
 		deprecatedTriggerFilter: true,
-		eventExtension:          emptyEventExtension,
+		extensionExists:         false,
 	}, {
 		name: "test default broker with many attribute triggers",
 		eventsToReceive: []eventReceiver{
-			{eventTypeAndSource{Type: any, Source: any}, newSelector()},
-			{eventTypeAndSource{Type: eventType1, Source: any}, newSelector()},
-			{eventTypeAndSource{Type: any, Source: eventSource1}, newSelector()},
-			{eventTypeAndSource{Type: eventType1, Source: eventSource1}, newSelector()},
+			{eventMeta{Type: any, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+			{eventMeta{Type: eventType1, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+			{eventMeta{Type: any, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+			{eventMeta{Type: eventType1, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
 		},
-		eventsToSend: []eventTypeAndSource{
-			{eventType1, eventSource1},
-			{eventType1, eventSource2},
-			{eventType2, eventSource1},
-			{eventType2, eventSource2},
+		eventsToSend: []eventMeta{
+			{eventType1, eventSource1, nilString, nilString},
+			{eventType1, eventSource2, nilString, nilString},
+			{eventType2, eventSource1, nilString, nilString},
+			{eventType2, eventSource2, nilString, nilString},
 		},
 		deprecatedTriggerFilter: false,
-		eventExtension:          eventExtension{},
+		extensionExists:         false,
 	},
+		{
+			name: "test default broker with many attribute and extension triggers",
+			eventsToReceive: []eventReceiver{
+				{eventMeta{Type: any, Source: any, ExtensionName: extensionName, ExtensionValue: extensionValue}, newSelector()},
+				{eventMeta{Type: eventType1, Source: any, ExtensionName: extensionName, ExtensionValue: extensionValue}, newSelector()},
+				{eventMeta{Type: any, Source: any, ExtensionName: extensionName, ExtensionValue: any}, newSelector()},
+				{eventMeta{Type: any, Source: eventSource1, ExtensionName: extensionName, ExtensionValue: extensionValue}, newSelector()},
+			},
+			eventsToSend: []eventMeta{
+				{eventType1, eventSource1, extensionName, extensionValue},
+				{eventType1, eventSource2, extensionName, extensionValue},
+				{eventType2, eventSource1, extensionName, "non matching extension value"},
+				{eventType2, eventSource2, "non matching extension name", extensionValue},
+			},
+			deprecatedTriggerFilter: false,
+			extensionExists:         true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -130,17 +153,16 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 			// Create subscribers.
 			for _, event := range test.eventsToReceive {
-				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
+				subscriberName := name("dumper", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
 				pod := resources.EventLoggerPod(subscriberName)
 				client.CreatePodOrFail(pod, common.WithService(subscriberName))
 			}
-			extensionExists := test.eventExtension == eventExtension{}
 
 			// Create triggers.
 			for _, event := range test.eventsToReceive {
-				triggerName := name("trigger", event.typeAndSource.Type, event.typeAndSource.Source)
-				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
-				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, extensionExists, event.typeAndSource, test.eventExtension)
+				triggerName := name("trigger", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
+				subscriberName := name("dumper", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
+				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, test.extensionExists, event.meta)
 				client.CreateTriggerOrFail(triggerName,
 					resources.WithSubscriberRefForTrigger(subscriberName),
 					triggerOption,
@@ -159,14 +181,11 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			for _, eventToSend := range test.eventsToSend {
 				// Create cloud event.
 				// Using event type and source as part of the body for easier debugging.
-				body := fmt.Sprintf("Body-%s-%s", eventToSend.Type, eventToSend.Source)
-				cloudEvent := &resources.CloudEvent{
-					Source: eventToSend.Source,
-					Type:   eventToSend.Type,
-					Data:   fmt.Sprintf(`{"msg":%q}`, body),
-				}
+				body := fmt.Sprintf("Body:eventType[%s]-eventSource[%s]-eventExtensionName[%s]-eventExtensionValue[%s]",
+					eventToSend.Type, eventToSend.Source, eventToSend.ExtensionName, eventToSend.ExtensionValue)
+				cloudEvent := makeCloudEvent(eventToSend, body)
 				// Create sender pod.
-				senderPodName := name("sender", eventToSend.Type, eventToSend.Source)
+				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.ExtensionName, eventToSend.ExtensionValue)
 				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
 					t.Fatalf("Error send cloud event to broker: %v", err)
 				}
@@ -174,7 +193,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				// Check on every dumper whether we should expect this event or not, and add its body
 				// to the expectedEvents/unexpectedEvents maps.
 				for _, eventToReceive := range test.eventsToReceive {
-					subscriberName := name("dumper", eventToReceive.typeAndSource.Type, eventToReceive.typeAndSource.Source)
+					subscriberName := name("dumper", eventToReceive.meta.Type, eventToReceive.meta.Source, eventToReceive.meta.ExtensionName, eventToReceive.meta.ExtensionValue)
 					if shouldExpectEvent(&eventToSend, &eventToReceive, t.Logf) {
 						expectedEvents[subscriberName] = append(expectedEvents[subscriberName], body)
 					} else {
@@ -184,7 +203,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 
 			for _, event := range test.eventsToReceive {
-				subscriberName := name("dumper", event.typeAndSource.Type, event.typeAndSource.Source)
+				subscriberName := name("dumper", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
 				if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
 					t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 				}
@@ -203,20 +222,31 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 }
 
-func getTriggerFilterOption(deprecatedTriggerFilter, extensionExists bool, typeAndSource eventTypeAndSource, extension eventExtension) resources.TriggerOption {
+func makeCloudEvent(eventToSend eventMeta, body string) *resources.CloudEvent {
+	cloudEvent := &resources.CloudEvent{
+		Source: eventToSend.Source,
+		Type:   eventToSend.Type,
+		ExtensionName:eventToSend.ExtensionName,
+		ExtensionValue:eventToSend.ExtensionValue,
+		Data: fmt.Sprintf(`{"msg":%q}`, body),
+	}
+	return cloudEvent
+}
+
+func getTriggerFilterOption(deprecatedTriggerFilter, extensionExists bool, eventMeta eventMeta) resources.TriggerOption {
 	if deprecatedTriggerFilter {
-		return resources.WithDeprecatedSourceAndTypeTriggerFilter(typeAndSource.Source, typeAndSource.Type)
+		return resources.WithDeprecatedSourceAndTypeTriggerFilter(eventMeta.Source, eventMeta.Type)
 	} else {
 		if extensionExists {
-			return resources.WithAttributesAndExtensionTriggerFilter(typeAndSource.Source, typeAndSource.Type, extension.name, extension.value)
+			return resources.WithAttributesAndExtensionTriggerFilter(eventMeta.Source, eventMeta.Type, eventMeta.ExtensionValue, eventMeta.ExtensionValue)
 		} else {
-			return resources.WithAttributesTriggerFilter(typeAndSource.Source, typeAndSource.Type)
+			return resources.WithAttributesTriggerFilter(eventMeta.Source, eventMeta.Type)
 		}
 	}
 }
 
 // Helper function to create names for different objects (e.g., triggers, services, etc.).
-func name(obj, eventType, eventSource string) string {
+func name(obj, eventType, eventSource, eventExtensionName, eventExtensionValue string) string {
 	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
 	if eventType == "" {
 		eventType = "testany"
@@ -224,7 +254,22 @@ func name(obj, eventType, eventSource string) string {
 	if eventSource == "" {
 		eventSource = "testany"
 	}
-	return strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
+	if eventExtensionName == nilString {
+		eventExtensionName = "not exists"
+	}
+	if eventExtensionValue == "" {
+		eventExtensionValue = "testany"
+	}
+	if eventExtensionValue == nilString {
+		eventExtensionValue = "not exists"
+	}
+	return strings.ToLower(fmt.Sprintf(
+		"obj[%s]-eventType[%s]-eventSource[%s]-eventExtensionName[%s]-eventExtensionValue[%s]",
+		obj,
+		eventType,
+		eventSource,
+		eventExtensionName,
+		eventExtensionValue))
 }
 
 // Returns a new selector with a random uuid.
@@ -233,11 +278,14 @@ func newSelector() map[string]string {
 }
 
 // Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.
-func shouldExpectEvent(eventToSend *eventTypeAndSource, receiver *eventReceiver, logf logging.FormatLogger) bool {
-	if receiver.typeAndSource.Type != any && receiver.typeAndSource.Type != eventToSend.Type {
+func shouldExpectEvent(eventToSend *eventMeta, receiver *eventReceiver, logf logging.FormatLogger) bool {
+	if receiver.meta.Type != any && receiver.meta.Type != eventToSend.Type {
 		return false
 	}
-	if receiver.typeAndSource.Source != any && receiver.typeAndSource.Source != eventToSend.Source {
+	if receiver.meta.Source != any && receiver.meta.Source != eventToSend.Source {
+		return false
+	}
+	if receiver.meta.ExtensionName != nilString && receiver.meta.ExtensionValue != any && (receiver.meta.ExtensionName != eventToSend.ExtensionName || receiver.meta.ExtensionValue != eventToSend.ExtensionValue) {
 		return false
 	}
 	return true
