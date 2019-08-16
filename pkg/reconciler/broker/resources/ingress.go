@@ -67,7 +67,7 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 								Handler:             corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:        "/healthz",
-										Port:        intstr.IntOrString{Type: intstr.Int, IntVal: int32(8080)},
+										Port:        intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 									},
 								},
 								InitialDelaySeconds: 5,
