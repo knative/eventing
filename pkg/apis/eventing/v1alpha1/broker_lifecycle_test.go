@@ -19,8 +19,9 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"testing"
+
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
@@ -365,67 +366,67 @@ func TestBrokerIsReady(t *testing.T) {
 	}}
 
 	for _, test := range tests {
-			testName := fmt.Sprintf("%s", test.name)
-			//			t.Run(test.name, func(t *testing.T) {
-			t.Run(testName, func(t *testing.T) {
-				bs := &BrokerStatus{}
-				if test.markIngressReady != nil {
-					var d *v1.Deployment
-					if *test.markIngressReady {
-						d = TestHelper.AvailableDeployment()
-					} else {
-						d = TestHelper.UnavailableDeployment()
-					}
-					bs.PropagateIngressDeploymentAvailability(d)
+		testName := fmt.Sprintf("%s", test.name)
+		//			t.Run(test.name, func(t *testing.T) {
+		t.Run(testName, func(t *testing.T) {
+			bs := &BrokerStatus{}
+			if test.markIngressReady != nil {
+				var d *v1.Deployment
+				if *test.markIngressReady {
+					d = TestHelper.AvailableDeployment()
+				} else {
+					d = TestHelper.UnavailableDeployment()
 				}
-				if test.markTriggerChannelReady != nil {
-					var c *duckv1alpha1.ChannelableStatus
-					if *test.markTriggerChannelReady {
-						c = TestHelper.ReadyChannelStatusCRD()
-					} else {
-						c = TestHelper.NotReadyChannelStatusCRD()
-					}
-					bs.PropagateTriggerChannelReadinessCRD(c)
+				bs.PropagateIngressDeploymentAvailability(d)
+			}
+			if test.markTriggerChannelReady != nil {
+				var c *duckv1alpha1.ChannelableStatus
+				if *test.markTriggerChannelReady {
+					c = TestHelper.ReadyChannelStatusCRD()
+				} else {
+					c = TestHelper.NotReadyChannelStatusCRD()
 				}
-				if test.markIngressChannelReady != nil {
-					var c *duckv1alpha1.ChannelableStatus
-					if *test.markIngressChannelReady {
-						c = TestHelper.ReadyChannelStatusCRD()
-					} else {
-						c = TestHelper.NotReadyChannelStatusCRD()
-					}
-					bs.PropagateIngressChannelReadinessCRD(c)
+				bs.PropagateTriggerChannelReadinessCRD(c)
+			}
+			if test.markIngressChannelReady != nil {
+				var c *duckv1alpha1.ChannelableStatus
+				if *test.markIngressChannelReady {
+					c = TestHelper.ReadyChannelStatusCRD()
+				} else {
+					c = TestHelper.NotReadyChannelStatusCRD()
 				}
-				if !test.markIngressSubscriptionOwned {
-					bs.MarkIngressSubscriptionNotOwned(&Subscription{})
-				} else if test.markIngressSubscriptionReady != nil {
-					var sub *SubscriptionStatus
-					if *test.markIngressSubscriptionReady {
-						sub = TestHelper.ReadySubscriptionStatus()
-					} else {
-						sub = TestHelper.NotReadySubscriptionStatus()
-					}
-					bs.PropagateIngressSubscriptionReadiness(sub)
+				bs.PropagateIngressChannelReadinessCRD(c)
+			}
+			if !test.markIngressSubscriptionOwned {
+				bs.MarkIngressSubscriptionNotOwned(&Subscription{})
+			} else if test.markIngressSubscriptionReady != nil {
+				var sub *SubscriptionStatus
+				if *test.markIngressSubscriptionReady {
+					sub = TestHelper.ReadySubscriptionStatus()
+				} else {
+					sub = TestHelper.NotReadySubscriptionStatus()
 				}
-				if test.markFilterReady != nil {
-					var d *v1.Deployment
-					if *test.markFilterReady {
-						d = TestHelper.AvailableDeployment()
-					} else {
-						d = TestHelper.UnavailableDeployment()
-					}
-					bs.PropagateFilterDeploymentAvailability(d)
+				bs.PropagateIngressSubscriptionReadiness(sub)
+			}
+			if test.markFilterReady != nil {
+				var d *v1.Deployment
+				if *test.markFilterReady {
+					d = TestHelper.AvailableDeployment()
+				} else {
+					d = TestHelper.UnavailableDeployment()
 				}
-				bs.SetAddress(test.address)
+				bs.PropagateFilterDeploymentAvailability(d)
+			}
+			bs.SetAddress(test.address)
 
-				got := bs.IsReady()
-				if test.wantReady != got {
-					t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
-				}
+			got := bs.IsReady()
+			if test.wantReady != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
 
-			})
-		}
+		})
 	}
+}
 
 func TestBrokerAnnotateUserInfo(t *testing.T) {
 	const (
