@@ -19,12 +19,9 @@ limitations under the License.
 package e2e
 
 import (
-	"fmt"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/e2e/helpers"
 )
 
 /*
@@ -34,69 +31,5 @@ EventSource ---> Channel ---> Subscriptions ---> Channel ---> Subscriptions --->
 
 */
 func TestChannelChain(t *testing.T) {
-	ChannelChainTestHelper(t, channels)
-}
-
-func ChannelChainTestHelper(t *testing.T, channels []string) {
-	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
-		const (
-			senderName    = "e2e-channelchain-sender"
-			loggerPodName = "e2e-channelchain-logger-pod"
-		)
-		channelNames := []string{"e2e-channelchain1", "e2e-channelchain2"}
-		// subscriptionNames1 corresponds to Subscriptions on channelNames[0]
-		subscriptionNames1 := []string{"e2e-channelchain-subs11", "e2e-channelchain-subs12"}
-		// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
-		subscriptionNames2 := []string{"e2e-channelchain-subs21"}
-
-		client := setup(st, true)
-		defer tearDown(client)
-
-		// create channels
-		channelTypeMeta := getChannelTypeMeta(channel)
-		client.CreateChannelsOrFail(channelNames, channelTypeMeta)
-		client.WaitForResourcesReady(channelTypeMeta)
-
-		// create loggerPod and expose it as a service
-		pod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
-
-		// create subscriptions that subscribe the first channel, and reply events directly to the second channel
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames1,
-			channelNames[0],
-			channelTypeMeta,
-			resources.WithReplyForSubscription(channelNames[1], channelTypeMeta),
-		)
-		// create subscriptions that subscribe the second channel, and call the logging service
-		client.CreateSubscriptionsOrFail(
-			subscriptionNames2,
-			channelNames[1],
-			channelTypeMeta,
-			resources.WithSubscriberForSubscription(loggerPodName),
-		)
-
-		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
-
-		// send fake CloudEvent to the first channel
-		body := fmt.Sprintf("TestChannelChainEvent %s", uuid.NewUUID())
-		event := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
-		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], channelTypeMeta, event); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
-		}
-
-		// check if the logging service receives the correct number of event messages
-		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-		if err := client.CheckLog(loggerPodName, common.CheckerContainsCount(body, expectedContentCount)); err != nil {
-			st.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", body, expectedContentCount, loggerPodName, err)
-		}
-	})
+	helpers.ChannelChainTestHelper(t, channelTestRunner)
 }

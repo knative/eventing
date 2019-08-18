@@ -27,6 +27,9 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	pkgTest "knative.dev/pkg/test"
 )
 
 func TestSequence(t *testing.T) {
@@ -93,11 +96,19 @@ func TestSequence(t *testing.T) {
 		channelTypeMeta,
 		resources.WithSubscriberForSubscription(loggerPodName),
 	)
-	// create replyOption for the Sequence
-	replyOption := resources.WithReplyForSequence(channelName, channelTypeMeta)
+	replyRef := pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, channelName)
+
+	// create the sequence object
+	sequence := eventingtesting.NewSequence(
+		sequenceName,
+		client.Namespace,
+		eventingtesting.WithSequenceSteps(steps),
+		eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
+		eventingtesting.WithSequenceReply(replyRef),
+	)
 
 	// create Sequence or fail the test if there is an error
-	client.CreateSequenceOrFail(sequenceName, steps, channelTemplate, replyOption)
+	client.CreateSequenceOrFail(sequence)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
