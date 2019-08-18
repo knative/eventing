@@ -124,6 +124,8 @@ func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1alpha1.Subs
 		imc.Status.SubscribableTypeStatus = duckv1alpha1.SubscribableTypeStatus{
 			SubscribableStatus: &duckv1alpha1.SubscribableStatus{
 				Subscribers: subscriberStatuses},
+			SubscribableStatusV2: &duckv1alpha1.SubscribableStatus{
+				Subscribers: subscriberStatuses},
 		}
 	}
 }

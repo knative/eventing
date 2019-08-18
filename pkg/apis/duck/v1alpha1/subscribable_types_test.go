@@ -77,6 +77,20 @@ func TestSubscribablePopulate(t *testing.T) {
 					Message:            "Some message",
 				}},
 			},
+			SubscribableStatusV2: &SubscribableStatus{
+				// Populate ALL fields
+				Subscribers: []SubscriberStatus{{
+					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 1,
+					Ready:              corev1.ConditionTrue,
+					Message:            "Some message",
+				}, {
+					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 2,
+					Ready:              corev1.ConditionFalse,
+					Message:            "Some message",
+				}},
+			},
 		},
 	}
 

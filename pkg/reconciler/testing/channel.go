@@ -127,6 +127,17 @@ func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int6
 				ObservedGeneration: observedGeneration,
 				Ready:              v1.ConditionTrue,
 			})
+
+		if c.Status.SubscribableTypeStatus.SubscribableStatusV2 == nil {
+			c.Status.SubscribableTypeStatus.SubscribableStatusV2 = &eventingduckv1alpha1.SubscribableStatus{}
+		}
+		c.Status.SubscribableTypeStatus.SubscribableStatusV2.Subscribers = append(
+			c.Status.SubscribableTypeStatus.SubscribableStatusV2.Subscribers,
+			eventingduckv1alpha1.SubscriberStatus{
+				UID:                types.UID(uid),
+				ObservedGeneration: observedGeneration,
+				Ready:              v1.ConditionTrue,
+			})
 	}
 }
 

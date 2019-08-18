@@ -118,6 +118,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	}
 
 	imc.Status.SubscribableTypeStatus.SubscribableStatus = r.createSubscribableStatus(imc.Spec.Subscribable)
+	imc.Status.SubscribableTypeStatus.SubscribableStatusV2 = r.createSubscribableStatus(imc.Spec.Subscribable)
 	return nil
 }
 
