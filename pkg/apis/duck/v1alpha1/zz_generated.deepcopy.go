@@ -376,6 +376,11 @@ func (in *SubscribableTypeStatus) DeepCopyInto(out *SubscribableTypeStatus) {
 		*out = new(SubscribableStatus)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SubscribableStatusV2 != nil {
+		in, out := &in.SubscribableStatusV2, &out.SubscribableStatusV2
+		*out = new(SubscribableStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
