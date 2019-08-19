@@ -17,15 +17,16 @@ limitations under the License.
 package common
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
+	"knative.dev/pkg/test/helpers"
 )
 
 // TODO(Fredy-Z): break this file into multiple files when it grows too large.
@@ -119,20 +120,11 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 }
 
 // CreateSequenceOrFail will create a Sequence or fail the test if there is an error.
-func (client *Client) CreateSequenceOrFail(
-	name string,
-	steps []eventingv1alpha1.SubscriberSpec,
-	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec,
-	options ...resources.SequenceOption,
-) {
-	namespace := client.Namespace
-	sequence := resources.Sequence(name, steps, channelTemplate, options...)
-
-	sequences := client.Eventing.MessagingV1alpha1().Sequences(namespace)
-	// update sequence with the new reference
-	sequence, err := sequences.Create(sequence)
+func (client *Client) CreateSequenceOrFail(sequence *messagingv1alpha1.Sequence) {
+	sequences := client.Eventing.MessagingV1alpha1().Sequences(client.Namespace)
+	_, err := sequences.Create(sequence)
 	if err != nil {
-		client.T.Fatalf("Failed to create sequence %q: %v", name, err)
+		client.T.Fatalf("Failed to create sequence %q: %v", sequence.Name, err)
 	}
 	client.Tracker.AddObj(sequence)
 }
@@ -140,65 +132,39 @@ func (client *Client) CreateSequenceOrFail(
 // CreateChoiceOrFail will create a Choice or fail the test if there is an error.
 func (client *Client) CreateChoiceOrFail(choice *messagingv1alpha1.Choice) {
 	choices := client.Eventing.MessagingV1alpha1().Choices(client.Namespace)
-	// create choice with the new reference
-	created, err := choices.Create(choice)
+	_, err := choices.Create(choice)
 	if err != nil {
 		client.T.Fatalf("Failed to create choice %q: %v", choice.Name, err)
 	}
-	client.Tracker.AddObj(created)
+	client.Tracker.AddObj(choice)
 }
 
 // CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.
-func (client *Client) CreateCronJobSourceOrFail(
-	name,
-	schedule,
-	data string,
-	options ...resources.CronJobSourceOption,
-) {
-	namespace := client.Namespace
-	cronJobSource := resources.CronJobSource(name, schedule, data, options...)
-
-	cronJobSources := client.Eventing.SourcesV1alpha1().CronJobSources(namespace)
-	// update cronJobSource with the new reference
-	cronJobSource, err := cronJobSources.Create(cronJobSource)
+func (client *Client) CreateCronJobSourceOrFail(cronJobSource *sourcesv1alpha1.CronJobSource) {
+	cronJobSourceInterface := client.Eventing.SourcesV1alpha1().CronJobSources(client.Namespace)
+	_, err := cronJobSourceInterface.Create(cronJobSource)
 	if err != nil {
-		client.T.Fatalf("Failed to create cronjobsource %q: %v", name, err)
+		client.T.Fatalf("Failed to create cronjobsource %q: %v", cronJobSource.Name, err)
 	}
 	client.Tracker.AddObj(cronJobSource)
 }
 
 // CreateContainerSourceOrFail will create a ContainerSource or fail the test if there is an error.
-func (client *Client) CreateContainerSourceOrFail(
-	name string,
-	options ...resources.ContainerSourceOption,
-) {
-	namespace := client.Namespace
-	containerSource := resources.ContainerSource(name, options...)
-
-	containerSources := client.Eventing.SourcesV1alpha1().ContainerSources(namespace)
-	// update containerSource with the new reference
-	containerSource, err := containerSources.Create(containerSource)
+func (client *Client) CreateContainerSourceOrFail(containerSource *sourcesv1alpha1.ContainerSource) {
+	containerSourceInterface := client.Eventing.SourcesV1alpha1().ContainerSources(client.Namespace)
+	_, err := containerSourceInterface.Create(containerSource)
 	if err != nil {
-		client.T.Fatalf("Failed to create containersource %q: %v", name, err)
+		client.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
 	}
 	client.Tracker.AddObj(containerSource)
 }
 
 // CreateApiServerSourceOrFail will create an ApiServerSource
-func (client *Client) CreateApiServerSourceOrFail(
-	name string,
-	apiServerSourceResources []sourcesv1alpha1.ApiServerResource,
-	mode string,
-	options ...resources.ApiServerSourceOption,
-) {
-	namespace := client.Namespace
-	apiServerSource := resources.ApiServerSource(name, apiServerSourceResources, mode, options...)
-
-	apiServerSources := client.Eventing.SourcesV1alpha1().ApiServerSources(namespace)
-	// update apiServerSource with the new reference
-	apiServerSource, err := apiServerSources.Create(apiServerSource)
+func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha1.ApiServerSource) {
+	apiServerInterface := client.Eventing.SourcesV1alpha1().ApiServerSources(client.Namespace)
+	_, err := apiServerInterface.Create(apiServerSource)
 	if err != nil {
-		client.T.Fatalf("Failed to create apiserversource %q: %v", name, err)
+		client.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
 	}
 	client.Tracker.AddObj(apiServerSource)
 }
@@ -275,4 +241,49 @@ func (client *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName str
 		client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
+}
+
+const (
+	// the two ServiceAccounts are required for creating new Brokers in the current namespace
+	saIngressName = "eventing-broker-ingress"
+	saFilterName  = "eventing-broker-filter"
+
+	// the three ClusterRoles are preinstalled in Knative Eventing setup
+	crIngressName      = "eventing-broker-ingress"
+	crFilterName       = "eventing-broker-filter"
+	crConfigReaderName = "eventing-config-reader"
+)
+
+// CreateRBACResourcesForBrokers creates required RBAC resources for creating Brokers,
+// see https://github.com/knative/docs/blob/master/docs/eventing/broker-trigger.md - Manual Setup.
+func (client *Client) CreateRBACResourcesForBrokers() {
+	client.CreateServiceAccountOrFail(saIngressName)
+	client.CreateServiceAccountOrFail(saFilterName)
+	// The two RoleBindings are required for running Brokers correctly.
+	client.CreateRoleBindingOrFail(
+		saIngressName,
+		crIngressName,
+		fmt.Sprintf("%s-%s", saIngressName, crIngressName),
+		client.Namespace,
+	)
+	client.CreateRoleBindingOrFail(
+		saFilterName,
+		crFilterName,
+		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
+		client.Namespace,
+	)
+	// The two RoleBindings are required for access to shared configmaps for logging,
+	// tracing, and metrics configuration.
+	client.CreateRoleBindingOrFail(
+		saIngressName,
+		crConfigReaderName,
+		fmt.Sprintf("%s-%s-%s", saIngressName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
+		resources.SystemNamespace,
+	)
+	client.CreateRoleBindingOrFail(
+		saFilterName,
+		crConfigReaderName,
+		fmt.Sprintf("%s-%s-%s", saFilterName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
+		resources.SystemNamespace,
+	)
 }

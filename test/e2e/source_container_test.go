@@ -21,9 +21,14 @@ import (
 	"fmt"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	pkgTest "knative.dev/pkg/test"
 )
 
 func TestContainerSource(t *testing.T) {
@@ -43,15 +48,45 @@ func TestContainerSource(t *testing.T) {
 	loggerPod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
+	// create container source
 	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
 	// args are the arguments passing to the container, msg is used in the heartbeats image
 	args := []string{"--msg=" + data}
-
-	// create container source
-	template := resources.ContainerSourceBasicTemplate(templateName, client.Namespace, imageName, args)
-	templateOption := resources.WithTemplateForContainerSource(template)
-	sinkOption := resources.WithSinkServiceForContainerSource(loggerPodName)
-	client.CreateContainerSourceOrFail(containerSourceName, templateOption, sinkOption)
+	// envVars are the environment variables of the container
+	envVars := []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: templateName,
+		},
+		{
+			Name:  "POD_NAMESPACE",
+			Value: client.Namespace,
+		},
+	}
+	containerSource := eventingtesting.NewContainerSource(
+		containerSourceName,
+		client.Namespace,
+		eventingtesting.WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+			Template: &corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: templateName,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:            imageName,
+							Image:           pkgTest.ImagePath(imageName),
+							ImagePullPolicy: corev1.PullAlways,
+							Args:            args,
+							Env:             envVars,
+						},
+					},
+				},
+			},
+			Sink: resources.ServiceRef(loggerPodName),
+		}),
+	)
+	client.CreateContainerSourceOrFail(containerSource)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

@@ -23,17 +23,10 @@ import (
 // DefaultChannel is the default channel we will run tests against.
 const DefaultChannel = resources.InMemoryChannelKind
 
-// ValidChannelsMap saves the channel-features mapping.
+// ChannelFeatureMap saves the channel-features mapping.
 // Each pair means the channel support the list of features.
-var ValidChannelsMap = map[string]ChannelConfig{
-	resources.InMemoryChannelKind: {
-		Features: []Feature{FeatureBasic},
-	},
-}
-
-// ChannelConfig includes general configuration for a channel.
-type ChannelConfig struct {
-	Features []Feature
+var ChannelFeatureMap = map[string][]Feature{
+	resources.InMemoryChannelKind: []Feature{FeatureBasic},
 }
 
 // Feature is the feature supported by the channel.
