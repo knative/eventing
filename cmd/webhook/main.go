@@ -18,14 +18,15 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
+	"strconv"
+	"time"
+
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/clients/kubeclient"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/version"
-	"log"
-	"strconv"
-	"time"
 
 	"knative.dev/eventing/pkg/defaultchannel"
 
