@@ -42,22 +42,10 @@ const (
 	eventType2        = "type2"
 	eventSource1      = "source1"
 	eventSource2      = "source2"
-	nilString         = "nil"
+	nilString         = "nilstring"
 	extensionName     = `myextname`
 	extensionValue    = `myextval`
 )
-
-// eventTypeAndSource specifies the type and source of an Event.
-//type eventTypeAndSource struct {
-//	Type   string
-//	Source string
-//}
-
-// eventExtension specifies the name and value of an Event extension.
-//type eventExtension struct {
-//	name  string
-//	value string
-//}
 
 type eventMeta struct {
 	Type           string
@@ -129,8 +117,8 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			eventsToSend: []eventMeta{
 				{eventType1, eventSource1, extensionName, extensionValue},
 				{eventType1, eventSource2, extensionName, extensionValue},
-				{eventType2, eventSource1, extensionName, "non matching extension value"},
-				{eventType2, eventSource2, "non matching extension name", extensionValue},
+				{eventType2, eventSource1, extensionName, "non.matching.ext.val"},
+				{eventType2, eventSource2, "non.matching.ext.name", extensionValue},
 			},
 			deprecatedTriggerFilter: false,
 			extensionExists:         true,
@@ -223,14 +211,21 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 }
 
 func makeCloudEvent(eventToSend eventMeta, body string) *resources.CloudEvent {
-	cloudEvent := &resources.CloudEvent{
-		Source: eventToSend.Source,
-		Type:   eventToSend.Type,
-		ExtensionName:eventToSend.ExtensionName,
-		ExtensionValue:eventToSend.ExtensionValue,
-		Data: fmt.Sprintf(`{"msg":%q}`, body),
+	if eventToSend.ExtensionName != nilString {
+		return &resources.CloudEvent{
+			Source:         eventToSend.Source,
+			Type:           eventToSend.Type,
+			ExtensionName:  eventToSend.ExtensionName,
+			ExtensionValue: eventToSend.ExtensionValue,
+			Data:           fmt.Sprintf(`{"msg":%q}`, body),
+		}
+	} else {
+		return &resources.CloudEvent{
+			Source: eventToSend.Source,
+			Type:   eventToSend.Type,
+			Data:   fmt.Sprintf(`{"msg":%q}`, body),
+		}
 	}
-	return cloudEvent
 }
 
 func getTriggerFilterOption(deprecatedTriggerFilter, extensionExists bool, eventMeta eventMeta) resources.TriggerOption {
@@ -255,13 +250,13 @@ func name(obj, eventType, eventSource, eventExtensionName, eventExtensionValue s
 		eventSource = "testany"
 	}
 	if eventExtensionName == nilString {
-		eventExtensionName = "not exists"
+		eventExtensionName = "notexists"
 	}
 	if eventExtensionValue == "" {
 		eventExtensionValue = "testany"
 	}
 	if eventExtensionValue == nilString {
-		eventExtensionValue = "not exists"
+		eventExtensionValue = "notexists"
 	}
 	return strings.ToLower(fmt.Sprintf(
 		"%s-%s-%s-%s-%s",
@@ -285,7 +280,14 @@ func shouldExpectEvent(eventToSend *eventMeta, receiver *eventReceiver, logf log
 	if receiver.meta.Source != any && receiver.meta.Source != eventToSend.Source {
 		return false
 	}
-	if receiver.meta.ExtensionName != nilString && receiver.meta.ExtensionValue != any && (receiver.meta.ExtensionName != eventToSend.ExtensionName || receiver.meta.ExtensionValue != eventToSend.ExtensionValue) {
+	//event extension does not exists, return True
+	if receiver.meta.ExtensionName == nilString {
+		return true
+	}
+	if receiver.meta.ExtensionName != eventToSend.ExtensionName {
+		return false
+	}
+	if receiver.meta.ExtensionValue != any && receiver.meta.ExtensionValue != eventToSend.ExtensionValue {
 		return false
 	}
 	return true
