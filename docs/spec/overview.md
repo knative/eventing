@@ -35,10 +35,12 @@ _Service_ only when the _Trigger_ filter matches.
 
 ![Resource Types Overview](images/resource-types-overview.svg)
 
-Channels as well as Sources are defined by independent CRDs that can be installed into a cluster.
-For more information see
-[Knative Eventing Contrib](https://github.com/knative/eventing-contrib).
-Both Sources and Channels implementations can be created directly. A Channel however offers also a way to create the backing implementation as part of the generic Channel (using a _channelTemplate_).
+Channels as well as Sources are defined by independent CRDs that can be
+installed into a cluster. For more information see
+[Knative Eventing Contrib](https://github.com/knative/eventing-contrib). Both
+Sources and Channels implementations can be created directly. A Channel however
+offers also a way to create the backing implementation as part of the generic
+Channel (using a _channelTemplate_).
 
 ## Trigger
 

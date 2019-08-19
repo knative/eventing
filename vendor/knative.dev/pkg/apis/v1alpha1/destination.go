@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"net/url"
+	"path"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,10 +36,72 @@ type Destination struct {
 	// URI is for direct URI Designations.
 	URI *apis.URL `json:"uri,omitempty"`
 
-	// Path is used with the resulting URL from Addressable ObjectReference or
-	// URI. Must start with `/`. Will be appended to the path of the resulting
-	// URL from the Addressable, or URI.
+	// Path is used with the resulting URL from Addressable ObjectReference or URI. Must start
+	// with `/`. An empty path should be represented as the nil value, not `` or `/`.  Will be
+	// appended to the path of the resulting URL from the Addressable, or URI.
 	Path *string `json:"path,omitempty"`
+}
+
+// NewDestination constructs a Destination from an object reference as a convenience.
+func NewDestination(obj *corev1.ObjectReference, paths ...string) (*Destination, error) {
+	dest := &Destination{
+		ObjectReference: obj,
+	}
+	err := dest.AppendPath(paths...)
+	if err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+// NewDestinationURI constructs a Destination from a URI.
+func NewDestinationURI(uri *apis.URL, paths ...string) (*Destination, error) {
+	dest := &Destination{
+		URI: uri,
+	}
+	err := dest.AppendPath(paths...)
+	if err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+// AppendPath iteratively appends paths to the Destination.
+// The path will always begin with "/" unless it is empty.
+// An empty path ("" or "/") will always resolve to nil.
+func (current *Destination) AppendPath(paths ...string) error {
+	// Start with empty string or existing path
+	var fullpath string
+	if current.Path != nil {
+		fullpath = *current.Path
+	}
+
+	// Intelligently join all the paths provided
+	fullpath = path.Join("/", fullpath, path.Join(paths...))
+
+	// Parse the URL to trim garbage
+	urlpath, err := apis.ParseURL(fullpath)
+	if err != nil {
+		return err
+	}
+
+	// apis.ParseURL returns nil if our path was empty, then our path
+	// should reflect that it is not set.
+	if urlpath == nil {
+		current.Path = nil
+		return nil
+	}
+
+	// A path of "/" adds no information, just toss it
+	// Note that urlpath.Path == "" is always false here (joined with "/" above).
+	if urlpath.Path == "/" {
+		current.Path = nil
+		return nil
+	}
+
+	// Only use the plain path from the URL
+	current.Path = &urlpath.Path
+	return nil
 }
 
 func (current *Destination) Validate(ctx context.Context) *apis.FieldError {
