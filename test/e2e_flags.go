@@ -44,18 +44,10 @@ func (channels *Channels) String() string {
 // Set converts the input string to Channels.
 // The default Channel we will test against is InMemoryChannel.
 func (channels *Channels) Set(value string) error {
-	// We'll test against all valid channels if we pass "all" through the flag.
-	if value == "all" {
-		for channel := range common.ValidChannelsMap {
-			*channels = append(*channels, channel)
-		}
-		return nil
-	}
-
 	for _, channel := range strings.Split(value, ",") {
 		channel := strings.TrimSpace(channel)
 		if !isValid(channel) {
-			log.Fatalf("The given channel %q is not supported, tests cannot be run.\n", channel)
+			log.Fatalf("The given channel name %q is invalid, tests cannot be run.\n", channel)
 		}
 
 		*channels = append(*channels, channel)
@@ -63,12 +55,9 @@ func (channels *Channels) Set(value string) error {
 	return nil
 }
 
-// Check if the channel is a valid one.
+// Check if the channel name is valid.
 func isValid(channel string) bool {
-	if _, ok := common.ValidChannelsMap[channel]; ok {
-		return true
-	}
-	return false
+	return strings.HasSuffix(channel, "Channel")
 }
 
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.

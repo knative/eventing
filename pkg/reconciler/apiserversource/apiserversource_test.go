@@ -84,19 +84,21 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "missing sink",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 			},
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceSinkNotFound,
@@ -106,7 +108,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "valid",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -116,6 +118,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewMessagingChannel(sinkName, testNS,
 					WithInitMessagingChannelConditions,
@@ -129,7 +132,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -139,6 +142,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
@@ -150,7 +154,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "deployment update due to env",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -160,6 +164,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewMessagingChannel(sinkName, testNS,
 					WithInitMessagingChannelConditions,
@@ -173,7 +178,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -183,6 +188,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceSink(sinkURI),
@@ -197,7 +203,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "deployment update due to service account",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -208,6 +214,7 @@ func TestReconcile(t *testing.T) {
 						Sink:               &sinkRef,
 						ServiceAccountName: "malin",
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewMessagingChannel(sinkName, testNS,
 					WithInitMessagingChannelConditions,
@@ -221,7 +228,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -232,6 +239,7 @@ func TestReconcile(t *testing.T) {
 						Sink:               &sinkRef,
 						ServiceAccountName: "malin",
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeploymentUnavailable,
@@ -246,7 +254,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "deployment update due to container count",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -256,6 +264,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewMessagingChannel(sinkName, testNS,
 					WithInitMessagingChannelConditions,
@@ -269,7 +278,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -279,6 +288,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeploymentUnavailable,
@@ -293,7 +303,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "valid with event types to delete",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -303,6 +313,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewMessagingChannel(sinkName, testNS,
 					WithInitMessagingChannelConditions,
@@ -317,7 +328,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -327,6 +338,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
@@ -341,7 +353,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "valid with broker sink",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -351,6 +363,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &brokerRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -364,7 +377,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -374,6 +387,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &brokerRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
@@ -393,7 +407,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "valid with broker sink and missing event types",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -403,6 +417,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &brokerRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -419,7 +434,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -429,6 +444,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &brokerRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
@@ -445,7 +461,7 @@ func TestReconcile(t *testing.T) {
 		{
 			Name: "valid with broker sink and event types to delete",
 			Objects: []runtime.Object{
-				NewApiServerSource(sourceName, testNS, sourceUID,
+				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -455,6 +471,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &brokerRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -474,7 +491,7 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReadinessChanged", `ApiServerSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewApiServerSource(sourceName, testNS, sourceUID,
+				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 						Resources: []sourcesv1alpha1.ApiServerResource{
 							{
@@ -484,6 +501,7 @@ func TestReconcile(t *testing.T) {
 						},
 						Sink: &brokerRef,
 					}),
+					WithApiServerSourceUID(sourceUID),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
@@ -522,7 +540,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {
-	src := NewApiServerSource(sourceName, testNS, sourceUID,
+	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha1.ApiServerResource{
 				{
@@ -531,8 +549,8 @@ func makeReceiveAdapter() *appsv1.Deployment {
 				},
 			},
 			Sink: &sinkRef,
-		},
-		),
+		}),
+		WithApiServerSourceUID(sourceUID),
 		// Status Update:
 		WithInitApiServerSourceConditions,
 		WithApiServerSourceDeployed,
@@ -604,7 +622,7 @@ func makeEventType(eventType string) *v1alpha1.EventType {
 }
 
 func makeApiServerSource() *sourcesv1alpha1.ApiServerSource {
-	return NewApiServerSource(sourceName, testNS, sourceUID,
+	return NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha1.ApiServerResource{
 				{
@@ -614,5 +632,6 @@ func makeApiServerSource() *sourcesv1alpha1.ApiServerSource {
 			},
 			Sink: &brokerRef,
 		}),
+		WithApiServerSourceUID(sourceUID),
 	)
 }
