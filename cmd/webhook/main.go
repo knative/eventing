@@ -22,29 +22,25 @@ import (
 	"strconv"
 	"time"
 
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/clients/kubeclient"
-	"knative.dev/pkg/injection/sharedmain"
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/version"
-
-	"knative.dev/eventing/pkg/defaultchannel"
-
-	"go.uber.org/zap"
-
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/logging/logkey"
-	"knative.dev/pkg/signals"
-	"knative.dev/pkg/system"
-	"knative.dev/pkg/webhook"
-
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/clients/kubeclient"
+	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/logging/logkey"
+	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/signals"
+	"knative.dev/pkg/system"
+	"knative.dev/pkg/version"
+	"knative.dev/pkg/webhook"
 )
 
 type envConfig struct {
@@ -110,6 +106,12 @@ func main() {
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
 
+	// Watch the default-ch-webhook ConfigMap and dynamically update the default
+	// Channel CRD.
+	chDefaulter := defaultchannel.New(logger.Desugar())
+	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
+	configMapWatcher.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
+
 	if err = configMapWatcher.Start(ctx.Done()); err != nil {
 		logger.Fatalw("Failed to start the ConfigMap watcher", zap.Error(err))
 	}
@@ -119,16 +121,6 @@ func main() {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
 	registrationDelay := getRegistrationDelayTime(env.RegistrationDelayTime)
-
-	// Watch the default-ch-webhook ConfigMap and dynamically update the default
-	// Channel CRD.
-	chDefaulter := defaultchannel.New(logger.Desugar())
-	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
-	configMapWatcher.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
-
-	if err = configMapWatcher.Start(ctx.Done()); err != nil {
-		logger.Fatalf("failed to start webhook configmap watcher: %v", zap.Error(err))
-	}
 
 	stats, err := webhook.NewStatsReporter()
 	if err != nil {
