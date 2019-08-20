@@ -40,7 +40,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/controller"
 )
 
@@ -135,6 +134,19 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return nil
 	}
 
+	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
+	objRef := corev1.ObjectReference{
+		Kind:       brokerGVK.Kind,
+		APIVersion: brokerGVK.GroupVersion().String(),
+		Name:       t.Spec.Broker,
+		Namespace:  t.Namespace,
+	}
+	track := r.resourceTracker.TrackInNamespace(t)
+	if err := track(objRef); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
+		return err
+	}
+
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
@@ -146,13 +158,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 	t.Status.PropagateBrokerStatus(&b.Status)
-
-	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
-	track := r.resourceTracker.TrackInNamespace(t)
-	if err = track(utils.ObjectRef(b, brokerGVK)); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
-		return err
-	}
 
 	brokerTrigger := b.Status.TriggerChannel
 	if brokerTrigger == nil {
