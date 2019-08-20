@@ -147,6 +147,7 @@ func main() {
 		// For group messaging.knative.dev.
 		messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
+		messagingv1alpha1.SchemeGroupVersion.WithKind("Choice"):          &messagingv1alpha1.Choice{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
 	}
 
