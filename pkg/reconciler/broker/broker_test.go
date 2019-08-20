@@ -97,12 +97,6 @@ var (
 		Version: "v1",
 		Kind:    "Service",
 	}
-
-	provisionerGVK = metav1.GroupVersionKind{
-		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "ClusterChannelProvisioner",
-	}
 )
 
 func init() {
@@ -835,14 +829,6 @@ func ownerReferences() []metav1.OwnerReference {
 		Controller:         &trueVal,
 		BlockOwnerDeletion: &trueVal,
 	}}
-}
-
-func channelProvisioner(name string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "ClusterChannelProvisioner",
-		Name:       name,
-	}
 }
 
 func channelCRD() metav1.TypeMeta {
