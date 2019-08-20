@@ -26,7 +26,7 @@ const DefaultChannel = resources.InMemoryChannelKind
 // ChannelFeatureMap saves the channel-features mapping.
 // Each pair means the channel support the list of features.
 var ChannelFeatureMap = map[string][]Feature{
-	resources.InMemoryChannelKind: []Feature{FeatureBasic},
+	resources.InMemoryChannelKind: {FeatureBasic},
 }
 
 // Feature is the feature supported by the channel.
