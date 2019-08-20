@@ -33,13 +33,11 @@ import (
 	"knative.dev/pkg/apis/duck/v1beta1"
 )
 
-// TODO once we remove Channel from eventing, we should rename this to be just Channel.
+// ChannelOption enables further configuration of a Channel.
+type ChannelOption func(*v1alpha1.Channel)
 
-// MessagingChannelOption enables further configuration of a Channel.
-type MessagingChannelOption func(*v1alpha1.Channel)
-
-// NewMessagingChannel creates a Channel with MessagingChannelOptions
-func NewMessagingChannel(name, namespace string, o ...MessagingChannelOption) *v1alpha1.Channel {
+// NewChannel creates a Channel with ChannelOptions
+func NewChannel(name, namespace string, o ...ChannelOption) *v1alpha1.Channel {
 	c := &v1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
@@ -57,17 +55,17 @@ func NewMessagingChannel(name, namespace string, o ...MessagingChannelOption) *v
 	return c
 }
 
-// WithInitMessagingChannelConditions initializes the Channel's conditions.
-func WithInitMessagingChannelConditions(c *v1alpha1.Channel) {
+// WithInitChannelConditions initializes the Channel's conditions.
+func WithInitChannelConditions(c *v1alpha1.Channel) {
 	c.Status.InitializeConditions()
 }
 
-func WithMessagingChannelDeleted(c *v1alpha1.Channel) {
+func WithChannelDeleted(c *v1alpha1.Channel) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-func WithMessagingChannelTemplate(typeMeta metav1.TypeMeta) MessagingChannelOption {
+func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
 			TypeMeta: typeMeta,
@@ -75,7 +73,7 @@ func WithMessagingChannelTemplate(typeMeta metav1.TypeMeta) MessagingChannelOpti
 	}
 }
 
-func WithBackingChannelFailed(reason, msg string) MessagingChannelOption {
+func WithBackingChannelFailed(reason, msg string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.MarkBackingChannelFailed(reason, msg)
 	}
@@ -85,13 +83,13 @@ func WithBackingChannelReady(c *v1alpha1.Channel) {
 	c.Status.MarkBackingChannelReady()
 }
 
-func WithBackingChannelObjRef(objRef *v1.ObjectReference) MessagingChannelOption {
+func WithBackingChannelObjRef(objRef *v1.ObjectReference) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.Channel = objRef
 	}
 }
 
-func WithMessagingChannelAddress(hostname string) MessagingChannelOption {
+func WithChannelAddress(hostname string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		address := &duck.Addressable{
 			Addressable: v1beta1.Addressable{
@@ -105,7 +103,7 @@ func WithMessagingChannelAddress(hostname string) MessagingChannelOption {
 	}
 }
 
-func WithMessagingChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) MessagingChannelOption {
+func WithChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
 			Subscribers: subscribers,
@@ -113,11 +111,11 @@ func WithMessagingChannelSubscribers(subscribers []eventingduckv1alpha1.Subscrib
 	}
 }
 
-func WithMessagingChannelReadySubscriber(uid string) MessagingChannelOption {
-	return WithMessagingChannelReadySubscriberAndGeneration(uid, 0)
+func WithChannelReadySubscriber(uid string) ChannelOption {
+	return WithChannelReadySubscriberAndGeneration(uid, 0)
 }
 
-func WithMessagingChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) MessagingChannelOption {
+func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		if c.Status.SubscribableTypeStatus.SubscribableStatus == nil {
 			c.Status.SubscribableTypeStatus.SubscribableStatus = &eventingduckv1alpha1.SubscribableStatus{}
@@ -132,7 +130,7 @@ func WithMessagingChannelReadySubscriberAndGeneration(uid string, observedGenera
 	}
 }
 
-func WithMessagingChannelSubscriberStatuses(subscriberStatuses []eventingduckv1alpha1.SubscriberStatus) MessagingChannelOption {
+func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1alpha1.SubscriberStatus) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.SubscribableStatus = &eventingduckv1alpha1.SubscribableStatus{
 			Subscribers: subscriberStatuses,
