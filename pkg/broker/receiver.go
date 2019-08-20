@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"knative.dev/eventing/pkg/logging"
@@ -59,6 +60,21 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Liveness check.
+	httpTransport.Handler = http.NewServeMux()
+	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+	})
+	// Readiness check.
+	isReady := &atomic.Value{}
+	isReady.Store(false)
+	httpTransport.Handler.HandleFunc("/readyz", func(writer http.ResponseWriter, _ *http.Request) {
+		if isReady == nil || !isReady.Load().(bool) {
+			http.Error(writer, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+		}
+		writer.WriteHeader(http.StatusOK)
+	})
+
 	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		return nil, err
@@ -73,7 +89,8 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// TODO mark isReady false when the client is too far out of sync.
+	isReady.Store(true)
 	return r, nil
 }
 

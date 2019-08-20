@@ -108,6 +108,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
+
+	// Liveness check.
+	httpTransport.Handler = http.NewServeMux()
+	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+	})
+
 	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
