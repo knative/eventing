@@ -75,8 +75,6 @@ rules:
       - "brokers/status"
       - "channels"
       - "channels/status"
-      - "clusterchannelprovisioners"
-      - "clusterchannelprovisioners/status"
       - "subscriptions"
       - "subscriptions/status"
       - "triggers"
