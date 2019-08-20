@@ -119,6 +119,31 @@ var (
 	_ apis.Listable    = (*SubscribableType)(nil)
 )
 
+// Returns the Default SubscribableStatus in this case it's SubscribableStatusV2
+// This is w.r.t https://github.com/knative/eventing/pull/1685#discussion_r314797276
+// Due to change in the API, we support reading of SubscribableTypeStatus#SubscribableStatus in a logical way
+// where we read the V2 value first and if the value is absent then we read the V1 value,
+// Having this function here makes it convinient to read the default value at runtime.
+func (s SubscribableTypeStatus) DefaultSubscribableTypeStatus() *SubscribableStatus {
+	if s.SubscribableStatusV2 == nil {
+		return s.SubscribableStatus
+	} else {
+		return s.SubscribableStatusV2
+	}
+}
+
+// A Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
+// with Subscribers, use this function, so that the value is reflected in both the duplicate fields residing
+// in SubscribableTypeStatus
+func (s SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
+	if s.SubscribableStatusV2 != nil {
+		s.SubscribableStatusV2.Subscribers = append(s.SubscribableStatusV2.Subscribers, subscriberStatus)
+	}
+	if s.SubscribableStatus != nil {
+		s.SubscribableStatus.Subscribers = append(s.SubscribableStatus.Subscribers, subscriberStatus)
+	}
+}
+
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {
 	return &SubscribableType{}

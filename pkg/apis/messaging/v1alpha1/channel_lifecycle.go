@@ -89,4 +89,5 @@ func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) 
 	cs.SetAddress(chs.AddressStatus.Address)
 	// Set the subscribable status.
 	cs.SubscribableStatus = chs.SubscribableStatus
+	cs.SubscribableStatusV2 = chs.SubscribableStatusV2
 }
