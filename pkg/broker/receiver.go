@@ -60,12 +60,12 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 	if err != nil {
 		return nil, err
 	}
-	//liveness check
+	// Liveness check.
 	httpTransport.Handler = http.NewServeMux()
 	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})
-	//readiness check
+	// Readiness check.
 	isReady := &atomic.Value{}
 	isReady.Store(false)
 	httpTransport.Handler.HandleFunc("/readyz", func(writer http.ResponseWriter, _ *http.Request) {
@@ -89,6 +89,7 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO mark isReady false when the client is too far out of sync.
 	isReady.Store(true)
 	return r, nil
 }

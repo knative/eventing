@@ -109,7 +109,7 @@ func main() {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
 
-	//liveness check
+	// Liveness check.
 	httpTransport.Handler = http.NewServeMux()
 	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusOK)
