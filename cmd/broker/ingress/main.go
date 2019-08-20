@@ -96,12 +96,12 @@ func main() {
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
 
-	zipkinServiceName := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
+	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
-		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	if err = tracing.SetupDynamicPublishing(logger.Sugar(), configMapWatcher, bin); err != nil {
+		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
