@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	"go.uber.org/zap"
@@ -449,6 +450,10 @@ func (r *Reconciler) listAllSubscriptionsWithPhysicalChannel(ctx context.Context
 
 func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduckv1alpha1.Subscribable {
 	rv := &eventingduckv1alpha1.Subscribable{}
+	// Strictly order the subscriptions, so that simple ordering changes do not cause re-reconciles.
+	sort.Slice(subs, func(i, j int) bool {
+		return subs[i].UID < subs[j].UID
+	})
 	for _, sub := range subs {
 		if sub.Status.AreReferencesResolved() && sub.DeletionTimestamp == nil {
 			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{
