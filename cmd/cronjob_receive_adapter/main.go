@@ -52,20 +52,21 @@ func main() {
 	ctx := context.Background()
 	logCfg := zap.NewProductionConfig()
 	logCfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	logger, err := logCfg.Build()
+	dlogger, err := logCfg.Build()
 	if err != nil {
-		log.Fatalf("Unable to create logger: %v", err)
+		log.Fatalf("Error building logger: %v", err)
 	}
+	logger := dlogger.Sugar()
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing("cronjobsource", tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing(logger, "cronjobsource", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer to continue to
 		// start.
-		logger.Error("Error setting up trace publishing", zap.Error(err))
+		logger.Errorw("Error setting up trace publishing", err)
 	}
 
 	adapter := &cronjobevents.Adapter{

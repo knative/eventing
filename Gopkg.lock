@@ -1176,7 +1176,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:404d4604437fc3e89df14cb45fcd6a14c167625e4be16d70b4d1d8f80b2c2e8c"
+  digest = "1:1acb2be34723e1aef8db2de08eac99d9a37dc23b1cf267036199b1c323c9829c"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1254,7 +1254,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "9cc6a645418f08721a6103ad8b02f33af78e35d5"
+  revision = "6785699dc3f0a87d6cc0225a547f35d9994b5d94"
 
 [[projects]]
   branch = "master"
@@ -1314,7 +1314,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
-    "github.com/openzipkin/zipkin-go",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "go.opencensus.io/plugin/ochttp",

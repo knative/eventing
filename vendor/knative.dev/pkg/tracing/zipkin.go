@@ -20,7 +20,6 @@ import (
 	"contrib.go.opencensus.io/exporter/zipkin"
 	zipkinmodel "github.com/openzipkin/zipkin-go/model"
 	zipkinreporter "github.com/openzipkin/zipkin-go/reporter"
-	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	"go.opencensus.io/trace"
 
 	"knative.dev/pkg/tracing/config"
@@ -29,15 +28,9 @@ import (
 // ZipkinReporterFactory is a factory function which creates a reporter given a config
 type ZipkinReporterFactory func(*config.Config) (zipkinreporter.Reporter, error)
 
-// CreateZipkinReporter returns a zipkin reporter. If EndpointURL is not specified it returns
-// a noop reporter
-func CreateZipkinReporter(cfg *config.Config) (zipkinreporter.Reporter, error) {
-	if cfg.ZipkinEndpoint == "" {
-		return zipkinreporter.NewNoopReporter(), nil
-	}
-	return httpreporter.NewReporter(cfg.ZipkinEndpoint), nil
-}
-
+// DEPRECATED: This function is the legacy entrypoint and should be replaced with one of:
+//  - WithExporter() in production code
+//  - testing/FakeZipkinExporter() in test code.
 func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmodel.Endpoint) ConfigOption {
 	return func(cfg *config.Config) {
 		var (
@@ -45,7 +38,7 @@ func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmode
 			exporter trace.Exporter
 		)
 
-		if cfg != nil && cfg.Enable {
+		if cfg != nil && cfg.Backend == config.Zipkin {
 			// Initialize our reporter / exporter
 			// do this before cleanup to minimize time where we have duplicate exporters
 			reporter, err := reporterFact(cfg)
