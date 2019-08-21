@@ -99,14 +99,17 @@ func (client *Client) FindAnyLogContents(podName string, contents []string) (boo
 		return false, err
 	}
 	for _, content := range contents {
-		_, ok := eventContentsSet[content]
-		if ok {
+		if _, ok := eventContentsSet[content]; ok {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
+//Example log entry: 2019/08/21 22:46:38 {"msg":"Body-type1-source1--extname1-extval1-extname2-extvalue2","sequence":"1"}
+//Use regex to get the event content with json format: {"msg":"Body-type1-source1--extname1-extval1-extname2-extvalue2","sequence":"1"}
+//Get the eventContent with key "msg"
+//Returns a set(map implementation) with all unique event contents
 func parseEventContentsFromPodLogs(logs string) (map[string]bool, error) {
 	re := regexp.MustCompile(`{.+?}`)
 	matches := re.FindAllString(logs, -1)

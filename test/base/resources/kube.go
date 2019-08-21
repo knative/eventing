@@ -40,8 +40,7 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 	eventExtensionsBytes, error := json.Marshal(event.Extensions)
 	eventExtensions := string(eventExtensionsBytes)
 	if error != nil {
-
-		return nil, fmt.Errorf("Encountered error when we marshall cloud event extensions %v", error)
+		return nil, fmt.Errorf("encountered error when we marshall cloud event extensions %v", error)
 	}
 
 	return &corev1.Pod{

@@ -43,6 +43,8 @@ const (
 	eventType2        = "type2"
 	eventSource1      = "source1"
 	eventSource2      = "source2"
+	//Be careful with the length of extension name and values,
+	// we use extension name and value as a part of the name of resources like subscriber and trigger, the maximum characters allowed of resource name is 63
 	extensionName1    = "extname1"
 	extensionValue1   = "extval1"
 	extensionName2    = "extname2"
@@ -77,31 +79,31 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		{
 			name: "test default broker with many deprecated triggers",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any, Extensions: nil}, newSelector()},
-				{eventContext{Type: eventType1, Source: any, Extensions: nil}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1, Extensions: nil}, newSelector()},
-				{eventContext{Type: eventType1, Source: eventSource1, Extensions: nil}, newSelector()},
+				{eventContext{Type: any, Source: any}, newSelector()},
+				{eventContext{Type: eventType1, Source: any}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1}, newSelector()},
+				{eventContext{Type: eventType1, Source: eventSource1}, newSelector()},
 			},
 			eventsToSend: []eventContext{
-				{Type: eventType1, Source: eventSource1, Extensions: nil},
-				{Type: eventType1, Source: eventSource2, Extensions: nil},
-				{Type: eventType2, Source: eventSource1, Extensions: nil},
-				{Type: eventType2, Source: eventSource2, Extensions: nil},
+				{Type: eventType1, Source: eventSource1},
+				{Type: eventType1, Source: eventSource2},
+				{Type: eventType2, Source: eventSource1},
+				{Type: eventType2, Source: eventSource2},
 			},
 			deprecatedTriggerFilter: true,
 		}, {
 			name: "test default broker with many attribute triggers",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any, Extensions: nil}, newSelector()},
-				{eventContext{Type: eventType1, Source: any, Extensions: nil}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1, Extensions: nil}, newSelector()},
-				{eventContext{Type: eventType1, Source: eventSource1, Extensions: nil}, newSelector()},
+				{eventContext{Type: any, Source: any}, newSelector()},
+				{eventContext{Type: eventType1, Source: any}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1}, newSelector()},
+				{eventContext{Type: eventType1, Source: eventSource1}, newSelector()},
 			},
 			eventsToSend: []eventContext{
-				{Type: eventType1, Source: eventSource1, Extensions: nil},
-				{Type: eventType1, Source: eventSource2, Extensions: nil},
-				{Type: eventType2, Source: eventSource1, Extensions: nil},
-				{Type: eventType2, Source: eventSource2, Extensions: nil},
+				{Type: eventType1, Source: eventSource1},
+				{Type: eventType1, Source: eventSource2},
+				{Type: eventType2, Source: eventSource1},
+				{Type: eventType2, Source: eventSource2},
 			},
 			deprecatedTriggerFilter: false,
 		},
@@ -240,21 +242,11 @@ func name(obj, eventType, eventSource string, extensions map[string]interface{})
 	if eventSource == "" {
 		eventSource = "testany"
 	}
-	if len(extensions) == 0 {
-		return strings.ToLower(fmt.Sprintf(
-			"%s-%s-%s",
-			obj,
-			eventType,
-			eventSource))
-	} else {
-		extensionsStr := joinSortedExtensions(extensions)
-		return strings.ToLower(fmt.Sprintf(
-			"%s-%s-%s-%s",
-			obj,
-			eventType,
-			eventSource,
-			extensionsStr))
+	name := strings.ToLower(fmt.Sprintf("%s-%s-%s", obj, eventType, eventSource))
+	if len(extensions) > 0 {
+		name = strings.ToLower(fmt.Sprintf("%s-%s", name, joinSortedExtensions(extensions)))
 	}
+	return name
 }
 
 func joinSortedExtensions(extensions map[string]interface{}) string {
@@ -274,11 +266,9 @@ func joinSortedExtensions(extensions map[string]interface{}) string {
 }
 
 func sortedKeys(m map[string]interface{}) []string {
-	keys := make([]string, len(m))
-	i := 0
+	keys := make([]string, 0, len(m))
 	for k := range m {
-		keys[i] = k
-		i++
+		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	return keys
