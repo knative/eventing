@@ -16,34 +16,41 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"strconv"
 	"time"
 
-	"knative.dev/eventing/pkg/defaultchannel"
-
-	"go.uber.org/zap"
-
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/clients/kubeclient"
+	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/logging/logkey"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/version"
 	"knative.dev/pkg/webhook"
 )
 
 type envConfig struct {
 	RegistrationDelayTime string `envconfig:"REG_DELAY_TIME" required:"false"`
 }
+
+var (
+	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+)
 
 func getRegistrationDelayTime(rdt string) time.Duration {
 	var RegistrationDelay time.Duration
@@ -62,44 +69,42 @@ func getRegistrationDelayTime(rdt string) time.Duration {
 
 func main() {
 	flag.Parse()
-	// Read the logging config and setup a logger.
-	cm, err := configmap.Load("/etc/config-logging")
+
+	// Set up signals so we handle the first shutdown signal gracefully.
+	ctx := signals.NewContext()
+
+	cfg, err := sharedmain.GetConfig(*masterURL, *kubeconfig)
 	if err != nil {
-		log.Fatalf("Error loading logging configuration: %v", err)
+		log.Fatal("Failed to get cluster config:", err)
 	}
-	config, err := logging.NewConfigFromMap(cm)
+
+	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
+	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
+	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
+
+	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
+	kubeClient := kubeclient.Get(ctx)
+
+	config, err := sharedmain.GetLoggingConfig(ctx)
 	if err != nil {
-		log.Fatalf("Error parsing logging configuration: %v", err)
+		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
 	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.WebhookName())
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.WebhookName()))
 
+	if err := version.CheckMinimumVersion(kubeClient.Discovery()); err != nil {
+		logger.Fatalw("Version check failed", err)
+	}
+
 	logger.Infow("Starting the Eventing Webhook")
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
-	}
-	RegistrationDelay := getRegistrationDelayTime(env.RegistrationDelayTime)
-
-	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
-
-	clusterConfig, err := rest.InClusterConfig()
-	if err != nil {
-		logger.Fatalw("Failed to get in cluster config", zap.Error(err))
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
-	if err != nil {
-		logger.Fatalw("Failed to get the client set", zap.Error(err))
-	}
 
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
-
-	configMapWatcher.Watch(logconfig.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
+	// Watch the observability config map and dynamically update metrics exporter.
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(logconfig.WebhookName(), logger))
+	// Watch the observability config map and dynamically update request logs.
+	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(logger, atomicLevel, logconfig.WebhookName()))
 
 	// Watch the default-ch-webhook ConfigMap and dynamically update the default
 	// Channel CRD.
@@ -107,9 +112,15 @@ func main() {
 	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
 	configMapWatcher.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
-	if err = configMapWatcher.Start(stopCh); err != nil {
-		logger.Fatalf("failed to start webhook configmap watcher: %v", zap.Error(err))
+	if err = configMapWatcher.Start(ctx.Done()); err != nil {
+		logger.Fatalw("Failed to start the ConfigMap watcher", zap.Error(err))
 	}
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+	registrationDelay := getRegistrationDelayTime(env.RegistrationDelayTime)
 
 	stats, err := webhook.NewStatsReporter()
 	if err != nil {
@@ -124,29 +135,38 @@ func main() {
 		SecretName:        "eventing-webhook-certs",
 		WebhookName:       "webhook.eventing.knative.dev",
 		StatsReporter:     stats,
-		RegistrationDelay: RegistrationDelay * time.Second,
+		RegistrationDelay: registrationDelay * time.Second,
 	}
-	controller := webhook.AdmissionController{
-		Client:  kubeClient,
-		Options: options,
-		Handlers: map[schema.GroupVersionKind]webhook.GenericCRD{
-			// For group eventing.knative.dev,
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):       &eventingv1alpha1.Broker{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"): &eventingv1alpha1.Subscription{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):      &eventingv1alpha1.Trigger{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"):    &eventingv1alpha1.EventType{},
-			// For group messaging.knative.dev.
-			messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
-		},
-		Logger: logger,
+
+	handlers := map[schema.GroupVersionKind]webhook.GenericCRD{
+		// For group eventing.knative.dev,
+		eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):       &eventingv1alpha1.Broker{},
+		eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"): &eventingv1alpha1.Subscription{},
+		eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):      &eventingv1alpha1.Trigger{},
+		eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"):    &eventingv1alpha1.EventType{},
+		// For group messaging.knative.dev.
+		messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
+		messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
+		messagingv1alpha1.SchemeGroupVersion.WithKind("Choice"):          &messagingv1alpha1.Choice{},
+		messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
 	}
+
+	// Decorate contexts with the current state of the config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		// TODO: implement upgrades when eventing needs it:
+		//  return v1beta1.WithUpgradeViaDefaulting(store.ToContext(ctx))
+		return ctx
+	}
+
+	controller, err := webhook.NewAdmissionController(kubeClient, options, handlers, logger, ctxFunc, true)
+
 	if err != nil {
-		logger.Fatalw("Failed to create the admission controller", zap.Error(err))
+		logger.Fatalw("Failed to create admission controller", zap.Error(err))
 	}
-	if err = controller.Run(stopCh); err != nil {
-		logger.Errorw("controller.Run() failed", zap.Error(err))
+
+	if err = controller.Run(ctx.Done()); err != nil {
+		logger.Fatalw("Failed to start the admission controller", zap.Error(err))
 	}
+
 	logger.Infow("Webhook stopping")
 }
