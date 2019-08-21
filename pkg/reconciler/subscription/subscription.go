@@ -248,7 +248,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 }
 
 func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) error {
-	subscribableStatus := channel.Status.DefaultSubscribableTypeStatus()
+	subscribableStatus := channel.Status.GetSubscribableTypeStatus()
 
 	if subscribableStatus == nil {
 		return fmt.Errorf("channel.Status.SubscribableStatus is nil")

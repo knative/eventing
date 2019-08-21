@@ -63,7 +63,7 @@ func TestSubscribablePopulate(t *testing.T) {
 			},
 		},
 		Status: SubscribableTypeStatus{
-			SubscribableStatus: &SubscribableStatus{
+			DeprecatedSubscribableStatus: &SubscribableStatus{
 				// Populate ALL fields
 				Subscribers: []SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -77,7 +77,7 @@ func TestSubscribablePopulate(t *testing.T) {
 					Message:            "Some message",
 				}},
 			},
-			SubscribableStatusV2: &SubscribableStatus{
+			SubscribableStatus: &SubscribableStatus{
 				// Populate ALL fields
 				Subscribers: []SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
