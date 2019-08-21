@@ -31,17 +31,16 @@ import (
 )
 
 var (
-	sink          string
-	eventID       string
-	eventType     string
-	eventSource   string
-	eventExtensionName     string
-	eventExtensionValue   string
-	eventData     string
-	eventEncoding string
-	periodStr     string
-	delayStr      string
-	maxMsgStr     string
+	sink                  string
+	eventID               string
+	eventType             string
+	eventSource           string
+	eventExtensionsMapStr string
+	eventData             string
+	eventEncoding         string
+	periodStr             string
+	delayStr              string
+	maxMsgStr             string
 )
 
 func init() {
@@ -49,8 +48,7 @@ func init() {
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
 	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
-	flag.StringVar(&eventExtensionName, "event-extension-name", "", "The extension name of event.")
-	flag.StringVar(&eventExtensionValue, "event-extension-value", "", "The extension value of event")
+	flag.StringVar(&eventExtensionsMapStr, "event-extensions", "", "The extensions of event with json format.")
 	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
@@ -142,9 +140,16 @@ func main() {
 		}
 		event.SetType(eventType)
 		event.SetSource(eventSource)
-		if eventExtensionName != "" {
-			event.SetExtension(eventExtensionName, eventExtensionValue)
+
+		var eventExtensions map[string]interface{}
+		if err := json.Unmarshal([]byte(eventExtensionsMapStr), &eventExtensions); err != nil {
+			log.Println("Can't unmarshall cloud event extensions to map[string]interface{}")
+			os.Exit(1)
 		}
+		for k, v := range eventExtensions {
+			event.SetExtension(k, v)
+		}
+
 		if err := event.SetData(untyped); err != nil {
 			log.Fatalf("failed to set data, %v", err)
 		}

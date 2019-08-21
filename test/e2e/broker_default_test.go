@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -42,22 +43,22 @@ const (
 	eventType2        = "type2"
 	eventSource1      = "source1"
 	eventSource2      = "source2"
-	nilString         = "nilstring"
-	extensionName     = `myextname`
-	extensionValue    = `myextval`
+	extensionName1    = "extname1"
+	extensionValue1   = "extval1"
+	extensionName2    = "extname2"
+	extensionValue2   = "extvalue2"
 )
 
-type eventMeta struct {
-	Type           string
-	Source         string
-	ExtensionName  string
-	ExtensionValue string
+type eventContext struct {
+	Type       string
+	Source     string
+	Extensions map[string]interface{}
 }
 
 // Helper struct to tie the type and sources of the events we expect to receive
 // in subscribers with the selectors we use when creating their pods.
 type eventReceiver struct {
-	meta     eventMeta
+	context  eventContext
 	selector map[string]string
 }
 
@@ -68,60 +69,64 @@ type eventReceiver struct {
 func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	tests := []struct {
 		name            string
-		eventsToReceive []eventReceiver // These are the event types and sources that triggers will listen to, as well as the selectors
-		// to set  in the subscriber and services pods.
-		eventsToSend            []eventMeta // These are the event types and sources that will be send.
-		deprecatedTriggerFilter bool        //TriggerFilter with DeprecatedSourceAndType or not
-		extensionExists         bool
-	}{{
-		name: "test default broker with many deprecated triggers",
-		eventsToReceive: []eventReceiver{
-			{eventMeta{Type: any, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-			{eventMeta{Type: eventType1, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-			{eventMeta{Type: any, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-			{eventMeta{Type: eventType1, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
+		eventsToReceive []eventReceiver // These are the event context attributes and extension attributes that triggers will listen to,
+		// to set in the subscriber and services pod
+		eventsToSend            []eventContext // These are the event context attributes and extension attributes that will be send.
+		deprecatedTriggerFilter bool           //TriggerFilter with DeprecatedSourceAndType or not
+	}{
+		{
+			name: "test default broker with many deprecated triggers",
+			eventsToReceive: []eventReceiver{
+				{eventContext{Type: any, Source: any, Extensions: nil}, newSelector()},
+				{eventContext{Type: eventType1, Source: any, Extensions: nil}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1, Extensions: nil}, newSelector()},
+				{eventContext{Type: eventType1, Source: eventSource1, Extensions: nil}, newSelector()},
+			},
+			eventsToSend: []eventContext{
+				{Type: eventType1, Source: eventSource1, Extensions: nil},
+				{Type: eventType1, Source: eventSource2, Extensions: nil},
+				{Type: eventType2, Source: eventSource1, Extensions: nil},
+				{Type: eventType2, Source: eventSource2, Extensions: nil},
+			},
+			deprecatedTriggerFilter: true,
+		}, {
+			name: "test default broker with many attribute triggers",
+			eventsToReceive: []eventReceiver{
+				{eventContext{Type: any, Source: any, Extensions: nil}, newSelector()},
+				{eventContext{Type: eventType1, Source: any, Extensions: nil}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1, Extensions: nil}, newSelector()},
+				{eventContext{Type: eventType1, Source: eventSource1, Extensions: nil}, newSelector()},
+			},
+			eventsToSend: []eventContext{
+				{Type: eventType1, Source: eventSource1, Extensions: nil},
+				{Type: eventType1, Source: eventSource2, Extensions: nil},
+				{Type: eventType2, Source: eventSource1, Extensions: nil},
+				{Type: eventType2, Source: eventSource2, Extensions: nil},
+			},
+			deprecatedTriggerFilter: false,
 		},
-		eventsToSend: []eventMeta{
-			{eventType1, eventSource1, nilString, nilString},
-			{eventType1, eventSource2, nilString, nilString},
-			{eventType2, eventSource1, nilString, nilString},
-			{eventType2, eventSource2, nilString, nilString},
-		},
-		deprecatedTriggerFilter: true,
-		extensionExists:         false,
-	}, {
-		name: "test default broker with many attribute triggers",
-		eventsToReceive: []eventReceiver{
-			{eventMeta{Type: any, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-			{eventMeta{Type: eventType1, Source: any, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-			{eventMeta{Type: any, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-			{eventMeta{Type: eventType1, Source: eventSource1, ExtensionName: nilString, ExtensionValue: nilString}, newSelector()},
-		},
-		eventsToSend: []eventMeta{
-			{eventType1, eventSource1, nilString, nilString},
-			{eventType1, eventSource2, nilString, nilString},
-			{eventType2, eventSource1, nilString, nilString},
-			{eventType2, eventSource2, nilString, nilString},
-		},
-		deprecatedTriggerFilter: false,
-		extensionExists:         false,
-	},
 		{
 			name: "test default broker with many attribute and extension triggers",
 			eventsToReceive: []eventReceiver{
-				{eventMeta{Type: any, Source: any, ExtensionName: extensionName, ExtensionValue: extensionValue}, newSelector()},
-				{eventMeta{Type: eventType1, Source: any, ExtensionName: extensionName, ExtensionValue: extensionValue}, newSelector()},
-				{eventMeta{Type: any, Source: any, ExtensionName: extensionName, ExtensionValue: any}, newSelector()},
-				{eventMeta{Type: any, Source: eventSource1, ExtensionName: extensionName, ExtensionValue: extensionValue}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1,},}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2},}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2},}, newSelector()},
+				{eventContext{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1,},}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any,},}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1,},}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2},}, newSelector()},
 			},
-			eventsToSend: []eventMeta{
-				{eventType1, eventSource1, extensionName, extensionValue},
-				{eventType1, eventSource2, extensionName, extensionValue},
-				{eventType2, eventSource1, extensionName, "non.matching.ext.val"},
-				{eventType2, eventSource2, "non.matching.ext.name", extensionValue},
+			eventsToSend: []eventContext{
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1,}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
+				{Type: eventType1, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1,}},
+				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: "non.matching.ext.val",}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{"non.matching.ext.name": extensionValue1,}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, "non.matching.ext.name": extensionValue2}},
 			},
 			deprecatedTriggerFilter: false,
-			extensionExists:         true,
 		},
 	}
 	for _, test := range tests {
@@ -141,16 +146,16 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 			// Create subscribers.
 			for _, event := range test.eventsToReceive {
-				subscriberName := name("dumper", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
+				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				pod := resources.EventLoggerPod(subscriberName)
 				client.CreatePodOrFail(pod, common.WithService(subscriberName))
 			}
 
 			// Create triggers.
 			for _, event := range test.eventsToReceive {
-				triggerName := name("trigger", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
-				subscriberName := name("dumper", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
-				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, test.extensionExists, event.meta)
+				triggerName := name("trigger", event.context.Type, event.context.Source, event.context.Extensions)
+				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
+				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, event.context)
 				client.CreateTriggerOrFail(triggerName,
 					resources.WithSubscriberRefForTrigger(subscriberName),
 					triggerOption,
@@ -168,12 +173,12 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			unexpectedEvents := make(map[string][]string)
 			for _, eventToSend := range test.eventsToSend {
 				// Create cloud event.
-				// Using event type and source as part of the body for easier debugging.
-				body := fmt.Sprintf("Body:eventType[%s]-eventSource[%s]-eventExtensionName[%s]-eventExtensionValue[%s]",
-					eventToSend.Type, eventToSend.Source, eventToSend.ExtensionName, eventToSend.ExtensionValue)
+				// Using event type, source and extensions as part of the body for easier debugging.
+				extensionsStr := joinSortedExtensions(eventToSend.Extensions)
+				body := fmt.Sprintf(("Body-%s-%s-%s"), eventToSend.Type, eventToSend.Source, extensionsStr)
 				cloudEvent := makeCloudEvent(eventToSend, body)
 				// Create sender pod.
-				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.ExtensionName, eventToSend.ExtensionValue)
+				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.Extensions)
 				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
 					t.Fatalf("Error send cloud event to broker: %v", err)
 				}
@@ -181,7 +186,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				// Check on every dumper whether we should expect this event or not, and add its body
 				// to the expectedEvents/unexpectedEvents maps.
 				for _, eventToReceive := range test.eventsToReceive {
-					subscriberName := name("dumper", eventToReceive.meta.Type, eventToReceive.meta.Source, eventToReceive.meta.ExtensionName, eventToReceive.meta.ExtensionValue)
+					subscriberName := name("dumper", eventToReceive.context.Type, eventToReceive.context.Source, eventToReceive.context.Extensions)
 					if shouldExpectEvent(&eventToSend, &eventToReceive, t.Logf) {
 						expectedEvents[subscriberName] = append(expectedEvents[subscriberName], body)
 					} else {
@@ -191,7 +196,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 
 			for _, event := range test.eventsToReceive {
-				subscriberName := name("dumper", event.meta.Type, event.meta.Source, event.meta.ExtensionName, event.meta.ExtensionValue)
+				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
 					t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 				}
@@ -210,38 +215,24 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 }
 
-func makeCloudEvent(eventToSend eventMeta, body string) *resources.CloudEvent {
-	if eventToSend.ExtensionName != nilString {
-		return &resources.CloudEvent{
-			Source:         eventToSend.Source,
-			Type:           eventToSend.Type,
-			ExtensionName:  eventToSend.ExtensionName,
-			ExtensionValue: eventToSend.ExtensionValue,
-			Data:           fmt.Sprintf(`{"msg":%q}`, body),
-		}
-	} else {
-		return &resources.CloudEvent{
-			Source: eventToSend.Source,
-			Type:   eventToSend.Type,
-			Data:   fmt.Sprintf(`{"msg":%q}`, body),
-		}
-	}
+func makeCloudEvent(eventToSend eventContext, body string) *resources.CloudEvent {
+	return &resources.CloudEvent{
+		Source:     eventToSend.Source,
+		Type:       eventToSend.Type,
+		Extensions: eventToSend.Extensions,
+		Data:       fmt.Sprintf(`{"msg":%q}`, body),}
 }
 
-func getTriggerFilterOption(deprecatedTriggerFilter, extensionExists bool, eventMeta eventMeta) resources.TriggerOption {
+func getTriggerFilterOption(deprecatedTriggerFilter bool, context eventContext) resources.TriggerOption {
 	if deprecatedTriggerFilter {
-		return resources.WithDeprecatedSourceAndTypeTriggerFilter(eventMeta.Source, eventMeta.Type)
+		return resources.WithDeprecatedSourceAndTypeTriggerFilter(context.Source, context.Type)
 	} else {
-		if extensionExists {
-			return resources.WithAttributesAndExtensionTriggerFilter(eventMeta.Source, eventMeta.Type, eventMeta.ExtensionName, eventMeta.ExtensionValue)
-		} else {
-			return resources.WithAttributesTriggerFilter(eventMeta.Source, eventMeta.Type)
-		}
+		return resources.WithAttributesTriggerFilter(context.Source, context.Type, context.Extensions)
 	}
 }
 
 // Helper function to create names for different objects (e.g., triggers, services, etc.).
-func name(obj, eventType, eventSource, eventExtensionName, eventExtensionValue string) string {
+func name(obj, eventType, eventSource string, extensions map[string]interface{}) string {
 	// Pod names need to be lowercase. We might have an eventType as Any, that is why we lowercase them.
 	if eventType == "" {
 		eventType = "testany"
@@ -249,22 +240,48 @@ func name(obj, eventType, eventSource, eventExtensionName, eventExtensionValue s
 	if eventSource == "" {
 		eventSource = "testany"
 	}
-	if eventExtensionName == nilString {
-		eventExtensionName = "notexists"
+	if len(extensions) == 0 {
+		return strings.ToLower(fmt.Sprintf(
+			"%s-%s-%s",
+			obj,
+			eventType,
+			eventSource))
+	} else {
+		extensionsStr := joinSortedExtensions(extensions)
+		return strings.ToLower(fmt.Sprintf(
+			"%s-%s-%s-%s",
+			obj,
+			eventType,
+			eventSource,
+			extensionsStr))
 	}
-	if eventExtensionValue == "" {
-		eventExtensionValue = "testany"
+}
+
+func joinSortedExtensions(extensions map[string]interface{}) string {
+	var sb strings.Builder
+	sortedExtensionNames := sortedKeys(extensions)
+	for _, sortedExtensionName := range sortedExtensionNames {
+		sb.WriteString("-")
+		sb.WriteString(sortedExtensionName)
+		sb.WriteString("-")
+		vStr := fmt.Sprintf("%v", extensions[sortedExtensionName])
+		if vStr == "" {
+			vStr = "testany"
+		}
+		sb.WriteString(vStr)
 	}
-	if eventExtensionValue == nilString {
-		eventExtensionValue = "notexists"
+	return sb.String()
+}
+
+func sortedKeys(m map[string]interface{}) []string {
+	keys := make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
 	}
-	return strings.ToLower(fmt.Sprintf(
-		"%s-%s-%s-%s-%s",
-		obj,
-		eventType,
-		eventSource,
-		eventExtensionName,
-		eventExtensionValue))
+	sort.Strings(keys)
+	return keys
 }
 
 // Returns a new selector with a random uuid.
@@ -273,22 +290,24 @@ func newSelector() map[string]string {
 }
 
 // Checks whether we should expect to receive 'eventToSend' in 'eventReceiver' based on its type and source pattern.
-func shouldExpectEvent(eventToSend *eventMeta, receiver *eventReceiver, logf logging.FormatLogger) bool {
-	if receiver.meta.Type != any && receiver.meta.Type != eventToSend.Type {
+func shouldExpectEvent(eventToSend *eventContext, receiver *eventReceiver, logf logging.FormatLogger) bool {
+	if receiver.context.Type != any && receiver.context.Type != eventToSend.Type {
 		return false
 	}
-	if receiver.meta.Source != any && receiver.meta.Source != eventToSend.Source {
+	if receiver.context.Source != any && receiver.context.Source != eventToSend.Source {
 		return false
 	}
-	//event extension does not exists, return True
-	if receiver.meta.ExtensionName == nilString {
-		return true
-	}
-	if receiver.meta.ExtensionName != eventToSend.ExtensionName {
-		return false
-	}
-	if receiver.meta.ExtensionValue != any && receiver.meta.ExtensionValue != eventToSend.ExtensionValue {
-		return false
+	for k, v := range receiver.context.Extensions {
+		var value interface{}
+		value, ok := eventToSend.Extensions[k]
+		// If the attribute does not exist in the event, return false.
+		if !ok {
+			return false
+		}
+		// If the attribute is not set to any and is different than the one from the event, return false.
+		if v != any && v != value {
+			return false
+		}
 	}
 	return true
 }

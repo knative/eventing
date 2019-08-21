@@ -17,6 +17,8 @@ limitations under the License.
 package common
 
 import (
+	"encoding/json"
+	"regexp"
 	"strings"
 	"time"
 
@@ -92,12 +94,34 @@ func (client *Client) FindAnyLogContents(podName string, contents []string) (boo
 	if err != nil {
 		return false, err
 	}
+	eventContentsSet, err := parseEventContentsFromPodLogs(string(logs))
+	if err != nil {
+		return false, err
+	}
 	for _, content := range contents {
-		if strings.Contains(string(logs), content) {
+		_, ok := eventContentsSet[content]
+		if ok {
 			return true, nil
 		}
 	}
 	return false, nil
+}
+
+func parseEventContentsFromPodLogs(logs string) (map[string]bool, error) {
+	re := regexp.MustCompile(`{.+?}`)
+	matches := re.FindAllString(logs, -1)
+	eventContentsSet := make(map[string]bool)
+	for _, match := range matches {
+		var matchedLogs map[string]string
+		err := json.Unmarshal([]byte(match), &matchedLogs)
+		if err != nil {
+			return nil, err
+		} else {
+			eventContent := matchedLogs["msg"]
+			eventContentsSet[eventContent] = true
+		}
+	}
+	return eventContentsSet, nil
 }
 
 // getContainerName gets name of the first container of the given pod.

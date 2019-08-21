@@ -19,6 +19,8 @@ package resources
 // This file contains functions that construct common Kubernetes resources.
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,11 +32,18 @@ import (
 )
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
+func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
 	const imageName = "sendevents"
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
+	eventExtensionsBytes, error := json.Marshal(event.Extensions)
+	eventExtensions := string(eventExtensionsBytes)
+	if error != nil {
+
+		return nil, fmt.Errorf("Encountered error when we marshall cloud event extensions %v", error)
+	}
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -51,10 +60,8 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 					event.Type,
 					"-event-source",
 					event.Source,
-					"-event-extension-name",
-					event.ExtensionName,
-					"-event-extension-value",
-					event.ExtensionValue,
+					"-event-extensions",
+					eventExtensions,
 					"-event-data",
 					event.Data,
 					"-event-encoding",
@@ -66,7 +73,7 @@ func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
-	}
+	}, nil
 }
 
 // EventLoggerPod creates a Pod that logs events received.
