@@ -41,11 +41,11 @@ var (
 	}
 )
 
-// setupZipkinPublishing sets up Zipkin trace publishing for the process. Note that other pieces
+// setupPublishing sets up trace publishing for the process. Note that other pieces
 // still need to generate the traces, this just ensures that if generated, they are collected
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP
 // handler.
-func setupZipkinPublishing(serviceName string) (*tracing.OpenCensusTracer, error) {
+func setupPublishing(serviceName string) (*tracing.OpenCensusTracer, error) {
 	// TODO Should we fill in the hostPort?
 	zipkinEndpoint, err := zipkin.NewEndpoint(serviceName, "")
 	if err != nil {
@@ -55,12 +55,12 @@ func setupZipkinPublishing(serviceName string) (*tracing.OpenCensusTracer, error
 	return oct, nil
 }
 
-// SetupStaticZipkinPublishing sets up Zipkin trace publishing for the process. Note that other
+// SetupStaticPublishing sets up trace publishing for the process. Note that other
 // pieces still need to generate the traces, this just ensures that if generated, they are collected
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP
 // handler. The configuration will not be dynamically updated.
-func SetupStaticZipkinPublishing(serviceName string, cfg *tracingconfig.Config) error {
-	oct, err := setupZipkinPublishing(serviceName)
+func SetupStaticPublishing(serviceName string, cfg *tracingconfig.Config) error {
+	oct, err := setupPublishing(serviceName)
 	if err != nil {
 		return err
 	}
@@ -71,13 +71,13 @@ func SetupStaticZipkinPublishing(serviceName string, cfg *tracingconfig.Config) 
 	return nil
 }
 
-// SetupDynamicZipkinPublishing sets up Zipkin trace publishing for the process, by watching a
+// SetupDynamicPublishing sets up trace publishing for the process, by watching a
 // ConfigMap for the configuration. Note that other pieces still need to generate the traces, this
 // just ensures that if generated, they are collected appropriately. This is normally done by using
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
-func SetupDynamicZipkinPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName string) error {
-	oct, err := setupZipkinPublishing(serviceName)
+func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName string) error {
+	oct, err := setupPublishing(serviceName)
 	if err != nil {
 		return err
 	}
