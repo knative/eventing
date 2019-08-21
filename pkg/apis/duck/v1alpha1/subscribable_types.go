@@ -124,7 +124,7 @@ var (
 // Due to change in the API, we support reading of SubscribableTypeStatus#SubscribableStatus in a logical way
 // where we read the V2 value first and if the value is absent then we read the V1 value,
 // Having this function here makes it convinient to read the default value at runtime.
-func (s SubscribableTypeStatus) DefaultSubscribableTypeStatus() *SubscribableStatus {
+func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
 	if s.SubscribableStatusV2 == nil {
 		return s.SubscribableStatus
 	} else {
