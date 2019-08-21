@@ -63,20 +63,20 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 							Name:  "filter",
 							Image: args.Image,
 							LivenessProbe: &corev1.Probe{
-								Handler:             corev1.Handler{
+								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path:        "/healthz",
-										Port:        intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+										Path: "/healthz",
+										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 									},
 								},
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       2,
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler:             corev1.Handler{
+								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path:        "/readyz",
-										Port:        intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+										Path: "/readyz",
+										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 									},
 								},
 								InitialDelaySeconds: 5,

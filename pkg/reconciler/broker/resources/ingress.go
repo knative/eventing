@@ -64,10 +64,10 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 							Image: args.Image,
 							Name:  "ingress",
 							LivenessProbe: &corev1.Probe{
-								Handler:             corev1.Handler{
+								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path:        "/healthz",
-										Port:        intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+										Path: "/healthz",
+										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 									},
 								},
 								InitialDelaySeconds: 5,
