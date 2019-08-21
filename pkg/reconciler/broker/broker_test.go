@@ -840,10 +840,10 @@ func channelCRD() metav1.TypeMeta {
 
 func livenessProbe() *corev1.Probe {
 	return &corev1.Probe{
-		Handler:             corev1.Handler{
+		Handler: corev1.Handler{
 			HTTPGet: &corev1.HTTPGetAction{
-				Path:        "/healthz",
-				Port:        intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				Path: "/healthz",
+				Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 			},
 		},
 		InitialDelaySeconds: 5,
@@ -853,10 +853,10 @@ func livenessProbe() *corev1.Probe {
 
 func readinessProbe() *corev1.Probe {
 	return &corev1.Probe{
-		Handler:             corev1.Handler{
+		Handler: corev1.Handler{
 			HTTPGet: &corev1.HTTPGetAction{
-				Path:        "/readyz",
-				Port:        intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				Path: "/readyz",
+				Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 			},
 		},
 		InitialDelaySeconds: 5,
