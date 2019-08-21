@@ -81,10 +81,10 @@ func main() {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticZipkinPublishing("apiserversource", tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing("apiserversource", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer to continue to
 		// start.
-		logger.Error("Error setting up Zipkin publishing", zap.Error(err))
+		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
 	eventsClient, err := kncloudevents.NewDefaultClient(env.SinkURI)

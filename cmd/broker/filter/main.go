@@ -85,12 +85,12 @@ func main() {
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
 
-	zipkinServiceName := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
+	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
-		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	if err = tracing.SetupDynamicPublishing(logger.Sugar(), configMapWatcher, bin); err != nil {
+		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
