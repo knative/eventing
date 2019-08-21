@@ -22,9 +22,6 @@ import (
 )
 
 const (
-	// ConfigMapNameEnv is the environment value to get the name of the config map used for knative-eventing logging config.
-	ConfigMapNameEnv = "CONFIG_LOGGING_NAME"
-
 	// Named Loggers are used to override the default log level. config-logging.yaml will use the follow:
 	//
 	// loglevel.controller: "info"
@@ -33,28 +30,9 @@ const (
 	// Controller is the name of the override key used inside of the logging config for Controller.
 	Controller = "controller"
 
-	// SourcesController is the name of the override key used inside of the logging config for Sources Controller.
-	SourcesController = "sources-controller"
-
 	// Webhook is the name of the override key used inside of the logging config for Webhook Controller.
 	WebhookNameEnv = "WEBHOOK_NAME"
 )
-
-func ConfigMapName() string {
-	if cm := os.Getenv(ConfigMapNameEnv); cm != "" {
-		return cm
-	}
-
-	panic(fmt.Sprintf(`The environment variable %q is not set
-
-If this is a process running on Kubernetes, then it should be using the downward
-API to initialize this variable via:
-
-  env:
-  - name: CONFIG_LOGGING_NAME
-    value: config-logging
-`, ConfigMapNameEnv))
-}
 
 func WebhookName() string {
 	if webhook := os.Getenv(WebhookNameEnv); webhook != "" {
