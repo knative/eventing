@@ -5,7 +5,12 @@ import (
 	"io"
 	"sync"
 
+	"contrib.go.opencensus.io/exporter/stackdriver"
+	oczipkin "contrib.go.opencensus.io/exporter/zipkin"
+	zipkin "github.com/openzipkin/zipkin-go"
+	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	"go.opencensus.io/trace"
+	"go.uber.org/zap"
 
 	"knative.dev/pkg/tracing/config"
 )
@@ -87,7 +92,7 @@ func (oct *OpenCensusTracer) acquireGlobal() error {
 func createOCTConfig(cfg *config.Config) *trace.Config {
 	octCfg := trace.Config{}
 
-	if cfg.Enable {
+	if cfg.Backend != config.None {
 		if cfg.Debug {
 			octCfg.DefaultSampler = trace.AlwaysSample()
 		} else {
@@ -98,4 +103,50 @@ func createOCTConfig(cfg *config.Config) *trace.Config {
 	}
 
 	return &octCfg
+}
+
+// WithExporter returns a ConfigOption for use with NewOpenCensusTracer that configures
+// it to export traces based on the configuration read from config-tracing.
+func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
+	return func(cfg *config.Config) {
+		var (
+			exporter trace.Exporter
+			closer   io.Closer
+		)
+		switch cfg.Backend {
+		case config.Stackdriver:
+			exp, err := stackdriver.NewExporter(stackdriver.Options{
+				ProjectID: cfg.StackdriverProjectID,
+			})
+			if err != nil {
+				logger.Errorw("error reading project-id from metadata", err)
+				return
+			}
+			exporter = exp
+		case config.Zipkin:
+			zipEP, err := zipkin.NewEndpoint(name, ":80")
+			if err != nil {
+				logger.Errorw("error building zipkin endpoint", err)
+				return
+			}
+			reporter := httpreporter.NewReporter(cfg.ZipkinEndpoint)
+			exporter = oczipkin.NewExporter(reporter, zipEP)
+			closer = reporter
+		default:
+			// Disables tracing.
+		}
+		if exporter != nil {
+			trace.RegisterExporter(exporter)
+		}
+		// We know this is set because we are called with acquireGlobal lock held
+		if globalOct.exporter != nil {
+			trace.UnregisterExporter(globalOct.exporter)
+		}
+		if globalOct.closer != nil {
+			globalOct.closer.Close()
+		}
+
+		globalOct.exporter = exporter
+		globalOct.closer = closer
+	}
 }

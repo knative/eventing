@@ -19,7 +19,6 @@ package tracing
 import (
 	"fmt"
 
-	zipkin "github.com/openzipkin/zipkin-go"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +32,10 @@ import (
 
 var (
 	// OnePercentSampling is a configuration that samples 1% of the requests.
+	// TODO(#1712): Remove this and pull "static" configuration from the
+	// environment instead.
 	OnePercentSampling = &tracingconfig.Config{
-		Enable:         true,
+		Backend:        tracingconfig.Zipkin,
 		Debug:          false,
 		SampleRate:     0.01,
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
@@ -45,22 +46,16 @@ var (
 // still need to generate the traces, this just ensures that if generated, they are collected
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP
 // handler.
-func setupPublishing(serviceName string) (*tracing.OpenCensusTracer, error) {
-	// TODO Should we fill in the hostPort?
-	zipkinEndpoint, err := zipkin.NewEndpoint(serviceName, "")
-	if err != nil {
-		return nil, fmt.Errorf("unable to create tracing endpoint: %v", err)
-	}
-	oct := tracing.NewOpenCensusTracer(tracing.WithZipkinExporter(tracing.CreateZipkinReporter, zipkinEndpoint))
-	return oct, nil
+func setupPublishing(serviceName string, logger *zap.SugaredLogger) (*tracing.OpenCensusTracer, error) {
+	return tracing.NewOpenCensusTracer(tracing.WithExporter(serviceName, logger)), nil
 }
 
 // SetupStaticPublishing sets up trace publishing for the process. Note that other
 // pieces still need to generate the traces, this just ensures that if generated, they are collected
 // appropriately. This is normally done by using tracing.HTTPSpanMiddleware as a middleware HTTP
 // handler. The configuration will not be dynamically updated.
-func SetupStaticPublishing(serviceName string, cfg *tracingconfig.Config) error {
-	oct, err := setupPublishing(serviceName)
+func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *tracingconfig.Config) error {
+	oct, err := setupPublishing(serviceName, logger)
 	if err != nil {
 		return err
 	}
@@ -77,7 +72,7 @@ func SetupStaticPublishing(serviceName string, cfg *tracingconfig.Config) error 
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
 func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName string) error {
-	oct, err := setupPublishing(serviceName)
+	oct, err := setupPublishing(serviceName, logger)
 	if err != nil {
 		return err
 	}

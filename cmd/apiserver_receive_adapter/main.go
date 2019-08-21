@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"log"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -57,6 +58,9 @@ func main() {
 	logCfg := zap.NewProductionConfig()
 	logCfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	dlogger, err := logCfg.Build()
+	if err != nil {
+		log.Fatalf("Error building logger: %v", err)
+	}
 	logger := dlogger.Sugar()
 
 	var env envConfig
@@ -81,7 +85,7 @@ func main() {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing("apiserversource", tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing(logger, "apiserversource", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer to continue to
 		// start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
