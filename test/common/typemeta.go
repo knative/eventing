@@ -71,3 +71,8 @@ func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 		APIVersion: resources.MessagingAPIVersion,
 	}
 }
+
+// GetChannelTypeMeta gets the actual typemeta of the channel.
+func GetChannelTypeMeta(channelName string) *metav1.TypeMeta {
+	return MessagingTypeMeta(channelName)
+}

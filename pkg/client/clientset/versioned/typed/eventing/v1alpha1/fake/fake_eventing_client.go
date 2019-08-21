@@ -32,14 +32,6 @@ func (c *FakeEventingV1alpha1) Brokers(namespace string) v1alpha1.BrokerInterfac
 	return &FakeBrokers{c, namespace}
 }
 
-func (c *FakeEventingV1alpha1) Channels(namespace string) v1alpha1.ChannelInterface {
-	return &FakeChannels{c, namespace}
-}
-
-func (c *FakeEventingV1alpha1) ClusterChannelProvisioners() v1alpha1.ClusterChannelProvisionerInterface {
-	return &FakeClusterChannelProvisioners{c}
-}
-
 func (c *FakeEventingV1alpha1) EventTypes(namespace string) v1alpha1.EventTypeInterface {
 	return &FakeEventTypes{c, namespace}
 }

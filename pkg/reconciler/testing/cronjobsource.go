@@ -28,12 +28,11 @@ import (
 type CronJobSourceOption func(*v1alpha1.CronJobSource)
 
 // NewCronJobSource creates a CronJobSource with CronJobOptions.
-func NewCronJobSource(name, namespace, uid string, o ...CronJobSourceOption) *v1alpha1.CronJobSource {
+func NewCronJobSource(name, namespace string, o ...CronJobSourceOption) *v1alpha1.CronJobSource {
 	c := &v1alpha1.CronJobSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			UID:       types.UID(uid),
 		},
 	}
 	for _, opt := range o {
@@ -41,6 +40,12 @@ func NewCronJobSource(name, namespace, uid string, o ...CronJobSourceOption) *v1
 	}
 	// c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
 	return c
+}
+
+func WithCronJobSourceUID(uid string) CronJobSourceOption {
+	return func(c *v1alpha1.CronJobSource) {
+		c.UID = types.UID(uid)
+	}
 }
 
 // WithInitCronJobSourceConditions initializes the CronJobSource's conditions.

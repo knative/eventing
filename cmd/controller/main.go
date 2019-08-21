@@ -25,7 +25,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/choice"
-	"knative.dev/eventing/pkg/reconciler/eventingchannel"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	"knative.dev/eventing/pkg/reconciler/namespace"
 	"knative.dev/eventing/pkg/reconciler/sequence"
@@ -37,7 +36,6 @@ func main() {
 	sharedmain.Main("controller",
 		subscription.NewController,
 		namespace.NewController,
-		eventingchannel.NewController,
 		channel.NewController,
 		trigger.NewController,
 		broker.NewController,

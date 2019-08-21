@@ -30,7 +30,6 @@ import (
 	"knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/channel"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 )
@@ -52,7 +51,6 @@ func NewController(
 ) *controller.Impl {
 
 	triggerInformer := trigger.Get(ctx)
-	channelInformer := channel.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 	serviceInformer := service.Get(ctx)
@@ -61,7 +59,6 @@ func NewController(
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 		triggerLister:      triggerInformer.Lister(),
-		channelLister:      channelInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		serviceLister:      serviceInformer.Lister(),

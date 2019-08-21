@@ -493,6 +493,14 @@
   version = "v1.1"
 
 [[projects]]
+  digest = "1:7008ec21a0ce773bd21deefdb7d17fab8cb9f1ae0bc44026cdd2b658ab1582ca"
+  name = "github.com/rogpeppe/go-internal"
+  packages = ["semver"]
+  pruneopts = "NUT"
+  revision = "438578804ca6f31be148c27683afc419ce47c06e"
+  version = "v1.3.0"
+
+[[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -1168,7 +1176,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c375d4501b58273f93be7fb531b551406dc57247a865520e48e724cee9398ded"
+  digest = "1:b9a2a90a672cca14c7353eff529b8375db18878fd03fff30a63cb5500decdc08"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1180,6 +1188,7 @@
     "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
+    "apis/v1alpha1",
     "changeset",
     "client/clientset/versioned",
     "client/clientset/versioned/fake",
@@ -1241,14 +1250,15 @@
     "tracing",
     "tracing/config",
     "tracker",
+    "version",
     "webhook",
   ]
   pruneopts = "T"
-  revision = "4707aad818fed9883f7d5255dcbf67b9382260e2"
+  revision = "c11c79155fa4be834735d1d0cbcafad88b16be69"
 
 [[projects]]
   branch = "master"
-  digest = "1:361c09209a9c7ab7723b981629bb73ab7c0eefbcdf4fc3fe96e91bfe0f51469f"
+  digest = "1:69d8653b65ad2c3e95903310135a5a1fc7dde820385f9822b6caee1c9a91ef87"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
@@ -1260,10 +1270,10 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "751583ee73a463cf6449817afda38d63b29dfff7"
+  revision = "f3fe0bcc30693df8e3c9616358b16045efb9ed10"
 
 [[projects]]
-  digest = "1:feab562c2e2852074e0c38310e19c4acf8cbb36746f7ad4ac2e60e61ceedff61"
+  digest = "1:db96fceb1477924a5e724ebfd355842c73805eb8e44bf7f325898c3116a1d852"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1272,23 +1282,15 @@
     "pkg/client/apiutil",
     "pkg/client/config",
     "pkg/client/fake",
-    "pkg/controller",
-    "pkg/event",
-    "pkg/handler",
-    "pkg/internal/controller",
-    "pkg/internal/controller/metrics",
     "pkg/internal/recorder",
     "pkg/leaderelection",
     "pkg/manager",
     "pkg/metrics",
     "pkg/patch",
-    "pkg/predicate",
     "pkg/reconcile",
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
-    "pkg/source",
-    "pkg/source/internal",
     "pkg/webhook/admission",
     "pkg/webhook/admission/types",
     "pkg/webhook/internal/metrics",
@@ -1312,7 +1314,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
-    "github.com/openzipkin/zipkin-go",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "go.opencensus.io/plugin/ochttp",
@@ -1326,7 +1327,6 @@
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "golang.org/x/sync/errgroup",
-    "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/authentication/v1",
     "k8s.io/api/core/v1",
@@ -1424,23 +1424,18 @@
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
+    "knative.dev/pkg/version",
     "knative.dev/pkg/webhook",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/shared/junit",
     "knative.dev/test-infra/shared/testgrid",
     "knative.dev/test-infra/tools/dep-collector",
-    "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
-    "sigs.k8s.io/controller-runtime/pkg/controller",
-    "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/inject",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
-    "sigs.k8s.io/controller-runtime/pkg/source",
-    "sigs.k8s.io/controller-runtime/pkg/webhook/admission/types",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

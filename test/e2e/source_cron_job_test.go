@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
 )
@@ -44,8 +46,16 @@ func TestCronJobSource(t *testing.T) {
 
 	// create cron job source
 	data := fmt.Sprintf("TestCronJobSource %s", uuid.NewUUID())
-	sinkOption := resources.WithSinkServiceForCronJobSource(loggerPodName)
-	client.CreateCronJobSourceOrFail(cronJobSourceName, schedule, data, sinkOption)
+	cronJobSource := eventingtesting.NewCronJobSource(
+		cronJobSourceName,
+		client.Namespace,
+		eventingtesting.WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+			Schedule: schedule,
+			Data:     data,
+			Sink:     resources.ServiceRef(loggerPodName),
+		}),
+	)
+	client.CreateCronJobSourceOrFail(cronJobSource)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

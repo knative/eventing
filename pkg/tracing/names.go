@@ -36,7 +36,7 @@ type BrokerFilterNameArgs struct {
 	BrokerName string
 }
 
-// BrokerFilterName creates the service name for Broker Filters to use when writing Zipkin traces.
+// BrokerFilterName creates the service name for Broker Filters to use when writing traces.
 func BrokerFilterName(args BrokerFilterNameArgs) string {
 	return fmt.Sprintf("%s-broker-filter.%s", args.BrokerName, args.Namespace)
 }

@@ -96,18 +96,25 @@ func main() {
 	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
 
-	zipkinServiceName := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
+	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicZipkinPublishing(logger.Sugar(), configMapWatcher, zipkinServiceName); err != nil {
-		logger.Fatal("Error setting up Zipkin publishing", zap.Error(err))
+	if err = tracing.SetupDynamicPublishing(logger.Sugar(), configMapWatcher, bin); err != nil {
+		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
+
+	// Liveness check.
+	httpTransport.Handler = http.NewServeMux()
+	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+	})
+
 	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
