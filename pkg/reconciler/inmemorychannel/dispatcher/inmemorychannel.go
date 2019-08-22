@@ -116,8 +116,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
 		return err
 	}
-
-	imc.Status.SubscribableTypeStatus.SubscribableStatus = r.createSubscribableStatus(imc.Spec.Subscribable)
+	if subscribableStatus := r.createSubscribableStatus(imc.Spec.Subscribable); subscribableStatus != nil {
+		imc.Status.SubscribableTypeStatus.SetSubscribableTypeStatus(*subscribableStatus)
+	}
 	return nil
 }
 
