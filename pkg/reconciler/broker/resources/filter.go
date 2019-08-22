@@ -99,6 +99,10 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 									Name:  "BROKER",
 									Value: args.Broker.Name,
 								},
+								{
+									Name:  "METRICS_DOMAIN",
+									Value: "knative.dev/eventing",
+								},
 							},
 							Ports: []corev1.ContainerPort{
 								{
