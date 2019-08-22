@@ -113,7 +113,7 @@ func (client *Client) FindAnyLogContents(podName string, contents []string) (boo
 // Get the eventContent with key "msg"
 // Returns a set with all unique event contents
 func parseEventContentsFromPodLogs(logs string) (sets.String, error) {
-	re := regexp.MustCompile(`{.+?}`)
+	re := regexp.MustCompile(`{.+}`)
 	matches := re.FindAllString(logs, -1)
 	eventContentsSet := sets.String{}
 	for _, match := range matches {
