@@ -20,8 +20,6 @@ package e2e
 
 import (
 	"fmt"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
 	"sort"
 	"strings"
 	"testing"
@@ -30,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 	"knative.dev/pkg/test/logging"
 )
 
@@ -45,10 +45,10 @@ const (
 	eventSource2      = "source2"
 	// Be careful with the length of extension name and values,
 	// we use extension name and value as a part of the name of resources like subscriber and trigger, the maximum characters allowed of resource name is 63
-	extensionName1    = "extname1"
-	extensionValue1   = "extval1"
-	extensionName2    = "extname2"
-	extensionValue2   = "extvalue2"
+	extensionName1  = "extname1"
+	extensionValue1 = "extval1"
+	extensionName2  = "extname2"
+	extensionValue2 = "extvalue2"
 )
 
 type eventContext struct {
@@ -110,21 +110,21 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		{
 			name: "test default broker with many attribute and extension triggers",
 			eventsToReceive: []eventReceiver{
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1,},}, newSelector()},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2},}, newSelector()},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2},}, newSelector()},
-				{eventContext{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1,},}, newSelector()},
-				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any,},}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1,},}, newSelector()},
-				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2},}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName2: extensionValue2}}, newSelector()},
+				{eventContext{Type: eventType1, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
+				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: any}}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}, newSelector()},
 			},
 			eventsToSend: []eventContext{
-				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1,}},
+				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
-				{Type: eventType1, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1,}},
-				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: "non.matching.ext.val",}},
-				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{"non.matching.ext.name": extensionValue1,}},
+				{Type: eventType1, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
+				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: "non.matching.ext.val"}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{"non.matching.ext.name": extensionValue1}},
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, "non.matching.ext.name": extensionValue2}},
 			},
@@ -222,7 +222,7 @@ func makeCloudEvent(eventToSend eventContext, body string) *resources.CloudEvent
 		Source:     eventToSend.Source,
 		Type:       eventToSend.Type,
 		Extensions: eventToSend.Extensions,
-		Data:       fmt.Sprintf(`{"msg":%q}`, body),}
+		Data:       fmt.Sprintf(`{"msg":%q}`, body)}
 }
 
 func getTriggerFilterOption(deprecatedTriggerFilter bool, context eventContext) resources.TriggerOption {
