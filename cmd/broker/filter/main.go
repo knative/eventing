@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

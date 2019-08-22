@@ -18,13 +18,13 @@ package main
 
 import (
 	"flag"
-	"knative.dev/pkg/metrics"
 	"net/http"
 	"net/url"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
@@ -34,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/provisioners"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	pkgtracing "knative.dev/pkg/tracing"
