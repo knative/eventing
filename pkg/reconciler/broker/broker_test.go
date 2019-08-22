@@ -884,6 +884,10 @@ func envVars(containerName string) []corev1.EnvVar {
 				Name:  "BROKER",
 				Value: brokerName,
 			},
+			{
+				Name:  "METRICS_DOMAIN",
+				Value: "knative.dev/eventing",
+			},
 		}
 	case ingressContainerName:
 		return []corev1.EnvVar{
@@ -910,6 +914,10 @@ func envVars(containerName string) []corev1.EnvVar {
 			{
 				Name:  "BROKER",
 				Value: brokerName,
+			},
+			{
+				Name:  "METRICS_DOMAIN",
+				Value: "knative.dev/eventing",
 			},
 		}
 	}

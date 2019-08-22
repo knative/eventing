@@ -1304,7 +1304,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",

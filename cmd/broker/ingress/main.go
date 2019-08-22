@@ -18,29 +18,23 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"net/url"
-	"sync"
-	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"contrib.go.opencensus.io/exporter/prometheus"
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/eventing/pkg/provisioners"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	pkgtracing "knative.dev/pkg/tracing"
@@ -55,19 +49,10 @@ type envConfig struct {
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 }
 
-var (
-	metricsPort = 9090
-
-	writeTimeout    = 1 * time.Minute
-	shutdownTimeout = 1 * time.Minute
-
-	wg sync.WaitGroup
-)
-
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
 	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig).Desugar()
-	defer logger.Sync()
+	defer flush(logger)
 	flag.Parse()
 	crlog.SetLogger(crlog.ZapLogger(false))
 
@@ -132,29 +117,10 @@ func main() {
 		logger.Fatal("Unable to add handler", zap.Error(err))
 	}
 
-	// Metrics
-	e, err := prometheus.NewExporter(prometheus.Options{})
-	if err != nil {
-		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
-	}
-	view.RegisterExporter(e)
-	sm := http.NewServeMux()
-	sm.Handle("/metrics", e)
-	metricsSrv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", metricsPort),
-		Handler:      e,
-		ErrorLog:     zap.NewStdLog(logger),
-		WriteTimeout: writeTimeout,
-	}
+	// TODO watch logging config map.
 
-	err = mgr.Add(&utils.RunnableServer{
-		Server:          metricsSrv,
-		ShutdownTimeout: shutdownTimeout,
-		WaitGroup:       &wg,
-	})
-	if err != nil {
-		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
-	}
+	// Watch the observability config map and dynamically update metrics exporter.
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_ingress", logger.Sugar()))
 
 	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()
@@ -169,16 +135,9 @@ func main() {
 		logger.Error("manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+}
 
-	// TODO Gracefully shutdown the ingress server. CloudEvents SDK doesn't seem
-	// to let us do that today.
-	go func() {
-		<-time.After(shutdownTimeout)
-		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
-	}()
-
-	// Wait for runnables to stop. This blocks indefinitely, but the above
-	// goroutine will exit the process if it takes longer than shutdownTimeout.
-	wg.Wait()
-	logger.Info("Done.")
+func flush(logger *zap.Logger) {
+	logger.Sync()
+	metrics.FlushExporter()
 }
