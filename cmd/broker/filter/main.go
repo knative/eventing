@@ -18,15 +18,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
-	"net/http"
-	"sync"
-	"time"
 
-	"contrib.go.opencensus.io/exporter/prometheus"
 	"github.com/kelseyhightower/envconfig"
-	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/kubernetes"
@@ -34,8 +27,8 @@ import (
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/provisioners"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -47,21 +40,11 @@ type envConfig struct {
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 }
 
-var (
-	metricsPort = 9090
-
-	writeTimeout    = 1 * time.Minute
-	shutdownTimeout = 1 * time.Minute
-
-	wg sync.WaitGroup
-)
-
 func main() {
 	logConfig := provisioners.NewLoggingConfig()
 	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
 	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig).Desugar()
-	defer logger.Sync()
-
+	defer flush(logger)
 	flag.Parse()
 
 	logger.Info("Starting...")
@@ -101,32 +84,13 @@ func main() {
 	}
 	err = mgr.Add(receiver)
 	if err != nil {
-		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("receiver", receiver))
+		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("broker_receiver", receiver))
 	}
 
-	// Metrics
-	e, err := prometheus.NewExporter(prometheus.Options{})
-	if err != nil {
-		logger.Fatal("Unable to create Prometheus exporter", zap.Error(err))
-	}
-	view.RegisterExporter(e)
-	sm := http.NewServeMux()
-	sm.Handle("/metrics", e)
-	metricsSrv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", metricsPort),
-		Handler:      e,
-		ErrorLog:     zap.NewStdLog(logger),
-		WriteTimeout: writeTimeout,
-	}
+	// TODO watch logging config map.
 
-	err = mgr.Add(&utils.RunnableServer{
-		Server:          metricsSrv,
-		ShutdownTimeout: shutdownTimeout,
-		WaitGroup:       &wg,
-	})
-	if err != nil {
-		logger.Fatal("Unable to add metrics runnableServer", zap.Error(err))
-	}
+	// Watch the observability config map and dynamically update metrics exporter.
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_receiver", logger.Sugar()))
 
 	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()
@@ -143,14 +107,9 @@ func main() {
 		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+}
 
-	go func() {
-		<-time.After(shutdownTimeout)
-		log.Fatalf("Shutdown took longer than %v", shutdownTimeout)
-	}()
-
-	// Wait for runnables to stop. This blocks indefinitely, but the above
-	// goroutine will exit the process if it takes longer than shutdownTimeout.
-	wg.Wait()
-	logger.Info("Done.")
+func flush(logger *zap.Logger) {
+	logger.Sync()
+	metrics.FlushExporter()
 }
