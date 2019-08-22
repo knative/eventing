@@ -43,7 +43,7 @@ const (
 	eventType2        = "type2"
 	eventSource1      = "source1"
 	eventSource2      = "source2"
-	//Be careful with the length of extension name and values,
+	// Be careful with the length of extension name and values,
 	// we use extension name and value as a part of the name of resources like subscriber and trigger, the maximum characters allowed of resource name is 63
 	extensionName1    = "extname1"
 	extensionValue1   = "extval1"

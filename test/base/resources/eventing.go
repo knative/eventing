@@ -129,10 +129,9 @@ func WithAttributesTriggerFilter(eventSource, eventType string, extensions map[s
 	}
 	triggerFilterAttributes := eventingv1alpha1.TriggerFilterAttributes(attrs)
 	return func(t *eventingv1alpha1.Trigger) {
-		triggerFilter := &eventingv1alpha1.TriggerFilter{
+		t.Spec.Filter = &eventingv1alpha1.TriggerFilter{
 			Attributes: &triggerFilterAttributes,
 		}
-		t.Spec.Filter = triggerFilter
 	}
 }
 
