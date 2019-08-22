@@ -378,6 +378,27 @@ func TestChannelPropagateStatuses(t *testing.T) {
 			},
 			wantReady: false,
 		},
+		"test subscribableTypeStatus is set": {
+			channelableStatus: &v1alpha1.ChannelableStatus{
+				SubscribableTypeStatus: v1alpha1.SubscribableTypeStatus{
+					SubscribableStatus: &v1alpha1.SubscribableStatus{
+						// Populate ALL fields
+						Subscribers: []v1alpha1.SubscriberStatus{{
+							UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+							ObservedGeneration: 1,
+							Ready:              corev1.ConditionTrue,
+							Message:            "Some message",
+						}, {
+							UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+							ObservedGeneration: 2,
+							Ready:              corev1.ConditionFalse,
+							Message:            "Some message",
+						}},
+					},
+				},
+			},
+			wantReady: false,
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {

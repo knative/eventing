@@ -109,7 +109,8 @@ type SubscribableTypeSpec struct {
 
 // SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
 type SubscribableTypeStatus struct {
-	SubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
+	DeprecatedSubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
+	SubscribableStatus           *SubscribableStatus `json:"subscribableStatus,omitempty"`
 }
 
 var (
@@ -117,6 +118,35 @@ var (
 	_ duck.Populatable = (*SubscribableType)(nil)
 	_ apis.Listable    = (*SubscribableType)(nil)
 )
+
+// GetSubscribableTypeStatus method Returns the Default SubscribableStatus in this case it's SubscribableStatus
+// This is w.r.t https://github.com/knative/eventing/pull/1685#discussion_r314797276
+// Due to change in the API, we support reading of SubscribableTypeStatus#DeprecatedSubscribableStatus in a logical way
+// where we read the V2 value first and if the value is absent then we read the V1 value,
+// Having this function here makes it convinient to read the default value at runtime.
+func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
+	if s.SubscribableStatus == nil {
+		return s.DeprecatedSubscribableStatus
+	}
+	return s.SubscribableStatus
+
+}
+
+// SetSubscribableTypeStatus method sets the SubscribableStatus Values in th SubscribableTypeStatus structs
+// This helper function ensures that we set both the values (SubscribableStatus and DeprecatedSubscribableStatus)
+func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus SubscribableStatus) {
+	s.SubscribableStatus = &subscriberStatus
+	s.DeprecatedSubscribableStatus = &subscriberStatus
+}
+
+// AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
+// with Subscribers, use this function, so that the value is reflected in both the duplicate fields residing
+// in SubscribableTypeStatus
+func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
+	subscribers := append(s.GetSubscribableTypeStatus().Subscribers, subscriberStatus)
+	s.SubscribableStatus.Subscribers = subscribers
+	s.DeprecatedSubscribableStatus.Subscribers = subscribers
+}
 
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {
@@ -139,7 +169,7 @@ func (c *SubscribableType) Populate() {
 			ReplyURI:      "sink2",
 		}},
 	}
-	c.Status.SubscribableStatus = &SubscribableStatus{
+	c.Status.SetSubscribableTypeStatus(SubscribableStatus{
 		// Populate ALL fields
 		Subscribers: []SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -152,7 +182,7 @@ func (c *SubscribableType) Populate() {
 			Ready:              corev1.ConditionFalse,
 			Message:            "Some message",
 		}},
-	}
+	})
 }
 
 // GetListType implements apis.Listable
