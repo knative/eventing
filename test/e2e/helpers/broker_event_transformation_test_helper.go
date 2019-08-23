@@ -74,7 +74,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 		client.CreateTriggerOrFail(
 			triggerName1,
 			resources.WithBroker(brokerName),
-			resources.WithTriggerFilter(eventSource1, eventType1),
+			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource1, eventType1),
 			resources.WithSubscriberRefForTrigger(transformationPodName),
 		)
 
@@ -86,7 +86,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 		client.CreateTriggerOrFail(
 			triggerName2,
 			resources.WithBroker(brokerName),
-			resources.WithTriggerFilter(eventSource2, eventType2),
+			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
 			resources.WithSubscriberRefForTrigger(loggerPodName),
 		)
 

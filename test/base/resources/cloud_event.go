@@ -18,11 +18,12 @@ package resources
 
 // CloudEvent specifies the arguments for a CloudEvent used by the sendevents or transformevents image.
 type CloudEvent struct {
-	ID       string
-	Type     string
-	Source   string
-	Data     string // must be in json format
-	Encoding string // binary or structured
+	ID         string
+	Type       string
+	Source     string
+	Extensions map[string]interface{}
+	Data       string // must be in json format
+	Encoding   string // binary or structured
 }
 
 // CloudEventBaseData defines a simple struct that can be used as data of a CloudEvent.

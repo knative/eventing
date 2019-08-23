@@ -29,7 +29,7 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/provisioners"
+	"knative.dev/eventing/pkg/channel"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
@@ -58,7 +58,7 @@ var (
 
 func TestFanoutHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
-		receiverFunc   func(provisioners.ChannelReference, *provisioners.Message) error
+		receiverFunc   func(channel.ChannelReference, *channel.Message) error
 		timeout        time.Duration
 		subs           []eventingduck.SubscriberSpec
 		subscriber     func(http.ResponseWriter, *http.Request)
@@ -68,7 +68,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		skip           string
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(provisioners.ChannelReference, *provisioners.Message) error {
+			receiverFunc: func(channel.ChannelReference, *channel.Message) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -238,7 +238,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				h.config.AsyncHandler = true
 			}
 			if tc.receiverFunc != nil {
-				receiver, err := provisioners.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				receiver, err := channel.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 				if err != nil {
 					t.Fatalf("NewMessageReceiver failed. Error:%s", err)
 				}

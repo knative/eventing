@@ -19,6 +19,7 @@ package resources
 // This file contains functions that construct Eventing resources.
 
 import (
+	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -105,8 +106,8 @@ func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
 	return broker
 }
 
-// WithTriggerFilter returns an option that adds a TriggerFilter for the given Trigger.
-func WithTriggerFilter(eventSource, eventType string) TriggerOption {
+// WithDeprecatedSourceAndTypeTriggerFilter returns an option that adds a TriggerFilter with DeprecatedSourceAndType for the given Trigger.
+func WithDeprecatedSourceAndTypeTriggerFilter(eventSource, eventType string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		triggerFilter := &eventingv1alpha1.TriggerFilter{
 			DeprecatedSourceAndType: &eventingv1alpha1.TriggerFilterSourceAndType{
@@ -115,6 +116,22 @@ func WithTriggerFilter(eventSource, eventType string) TriggerOption {
 			},
 		}
 		t.Spec.Filter = triggerFilter
+	}
+}
+
+// WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
+func WithAttributesTriggerFilter(eventSource, eventType string, extensions map[string]interface{}) TriggerOption {
+	attrs := make(map[string]string)
+	attrs["type"] = eventType
+	attrs["source"] = eventSource
+	for k, v := range extensions {
+		attrs[k] = fmt.Sprintf("%v", v)
+	}
+	triggerFilterAttributes := eventingv1alpha1.TriggerFilterAttributes(attrs)
+	return func(t *eventingv1alpha1.Trigger) {
+		t.Spec.Filter = &eventingv1alpha1.TriggerFilter{
+			Attributes: &triggerFilterAttributes,
+		}
 	}
 }
 

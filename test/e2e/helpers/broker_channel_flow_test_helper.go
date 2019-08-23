@@ -79,7 +79,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		client.CreateTriggerOrFail(
 			triggerName1,
 			resources.WithBroker(brokerName),
-			resources.WithTriggerFilter(eventSource1, eventType1),
+			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource1, eventType1),
 			resources.WithSubscriberRefForTrigger(transformationPodName),
 		)
 
@@ -91,7 +91,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		client.CreateTriggerOrFail(
 			triggerName2,
 			resources.WithBroker(brokerName),
-			resources.WithTriggerFilter(any, any),
+			resources.WithDeprecatedSourceAndTypeTriggerFilter(any, any),
 			resources.WithSubscriberRefForTrigger(loggerPodName1),
 		)
 
@@ -107,7 +107,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		client.CreateTriggerOrFail(
 			triggerName3,
 			resources.WithBroker(brokerName),
-			resources.WithTriggerFilter(eventSource2, eventType2),
+			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
 			resources.WithSubscriberURIForTrigger(channelURL),
 		)
 

@@ -28,7 +28,7 @@ import (
 
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/provisioners"
+	"knative.dev/eventing/pkg/channel"
 )
 
 const (
@@ -50,8 +50,8 @@ type Handler struct {
 	config Config
 
 	receivedMessages chan *forwardMessage
-	receiver         *provisioners.MessageReceiver
-	dispatcher       *provisioners.MessageDispatcher
+	receiver         *channel.MessageReceiver
+	dispatcher       *channel.MessageDispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -64,7 +64,7 @@ var _ http.Handler = &Handler{}
 
 // forwardMessage is passed between the Receiver and the Dispatcher.
 type forwardMessage struct {
-	msg  *provisioners.Message
+	msg  *channel.Message
 	done chan<- error
 }
 
@@ -73,13 +73,13 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
 		logger:           logger,
 		config:           config,
-		dispatcher:       provisioners.NewMessageDispatcher(logger.Sugar()),
+		dispatcher:       channel.NewMessageDispatcher(logger.Sugar()),
 		receivedMessages: make(chan *forwardMessage, messageBufferSize),
 		timeout:          defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := provisioners.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
+	receiver, err := channel.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,8 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	return handler, nil
 }
 
-func createReceiverFunction(f *Handler) func(provisioners.ChannelReference, *provisioners.Message) error {
-	return func(_ provisioners.ChannelReference, m *provisioners.Message) error {
+func createReceiverFunction(f *Handler) func(channel.ChannelReference, *channel.Message) error {
+	return func(_ channel.ChannelReference, m *channel.Message) error {
 		if f.config.AsyncHandler {
 			go func() {
 				// Any returned error is already logged in f.dispatch().
@@ -106,7 +106,7 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // dispatch takes the request, fans it out to each subscription in f.config. If all the fanned out
 // requests return successfully, then return nil. Else, return an error.
-func (f *Handler) dispatch(msg *provisioners.Message) error {
+func (f *Handler) dispatch(msg *channel.Message) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
 	for _, sub := range f.config.Subscriptions {
 		go func(s eventingduck.SubscriberSpec) {
@@ -132,6 +132,6 @@ func (f *Handler) dispatch(msg *provisioners.Message) error {
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *Handler) makeFanoutRequest(m provisioners.Message, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchMessage(&m, sub.SubscriberURI, sub.ReplyURI, provisioners.DispatchDefaults{})
+func (f *Handler) makeFanoutRequest(m channel.Message, sub eventingduck.SubscriberSpec) error {
+	return f.dispatcher.DispatchMessage(&m, sub.SubscriberURI, sub.ReplyURI, channel.DispatchDefaults{})
 }
