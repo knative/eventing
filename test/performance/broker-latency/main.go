@@ -81,8 +81,8 @@ const (
 	received
 	undelivered
 	dropped
-	duplicated
-	corrupted // TODO(Fredy-Z): corrupted status is not being used now
+	duplicated // TODO currently unused
+	corrupted  // TODO(Fredy-Z): corrupted status is not being used now
 )
 
 // state saves the data that is used to generate the metrics
@@ -217,14 +217,15 @@ func main() {
 	if err := group.Wait(); err != nil {
 		failTest("unexpected error happened when sending events")
 	}
+
+	close(resultCh)
+
+	// export result for this test
+	exportTestResult(q)
 	out, err := q.Store()
 	if err != nil {
 		log.Fatalf("q.Store error: %s %v", out.String(), err)
 	}
-	close(resultCh)
-
-	// export result for this test
-	exportTestResult()
 }
 
 func receivedEvent(event cloudevents.Event) {
@@ -234,20 +235,29 @@ func receivedEvent(event cloudevents.Event) {
 	}
 }
 
-func exportTestResult() {
+func exportTestResult(q *quickstore.Quickstore) {
 	// number of abnormal event deliveries
 	var errorCount int
+	var publishErrorCount int
+	var deliverErrorCount int
 	var latencies = make([]int64, 0)
 	for eventState := range resultCh {
 		switch eventState.status {
 		case received:
 			latencies = append(latencies, int64(eventState.latency))
-		case dropped, duplicated, undelivered:
+		case dropped:
 			errorCount++
+			deliverErrorCount++
+		case undelivered:
+			errorCount++
+			publishErrorCount++
 		default:
 			errorCount++
 		}
 	}
+
+	q.AddRunAggregate("pe", float64(publishErrorCount))
+	q.AddRunAggregate("de", float64(deliverErrorCount))
 
 	// if the error rate is larger than the threshold, we consider this test to be failed
 	if errorCount != 0 && float64(errorCount)/float64(eventNum) > errorRateThreshold {
