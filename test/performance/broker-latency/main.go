@@ -156,11 +156,6 @@ func main() {
 	// start a server to receive the events
 	go c.StartReceiver(context.Background(), receivedEvent)
 
-	// sleep 30 seconds before sending the events
-	// TODO(Fredy-Z): this is a bit hacky, as ideally, we need to wait for the Trigger/Subscription that uses it as a
-	//                Subscriber to become ready before sending the events, but we don't have a way to coordinate between them.
-	time.Sleep(30 * time.Second)
-
 	// populate the eventTimeMap with channels before sending the events
 	eventTimeMap = make(map[string]chan time.Time)
 	for seq := 0; seq < eventNum; seq++ {
