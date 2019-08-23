@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broker
+package filter
 
 import (
 	"context"
@@ -33,6 +33,7 @@ import (
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/tracing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,22 +41,18 @@ import (
 
 const (
 	writeTimeout = 1 * time.Minute
-	// TimeInFlightMetadataName is used to access the metadata stored on a
-	// CloudEvent to measure the time difference between when an event is
-	// received and when it is dispatched to the trigger function.
-	TimeInFlightMetadataName = "kn00timeinflight"
 )
 
-// Receiver parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
-type Receiver struct {
+// Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
+type Handler struct {
 	logger   *zap.Logger
 	client   client.Client
 	ceClient cloudevents.Client
 }
 
-// New creates a new Receiver and its associated MessageReceiver. The caller is responsible for
-// Start()ing the returned MessageReceiver.
-func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
+// NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
+// Start()ing the returned Handler.
+func NewHandler(logger *zap.Logger, client client.Client) (*Handler, error) {
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanMiddleware))
 	if err != nil {
 		return nil, err
@@ -80,7 +77,7 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 		return nil, err
 	}
 
-	r := &Receiver{
+	r := &Handler{
 		logger:   logger,
 		client:   client,
 		ceClient: ceClient,
@@ -95,7 +92,7 @@ func New(logger *zap.Logger, client client.Client) (*Receiver, error) {
 }
 
 // Initialize the client. Mainly intended to load stuff in its cache.
-func (r *Receiver) initClient() error {
+func (r *Handler) initClient() error {
 	// We list triggers so that we do not drop messages. Otherwise, on receiving an event, it
 	// may not find the Trigger and would return an error.
 	opts := &client.ListOptions{}
@@ -106,14 +103,14 @@ func (r *Receiver) initClient() error {
 	return nil
 }
 
-// Start begins to receive messages for the receiver.
+// Start begins to receive messages for the handler.
 //
 // Only HTTP POST requests to the root path (/) are accepted. If other paths or
 // methods are needed, use the HandleRequest method directly with another HTTP
 // server.
 //
 // This method will block until a message is received on the stop channel.
-func (r *Receiver) Start(stopCh <-chan struct{}) error {
+func (r *Handler) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -141,7 +138,7 @@ func (r *Receiver) Start(stopCh <-chan struct{}) error {
 	}
 }
 
-func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
@@ -157,7 +154,7 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 
 	// Remove the TTL attribute that is used by the Broker.
 	originalV3 := event.Context.AsV03()
-	ttl, ttlKey := GetTTL(event.Context)
+	ttl, ttlKey := broker.GetTTL(event.Context)
 	if ttl == nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
@@ -184,20 +181,20 @@ func (r *Receiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp 
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	responseEvent.Context, err = SetTTL(responseEvent.Context, ttl)
+	responseEvent.Context, err = broker.SetTTL(responseEvent.Context, ttl)
 	if err != nil {
 		return err
 	}
 	resp.Event = responseEvent
 	resp.Context = &cloudevents.HTTPTransportResponseContext{
-		Header: extractPassThroughHeaders(tctx),
+		Header: broker.ExtractPassThroughHeaders(tctx),
 	}
 
 	return nil
 }
 
 // sendEvent sends an event to a subscriber if the trigger filter passes.
-func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event) (*cloudevents.Event, error) {
+func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, trigger path.NamespacedNameUID, event *cloudevents.Event) (*cloudevents.Event, error) {
 	t, err := r.getTrigger(ctx, trigger)
 	if err != nil {
 		r.logger.Info("Unable to get the Trigger", zap.Error(err), zap.Any("triggerRef", trigger))
@@ -217,7 +214,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		dispatchTimeMS := int64(now.Sub(startTS) / time.Millisecond)
 		stats.Record(ctx, MeasureTriggerDispatchTime.M(dispatchTimeMS))
 		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
-		if err := event.ExtensionAs(TimeInFlightMetadataName, &deliveryTime); err != nil {
+		if err := event.ExtensionAs(broker.TimeInFlightMetadataName, &deliveryTime); err != nil {
 			return
 		}
 		timeInFlightMS := int64(now.Sub(deliveryTime) / time.Millisecond)
@@ -244,7 +241,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 		return nil, nil
 	}
 
-	sendingCTX := SendingContext(ctx, tctx, subscriberURI)
+	sendingCTX := broker.SendingContext(ctx, tctx, subscriberURI)
 	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	if err == nil {
 		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))
@@ -254,7 +251,7 @@ func (r *Receiver) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransport
 	return replyEvent, err
 }
 
-func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
+func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
 	t := &eventingv1alpha1.Trigger{}
 	err := r.client.Get(ctx, ref.NamespacedName, t)
 	if err != nil {
@@ -270,7 +267,7 @@ func (r *Receiver) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (
 // Currently it supports exact matching on event context attributes.
 // If no filter is present, shouldSendMessage returns false.
 // If no filter strategy is present, shouldSendMessage returns true.
-func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
+func (r *Handler) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) bool {
 	if ts.Filter == nil {
 		r.logger.Error("No filter specified")
 		ctx, _ = tag.New(ctx, tag.Upsert(TagFilterResult, "empty-fail"))
@@ -309,7 +306,7 @@ func (r *Receiver) shouldSendMessage(ctx context.Context, ts *eventingv1alpha1.T
 	return result
 }
 
-func (r *Receiver) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) bool {
+func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) bool {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
