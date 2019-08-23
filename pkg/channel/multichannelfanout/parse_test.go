@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/provisioners/fanout"
+	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/utils"
 )
 

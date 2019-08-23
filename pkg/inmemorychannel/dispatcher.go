@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/provisioners/multichannelfanout"
-	"knative.dev/eventing/pkg/provisioners/swappable"
+	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/eventing/pkg/channel/swappable"
 	pkgtracing "knative.dev/pkg/tracing"
 )
 

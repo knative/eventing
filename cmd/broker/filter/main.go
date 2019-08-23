@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/provisioners"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/metrics"
@@ -41,9 +41,9 @@ type envConfig struct {
 }
 
 func main() {
-	logConfig := provisioners.NewLoggingConfig()
+	logConfig := channel.NewLoggingConfig()
 	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
-	logger := provisioners.NewProvisionerLoggerFromConfig(logConfig).Desugar()
+	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
 	defer flush(logger)
 	flag.Parse()
 
