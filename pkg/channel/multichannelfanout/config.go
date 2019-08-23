@@ -17,7 +17,7 @@ limitations under the License.
 package multichannelfanout
 
 import (
-	"knative.dev/eventing/pkg/provisioners/fanout"
+	"knative.dev/eventing/pkg/channel/fanout"
 )
 
 // Config for a multichannelfanout.Handler.
