@@ -30,10 +30,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
-	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
 )
