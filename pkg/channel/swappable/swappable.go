@@ -29,7 +29,7 @@ import (
 	"sync/atomic"
 
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/provisioners/multichannelfanout"
+	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
 
 // Handler is an http.Handler that atomically swaps between underlying handlers.
