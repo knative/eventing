@@ -23,10 +23,16 @@ import (
 )
 
 const (
-	// v03TTLAttribute is the name of the CloudEvents 0.3 extension attribute used to store the
+	// V03TTLAttribute is the name of the CloudEvents 0.3 extension attribute used to store the
 	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
-	v03TTLAttribute = "knativebrokerttl"
+	V03TTLAttribute = "knativebrokerttl"
+
+	// TODO rename this extension, and place it somewhere else.
+	// TimeInFlightMetadataName is used to access the metadata stored on a
+	// CloudEvent to measure the time difference between when an event is
+	// received and when it is dispatched to the trigger function.
+	TimeInFlightMetadataName = "kn00timeinflight"
 )
 
 // GetTTL finds the TTL in the EventContext using a case insensitive comparison
@@ -34,15 +40,15 @@ const (
 // Depending on the encoding/transport, the extension case could be changed.
 func GetTTL(ctx cloudevents.EventContext) (interface{}, string) {
 	for k, v := range ctx.AsV03().Extensions {
-		if lower := strings.ToLower(k); lower == v03TTLAttribute {
+		if lower := strings.ToLower(k); lower == V03TTLAttribute {
 			return v, k
 		}
 	}
-	return nil, v03TTLAttribute
+	return nil, V03TTLAttribute
 }
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
 func SetTTL(ctx cloudevents.EventContext, ttl interface{}) (cloudevents.EventContext, error) {
-	err := ctx.SetExtension(v03TTLAttribute, ttl)
+	err := ctx.SetExtension(V03TTLAttribute, ttl)
 	return ctx, err
 }

@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/kubernetes"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
@@ -78,19 +78,19 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	receiver, err := broker.New(logger, mgr.GetClient())
+	handler, err := filter.NewHandler(logger, mgr.GetClient())
 	if err != nil {
-		logger.Fatal("Error creating Receiver", zap.Error(err))
+		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
-	err = mgr.Add(receiver)
+	err = mgr.Add(handler)
 	if err != nil {
-		logger.Fatal("Unable to start the receiver", zap.Error(err), zap.Any("broker_receiver", receiver))
+		logger.Fatal("Unable to start the handler", zap.Error(err), zap.Any("broker_filter", handler))
 	}
 
 	// TODO watch logging config map.
 
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_receiver", logger.Sugar()))
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger.Sugar()))
 
 	// Set up signals so we handle the first shutdown signal gracefully.
 	stopCh := signals.SetupSignalHandler()

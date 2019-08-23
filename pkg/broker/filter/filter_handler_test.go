@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broker
+package filter
 
 import (
 	"context"
@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker"
 	controllertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -290,7 +291,7 @@ func TestReceiver(t *testing.T) {
 				correctURI = append(correctURI, trig)
 			}
 
-			r, err := New(
+			r, err := NewHandler(
 				zap.NewNop(),
 				getClient(correctURI, tc.mocks))
 			if tc.expectNewToFail {
@@ -365,7 +366,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	h.requestReceived = true
 
 	for n, v := range h.headers {
-		if strings.Contains(strings.ToLower(n), strings.ToLower(v03TTLAttribute)) {
+		if strings.Contains(strings.ToLower(n), strings.ToLower(broker.V03TTLAttribute)) {
 			h.t.Errorf("Broker TTL should not be seen by the subscriber: %s", n)
 		}
 		if diff := cmp.Diff(v, req.Header[n]); diff != "" {
@@ -494,7 +495,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context, _ = SetTTL(e.Context, 1)
+	e.Context, _ = broker.SetTTL(e.Context, 1)
 	return e
 }
 

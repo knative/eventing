@@ -20,7 +20,7 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"knative.dev/eventing/pkg/broker"
+	utils "knative.dev/eventing/pkg/broker"
 )
 
 var (
@@ -47,11 +47,11 @@ var (
 	// - characters are printable US-ASCII
 
 	// TagResult is a tag key referring to the observed result of an operation.
-	TagResult = mustNewTagKey("result")
+	TagResult = utils.MustNewTagKey("result")
 
 	// TagBroker is a tag key referring to the Broker name serviced by this
 	// ingress process.
-	TagBroker = mustNewTagKey("broker")
+	TagBroker = utils.MustNewTagKey("broker")
 )
 
 func init() {
@@ -67,22 +67,11 @@ func init() {
 		&view.View{
 			Name:        "broker_dispatch_time",
 			Measure:     MeasureDispatchTime,
-			Aggregation: view.Distribution(broker.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
+			Aggregation: view.Distribution(utils.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
 			TagKeys:     []tag.Key{TagResult, TagBroker},
 		},
 	)
 	if err != nil {
 		panic(err)
 	}
-}
-
-// mustNewTagKey creates a Tag or panics. This will only fail if the tag key
-// doesn't conform to tag name validations.
-// TODO OC library should provide this
-func mustNewTagKey(k string) tag.Key {
-	tagKey, err := tag.NewKey(k)
-	if err != nil {
-		panic(err)
-	}
-	return tagKey
 }
