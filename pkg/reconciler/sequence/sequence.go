@@ -213,10 +213,9 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, c
 			}
 			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", newChannel))
 			return created, nil
-		} else {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
-			return nil, err
 		}
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
+		return nil, err
 	}
 	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", c))
 	return c, nil
