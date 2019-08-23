@@ -32,6 +32,9 @@ spec:
     args:
     - "-benchmark=5903682180743168"
     - "-event-count=1000"
+    volumeMounts:
+    - name: config-mako
+      mountPath: /etc/config-mako
     terminationMessagePolicy: FallbackToLogsOnError
   - name: "mako"
     image: gcr.io/knative-performance/mako-microservice:latest
@@ -45,3 +48,6 @@ spec:
   - name: mako-upload
     secret:
       secretName: mako-upload
+  - name: config-mako
+    configMap:
+      name: config-mako

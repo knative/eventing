@@ -36,18 +36,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/mako/helpers/go/quickstore"
-	qpb "github.com/google/mako/helpers/proto/quickstore/quickstore_go_proto"
 	"golang.org/x/sync/errgroup"
 	"knative.dev/eventing/test/performance"
+	"knative.dev/pkg/signals"
+	"knative.dev/pkg/test/mako"
 )
 
 const (
@@ -91,10 +90,6 @@ type state struct {
 	status  eventStatus
 }
 
-const (
-	makoAddr = "localhost:9813"
-)
-
 func init() {
 	flag.StringVar(&benchmark, "benchmark", "", "The mako benchmark ID")
 	flag.StringVar(&sinkURL, "sink", "http://default-broker", "The sink URL for the event destination.")
@@ -113,8 +108,28 @@ func main() {
 	// parse the command line flags
 	flag.Parse()
 
-	if benchmark == "" {
-		log.Fatal("-benchmark is a required flag.")
+	// We want this for properly handling Kubernetes container lifecycle events.
+	ctx := signals.NewContext()
+
+	// We cron every 5 minutes, so make sure that we don't severely overrun to
+	// limit how noisy a neighbor we can be.
+	ctx, cancel := context.WithTimeout(ctx, 6*time.Minute)
+	defer cancel()
+
+	// Use the benchmark key created
+	ctx, q, qclose, err := mako.Setup(ctx)
+	if err != nil {
+		log.Fatalf("Failed to setup mako: %v", err)
+	}
+
+	// Use a fresh context here so that our RPC to terminate the sidecar
+	// isn't subject to our timeout (or we won't shut it down when we time out)
+	defer qclose(context.Background())
+
+	// Wrap fatalf in a helper or our sidecar will live forever.
+	fatalf := func(f string, args ...interface{}) {
+		qclose(context.Background())
+		failTest(fmt.Sprintf(f, args...))
 	}
 
 	// get encoding
@@ -125,7 +140,7 @@ func main() {
 	case "structured":
 		encodingOption = cloudevents.WithStructuredEncoding()
 	default:
-		failTest(fmt.Sprintf("unsupported encoding option: %q\n", encoding))
+		fatalf("unsupported encoding option: %q\n", encoding)
 	}
 
 	// create cloudevents client
@@ -134,24 +149,15 @@ func main() {
 		encodingOption,
 	)
 	if err != nil {
-		failTest(fmt.Sprintf("failed to create transport: %v\n", err))
+		fatalf("failed to create transport: %v\n", err)
 	}
 	c, err := cloudevents.NewClient(t,
 		cloudevents.WithTimeNow(),
 		cloudevents.WithUUIDs(),
 	)
 	if err != nil {
-		failTest(fmt.Sprintf("failed to create client: %v\n", err))
+		fatalf("failed to create client: %v\n", err)
 	}
-
-	ctx := context.Background()
-	q, qclose, err := quickstore.NewAtAddress(ctx, &qpb.QuickstoreInput{
-		BenchmarkKey: proto.String(benchmark),
-	}, makoAddr)
-	if err != nil {
-		failTest(fmt.Sprintf("failed NewAtAddress: %v\n", err))
-	}
-	defer qclose(ctx)
 
 	// start a server to receive the events
 	go c.StartReceiver(context.Background(), receivedEvent)
@@ -191,7 +197,9 @@ func main() {
 				resultCh <- state{status: undelivered}
 			} else {
 				elapsed := time.Now().Sub(sendTime)
-				q.AddSamplePoint(ts(sendTime), map[string]float64{"pl": elapsed.Seconds()})
+				if qerr := q.AddSamplePoint(ts(sendTime), map[string]float64{"pl": elapsed.Seconds()}); qerr != nil {
+					log.Printf("ERROR AddSamplePoint: %v", qerr)
+				}
 			}
 
 			if timeCh, ok := eventTimeMap[seqStr]; ok {
@@ -215,7 +223,7 @@ func main() {
 		})
 	}
 	if err := group.Wait(); err != nil {
-		failTest("unexpected error happened when sending events")
+		fatalf("unexpected error happened when sending events: %v", err)
 	}
 
 	close(resultCh)
@@ -224,7 +232,7 @@ func main() {
 	exportTestResult(q)
 	out, err := q.Store()
 	if err != nil {
-		log.Fatalf("q.Store error: %s %v", out.String(), err)
+		fatalf("q.Store error: %v: %v", out, err)
 	}
 }
 
@@ -286,5 +294,4 @@ func failTest(reason string) {
 	builder.WriteString(performance.TestResultKey + ": " + performance.TestFail + "\n")
 	builder.WriteString(performance.TestFailReason + ": " + reason)
 	log.Fatalf(builder.String())
-	os.Exit(1)
 }

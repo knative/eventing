@@ -42,7 +42,7 @@ const (
 
 // EscapeTag replaces characters that Mako doesn't accept with ones it does.
 func EscapeTag(tag string) string {
-	return strings.ReplaceAll(tag, ".", "_")
+	return strings.Replace(tag, ".", "_", -1)
 }
 
 // Setup sets up the mako client for the provided benchmarkKey.
