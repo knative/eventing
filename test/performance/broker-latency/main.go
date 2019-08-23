@@ -191,7 +191,7 @@ func main() {
 				resultCh <- state{status: undelivered}
 			} else {
 				elapsed := time.Now().Sub(sendTime)
-				q.AddSamplePoint(ts(time.Now()), map[string]float64{"pl": elapsed.Seconds()})
+				q.AddSamplePoint(ts(sendTime), map[string]float64{"pl": elapsed.Seconds()})
 			}
 
 			if timeCh, ok := eventTimeMap[seqStr]; ok {
@@ -199,14 +199,13 @@ func main() {
 				// if the event is received, calculate the delay
 				case receivedTime := <-timeCh:
 					latency := receivedTime.Sub(sendTime)
-					if qerr := q.AddSamplePoint(ts(receivedTime), map[string]float64{"dl": latency.Seconds()}); qerr != nil {
+					if qerr := q.AddSamplePoint(ts(sendTime), map[string]float64{"dl": latency.Seconds()}); qerr != nil {
 						log.Printf("ERROR AddSamplePoint: %v", qerr)
 					}
 					resultCh <- state{latency: latency, status: received}
 				// if the event is not received before timeout, consider it to be dropped
 				case <-ctx.Done():
-					// Should this be sendTime or current time?
-					if qerr := q.AddError(ts(time.Now()), "Timeout waiting for delivery"); qerr != nil {
+					if qerr := q.AddError(ts(sendTime), "Timeout waiting for delivery"); qerr != nil {
 						log.Printf("ERROR AddError: %v", qerr)
 					}
 					resultCh <- state{status: dropped}
