@@ -31,7 +31,7 @@ type HasSpec interface {
 }
 
 // setUserInfoAnnotations sets creator and updater annotations on a resource.
-func setUserInfoAnnotations(resource HasSpec, ctx context.Context) {
+func setUserInfoAnnotations(ctx context.Context, resource HasSpec) {
 	if ui := apis.GetUserInfo(ctx); ui != nil {
 		objectMetaAccessor, ok := resource.(metav1.ObjectMetaAccessor)
 		if !ok {
