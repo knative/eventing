@@ -297,8 +297,14 @@ func patchSubscribers(namespace, name string, subscribers []eventingduckv1alpha1
 	var spec string
 	if subscribers != nil {
 		b, err := json.Marshal(subscribers)
+		if err != nil {
+			return action
+		}
 		ss := make([]map[string]interface{}, 0)
 		err = json.Unmarshal(b, &ss)
+		if err != nil {
+			return action
+		}
 		subs, err := json.Marshal(ss)
 		if err != nil {
 			return action
