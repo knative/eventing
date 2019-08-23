@@ -31,10 +31,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
-	status "knative.dev/eventing/pkg/apis/duck"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -53,10 +51,6 @@ const (
 	cronJobUpdateStatusFailed      = "CronJobSourceUpdateStatusFailed"
 	cronJobSourceDeploymentCreated = "CronJobSurceDeploymentCreated"
 	cronJobSourceDeploymentUpdated = "CronJobSourceDeploymentUpdated"
-
-	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
-	// image. It must be defined.
-	raImageEnvVar = "CRONJOB_RA_IMAGE"
 )
 
 type Reconciler struct {
@@ -162,29 +156,12 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	}
 	cronjob.Status.PropagateDeploymentAvailability(ra)
 
-	// TODO Delete this after 0.8 is cut.
-	if status.DeploymentIsAvailable(&ra.Status, true) {
-		err = r.deleteOldReceiveAdapter(ctx, cronjob)
-		if err != nil {
-			return fmt.Errorf("deleting old receive adapter: %v", err)
-		}
-	}
 	_, err = r.reconcileEventType(ctx, cronjob)
 	if err != nil {
 		cronjob.Status.MarkNoEventType("EventTypeReconcileFailed", "")
 		return fmt.Errorf("reconciling event types: %v", err)
 	}
 	cronjob.Status.MarkEventType()
-
-	// TODO Delete this after 0.8 is cut.
-	oldEventType, err := r.getOldEventType(ctx, cronjob)
-	if err != nil {
-		return fmt.Errorf("getting old event type: %v", err)
-	} else if oldEventType != nil {
-		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(cronjob.Namespace).Delete(oldEventType.Name, &metav1.DeleteOptions{}); err != nil {
-			return fmt.Errorf("deleting old event type: %v", err)
-		}
-	}
 
 	return nil
 }
@@ -273,24 +250,6 @@ func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	return false
 }
 
-func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.CronJobSource) error {
-	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
-	})
-	if err != nil {
-		return fmt.Errorf("listing old receive adapter: %v", err)
-	}
-	for _, ora := range dl.Items {
-		if metav1.IsControlledBy(&ora, src) {
-			err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
-			if err != nil {
-				return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
-			}
-		}
-	}
-	return nil
-}
-
 func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
 	expected := resources.MakeEventType(src)
 	current, err := r.eventTypeLister.EventTypes(src.Namespace).Get(expected.Name)
@@ -330,26 +289,6 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 	}
 	logging.FromContext(ctx).Debug("EventType created", zap.Any("eventType", current))
 	return current, nil
-}
-
-func (r *Reconciler) getOldEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
-	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: r.getOldLabelSelector(src).String(),
-	})
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
-		return nil, err
-	}
-	for _, et := range etl.Items {
-		if metav1.IsControlledBy(&et, src) {
-			return &et, nil
-		}
-	}
-	return nil, nil
-}
-
-func (r *Reconciler) getOldLabelSelector(src *v1alpha1.CronJobSource) labels.Selector {
-	return labels.SelectorFromSet(resources.OldLabels(src.Name))
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJobSource) (*v1alpha1.CronJobSource, error) {
