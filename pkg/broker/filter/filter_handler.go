@@ -33,7 +33,7 @@ import (
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	utils "knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/tracing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -154,7 +154,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 	// Remove the TTL attribute that is used by the Broker.
 	originalV3 := event.Context.AsV03()
-	ttl, ttlKey := utils.GetTTL(event.Context)
+	ttl, ttlKey := broker.GetTTL(event.Context)
 	if ttl == nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
@@ -181,13 +181,13 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	responseEvent.Context, err = utils.SetTTL(responseEvent.Context, ttl)
+	responseEvent.Context, err = broker.SetTTL(responseEvent.Context, ttl)
 	if err != nil {
 		return err
 	}
 	resp.Event = responseEvent
 	resp.Context = &cloudevents.HTTPTransportResponseContext{
-		Header: utils.ExtractPassThroughHeaders(tctx),
+		Header: broker.ExtractPassThroughHeaders(tctx),
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		dispatchTimeMS := int64(now.Sub(startTS) / time.Millisecond)
 		stats.Record(ctx, MeasureTriggerDispatchTime.M(dispatchTimeMS))
 		stats.Record(ctx, MeasureTriggerEventsTotal.M(1))
-		if err := event.ExtensionAs(utils.TimeInFlightMetadataName, &deliveryTime); err != nil {
+		if err := event.ExtensionAs(broker.TimeInFlightMetadataName, &deliveryTime); err != nil {
 			return
 		}
 		timeInFlightMS := int64(now.Sub(deliveryTime) / time.Millisecond)
@@ -241,7 +241,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		return nil, nil
 	}
 
-	sendingCTX := utils.SendingContext(ctx, tctx, subscriberURI)
+	sendingCTX := broker.SendingContext(ctx, tctx, subscriberURI)
 	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	if err == nil {
 		ctx, _ = tag.New(ctx, tag.Upsert(TagResult, "accept"))

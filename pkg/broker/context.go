@@ -60,6 +60,8 @@ func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, 
 	return sendingCTX
 }
 
+// ExtractPassThroughHeaders extracts the headers that are in the `forwardHeaders` set
+// or has any of the prefixes in `forwardPrefixes`.
 func ExtractPassThroughHeaders(tctx cloudevents.HTTPTransportContext) http.Header {
 	h := http.Header{}
 

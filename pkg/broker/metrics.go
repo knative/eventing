@@ -18,7 +18,7 @@ package broker
 
 import "go.opencensus.io/tag"
 
-// mustNewTagKey creates a Tag or panics. This will only fail if the tag key
+// MustNewTagKey creates a Tag or panics. This will only fail if the tag key
 // doesn't conform to tag name validations.
 // TODO OC library should provide this
 func MustNewTagKey(k string) tag.Key {
