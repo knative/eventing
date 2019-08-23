@@ -12,7 +12,7 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/broker"
+	utils "knative.dev/eventing/pkg/broker"
 )
 
 var (
@@ -57,7 +57,7 @@ func (h *Handler) Start(stopCh <-chan struct{}) error {
 }
 
 func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	event.SetExtension(broker.TimeInFlightMetadataName, time.Now())
+	event.SetExtension(utils.TimeInFlightMetadataName, time.Now())
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
@@ -88,7 +88,7 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 }
 
 func (h *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, event cloudevents.Event) error {
-	sendingCTX := broker.SendingContext(ctx, tctx, h.ChannelURI)
+	sendingCTX := utils.SendingContext(ctx, tctx, h.ChannelURI)
 
 	startTS := time.Now()
 	defer func() {
@@ -114,7 +114,7 @@ func (h *Handler) decrementTTL(event *cloudevents.Event) bool {
 	}
 
 	var err error
-	event.Context, err = broker.SetTTL(event.Context, ttl)
+	event.Context, err = utils.SetTTL(event.Context, ttl)
 	if err != nil {
 		h.Logger.Error("failed to set TTL", zap.Error(err))
 	}
@@ -122,7 +122,7 @@ func (h *Handler) decrementTTL(event *cloudevents.Event) bool {
 }
 
 func (h *Handler) getTTLToSet(event *cloudevents.Event) int {
-	ttlInterface, _ := broker.GetTTL(event.Context)
+	ttlInterface, _ := utils.GetTTL(event.Context)
 	if ttlInterface == nil {
 		h.Logger.Debug("No TTL found, defaulting")
 		return defaultTTL
