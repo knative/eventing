@@ -350,3 +350,24 @@ func triggerFilterAttribute(filter *eventingv1alpha1.TriggerFilter, attributeNam
 	}
 	return attributeValue
 }
+
+// triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
+// returns the any value filter.
+func triggerFilterAttribute(filter *eventingv1alpha1.TriggerFilter, attributeName string) string {
+	attributeValue := eventingv1alpha1.TriggerAnyFilter
+	if filter != nil {
+		if filter.DeprecatedSourceAndType != nil {
+			if attributeName == "type" {
+				attributeValue = filter.DeprecatedSourceAndType.Type
+			} else if attributeName == "source" {
+				attributeValue = filter.DeprecatedSourceAndType.Source
+			}
+		} else if filter.Attributes != nil {
+			attrs := map[string]string(*filter.Attributes)
+			if v, ok := attrs[attributeName]; ok {
+				attributeValue = v
+			}
+		}
+	}
+	return attributeValue
+}
