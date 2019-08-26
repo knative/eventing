@@ -180,11 +180,10 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 			logging.FromContext(ctx).Error("can not find Broker's Filter service", zap.Error(err))
 			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Broker's Filter service not found")
 			return errors.New("failed to find Broker's Filter service")
-		} else {
-			logging.FromContext(ctx).Error("failed to get Broker's Filter service", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Failed to get Broker's Filter service")
-			return err
 		}
+		logging.FromContext(ctx).Error("failed to get Broker's Filter service", zap.Error(err))
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Failed to get Broker's Filter service")
+		return err
 	}
 
 	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, track)

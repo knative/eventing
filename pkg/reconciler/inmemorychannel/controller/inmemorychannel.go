@@ -233,9 +233,8 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.
 				return nil, err
 			}
 			return svc, nil
-		} else {
-			logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
 		}
+		logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
 		return nil, err
 	}
 

@@ -69,11 +69,6 @@ func MakeFactory(ctor Ctor, unstructured bool) Factory {
 			addTo(dynamicScheme)
 		}
 
-		allObjects := ls.GetAllObjects()
-		if unstructured {
-			allObjects = ToUnstructured(t, allObjects)
-		}
-
 		// The dynamic client's support for patching is BS.  Implement it
 		// here via PrependReactor (this can be overridden below by the
 		// provided reactors).

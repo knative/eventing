@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	testError = errors.New("test error")
+	errTest = errors.New("test error")
 )
 
 type fakeInformerFactory struct {
@@ -60,7 +60,7 @@ func (fif *fakeInformerFactory) Get(gvr schema.GroupVersionResource) (cache.Shar
 	if _, present := fif.gvr[gvr]; !present {
 		fif.gvr[gvr] = 0
 	}
-	fif.gvr[gvr] += 1
+	fif.gvr[gvr] ++
 	return &fakeInformer{}, nil, nil
 }
 
@@ -87,8 +87,8 @@ func TestResourceTracker(t *testing.T) {
 		expectedError        error
 	}{
 		"informerFactory error": {
-			informerFactoryError: testError,
-			expectedError:        testError,
+			informerFactoryError: errTest,
+			expectedError:        errTest,
 		},
 		"Only one informer created per GVR": {
 			repeatedTracks: 1,

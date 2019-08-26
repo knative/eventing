@@ -117,11 +117,11 @@ func TearDown(client *Client) {
 
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
-	nsSpec, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 
 	if err != nil && errors.IsNotFound(err) {
-		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		nsSpec, err = client.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+		_, err = client.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 
 		if err != nil {
 			t.Fatalf("Failed to create Namespace: %s; %v", namespace, err)
