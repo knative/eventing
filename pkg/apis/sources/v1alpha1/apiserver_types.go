@@ -108,7 +108,7 @@ type ApiServerResource struct {
 	APIVersion string `json:"apiVersion"`
 
 	// Kind of the resource to watch.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	Kind string `json:"kind"`
 
 	// If true, send an event referencing the object controlling the resource
