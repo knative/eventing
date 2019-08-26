@@ -17,10 +17,11 @@ limitations under the License.
 package ingress
 
 import (
-	"knative.dev/eventing/pkg/metrics/metricskey"
-	"knative.dev/pkg/metrics/metricstest"
 	"testing"
 	"time"
+
+	"knative.dev/eventing/pkg/metrics/metricskey"
+	"knative.dev/pkg/metrics/metricstest"
 )
 
 // unregister, ehm, unregisters the metrics that were registered, by

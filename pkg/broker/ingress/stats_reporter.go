@@ -18,13 +18,14 @@ package ingress
 
 import (
 	"context"
+	"time"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	utils "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics"
-	"time"
 )
 
 var (
