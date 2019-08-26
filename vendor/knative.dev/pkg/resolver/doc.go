@@ -14,11 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
-
-// Labels are the labels attached to all resources based on a CronJobSource.
-func Labels(name string) map[string]string {
-	return map[string]string{
-		"sources.eventing.knative.dev/cronJobSource": name,
-	}
-}
+// Package resolver implements resolvers for resolving k8s references and URIs.
+package resolver

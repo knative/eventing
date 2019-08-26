@@ -364,43 +364,6 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 		}, {
-			Name: "valid with old event type deletion",
-			Objects: []runtime.Object{
-				NewCronJobSource(sourceName, testNS,
-					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
-						Schedule: testSchedule,
-						Data:     testData,
-						Sink:     &sinkRef,
-					}),
-					WithCronJobSourceUID(sourceUID),
-					WithInitCronJobSourceConditions,
-					WithValidCronJobSourceSchedule,
-					WithValidCronJobSourceResources,
-					WithValidCronJobSourceResources,
-					WithCronJobSourceDeployed,
-					WithCronJobSourceSink(sinkURI),
-					WithCronJobSourceEventType,
-				),
-				NewChannel(sinkName, testNS,
-					WithInitChannelConditions,
-					WithChannelAddress(sinkDNS),
-				),
-				makeAvailableReceiveAdapter(sinkRef),
-				NewEventType("name-1", testNS,
-					WithEventTypeLabels(resources.OldLabels(sourceName)),
-					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
-					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
-					WithEventTypeBroker(sinkName),
-					WithEventTypeOwnerReference(ownerRef)),
-			},
-			Key: testNS + "/" + sourceName,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
-			},
-			WantDeletes: []clientgotesting.DeleteActionImpl{{
-				Name: "name-1",
-			}},
-		}, {
 			Name: "valid with event type deletion",
 			Objects: []runtime.Object{
 				NewCronJobSource(sourceName, testNS,

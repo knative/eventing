@@ -14,11 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+package alerter
 
-// Labels are the labels attached to all resources based on a CronJobSource.
-func Labels(name string) map[string]string {
-	return map[string]string{
-		"sources.eventing.knative.dev/cronJobSource": name,
+import (
+	"log"
+)
+
+// Run can run functions that needs dryrun support.
+func Run(message string, call func() error, dryrun bool) error {
+	if dryrun {
+		log.Printf("[dry run] %s", message)
+		return nil
 	}
+	log.Printf(message)
+
+	return call()
 }

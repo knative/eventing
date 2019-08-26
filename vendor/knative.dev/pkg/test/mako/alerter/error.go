@@ -14,11 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resources
+// error.go helps with error handling
 
-// Labels are the labels attached to all resources based on a CronJobSource.
-func Labels(name string) map[string]string {
-	return map[string]string{
-		"sources.eventing.knative.dev/cronJobSource": name,
+package alerter
+
+import (
+	"errors"
+	"strings"
+)
+
+// CombineErrors combines slice of errors and return a single error
+func CombineErrors(errs []error) error {
+	if len(errs) == 0 {
+		return nil
 	}
+	var sb strings.Builder
+	for _, err := range errs {
+		sb.WriteString(err.Error())
+		sb.WriteString("\n")
+	}
+	return errors.New(strings.Trim(sb.String(), "\n"))
 }
