@@ -152,13 +152,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 	if err != nil {
 		return fmt.Errorf("reconciling receive adapter: %v", err)
 	}
-	// TODO Delete this after 0.8 is cut.
-	if status.DeploymentIsAvailable(&ra.Status, false) {
-		err = r.deleteOldReceiveAdapter(ctx, source, ra.Name)
-		if err != nil {
-			return fmt.Errorf("deleting old receive adapter: %v", err)
-		}
-	}
+
 	if status.DeploymentIsAvailable(&ra.Status, false) {
 		source.Status.MarkDeployed()
 		r.Recorder.Eventf(source, corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
@@ -267,28 +261,6 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 		}
 	}
 	return false
-}
-
-// TODO Delete this after 0.8 is cut.
-func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.ContainerSource, currentName string) error {
-	// Sadly there were no labels attached to the Deployment itself.
-	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("listing old receive adapter: %v", err)
-	}
-	for _, ora := range dl.Items {
-		// Note that this will match the new receive adapter as well.
-		if metav1.IsControlledBy(&ora, src) {
-			// Ignore the current receive adapter.
-			if ora.Name != currentName {
-				err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
-				if err != nil {
-					return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func (r *Reconciler) markDeployingAndRecordEvent(source *v1alpha1.ContainerSource, evType string, reason string, messageFmt string, args ...interface{}) {
