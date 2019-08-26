@@ -23,6 +23,8 @@ import (
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
+
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 var (
@@ -83,10 +85,10 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if isSubscriberSpecNilOrEmpty(ts.Subscriber) {
+	if messagingv1alpha1.IsSubscriberSpecNilOrEmpty(ts.Subscriber) {
 		fe := apis.ErrMissingField("subscriber")
 		errs = errs.Also(fe)
-	} else if fe := IsValidSubscriberSpec(*ts.Subscriber); fe != nil {
+	} else if fe := messagingv1alpha1.IsValidSubscriberSpec(*ts.Subscriber); fe != nil {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 

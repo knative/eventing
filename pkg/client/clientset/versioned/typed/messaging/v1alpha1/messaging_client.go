@@ -31,6 +31,7 @@ type MessagingV1alpha1Interface interface {
 	ChoicesGetter
 	InMemoryChannelsGetter
 	SequencesGetter
+	SubscriptionsGetter
 }
 
 // MessagingV1alpha1Client is used to interact with features provided by the messaging.knative.dev group.
@@ -52,6 +53,10 @@ func (c *MessagingV1alpha1Client) InMemoryChannels(namespace string) InMemoryCha
 
 func (c *MessagingV1alpha1Client) Sequences(namespace string) SequenceInterface {
 	return newSequences(c, namespace)
+}
+
+func (c *MessagingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {
+	return newSubscriptions(c, namespace)
 }
 
 // NewForConfig creates a new MessagingV1alpha1Client for the given config.

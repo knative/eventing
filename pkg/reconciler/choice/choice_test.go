@@ -36,7 +36,6 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
@@ -539,16 +538,16 @@ func createChoiceSubscriptionStatus(choiceName string, caseNumber int, status co
 	}
 }
 
-func createSubscriber(caseNumber int) eventingv1alpha1.SubscriberSpec {
+func createSubscriber(caseNumber int) v1alpha1.SubscriberSpec {
 	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
-	return eventingv1alpha1.SubscriberSpec{
+	return v1alpha1.SubscriberSpec{
 		URI: &uriString,
 	}
 }
 
-func createFilter(caseNumber int) *eventingv1alpha1.SubscriberSpec {
+func createFilter(caseNumber int) *v1alpha1.SubscriberSpec {
 	uriString := fmt.Sprintf("http://example.com/filter-%d", caseNumber)
-	return &eventingv1alpha1.SubscriberSpec{
+	return &v1alpha1.SubscriberSpec{
 		URI: &uriString,
 	}
 }

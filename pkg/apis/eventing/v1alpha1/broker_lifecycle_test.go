@@ -27,8 +27,11 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -398,9 +401,9 @@ func TestBrokerIsReady(t *testing.T) {
 				bs.PropagateIngressChannelReadinessCRD(c)
 			}
 			if !test.markIngressSubscriptionOwned {
-				bs.MarkIngressSubscriptionNotOwned(&Subscription{})
+				bs.MarkIngressSubscriptionNotOwned(&messagingv1alpha1.Subscription{})
 			} else if test.markIngressSubscriptionReady != nil {
-				var sub *SubscriptionStatus
+				var sub *messagingv1alpha1.SubscriptionStatus
 				if *test.markIngressSubscriptionReady {
 					sub = TestHelper.ReadySubscriptionStatus()
 				} else {

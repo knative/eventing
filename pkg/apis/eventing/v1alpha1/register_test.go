@@ -55,8 +55,8 @@ func TestKnownTypes(t *testing.T) {
 	types := scheme.KnownTypes(SchemeGroupVersion)
 
 	for _, name := range []string{
-		"Subscription",
-		"SubscriptionList",
+		"Trigger",
+		"TriggerList",
 	} {
 		if _, ok := types[name]; !ok {
 			t.Errorf("Did not find %q as registered type", name)
