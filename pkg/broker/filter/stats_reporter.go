@@ -18,14 +18,14 @@ package filter
 
 import (
 	"context"
-	"fmt"
+	"time"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	utils "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics"
-	"time"
 )
 
 var (
@@ -74,13 +74,14 @@ type ReportArgs struct {
 type StatsReporter interface {
 	ReportEventCount(args *ReportArgs, err error) error
 	ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error
-	ReportFilterTime(args *ReportArgs, filterResult string, d time.Duration) error
+	ReportFilterTime(args *ReportArgs, filterResult FilterResult, d time.Duration) error
 	ReportEventDeliveryTime(args *ReportArgs, err error, d time.Duration) error
 }
 
-// Reporter holds cached metric objects to report filter metrics.
-type Reporter struct {
-	initialized      bool
+var _ StatsReporter = (*reporter)(nil)
+
+// reporter holds cached metric objects to report filter metrics.
+type reporter struct {
 	namespaceTagKey  tag.Key
 	triggerTagKey    tag.Key
 	brokerTagKey     tag.Key
@@ -91,8 +92,8 @@ type Reporter struct {
 }
 
 // NewStatsReporter creates a reporter that collects and reports filter metrics.
-func NewStatsReporter() (*Reporter, error) {
-	var r = &Reporter{}
+func NewStatsReporter() (StatsReporter, error) {
+	var r = &reporter{}
 
 	// Create the tag keys that will be used to add tags to our measurements.
 	nsTag, err := tag.NewKey(metricskey.NamespaceName)
@@ -163,96 +164,44 @@ func NewStatsReporter() (*Reporter, error) {
 		return nil, err
 	}
 
-	r.initialized = true
 	return r, nil
 }
 
 // ReportEventCount captures the event count.
-func (r *Reporter) ReportEventCount(args *ReportArgs, err error) error {
-	if !r.initialized {
-		return fmt.Errorf("StatsReporter is not initialized yet")
-	}
-
-	// Note that eventType and eventSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.triggerTagKey, args.trigger),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.triggerTypeKey, valueOrAny(args.eventType)),
-		tag.Insert(r.triggerSourceKey, valueOrAny(args.eventSource)),
-		tag.Insert(r.resultKey, utils.Result(err)))
+func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
+	ctx, err := r.generateTag(args, tag.Insert(r.resultKey, utils.Result(err)))
 	if err != nil {
 		return err
 	}
-
 	metrics.Record(ctx, eventCountM.M(1))
 	return nil
 }
 
 // ReportDispatchTime captures dispatch times.
-func (r *Reporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
-	if !r.initialized {
-		return fmt.Errorf("StatsReporter is not initialized yet")
-	}
-
-	// Note that eventType and eventSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.triggerTagKey, args.trigger),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.triggerTypeKey, valueOrAny(args.eventType)),
-		tag.Insert(r.triggerSourceKey, valueOrAny(args.eventSource)),
-		tag.Insert(r.resultKey, utils.Result(err)))
+func (r *reporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+	ctx, err := r.generateTag(args, tag.Insert(r.resultKey, utils.Result(err)))
 	if err != nil {
 		return err
 	}
-
 	// convert time.Duration in nanoseconds to milliseconds.
 	metrics.Record(ctx, dispatchTimeInMsecM.M(float64(d/time.Millisecond)))
 	return nil
 }
 
 // ReportFilterTime captures filtering times.
-func (r *Reporter) ReportFilterTime(args *ReportArgs, filterResult string, d time.Duration) error {
-	if !r.initialized {
-		return fmt.Errorf("StatsReporter is not initialized yet")
-	}
-
-	// Note that eventType and eventSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.triggerTagKey, args.trigger),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.triggerTypeKey, valueOrAny(args.eventType)),
-		tag.Insert(r.triggerSourceKey, valueOrAny(args.eventSource)),
-		tag.Insert(r.filterResultKey, filterResult))
+func (r *reporter) ReportFilterTime(args *ReportArgs, filterResult FilterResult, d time.Duration) error {
+	ctx, err := r.generateTag(args, tag.Insert(r.filterResultKey, string(filterResult)))
 	if err != nil {
 		return err
 	}
-
 	// convert time.Duration in nanoseconds to milliseconds.
 	metrics.Record(ctx, filterTimeInMsecM.M(float64(d/time.Millisecond)))
 	return nil
 }
 
 // ReportEventDeliveryTime captures event delivery times.
-func (r *Reporter) ReportEventDeliveryTime(args *ReportArgs, err error, d time.Duration) error {
-	if !r.initialized {
-		return fmt.Errorf("StatsReporter is not initialized yet")
-	}
-
-	// Note that eventType and eventSource can be empty strings, so they need a special treatment.
-	ctx, err := tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.triggerTagKey, args.trigger),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.triggerTypeKey, valueOrAny(args.eventType)),
-		tag.Insert(r.triggerSourceKey, valueOrAny(args.eventSource)),
-		tag.Insert(r.resultKey, utils.Result(err)))
+func (r *reporter) ReportEventDeliveryTime(args *ReportArgs, err error, d time.Duration) error {
+	ctx, err := r.generateTag(args, tag.Insert(r.resultKey, utils.Result(err)))
 	if err != nil {
 		return err
 	}
@@ -260,6 +209,18 @@ func (r *Reporter) ReportEventDeliveryTime(args *ReportArgs, err error, d time.D
 	// convert time.Duration in nanoseconds to milliseconds.
 	metrics.Record(ctx, deliveryTimeInMsecM.M(float64(d/time.Millisecond)))
 	return nil
+}
+
+func (r *reporter) generateTag(args *ReportArgs, t tag.Mutator) (context.Context, error) {
+	// Note that eventType and eventSource can be empty strings, so they need a special treatment.
+	return tag.New(
+		context.Background(),
+		tag.Insert(r.namespaceTagKey, args.ns),
+		tag.Insert(r.triggerTagKey, args.trigger),
+		tag.Insert(r.brokerTagKey, args.broker),
+		tag.Insert(r.triggerTypeKey, valueOrAny(args.eventType)),
+		tag.Insert(r.triggerSourceKey, valueOrAny(args.eventSource)),
+		t)
 }
 
 func valueOrAny(v string) string {

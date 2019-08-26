@@ -367,7 +367,7 @@ func (r *mockReporter) ReportDispatchTime(args *ReportArgs, err error, d time.Du
 	return nil
 }
 
-func (r *mockReporter) ReportFilterTime(args *ReportArgs, filterResult string, d time.Duration) error {
+func (r *mockReporter) ReportFilterTime(args *ReportArgs, filterResult FilterResult, d time.Duration) error {
 	return nil
 }
 

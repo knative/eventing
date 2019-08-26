@@ -18,7 +18,6 @@ package ingress
 
 import (
 	"context"
-	"fmt"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -38,10 +37,10 @@ var (
 	)
 
 	// dispatchTimeInMsecM records the time spent dispatching an event to
-	// a Trigger, in milliseconds.
+	// a Channel, in milliseconds.
 	dispatchTimeInMsecM = stats.Float64(
 		"dispatch_latencies",
-		"The time spent dispatching an event to a Trigger",
+		"The time spent dispatching an event to a Channel",
 		stats.UnitMilliseconds,
 	)
 )
@@ -58,9 +57,10 @@ type StatsReporter interface {
 	ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error
 }
 
+var _ StatsReporter = (*reporter)(nil)
+
 // Reporter holds cached metric objects to report ingress metrics.
-type Reporter struct {
-	initialized     bool
+type reporter struct {
 	namespaceTagKey tag.Key
 	brokerTagKey    tag.Key
 	eventTypeKey    tag.Key
@@ -69,8 +69,8 @@ type Reporter struct {
 }
 
 // NewStatsReporter creates a reporter that collects and reports ingress metrics.
-func NewStatsReporter() (*Reporter, error) {
-	var r = &Reporter{}
+func NewStatsReporter() (StatsReporter, error) {
+	var r = &reporter{}
 
 	// Create the tag keys that will be used to add tags to our measurements.
 	nsTag, err := tag.NewKey(metricskey.NamespaceName)
@@ -114,47 +114,35 @@ func NewStatsReporter() (*Reporter, error) {
 		return nil, err
 	}
 
-	r.initialized = true
 	return r, nil
 }
 
 // ReportEventCount captures the event count.
-func (r *Reporter) ReportEventCount(args *ReportArgs, err error) error {
-	if !r.initialized {
-		return fmt.Errorf("StatsReporter is not initialized yet")
-	}
-
-	ctx, err := tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.eventTypeKey, args.eventType),
-		tag.Insert(r.resultKey, utils.Result(err)))
+func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
+	ctx, err := r.generateTag(args, err)
 	if err != nil {
 		return err
 	}
-
 	metrics.Record(ctx, eventCountM.M(1))
 	return nil
 }
 
 // ReportDispatchTime captures dispatch times.
-func (r *Reporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
-	if !r.initialized {
-		return fmt.Errorf("StatsReporter is not initialized yet")
+func (r *reporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+	ctx, err := r.generateTag(args, err)
+	if err != nil {
+		return err
 	}
+	// convert time.Duration in nanoseconds to milliseconds.
+	metrics.Record(ctx, dispatchTimeInMsecM.M(float64(d/time.Millisecond)))
+	return nil
+}
 
-	ctx, err := tag.New(
+func (r *reporter) generateTag(args *ReportArgs, err error) (context.Context, error) {
+	return tag.New(
 		context.Background(),
 		tag.Insert(r.namespaceTagKey, args.ns),
 		tag.Insert(r.brokerTagKey, args.broker),
 		tag.Insert(r.eventTypeKey, args.eventType),
 		tag.Insert(r.resultKey, utils.Result(err)))
-	if err != nil {
-		return err
-	}
-
-	// convert time.Duration in nanoseconds to milliseconds.
-	metrics.Record(ctx, dispatchTimeInMsecM.M(float64(d/time.Millisecond)))
-	return nil
 }

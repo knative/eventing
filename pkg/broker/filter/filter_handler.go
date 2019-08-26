@@ -30,6 +30,7 @@ import (
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/tracing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,10 @@ import (
 
 const (
 	writeTimeout = 1 * time.Minute
+
+	passFilter FilterResult = "pass"
+	failFilter FilterResult = "fail"
+	noFilter   FilterResult = "no_filter"
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -46,6 +51,9 @@ type Handler struct {
 	ceClient cloudevents.Client
 	reporter StatsReporter
 }
+
+// FilterResult has the result of the filtering operation.
+type FilterResult string
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
@@ -226,10 +234,10 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 
 	// Check if the event should be sent, and record filtering time.
 	start := time.Now()
-	pass, filterResult := r.shouldSendEvent(ctx, &t.Spec, event)
+	filterResult := r.shouldSendEvent(ctx, &t.Spec, event)
 	r.reporter.ReportFilterTime(reportArgs, filterResult, time.Since(start))
 
-	if !pass {
+	if filterResult == failFilter {
 		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
 		// Record the event count.
 		r.reporter.ReportEventCount(reportArgs, errors.New("event did not pass filter"))
@@ -267,11 +275,11 @@ func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*
 
 // shouldSendEvent determines whether event 'event' should be sent based on the triggerSpec 'ts'.
 // Currently it supports exact matching on event context attributes and extension attributes.
-// If no filter is present, shouldSendEvent returns true.
-func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) (bool, string) {
+// If no filter is present, shouldSendEvent returns passFilter.
+func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1alpha1.TriggerSpec, event *cloudevents.Event) FilterResult {
 	// No filter specified, default to passing everything.
 	if ts.Filter == nil || (ts.Filter.DeprecatedSourceAndType == nil && ts.Filter.Attributes == nil) {
-		return true, "no_filter"
+		return noFilter
 	}
 
 	attrs := map[string]string{}
@@ -284,15 +292,15 @@ func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1alpha1.Trig
 		attrs = map[string]string(*ts.Filter.Attributes)
 	}
 
-	result := r.filterEventByAttributes(attrs, event)
-	resultStr := "fail"
+	result := r.filterEventByAttributes(ctx, attrs, event)
+	filterResult := failFilter
 	if result {
-		resultStr = "pass"
+		filterResult = passFilter
 	}
-	return result, resultStr
+	return filterResult
 }
 
-func (r *Handler) filterEventByAttributes(attrs map[string]string, event *cloudevents.Event) bool {
+func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) bool {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
@@ -320,12 +328,12 @@ func (r *Handler) filterEventByAttributes(attrs map[string]string, event *cloude
 		value, ok := ce[k]
 		// If the attribute does not exist in the event, return false.
 		if !ok {
-			r.logger.Debug("Attribute not found", zap.String("attribute", k))
+			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
 			return false
 		}
 		// If the attribute is not set to any and is different than the one from the event, return false.
 		if v != eventingv1alpha1.TriggerAnyFilter && v != value {
-			r.logger.Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
+			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
 			return false
 		}
 	}

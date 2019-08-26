@@ -16,8 +16,6 @@ limitations under the License.
 
 package metricskey
 
-import "k8s.io/apimachinery/pkg/util/sets"
-
 const (
 	// KnativeTrigger is the Stackdriver resource type for Triggers.
 	KnativeTrigger = "knative_trigger"
@@ -61,25 +59,4 @@ const (
 
 	// Any is the default value if the trigger filter attributes are empty.
 	Any = "any"
-)
-
-var (
-	// KnativeTriggerLabels stores the set of resource labels for the resource type knative_trigger.
-	KnativeTriggerLabels = sets.NewString(
-		Project,
-		Location,
-		ClusterName,
-		NamespaceName,
-		TriggerName,
-		TriggerType,
-		TriggerSource,
-	)
-
-	// KnativeTriggerMetrics stores the set of metric types that are supported by the resource type knative_trigger.
-	KnativeTriggerMetrics = sets.NewString(
-		"knative.dev/eventing/trigger/event_count",
-		"knative.dev/eventing/trigger/dispatch_latencies",
-		"knative.dev/eventing/trigger/filter_latencies",
-		// TODO event_latencies should be associated with Broker.
-	)
 )

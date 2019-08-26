@@ -17,7 +17,6 @@ limitations under the License.
 package filter
 
 import (
-	"github.com/pkg/errors"
 	"knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 	"testing"
@@ -33,8 +32,6 @@ func unregister() {
 }
 
 func TestStatsReporter(t *testing.T) {
-	r := &Reporter{}
-
 	args := &ReportArgs{
 		ns:          "testns",
 		trigger:     "testtrigger",
@@ -42,12 +39,9 @@ func TestStatsReporter(t *testing.T) {
 		eventType:   "testeventtype",
 		eventSource: "testeventsource",
 	}
-	if err := r.ReportEventCount(args, errors.New("error")); err == nil {
-		t.Error("Reporter expected an error for Report call before init. Got success.")
-	}
 
-	var err error
-	if r, err = NewStatsReporter(); err != nil {
+	r, err := NewStatsReporter()
+	if err != nil {
 		t.Fatalf("Failed to create a new reporter: %v", err)
 	}
 	// Without this `go test ... -count=X`, where X > 1, fails, since

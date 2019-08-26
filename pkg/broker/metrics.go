@@ -20,6 +20,8 @@ const (
 	// EventArrivalTime is used to access the metadata stored on a
 	// CloudEvent to measure the time difference between when an event is
 	// received on a broker and when it is dispatched to the trigger function.
+	// Should be set using time.Now(), which returns the current local time.
+	// The format is: 2019-08-26T23:38:17.834384404Z.
 	EventArrivalTime = "knativearrivaltime"
 )
 
