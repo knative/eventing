@@ -350,10 +350,9 @@ func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string
 
 			}
 			return channelable, nil
-		} else {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", b.Namespace, channelName), zap.Error(err))
-			return nil, err
 		}
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", b.Namespace, channelName), zap.Error(err))
+		return nil, err
 	}
 	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", c))
 	channelable := &duckv1alpha1.Channelable{}
