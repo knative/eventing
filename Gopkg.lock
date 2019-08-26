@@ -1176,7 +1176,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:067237a99eb2075aacf78e355c9c89449cabb1e50be8fe50eff8d87dbaadfbbf"
+  digest = "1:1947b5ddbe075b6a90236987348564257bb6496b61a99459bdce84ff88ba93c0"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1236,6 +1236,7 @@
     "logging/testing",
     "metrics",
     "metrics/metricskey",
+    "profiling",
     "reconciler/testing",
     "signals",
     "system",
@@ -1254,7 +1255,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "85d7d7ec718e8f63024fd1f0741690e38a81a533"
+  revision = "604c5a32d1374395851928cd45d66cb91ecf4794"
 
 [[projects]]
   branch = "master"
@@ -1270,7 +1271,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "d2746f8b9470e8c8452a997e95190aba5320678a"
+  revision = "ad9e83dcff273bbe9db46721f4704dba3dc687ae"
 
 [[projects]]
   digest = "1:db96fceb1477924a5e724ebfd355842c73805eb8e44bf7f325898c3116a1d852"
