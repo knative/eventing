@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/channel/swappable"
+	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/tracing"
 
