@@ -1,0 +1,72 @@
+# Eventing controller
+- job_name: eventing-controller
+  scrape_interval: 3s
+  scrape_timeout: 3s
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  # Scrape only the the targets matching the following metadata
+  - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_port_name]
+    action: keep
+    regex: knative-eventing;eventing-controller;metrics
+  # Rename metadata labels to be reader friendly
+  - source_labels: [__meta_kubernetes_namespace]
+    target_label: namespace
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+  - source_labels: [__meta_kubernetes_service_name]
+    target_label: service
+# Broker filter
+- job_name: broker-filter
+  scrape_interval: 3s
+  scrape_timeout: 3s
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  # Scrape only the the targets matching the following metadata
+  - source_labels: [__meta_kubernetes_pod_label_eventing_knative_dev_brokerRole, __meta_kubernetes_pod_container_port_name]
+    action: keep
+    regex: filter;metrics
+  # Rename metadata labels to be reader friendly
+  - source_labels: [__meta_kubernetes_namespace]
+    target_label: namespace
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+  - source_labels: [__meta_kubernetes_service_name]
+    target_label: service
+# Broker ingress
+- job_name: broker-ingress
+  scrape_interval: 3s
+  scrape_timeout: 3s
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  # Scrape only the the targets matching the following metadata
+  - source_labels: [__meta_kubernetes_pod_label_eventing_knative_dev_brokerRole, __meta_kubernetes_pod_container_port_name]
+    action: keep
+    regex: ingress;metrics
+  # Rename metadata labels to be reader friendly
+  - source_labels: [__meta_kubernetes_namespace]
+    target_label: namespace
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+  - source_labels: [__meta_kubernetes_service_name]
+    target_label: service
+# Sources controller
+- job_name: sources-controller
+  scrape_interval: 3s
+  scrape_timeout: 3s
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  # Scrape only the the targets matching the following metadata
+  - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app, __meta_kubernetes_pod_container_port_name]
+    action: keep
+    regex: knative-eventing;sources-controller;metrics
+  # Rename metadata labels to be reader friendly
+  - source_labels: [__meta_kubernetes_namespace]
+    target_label: namespace
+  - source_labels: [__meta_kubernetes_pod_name]
+    target_label: pod
+  - source_labels: [__meta_kubernetes_service_name]
+    target_label: service
