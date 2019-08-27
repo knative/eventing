@@ -179,7 +179,7 @@ func TestChoicePropagateSubscriptionStatuses(t *testing.T) {
 		name: "empty status",
 		fsubs: []*Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -189,7 +189,7 @@ func TestChoicePropagateSubscriptionStatuses(t *testing.T) {
 			Status: SubscriptionStatus{},
 		}}, subs: []*Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{
