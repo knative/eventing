@@ -52,7 +52,7 @@ func init() {
 	flag.StringVar(&sink, "sink", "", "The sink url for the message destination.")
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
-	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventSource, "event-source", "localhost", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
@@ -95,9 +95,6 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
-	if eventSource == "" {
-		eventSource = "localhost"
-	}
 	//TODO consider using kncloudevents.NewDefaultClient and add support for confurable encodingOption?
 	var encodingOption http.Option
 	switch eventEncoding {
