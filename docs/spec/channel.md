@@ -49,7 +49,7 @@ created, backing all messages from the channel.
 
 #### Aggregated Channelable Manipulator ClusterRole
 
-Every CRD must create a corresponding ClusterRole, that will be aggregated into
+Every CRD MUST create a corresponding ClusterRole, that will be aggregated into
 the `channelable-manipulator` ClusterRole. This ClusterRole must include
 permissions to create, get, list, watch, patch, and update the CRD's custom
 objects and their status. Below is an example for the `KafkaChannel`:
@@ -82,7 +82,7 @@ Each channel MUST have the `duck.knative.dev/channelable: "true"` label on its
 
 #### Aggregated Addressable Resolver ClusterRole
 
-Every CRD must create a corresponding ClusterRole, that will be aggregated into
+Every CRD MUST create a corresponding ClusterRole, that will be aggregated into
 the `addressable-resolver` ClusterRole. This ClusterRole must include
 permissions to get, list, and watch the CRD's custom objects and their status.
 Below is an example for the `InMemoryChannel`:
@@ -153,7 +153,7 @@ exclusively communicate using CloudEvents.
 
 #### Input
 
-Every Channel must expose either an HTTP or HTTPS endpoint. It MAY expose both.
+Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
 The endpoint(s) MUST conform to
 [HTTP Transport Binding for CloudEvents - Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md).
 It MUST support both Binary Content mode and Structured Content mode. The
