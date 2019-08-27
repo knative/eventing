@@ -85,10 +85,6 @@ func init() {
 	flag.StringVar(&encoding, "encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 }
 
-func ts(t time.Time) float64 {
-	return float64(t.UnixNano()) / (1000.0 * 1000.0)
-}
-
 func main() {
 	// parse the command line flags
 	flag.Parse()
@@ -176,13 +172,13 @@ func main() {
 			sendTime := time.Now()
 			_, err := c.Send(ctx, event)
 			if err != nil {
-				if qerr := q.AddError(ts(sendTime), err.Error()); qerr != nil {
+				if qerr := q.AddError(mako.XTime(sendTime), err.Error()); qerr != nil {
 					log.Printf("ERROR AddError: %v", qerr)
 				}
 				resultCh <- state{status: undelivered}
 			} else {
 				elapsed := time.Now().Sub(sendTime)
-				if qerr := q.AddSamplePoint(ts(sendTime), map[string]float64{"pl": elapsed.Seconds()}); qerr != nil {
+				if qerr := q.AddSamplePoint(mako.XTime(sendTime), map[string]float64{"pl": elapsed.Seconds()}); qerr != nil {
 					log.Printf("ERROR AddSamplePoint: %v", qerr)
 				}
 			}
@@ -192,13 +188,13 @@ func main() {
 				// if the event is received, calculate the delay
 				case receivedTime := <-timeCh:
 					latency := receivedTime.Sub(sendTime)
-					if qerr := q.AddSamplePoint(ts(sendTime), map[string]float64{"dl": latency.Seconds()}); qerr != nil {
+					if qerr := q.AddSamplePoint(mako.XTime(sendTime), map[string]float64{"dl": latency.Seconds()}); qerr != nil {
 						log.Printf("ERROR AddSamplePoint: %v", qerr)
 					}
 					resultCh <- state{latency: latency, status: received}
 				// if the event is not received before timeout, consider it to be dropped
 				case <-ctx.Done():
-					if qerr := q.AddError(ts(sendTime), "Timeout waiting for delivery"); qerr != nil {
+					if qerr := q.AddError(mako.XTime(sendTime), "Timeout waiting for delivery"); qerr != nil {
 						log.Printf("ERROR AddError: %v", qerr)
 					}
 					resultCh <- state{status: dropped}
