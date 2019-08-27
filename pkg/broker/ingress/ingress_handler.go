@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
 )
