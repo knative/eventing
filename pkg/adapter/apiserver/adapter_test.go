@@ -36,6 +36,10 @@ func TestNewAdaptor(t *testing.T) {
 	ce := kncetesting.NewTestClient()
 	logger := zap.NewExample().Sugar()
 	k8s := makeDynamicClient(nil)
+	reporter, err := NewStatsReporter()
+	if err != nil {
+		t.Errorf("Cannot instantiate stats reporter: %v", err)
+	}
 
 	testCases := map[string]struct {
 		opt    Options
@@ -109,7 +113,7 @@ func TestNewAdaptor(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt)
+			a := NewAdaptor(tc.source, k8s, ce, logger, reporter, tc.opt)
 
 			got, ok := a.(*adapter)
 			if !ok {
@@ -136,6 +140,11 @@ func TestAdapter_StartRef(t *testing.T) {
 	logger := zap.NewExample().Sugar()
 	k8s := makeDynamicClient(nil)
 	source := "test-source"
+	reporter, err := NewStatsReporter()
+	if err != nil {
+		t.Errorf("Cannot instantiate stats reporter: %v", err)
+	}
+
 	opt := Options{
 		Mode:      RefMode,
 		Namespace: "default",
@@ -148,9 +157,9 @@ func TestAdapter_StartRef(t *testing.T) {
 		}},
 	}
 
-	a := NewAdaptor(source, k8s, ce, logger, opt)
+	a := NewAdaptor(source, k8s, ce, logger, reporter, opt)
 
-	err := errors.New("test never ran")
+	err = errors.New("test never ran")
 	stopCh := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
@@ -182,10 +191,14 @@ func TestAdapter_StartResource(t *testing.T) {
 			},
 		}},
 	}
+	reporter, err := NewStatsReporter()
+	if err != nil {
+		t.Errorf("Cannot instantiate stats reporter: %v", err)
+	}
 
-	a := NewAdaptor(source, k8s, ce, logger, opt)
+	a := NewAdaptor(source, k8s, ce, logger, reporter, opt)
 
-	err := errors.New("test never ran")
+	err = errors.New("test never ran")
 	stopCh := make(chan struct{})
 	done := make(chan struct{})
 	go func() {

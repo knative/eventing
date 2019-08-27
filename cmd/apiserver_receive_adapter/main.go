@@ -29,11 +29,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
+	"knative.dev/pkg/system"
 )
 
 var (
@@ -90,6 +94,14 @@ func main() {
 		// start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
+	reporter, err := apiserver.NewStatsReporter()
+	if err != nil {
+		logger.Fatal("Error creating stats reporter", zap.Error(err))
+	}
+	kc := kubernetes.NewForConfigOrDie(cfg)
+	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
+
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("apiserver_source", logger))
 
 	eventsClient, err := kncloudevents.NewDefaultClient(env.SinkURI)
 	if err != nil {
@@ -119,8 +131,11 @@ func main() {
 		Mode:      env.Mode,
 		GVRCs:     gvrcs,
 	}
+	if err = configMapWatcher.Start(stopCh); err != nil {
+		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
+	}
 
-	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt)
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, reporter, opt)
 	logger.Info("starting kubernetes api adapter")
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))

@@ -24,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
@@ -104,6 +106,13 @@ func TestMakeReceiveAdapter(t *testing.T) {
 						{
 							Name:  "receive-adapter",
 							Image: "test-image",
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "metrics",
+									ContainerPort: 9090,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SINK_URI",
@@ -120,7 +129,13 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name:  "CONTROLLER",
 									Value: "false,true",
 								}, {
-									Name: "SYSTEM_NAMESPACE",
+									Name:  "METRICS_DOMAIN",
+									Value: "knative.dev/eventing",
+								}, {
+									Name:  "SYSTEM_NAMESPACE",
+									Value: system.Namespace(),
+								}, {
+									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
 											FieldPath: "metadata.namespace",

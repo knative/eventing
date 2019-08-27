@@ -25,6 +25,7 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 )
 
 // ReceiveAdapterArgs are the arguments needed to create a ApiServer Receive Adapter.
@@ -68,6 +69,13 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 							Name:  "receive-adapter",
 							Image: args.Image,
 							Env:   makeEnv(args.SinkURI, &args.Source.Spec),
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "metrics",
+									Protocol:      corev1.ProtocolTCP,
+									ContainerPort: 9090,
+								},
+							},
 						},
 					},
 				},
@@ -109,7 +117,13 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 		Name:  "CONTROLLER",
 		Value: controlled,
 	}, {
-		Name: "SYSTEM_NAMESPACE",
+		Name:  "METRICS_DOMAIN",
+		Value: "knative.dev/eventing",
+	}, {
+		Name:  system.NamespaceEnvKey,
+		Value: system.Namespace(),
+	}, {
+		Name: "NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
