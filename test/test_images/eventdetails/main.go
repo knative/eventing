@@ -20,11 +20,31 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
-func handler(event cloudevents.Event) {
+func getHeader(header http.Header, headerName string) string {
+	&value := string(nil)
+	if header != nil && len(header) > 0 {
+		for k, v := range header {
+			if k == headerName {
+				*value = v				
+			}
+		}
+	}
+	return value
+}
+
+//func handler(event cloudevents.Event) {
+func handler(ctx context.Context, event cloudevents.Event) {
+	fmt.Printf("Got Event Context: %+v\n", event.Context)
+	tx := cloudevents.HTTPTransportContextFrom(ctx)
+	fmt.Printf("Got Transport Context: %+v\n", tx)
+	fmt.Printf("----------------------------\n")
+	header := tx.Header()
+
 	if err := event.Validate(); err == nil {
 		fmt.Printf("eventdetails:\n%s", event.String())
 	} else {

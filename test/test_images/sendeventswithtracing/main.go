@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"time"
 
+	_ "go.opencensus.io/trace"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp"
