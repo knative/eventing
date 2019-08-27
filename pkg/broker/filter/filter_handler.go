@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
