@@ -27,12 +27,6 @@ const (
 	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
 	V03TTLAttribute = "knativebrokerttl"
-
-	// TODO rename this extension, and place it somewhere else.
-	// TimeInFlightMetadataName is used to access the metadata stored on a
-	// CloudEvent to measure the time difference between when an event is
-	// received and when it is dispatched to the trigger function.
-	TimeInFlightMetadataName = "kn00timeinflight"
 )
 
 // GetTTL finds the TTL in the EventContext using a case insensitive comparison

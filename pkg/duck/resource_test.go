@@ -60,7 +60,7 @@ func (fif *fakeInformerFactory) Get(gvr schema.GroupVersionResource) (cache.Shar
 	if _, present := fif.gvr[gvr]; !present {
 		fif.gvr[gvr] = 0
 	}
-	fif.gvr[gvr] ++
+	fif.gvr[gvr]++
 	return &fakeInformer{}, nil, nil
 }
 

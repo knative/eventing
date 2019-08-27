@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -147,6 +148,7 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutFilter(),
 			},
+			expectedDispatch: true,
 		},
 		"No TTL": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -293,7 +295,8 @@ func TestReceiver(t *testing.T) {
 
 			r, err := NewHandler(
 				zap.NewNop(),
-				getClient(correctURI, tc.mocks))
+				getClient(correctURI, tc.mocks),
+				&mockReporter{})
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")
@@ -352,6 +355,24 @@ func TestReceiver(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockReporter struct{}
+
+func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
+	return nil
+}
+
+func (r *mockReporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+	return nil
+}
+
+func (r *mockReporter) ReportFilterTime(args *ReportArgs, filterResult FilterResult, d time.Duration) error {
+	return nil
+}
+
+func (r *mockReporter) ReportEventDeliveryTime(args *ReportArgs, err error, d time.Duration) error {
+	return nil
 }
 
 type fakeHandler struct {
