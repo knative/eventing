@@ -16,18 +16,14 @@
 
 package broker
 
-import "go.opencensus.io/tag"
-
-// MustNewTagKey creates a Tag or panics. This will only fail if the tag key
-// doesn't conform to tag name validations.
-// TODO OC library should provide this
-func MustNewTagKey(k string) tag.Key {
-	tagKey, err := tag.NewKey(k)
-	if err != nil {
-		panic(err)
-	}
-	return tagKey
-}
+const (
+	// EventArrivalTime is used to access the metadata stored on a
+	// CloudEvent to measure the time difference between when an event is
+	// received on a broker and when it is dispatched to the trigger function.
+	// Should be set using time.Now(), which returns the current local time.
+	// The format is: 2019-08-26T23:38:17.834384404Z.
+	EventArrivalTime = "knativearrivaltime"
+)
 
 // Buckets125 generates an array of buckets with approximate powers-of-two
 // buckets that also aligns with powers of 10 on every 3rd step. This can
@@ -38,4 +34,12 @@ func Buckets125(low, high float64) []float64 {
 		buckets = append(buckets, 2*last, 5*last, 10*last)
 	}
 	return buckets
+}
+
+// Result converts an error to a result string (either "success" or "error").
+func Result(err error) string {
+	if err != nil {
+		return "error"
+	}
+	return "success"
 }

@@ -104,11 +104,18 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
+	reporter, err := ingress.NewStatsReporter()
+	if err != nil {
+		logger.Fatal("Unable to create StatsReporter", zap.Error(err))
+	}
+
 	h := &ingress.Handler{
 		Logger:     logger,
 		CeClient:   ceClient,
 		ChannelURI: channelURI,
 		BrokerName: env.Broker,
+		Namespace:  env.Namespace,
+		Reporter:   reporter,
 	}
 
 	// Run the event handler with the manager.
