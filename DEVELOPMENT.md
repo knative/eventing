@@ -36,8 +36,8 @@ To check out this repository:
 1. Clone it to your machine:
 
 ```shell
-mkdir -p ${GOPATH}/src/github.com/knative
-cd ${GOPATH}/src/github.com/knative
+mkdir -p ${GOPATH}/src/knative.dev
+cd ${GOPATH}/src/knative.dev
 git clone git@github.com:${YOUR_GITHUB_USERNAME}/eventing.git
 cd eventing
 git remote add upstream git@github.com:knative/eventing.git
