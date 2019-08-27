@@ -19,17 +19,14 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
-	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/google/mako/helpers/go/quickstore"
 	"golang.org/x/sync/errgroup"
-	"knative.dev/eventing/test/performance"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/test/mako"
 )
@@ -37,27 +34,21 @@ import (
 const (
 	defaultEventType   = "perf-test-event-type"
 	defaultEventSource = "perf-test-event-source"
-
-	// The interval and timeout used for polling in checking event states.
-	pollInterval = 1 * time.Second
-	pollTimeout  = 4 * time.Minute
 )
 
 // flags for the image
 var (
-	benchmark          string
-	sinkURL            string
-	msgSize            int
-	eventNum           int
-	errorRateThreshold float64
-	timeout            int
-	encoding           string
-	eventTimeMap       map[string]chan time.Time
-	resultCh           chan state
+	benchmark    string
+	sinkURL      string
+	msgSize      int
+	eventNum     int
+	timeout      int
+	encoding     string
+	eventTimeMap map[string]chan time.Time
+	resultCh     chan state
 )
 
-// eventStatus is status of the event, for now only if all events are in received status can the
-// test be considered as PASS.
+// eventStatus is status of the event delivery.
 type eventStatus int
 
 const (
@@ -71,18 +62,28 @@ const (
 
 // state saves the data that is used to generate the metrics
 type state struct {
-	latency time.Duration
-	status  eventStatus
+	status eventStatus
 }
 
 func init() {
-	flag.StringVar(&benchmark, "benchmark", "", "The mako benchmark ID")
 	flag.StringVar(&sinkURL, "sink", "http://default-broker", "The sink URL for the event destination.")
 	flag.IntVar(&msgSize, "msg-size", 100, "The size of each message we want to send. Generate random strings to avoid caching.")
 	flag.IntVar(&eventNum, "event-count", 10, "The number of events we want to send.")
 	flag.IntVar(&timeout, "timeout", 30, "Timeout in seconds. If we do not receive a message back within a limited time, we consider it to be dropped.")
-	flag.Float64Var(&errorRateThreshold, "error-rate-threshold", 0.1, "Rate of error event deliveries we allow. We fail the test if the error rate crosses the threshold.")
 	flag.StringVar(&encoding, "encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
+
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+// generateRandString returns a random string with the given length.
+func generateRandString(length int) string {
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
 
 func main() {
@@ -110,7 +111,7 @@ func main() {
 	// Wrap fatalf in a helper or our sidecar will live forever.
 	fatalf := func(f string, args ...interface{}) {
 		qclose(context.Background())
-		failTest(fmt.Sprintf(f, args...))
+		log.Fatalf(f, args...)
 	}
 
 	// get encoding
@@ -191,7 +192,7 @@ func main() {
 					if qerr := q.AddSamplePoint(mako.XTime(sendTime), map[string]float64{"dl": latency.Seconds()}); qerr != nil {
 						log.Printf("ERROR AddSamplePoint: %v", qerr)
 					}
-					resultCh <- state{latency: latency, status: received}
+					resultCh <- state{status: received}
 				// if the event is not received before timeout, consider it to be dropped
 				case <-ctx.Done():
 					if qerr := q.AddError(mako.XTime(sendTime), "Timeout waiting for delivery"); qerr != nil {
@@ -209,8 +210,22 @@ func main() {
 
 	close(resultCh)
 
-	// export result for this test
-	exportTestResult(q)
+	// count errors
+	var publishErrorCount int
+	var deliverErrorCount int
+	for eventState := range resultCh {
+		switch eventState.status {
+		case dropped:
+			deliverErrorCount++
+		case undelivered:
+			publishErrorCount++
+		}
+	}
+
+	// publish error counts as aggregate metrics
+	q.AddRunAggregate("pe", float64(publishErrorCount))
+	q.AddRunAggregate("de", float64(deliverErrorCount))
+
 	out, err := q.Store()
 	if err != nil {
 		fatalf("q.Store error: %v: %v", out, err)
@@ -222,57 +237,4 @@ func receivedEvent(event cloudevents.Event) {
 	if timeCh, ok := eventTimeMap[eventID]; ok {
 		timeCh <- time.Now()
 	}
-}
-
-func exportTestResult(q *quickstore.Quickstore) {
-	// number of abnormal event deliveries
-	var errorCount int
-	var publishErrorCount int
-	var deliverErrorCount int
-	var latencies = make([]int64, 0)
-	for eventState := range resultCh {
-		switch eventState.status {
-		case received:
-			latencies = append(latencies, int64(eventState.latency))
-		case dropped:
-			errorCount++
-			deliverErrorCount++
-		case undelivered:
-			errorCount++
-			publishErrorCount++
-		default:
-			errorCount++
-		}
-	}
-
-	q.AddRunAggregate("pe", float64(publishErrorCount))
-	q.AddRunAggregate("de", float64(deliverErrorCount))
-
-	// if the error rate is larger than the threshold, we consider this test to be failed
-	if errorCount != 0 && float64(errorCount)/float64(eventNum) > errorRateThreshold {
-		failTest(fmt.Sprintf("%d events failed to deliver", errorCount))
-	}
-
-	// use the stringbuilder to build the test result
-	var builder strings.Builder
-	builder.WriteString("\n")
-	builder.WriteString(performance.TestResultKey + ": " + performance.TestPass)
-	builder.WriteString("\n")
-
-	// create latency metrics
-	for _, perc := range []float64{0.50, 0.90, 0.99} {
-		samplePercentile := float32(calculateSamplePercentile(latencies, perc)) / float32(1e9)
-		name := fmt.Sprintf("p%d(s)", int(perc*100))
-		builder.WriteString(fmt.Sprintf("%s: %f\n", name, samplePercentile))
-	}
-
-	log.Printf(builder.String())
-}
-
-func failTest(reason string) {
-	var builder strings.Builder
-	builder.WriteString("\n")
-	builder.WriteString(performance.TestResultKey + ": " + performance.TestFail + "\n")
-	builder.WriteString(performance.TestFailReason + ": " + reason)
-	log.Fatalf(builder.String())
 }

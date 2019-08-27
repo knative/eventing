@@ -30,7 +30,6 @@ spec:
         cpu: 1000m
         memory: 3Gi
     args:
-    - "-benchmark=5903682180743168"
     - "-event-count=1000"
     volumeMounts:
     - name: config-mako
