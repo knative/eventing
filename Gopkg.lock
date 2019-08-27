@@ -265,6 +265,23 @@
   revision = "e979a0b10eebe748549c702a25e997c556349da6"
 
 [[projects]]
+  digest = "1:3efb665a5beaa0266ff287cdb58dff8a966631000e9f8ad8d832a288b90ca247"
+  name = "github.com/google/mako"
+  packages = [
+    "clients/proto/analyzers/threshold_analyzer_go_proto",
+    "clients/proto/analyzers/utest_analyzer_go_proto",
+    "clients/proto/analyzers/window_deviation_go_proto",
+    "helpers/go/quickstore",
+    "helpers/proto/quickstore/quickstore_go_proto",
+    "internal/go/common",
+    "internal/quickstore_microservice/proto/quickstore_go_proto",
+    "spec/proto/mako_go_proto",
+  ]
+  pruneopts = "NUT"
+  revision = "d56a6e811df75f8e4d6e7c256d25acf19ef16d03"
+  version = "v0.0.0-rc.4"
+
+[[projects]]
   digest = "1:56a1f3949ebb7fa22fa6b4e4ac0fe0f77cc4faee5b57413e6fa9199a8458faf1"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -1246,6 +1263,7 @@
     "test/helpers",
     "test/ingress",
     "test/logging",
+    "test/mako",
     "test/monitoring",
     "test/spoof",
     "test/zipkin",
@@ -1423,6 +1441,7 @@
     "knative.dev/pkg/test",
     "knative.dev/pkg/test/helpers",
     "knative.dev/pkg/test/logging",
+    "knative.dev/pkg/test/mako",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",

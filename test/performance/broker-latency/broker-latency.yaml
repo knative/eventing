@@ -1,0 +1,52 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: broker-latency-driver
+  namespace: perf-eventing
+  labels:
+    role: broker-latency-consumer
+spec:
+  serviceAccountName: default
+  restartPolicy: Never
+  containers:
+  - name: "broker-latency"
+    image: knative.dev/eventing/test/performance/broker-latency
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 3Gi
+    args:
+    - "-event-count=1000"
+    volumeMounts:
+    - name: config-mako
+      mountPath: /etc/config-mako
+    terminationMessagePolicy: FallbackToLogsOnError
+  - name: "mako"
+    image: gcr.io/knative-performance/mako-microservice:latest
+    env:
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: /var/secret/robot.json
+    volumeMounts:
+    - name: mako-upload
+      mountPath: /var/secret
+  volumes:
+  - name: mako-upload
+    secret:
+      secretName: mako-upload
+  - name: config-mako
+    configMap:
+      name: config-mako
