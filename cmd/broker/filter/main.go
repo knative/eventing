@@ -18,12 +18,15 @@ package main
 
 import (
 	"flag"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/clients/kubeclient"
+	"knative.dev/pkg/injection/sharedmain"
+	"log"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/client-go/kubernetes"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker/filter"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/tracing"
@@ -31,8 +34,13 @@ import (
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
+)
+
+var (
+	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
 type envConfig struct {
@@ -44,8 +52,15 @@ func main() {
 	logConfig := channel.NewLoggingConfig()
 	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
 	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
-	defer flush(logger)
 	flag.Parse()
+
+	defer flush(logger)
+
+	ctx := signals.NewContext()
+
+	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
+	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
+	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	logger.Info("Starting...")
 
@@ -54,19 +69,12 @@ func main() {
 		logger.Fatal("Failed to process env var", zap.Error(err))
 	}
 
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Namespace: env.Namespace,
-	})
+	cfg, err := sharedmain.GetConfig(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatal("Error starting up.", zap.Error(err))
+		log.Fatal("Error building kubeconfig", err)
 	}
 
-	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
-	}
-
-	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
+	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
@@ -81,15 +89,20 @@ func main() {
 		logger.Fatal("Error creating stats reporter", zap.Error(err))
 	}
 
+	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+	// Start all of the informers and wait for them to sync.
+	logger.Info("Starting informers.")
+	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
+		logger.Fatal("Failed to start informers", zap.Error(err))
+	}
+
+	triggerInformer := trigger.Get(ctx)
+
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, mgr.GetClient(), reporter)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
-	}
-	err = mgr.Add(handler)
-	if err != nil {
-		logger.Fatal("Unable to start the handler", zap.Error(err), zap.Any("broker_filter", handler))
 	}
 
 	// TODO watch logging config map.
@@ -106,10 +119,11 @@ func main() {
 	}
 
 	// Start blocks forever.
-	logger.Info("Manager starting...")
-	err = mgr.Start(stopCh)
+	logger.Info("Filter starting...")
+
+	err = handler.Start(ctx)
 	if err != nil {
-		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
+		logger.Fatal("handler.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
 }
