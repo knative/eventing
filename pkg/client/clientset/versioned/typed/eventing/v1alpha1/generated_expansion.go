@@ -22,6 +22,4 @@ type BrokerExpansion interface{}
 
 type EventTypeExpansion interface{}
 
-type SubscriptionExpansion interface{}
-
 type TriggerExpansion interface{}

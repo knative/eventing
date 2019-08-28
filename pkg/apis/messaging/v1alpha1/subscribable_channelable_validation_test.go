@@ -33,7 +33,7 @@ var validationTests = []struct {
 		name: "valid object ref",
 		ref: corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "MyChannel",
 		},
 		want: nil,
@@ -42,7 +42,7 @@ var validationTests = []struct {
 		name: "invalid object ref",
 		ref: corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "",
 		},
 		want: apis.ErrMissingField("kind"),
@@ -54,7 +54,7 @@ func TestIsChannelEmpty(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		r := corev1.ObjectReference{
 			Name:       "boaty-mcboatface",
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "Channel",
 		}
 		if isChannelEmpty(r) {
@@ -128,7 +128,7 @@ func TestIsValidObjectReference(t *testing.T) {
 			name: "missing none",
 			ref: corev1.ObjectReference{
 				Name:       "kind",
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "Channel",
 			},
 			want: []*apis.FieldError{},

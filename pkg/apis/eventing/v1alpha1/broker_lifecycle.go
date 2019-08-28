@@ -18,9 +18,11 @@ package v1alpha1
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	"knative.dev/pkg/apis"
+
 	"knative.dev/eventing/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/apis"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 var brokerCondSet = apis.NewLivingConditionSet(
@@ -108,16 +110,16 @@ func (bs *BrokerStatus) MarkIngressSubscriptionFailed(reason, format string, arg
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, reason, format, args...)
 }
 
-func (bs *BrokerStatus) MarkIngressSubscriptionNotOwned(sub *Subscription) {
+func (bs *BrokerStatus) MarkIngressSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
 	bs.MarkIngressSubscriptionFailed("SubscriptionNotOwned", "Subscription %q is not owned by this Broker.", sub.Name)
 }
 
-func (bs *BrokerStatus) PropagateIngressSubscriptionReadiness(ss *SubscriptionStatus) {
+func (bs *BrokerStatus) PropagateIngressSubscriptionReadiness(ss *messagingv1alpha1.SubscriptionStatus) {
 	if ss.IsReady() {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)
 	} else {
 		msg := "nil"
-		if sc := subCondSet.Manage(ss).GetCondition(SubscriptionConditionReady); sc != nil {
+		if sc := ss.GetCondition(messagingv1alpha1.SubscriptionConditionReady); sc != nil {
 			msg = sc.Message
 		}
 		bs.MarkIngressSubscriptionFailed("SubscriptionNotReady", "ingress Subscription is not ready: %s", msg)

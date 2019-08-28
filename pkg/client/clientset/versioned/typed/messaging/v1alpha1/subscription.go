@@ -23,7 +23,7 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	scheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 )
 
@@ -54,7 +54,7 @@ type subscriptions struct {
 }
 
 // newSubscriptions returns a Subscriptions
-func newSubscriptions(c *EventingV1alpha1Client, namespace string) *subscriptions {
+func newSubscriptions(c *MessagingV1alpha1Client, namespace string) *subscriptions {
 	return &subscriptions{
 		client: c.RESTClient(),
 		ns:     namespace,

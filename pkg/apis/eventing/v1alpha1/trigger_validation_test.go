@@ -22,6 +22,8 @@ import (
 
 	"knative.dev/pkg/apis"
 
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -40,14 +42,14 @@ var (
 			"source": "other_source",
 		},
 	}
-	validSubscriber = &SubscriberSpec{
+	validSubscriber = &messagingv1alpha1.SubscriberSpec{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	invalidSubscriber = &SubscriberSpec{
+	invalidSubscriber = &messagingv1alpha1.SubscriberSpec{
 		Ref: &corev1.ObjectReference{
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",

@@ -29,20 +29,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+	duckroot "knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	"knative.dev/eventing/pkg/utils"
-	duckroot "knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/tracker"
 )
 
 const (
@@ -58,7 +57,7 @@ type Reconciler struct {
 	sequenceLister     listers.SequenceLister
 	tracker            tracker.Interface
 	resourceTracker    duck.ResourceTracker
-	subscriptionLister eventinglisters.SubscriptionLister
+	subscriptionLister listers.SubscriptionLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -164,7 +163,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Sequence) error 
 	}
 	p.Status.PropagateChannelStatuses(channels)
 
-	subs := make([]*eventingv1alpha1.Subscription, 0, len(p.Spec.Steps))
+	subs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Steps))
 	for i := 0; i < len(p.Spec.Steps); i++ {
 		sub, err := r.reconcileSubscription(ctx, i, p)
 		if err != nil {
@@ -221,7 +220,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, c
 	return c, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1alpha1.Sequence) (*eventingv1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1alpha1.Sequence) (*v1alpha1.Subscription, error) {
 	expected := resources.NewSubscription(step, p)
 
 	subName := resources.SequenceSubscriptionName(p.Name, step)
@@ -231,7 +230,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v", sub))
-		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
+		newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequence's subscription failed: %v", err)

@@ -22,7 +22,7 @@ import (
 )
 
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.
-var SubscriptionTypeMeta = EventingTypeMeta(resources.SubscriptionKind)
+var SubscriptionTypeMeta = MessagingTypeMeta(resources.SubscriptionKind)
 
 // BrokerTypeMeta is the TypeMeta ref for Broker.
 var BrokerTypeMeta = EventingTypeMeta(resources.BrokerKind)

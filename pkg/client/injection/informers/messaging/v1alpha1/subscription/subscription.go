@@ -21,8 +21,8 @@ package subscription
 import (
 	"context"
 
-	v1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
-	factory "knative.dev/eventing/pkg/client/injection/informers/eventing/factory"
+	v1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1alpha1"
+	factory "knative.dev/eventing/pkg/client/injection/informers/messaging/factory"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 	logging "knative.dev/pkg/logging"
@@ -37,7 +37,7 @@ type Key struct{}
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := factory.Get(ctx)
-	inf := f.Eventing().V1alpha1().Subscriptions()
+	inf := f.Messaging().V1alpha1().Subscriptions()
 	return context.WithValue(ctx, Key{}, inf), inf.Informer()
 }
 

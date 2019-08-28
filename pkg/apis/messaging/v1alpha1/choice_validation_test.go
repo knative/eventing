@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -78,7 +77,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 	}, {
 		name: "missing channeltemplatespec",
 		ts: &ChoiceSpec{
-			Cases: []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases: []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -88,7 +87,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &ChoiceSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, &runtime.RawExtension{}},
-			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -98,7 +97,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &ChoiceSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, &runtime.RawExtension{}},
-			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
@@ -108,7 +107,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		name: "valid choice",
 		ts: &ChoiceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -117,7 +116,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		name: "valid choice with valid reply",
 		ts: &ChoiceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -127,7 +126,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		name: "valid choice with invalid missing name",
 		ts: &ChoiceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply: &corev1.ObjectReference{
 				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "inmemorychannel",
@@ -141,7 +140,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		name: "valid choice with invalid reply",
 		ts: &ChoiceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: eventingv1alpha1.SubscriberSpec{URI: &subscriberURI}}},
+			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {

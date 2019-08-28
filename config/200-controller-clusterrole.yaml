@@ -57,10 +57,6 @@ rules:
     resources:
       - "brokers"
       - "brokers/status"
-      - "channels"
-      - "channels/status"
-      - "subscriptions"
-      - "subscriptions/status"
       - "triggers"
       - "triggers/status"
       - "eventtypes"
@@ -86,6 +82,8 @@ rules:
       - "channels/status"
       - "choices"
       - "choices/status"
+      - "subscriptions"
+      - "subscriptions/status"
     verbs: *everything
 
   # Messaging resources and finalizers we care about.

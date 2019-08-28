@@ -23,9 +23,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgTest "knative.dev/pkg/test"
+
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	pkgTest "knative.dev/pkg/test"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 // BrokerOption enables further configuration of a Broker.
@@ -35,7 +37,7 @@ type BrokerOption func(*eventingv1alpha1.Broker)
 type TriggerOption func(*eventingv1alpha1.Trigger)
 
 // SubscriptionOption enables further configuration of a Subscription.
-type SubscriptionOption func(*eventingv1alpha1.Subscription)
+type SubscriptionOption func(*messagingv1alpha1.Subscription)
 
 // channelRef returns an ObjectReference for a given Channel name.
 func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
@@ -44,9 +46,9 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
 func WithSubscriberForSubscription(name string) SubscriptionOption {
-	return func(s *eventingv1alpha1.Subscription) {
+	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+			s.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -55,9 +57,9 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 
 // WithReplyForSubscription returns an options that adds a ReplyStrategy for the given Subscription.
 func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
-	return func(s *eventingv1alpha1.Subscription) {
+	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
+			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
 				Channel: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 			}
 		}
@@ -69,12 +71,12 @@ func Subscription(
 	name, channelName string,
 	channelTypeMeta *metav1.TypeMeta,
 	options ...SubscriptionOption,
-) *eventingv1alpha1.Subscription {
-	subscription := &eventingv1alpha1.Subscription{
+) *messagingv1alpha1.Subscription {
+	subscription := &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: eventingv1alpha1.SubscriptionSpec{
+		Spec: messagingv1alpha1.SubscriptionSpec{
 			Channel: *channelRef(channelName, channelTypeMeta),
 		},
 	}
@@ -147,7 +149,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+			t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -157,7 +159,7 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &eventingv1alpha1.SubscriberSpec{
+		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
 			URI: &uri,
 		}
 	}

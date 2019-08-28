@@ -140,15 +140,15 @@ func main() {
 
 	handlers := map[schema.GroupVersionKind]webhook.GenericCRD{
 		// For group eventing.knative.dev,
-		eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):       &eventingv1alpha1.Broker{},
-		eventingv1alpha1.SchemeGroupVersion.WithKind("Subscription"): &eventingv1alpha1.Subscription{},
-		eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):      &eventingv1alpha1.Trigger{},
-		eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"):    &eventingv1alpha1.EventType{},
+		eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
+		eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
+		eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"): &eventingv1alpha1.EventType{},
 		// For group messaging.knative.dev.
 		messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Choice"):          &messagingv1alpha1.Choice{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
+		messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
 	}
 
 	// Decorate contexts with the current state of the config.
