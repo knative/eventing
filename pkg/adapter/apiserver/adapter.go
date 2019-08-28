@@ -104,15 +104,10 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 	stop := make(chan struct{})
 
 	resyncPeriod := time.Duration(10 * time.Hour)
-	reportArgs := &ReportArgs{
-		ns: a.namespace,
-	}
 
 	var d eventDelegate
 	switch a.mode {
 	case ResourceMode:
-		// TODO: Count resourcemode
-		a.reporter.ReportEventCountResource(reportArgs, nil)
 		d = &resource{
 			ce:     a.ce,
 			source: a.source,
@@ -120,8 +115,6 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 		}
 
 	case RefMode:
-		// TODO: Count refmode
-		a.reporter.ReportEventCountRef(reportArgs, nil)
 		d = &ref{
 			ce:     a.ce,
 			source: a.source,
