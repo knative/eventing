@@ -18,10 +18,6 @@ package main
 
 import (
 	"flag"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/clients/kubeclient"
-	"knative.dev/pkg/injection/sharedmain"
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
@@ -31,6 +27,10 @@ import (
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/clients/kubeclient"
+	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
