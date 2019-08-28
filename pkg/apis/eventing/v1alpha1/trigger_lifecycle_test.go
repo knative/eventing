@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
@@ -199,7 +200,7 @@ func TestTriggerIsReady(t *testing.T) {
 		markKubernetesServiceExists bool
 		markVirtualServiceExists    bool
 		subscriptionOwned           bool
-		subscriptionStatus          *SubscriptionStatus
+		subscriptionStatus          *messagingv1alpha1.SubscriptionStatus
 		wantReady                   bool
 	}{{
 		name:                        "all happy",
@@ -249,7 +250,7 @@ func TestTriggerIsReady(t *testing.T) {
 				ts.PropagateBrokerStatus(test.brokerStatus)
 			}
 			if !test.subscriptionOwned {
-				ts.MarkSubscriptionNotOwned(&Subscription{})
+				ts.MarkSubscriptionNotOwned(&messagingv1alpha1.Subscription{})
 			} else if test.subscriptionStatus != nil {
 				ts.PropagateSubscriptionStatus(test.subscriptionStatus)
 			}

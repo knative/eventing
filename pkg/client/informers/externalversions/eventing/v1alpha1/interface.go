@@ -28,8 +28,6 @@ type Interface interface {
 	Brokers() BrokerInformer
 	// EventTypes returns a EventTypeInformer.
 	EventTypes() EventTypeInformer
-	// Subscriptions returns a SubscriptionInformer.
-	Subscriptions() SubscriptionInformer
 	// Triggers returns a TriggerInformer.
 	Triggers() TriggerInformer
 }
@@ -53,11 +51,6 @@ func (v *version) Brokers() BrokerInformer {
 // EventTypes returns a EventTypeInformer.
 func (v *version) EventTypes() EventTypeInformer {
 	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Subscriptions returns a SubscriptionInformer.
-func (v *version) Subscriptions() SubscriptionInformer {
-	return &subscriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Triggers returns a TriggerInformer.

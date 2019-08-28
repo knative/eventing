@@ -49,3 +49,11 @@ type SequenceListerExpansion interface{}
 // SequenceNamespaceListerExpansion allows custom methods to be added to
 // SequenceNamespaceLister.
 type SequenceNamespaceListerExpansion interface{}
+
+// SubscriptionListerExpansion allows custom methods to be added to
+// SubscriptionLister.
+type SubscriptionListerExpansion interface{}
+
+// SubscriptionNamespaceListerExpansion allows custom methods to be added to
+// SubscriptionNamespaceLister.
+type SubscriptionNamespaceListerExpansion interface{}

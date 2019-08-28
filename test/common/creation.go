@@ -63,7 +63,7 @@ func (client *Client) CreateSubscriptionOrFail(
 	namespace := client.Namespace
 	subscription := resources.Subscription(name, channelName, channelTypeMeta, options...)
 
-	subscriptions := client.Eventing.EventingV1alpha1().Subscriptions(namespace)
+	subscriptions := client.Eventing.MessagingV1alpha1().Subscriptions(namespace)
 	// update subscription with the new reference
 	subscription, err := subscriptions.Create(subscription)
 	if err != nil {

@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -65,12 +66,12 @@ func (ts *TriggerStatus) MarkBrokerFailed(reason, messageFormat string, messageA
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBroker, reason, messageFormat, messageA...)
 }
 
-func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *SubscriptionStatus) {
+func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *messagingv1alpha1.SubscriptionStatus) {
 	if ss.IsReady() {
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
 	} else {
 		msg := "nil"
-		if sc := subCondSet.Manage(ss).GetCondition(SubscriptionConditionReady); sc != nil {
+		if sc := ss.Status.GetCondition(messagingv1alpha1.SubscriptionConditionReady); sc != nil {
 			msg = sc.Message
 		}
 		ts.MarkNotSubscribed("SubscriptionNotReady", "Subscription is not ready: %s", msg)
@@ -81,6 +82,6 @@ func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, message
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, reason, messageFormat, messageA...)
 }
 
-func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *Subscription) {
+func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
 }

@@ -34,6 +34,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -514,7 +515,7 @@ func makeTrigger() *v1alpha1.Trigger {
 					Type:   "Any",
 				},
 			},
-			Subscriber: &v1alpha1.SubscriberSpec{
+			Subscriber: &messagingv1alpha1.SubscriberSpec{
 				Ref: &corev1.ObjectReference{
 					Name:       subscriberName,
 					Kind:       subscriberKind,
@@ -603,18 +604,18 @@ func makeServiceURI() *url.URL {
 	}
 }
 
-func makeIngressSubscription() *v1alpha1.Subscription {
+func makeIngressSubscription() *messagingv1alpha1.Subscription {
 	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
 }
 
-func makeIngressSubscriptionNotOwnedByTrigger() *v1alpha1.Subscription {
+func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription {
 	sub := makeIngressSubscription()
 	sub.OwnerReferences = []metav1.OwnerReference{}
 	return sub
 }
 
 // Just so we can test subscription updates
-func makeDifferentReadySubscription() *v1alpha1.Subscription {
+func makeDifferentReadySubscription() *messagingv1alpha1.Subscription {
 	uri := "http://example.com/differenturi"
 	s := makeIngressSubscription()
 	s.Spec.Subscriber.URI = &uri
@@ -622,13 +623,13 @@ func makeDifferentReadySubscription() *v1alpha1.Subscription {
 	return s
 }
 
-func makeReadySubscription() *v1alpha1.Subscription {
+func makeReadySubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
 	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 
-func makeNotReadySubscription() *v1alpha1.Subscription {
+func makeNotReadySubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
 	s.Status = *v1alpha1.TestHelper.NotReadySubscriptionStatus()
 	return s

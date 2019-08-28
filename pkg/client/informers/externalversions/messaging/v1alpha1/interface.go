@@ -32,6 +32,8 @@ type Interface interface {
 	InMemoryChannels() InMemoryChannelInformer
 	// Sequences returns a SequenceInformer.
 	Sequences() SequenceInformer
+	// Subscriptions returns a SubscriptionInformer.
+	Subscriptions() SubscriptionInformer
 }
 
 type version struct {
@@ -63,4 +65,9 @@ func (v *version) InMemoryChannels() InMemoryChannelInformer {
 // Sequences returns a SequenceInformer.
 func (v *version) Sequences() SequenceInformer {
 	return &sequenceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Subscriptions returns a SubscriptionInformer.
+func (v *version) Subscriptions() SubscriptionInformer {
+	return &subscriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

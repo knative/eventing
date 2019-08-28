@@ -25,18 +25,18 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 // FakeSubscriptions implements SubscriptionInterface
 type FakeSubscriptions struct {
-	Fake *FakeEventingV1alpha1
+	Fake *FakeMessagingV1alpha1
 	ns   string
 }
 
-var subscriptionsResource = schema.GroupVersionResource{Group: "eventing.knative.dev", Version: "v1alpha1", Resource: "subscriptions"}
+var subscriptionsResource = schema.GroupVersionResource{Group: "messaging.knative.dev", Version: "v1alpha1", Resource: "subscriptions"}
 
-var subscriptionsKind = schema.GroupVersionKind{Group: "eventing.knative.dev", Version: "v1alpha1", Kind: "Subscription"}
+var subscriptionsKind = schema.GroupVersionKind{Group: "messaging.knative.dev", Version: "v1alpha1", Kind: "Subscription"}
 
 // Get takes name of the subscription, and returns the corresponding subscription object, and an error if there is any.
 func (c *FakeSubscriptions) Get(name string, options v1.GetOptions) (result *v1alpha1.Subscription, err error) {

@@ -23,7 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
@@ -35,8 +34,8 @@ func ChoiceSubscriptionName(choiceName string, caseNumber int) string {
 	return fmt.Sprintf("%s-kn-choice-%d", choiceName, caseNumber)
 }
 
-func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1.Subscription {
-	r := &eventingv1alpha1.Subscription{
+func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscription {
+	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -49,7 +48,7 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: eventingv1alpha1.SubscriptionSpec{
+		Spec: v1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -58,7 +57,7 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1
 			Subscriber: p.Spec.Cases[caseNumber].Filter,
 		},
 	}
-	r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
+	r.Spec.Reply = &v1alpha1.ReplyStrategy{
 		Channel: &corev1.ObjectReference{
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 			Kind:       p.Spec.ChannelTemplate.Kind,
@@ -67,8 +66,8 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1
 	return r
 }
 
-func NewSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1.Subscription {
-	r := &eventingv1alpha1.Subscription{
+func NewSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscription {
+	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -81,7 +80,7 @@ func NewSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1.Subsc
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: eventingv1alpha1.SubscriptionSpec{
+		Spec: v1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -92,9 +91,9 @@ func NewSubscription(caseNumber int, p *v1alpha1.Choice) *eventingv1alpha1.Subsc
 	}
 
 	if p.Spec.Cases[caseNumber].Reply != nil {
-		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{Channel: p.Spec.Cases[caseNumber].Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Cases[caseNumber].Reply}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
 	}
 	return r
 }

@@ -30,7 +30,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
+	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 	serviceinformer "knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
 )

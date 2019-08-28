@@ -23,7 +23,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 // TriggerOption enables further configuration of a Trigger.
@@ -49,13 +51,13 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1alpha1.T
 
 func WithTriggerSubscriberURI(uri string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{URI: &uri}
+		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{URI: &uri}
 	}
 }
 
 func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,

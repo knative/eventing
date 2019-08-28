@@ -25,10 +25,10 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	v1alpha1 "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 )
 
 // SubscriptionInformer provides access to a shared informer and lister for
@@ -61,16 +61,16 @@ func NewFilteredSubscriptionInformer(client versioned.Interface, namespace strin
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Subscriptions(namespace).List(options)
+				return client.MessagingV1alpha1().Subscriptions(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.EventingV1alpha1().Subscriptions(namespace).Watch(options)
+				return client.MessagingV1alpha1().Subscriptions(namespace).Watch(options)
 			},
 		},
-		&eventingv1alpha1.Subscription{},
+		&messagingv1alpha1.Subscription{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *subscriptionInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *subscriptionInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&eventingv1alpha1.Subscription{}, f.defaultInformer)
+	return f.factory.InformerFor(&messagingv1alpha1.Subscription{}, f.defaultInformer)
 }
 
 func (f *subscriptionInformer) Lister() v1alpha1.SubscriptionLister {

@@ -23,16 +23,15 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 func SequenceSubscriptionName(sequenceName string, step int) string {
 	return fmt.Sprintf("%s-kn-sequence-%d", sequenceName, step)
 }
 
-func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *eventingv1alpha1.Subscription {
-	r := &eventingv1alpha1.Subscription{
+func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *v1alpha1.Subscription {
+	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -45,7 +44,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *eventingv1alpha1.Sub
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: eventingv1alpha1.SubscriptionSpec{
+		Spec: v1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -57,7 +56,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *eventingv1alpha1.Sub
 	// If it's not the last step, use the next channel as the reply to, if it's the very
 	// last one, we'll use the (optional) reply from the Sequence Spec.
 	if stepNumber < len(p.Spec.Steps)-1 {
-		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{
 			Channel: &corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -65,7 +64,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *eventingv1alpha1.Sub
 			},
 		}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &eventingv1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
 	}
 	return r
 }

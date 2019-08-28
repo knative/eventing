@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"testing"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
@@ -168,62 +167,62 @@ func TestChoiceInitializeConditions(t *testing.T) {
 func TestChoicePropagateSubscriptionStatuses(t *testing.T) {
 	tests := []struct {
 		name  string
-		fsubs []*eventingv1alpha1.Subscription
-		subs  []*eventingv1alpha1.Subscription
+		fsubs []*Subscription
+		subs  []*Subscription
 		want  corev1.ConditionStatus
 	}{{
 		name:  "empty",
-		fsubs: []*eventingv1alpha1.Subscription{},
-		subs:  []*eventingv1alpha1.Subscription{},
+		fsubs: []*Subscription{},
+		subs:  []*Subscription{},
 		want:  corev1.ConditionFalse,
 	}, {
 		name: "empty status",
-		fsubs: []*eventingv1alpha1.Subscription{{
+		fsubs: []*Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "sub",
 				Namespace: "testns",
 			},
-			Status: eventingv1alpha1.SubscriptionStatus{},
-		}}, subs: []*eventingv1alpha1.Subscription{{
+			Status: SubscriptionStatus{},
+		}}, subs: []*Subscription{{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "eventing.knative.dev/v1alpha1",
+				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "Subscription",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "sub",
 				Namespace: "testns",
 			},
-			Status: eventingv1alpha1.SubscriptionStatus{},
+			Status: SubscriptionStatus{},
 		}},
 		want: corev1.ConditionFalse,
 	}, {
 		name:  "one filter and subscriber subscription not ready",
-		fsubs: []*eventingv1alpha1.Subscription{getSubscription("fsub0", false)},
-		subs:  []*eventingv1alpha1.Subscription{getSubscription("sub0", false)},
+		fsubs: []*Subscription{getSubscription("fsub0", false)},
+		subs:  []*Subscription{getSubscription("sub0", false)},
 		want:  corev1.ConditionFalse,
 	}, {
 		name:  "one filter and one subscription ready",
-		fsubs: []*eventingv1alpha1.Subscription{getSubscription("fsub0", true)},
-		subs:  []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
+		fsubs: []*Subscription{getSubscription("fsub0", true)},
+		subs:  []*Subscription{getSubscription("sub0", true)},
 		want:  corev1.ConditionTrue,
 	}, {
 		name:  "one filter subscription not ready and one subscription ready",
-		fsubs: []*eventingv1alpha1.Subscription{getSubscription("fsub0", false)},
-		subs:  []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
+		fsubs: []*Subscription{getSubscription("fsub0", false)},
+		subs:  []*Subscription{getSubscription("sub0", true)},
 		want:  corev1.ConditionFalse,
 	}, {
 		name:  "one subscription ready, one not",
-		fsubs: []*eventingv1alpha1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
-		subs:  []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
+		fsubs: []*Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
+		subs:  []*Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
 		want:  corev1.ConditionFalse,
 	}, {
 		name:  "two subscriptions ready",
-		fsubs: []*eventingv1alpha1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:  []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		fsubs: []*Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:  []*Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:  corev1.ConditionTrue,
 	}}
 
@@ -299,22 +298,22 @@ func TestChoicePropagateChannelStatuses(t *testing.T) {
 func TestChoiceReady(t *testing.T) {
 	tests := []struct {
 		name     string
-		fsubs    []*eventingv1alpha1.Subscription
-		subs     []*eventingv1alpha1.Subscription
+		fsubs    []*Subscription
+		subs     []*Subscription
 		ichannel *duckv1alpha1.Channelable
 		channels []*duckv1alpha1.Channelable
 		want     bool
 	}{{
 		name:     "ingress false, empty",
-		fsubs:    []*eventingv1alpha1.Subscription{},
-		subs:     []*eventingv1alpha1.Subscription{},
+		fsubs:    []*Subscription{},
+		subs:     []*Subscription{},
 		ichannel: getChannelable(false),
 		channels: []*duckv1alpha1.Channelable{},
 		want:     false,
 	}, {
 		name:     "ingress true, empty",
-		fsubs:    []*eventingv1alpha1.Subscription{},
-		subs:     []*eventingv1alpha1.Subscription{},
+		fsubs:    []*Subscription{},
+		subs:     []*Subscription{},
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{},
 		want:     false,
@@ -322,57 +321,57 @@ func TestChoiceReady(t *testing.T) {
 		name:     "ingress true, one channelable not ready, one subscription ready",
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{getChannelable(false)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true)},
+		subs:     []*Subscription{getSubscription("sub0", true)},
 		want:     false,
 	}, {
 		name:     "ingress true, one channelable ready, one subscription not ready",
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", false)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", false)},
+		fsubs:    []*Subscription{getSubscription("fsub0", false)},
+		subs:     []*Subscription{getSubscription("sub0", false)},
 		want:     false,
 	}, {
 		name:     "ingress false, one channelable ready, one subscription ready",
 		ichannel: getChannelable(false),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true)},
+		subs:     []*Subscription{getSubscription("sub0", true)},
 		want:     false,
 	}, {
 		name:     "ingress true, one channelable ready, one subscription ready",
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true)},
+		subs:     []*Subscription{getSubscription("sub0", true)},
 		want:     true,
 	}, {
 		name:     "ingress true, one channelable ready, one not, two subsriptions ready",
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(false)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:     []*Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     false,
 	}, {
 		name:     "ingress true, two channelables ready, one subscription ready, one not",
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(true)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true), getSubscription("fsub1", false)},
+		subs:     []*Subscription{getSubscription("sub0", true), getSubscription("sub1", false)},
 		want:     false,
 	}, {
 		name:     "ingress false, two channelables ready, two subscriptions ready",
 		ichannel: getChannelable(false),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(true)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:     []*Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     false,
 	}, {
 		name:     "ingress true, two channelables ready, two subscriptions ready",
 		ichannel: getChannelable(true),
 		channels: []*duckv1alpha1.Channelable{getChannelable(true), getChannelable(true)},
-		fsubs:    []*eventingv1alpha1.Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
-		subs:     []*eventingv1alpha1.Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
+		fsubs:    []*Subscription{getSubscription("fsub0", true), getSubscription("fsub1", true)},
+		subs:     []*Subscription{getSubscription("sub0", true), getSubscription("sub1", true)},
 		want:     true,
 	}}
 

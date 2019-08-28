@@ -35,19 +35,22 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/apis"
+	duckroot "knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/controller"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
-	duckroot "knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
 )
 
 const (
@@ -68,7 +71,7 @@ type Reconciler struct {
 	brokerLister       eventinglisters.BrokerLister
 	serviceLister      corev1listers.ServiceLister
 	deploymentLister   appsv1listers.DeploymentLister
-	subscriptionLister eventinglisters.SubscriptionLister
+	subscriptionLister messaginglisters.SubscriptionLister
 
 	resourceTracker duck.ResourceTracker
 
@@ -453,14 +456,14 @@ func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Br
 	return r.reconcileService(ctx, expected)
 }
 
-func (r *Reconciler) reconcileIngressSubscriptionCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileIngressSubscriptionCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
 	expected := resources.MakeSubscriptionCRD(b, c, svc)
 
 	sub, err := r.subscriptionLister.Subscriptions(b.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it
 	if apierrs.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Creating subscription")
-		sub, err = r.EventingClientSet.EventingV1alpha1().Subscriptions(expected.Namespace).Create(expected)
+		sub, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(expected.Namespace).Create(expected)
 		if err != nil {
 			r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Broker's subscription create failed: %v", err)
 			return nil, err
@@ -479,7 +482,7 @@ func (r *Reconciler) reconcileIngressSubscriptionCRD(ctx context.Context, b *v1a
 	return sub, nil
 }
 
-func (r *Reconciler) reconcileExistingIngressSubscription(ctx context.Context, b *v1alpha1.Broker, expected, actual *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileExistingIngressSubscription(ctx context.Context, b *v1alpha1.Broker, expected, actual *messagingv1alpha1.Subscription) (*messagingv1alpha1.Subscription, error) {
 	// Update Subscription if it has changed. Ignore the generation.
 	expected.Spec.DeprecatedGeneration = actual.Spec.DeprecatedGeneration
 	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
@@ -487,13 +490,13 @@ func (r *Reconciler) reconcileExistingIngressSubscription(ctx context.Context, b
 	}
 	// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 	// it instead, and re-create it.
-	err := r.EventingClientSet.EventingV1alpha1().Subscriptions(b.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
+	err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(b.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
 		r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionDeleteFailed, "Delete Broker Ingress' subscription failed: %v", err)
 		return nil, err
 	}
-	newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(b.Namespace).Create(expected)
+	newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(b.Namespace).Create(expected)
 	if err != nil {
 		logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
 		r.Recorder.Eventf(b, corev1.EventTypeWarning, ingressSubscriptionCreateFailed, "Create Broker Ingress' subscription failed: %v", err)
@@ -504,7 +507,7 @@ func (r *Reconciler) reconcileExistingIngressSubscription(ctx context.Context, b
 
 // getSubscription returns the first subscription controlled by Broker b
 // otherwise it returns an error.
-func (r *Reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Broker) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) getIngressSubscription(ctx context.Context, b *v1alpha1.Broker) (*messagingv1alpha1.Subscription, error) {
 	subscriptions, err := r.subscriptionLister.Subscriptions(b.Namespace).List(labels.SelectorFromSet(ingressSubscriptionLabels(b.Name)))
 	if err != nil {
 		return nil, err

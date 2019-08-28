@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
@@ -60,7 +59,7 @@ func (ps *ChoiceStatus) InitializeConditions() {
 
 // PropagateSubscriptionStatuses sets the ChoiceConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*eventingv1alpha1.Subscription, subscriptions []*eventingv1alpha1.Subscription) {
+func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Subscription, subscriptions []*Subscription) {
 	if ps.CaseStatuses == nil {
 		ps.CaseStatuses = make([]ChoiceCaseStatus, len(subscriptions))
 	}
@@ -80,7 +79,7 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*eve
 			},
 		}
 
-		readyCondition := s.Status.GetCondition(eventingv1alpha1.SubscriptionConditionReady)
+		readyCondition := s.Status.GetCondition(SubscriptionConditionReady)
 		if readyCondition != nil {
 			ps.CaseStatuses[i].SubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
@@ -99,7 +98,7 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*eve
 				Namespace:  fs.Namespace,
 			},
 		}
-		readyCondition = fs.Status.GetCondition(eventingv1alpha1.SubscriptionConditionReady)
+		readyCondition = fs.Status.GetCondition(SubscriptionConditionReady)
 		if readyCondition != nil {
 			ps.CaseStatuses[i].FilterSubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {

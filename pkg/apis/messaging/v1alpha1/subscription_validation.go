@@ -43,7 +43,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingSubscriber := isSubscriberSpecNilOrEmpty(ss.Subscriber)
+	missingSubscriber := IsSubscriberSpecNilOrEmpty(ss.Subscriber)
 	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
 	if missingSubscriber && missingReply {
 		fe := apis.ErrMissingField("reply", "subscriber")
@@ -66,7 +66,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func isSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
+func IsSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
 	if s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) {
 		return true
 	}
