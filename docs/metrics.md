@@ -28,9 +28,9 @@ Accessing metrics requires Prometheus and Grafana installed. Follow the
 [instructions to install Prometheus and Grafana](https://github.com/knative/docs/blob/master/docs/serving/installing-logging-metrics-traces.md)
 in namespace `knative-monitoring`.
 
-
 ## Prometheus Collection
-> _All commands assume root of repo._ 
+
+> _All commands assume root of repo._
 
 1. Enable Knatives install of Prometheus to scrape Knative with GCP, run the
    following:
@@ -90,14 +90,13 @@ in namespace `knative-monitoring`.
 
 #### Remove Scrape Config
 
-Remove the text related to Cloud Run Events from `prometheus-scrape-config`, 
+Remove the text related to Cloud Run Events from `prometheus-scrape-config`,
 
 ```shell
 kubectl edit configmap -n  knative-monitoring prometheus-scrape-config
 ```
 
 And then restart Prometheus.
-
 
 ### Prometheus
 
