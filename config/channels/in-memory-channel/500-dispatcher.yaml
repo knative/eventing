@@ -25,7 +25,6 @@ spec:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
       messaging.knative.dev/role: dispatcher
-      app: imc-dispatcher
   template:
     metadata:
       labels: *labels
