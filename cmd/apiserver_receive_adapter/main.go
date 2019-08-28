@@ -131,6 +131,8 @@ func main() {
 		Mode:      env.Mode,
 		GVRCs:     gvrcs,
 	}
+
+	logger.Info("watching the configmap for observability")
 	if err = configMapWatcher.Start(stopCh); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
@@ -140,4 +142,5 @@ func main() {
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
 	}
+	logger.Info("Exiting...")
 }

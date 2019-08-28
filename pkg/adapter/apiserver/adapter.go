@@ -90,6 +90,7 @@ func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents
 		mode:      mode,
 		reporter:  reporter,
 	}
+	logger.Info("Successfully created a new adapter")
 	return a
 }
 
@@ -142,6 +143,7 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 		}
 
 		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, d, resyncPeriod)
+		a.logger.Info("Creating a new reflector!")
 		go reflector.Run(stop)
 	}
 
