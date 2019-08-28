@@ -1,12 +1,13 @@
 ---
 name: Bug
 about: Create a bug report to help us improve
-title: '[BUG]'
+title: ''
 labels: kind/bug
+assignees: ''
 
 ---
 
- **Describe the bug**
+**Describe the bug**
 A clear and concise description of what the bug is.
 
  **Expected behavior**
