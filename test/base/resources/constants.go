@@ -44,6 +44,7 @@ const (
 const (
 	InMemoryChannelKind string = "InMemoryChannel"
 
+	ChannelKind  string = "Channel"
 	SequenceKind string = "Sequence"
 	ChoiceKind   string = "Choice"
 )
