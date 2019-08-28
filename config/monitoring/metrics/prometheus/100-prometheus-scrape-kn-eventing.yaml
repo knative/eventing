@@ -108,3 +108,4 @@
       target_label: pod
     - source_labels: [__meta_kubernetes_service_name]
       target_label: service
+
