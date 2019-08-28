@@ -28,7 +28,7 @@ type Handler struct {
 	Reporter   StatsReporter
 }
 
-func (h *Handler) Start(stopCh <-chan struct{}) error {
+func (h *Handler) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -41,7 +41,7 @@ func (h *Handler) Start(stopCh <-chan struct{}) error {
 	select {
 	case err := <-errCh:
 		return err
-	case <-stopCh:
+	case <-ctx.Done():
 		break
 	}
 
