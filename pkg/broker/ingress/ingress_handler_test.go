@@ -22,6 +22,8 @@ const (
 	validHTTPMethod = nethttp.MethodPost
 )
 
+var validHTTPHeader = nethttp.Header{}
+
 type mockReporter struct{}
 
 func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
@@ -78,7 +80,7 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 			}
 			event := cloudevents.NewEvent()
 			resp := new(cloudevents.EventResponse)
-			tctx := http.TransportContext{Method: tc.httpmethod, URI: tc.URI}
+			tctx := http.TransportContext{Header: validHTTPHeader, Method: tc.httpmethod, URI: tc.URI}
 			ctx := http.WithTransportContext(context.Background(), tctx)
 			_ = handler.serveHTTP(ctx, event, resp)
 			if resp.Status != tc.expectedStatus {
@@ -104,7 +106,7 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 	}
 	event := cloudevents.NewEvent()
 	resp := new(cloudevents.EventResponse)
-	tctx := http.TransportContext{Method: validHTTPMethod, URI: validURI}
+	tctx := http.TransportContext{Header: validHTTPHeader, Method: validHTTPMethod, URI: validURI}
 	ctx := http.WithTransportContext(context.Background(), tctx)
 	_ = handler.serveHTTP(ctx, event, resp)
 	if !client.sent {

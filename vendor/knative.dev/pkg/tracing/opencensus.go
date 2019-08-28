@@ -124,9 +124,9 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 			}
 			exporter = exp
 		case config.Zipkin:
-			zipEP, err := zipkin.NewEndpoint(name, ":80")
+			zipEP, err := zipkin.NewEndpoint(name, "")
 			if err != nil {
-				logger.Errorw("error building zipkin endpoint", err)
+				logger.Error("error building zipkin endpoint", err)
 				return
 			}
 			reporter := httpreporter.NewReporter(cfg.ZipkinEndpoint)

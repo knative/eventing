@@ -3,9 +3,14 @@ package ingress
 import (
 	"context"
 	"errors"
+	"fmt"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	"go.opencensus.io/trace"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
@@ -69,6 +74,18 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		resp.Status = http.StatusNotFound
 		return nil
 	}
+
+	// Inject trace into HTTP header.
+	spanContext := trace.FromContext(ctx).SpanContext()
+	tctx.Header.Set(b3.TraceIDHeader, spanContext.TraceID.String())
+	tctx.Header.Set(b3.SpanIDHeader, spanContext.SpanID.String())
+	tctx.Header.Set(b3.SampledHeader, strconv.Itoa(int(spanContext.TraceOptions&1)))
+
+	// Set CloudEvent standard extension attribute for distributed tracing, traceparent,
+	// which contains a version ("00" is the current version), trace ID, span ID, and
+	// trace options(only support flag sampled in current version).
+	traceParent := strings.Join([]string{"00",  spanContext.TraceID.String(), spanContext.SpanID.String(), fmt.Sprintf("%02x", spanContext.TraceOptions)},"-")
+	event.SetExtension(broker.TraceParent, traceParent)
 
 	reporterArgs := &ReportArgs{
 		ns:        h.Namespace,
