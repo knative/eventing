@@ -23,7 +23,6 @@ const (
 	// Should be set using time.Now(), which returns the current local time.
 	// The format is: 2019-08-26T23:38:17.834384404Z.
 	EventArrivalTime = "knativearrivaltime"
-	TraceParent = "traceparent"
 )
 
 // Buckets125 generates an array of buckets with approximate powers-of-two
