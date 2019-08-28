@@ -113,6 +113,9 @@ func (r *Handler) Start(ctx context.Context) error {
 		errCh <- r.ceClient.StartReceiver(ctx, r.serveHTTP)
 	}()
 
+	// We are ready.
+	r.isReady.Store(true)
+
 	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
 	select {
 	case err := <-errCh:
@@ -120,6 +123,9 @@ func (r *Handler) Start(ctx context.Context) error {
 	case <-ctx.Done():
 		break
 	}
+
+	// No longer ready.
+	r.isReady.Store(false)
 
 	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
