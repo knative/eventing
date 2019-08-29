@@ -44,6 +44,9 @@ var (
 
 type StringList []string
 
+// Decode splits list of strings separated by '|',
+// overriding the default comma separator which is
+// a valid label selector character.
 func (s *StringList) Decode(value string) error {
 	*s = strings.Split(value, "|")
 	return nil

@@ -50,7 +50,7 @@ type Options struct {
 	GVRCs     []GVRC
 }
 
-// GVRC is a combining GroupVersionResource, Controller flag and LabelSelector.
+// GVRC is a combination of GroupVersionResource, Controller flag and LabelSelector.
 type GVRC struct {
 	GVR           schema.GroupVersionResource
 	Controller    bool

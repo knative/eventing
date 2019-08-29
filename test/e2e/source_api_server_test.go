@@ -66,19 +66,6 @@ func TestApiServerSource(t *testing.T) {
 			expected: "Event",
 		},
 		{
-			name: "event-pod-ref",
-			resources: []sourcesv1alpha1.ApiServerResource{
-				{
-					APIVersion:    "v1",
-					Kind:          "Event",
-					LabelSelector: &metav1.LabelSelector{},
-				},
-			},
-			mode:     "Ref",
-			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
-			expected: "Event",
-		},
-		{
 			name: "event-ref-unmatch-label",
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
@@ -104,7 +91,8 @@ func TestApiServerSource(t *testing.T) {
 						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 					},
 				},
-				Mode: mode,
+				Mode:               mode,
+				ServiceAccountName: serviceAccountName,
 			},
 			pod: func(name string) *corev1.Pod {
 				return resources.HelloWorldPod(name, resources.WithLabelsForPod(map[string]string{"e2e": "testing"}))
@@ -113,19 +101,22 @@ func TestApiServerSource(t *testing.T) {
 		},
 		{
 			name: "event-ref-match-label-expr",
-			resources: []sourcesv1alpha1.ApiServerResource{
-				{
-					APIVersion: "v1",
-					Kind:       "Pod",
-					LabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"e2e": "testing"},
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{Key: "e2e", Operator: "Exists"},
+			spec: sourcesv1alpha1.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha1.ApiServerResource{
+					{
+						APIVersion: "v1",
+						Kind:       "Pod",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"e2e": "testing"},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{Key: "e2e", Operator: "Exists"},
+							},
 						},
 					},
 				},
+				Mode:               mode,
+				ServiceAccountName: serviceAccountName,
 			},
-			mode: "Ref",
 			pod: func(name string) *corev1.Pod {
 				return resources.HelloWorldPod(name, resources.WithLabelsForPod(map[string]string{"e2e": "testing"}))
 			},
