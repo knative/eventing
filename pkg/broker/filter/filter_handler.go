@@ -46,11 +46,11 @@ const (
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	logger          *zap.Logger
-	triggerInformer eventinglisters.TriggerLister
-	ceClient        cloudevents.Client
-	reporter        StatsReporter
-	isReady         *atomic.Value
+	logger        *zap.Logger
+	triggerLister eventinglisters.TriggerNamespaceLister
+	ceClient      cloudevents.Client
+	reporter      StatsReporter
+	isReady       *atomic.Value
 }
 
 // FilterResult has the result of the filtering operation.
@@ -58,7 +58,7 @@ type FilterResult string
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerInformer eventinglisters.TriggerLister, reporter StatsReporter) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanMiddleware))
 	if err != nil {
 		return nil, err
@@ -70,11 +70,11 @@ func NewHandler(logger *zap.Logger, triggerInformer eventinglisters.TriggerListe
 	}
 
 	r := &Handler{
-		logger:          logger,
-		triggerInformer: triggerInformer,
-		ceClient:        ceClient,
-		reporter:        reporter,
-		isReady:         &atomic.Value{},
+		logger:        logger,
+		triggerLister: triggerLister,
+		ceClient:      ceClient,
+		reporter:      reporter,
+		isReady:       &atomic.Value{},
 	}
 	r.isReady.Store(false)
 
@@ -256,7 +256,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 }
 
 func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
-	t, err := r.triggerInformer.Triggers(ref.Namespace).Get(ref.Name)
+	t, err := r.triggerLister.Get(ref.Name)
 	if err != nil {
 		return nil, err
 	}

@@ -18,8 +18,8 @@ package filter
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"knative.dev/pkg/controller"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -34,12 +34,13 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
-	controllertesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
+	"knative.dev/eventing/pkg/client/informers/externalversions"
+	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -67,7 +68,6 @@ func init() {
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
 		triggers         []*eventingv1alpha1.Trigger
-		mocks            controllertesting.Mocks
 		tctx             *cloudevents.HTTPTransportContext
 		event            *cloudevents.Event
 		requestFails     bool
@@ -78,16 +78,6 @@ func TestReceiver(t *testing.T) {
 		expectedStatus   int
 		expectedHeaders  http.Header
 	}{
-		"Cannot init": {
-			mocks: controllertesting.Mocks{
-				MockLists: []controllertesting.MockList{
-					func(_ client.Client, _ context.Context, _ *client.ListOptions, _ runtime.Object) (controllertesting.MockHandled, error) {
-						return controllertesting.Handled, errors.New("test induced error")
-					},
-				},
-			},
-			expectNewToFail: true,
-		},
 		"Not POST": {
 			tctx: &cloudevents.HTTPTransportContext{
 				Method: "GET",
@@ -295,7 +285,7 @@ func TestReceiver(t *testing.T) {
 
 			r, err := NewHandler(
 				zap.NewNop(),
-				getClient(correctURI, tc.mocks),
+				getFakeTriggerLister(correctURI),
 				&mockReporter{})
 			if tc.expectNewToFail {
 				if err == nil {
@@ -422,9 +412,11 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getClient(initial []runtime.Object, mocks controllertesting.Mocks) *controllertesting.MockClient {
-	innerClient := fake.NewFakeClient(initial...)
-	return controllertesting.NewMockClient(innerClient, mocks)
+func getFakeTriggerLister(initial []runtime.Object) v1alpha1.TriggerNamespaceLister {
+	c := fake.NewSimpleClientset(initial...)
+	sif := externalversions.NewSharedInformerFactoryWithOptions(c, controller.GetResyncPeriod(context.TODO()), externalversions.WithNamespace(testNS))
+	sif.Start(context.TODO().Done())
+	return sif.Eventing().V1alpha1().Triggers().Lister().Triggers(testNS)
 }
 
 func makeTriggerFilterWithDeprecatedSourceAndType(t, s string) *eventingv1alpha1.TriggerFilter {

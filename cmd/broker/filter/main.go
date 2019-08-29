@@ -18,24 +18,26 @@ package main
 
 import (
 	"flag"
+	"k8s.io/client-go/kubernetes"
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"knative.dev/eventing/pkg/broker/filter"
-	"knative.dev/eventing/pkg/channel"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/clients/kubeclient"
+	"knative.dev/eventing/pkg/broker/filter"
+	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/tracing"
+
 	"knative.dev/pkg/injection/sharedmain"
+
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
 )
 
 var (
@@ -58,10 +60,6 @@ func main() {
 
 	ctx := signals.NewContext()
 
-	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
-	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
-	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
-
 	logger.Info("Starting...")
 
 	var env envConfig
@@ -74,9 +72,15 @@ func main() {
 		log.Fatal("Error building kubeconfig", err)
 	}
 
-	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+	kubeClient := kubernetes.NewForConfigOrDie(cfg)
 
-	cmw := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
+	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
+	eventingFactory := eventinginformers.NewSharedInformerFactoryWithOptions(eventingClient,
+		controller.GetResyncPeriod(ctx),
+		eventinginformers.WithNamespace(env.Namespace))
+	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
+
+	cmw := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
@@ -91,11 +95,9 @@ func main() {
 		logger.Fatal("Error creating stats reporter", zap.Error(err))
 	}
 
-	triggerInformer := trigger.Get(ctx)
-
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister().Triggers(env.Namespace), reporter)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
@@ -111,10 +113,10 @@ func main() {
 	}
 
 	// Start all of the informers and wait for them to sync.
-	logger.Info("Starting informers.")
-	if err := controller.StartInformers(ctx.Done(), informers...); err != nil {
-		logger.Fatal("Failed to start informers", zap.Error(err))
-	}
+	logger.Info("Starting informer.")
+
+	go eventingFactory.Start(ctx.Done())
+	eventingFactory.WaitForCacheSync(ctx.Done())
 
 	// Start blocks forever.
 	logger.Info("Filter starting...")
