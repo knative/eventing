@@ -18,21 +18,32 @@ package main
 
 import (
 	"flag"
+	"log"
+
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/client-go/kubernetes"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/broker/filter"
-	"knative.dev/eventing/pkg/channel"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"knative.dev/eventing/pkg/broker/filter"
+	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/tracing"
+
+	"knative.dev/pkg/injection/sharedmain"
+
+	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
+)
+
+var (
+	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
 type envConfig struct {
@@ -44,8 +55,11 @@ func main() {
 	logConfig := channel.NewLoggingConfig()
 	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
 	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
-	defer flush(logger)
 	flag.Parse()
+
+	defer flush(logger)
+
+	ctx := signals.NewContext()
 
 	logger.Info("Starting...")
 
@@ -54,25 +68,26 @@ func main() {
 		logger.Fatal("Failed to process env var", zap.Error(err))
 	}
 
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Namespace: env.Namespace,
-	})
+	cfg, err := sharedmain.GetConfig(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatal("Error starting up.", zap.Error(err))
+		log.Fatal("Error building kubeconfig", err)
 	}
 
-	if err = eventingv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
-		logger.Fatal("Unable to add eventingv1alpha1 scheme", zap.Error(err))
-	}
+	kubeClient := kubernetes.NewForConfigOrDie(cfg)
 
-	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	configMapWatcher := configmap.NewInformedWatcher(kc, system.Namespace())
+	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
+	eventingFactory := eventinginformers.NewSharedInformerFactoryWithOptions(eventingClient,
+		controller.GetResyncPeriod(ctx),
+		eventinginformers.WithNamespace(env.Namespace))
+	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
+
+	cmw := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(logger.Sugar(), configMapWatcher, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(logger.Sugar(), cmw, bin); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -83,33 +98,33 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, mgr.GetClient(), reporter)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister().Triggers(env.Namespace), reporter)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
-	}
-	err = mgr.Add(handler)
-	if err != nil {
-		logger.Fatal("Unable to start the handler", zap.Error(err), zap.Any("broker_filter", handler))
 	}
 
 	// TODO watch logging config map.
 
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger.Sugar()))
-
-	// Set up signals so we handle the first shutdown signal gracefully.
-	stopCh := signals.SetupSignalHandler()
+	cmw.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger.Sugar()))
 
 	// configMapWatcher does not block, so start it first.
-	if err = configMapWatcher.Start(stopCh); err != nil {
+	if err = cmw.Start(ctx.Done()); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
 
+	// Start all of the informers and wait for them to sync.
+	logger.Info("Starting informer.")
+
+	go eventingFactory.Start(ctx.Done())
+	eventingFactory.WaitForCacheSync(ctx.Done())
+
 	// Start blocks forever.
-	logger.Info("Manager starting...")
-	err = mgr.Start(stopCh)
+	logger.Info("Filter starting...")
+
+	err = handler.Start(ctx)
 	if err != nil {
-		logger.Fatal("Manager.Start() returned an error", zap.Error(err))
+		logger.Fatal("handler.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
 }

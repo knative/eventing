@@ -61,7 +61,6 @@ const (
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
 	ingressSubscriptionGetFailed    = "IngressSubscriptionGetFailed"
-	deprecatedMessage               = "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec."
 )
 
 type Reconciler struct {
@@ -153,6 +152,12 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 
 	if b.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
+		return nil
+	}
+
+	if b.Spec.ChannelTemplate == nil {
+		r.Logger.Error("Broker.Spec..ChannelTemplate is nil",
+			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
 		return nil
 	}
 

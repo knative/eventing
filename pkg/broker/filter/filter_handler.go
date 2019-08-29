@@ -30,10 +30,10 @@ import (
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/tracing"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -46,10 +46,11 @@ const (
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
 type Handler struct {
-	logger   *zap.Logger
-	client   client.Client
-	ceClient cloudevents.Client
-	reporter StatsReporter
+	logger        *zap.Logger
+	triggerLister eventinglisters.TriggerNamespaceLister
+	ceClient      cloudevents.Client
+	reporter      StatsReporter
+	isReady       *atomic.Value
 }
 
 // FilterResult has the result of the filtering operation.
@@ -57,25 +58,11 @@ type FilterResult string
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, client client.Client, reporter StatsReporter) (*Handler, error) {
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanMiddleware))
 	if err != nil {
 		return nil, err
 	}
-	// Liveness check.
-	httpTransport.Handler = http.NewServeMux()
-	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
-		writer.WriteHeader(http.StatusOK)
-	})
-	// Readiness check.
-	isReady := &atomic.Value{}
-	isReady.Store(false)
-	httpTransport.Handler.HandleFunc("/readyz", func(writer http.ResponseWriter, _ *http.Request) {
-		if isReady == nil || !isReady.Load().(bool) {
-			http.Error(writer, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
-		}
-		writer.WriteHeader(http.StatusOK)
-	})
 
 	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
@@ -83,30 +70,31 @@ func NewHandler(logger *zap.Logger, client client.Client, reporter StatsReporter
 	}
 
 	r := &Handler{
-		logger:   logger,
-		client:   client,
-		ceClient: ceClient,
-		reporter: reporter,
+		logger:        logger,
+		triggerLister: triggerLister,
+		ceClient:      ceClient,
+		reporter:      reporter,
+		isReady:       &atomic.Value{},
 	}
-	err = r.initClient()
-	if err != nil {
-		return nil, err
-	}
-	// TODO mark isReady false when the client is too far out of sync.
-	isReady.Store(true)
+	r.isReady.Store(false)
+
+	httpTransport.Handler = http.NewServeMux()
+	httpTransport.Handler.HandleFunc("/healthz", r.healthZ)
+	httpTransport.Handler.HandleFunc("/readyz", r.readyZ)
+
 	return r, nil
 }
 
-// Initialize the client. Mainly intended to load stuff in its cache.
-func (r *Handler) initClient() error {
-	// We list triggers so that we do not drop messages. Otherwise, on receiving an event, it
-	// may not find the Trigger and would return an error.
-	opts := &client.ListOptions{}
-	tl := &eventingv1alpha1.TriggerList{}
-	if err := r.client.List(context.TODO(), opts, tl); err != nil {
-		return err
+func (r *Handler) healthZ(writer http.ResponseWriter, _ *http.Request) {
+	writer.WriteHeader(http.StatusOK)
+}
+
+func (r *Handler) readyZ(writer http.ResponseWriter, _ *http.Request) {
+	if r.isReady == nil || !r.isReady.Load().(bool) {
+		http.Error(writer, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+		return
 	}
-	return nil
+	writer.WriteHeader(http.StatusOK)
 }
 
 // Start begins to receive messages for the handler.
@@ -116,7 +104,7 @@ func (r *Handler) initClient() error {
 // server.
 //
 // This method will block until a message is received on the stop channel.
-func (r *Handler) Start(stopCh <-chan struct{}) error {
+func (r *Handler) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -125,13 +113,19 @@ func (r *Handler) Start(stopCh <-chan struct{}) error {
 		errCh <- r.ceClient.StartReceiver(ctx, r.serveHTTP)
 	}()
 
+	// We are ready.
+	r.isReady.Store(true)
+
 	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
 	select {
 	case err := <-errCh:
 		return err
-	case <-stopCh:
+	case <-ctx.Done():
 		break
 	}
+
+	// No longer ready.
+	r.isReady.Store(false)
 
 	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
@@ -262,8 +256,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 }
 
 func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
-	t := &eventingv1alpha1.Trigger{}
-	err := r.client.Get(ctx, ref.NamespacedName, t)
+	t, err := r.triggerLister.Get(ref.Name)
 	if err != nil {
 		return nil, err
 	}
