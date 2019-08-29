@@ -92,11 +92,6 @@ required = [
   name = "github.com/Shopify/sarama"
   version = "1.19.0"
 
-# 0.1.9 is most recent version that still uses K8s 1.12. 0.1.10 uses K8s 1.13.
-[[constraint]]
-  name = "sigs.k8s.io/controller-runtime"
-  version = "=0.1.9"
-
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
   version = "=0.7.0"
