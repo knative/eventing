@@ -59,7 +59,7 @@ const (
 	// image. It must be defined.
 	raImageEnvVar = "APISERVER_RA_IMAGE"
 
-	component = "apiserver-source-controller"
+	component = "apiserversource"
 )
 
 var (

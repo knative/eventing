@@ -22,7 +22,6 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	utils "knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics"
 )
@@ -53,6 +52,8 @@ var _ StatsReporter = (*reporter)(nil)
 // reporter holds cached metric objects to report filter metrics.
 type reporter struct {
 	namespaceTagKey tag.Key
+	eventTypeKey    tag.Key
+	eventSourceKey  tag.Key
 	resultKey       tag.Key
 	filterResultKey tag.Key
 }
@@ -67,7 +68,16 @@ func NewStatsReporter() (StatsReporter, error) {
 		return nil, err
 	}
 	r.namespaceTagKey = nsTag
-
+	eventTypeTag, err := tag.NewKey(metricskey.EventType)
+	if err != nil {
+		return nil, err
+	}
+	r.eventTypeKey = eventTypeTag
+	eventSourceTag, err := tag.NewKey(metricskey.EventSource)
+	if err != nil {
+		return nil, err
+	}
+	r.eventSourceKey = eventSourceTag
 	filterResultTag, err := tag.NewKey(metricskey.FilterResult)
 	if err != nil {
 		return nil, err
@@ -86,7 +96,8 @@ func NewStatsReporter() (StatsReporter, error) {
 			Measure:     eventCountM,
 			// TODO count or sum aggregation?
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.resultKey},
+			TagKeys: []tag.Key{r.namespaceTagKey, r.eventSourceKey,
+				r.eventTypeKey},
 		},
 	)
 	if err != nil {
@@ -98,7 +109,7 @@ func NewStatsReporter() (StatsReporter, error) {
 
 // ReportEventCount captures the event count.
 func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
-	ctx, err := r.generateTag(args, tag.Insert(r.resultKey, utils.Result(err)))
+	ctx, err := r.generateTag(args, tag.Insert(r.resultKey, Result(err)))
 	if err != nil {
 		return err
 	}
@@ -111,6 +122,8 @@ func (r *reporter) generateTag(args *ReportArgs, t tag.Mutator) (context.Context
 	return tag.New(
 		context.Background(),
 		tag.Insert(r.namespaceTagKey, args.ns),
+		tag.Insert(r.eventSourceKey, valueOrAny(args.eventSource)),
+		tag.Insert(r.eventTypeKey, valueOrAny(args.eventType)),
 		t)
 }
 

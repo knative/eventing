@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	_ "knative.dev/pkg/metrics/testing"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
@@ -132,6 +133,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 						{
 							Name:  "receive-adapter",
 							Image: "test-image",
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9090,
+							}},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SINK_URI",
@@ -157,6 +162,15 @@ func TestMakeReceiveAdapter(t *testing.T) {
 											FieldPath: "metadata.namespace",
 										},
 									},
+								}, {
+									Name:  "METRICS_DOMAIN",
+									Value: "knative.dev/eventing",
+								}, {
+									Name:  "K_METRICS_CONFIG",
+									Value: "",
+								}, {
+									Name:  "K_LOGGING_CONFIG",
+									Value: "",
 								},
 							},
 						},
