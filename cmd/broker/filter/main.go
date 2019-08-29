@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"k8s.io/client-go/kubernetes"
 	"log"
+
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"

@@ -45,7 +45,7 @@ required = [
 # k8s-dynamic-fake-simple.patch in ./hack/update-deps.sh
 #
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-01-24 is 1.11
+# GKE version as of 2019-01-24 is 1.11  
 [[override]]
   name = "k8s.io/api"
   version = "kubernetes-1.12.9"
