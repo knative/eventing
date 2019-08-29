@@ -25,6 +25,17 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+type MockHandled int
+
+const (
+	// This mock has handled the function call, no further mocks nor the real client should be
+	// called.
+	Handled MockHandled = iota
+	// This mock has not handled the function call, subsequent mocks or the real client should be
+	// called.
+	Unhandled
+)
+
 // All of the functions in dynamic.Interface get mocked equivalents.
 type MockDynamicResource func(innerInterface dynamic.Interface, resource schema.GroupVersionResource) (MockHandled, dynamic.NamespaceableResourceInterface)
 

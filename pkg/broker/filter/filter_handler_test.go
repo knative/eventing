@@ -19,7 +19,7 @@ package filter
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/controller"
+	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -31,6 +31,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -38,7 +39,6 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
-	"knative.dev/eventing/pkg/client/informers/externalversions"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 )
@@ -412,11 +412,24 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+type FakeBrokerNamespaceLister struct {
+	client *fake.Clientset
+}
+
+func (f *FakeBrokerNamespaceLister) List(selector labels.Selector) (ret []*eventingv1alpha1.Trigger, err error) {
+	panic("implement me")
+}
+
+func (f *FakeBrokerNamespaceLister) Get(name string) (*eventingv1alpha1.Trigger, error) {
+	return f.client.EventingV1alpha1().Triggers(testNS).Get(name, metav1.GetOptions{})
+}
+
 func getFakeTriggerLister(initial []runtime.Object) v1alpha1.TriggerNamespaceLister {
 	c := fake.NewSimpleClientset(initial...)
-	sif := externalversions.NewSharedInformerFactoryWithOptions(c, controller.GetResyncPeriod(context.TODO()), externalversions.WithNamespace(testNS))
-	sif.Start(context.TODO().Done())
-	return sif.Eventing().V1alpha1().Triggers().Lister().Triggers(testNS)
+
+	return &FakeBrokerNamespaceLister{
+		client: c,
+	}
 }
 
 func makeTriggerFilterWithDeprecatedSourceAndType(t, s string) *eventingv1alpha1.TriggerFilter {
