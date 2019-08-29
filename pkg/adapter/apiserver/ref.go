@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -36,6 +37,8 @@ type ref struct {
 	logger *zap.SugaredLogger
 
 	controlledGVRs []schema.GroupVersionResource
+	reporter       StatsReporter
+	namespace      string
 }
 
 var _ cache.Store = (*ref)(nil)
@@ -105,6 +108,11 @@ func (a *ref) Delete(obj interface{}) error {
 }
 
 func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
+	fmt.Printf("Are we here?\n", gvr)
+	reportArgs := &ReportArgs{
+		ns: a.namespace,
+	}
+	a.reporter.ReportEventCount(reportArgs, nil)
 	if a.controlledGVRs == nil {
 		a.controlledGVRs = []schema.GroupVersionResource{gvr}
 		return

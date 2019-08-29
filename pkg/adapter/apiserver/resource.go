@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
@@ -27,9 +28,11 @@ import (
 )
 
 type resource struct {
-	ce     cloudevents.Client
-	source string
-	logger *zap.SugaredLogger
+	ce        cloudevents.Client
+	source    string
+	logger    *zap.SugaredLogger
+	reporter  StatsReporter
+	namespace string
 }
 
 var _ cache.Store = (*resource)(nil)
@@ -81,6 +84,11 @@ func (a *resource) Delete(obj interface{}) error {
 
 func (a *resource) addControllerWatch(gvr schema.GroupVersionResource) {
 	// not supported for resource.
+	fmt.Printf("Are we here?\n", gvr)
+	reportArgs := &ReportArgs{
+		ns: a.namespace,
+	}
+	a.reporter.ReportEventCount(reportArgs, nil)
 	a.logger.Warn("ignored controller watch request on gvr.", zap.String("gvr", gvr.String()))
 }
 

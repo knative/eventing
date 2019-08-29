@@ -66,9 +66,10 @@ type adapter struct {
 
 	mode     string
 	delegate eventDelegate
+	reporter StatsReporter
 }
 
-func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents.Client, logger *zap.SugaredLogger, opt Options) Adapter {
+func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents.Client, logger *zap.SugaredLogger, opt Options, reporter StatsReporter) Adapter {
 	mode := opt.Mode
 	switch mode {
 	case ResourceMode, RefMode:
@@ -87,6 +88,7 @@ func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents
 		gvrcs:     opt.GVRCs,
 		namespace: opt.Namespace,
 		mode:      mode,
+		reporter:  reporter,
 	}
 	return a
 }
@@ -101,21 +103,28 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 	stop := make(chan struct{})
 
 	resyncPeriod := time.Duration(10 * time.Hour)
-
+	reportArgs := &ReportArgs{
+		ns: a.namespace,
+	}
+	a.reporter.ReportEventCount(reportArgs, nil)
 	var d eventDelegate
 	switch a.mode {
 	case ResourceMode:
 		d = &resource{
-			ce:     a.ce,
-			source: a.source,
-			logger: a.logger,
+			ce:        a.ce,
+			source:    a.source,
+			logger:    a.logger,
+			reporter:  a.reporter,
+			namespace: a.namespace,
 		}
 
 	case RefMode:
 		d = &ref{
-			ce:     a.ce,
-			source: a.source,
-			logger: a.logger,
+			ce:        a.ce,
+			source:    a.source,
+			logger:    a.logger,
+			reporter:  a.reporter,
+			namespace: a.namespace,
 		}
 
 	default:

@@ -43,6 +43,8 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/utils"
+	pkgLogging "knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
 )
 
 const (
@@ -56,6 +58,8 @@ const (
 	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
 	// image. It must be defined.
 	raImageEnvVar = "APISERVER_RA_IMAGE"
+
+	component = "apiserver-source-controller"
 )
 
 var (
@@ -87,6 +91,9 @@ type Reconciler struct {
 
 	source         string
 	sinkReconciler *duck.SinkReconciler
+	context        context.Context
+	loggingConfig  *pkgLogging.Config
+	metricsConfig  *metrics.ExporterOptions
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -187,10 +194,12 @@ func (r *Reconciler) getReceiveAdapterImage() string {
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.getReceiveAdapterImage(),
-		Source:  src,
-		Labels:  resources.Labels(src.Name),
-		SinkURI: sinkURI,
+		Image:         r.getReceiveAdapterImage(),
+		Source:        src,
+		Labels:        resources.Labels(src.Name),
+		SinkURI:       sinkURI,
+		LoggingConfig: resources.LoggingConfigToBase64(r.loggingConfig),
+		MetricsConfig: resources.MetricsOptionsToBase64(r.metricsConfig),
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 
@@ -373,4 +382,31 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServ
 	}
 
 	return cj, err
+}
+
+func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
+	if cfg != nil {
+		delete(cfg.Data, "_example")
+	}
+
+	logcfg, err := pkgLogging.NewConfigFromConfigMap(cfg)
+	if err != nil {
+		logging.FromContext(r.context).Warn("failed to create logging config from configmap", zap.String("cfg.Name", cfg.Name))
+		return
+	}
+	r.loggingConfig = logcfg
+	logging.FromContext(r.context).Info("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
+}
+
+func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
+	if cfg != nil {
+		delete(cfg.Data, "_example")
+	}
+
+	r.metricsConfig = &metrics.ExporterOptions{
+		Domain:    metrics.Domain(),
+		Component: component,
+		ConfigMap: cfg.Data,
+	}
+	logging.FromContext(r.context).Info("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }
