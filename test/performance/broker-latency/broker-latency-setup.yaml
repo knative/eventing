@@ -16,8 +16,18 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: perf-eventing
-  labels:
-    knative-eventing-injection: enabled
+
+---
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Broker
+metadata:
+  name: in-memory-test-broker
+  namespace: perf-eventing
+spec:
+  channelTemplateSpec:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: InMemoryChannel
 
 ---
 
@@ -27,11 +37,126 @@ metadata:
   name: broker-latency
   namespace: perf-eventing
 spec:
+  broker: in-memory-test-broker
   subscriber:
     ref:
       apiVersion: v1
       kind: Service
       name: broker-latency-consumer
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eventing-broker-ingress
+  namespace: perf-eventing
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eventing-broker-filter
+  namespace: perf-eventing
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: perf-eventing
+  namespace: perf-eventing
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: perf-eventing
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: perf-eventing
+subjects:
+  - kind: ServiceAccount
+    name: perf-eventing
+    namespace: perf-eventing
+roleRef:
+  kind: ClusterRole
+  name: perf-eventing
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eventing-broker-ingress
+  namespace: perf-eventing
+subjects:
+  - kind: ServiceAccount
+    name: eventing-broker-ingress
+    namespace: perf-eventing
+roleRef:
+  kind: ClusterRole
+  name: eventing-broker-ingress
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eventing-broker-filter
+  namespace: perf-eventing
+subjects:
+  - kind: ServiceAccount
+    name: eventing-broker-filter
+    namespace: perf-eventing
+roleRef:
+  kind: ClusterRole
+  name: eventing-broker-filter
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eventing-config-reader-default-eventing-broker-ingress
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: eventing-broker-ingress
+    namespace: perf-eventing
+roleRef:
+  kind: ClusterRole
+  name: eventing-config-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: eventing-config-reader-default-eventing-broker-filter
+  namespace: knative-eventing
+subjects:
+  - kind: ServiceAccount
+    name: eventing-broker-filter
+    namespace: perf-eventing
+roleRef:
+  kind: ClusterRole
+  name: eventing-config-reader
+  apiGroup: rbac.authorization.k8s.io
 
 ---
 
