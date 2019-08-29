@@ -20,12 +20,17 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+
+	v1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
+	duck "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // ChannelOption enables further configuration of a Channel.
@@ -35,7 +40,7 @@ type ChannelOption func(*v1alpha1.Channel)
 func NewChannel(name, namespace string, o ...ChannelOption) *v1alpha1.Channel {
 	c := &v1alpha1.Channel{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "Channel",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,23 +55,9 @@ func NewChannel(name, namespace string, o ...ChannelOption) *v1alpha1.Channel {
 	return c
 }
 
-// NewChannelWithoutNamespace creates a Channel with ChannelOptions but without a specific namespace
-func NewChannelWithoutNamespace(name string, o ...ChannelOption) *v1alpha1.Channel {
-	s := &v1alpha1.Channel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	for _, opt := range o {
-		opt(s)
-	}
-	s.SetDefaults(context.Background())
-	return s
-}
-
 // WithInitChannelConditions initializes the Channel's conditions.
-func WithInitChannelConditions(s *v1alpha1.Channel) {
-	s.Status.InitializeConditions()
+func WithInitChannelConditions(c *v1alpha1.Channel) {
+	c.Status.InitializeConditions()
 }
 
 func WithChannelDeleted(c *v1alpha1.Channel) {
@@ -74,62 +65,73 @@ func WithChannelDeleted(c *v1alpha1.Channel) {
 	c.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-func WithChannelProvisionerNotFound(name, kind string) ChannelOption {
+func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Status.MarkProvisionerNotInstalled(
-			"Provisioner not found.",
-			"Specified provisioner [Name:%s Kind:%s] is not installed or not controlling the channel.",
-			name,
-			kind,
-		)
+		c.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+			TypeMeta: typeMeta,
+		}
 	}
 }
 
-func WithChannelProvisioner(gvk metav1.GroupVersionKind, name string) ChannelOption {
+func WithBackingChannelFailed(reason, msg string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Spec.Provisioner = &corev1.ObjectReference{
-			APIVersion: apiVersion(gvk),
-			Kind:       gvk.Kind,
-			Name:       name,
-		}
+		c.Status.MarkBackingChannelFailed(reason, msg)
+	}
+}
+
+func WithBackingChannelReady(c *v1alpha1.Channel) {
+	c.Status.MarkBackingChannelReady()
+}
+
+func WithBackingChannelObjRef(objRef *v1.ObjectReference) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.Channel = objRef
 	}
 }
 
 func WithChannelAddress(hostname string) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Status.SetAddress(&apis.URL{
-			Scheme: "http",
-			Host:   hostname,
-		})
+		address := &duck.Addressable{
+			Addressable: v1beta1.Addressable{
+				URL: &apis.URL{
+					Scheme: "http",
+					Host:   hostname,
+				},
+			},
+		}
+		c.Status.SetAddress(address)
 	}
 }
 
-func WithChannelReady(c *v1alpha1.Channel) {
-	c.Status = *v1alpha1.TestHelper.ReadyChannelStatus()
-}
-
-func WithChannelSubscribers(subscribers []duckv1alpha1.SubscriberSpec) ChannelOption {
+func WithChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Spec.Subscribable = &duckv1alpha1.Subscribable{
+		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
 			Subscribers: subscribers,
 		}
 	}
 }
 
-func WithChannelGenerateName(generateName string) ChannelOption {
+func WithChannelReadySubscriber(uid string) ChannelOption {
+	return WithChannelReadySubscriberAndGeneration(uid, 0)
+}
+
+func WithChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.ObjectMeta.GenerateName = generateName
+		if c.Status.GetSubscribableTypeStatus() == nil { // Both the SubscribableStatus fields are nil
+			c.Status.SetSubscribableTypeStatus(eventingduckv1alpha1.SubscribableStatus{})
+		}
+		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(eventingduckv1alpha1.SubscriberStatus{
+			UID:                types.UID(uid),
+			ObservedGeneration: observedGeneration,
+			Ready:              v1.ConditionTrue,
+		})
 	}
 }
 
-func WithChannelLabels(labels map[string]string) ChannelOption {
+func WithChannelSubscriberStatuses(subscriberStatuses []eventingduckv1alpha1.SubscriberStatus) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.ObjectMeta.Labels = labels
-	}
-}
-
-func WithChannelOwnerReferences(ownerReferences []metav1.OwnerReference) ChannelOption {
-	return func(c *v1alpha1.Channel) {
-		c.ObjectMeta.OwnerReferences = ownerReferences
+		c.Status.SetSubscribableTypeStatus(eventingduckv1alpha1.SubscribableStatus{
+			Subscribers: subscriberStatuses,
+		})
 	}
 }

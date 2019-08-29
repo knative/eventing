@@ -25,3 +25,5 @@ type ChoiceExpansion interface{}
 type InMemoryChannelExpansion interface{}
 
 type SequenceExpansion interface{}
+
+type SubscriptionExpansion interface{}

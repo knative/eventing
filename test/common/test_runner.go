@@ -38,23 +38,37 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
+// ChannelTestRunner is used to run tests against channels.
+type ChannelTestRunner struct {
+	ChannelFeatureMap map[string][]Feature
+	ChannelsToTest    []string
+}
+
 // RunTests will use all channels that support the given feature, to run
 // a test for the testFunc.
-func RunTests(
+func (tr *ChannelTestRunner) RunTests(
 	t *testing.T,
-	channels []string,
 	feature Feature,
 	testFunc func(st *testing.T, channel string),
 ) {
 	t.Parallel()
-	for _, channel := range channels {
-		channelConfig := ValidChannelsMap[channel]
-		if contains(channelConfig.Features, feature) {
+	for _, channel := range tr.ChannelsToTest {
+		features := tr.ChannelFeatureMap[channel]
+		if contains(features, feature) {
 			t.Run(fmt.Sprintf("%s-%s", t.Name(), channel), func(st *testing.T) {
 				testFunc(st, channel)
 			})
 		}
 	}
+}
+
+func contains(features []Feature, feature Feature) bool {
+	for _, f := range features {
+		if f == feature {
+			return true
+		}
+	}
+	return false
 }
 
 // Setup creates the client objects needed in the e2e tests,
@@ -101,27 +115,13 @@ func TearDown(client *Client) {
 	}
 }
 
-func contains(features []Feature, feature Feature) bool {
-	for _, f := range features {
-		if f == feature {
-			return true
-		}
-	}
-	return false
-}
-
-// GetChannelTypeMeta gets the actual typemeta of the channel.
-func GetChannelTypeMeta(channelName string) *metav1.TypeMeta {
-	return MessagingTypeMeta(channelName)
-}
-
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
-	nsSpec, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 
 	if err != nil && errors.IsNotFound(err) {
-		nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-		nsSpec, err = client.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
+		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+		_, err = client.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 
 		if err != nil {
 			t.Fatalf("Failed to create Namespace: %s; %v", namespace, err)

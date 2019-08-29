@@ -16,21 +16,6 @@ limitations under the License.
 
 package resources
 
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "cronjob-source-controller"
-)
-
-// OldLabels are the pre-0.8 labels.
-// TODO Delete after 0.8 is cut.
-func OldLabels(name string) map[string]string {
-	return map[string]string{
-		"knative-eventing-source":      controllerAgentName,
-		"knative-eventing-source-name": name,
-	}
-}
-
 // Labels are the labels attached to all resources based on a CronJobSource.
 func Labels(name string) map[string]string {
 	return map[string]string{

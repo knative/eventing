@@ -31,15 +31,16 @@ import (
 )
 
 var (
-	sink          string
-	eventID       string
-	eventType     string
-	eventSource   string
-	eventData     string
-	eventEncoding string
-	periodStr     string
-	delayStr      string
-	maxMsgStr     string
+	sink            string
+	eventID         string
+	eventType       string
+	eventSource     string
+	eventExtensions string
+	eventData       string
+	eventEncoding   string
+	periodStr       string
+	delayStr        string
+	maxMsgStr       string
 )
 
 func init() {
@@ -47,6 +48,7 @@ func init() {
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
 	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventExtensions, "event-extensions", "", "The extensions of event with json format.")
 	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
@@ -138,6 +140,15 @@ func main() {
 		}
 		event.SetType(eventType)
 		event.SetSource(eventSource)
+
+		var extensions map[string]interface{}
+		if err := json.Unmarshal([]byte(eventExtensions), &extensions); err != nil {
+			log.Fatalf("Encountered error when unmarshalling cloud event extensions to map[string]interface{}: %v", err)
+		}
+		for k, v := range extensions {
+			event.SetExtension(k, v)
+		}
+
 		if err := event.SetData(untyped); err != nil {
 			log.Fatalf("failed to set data, %v", err)
 		}

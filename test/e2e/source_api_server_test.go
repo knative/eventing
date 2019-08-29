@@ -24,6 +24,8 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 func TestApiServerSource(t *testing.T) {
@@ -63,13 +65,18 @@ func TestApiServerSource(t *testing.T) {
 	}
 	// mode is the watch mode: `Ref` sends only the reference to the resource, `Resource` sends the full resource.
 	mode := "Ref"
-	client.CreateApiServerSourceOrFail(
+	apiServerSource := eventingtesting.NewApiServerSource(
 		apiServerSourceName,
-		apiServerSourceResources,
-		mode,
-		resources.WithServiceAccountForApiServerSource(serviceAccountName),
-		resources.WithSinkServiceForApiServerSource(loggerPodName),
+		client.Namespace,
+		eventingtesting.WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+			Resources:          apiServerSourceResources,
+			ServiceAccountName: serviceAccountName,
+			Mode:               mode,
+			Sink:               resources.ServiceRef(loggerPodName),
+		}),
 	)
+
+	client.CreateApiServerSourceOrFail(apiServerSource)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

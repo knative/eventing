@@ -17,10 +17,13 @@ limitations under the License.
 package common
 
 import (
+	"encoding/json"
+	"regexp"
 	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -92,12 +95,38 @@ func (client *Client) FindAnyLogContents(podName string, contents []string) (boo
 	if err != nil {
 		return false, err
 	}
+	eventContentsSet, err := parseEventContentsFromPodLogs(string(logs))
+	if err != nil {
+		return false, err
+	}
 	for _, content := range contents {
-		if strings.Contains(string(logs), content) {
+		if eventContentsSet.Has(content) {
 			return true, nil
 		}
 	}
 	return false, nil
+}
+
+// parseEventContentsFromPodLogs extracts the contents of events from a Pod logs
+// Example log entry: 2019/08/21 22:46:38 {"msg":"Body-type1-source1--extname1-extval1-extname2-extvalue2","sequence":"1"}
+// Use regex to get the event content with json format: {"msg":"Body-type1-source1--extname1-extval1-extname2-extvalue2","sequence":"1"}
+// Get the eventContent with key "msg"
+// Returns a set with all unique event contents
+func parseEventContentsFromPodLogs(logs string) (sets.String, error) {
+	re := regexp.MustCompile(`{.+}`)
+	matches := re.FindAllString(logs, -1)
+	eventContentsSet := sets.String{}
+	for _, match := range matches {
+		var matchedLogs map[string]string
+		err := json.Unmarshal([]byte(match), &matchedLogs)
+		if err != nil {
+			return nil, err
+		} else {
+			eventContent := matchedLogs["msg"]
+			eventContentsSet.Insert(eventContent)
+		}
+	}
+	return eventContentsSet, nil
 }
 
 // getContainerName gets name of the first container of the given pod.

@@ -8,6 +8,7 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
+  "google.golang.org/api/container/v1",
   "github.com/evanphx/json-patch",
   "knative.dev/test-infra/scripts",
   "knative.dev/test-infra/tools/dep-collector",
@@ -56,6 +57,10 @@ required = [
 [[constraint]]
   name = "contrib.go.opencensus.io/exporter/stackdriver"
   version = "v0.12.2"
+
+[[constraint]]
+  name = "github.com/google/mako"
+  version = "v0.1.0"
 
 [[constraint]]
   name = "knative.dev/test-infra"

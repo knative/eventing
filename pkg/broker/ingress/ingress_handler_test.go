@@ -5,6 +5,7 @@ import (
 	nethttp "net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -12,6 +13,7 @@ import (
 )
 
 const (
+	namespace       = "testNamespace"
 	brokerName      = "testBroker"
 	validURI        = "/"
 	urlHost         = "testHost"
@@ -19,6 +21,16 @@ const (
 	urlScheme       = "http"
 	validHTTPMethod = nethttp.MethodPost
 )
+
+type mockReporter struct{}
+
+func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
+	return nil
+}
+
+func (r *mockReporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+	return nil
+}
 
 type fakeClient struct{ sent bool }
 
@@ -61,6 +73,8 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 					Path:   urlPath,
 				},
 				BrokerName: brokerName,
+				Namespace:  namespace,
+				Reporter:   &mockReporter{},
 			}
 			event := cloudevents.NewEvent()
 			resp := new(cloudevents.EventResponse)
@@ -85,6 +99,8 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 			Path:   urlPath,
 		},
 		BrokerName: brokerName,
+		Namespace:  namespace,
+		Reporter:   &mockReporter{},
 	}
 	event := cloudevents.NewEvent()
 	resp := new(cloudevents.EventResponse)

@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
@@ -61,7 +60,7 @@ func WithSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTemplateSp
 	}
 }
 
-func WithSequenceSteps(steps []eventingv1alpha1.SubscriberSpec) SequenceOption {
+func WithSequenceSteps(steps []v1alpha1.SubscriberSpec) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Steps = steps
 	}

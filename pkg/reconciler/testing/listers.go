@@ -111,8 +111,8 @@ func (l *Listers) GetSharedObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakesharedclientset.AddToScheme)
 }
 
-func (l *Listers) GetSubscriptionLister() eventinglisters.SubscriptionLister {
-	return eventinglisters.NewSubscriptionLister(l.indexerFor(&eventingv1alpha1.Subscription{}))
+func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
+	return messaginglisters.NewSubscriptionLister(l.indexerFor(&messagingv1alpha1.Subscription{}))
 }
 
 func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
@@ -129,10 +129,6 @@ func (l *Listers) GetEventTypeLister() eventinglisters.EventTypeLister {
 
 func (l *Listers) GetInMemoryChannelLister() messaginglisters.InMemoryChannelLister {
 	return messaginglisters.NewInMemoryChannelLister(l.indexerFor(&messagingv1alpha1.InMemoryChannel{}))
-}
-
-func (l *Listers) GetChannelLister() eventinglisters.ChannelLister {
-	return eventinglisters.NewChannelLister(l.indexerFor(&eventingv1alpha1.Channel{}))
 }
 
 func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {

@@ -30,12 +30,11 @@ import (
 type ApiServerSourceOption func(*v1alpha1.ApiServerSource)
 
 // NewApiServerSource creates a ApiServer with ApiServerOptions
-func NewApiServerSource(name, namespace, uid string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
+func NewApiServerSource(name, namespace string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
 	c := &v1alpha1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			UID:       types.UID(uid),
 		},
 	}
 	for _, opt := range o {
@@ -43,6 +42,12 @@ func NewApiServerSource(name, namespace, uid string, o ...ApiServerSourceOption)
 	}
 	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
 	return c
+}
+
+func WithApiServerSourceUID(uid string) ApiServerSourceOption {
+	return func(a *v1alpha1.ApiServerSource) {
+		a.UID = types.UID(uid)
+	}
 }
 
 // WithInitApiServerSourceConditions initializes the ApiServerSource's conditions.

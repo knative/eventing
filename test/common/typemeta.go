@@ -22,7 +22,7 @@ import (
 )
 
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.
-var SubscriptionTypeMeta = EventingTypeMeta(resources.SubscriptionKind)
+var SubscriptionTypeMeta = MessagingTypeMeta(resources.SubscriptionKind)
 
 // BrokerTypeMeta is the TypeMeta ref for Broker.
 var BrokerTypeMeta = EventingTypeMeta(resources.BrokerKind)
@@ -70,4 +70,9 @@ func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 		Kind:       kind,
 		APIVersion: resources.MessagingAPIVersion,
 	}
+}
+
+// GetChannelTypeMeta gets the actual typemeta of the channel.
+func GetChannelTypeMeta(channelName string) *metav1.TypeMeta {
+	return MessagingTypeMeta(channelName)
 }

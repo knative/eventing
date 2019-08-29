@@ -71,7 +71,10 @@ func (client *Client) sendFakeEventToAddress(
 	event *resources.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	pod := resources.EventSenderPod(senderName, uri, event)
+	pod, err := resources.EventSenderPod(senderName, uri, event)
+	if err != nil {
+		return err
+	}
 	client.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
 		return err

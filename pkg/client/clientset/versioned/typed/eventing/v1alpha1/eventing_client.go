@@ -28,10 +28,7 @@ import (
 type EventingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BrokersGetter
-	ChannelsGetter
-	ClusterChannelProvisionersGetter
 	EventTypesGetter
-	SubscriptionsGetter
 	TriggersGetter
 }
 
@@ -44,20 +41,8 @@ func (c *EventingV1alpha1Client) Brokers(namespace string) BrokerInterface {
 	return newBrokers(c, namespace)
 }
 
-func (c *EventingV1alpha1Client) Channels(namespace string) ChannelInterface {
-	return newChannels(c, namespace)
-}
-
-func (c *EventingV1alpha1Client) ClusterChannelProvisioners() ClusterChannelProvisionerInterface {
-	return newClusterChannelProvisioners(c)
-}
-
 func (c *EventingV1alpha1Client) EventTypes(namespace string) EventTypeInterface {
 	return newEventTypes(c, namespace)
-}
-
-func (c *EventingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {
-	return newSubscriptions(c, namespace)
 }
 
 func (c *EventingV1alpha1Client) Triggers(namespace string) TriggerInterface {

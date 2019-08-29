@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	"go.uber.org/zap"
@@ -34,15 +35,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	eventingduck "knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
+
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -156,7 +158,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			}
 		}
 		removeFinalizer(subscription)
-		_, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
+		_, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
 		return err
 	}
 	channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
@@ -226,33 +228,33 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	// Check if the subscription is marked as ready by channel.
 	// Refresh subscribableChan to avoid another reconile loop.
 	// If it doesn't get refreshed, then next reconcile loop will get the updated channel
-	// Skip this if older channel of kind:channel and apiversion:eventing.knative.dev/v1alpha1
-	if !deprecatedChannel(channel) {
-		channel, err = r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
-		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
-				zap.Error(err),
-				zap.Any("channel", subscription.Spec.Channel))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-			subscription.Status.MarkChannelNotReady(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-			return err
-		}
-		if err := r.subMarkedReadyByChannel(subscription, channel); err != nil {
-			logging.FromContext(ctx).Warn("Subscription not marked by Channel as Ready.", zap.Error(err))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
-			subscription.Status.MarkChannelNotReady(subscriptionNotMarkedReadyByChannel, "Subscription not marked by Channel as Ready: %s", err)
-			return err
-		}
+	channel, err = r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
+			zap.Error(err),
+			zap.Any("channel", subscription.Spec.Channel))
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		subscription.Status.MarkChannelNotReady(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		return err
 	}
+	if err := r.subMarkedReadyByChannel(subscription, channel); err != nil {
+		logging.FromContext(ctx).Warn("Subscription not marked by Channel as Ready.", zap.Error(err))
+		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
+		subscription.Status.MarkChannelNotReady(subscriptionNotMarkedReadyByChannel, "Subscription not marked by Channel as Ready: %s", err)
+		return err
+	}
+
 	subscription.Status.MarkChannelReady()
 	return nil
 }
 
 func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) error {
-	if channel.Status.SubscribableStatus == nil {
+	subscribableStatus := channel.Status.GetSubscribableTypeStatus()
+
+	if subscribableStatus == nil {
 		return fmt.Errorf("channel.Status.SubscribableStatus is nil")
 	}
-	for _, sub := range channel.Status.SubscribableStatus.Subscribers {
+	for _, sub := range subscribableStatus.Subscribers {
 		if sub.UID == subscription.GetUID() &&
 			sub.ObservedGeneration == subscription.GetGeneration() {
 			if sub.Ready == corev1.ConditionTrue {
@@ -289,19 +291,7 @@ func (r *Reconciler) getChannelable(ctx context.Context, namespace string, chanR
 	return &channel, nil
 }
 
-func deprecatedChannel(channel *eventingduckv1alpha1.Channelable) bool {
-	if channel.Kind == "Channel" && channel.APIVersion == "eventing.knative.dev/v1alpha1" {
-		return true
-	}
-	return false
-}
-
 func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv1alpha1.Channelable) error {
-	// Special case for backwards compatibility, channel COs are valid channels.
-	if deprecatedChannel(channel) {
-		return nil
-	}
-
 	// Check whether the CRD has the label for channels.
 	gvr, _ := meta.UnsafeGuessKindToResource(channel.GroupVersionKind())
 	crdName := fmt.Sprintf("%s.%s", gvr.Resource, gvr.Group)
@@ -347,7 +337,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscri
 	existing := subscription.DeepCopy()
 	existing.Status = desired.Status
 
-	sub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
+	sub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(sub.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("Subscription %q became ready after %v", subscription.Name, duration)
@@ -378,7 +368,7 @@ func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 		return err
 	}
 
-	_, err = r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
+	_, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
 	return err
 }
 
@@ -463,6 +453,10 @@ func (r *Reconciler) listAllSubscriptionsWithPhysicalChannel(ctx context.Context
 
 func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduckv1alpha1.Subscribable {
 	rv := &eventingduckv1alpha1.Subscribable{}
+	// Strictly order the subscriptions, so that simple ordering changes do not cause re-reconciles.
+	sort.Slice(subs, func(i, j int) bool {
+		return subs[i].UID < subs[j].UID
+	})
 	for _, sub := range subs {
 		if sub.Status.AreReferencesResolved() && sub.DeletionTimestamp == nil {
 			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{

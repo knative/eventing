@@ -44,6 +44,10 @@ func (c *FakeMessagingV1alpha1) Sequences(namespace string) v1alpha1.SequenceInt
 	return &FakeSequences{c, namespace}
 }
 
+func (c *FakeMessagingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
+	return &FakeSubscriptions{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeMessagingV1alpha1) RESTClient() rest.Interface {

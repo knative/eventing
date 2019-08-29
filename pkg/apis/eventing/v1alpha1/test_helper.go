@@ -18,30 +18,18 @@ package v1alpha1
 
 import (
 	v1 "k8s.io/api/apps/v1"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 type testHelper struct{}
 
 // TestHelper contains helpers for unit tests.
 var TestHelper = testHelper{}
-
-func (testHelper) ReadyChannelStatus() *ChannelStatus {
-	cs := &ChannelStatus{}
-	cs.MarkProvisionerInstalled()
-	cs.MarkProvisioned()
-	cs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
-	return cs
-}
-
-func (t testHelper) NotReadyChannelStatus() *ChannelStatus {
-	cs := t.ReadyChannelStatus()
-	cs.MarkNotProvisioned("foo", "bar")
-	return cs
-}
 
 func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
 	cs := &duckv1alpha1.ChannelableStatus{
@@ -62,16 +50,16 @@ func (t testHelper) NotReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
 	return &duckv1alpha1.ChannelableStatus{}
 }
 
-func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
-	ss := &SubscriptionStatus{}
+func (testHelper) ReadySubscriptionStatus() *messagingv1alpha1.SubscriptionStatus {
+	ss := &messagingv1alpha1.SubscriptionStatus{}
 	ss.MarkChannelReady()
 	ss.MarkReferencesResolved()
 	ss.MarkAddedToChannel()
 	return ss
 }
 
-func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
-	ss := &SubscriptionStatus{}
+func (testHelper) NotReadySubscriptionStatus() *messagingv1alpha1.SubscriptionStatus {
+	ss := &messagingv1alpha1.SubscriptionStatus{}
 	ss.MarkReferencesResolved()
 	ss.MarkChannelNotReady("testInducedError", "test induced %s", "error")
 	return ss
@@ -80,8 +68,8 @@ func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateIngressChannelReadinessCRD(t.ReadyChannelStatusCRD())
+	bs.PropagateTriggerChannelReadinessCRD(t.ReadyChannelStatusCRD())
 	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
 	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
 	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
@@ -91,18 +79,6 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 func (t testHelper) NotReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressChannelReadinessCRD(&duckv1alpha1.ChannelableStatus{})
-	return bs
-}
-
-func (t testHelper) ReadyBrokerStatusDeprecated() *BrokerStatus {
-	bs := &BrokerStatus{}
-	bs.MarkDeprecated("ClusterChannelProvisionerDeprecated", "Provisioners are deprecated and will be removed in 0.9. Recommended replacement is CRD based channels using spec.channelTemplateSpec.")
-	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
-	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
-	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
 	return bs
 }
 

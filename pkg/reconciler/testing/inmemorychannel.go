@@ -121,9 +121,7 @@ func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
 
 func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1alpha1.SubscriberStatus) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
-		imc.Status.SubscribableTypeStatus = duckv1alpha1.SubscribableTypeStatus{
-			SubscribableStatus: &duckv1alpha1.SubscribableStatus{
-				Subscribers: subscriberStatuses},
-		}
+		imc.Status.SetSubscribableTypeStatus(duckv1alpha1.SubscribableStatus{
+			Subscribers: subscriberStatuses})
 	}
 }

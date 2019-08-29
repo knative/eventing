@@ -24,8 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -73,10 +72,10 @@ func TestChoice(t *testing.T) {
 			client.CreatePodOrFail(subPod, common.WithService(subPodName))
 
 			choiceCases[caseNumber] = v1alpha1.ChoiceCase{
-				Filter: &eventingv1alpha1.SubscriberSpec{
+				Filter: &v1alpha1.SubscriberSpec{
 					Ref: resources.ServiceRef(filterPodName),
 				},
-				Subscriber: eventingv1alpha1.SubscriberSpec{
+				Subscriber: v1alpha1.SubscriberSpec{
 					Ref: resources.ServiceRef(subPodName),
 				},
 			}

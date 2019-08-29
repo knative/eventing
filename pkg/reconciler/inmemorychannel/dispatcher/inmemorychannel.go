@@ -30,10 +30,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/provisioners/fanout"
-	"knative.dev/eventing/pkg/provisioners/multichannelfanout"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
 )
@@ -116,8 +116,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
 		return err
 	}
-
-	imc.Status.SubscribableTypeStatus.SubscribableStatus = r.createSubscribableStatus(imc.Spec.Subscribable)
+	if subscribableStatus := r.createSubscribableStatus(imc.Spec.Subscribable); subscribableStatus != nil {
+		imc.Status.SubscribableTypeStatus.SetSubscribableTypeStatus(*subscribableStatus)
+	}
 	return nil
 }
 

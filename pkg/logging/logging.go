@@ -24,8 +24,6 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-const ConfigMapNameEnv = "CONFIG_LOGGING_NAME"
-
 func WithLogger(ctx context.Context, logger *zap.Logger) context.Context {
 	return logging.WithLogger(ctx, logger.Sugar())
 }

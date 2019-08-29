@@ -26,8 +26,8 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/subscription"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/sequence"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 )
 
 const (

@@ -265,6 +265,23 @@
   revision = "e979a0b10eebe748549c702a25e997c556349da6"
 
 [[projects]]
+  digest = "1:d7736b4372fa7b6d447118aca5a9a6d90a61d4e0d467316ac631e4ba58458ae4"
+  name = "github.com/google/mako"
+  packages = [
+    "clients/proto/analyzers/threshold_analyzer_go_proto",
+    "clients/proto/analyzers/utest_analyzer_go_proto",
+    "clients/proto/analyzers/window_deviation_go_proto",
+    "go/quickstore",
+    "internal/go/common",
+    "internal/quickstore_microservice/proto/quickstore_go_proto",
+    "proto/quickstore/quickstore_go_proto",
+    "spec/proto/mako_go_proto",
+  ]
+  pruneopts = "NUT"
+  revision = "122f8dcef9e3906310e7dba05849cedb5be43b24"
+  version = "0.1.0"
+
+[[projects]]
   digest = "1:56a1f3949ebb7fa22fa6b4e4ac0fe0f77cc4faee5b57413e6fa9199a8458faf1"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -491,6 +508,14 @@
   pruneopts = "NUT"
   revision = "b41be1df696709bb6395fe435af20370037c0b4c"
   version = "v1.1"
+
+[[projects]]
+  digest = "1:7008ec21a0ce773bd21deefdb7d17fab8cb9f1ae0bc44026cdd2b658ab1582ca"
+  name = "github.com/rogpeppe/go-internal"
+  packages = ["semver"]
+  pruneopts = "NUT"
+  revision = "438578804ca6f31be148c27683afc419ce47c06e"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
@@ -1168,7 +1193,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c375d4501b58273f93be7fb531b551406dc57247a865520e48e724cee9398ded"
+  digest = "1:bb5bc945cb10dbe8d011d5b6477576bd72ef6420a1329c5f12e1f5de1db32877"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1180,6 +1205,7 @@
     "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
+    "apis/v1alpha1",
     "changeset",
     "client/clientset/versioned",
     "client/clientset/versioned/fake",
@@ -1227,6 +1253,8 @@
     "logging/testing",
     "metrics",
     "metrics/metricskey",
+    "metrics/metricstest",
+    "profiling",
     "reconciler/testing",
     "signals",
     "system",
@@ -1235,20 +1263,22 @@
     "test/helpers",
     "test/ingress",
     "test/logging",
+    "test/mako",
     "test/monitoring",
     "test/spoof",
     "test/zipkin",
     "tracing",
     "tracing/config",
     "tracker",
+    "version",
     "webhook",
   ]
   pruneopts = "T"
-  revision = "4707aad818fed9883f7d5255dcbf67b9382260e2"
+  revision = "9118872a32f620bbf4798b4e6103094f6b7bce6c"
 
 [[projects]]
   branch = "master"
-  digest = "1:361c09209a9c7ab7723b981629bb73ab7c0eefbcdf4fc3fe96e91bfe0f51469f"
+  digest = "1:6064744530b3ba92a69ce0ba972e403861737a010b79b764ebccd5874f26af5f"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
@@ -1260,10 +1290,10 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "751583ee73a463cf6449817afda38d63b29dfff7"
+  revision = "5ce07d0fc6603e4cf576f91cdd85dcd74c4d629c"
 
 [[projects]]
-  digest = "1:feab562c2e2852074e0c38310e19c4acf8cbb36746f7ad4ac2e60e61ceedff61"
+  digest = "1:db96fceb1477924a5e724ebfd355842c73805eb8e44bf7f325898c3116a1d852"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1272,23 +1302,15 @@
     "pkg/client/apiutil",
     "pkg/client/config",
     "pkg/client/fake",
-    "pkg/controller",
-    "pkg/event",
-    "pkg/handler",
-    "pkg/internal/controller",
-    "pkg/internal/controller/metrics",
     "pkg/internal/recorder",
     "pkg/leaderelection",
     "pkg/manager",
     "pkg/metrics",
     "pkg/patch",
-    "pkg/predicate",
     "pkg/reconcile",
     "pkg/recorder",
     "pkg/runtime/inject",
     "pkg/runtime/log",
-    "pkg/source",
-    "pkg/source/internal",
     "pkg/webhook/admission",
     "pkg/webhook/admission/types",
     "pkg/webhook/internal/metrics",
@@ -1302,7 +1324,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
@@ -1312,7 +1333,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
-    "github.com/openzipkin/zipkin-go",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "go.opencensus.io/plugin/ochttp",
@@ -1326,7 +1346,6 @@
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
     "golang.org/x/sync/errgroup",
-    "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/authentication/v1",
     "k8s.io/api/core/v1",
@@ -1414,6 +1433,7 @@
     "knative.dev/pkg/logging/logkey",
     "knative.dev/pkg/logging/testing",
     "knative.dev/pkg/metrics",
+    "knative.dev/pkg/metrics/metricstest",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/signals",
     "knative.dev/pkg/system",
@@ -1421,26 +1441,22 @@
     "knative.dev/pkg/test",
     "knative.dev/pkg/test/helpers",
     "knative.dev/pkg/test/logging",
+    "knative.dev/pkg/test/mako",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
+    "knative.dev/pkg/version",
     "knative.dev/pkg/webhook",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/shared/junit",
     "knative.dev/test-infra/shared/testgrid",
     "knative.dev/test-infra/tools/dep-collector",
-    "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
-    "sigs.k8s.io/controller-runtime/pkg/controller",
-    "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/inject",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
-    "sigs.k8s.io/controller-runtime/pkg/source",
-    "sigs.k8s.io/controller-runtime/pkg/webhook/admission/types",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

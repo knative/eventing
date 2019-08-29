@@ -162,7 +162,7 @@ exclusively communicate using CloudEvents.
 
 #### Input
 
-Every Channel must expose either an HTTP or HTTPS endpoint. It MAY expose both.
+Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
 The endpoint(s) MUST conform to
 [HTTP Transport Binding for CloudEvents - Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md).
 It MUST support both Binary Content mode and Structured Content mode. The

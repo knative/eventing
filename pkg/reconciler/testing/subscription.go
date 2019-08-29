@@ -24,7 +24,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 // SubscriptionOption enables further configuration of a Subscription.
@@ -83,7 +85,7 @@ func WithInitSubscriptionConditions(s *v1alpha1.Subscription) {
 }
 
 func WithSubscriptionReady(s *v1alpha1.Subscription) {
-	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	s.Status = *eventingv1alpha1.TestHelper.ReadySubscriptionStatus()
 }
 
 // TODO: this can be a runtime object

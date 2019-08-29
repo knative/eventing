@@ -31,6 +31,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -95,7 +96,7 @@ var (
 	}
 
 	channelGVK = metav1.GroupVersionKind{
-		Group:   "eventing.knative.dev",
+		Group:   "messaging.knative.dev",
 		Version: "v1alpha1",
 		Kind:    "Channel",
 	}
@@ -141,7 +142,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. channels.eventing.knative.dev %q not found", channelName),
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. channels.messaging.knative.dev %q not found", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -150,7 +151,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel as Channelable duck type. channels.eventing.knative.dev %q not found", channelName)),
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel as Channelable duck type. channels.messaging.knative.dev %q not found", channelName)),
 				),
 			}},
 		}, {
@@ -259,6 +260,8 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
@@ -287,6 +290,8 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
@@ -318,11 +323,13 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: channels.messaging.knative.dev %q not found", replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -333,7 +340,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.eventing.knative.dev %q not found", replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.messaging.knative.dev %q not found", replyName)),
 				),
 			}},
 		}, {
@@ -352,6 +359,8 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 				NewUnstructured(nonAddressableGVK, replyName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -385,7 +394,10 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
+					WithChannelReadySubscriber(subscriptionUID),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -422,11 +434,14 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
+					WithChannelReadySubscriber(subscriptionUID),
 				),
 				NewChannel(replyName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(replyDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -466,11 +481,14 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
+					WithChannelReadySubscriber(subscriptionUID),
 				),
 				NewChannel(replyName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(replyDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -519,7 +537,10 @@ func TestAllCases(t *testing.T) {
 					WithChannelSubscribers([]eventingduck.SubscriberSpec{
 						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 					}),
+					WithChannelReadySubscriberAndGeneration(subscriptionUID, subscriptionGeneration),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -562,11 +583,14 @@ func TestAllCases(t *testing.T) {
 					WithChannelSubscribers([]eventingduck.SubscriberSpec{
 						{UID: subscriptionUID, SubscriberURI: subscriberURI, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 					}),
+					WithChannelReadySubscriberAndGeneration(subscriptionUID, subscriptionGeneration),
 				),
 				NewChannel(replyName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(replyDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
@@ -602,6 +626,8 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
@@ -629,7 +655,10 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
+					WithChannelReadySubscriber(subscriptionUID),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -675,7 +704,11 @@ func TestAllCases(t *testing.T) {
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
 					WithChannelAddress(channelDNS),
+					WithChannelReadySubscriber("a_"+subscriptionUID),
+					WithChannelReadySubscriber("b_"+subscriptionUID),
 				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelCrdLabelKey: channelCrdLabelValue})),
 				NewService(serviceName, testNS),
 			},
 			Key:     testNS + "/" + "a_" + subscriptionName,
@@ -697,8 +730,8 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b_" + subscriptionName, Namespace: testNS, UID: "b_" + subscriptionUID}},
 					{UID: "a_" + subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: "a_" + subscriptionName, Namespace: testNS, UID: "a_" + subscriptionUID}},
+					{UID: "b_" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b_" + subscriptionName, Namespace: testNS, UID: "b_" + subscriptionUID}},
 				}),
 				patchFinalizers(testNS, "a_"+subscriptionName),
 			},
@@ -803,7 +836,7 @@ func TestFinalizers(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		original := &eventingv1alpha1.Subscription{}
+		original := &v1alpha1.Subscription{}
 		original.Finalizers = tc.original.List()
 		if tc.add {
 			addFinalizer(original)
@@ -818,7 +851,7 @@ func TestFinalizers(t *testing.T) {
 	}
 }
 
-func addFinalizer(sub *eventingv1alpha1.Subscription) {
+func addFinalizer(sub *v1alpha1.Subscription) {
 	finalizers := sets.NewString(sub.Finalizers...)
 	finalizers.Insert(finalizerName)
 	sub.Finalizers = finalizers.List()
@@ -832,8 +865,14 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 	var spec string
 	if subscribers != nil {
 		b, err := json.Marshal(subscribers)
+		if err != nil {
+			return action
+		}
 		ss := make([]map[string]interface{}, 0)
 		err = json.Unmarshal(b, &ss)
+		if err != nil {
+			return action
+		}
 		subs, err := json.Marshal(ss)
 		if err != nil {
 			return action
