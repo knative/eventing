@@ -18,7 +18,6 @@ package apiserver
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -32,9 +31,10 @@ import (
 )
 
 type ref struct {
-	ce     cloudevents.Client
-	source string
-	logger *zap.SugaredLogger
+	ce        cloudevents.Client
+	source    string
+	eventType string
+	logger    *zap.SugaredLogger
 
 	controlledGVRs []schema.GroupVersionResource
 	reporter       StatsReporter
@@ -70,11 +70,7 @@ func (a *ref) Add(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-	return nil
+	return a.sendEvent(context.Background(), event, a.reporter)
 }
 
 // Implements cache.Store
@@ -85,11 +81,7 @@ func (a *ref) Update(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-	return nil
+	return a.sendEvent(context.Background(), event, a.reporter)
 }
 
 // Implements cache.Store
@@ -100,17 +92,14 @@ func (a *ref) Delete(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-	return nil
+	return a.sendEvent(context.Background(), event, a.reporter)
 }
 
 func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
-	fmt.Printf("Are we here?\n", gvr)
 	reportArgs := &ReportArgs{
-		ns: a.namespace,
+		ns:          a.namespace,
+		eventSource: a.source,
+		eventType:   a.eventType,
 	}
 	a.reporter.ReportEventCount(reportArgs, nil)
 	if a.controlledGVRs == nil {
@@ -118,6 +107,21 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 		return
 	}
 	a.controlledGVRs = append(a.controlledGVRs, gvr)
+}
+
+func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event, reporter StatsReporter) error {
+	reportArgs := &ReportArgs{
+		ns:          a.namespace,
+		eventSource: event.Source(),
+		eventType:   event.Type(),
+	}
+	a.reporter.ReportEventCount(reportArgs, nil)
+
+	if _, err := a.ce.Send(ctx, *event); err != nil {
+		a.logger.Info("event delivery failed", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 // Stub cache.Store impl

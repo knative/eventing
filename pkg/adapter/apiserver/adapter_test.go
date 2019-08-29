@@ -108,8 +108,11 @@ func TestNewAdaptor(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt)
+			r, err := NewStatsReporter()
+			if err != nil {
+				t.Fatalf("Failed to create a new reporter: %v", err)
+			}
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r)
 
 			got, ok := a.(*adapter)
 			if !ok {
@@ -147,10 +150,14 @@ func TestAdapter_StartRef(t *testing.T) {
 			},
 		}},
 	}
+	r, err := NewStatsReporter()
+	if err != nil {
+		t.Fatalf("Failed to create a new reporter: %v", err)
+	}
 
-	a := NewAdaptor(source, k8s, ce, logger, opt)
+	a := NewAdaptor(source, k8s, ce, logger, opt, r)
 
-	err := errors.New("test never ran")
+	err = errors.New("test never ran")
 	stopCh := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
@@ -182,10 +189,13 @@ func TestAdapter_StartResource(t *testing.T) {
 			},
 		}},
 	}
+	r, err := NewStatsReporter()
+	if err != nil {
+		t.Fatalf("Failed to create a new reporter: %v", err)
+	}
+	a := NewAdaptor(source, k8s, ce, logger, opt, r)
 
-	a := NewAdaptor(source, k8s, ce, logger, opt)
-
-	err := errors.New("test never ran")
+	err = errors.New("test never ran")
 	stopCh := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
@@ -264,26 +274,34 @@ func validateNotSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want s
 	}
 }
 
-func makeResourceAndTestingClient() (*resource, *kncetesting.TestCloudEventsClient) {
+func makeResourceAndTestingClient(t *testing.T) (*resource, *kncetesting.TestCloudEventsClient) {
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
-
+	r, err := NewStatsReporter()
+	if err != nil {
+		t.Fatalf("Failed to create a new reporter: %v", err)
+	}
 	return &resource{
-		ce:     ce,
-		source: source,
-		logger: logger,
+		ce:       ce,
+		source:   source,
+		logger:   logger,
+		reporter: r,
 	}, ce
 }
 
-func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
+func makeRefAndTestingClient(t *testing.T) (*ref, *kncetesting.TestCloudEventsClient) {
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
-
+	r, err := NewStatsReporter()
+	if err != nil {
+		t.Fatalf("Failed to create a new reporter: %v", err)
+	}
 	return &ref{
-		ce:     ce,
-		source: source,
-		logger: logger,
+		ce:       ce,
+		source:   source,
+		logger:   logger,
+		reporter: r,
 	}, ce
 }

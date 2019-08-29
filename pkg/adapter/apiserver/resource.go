@@ -18,7 +18,6 @@ package apiserver
 
 import (
 	"context"
-	"fmt"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
@@ -30,6 +29,7 @@ import (
 type resource struct {
 	ce        cloudevents.Client
 	source    string
+	eventType string
 	logger    *zap.SugaredLogger
 	reporter  StatsReporter
 	namespace string
@@ -44,12 +44,7 @@ func (a *resource) Add(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-
-	return nil
+	return a.sendEvent(context.Background(), event, a.reporter)
 }
 
 func (a *resource) Update(obj interface{}) error {
@@ -59,10 +54,7 @@ func (a *resource) Update(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
+	return a.sendEvent(context.Background(), event, a.reporter)
 
 	return nil
 }
@@ -74,21 +66,26 @@ func (a *resource) Delete(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
+	return a.sendEvent(context.Background(), event, a.reporter)
+}
+
+func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event, reporter StatsReporter) error {
+	reportArgs := &ReportArgs{
+		ns:          a.namespace,
+		eventSource: event.Source(),
+		eventType:   event.Type(),
+	}
+	a.reporter.ReportEventCount(reportArgs, nil)
+
+	if _, err := a.ce.Send(ctx, *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 		return err
 	}
-
 	return nil
 }
 
 func (a *resource) addControllerWatch(gvr schema.GroupVersionResource) {
 	// not supported for resource.
-	fmt.Printf("Are we here?\n", gvr)
-	reportArgs := &ReportArgs{
-		ns: a.namespace,
-	}
-	a.reporter.ReportEventCount(reportArgs, nil)
 	a.logger.Warn("ignored controller watch request on gvr.", zap.String("gvr", gvr.String()))
 }
 

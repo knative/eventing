@@ -20,7 +20,8 @@ import (
 	"flag"
 	"fmt"
 
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// Uncomment the following line to load the gcp plugin
+	// (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
@@ -55,9 +56,10 @@ type envConfig struct {
 	ApiVersion []string `split_words:"true" required:"true"`
 	Kind       []string `required:"true"`
 	Controller []bool   `required:"true"`
-	// MetricsConfigBase64 is a base64 encoded json string of metrics.ExporterOptions.
-	// This is used to configure the metrics exporter options, the config is
-	// stored in a config map inside the controllers namespace and copied here.
+	// MetricsConfigBase64 is a base64 encoded json string of
+	// metrics.ExporterOptions. This is used to configure the metrics exporter
+	// options, the config is stored in a config map inside the controllers
+	// namespace and copied here.
 	MetricsConfigBase64 string `envconfig:"K_METRICS_CONFIG" required:"true"`
 
 	// LoggingConfigBase64 is a base64 encoded json string of logging.Config.
@@ -78,13 +80,16 @@ func main() {
 	}
 
 	// Convert base64 encoded json logging.Config to logging.Config.
-	loggingConfig, err := resources.Base64ToLoggingConfig(env.LoggingConfigBase64)
+	loggingConfig, err := resources.Base64ToLoggingConfig(
+		env.LoggingConfigBase64)
 	if err != nil {
 		panic(err)
 	}
 
-	// Convert base64 encoded json metrics.ExporterOptions to metrics.ExporterOptions.
-	metricsConfig, err := resources.Base64ToMetricsOptions(env.MetricsConfigBase64)
+	// Convert base64 encoded json metrics.ExporterOptions to
+	// metrics.ExporterOptions.
+	metricsConfig, err := resources.Base64ToMetricsOptions(
+		env.MetricsConfigBase64)
 	if err != nil {
 		panic(err)
 	}
@@ -97,6 +102,9 @@ func main() {
 	}
 
 	reporter, err := apiserver.NewStatsReporter()
+	if err != nil {
+		logger.Fatalw("Error building statsreporter", zap.Error(err))
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
@@ -112,9 +120,10 @@ func main() {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing(logger, "apiserversource", tracing.OnePercentSampling); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the importer to continue to
-		// start.
+	if err = tracing.SetupStaticPublishing(logger, "apiserversource",
+		tracing.OnePercentSampling); err != nil {
+		// If tracing doesn't work, we will log an error, but allow the importer
+		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -134,7 +143,10 @@ func main() {
 			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
 		}
 		// TODO: pass down the resource and the kind so we do not have to guess.
-		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
+			Kind:    kind,
+			Group:   gv.Group,
+			Version: gv.Version})
 		gvrcs = append(gvrcs, apiserver.GVRC{
 			GVR:        gvr,
 			Controller: controlled,
@@ -147,7 +159,8 @@ func main() {
 		GVRCs:     gvrcs,
 	}
 
-	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt, reporter)
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt,
+		reporter)
 	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
@@ -158,7 +171,3 @@ func flush(logger *zap.SugaredLogger) {
 	_ = logger.Sync()
 	metrics.FlushExporter()
 }
-
-// func mainMetrics(logger *zap.SugaredLogger, opts *metrics.ExporterOptions) {
-
-// }

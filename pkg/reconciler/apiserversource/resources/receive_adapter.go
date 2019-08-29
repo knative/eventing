@@ -122,6 +122,9 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiSer
 			},
 		},
 	}, {
+		Name:  "METRICS_DOMAIN",
+		Value: "knative.dev/eventing",
+	}, {
 		Name:  "K_METRICS_CONFIG",
 		Value: metricsConfig,
 	}, {

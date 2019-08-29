@@ -103,10 +103,6 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 	stop := make(chan struct{})
 
 	resyncPeriod := time.Duration(10 * time.Hour)
-	reportArgs := &ReportArgs{
-		ns: a.namespace,
-	}
-	a.reporter.ReportEventCount(reportArgs, nil)
 	var d eventDelegate
 	switch a.mode {
 	case ResourceMode:

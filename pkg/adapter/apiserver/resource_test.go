@@ -8,49 +8,49 @@ import (
 )
 
 func TestResourceAddEvent(t *testing.T) {
-	d, ce := makeResourceAndTestingClient()
+	d, ce := makeResourceAndTestingClient(t)
 	d.Add(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddEventType)
 }
 
 func TestResourceUpdateEvent(t *testing.T) {
-	d, ce := makeResourceAndTestingClient()
+	d, ce := makeResourceAndTestingClient(t)
 	d.Update(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateEventType)
 }
 
 func TestResourceDeleteEvent(t *testing.T) {
-	d, ce := makeResourceAndTestingClient()
+	d, ce := makeResourceAndTestingClient(t)
 	d.Delete(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteEventType)
 }
 
 func TestResourceAddEventNil(t *testing.T) {
-	d, ce := makeResourceAndTestingClient()
+	d, ce := makeResourceAndTestingClient(t)
 	d.Add(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceAddEventType)
 }
 
 func TestResourceUpdateEventNil(t *testing.T) {
-	d, ce := makeResourceAndTestingClient()
+	d, ce := makeResourceAndTestingClient(t)
 	d.Update(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateEventType)
 }
 
 func TestResourceDeleteEventNil(t *testing.T) {
-	d, ce := makeResourceAndTestingClient()
+	d, ce := makeResourceAndTestingClient(t)
 	d.Delete(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteEventType)
 }
 
 func TestResourceCoverageHacks(t *testing.T) {
-	d, _ := makeResourceAndTestingClient()
+	d, _ := makeResourceAndTestingClient(t)
 	d.addControllerWatch(schema.GroupVersionResource{}) // for coverage.
 }
 
 // HACKHACKHACK For test coverage.
 func TestResourceStub(t *testing.T) {
-	d, _ := makeResourceAndTestingClient()
+	d, _ := makeResourceAndTestingClient(t)
 
 	d.List()
 	d.ListKeys()
