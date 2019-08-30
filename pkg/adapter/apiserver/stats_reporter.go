@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	// eventCountM is a counter which records the number of events received
-	// by a Trigger.
+	// eventCountM is a counter which records the number of events sent
+	// by an Importer.
 	eventCountM = stats.Int64(
 		"event_count",
 		"Number of events created",
@@ -55,10 +55,10 @@ type reporter struct {
 	eventTypeKey    tag.Key
 	eventSourceKey  tag.Key
 	resultKey       tag.Key
-	filterResultKey tag.Key
 }
 
-// NewStatsReporter creates a reporter that collects and reports filter metrics.
+// NewStatsReporter creates a reporter that collects and reports apiserversource
+// metrics.
 func NewStatsReporter() (StatsReporter, error) {
 	var r = &reporter{}
 
@@ -78,11 +78,6 @@ func NewStatsReporter() (StatsReporter, error) {
 		return nil, err
 	}
 	r.eventSourceKey = eventSourceTag
-	filterResultTag, err := tag.NewKey(metricskey.FilterResult)
-	if err != nil {
-		return nil, err
-	}
-	r.filterResultKey = filterResultTag
 	resultTag, err := tag.NewKey(metricskey.Result)
 	if err != nil {
 		return nil, err
@@ -94,7 +89,6 @@ func NewStatsReporter() (StatsReporter, error) {
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
-			// TODO count or sum aggregation?
 			Aggregation: view.Count(),
 			TagKeys: []tag.Key{r.namespaceTagKey, r.eventSourceKey,
 				r.eventTypeKey},
@@ -118,18 +112,10 @@ func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
 }
 
 func (r *reporter) generateTag(args *ReportArgs, t tag.Mutator) (context.Context, error) {
-	// Note that eventType and eventSource can be empty strings, so they need a special treatment.
 	return tag.New(
 		context.Background(),
 		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.eventSourceKey, valueOrAny(args.eventSource)),
-		tag.Insert(r.eventTypeKey, valueOrAny(args.eventType)),
+		tag.Insert(r.eventSourceKey, args.eventSource),
+		tag.Insert(r.eventTypeKey, args.eventType),
 		t)
-}
-
-func valueOrAny(v string) string {
-	if v != "" {
-		return v
-	}
-	return metricskey.Any
 }
