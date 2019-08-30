@@ -238,9 +238,12 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 
 	// Record the event processing time. This might be off if the receiver and the filter pods are running in
 	// different nodes with different clocks.
-	var arrivalTime time.Time
-	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTime); extErr == nil {
-		r.reporter.ReportEventProcessingTime(reportArgs, err, time.Since(arrivalTime))
+	var arrivalTimeStr string
+	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
+		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
+		if err != nil {
+			r.reporter.ReportEventProcessingTime(reportArgs, err, time.Since(arrivalTime))
+		}
 	}
 
 	start := time.Now()

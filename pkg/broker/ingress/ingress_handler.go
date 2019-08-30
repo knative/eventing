@@ -62,7 +62,8 @@ func (h *Handler) Start(ctx context.Context) error {
 }
 
 func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	event.SetExtension(broker.EventArrivalTime, time.Now())
+	// Setting the extension as a string as the CloudEvents sdk does not support non-string extensions.
+	event.SetExtension(broker.EventArrivalTime, time.Now().String())
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
