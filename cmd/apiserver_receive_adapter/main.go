@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	component = "ApiServerSource::ReceiveAdapter"
+	component = "apiserversource"
 )
 
 var (
@@ -93,19 +93,23 @@ func main() {
 	loggingConfig, err := resources.Base64ToLoggingConfig(
 		env.LoggingConfigBase64)
 	if err != nil {
-		panic(err)
+		fmt.Printf("[ERROR] filed to process logging config: %s", err.Error())
+		// Use default logging config.
+		if loggingConfig, err = logging.NewConfigFromMap(map[string]string{}); err != nil {
+			// If this fails, there is no recovering.
+			panic(err)
+		}
 	}
+	logger, _ := logging.NewLoggerFromConfig(loggingConfig, component)
+	defer flush(logger)
 
 	// Convert base64 encoded json metrics.ExporterOptions to
 	// metrics.ExporterOptions.
 	metricsConfig, err := resources.Base64ToMetricsOptions(
 		env.MetricsConfigBase64)
 	if err != nil {
-		panic(err)
+		logger.Errorf("failed to process metrics options: %s", err.Error())
 	}
-
-	logger, _ := logging.NewLoggerFromConfig(loggingConfig, component)
-	defer flush(logger)
 
 	if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
 		logger.Fatalf("Failed to create the metrics exporter: %v", err)

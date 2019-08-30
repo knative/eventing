@@ -16,6 +16,7 @@
 
 package apiserver
 
+// TODO: use HTTP status codes
 // Type gets the eventtype.
 func Result(err error) string {
 	if err != nil {

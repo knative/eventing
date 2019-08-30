@@ -17,6 +17,7 @@ limitations under the License.
 package apiserver
 
 import (
+	"fmt"
 	"testing"
 
 	"knative.dev/eventing/pkg/metrics/metricskey"
@@ -34,7 +35,7 @@ func unregister() {
 func TestStatsReporter(t *testing.T) {
 	args := &ReportArgs{
 		ns:          "testns",
-		eventType:   "dev.knative.apiserver.ref.delete",
+		eventType:   "dev.knative.apiserver.resource.update",
 		eventSource: "unit-test",
 	}
 
@@ -48,7 +49,7 @@ func TestStatsReporter(t *testing.T) {
 
 	wantTags := map[string]string{
 		metricskey.NamespaceName: "testns",
-		metricskey.EventType:     "dev.knative.apiserver.ref.delete",
+		metricskey.EventType:     "dev.knative.apiserver.resource.update",
 		metricskey.EventSource:   "unit-test",
 	}
 
@@ -62,11 +63,11 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, nil)
 	})
-	metricstest.CheckCountData(t, "event_count", wantTags1, 2)
+	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 
 }
 
-func TestReporterEmptySourceAndType(t *testing.T) {
+func TestReporterForErrorTag(t *testing.T) {
 	r, err := NewStatsReporter()
 	defer unregister()
 
@@ -76,31 +77,25 @@ func TestReporterEmptySourceAndType(t *testing.T) {
 
 	args := &ReportArgs{
 		ns:          "testns",
-		eventType:   "",
-		eventSource: "",
+		eventType:   "eventtype",
+		eventSource: "eventsource",
 	}
 
 	wantTags := map[string]string{
 		metricskey.NamespaceName: "testns",
 		metricskey.Result:        "success",
-		metricskey.EventSource:   metricskey.Any,
-		metricskey.EventType:     metricskey.Any,
+		metricskey.EventType:     "eventtype",
+		metricskey.EventSource:   "eventsource",
 	}
-
+	e := fmt.Errorf("test error")
 	// test ReportEventCount
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, e)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, e)
 	})
-	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
-	})
-	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
-	})
-	metricstest.CheckCountData(t, "event_count", wantTags, 4)
+	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 }
 
 func expectSuccess(t *testing.T, f func() error) {

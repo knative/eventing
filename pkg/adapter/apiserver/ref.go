@@ -70,7 +70,7 @@ func (a *ref) Add(obj interface{}) error {
 		return err
 	}
 
-	return a.sendEvent(context.Background(), event, a.reporter)
+	return a.sendEvent(context.Background(), event)
 }
 
 // Implements cache.Store
@@ -81,7 +81,7 @@ func (a *ref) Update(obj interface{}) error {
 		return err
 	}
 
-	return a.sendEvent(context.Background(), event, a.reporter)
+	return a.sendEvent(context.Background(), event)
 }
 
 // Implements cache.Store
@@ -92,16 +92,10 @@ func (a *ref) Delete(obj interface{}) error {
 		return err
 	}
 
-	return a.sendEvent(context.Background(), event, a.reporter)
+	return a.sendEvent(context.Background(), event)
 }
 
 func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
-	reportArgs := &ReportArgs{
-		ns:          a.namespace,
-		eventSource: a.source,
-		eventType:   a.eventType,
-	}
-	a.reporter.ReportEventCount(reportArgs, nil)
 	if a.controlledGVRs == nil {
 		a.controlledGVRs = []schema.GroupVersionResource{gvr}
 		return
@@ -109,7 +103,7 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 	a.controlledGVRs = append(a.controlledGVRs, gvr)
 }
 
-func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event, reporter StatsReporter) error {
+func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 	reportArgs := &ReportArgs{
 		ns:          a.namespace,
 		eventSource: event.Source(),
@@ -117,8 +111,10 @@ func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event, reporter 
 	}
 	a.reporter.ReportEventCount(reportArgs, nil)
 
-	if _, err := a.ce.Send(ctx, *event); err != nil {
+	_, err := a.ce.Send(ctx, *event)
+	if err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
+		a.reporter.ReportEventCount(reportArgs, err)
 		return err
 	}
 	return nil
