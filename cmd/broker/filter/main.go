@@ -105,6 +105,7 @@ func main() {
 
 	// TODO watch logging config map.
 
+	// TODO change the component name to trigger once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update metrics exporter.
 	cmw.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger.Sugar()))
 

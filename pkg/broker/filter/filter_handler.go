@@ -202,11 +202,11 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	}
 
 	reportArgs := &ReportArgs{
-		ns:          t.Namespace,
-		trigger:     t.Name,
-		broker:      t.Spec.Broker,
-		eventType:   triggerFilterAttribute(t.Spec.Filter, "type"),
-		eventSource: triggerFilterAttribute(t.Spec.Filter, "source"),
+		ns:           t.Namespace,
+		trigger:      t.Name,
+		broker:       t.Spec.Broker,
+		filterType:   triggerFilterAttribute(t.Spec.Filter, "type"),
+		filterSource: triggerFilterAttribute(t.Spec.Filter, "source"),
 	}
 
 	subscriberURIString := t.Status.SubscriberURI
@@ -226,10 +226,8 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		return nil, err
 	}
 
-	// Check if the event should be sent, and record filtering time.
-	start := time.Now()
+	// Check if the event should be sent.
 	filterResult := r.shouldSendEvent(ctx, &t.Spec, event)
-	r.reporter.ReportFilterTime(reportArgs, filterResult, time.Since(start))
 
 	if filterResult == failFilter {
 		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
@@ -238,20 +236,24 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		return nil, nil
 	}
 
-	start = time.Now()
+	// Record the event processing time. This might be off if the receiver and the filter pods are running in
+	// different nodes with different clocks.
+	var arrivalTimeStr string
+	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
+		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
+		if err != nil {
+			r.reporter.ReportEventProcessingTime(reportArgs, err, time.Since(arrivalTime))
+		}
+	}
+
+	start := time.Now()
 	sendingCTX := broker.SendingContext(ctx, tctx, subscriberURI)
-	// TODO get HTTP status codes and use those.
+	// TODO use HTTP codes: https://github.com/cloudevents/sdk-go/pull/177
 	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	// Record the dispatch time.
-	r.reporter.ReportDispatchTime(reportArgs, err, time.Since(start))
+	r.reporter.ReportEventDispatchTime(reportArgs, err, time.Since(start))
 	// Record the event count.
 	r.reporter.ReportEventCount(reportArgs, err)
-	// Record the event latency. This might be off if the receiver and the filter pods are running in
-	// different nodes with different clocks.
-	var arrivalTime time.Time
-	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTime); extErr == nil {
-		r.reporter.ReportEventDeliveryTime(reportArgs, err, time.Since(arrivalTime))
-	}
 	return replyEvent, err
 }
 
@@ -285,15 +287,10 @@ func (r *Handler) shouldSendEvent(ctx context.Context, ts *eventingv1alpha1.Trig
 		attrs = map[string]string(*ts.Filter.Attributes)
 	}
 
-	result := r.filterEventByAttributes(ctx, attrs, event)
-	filterResult := failFilter
-	if result {
-		filterResult = passFilter
-	}
-	return filterResult
+	return r.filterEventByAttributes(ctx, attrs, event)
 }
 
-func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) bool {
+func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]string, event *cloudevents.Event) FilterResult {
 	// Set standard context attributes. The attributes available may not be
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
@@ -322,15 +319,15 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 		// If the attribute does not exist in the event, return false.
 		if !ok {
 			logging.FromContext(ctx).Debug("Attribute not found", zap.String("attribute", k))
-			return false
+			return failFilter
 		}
 		// If the attribute is not set to any and is different than the one from the event, return false.
 		if v != eventingv1alpha1.TriggerAnyFilter && v != value {
 			logging.FromContext(ctx).Debug("Attribute had non-matching value", zap.String("attribute", k), zap.String("filter", v), zap.Any("received", value))
-			return false
+			return failFilter
 		}
 	}
-	return true
+	return passFilter
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,

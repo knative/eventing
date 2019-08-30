@@ -20,7 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/metrics/metricskey"
+	. "knative.dev/eventing/pkg/metrics/metricskey"
+	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
 
@@ -29,16 +30,16 @@ import (
 // Since golang executes test iterations within the same process, the stats reporter
 // returns an error if the metric is already registered and the test panics.
 func unregister() {
-	metricstest.Unregister("event_count", "dispatch_latencies", "filter_latencies", "event_latencies")
+	metricstest.Unregister("event_count", "event_dispatch_latencies", "event_processing_latencies")
 }
 
 func TestStatsReporter(t *testing.T) {
 	args := &ReportArgs{
-		ns:          "testns",
-		trigger:     "testtrigger",
-		broker:      "testbroker",
-		eventType:   "testeventtype",
-		eventSource: "testeventsource",
+		ns:           "testns",
+		trigger:      "testtrigger",
+		broker:       "testbroker",
+		filterType:   "testeventtype",
+		filterSource: "testeventsource",
 	}
 
 	r, err := NewStatsReporter()
@@ -50,15 +51,13 @@ func TestStatsReporter(t *testing.T) {
 	defer unregister()
 
 	wantTags := map[string]string{
-		metricskey.NamespaceName: "testns",
-		metricskey.TriggerName:   "testtrigger",
-		metricskey.BrokerName:    "testbroker",
-		metricskey.TriggerType:   "testeventtype",
-		metricskey.TriggerSource: "testeventsource",
+		metricskey.LabelNamespaceName: "testns",
+		metricskey.LabelTriggerName:   "testtrigger",
+		metricskey.LabelBrokerName:    "testbroker",
+		metricskey.LabelFilterType:    "testeventtype",
+		metricskey.LabelFilterSource:  "testeventsource",
+		LabelResult:                   "success",
 	}
-
-	wantTags1 := map[string]string(wantTags)
-	wantTags1[metricskey.Result] = "success"
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
@@ -67,40 +66,28 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, nil)
 	})
-	metricstest.CheckCountData(t, "event_count", wantTags1, 2)
+	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 
-	// test ReportDispatchTime
+	// test ReportEventDispatchTime
 	expectSuccess(t, func() error {
-		return r.ReportDispatchTime(args, nil, 1100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, nil, 1100*time.Millisecond)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportDispatchTime(args, nil, 9100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, nil, 9100*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "dispatch_latencies", wantTags1, 2, 1100.0, 9100.0)
+	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
 
-	// test ReportEventDeliveryTime
+	// test ReportEventProcessingTime
 	expectSuccess(t, func() error {
-		return r.ReportEventDeliveryTime(args, nil, 1000*time.Millisecond)
+		return r.ReportEventProcessingTime(args, nil, 1000*time.Millisecond)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventDeliveryTime(args, nil, 8000*time.Millisecond)
+		return r.ReportEventProcessingTime(args, nil, 8000*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "event_latencies", wantTags1, 2, 1000.0, 8000.0)
-
-	wantTags2 := map[string]string(wantTags)
-	wantTags2[metricskey.FilterResult] = "pass"
-
-	// test ReportFilterTime
-	expectSuccess(t, func() error {
-		return r.ReportFilterTime(args, "pass", 100*time.Millisecond)
-	})
-	expectSuccess(t, func() error {
-		return r.ReportFilterTime(args, "pass", 500*time.Millisecond)
-	})
-	metricstest.CheckDistributionData(t, "filter_latencies", wantTags1, 2, 100.0, 500.0)
+	metricstest.CheckDistributionData(t, "event_processing_latencies", wantTags, 2, 1000.0, 8000.0)
 }
 
-func TestReporterEmptySourceAndType(t *testing.T) {
+func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	r, err := NewStatsReporter()
 	defer unregister()
 
@@ -109,20 +96,20 @@ func TestReporterEmptySourceAndType(t *testing.T) {
 	}
 
 	args := &ReportArgs{
-		ns:          "testns",
-		trigger:     "testtrigger",
-		broker:      "testbroker",
-		eventType:   "",
-		eventSource: "",
+		ns:           "testns",
+		trigger:      "testtrigger",
+		broker:       "testbroker",
+		filterType:   "",
+		filterSource: "",
 	}
 
 	wantTags := map[string]string{
-		metricskey.NamespaceName: "testns",
-		metricskey.TriggerName:   "testtrigger",
-		metricskey.BrokerName:    "testbroker",
-		metricskey.TriggerType:   metricskey.Any,
-		metricskey.TriggerSource: metricskey.Any,
-		metricskey.Result:        "success",
+		metricskey.LabelNamespaceName: "testns",
+		metricskey.LabelTriggerName:   "testtrigger",
+		metricskey.LabelBrokerName:    "testbroker",
+		metricskey.LabelFilterType:    AnyValue,
+		metricskey.LabelFilterSource:  AnyValue,
+		LabelResult:                   "success",
 	}
 
 	// test ReportEventCount
