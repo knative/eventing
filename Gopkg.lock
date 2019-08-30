@@ -151,22 +151,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:53becd66889185091b58ea3fc49294996f2179fb05a89702f4de7d15e581b509"
-  name = "github.com/go-logr/logr"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
-
-[[projects]]
-  branch = "master"
-  digest = "1:340497a512995aa69c0add901d79a2096b3449d35a44a6f1f1115091a9f8c687"
-  name = "github.com/go-logr/zapr"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "7536572e8d55209135cd5e7ccf7fce43dca217ab"
-
-[[projects]]
   digest = "1:e885f703ddf302286f6bae494d0602010c6ac8e724503f3306e18f3350802d32"
   name = "github.com/gobuffalo/envy"
   packages = ["."]
@@ -263,6 +247,23 @@
   ]
   pruneopts = "NUT"
   revision = "e979a0b10eebe748549c702a25e997c556349da6"
+
+[[projects]]
+  digest = "1:d7736b4372fa7b6d447118aca5a9a6d90a61d4e0d467316ac631e4ba58458ae4"
+  name = "github.com/google/mako"
+  packages = [
+    "clients/proto/analyzers/threshold_analyzer_go_proto",
+    "clients/proto/analyzers/utest_analyzer_go_proto",
+    "clients/proto/analyzers/window_deviation_go_proto",
+    "go/quickstore",
+    "internal/go/common",
+    "internal/quickstore_microservice/proto/quickstore_go_proto",
+    "proto/quickstore/quickstore_go_proto",
+    "spec/proto/mako_go_proto",
+  ]
+  pruneopts = "NUT"
+  revision = "122f8dcef9e3906310e7dba05849cedb5be43b24"
+  version = "0.1.0"
 
 [[projects]]
   digest = "1:56a1f3949ebb7fa22fa6b4e4ac0fe0f77cc4faee5b57413e6fa9199a8458faf1"
@@ -850,8 +851,8 @@
     "storage/v1beta1",
   ]
   pruneopts = "NUT"
-  revision = "145d52631d00cbfe68490d19ae4f0f501fd31a95"
-  version = "kubernetes-1.12.6"
+  revision = "9ad12a4af32677db3ae70bef3371bf9b618eb3a0"
+  version = "kubernetes-1.12.9"
 
 [[projects]]
   digest = "1:6def8acd040e85b3becb1dd73de1f22a787fd9776e32aa3bbac9cf9727b53d0d"
@@ -871,8 +872,8 @@
     "pkg/client/listers/apiextensions/v1beta1",
   ]
   pruneopts = "NUT"
-  revision = "bd0469a053ff88529a61145790499fe78a09a49d"
-  version = "kubernetes-1.12.6"
+  revision = "fa58353d80f37509c2b8de8e67f2377a2bc2ce80"
+  version = "kubernetes-1.12.9"
 
 [[projects]]
   digest = "1:58293c3a67fbca0336cd3cc2140dfe630545694452cf73980d2e4b6e6ce2660c"
@@ -928,10 +929,10 @@
   ]
   pruneopts = "NUT"
   revision = "01f179d85dbce0f2e0e4351a92394b38694b7cae"
-  version = "kubernetes-1.12.6"
+  version = "kubernetes-1.12.9"
 
 [[projects]]
-  digest = "1:e41f040a7dada94e29b62420a80fd02caddfc4f9dfa63ab38a9151545aa422ae"
+  digest = "1:e816108bd65d5e1956b2ddcf71e7d1360503be42a94b151bdeb9de1896589f3b"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1083,7 +1084,6 @@
     "plugin/pkg/client/auth/oidc",
     "rest",
     "rest/watch",
-    "restmapper",
     "testing",
     "third_party/forked/golang/template",
     "tools/auth",
@@ -1092,8 +1092,6 @@
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
-    "tools/leaderelection",
-    "tools/leaderelection/resourcelock",
     "tools/metrics",
     "tools/pager",
     "tools/record",
@@ -1110,8 +1108,8 @@
     "util/workqueue",
   ]
   pruneopts = "NUT"
-  revision = "78295b709ec6fa5be12e35892477a326dea2b5d3"
-  version = "kubernetes-1.12.6"
+  revision = "4f3abb12cae2d6817e1b6d72d9cbc3d3a6ddf965"
+  version = "kubernetes-1.12.9"
 
 [[projects]]
   digest = "1:26b81b5e76e3f84ea5140da4f74649576e470f79091d2ef8e0d1b5000bc636ca"
@@ -1139,7 +1137,7 @@
   ]
   pruneopts = "T"
   revision = "b1289fc74931d4b6b04bd1a259acfc88a2cb0a66"
-  version = "kubernetes-1.12.6"
+  version = "kubernetes-1.12.9"
 
 [[projects]]
   branch = "master"
@@ -1176,7 +1174,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:067237a99eb2075aacf78e355c9c89449cabb1e50be8fe50eff8d87dbaadfbbf"
+  digest = "1:c695f3415658f521f10bd3c3ed7f9a86433eafb2ca554ba64c2160d05c9633b0"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1236,6 +1234,8 @@
     "logging/testing",
     "metrics",
     "metrics/metricskey",
+    "metrics/metricstest",
+    "profiling",
     "reconciler/testing",
     "signals",
     "system",
@@ -1244,6 +1244,7 @@
     "test/helpers",
     "test/ingress",
     "test/logging",
+    "test/mako",
     "test/monitoring",
     "test/spoof",
     "test/zipkin",
@@ -1254,7 +1255,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "85d7d7ec718e8f63024fd1f0741690e38a81a533"
+  revision = "0c1c6db1df9ea2343a6dbf1290e4325682fcf85d"
 
 [[projects]]
   branch = "master"
@@ -1270,35 +1271,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "d2746f8b9470e8c8452a997e95190aba5320678a"
-
-[[projects]]
-  digest = "1:db96fceb1477924a5e724ebfd355842c73805eb8e44bf7f325898c3116a1d852"
-  name = "sigs.k8s.io/controller-runtime"
-  packages = [
-    "pkg/cache",
-    "pkg/cache/internal",
-    "pkg/client",
-    "pkg/client/apiutil",
-    "pkg/client/config",
-    "pkg/client/fake",
-    "pkg/internal/recorder",
-    "pkg/leaderelection",
-    "pkg/manager",
-    "pkg/metrics",
-    "pkg/patch",
-    "pkg/reconcile",
-    "pkg/recorder",
-    "pkg/runtime/inject",
-    "pkg/runtime/log",
-    "pkg/webhook/admission",
-    "pkg/webhook/admission/types",
-    "pkg/webhook/internal/metrics",
-    "pkg/webhook/types",
-  ]
-  pruneopts = "NUT"
-  revision = "f6f0bc9611363b43664d08fb097ab13243ef621d"
-  version = "v0.1.9"
+  revision = "5ce07d0fc6603e4cf576f91cdd85dcd74c4d629c"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -1413,6 +1386,7 @@
     "knative.dev/pkg/logging/logkey",
     "knative.dev/pkg/logging/testing",
     "knative.dev/pkg/metrics",
+    "knative.dev/pkg/metrics/metricstest",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/signals",
     "knative.dev/pkg/system",
@@ -1420,6 +1394,7 @@
     "knative.dev/pkg/test",
     "knative.dev/pkg/test/helpers",
     "knative.dev/pkg/test/logging",
+    "knative.dev/pkg/test/mako",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
@@ -1429,12 +1404,6 @@
     "knative.dev/test-infra/shared/junit",
     "knative.dev/test-infra/shared/testgrid",
     "knative.dev/test-infra/tools/dep-collector",
-    "sigs.k8s.io/controller-runtime/pkg/client",
-    "sigs.k8s.io/controller-runtime/pkg/client/config",
-    "sigs.k8s.io/controller-runtime/pkg/client/fake",
-    "sigs.k8s.io/controller-runtime/pkg/manager",
-    "sigs.k8s.io/controller-runtime/pkg/reconcile",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/log",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

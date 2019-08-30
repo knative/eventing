@@ -33,7 +33,7 @@ func (b *Broker) SetDefaults(ctx context.Context) {
 		}
 	}
 	b.Spec.SetDefaults(ctx)
-	setUserInfoAnnotations(b, ctx)
+	setUserInfoAnnotations(ctx, b)
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {

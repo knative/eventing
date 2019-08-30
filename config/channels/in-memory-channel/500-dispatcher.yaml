@@ -44,6 +44,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+        ports:
+          - containerPort: 9090
+            name: metrics
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging

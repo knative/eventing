@@ -18,10 +18,12 @@ package v1alpha1
 
 import (
 	v1 "k8s.io/api/apps/v1"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 type testHelper struct{}
@@ -48,16 +50,16 @@ func (t testHelper) NotReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
 	return &duckv1alpha1.ChannelableStatus{}
 }
 
-func (testHelper) ReadySubscriptionStatus() *SubscriptionStatus {
-	ss := &SubscriptionStatus{}
+func (testHelper) ReadySubscriptionStatus() *messagingv1alpha1.SubscriptionStatus {
+	ss := &messagingv1alpha1.SubscriptionStatus{}
 	ss.MarkChannelReady()
 	ss.MarkReferencesResolved()
 	ss.MarkAddedToChannel()
 	return ss
 }
 
-func (testHelper) NotReadySubscriptionStatus() *SubscriptionStatus {
-	ss := &SubscriptionStatus{}
+func (testHelper) NotReadySubscriptionStatus() *messagingv1alpha1.SubscriptionStatus {
+	ss := &messagingv1alpha1.SubscriptionStatus{}
 	ss.MarkReferencesResolved()
 	ss.MarkChannelNotReady("testInducedError", "test induced %s", "error")
 	return ss

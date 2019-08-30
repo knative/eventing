@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -83,10 +82,10 @@ type ChoiceSpec struct {
 
 type ChoiceCase struct {
 	// Filter is the expression guarding the branch/case
-	Filter *eventingv1alpha1.SubscriberSpec `json:"filter,omitempty"`
+	Filter *SubscriberSpec `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
-	Subscriber eventingv1alpha1.SubscriberSpec `json:"subscriber"`
+	Subscriber SubscriberSpec `json:"subscriber"`
 
 	// Reply is a Reference to where the result of Subscriber of this case gets sent to.
 	// If not specified, sent the result to the Choice Reply

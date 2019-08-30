@@ -22,7 +22,7 @@ import (
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
 	t.Spec.SetDefaults(ctx)
-	setUserInfoAnnotations(t, ctx)
+	setUserInfoAnnotations(ctx, t)
 }
 
 func (ts *TriggerSpec) SetDefaults(ctx context.Context) {

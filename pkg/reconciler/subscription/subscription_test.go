@@ -31,6 +31,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -835,7 +836,7 @@ func TestFinalizers(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		original := &eventingv1alpha1.Subscription{}
+		original := &v1alpha1.Subscription{}
 		original.Finalizers = tc.original.List()
 		if tc.add {
 			addFinalizer(original)
@@ -850,7 +851,7 @@ func TestFinalizers(t *testing.T) {
 	}
 }
 
-func addFinalizer(sub *eventingv1alpha1.Subscription) {
+func addFinalizer(sub *v1alpha1.Subscription) {
 	finalizers := sets.NewString(sub.Finalizers...)
 	finalizers.Insert(finalizerName)
 	sub.Finalizers = finalizers.List()
@@ -864,8 +865,14 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 	var spec string
 	if subscribers != nil {
 		b, err := json.Marshal(subscribers)
+		if err != nil {
+			return action
+		}
 		ss := make([]map[string]interface{}, 0)
 		err = json.Unmarshal(b, &ss)
+		if err != nil {
+			return action
+		}
 		subs, err := json.Marshal(ss)
 		if err != nil {
 			return action

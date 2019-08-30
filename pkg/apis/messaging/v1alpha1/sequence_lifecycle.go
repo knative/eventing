@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
@@ -60,7 +59,7 @@ func (ps *SequenceStatus) InitializeConditions() {
 
 // PropagateSubscriptionStatuses sets the SubscriptionStatuses and SequenceConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*eventingv1alpha1.Subscription) {
+func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*Subscription) {
 	ps.SubscriptionStatuses = make([]SequenceSubscriptionStatus, len(subscriptions))
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
@@ -77,7 +76,7 @@ func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*eventin
 				Namespace:  s.Namespace,
 			},
 		}
-		readyCondition := s.Status.GetCondition(eventingv1alpha1.SubscriptionConditionReady)
+		readyCondition := s.Status.GetCondition(SubscriptionConditionReady)
 		if readyCondition != nil {
 			ps.SubscriptionStatuses[i].ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {

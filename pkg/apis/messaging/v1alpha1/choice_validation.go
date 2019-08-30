@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"context"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -36,12 +35,12 @@ func (ps *ChoiceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	for i, s := range ps.Cases {
 		if s.Filter != nil {
-			if err := eventingv1alpha1.IsValidSubscriberSpec(*s.Filter); err != nil {
+			if err := IsValidSubscriberSpec(*s.Filter); err != nil {
 				errs = errs.Also(err.ViaField("filter"))
 			}
 		}
 
-		if e := eventingv1alpha1.IsValidSubscriberSpec(s.Subscriber); e != nil {
+		if e := IsValidSubscriberSpec(s.Subscriber); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "cases", i))
 		}
 	}
@@ -59,7 +58,7 @@ func (ps *ChoiceSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
 	}
 	if ps.Reply != nil {
-		if err := eventingv1alpha1.IsValidObjectReference(*ps.Reply); err != nil {
+		if err := IsValidObjectReference(*ps.Reply); err != nil {
 			errs = errs.Also(err.ViaField("reply"))
 		}
 	}

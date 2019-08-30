@@ -126,10 +126,9 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   b.Namespace,
-			Name:        fmt.Sprintf("%s-broker-filter", b.Name),
-			Annotations: FilterAnnotations(),
-			Labels:      FilterLabels(b.Name),
+			Namespace: b.Namespace,
+			Name:      fmt.Sprintf("%s-broker-filter", b.Name),
+			Labels:    FilterLabels(b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
@@ -157,14 +156,5 @@ func FilterLabels(brokerName string) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":     brokerName,
 		"eventing.knative.dev/brokerRole": "filter",
-	}
-}
-
-// FilterAnnotations generates the annotation that allow Prometheus to scrape the metrics exposed
-// by this service.
-func FilterAnnotations() map[string]string {
-	return map[string]string{
-		"prometheus.io/scrape": "true",
-		"prometheus.io/port":   "9090",
 	}
 }

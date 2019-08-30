@@ -3,14 +3,17 @@ package ingress
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
 )
@@ -26,9 +29,11 @@ type Handler struct {
 	CeClient   cloudevents.Client
 	ChannelURI *url.URL
 	BrokerName string
+	Namespace  string
+	Reporter   StatsReporter
 }
 
-func (h *Handler) Start(stopCh <-chan struct{}) error {
+func (h *Handler) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -41,7 +46,7 @@ func (h *Handler) Start(stopCh <-chan struct{}) error {
 	select {
 	case err := <-errCh:
 		return err
-	case <-stopCh:
+	case <-ctx.Done():
 		break
 	}
 
@@ -57,7 +62,7 @@ func (h *Handler) Start(stopCh <-chan struct{}) error {
 }
 
 func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	event.SetExtension(broker.TimeInFlightMetadataName, time.Now())
+	event.SetExtension(broker.EventArrivalTime, time.Now())
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
@@ -70,38 +75,29 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	ctx, _ = tag.New(ctx, tag.Insert(TagBroker, h.BrokerName))
-	defer func() {
-		stats.Record(ctx, MeasureEventsTotal.M(1))
-	}()
+	tctx = addOutGoingTracing(ctx, event, tctx)
+
+	reporterArgs := &ReportArgs{
+		ns:        h.Namespace,
+		broker:    h.BrokerName,
+		eventType: event.Type(),
+	}
 
 	send := h.decrementTTL(&event)
 	if !send {
-		ctx, _ = tag.New(ctx, tag.Insert(TagResult, "droppedDueToTTL"))
+		// Record the event count.
+		h.Reporter.ReportEventCount(reporterArgs, errors.New("dropped due to TTL"))
 		return nil
 	}
 
-	// TODO Filter.
-
-	ctx, _ = tag.New(ctx, tag.Insert(TagResult, "dispatched"))
-	return h.sendEvent(ctx, tctx, event)
-}
-
-func (h *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportContext, event cloudevents.Event) error {
+	start := time.Now()
 	sendingCTX := broker.SendingContext(ctx, tctx, h.ChannelURI)
-
-	startTS := time.Now()
-	defer func() {
-		dispatchTimeMS := int64(time.Now().Sub(startTS) / time.Millisecond)
-		stats.Record(sendingCTX, MeasureDispatchTime.M(dispatchTimeMS))
-	}()
-
+	// TODO get HTTP status codes and use those.
 	_, err := h.CeClient.Send(sendingCTX, event)
-	if err != nil {
-		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "error"))
-	} else {
-		sendingCTX, _ = tag.New(sendingCTX, tag.Insert(TagResult, "ok"))
-	}
+	// Record the dispatch time.
+	h.Reporter.ReportDispatchTime(reporterArgs, err, time.Since(start))
+	// Record the event count.
+	h.Reporter.ReportEventCount(reporterArgs, err)
 	return err
 }
 
@@ -133,4 +129,21 @@ func (h *Handler) getTTLToSet(event *cloudevents.Event) int {
 		h.Logger.Info("TTL attribute wasn't a float64, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOf(ttlInterface)", reflect.TypeOf(ttlInterface)))
 	}
 	return int(ttl) - 1
+}
+
+func addOutGoingTracing(ctx context.Context, event cloudevents.Event, tctx cloudevents.HTTPTransportContext) cloudevents.HTTPTransportContext {
+	// Inject trace into HTTP header.
+	spanContext := trace.FromContext(ctx).SpanContext()
+	tctx.Header.Set(b3.TraceIDHeader, spanContext.TraceID.String())
+	tctx.Header.Set(b3.SpanIDHeader, spanContext.SpanID.String())
+	sampled := 0
+	if spanContext.IsSampled() {
+		sampled = 1
+	}
+	tctx.Header.Set(b3.SampledHeader, strconv.Itoa(sampled))
+
+	// Set traceparent, a CloudEvent documented extension attribute for distributed tracing.
+	traceParent := strings.Join([]string{"00", spanContext.TraceID.String(), spanContext.SpanID.String(), fmt.Sprintf("%02x", spanContext.TraceOptions)}, "-")
+	event.SetExtension(broker.TraceParent, traceParent)
+	return tctx
 }

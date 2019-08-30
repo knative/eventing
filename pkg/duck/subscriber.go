@@ -29,12 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler/names"
 	duckapis "knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 // DomainToURL converts a domain into an HTTP URL.

@@ -34,7 +34,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"go.uber.org/zap"
-	status "knative.dev/eventing/pkg/apis/duck"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -163,14 +162,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		return fmt.Errorf("unable to track receive adapter: %v", err)
 	}
 
-	// TODO Delete this after 0.8 is cut.
-	if status.DeploymentIsAvailable(&ra.Status, true) {
-		err = r.deleteOldReceiveAdapter(ctx, source)
-		if err != nil {
-			return fmt.Errorf("deleting old receive adapter: %v", err)
-		}
-	}
-
 	err = r.reconcileEventTypes(ctx, source)
 	if err != nil {
 		source.Status.MarkNoEventTypes("EventTypesReconcileFailed", "")
@@ -225,24 +216,6 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	return ra, nil
 }
 
-func (r *Reconciler) deleteOldReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource) error {
-	dl, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
-	})
-	if err != nil {
-		return fmt.Errorf("listing old receive adapter: %v", err)
-	}
-	for _, ora := range dl.Items {
-		if metav1.IsControlledBy(&ora, src) {
-			err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Delete(ora.Name, &metav1.DeleteOptions{})
-			if err != nil {
-				return fmt.Errorf("deleting old receive adapter %q: %v", ora.Name, err)
-			}
-		}
-	}
-	return nil
-}
-
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
 	current, err := r.getEventTypes(ctx, src)
 	if err != nil {
@@ -271,17 +244,6 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiS
 		}
 	}
 
-	// TODO Delete this after 0.8 is cut.
-	oldEventTypes, err := r.getOldEventTypes(ctx, src)
-	if err != nil {
-		return fmt.Errorf("getting old event types: %v", err)
-	}
-	for _, eventType := range oldEventTypes {
-		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
-			return fmt.Errorf("deleting old eventType %q: %v", eventType.Name, err)
-		}
-	}
-
 	return nil
 }
 
@@ -292,22 +254,6 @@ func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerS
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
-	}
-	eventTypes := make([]eventingv1alpha1.EventType, 0)
-	for _, et := range etl.Items {
-		if metav1.IsControlledBy(&et, src) {
-			eventTypes = append(eventTypes, et)
-		}
-	}
-	return eventTypes, nil
-}
-
-func (r *Reconciler) getOldEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
-	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(resources.OldLabels(src.Name)).String(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("listing event types: %v", err)
 	}
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
 	for _, et := range etl.Items {

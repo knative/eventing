@@ -27,7 +27,7 @@ import (
 )
 
 func main() {
-	sharedmain.Main("source-controller",
+	sharedmain.Main("source_controller",
 		apiserversource.NewController,
 		containersource.NewController,
 		cronjobsource.NewController,
