@@ -20,7 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/pkg/metrics/metricskey"
+	. "knative.dev/eventing/pkg/metrics/metricskey"
+	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
 
@@ -29,14 +30,15 @@ import (
 // Since golang executes test iterations within the same process, the stats reporter
 // returns an error if the metric is already registered and the test panics.
 func unregister() {
-	metricstest.Unregister("event_count", "dispatch_latencies")
+	metricstest.Unregister("event_count", "event_dispatch_latencies")
 }
 
 func TestStatsReporter(t *testing.T) {
 	args := &ReportArgs{
-		ns:        "testns",
-		broker:    "testbroker",
-		eventType: "testeventtype",
+		ns:          "testns",
+		broker:      "testbroker",
+		eventType:   "testeventtype",
+		eventSource: "testeventsource",
 	}
 
 	r, err := NewStatsReporter()
@@ -48,10 +50,11 @@ func TestStatsReporter(t *testing.T) {
 	defer unregister()
 
 	wantTags := map[string]string{
-		metricskey.NamespaceName: "testns",
-		metricskey.BrokerName:    "testbroker",
-		metricskey.EventType:     "testeventtype",
-		metricskey.Result:        "success",
+		metricskey.LabelNamespaceName: "testns",
+		metricskey.LabelBrokerName:    "testbroker",
+		metricskey.LabelEventType:     "testeventtype",
+		metricskey.LabelEventSource:   "testeventsource",
+		LabelResult:                   "success",
 	}
 
 	// test ReportEventCount
@@ -65,12 +68,12 @@ func TestStatsReporter(t *testing.T) {
 
 	// test ReportDispatchTime
 	expectSuccess(t, func() error {
-		return r.ReportDispatchTime(args, nil, 1100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, nil, 1100*time.Millisecond)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportDispatchTime(args, nil, 9100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, nil, 9100*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
+	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
 }
 
 func expectSuccess(t *testing.T, f func() error) {

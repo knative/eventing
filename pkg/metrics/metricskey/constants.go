@@ -17,46 +17,12 @@ limitations under the License.
 package metricskey
 
 const (
-	// KnativeTrigger is the Stackdriver resource type for Triggers.
-	KnativeTrigger = "knative_trigger"
+	// LabelFilterResult is the label for the Trigger filtering result.
+	LabelFilterResult = "filter_result"
 
-	// Project is the label for the project (e.g., GCP project ID).
-	Project = "project_id"
+	// LabelResult is the label for the result of sending an event to a downstream consumer. One of "success", "error".
+	LabelResult = "result"
 
-	// Location is the label for the location (e.g. GCE zone) where the cluster is deployed.
-	Location = "location"
-
-	// ClusterName is the label for the immutable name of the cluster.
-	ClusterName = "cluster_name"
-
-	// NamespaceName is the label for the immutable name of the namespace where the resource type exists.
-	NamespaceName = "namespace_name"
-
-	// TriggerName is the label for the name of the Trigger.
-	TriggerName = "trigger_name"
-
-	// BrokerName is the label for the name of the Broker.
-	BrokerName = "broker_name"
-
-	// TriggerType is the label for the type attribute filter of the Trigger.
-	TriggerType = "trigger_type"
-
-	// TriggerSource is the label for the source attribute filter of the Trigger.
-	TriggerSource = "trigger_source"
-
-	// EventType is the label for the CloudEvents type context attribute.
-	EventType = "event_type"
-
-	// FilterResult is the label for the Trigger filtering result.
-	FilterResult = "filter_result"
-
-	// Unknown is the default value if the field is unknown, e.g., the project will be unknown if Knative
-	// is not running on GKE.
-	Unknown = "unknown"
-
-	// Result is the label for the result of sending an event to a downstream consumer. One of "success", "error".
-	Result = "result"
-
-	// Any is the default value if the trigger filter attributes are empty.
-	Any = "any"
+	// AnyValue is the default value if the trigger filter attributes are empty.
+	AnyValue = "any"
 )
