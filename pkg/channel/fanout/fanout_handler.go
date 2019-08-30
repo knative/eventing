@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	defaultTimeout = 1 * time.Minute
+	defaultTimeout = 15 * time.Minute
 
 	messageBufferSize = 500
 )

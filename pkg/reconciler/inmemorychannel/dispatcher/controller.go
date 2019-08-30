@@ -40,8 +40,8 @@ const (
 	// itself when creating events.
 	controllerAgentName = "in-memory-channel-dispatcher"
 
-	readTimeout  = 1 * time.Minute
-	writeTimeout = 1 * time.Minute
+	readTimeout  = 15 * time.Minute
+	writeTimeout = 15 * time.Minute
 	port         = 8080
 )
 
