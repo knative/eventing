@@ -20,7 +20,7 @@ metadata:
   labels:
     role: broker-latency-consumer
 spec:
-  serviceAccountName: default
+  serviceAccountName: perf-eventing
   restartPolicy: Never
   containers:
   - name: "broker-latency"
