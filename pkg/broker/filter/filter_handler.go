@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	writeTimeout = 1 * time.Minute
+	writeTimeout = 15 * time.Minute
 
 	passFilter FilterResult = "pass"
 	failFilter FilterResult = "fail"
