@@ -354,15 +354,11 @@ func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
 	return nil
 }
 
-func (r *mockReporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error {
 	return nil
 }
 
-func (r *mockReporter) ReportFilterTime(args *ReportArgs, filterResult FilterResult, d time.Duration) error {
-	return nil
-}
-
-func (r *mockReporter) ReportEventDeliveryTime(args *ReportArgs, err error, d time.Duration) error {
+func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, err error, d time.Duration) error {
 	return nil
 }
 

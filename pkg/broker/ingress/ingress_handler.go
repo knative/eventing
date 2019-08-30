@@ -78,9 +78,10 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	tctx = addOutGoingTracing(ctx, event, tctx)
 
 	reporterArgs := &ReportArgs{
-		ns:        h.Namespace,
-		broker:    h.BrokerName,
-		eventType: event.Type(),
+		ns:          h.Namespace,
+		broker:      h.BrokerName,
+		eventType:   event.Type(),
+		eventSource: event.Source(),
 	}
 
 	send := h.decrementTTL(&event)
@@ -92,10 +93,10 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 	start := time.Now()
 	sendingCTX := broker.SendingContext(ctx, tctx, h.ChannelURI)
-	// TODO get HTTP status codes and use those.
+	// TODO use HTTP codes: https://github.com/cloudevents/sdk-go/pull/177
 	_, err := h.CeClient.Send(sendingCTX, event)
 	// Record the dispatch time.
-	h.Reporter.ReportDispatchTime(reporterArgs, err, time.Since(start))
+	h.Reporter.ReportEventDispatchTime(reporterArgs, err, time.Since(start))
 	// Record the event count.
 	h.Reporter.ReportEventCount(reporterArgs, err)
 	return err
