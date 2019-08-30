@@ -20,7 +20,8 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/metrics/metricskey"
+	metricskeyEventing "knative.dev/eventing/pkg/metrics/metricskey"
+	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
 
@@ -48,13 +49,10 @@ func TestStatsReporter(t *testing.T) {
 	defer unregister()
 
 	wantTags := map[string]string{
-		metricskey.NamespaceName: "testns",
-		metricskey.EventType:     "dev.knative.apiserver.resource.update",
-		metricskey.EventSource:   "unit-test",
+		metricskey.LabelNamespaceName: "testns",
+		metricskey.LabelEventType:     "dev.knative.apiserver.resource.update",
+		metricskey.LabelEventSource:   "unit-test",
 	}
-
-	wantTags1 := map[string]string(wantTags)
-	wantTags1[metricskey.Result] = "success"
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
@@ -82,10 +80,10 @@ func TestReporterForErrorTag(t *testing.T) {
 	}
 
 	wantTags := map[string]string{
-		metricskey.NamespaceName: "testns",
-		metricskey.Result:        "success",
-		metricskey.EventType:     "eventtype",
-		metricskey.EventSource:   "eventsource",
+		metricskey.LabelNamespaceName: "testns",
+		metricskeyEventing.Result:     "success",
+		metricskey.LabelEventType:     "eventtype",
+		metricskey.LabelEventSource:   "eventsource",
 	}
 	e := fmt.Errorf("test error")
 	// test ReportEventCount
