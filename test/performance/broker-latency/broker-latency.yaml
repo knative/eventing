@@ -31,6 +31,9 @@ spec:
         memory: 3Gi
     args:
     - "-event-count=1000"
+    ports:
+    - name: cloudevents
+      containerPort: 8080
     volumeMounts:
     - name: config-mako
       mountPath: /etc/config-mako
@@ -40,6 +43,9 @@ spec:
     env:
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: /var/secret/robot.json
+    ports:
+    - name: quickstore
+      containerPort: 9813
     volumeMounts:
     - name: mako-upload
       mountPath: /var/secret
