@@ -25,10 +25,10 @@ broker._
 
 #### Spec
 
-| Field        | Type           | Description                                                                                                                                                                | Constraints |
-| ------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| broker       | String         | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
-| filter       | TriggerFilter  | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
+| Field        | Type                    | Description                                                                                                                                                                | Constraints |
+| ------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| broker       | String                  | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
+| filter       | TriggerFilter           | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
 | subscriber\* | eventing.SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
 
 \*: Required
@@ -105,10 +105,10 @@ channel CRD can also be instantiated directly.\_
 
 #### Spec
 
-| Field                    | Type                     | Description                                                           | Constraints                            |
-| ------------------------ | ------------------------ | --------------------------------------------------------------------- | -------------------------------------- |
-| channelTemplate          | ChannelTemplateSpec      | Specifies which channel CRD to use.                                   | Immutable                              |
-| subscribable.subscribers | duck.SubscriberSpec[]    | Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
+| Field                    | Type                  | Description                                                           | Constraints                            |
+| ------------------------ | --------------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| channelTemplate          | ChannelTemplateSpec   | Specifies which channel CRD to use.                                   | Immutable                              |
+| subscribable.subscribers | duck.SubscriberSpec[] | Information about subscriptions used to implement message forwarding. | Filled out by Subscription Controller. |
 
 #### Metadata
 
@@ -155,11 +155,11 @@ channel._
 
 #### Spec
 
-| Field                  | Type           | Description                                                                       | Constraints        |
-| ---------------------- | -------------- | --------------------------------------------------------------------------------- | ------------------ |
-| channel\*              | ObjectRef      | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
+| Field                  | Type                    | Description                                                                       | Constraints        |
+| ---------------------- | ----------------------- | --------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef               | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
 | subscriber<sup>1</sup> | eventing.SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
-| reply<sup>1</sup>      | ReplyStrategy  | The continuation for the link.                                                    |                    |
+| reply<sup>1</sup>      | ReplyStrategy           | The continuation for the link.                                                    |                    |
 
 \*: Required
 
