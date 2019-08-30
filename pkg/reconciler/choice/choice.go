@@ -29,20 +29,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+	duckroot "knative.dev/pkg/apis"
+	duckapis "knative.dev/pkg/apis/duck"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
+
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/choice/resources"
 	"knative.dev/eventing/pkg/utils"
-	duckroot "knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/tracker"
 )
 
 const (
@@ -58,7 +57,7 @@ type Reconciler struct {
 	choiceLister       listers.ChoiceLister
 	tracker            tracker.Interface
 	resourceTracker    duck.ResourceTracker
-	subscriptionLister eventinglisters.SubscriptionLister
+	subscriptionLister listers.SubscriptionLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -175,8 +174,8 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Choice) error {
 	}
 	p.Status.PropagateChannelStatuses(ingressChannel, channels)
 
-	filterSubs := make([]*eventingv1alpha1.Subscription, 0, len(p.Spec.Cases))
-	subs := make([]*eventingv1alpha1.Subscription, 0, len(p.Spec.Cases))
+	filterSubs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Cases))
+	subs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Cases))
 	for i := 0; i < len(p.Spec.Cases); i++ {
 		filterSub, sub, err := r.reconcileCase(ctx, i, p)
 		if err != nil {
@@ -235,7 +234,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, c
 	return c, nil
 }
 
-func (r *Reconciler) reconcileCase(ctx context.Context, caseNumber int, p *v1alpha1.Choice) (*eventingv1alpha1.Subscription, *eventingv1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileCase(ctx context.Context, caseNumber int, p *v1alpha1.Choice) (*v1alpha1.Subscription, *v1alpha1.Subscription, error) {
 	filterExpected := resources.NewFilterSubscription(caseNumber, p)
 	filterSubName := resources.ChoiceFilterSubscriptionName(p.Name, caseNumber)
 
@@ -255,14 +254,14 @@ func (r *Reconciler) reconcileCase(ctx context.Context, caseNumber int, p *v1alp
 	return filterSub, sub, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, caseNumber int, expected *eventingv1alpha1.Subscription, subName, ns string) (*eventingv1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, caseNumber int, expected *v1alpha1.Subscription, subName, ns string) (*v1alpha1.Subscription, error) {
 	sub, err := r.subscriptionLister.Subscriptions(ns).Get(subName)
 
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v", sub))
-		newSub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
+		newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Choice's subscription failed: %v", err)

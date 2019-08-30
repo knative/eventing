@@ -34,14 +34,6 @@ type EventTypeListerExpansion interface{}
 // EventTypeNamespaceLister.
 type EventTypeNamespaceListerExpansion interface{}
 
-// SubscriptionListerExpansion allows custom methods to be added to
-// SubscriptionLister.
-type SubscriptionListerExpansion interface{}
-
-// SubscriptionNamespaceListerExpansion allows custom methods to be added to
-// SubscriptionNamespaceLister.
-type SubscriptionNamespaceListerExpansion interface{}
-
 // TriggerListerExpansion allows custom methods to be added to
 // TriggerLister.
 type TriggerListerExpansion interface{}

@@ -35,15 +35,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	eventingduck "knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
+
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -157,7 +158,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			}
 		}
 		removeFinalizer(subscription)
-		_, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
+		_, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(subscription.Namespace).Update(subscription)
 		return err
 	}
 	channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel)
@@ -336,7 +337,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscri
 	existing := subscription.DeepCopy()
 	existing.Status = desired.Status
 
-	sub, err := r.EventingClientSet.EventingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
+	sub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(sub.ObjectMeta.CreationTimestamp.Time)
 		r.Logger.Infof("Subscription %q became ready after %v", subscription.Name, duration)
@@ -367,7 +368,7 @@ func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 		return err
 	}
 
-	_, err = r.EventingClientSet.EventingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
+	_, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
 	return err
 }
 

@@ -127,9 +127,8 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: b.Namespace,
 			// TODO add -ingress to the name to be consistent with the filter service naming.
-			Name:        fmt.Sprintf("%s-broker", b.Name),
-			Annotations: IngressAnnotations(),
-			Labels:      IngressLabels(b.Name),
+			Name:   fmt.Sprintf("%s-broker", b.Name),
+			Labels: IngressLabels(b.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(b),
 			},
@@ -157,14 +156,5 @@ func IngressLabels(brokerName string) map[string]string {
 	return map[string]string{
 		"eventing.knative.dev/broker":     brokerName,
 		"eventing.knative.dev/brokerRole": "ingress",
-	}
-}
-
-// IngressAnnotations generates the annotation that allow Prometheus to scrape the metrics exposed
-// by this service.
-func IngressAnnotations() map[string]string {
-	return map[string]string{
-		"prometheus.io/scrape": "true",
-		"prometheus.io/port":   "9090",
 	}
 }

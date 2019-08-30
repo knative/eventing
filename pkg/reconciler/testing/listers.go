@@ -111,8 +111,8 @@ func (l *Listers) GetSharedObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakesharedclientset.AddToScheme)
 }
 
-func (l *Listers) GetSubscriptionLister() eventinglisters.SubscriptionLister {
-	return eventinglisters.NewSubscriptionLister(l.indexerFor(&eventingv1alpha1.Subscription{}))
+func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
+	return messaginglisters.NewSubscriptionLister(l.indexerFor(&messagingv1alpha1.Subscription{}))
 }
 
 func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {

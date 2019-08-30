@@ -1,8 +1,9 @@
 ---
 name: Feature Request
-about: Suggest an idea for this project	about
+about: "Suggest an idea for this project\tabout"
 title: ''
 labels: kind/feature-request
+assignees: ''
 
 ---
 

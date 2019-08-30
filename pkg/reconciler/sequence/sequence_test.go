@@ -35,7 +35,6 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
@@ -91,9 +90,9 @@ func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructur
 
 }
 
-func createSubscriber(stepNumber int) eventingv1alpha1.SubscriberSpec {
+func createSubscriber(stepNumber int) v1alpha1.SubscriberSpec {
 	uriString := fmt.Sprintf("http://example.com/%d", stepNumber)
-	return eventingv1alpha1.SubscriberSpec{
+	return v1alpha1.SubscriberSpec{
 		URI: &uriString,
 	}
 }
@@ -145,20 +144,20 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(sequenceName, 0),
-				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -197,7 +196,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))},
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
@@ -207,13 +206,13 @@ func TestAllCases(t *testing.T) {
 				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}))),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
@@ -252,7 +251,7 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2)}))},
@@ -264,14 +263,14 @@ func TestAllCases(t *testing.T) {
 				createChannel(sequenceName, 0),
 				createChannel(sequenceName, 1),
 				createChannel(sequenceName, 2),
-				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2),
@@ -358,7 +357,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2)}))},
@@ -373,21 +372,21 @@ func TestAllCases(t *testing.T) {
 				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
 				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
 				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]eventingv1alpha1.SubscriberSpec{
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
 						createSubscriber(0),
 						createSubscriber(1),
 						createSubscriber(2),

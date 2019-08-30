@@ -28,7 +28,7 @@ func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
 	return nil
 }
 
-func (r *mockReporter) ReportDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error {
 	return nil
 }
 
@@ -78,7 +78,7 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 			}
 			event := cloudevents.NewEvent()
 			resp := new(cloudevents.EventResponse)
-			tctx := http.TransportContext{Method: tc.httpmethod, URI: tc.URI}
+			tctx := http.TransportContext{Header: nethttp.Header{}, Method: tc.httpmethod, URI: tc.URI}
 			ctx := http.WithTransportContext(context.Background(), tctx)
 			_ = handler.serveHTTP(ctx, event, resp)
 			if resp.Status != tc.expectedStatus {
@@ -104,7 +104,7 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 	}
 	event := cloudevents.NewEvent()
 	resp := new(cloudevents.EventResponse)
-	tctx := http.TransportContext{Method: validHTTPMethod, URI: validURI}
+	tctx := http.TransportContext{Header: nethttp.Header{}, Method: validHTTPMethod, URI: validURI}
 	ctx := http.WithTransportContext(context.Background(), tctx)
 	_ = handler.serveHTTP(ctx, event, resp)
 	if !client.sent {

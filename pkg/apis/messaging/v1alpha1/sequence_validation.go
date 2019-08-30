@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"context"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -35,7 +34,7 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	for i, s := range ps.Steps {
-		if e := eventingv1alpha1.IsValidSubscriberSpec(s); e != nil {
+		if e := IsValidSubscriberSpec(s); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "steps", i))
 		}
 	}
@@ -53,7 +52,7 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
 	}
 	if ps.Reply != nil {
-		if err := eventingv1alpha1.IsValidObjectReference(*ps.Reply); err != nil {
+		if err := IsValidObjectReference(*ps.Reply); err != nil {
 			errs = errs.Also(err.ViaField("reply"))
 		}
 	}
