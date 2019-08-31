@@ -55,8 +55,8 @@ type ReportArgs struct {
 
 // StatsReporter defines the interface for sending ingress metrics.
 type StatsReporter interface {
-	ReportEventCount(args *ReportArgs, err error) error
-	ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error
+	ReportEventCount(args *ReportArgs, responseCode int) error
+	ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error
 }
 
 var _ StatsReporter = (*reporter)(nil)

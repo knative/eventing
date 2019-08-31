@@ -35,7 +35,7 @@ func (u URLRef) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json unmarshal method used when this type is
-// unmarshed using json.Unmarshal.
+// unmarshaled using json.Unmarshal.
 func (u *URLRef) UnmarshalJSON(b []byte) error {
 	var ref string
 	if err := json.Unmarshal(b, &ref); err != nil {
@@ -51,12 +51,11 @@ func (u *URLRef) UnmarshalJSON(b []byte) error {
 // MarshalXML implements a custom xml marshal method used when this type is
 // marshaled using xml.Marshal.
 func (u URLRef) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	v := fmt.Sprintf("%s", u.String())
-	return e.EncodeElement(v, start)
+	return e.EncodeElement(u.String(), start)
 }
 
 // UnmarshalXML implements the xml unmarshal method used when this type is
-// unmarshed using xml.Unmarshal.
+// unmarshaled using xml.Unmarshal.
 func (u *URLRef) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	var ref string
 	if err := d.DecodeElement(&ref, &start); err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/context"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
@@ -15,6 +16,7 @@ import (
 
 type ClientOption client.Option
 type Client = client.Client
+type ConvertFn = client.ConvertFn
 
 // Event
 
@@ -41,6 +43,37 @@ type HTTPTransportContext = http.TransportContext
 type HTTPTransportResponseContext = http.TransportResponseContext
 type HTTPEncoding = http.Encoding
 
+const (
+	// Encoding
+
+	ApplicationXML                  = cloudevents.ApplicationXML
+	ApplicationJSON                 = cloudevents.ApplicationJSON
+	ApplicationCloudEventsJSON      = cloudevents.ApplicationCloudEventsJSON
+	ApplicationCloudEventsBatchJSON = cloudevents.ApplicationCloudEventsBatchJSON
+	Base64                          = cloudevents.Base64
+
+	// Event Versions
+
+	VersionV01 = cloudevents.CloudEventsVersionV01
+	VersionV02 = cloudevents.CloudEventsVersionV02
+	VersionV03 = cloudevents.CloudEventsVersionV03
+
+	// HTTP Transport Encodings
+
+	HTTPBinaryV01     = http.BinaryV01
+	HTTPStructuredV01 = http.StructuredV01
+	HTTPBinaryV02     = http.BinaryV02
+	HTTPStructuredV02 = http.StructuredV02
+	HTTPBinaryV03     = http.BinaryV03
+	HTTPStructuredV03 = http.StructuredV03
+	HTTPBatchedV03    = http.BatchedV03
+
+	// Context HTTP Transport Encodings
+
+	Binary     = http.Binary
+	Structured = http.Structured
+)
+
 var (
 	// ContentType Helpers
 
@@ -49,8 +82,6 @@ var (
 	StringOfApplicationCloudEventsJSON      = cloudevents.StringOfApplicationCloudEventsJSON
 	StringOfApplicationCloudEventsBatchJSON = cloudevents.StringOfApplicationCloudEventsBatchJSON
 	StringOfBase64                          = cloudevents.StringOfBase64
-
-	Base64 = cloudevents.Base64
 
 	// Client Creation
 
@@ -62,18 +93,22 @@ var (
 	WithEventDefaulter = client.WithEventDefaulter
 	WithUUIDs          = client.WithUUIDs
 	WithTimeNow        = client.WithTimeNow
+	WithConverterFn    = client.WithConverterFn
 
 	// Event Creation
 
-	NewEvent   = cloudevents.New
-	VersionV01 = cloudevents.CloudEventsVersionV01
-	VersionV02 = cloudevents.CloudEventsVersionV02
-	VersionV03 = cloudevents.CloudEventsVersionV03
+	NewEvent = cloudevents.New
+
+	// Tracing
+
+	EnableTracing = observability.EnableTracing
 
 	// Context
 
-	ContextWithTarget = context.WithTarget
-	TargetFromContext = context.TargetFrom
+	ContextWithTarget   = context.WithTarget
+	TargetFromContext   = context.TargetFrom
+	ContextWithEncoding = context.WithEncoding
+	EncodingFromContext = context.EncodingFrom
 
 	// Custom Types
 
@@ -86,29 +121,21 @@ var (
 
 	// HTTP Transport Options
 
-	WithTarget             = http.WithTarget
-	WithMethod             = http.WithMethod
-	WitHHeader             = http.WithHeader
-	WithShutdownTimeout    = http.WithShutdownTimeout
-	WithEncoding           = http.WithEncoding
-	WithBinaryEncoding     = http.WithBinaryEncoding
-	WithStructuredEncoding = http.WithStructuredEncoding
-	WithPort               = http.WithPort
-	WithPath               = http.WithPath
-	WithMiddleware         = http.WithMiddleware
+	WithTarget               = http.WithTarget
+	WithMethod               = http.WithMethod
+	WitHHeader               = http.WithHeader
+	WithShutdownTimeout      = http.WithShutdownTimeout
+	WithEncoding             = http.WithEncoding
+	WithContextBasedEncoding = http.WithContextBasedEncoding
+	WithBinaryEncoding       = http.WithBinaryEncoding
+	WithStructuredEncoding   = http.WithStructuredEncoding
+	WithPort                 = http.WithPort
+	WithPath                 = http.WithPath
+	WithMiddleware           = http.WithMiddleware
+	WithLongPollTarget       = http.WithLongPollTarget
 
 	// HTTP Context
 
 	HTTPTransportContextFrom = http.TransportContextFrom
 	ContextWithHeader        = http.ContextWithHeader
-
-	// HTTP Transport Encodings
-
-	HTTPBinaryV01     = http.BinaryV01
-	HTTPStructuredV01 = http.StructuredV01
-	HTTPBinaryV02     = http.BinaryV02
-	HTTPStructuredV02 = http.StructuredV02
-	HTTPBinaryV03     = http.BinaryV03
-	HTTPStructuredV03 = http.StructuredV03
-	HTTPBatchedV03    = http.BatchedV03
 )

@@ -3,9 +3,10 @@ package cloudevents
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"sort"
 	"strings"
+
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 const (
@@ -65,7 +66,7 @@ func (ec EventContextV02) ExtensionAs(name string, obj interface{}) error {
 			return fmt.Errorf("invalid type for extension %q", name)
 		}
 	default:
-		return fmt.Errorf("unkown extension type %T", obj)
+		return fmt.Errorf("unknown extension type %T", obj)
 	}
 }
 

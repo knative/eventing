@@ -38,7 +38,7 @@ func (t *Timestamp) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json unmarshal method used when this type is
-// unmarshed using json.Unmarshal.
+// unmarshaled using json.Unmarshal.
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	var timestamp string
 	if err := json.Unmarshal(b, &timestamp); err != nil {
@@ -61,7 +61,7 @@ func (t *Timestamp) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 }
 
 // UnmarshalXML implements the xml unmarshal method used when this type is
-// unmarshed using xml.Unmarshal.
+// unmarshaled using xml.Unmarshal.
 func (t *Timestamp) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	var timestamp string
 	if err := d.DecodeElement(&timestamp, &start); err != nil {

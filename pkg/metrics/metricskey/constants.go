@@ -20,8 +20,11 @@ const (
 	// LabelFilterResult is the label for the Trigger filtering result.
 	LabelFilterResult = "filter_result"
 
-	// LabelResult is the label for the result of sending an event to a downstream consumer. One of "success", "error".
-	LabelResult = "result"
+	// LabelResponseCode is the label for the HTTP response status code.
+	LabelResponseCode = "response_code"
+
+	// LabelResponseCodeClass is the label for the HTTP response status code class. For example, "2xx", "3xx", etc.
+	LabelResponseCodeClass = "response_code_class"
 
 	// AnyValue is the default value if the trigger filter attributes are empty.
 	AnyValue = "any"

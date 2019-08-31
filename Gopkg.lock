@@ -106,13 +106,13 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:0b2ffe5c17b0a3d49cc0a0cc20a13f7e1223fca1cd26587248a6b65c801dd46e"
+  branch = "master"
+  digest = "1:3e07bcc86130bbdd84341656a26746949f32a710e18ae43d5751f6fe16cb7fdb"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     ".",
     "pkg/cloudevents",
     "pkg/cloudevents/client",
-    "pkg/cloudevents/codec",
     "pkg/cloudevents/context",
     "pkg/cloudevents/datacodec",
     "pkg/cloudevents/datacodec/json",
@@ -123,8 +123,7 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "56931988abe3adf6792b5c6e575ee5f573e9ccbc"
-  version = "0.7.0"
+  revision = "a1c7a759c034d9289981dd8ca42ff3663842a8a6"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -1199,7 +1198,6 @@
     "codegen/cmd/injection-gen/args",
     "codegen/cmd/injection-gen/generators",
     "configmap",
-    "configmap/testing",
     "controller",
     "injection",
     "injection/clients/apiextclient",
@@ -1358,7 +1356,6 @@
     "knative.dev/pkg/client/clientset/versioned/fake",
     "knative.dev/pkg/codegen/cmd/injection-gen",
     "knative.dev/pkg/configmap",
-    "knative.dev/pkg/configmap/testing",
     "knative.dev/pkg/controller",
     "knative.dev/pkg/injection",
     "knative.dev/pkg/injection/clients/dynamicclient",
