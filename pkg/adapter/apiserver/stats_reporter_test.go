@@ -85,7 +85,7 @@ func TestReporterForErrorTag(t *testing.T) {
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:         "testns",
-		metricskeyEventing.Result:             "success",
+		metricskeyEventing.LabelFilterResult:  "success",
 		metricskey.LabelEventType:             "eventtype",
 		metricskey.LabelEventSource:           "eventsource",
 		metricskey.LabelImporterName:          "testimporter",

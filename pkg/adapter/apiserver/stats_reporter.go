@@ -101,7 +101,7 @@ func NewStatsReporter() (StatsReporter, error) {
 	}
 	r.importerResourceGroupTagKey = importerResourceGroupTag
 
-	resultTag, err := tag.NewKey(metricsKeyEventing.Result)
+	resultTag, err := tag.NewKey(metricsKeyEventing.LabelResult)
 	if err != nil {
 		return nil, err
 	}
