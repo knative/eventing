@@ -88,7 +88,7 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	send := h.decrementTTL(&event)
 	if !send {
 		// Record the event count.
-		h.Reporter.ReportEventCount(reporterArgs, errors.New("dropped due to TTL"))
+		h.Reporter.ReportEventCount(reporterArgs, http.StatusBadRequest)
 		return nil
 	}
 

@@ -12,10 +12,10 @@ type TestCloudEventsClient struct {
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
 
-func (c *TestCloudEventsClient) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+func (c *TestCloudEventsClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	// TODO: improve later.
 	c.Sent = append(c.Sent, event)
-	return nil, nil
+	return ctx, nil, nil
 }
 
 func (c *TestCloudEventsClient) StartReceiver(ctx context.Context, fn interface{}) error {

@@ -24,19 +24,19 @@ const (
 
 type mockReporter struct{}
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
+func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 	return nil
 }
 
-func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
 	return nil
 }
 
 type fakeClient struct{ sent bool }
 
-func (f *fakeClient) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+func (f *fakeClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	f.sent = true
-	return &event, nil
+	return ctx, &event, nil
 }
 
 func (f *fakeClient) StartReceiver(ctx context.Context, fn interface{}) error {
