@@ -32,8 +32,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// Convert base64 encoded json logging.Config to logging.Config.
-	loggingConfig, err := resources.Base64ToLoggingConfig(
+	loggingConfig, err := utils.Base64ToLoggingConfig(
 		env.LoggingConfigBase64)
 	if err != nil {
 		fmt.Printf("[ERROR] filed to process logging config: %s", err.Error())
@@ -95,7 +95,7 @@ func main() {
 
 	// Convert base64 encoded json metrics.ExporterOptions to
 	// metrics.ExporterOptions.
-	metricsConfig, err := resources.Base64ToMetricsOptions(
+	metricsConfig, err := utils.Base64ToMetricsOptions(
 		env.MetricsConfigBase64)
 	if err != nil {
 		logger.Errorf("failed to process metrics options: %s", err.Error())

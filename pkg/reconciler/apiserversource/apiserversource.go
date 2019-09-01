@@ -198,8 +198,8 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
 		SinkURI:       sinkURI,
-		LoggingConfig: resources.LoggingConfigToBase64(r.loggingConfig),
-		MetricsConfig: resources.MetricsOptionsToBase64(r.metricsConfig),
+		LoggingConfig: utils.LoggingConfigToBase64(r.loggingConfig),
+		MetricsConfig: utils.MetricsOptionsToBase64(r.metricsConfig),
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 
