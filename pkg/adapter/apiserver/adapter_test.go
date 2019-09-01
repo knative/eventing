@@ -136,7 +136,8 @@ func TestNewAdaptor(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create a new reporter: %v", err)
 			}
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r, "test-importer")
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r,
+				"test-importer")
 
 			got, ok := a.(*adapter)
 			if !ok {
