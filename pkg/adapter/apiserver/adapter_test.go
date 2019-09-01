@@ -217,7 +217,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create a new reporter: %v", err)
 	}
-	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-adapter")
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
 
 	err = errors.New("test never ran")
 	stopCh := make(chan struct{})
