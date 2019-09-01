@@ -65,12 +65,15 @@ type adapter struct {
 	namespace string
 	logger    *zap.SugaredLogger
 
-	mode     string
-	delegate eventDelegate
-	reporter StatsReporter
+	mode              string
+	delegate          eventDelegate
+	reporter          StatsReporter
+	apiServerImporter string
 }
 
-func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents.Client, logger *zap.SugaredLogger, opt Options, reporter StatsReporter) Adapter {
+func NewAdaptor(source string, k8sClient dynamic.Interface,
+	ceClient cloudevents.Client, logger *zap.SugaredLogger,
+	opt Options, reporter StatsReporter, apiServerImporter string) Adapter {
 	mode := opt.Mode
 	switch mode {
 	case ResourceMode, RefMode:
@@ -82,14 +85,15 @@ func NewAdaptor(source string, k8sClient dynamic.Interface, ceClient cloudevents
 	}
 
 	a := &adapter{
-		k8s:       k8sClient,
-		ce:        ceClient,
-		source:    source,
-		logger:    logger,
-		gvrcs:     opt.GVRCs,
-		namespace: opt.Namespace,
-		mode:      mode,
-		reporter:  reporter,
+		k8s:               k8sClient,
+		ce:                ceClient,
+		source:            source,
+		logger:            logger,
+		gvrcs:             opt.GVRCs,
+		namespace:         opt.Namespace,
+		mode:              mode,
+		reporter:          reporter,
+		apiServerImporter: apiServerImporter,
 	}
 	return a
 }
@@ -108,20 +112,22 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 	switch a.mode {
 	case ResourceMode:
 		d = &resource{
-			ce:        a.ce,
-			source:    a.source,
-			logger:    a.logger,
-			reporter:  a.reporter,
-			namespace: a.namespace,
+			ce:                a.ce,
+			source:            a.source,
+			logger:            a.logger,
+			reporter:          a.reporter,
+			namespace:         a.namespace,
+			apiServerImporter: a.apiServerImporter,
 		}
 
 	case RefMode:
 		d = &ref{
-			ce:        a.ce,
-			source:    a.source,
-			logger:    a.logger,
-			reporter:  a.reporter,
-			namespace: a.namespace,
+			ce:                a.ce,
+			source:            a.source,
+			logger:            a.logger,
+			reporter:          a.reporter,
+			namespace:         a.namespace,
+			apiServerImporter: a.apiServerImporter,
 		}
 
 	default:

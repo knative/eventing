@@ -35,9 +35,10 @@ func unregister() {
 
 func TestStatsReporter(t *testing.T) {
 	args := &ReportArgs{
-		ns:          "testns",
-		eventType:   "dev.knative.apiserver.resource.update",
-		eventSource: "unit-test",
+		ns:                "testns",
+		eventType:         "dev.knative.apiserver.resource.update",
+		eventSource:       "unit-test",
+		apiServerImporter: "testimporter",
 	}
 
 	r, err := NewStatsReporter()
@@ -49,9 +50,11 @@ func TestStatsReporter(t *testing.T) {
 	defer unregister()
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelEventType:     "dev.knative.apiserver.resource.update",
-		metricskey.LabelEventSource:   "unit-test",
+		metricskey.LabelNamespaceName:         "testns",
+		metricskey.LabelEventType:             "dev.knative.apiserver.resource.update",
+		metricskey.LabelEventSource:           "unit-test",
+		metricskey.LabelImporterName:          "testimporter",
+		metricskey.LabelImporterResourceGroup: "apiserversources.sources.eventing.knative.dev",
 	}
 
 	// test ReportEventCount
@@ -74,16 +77,19 @@ func TestReporterForErrorTag(t *testing.T) {
 	}
 
 	args := &ReportArgs{
-		ns:          "testns",
-		eventType:   "eventtype",
-		eventSource: "eventsource",
+		ns:                "testns",
+		eventType:         "eventtype",
+		eventSource:       "eventsource",
+		apiServerImporter: "testimporter",
 	}
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName: "testns",
-		metricskeyEventing.Result:     "success",
-		metricskey.LabelEventType:     "eventtype",
-		metricskey.LabelEventSource:   "eventsource",
+		metricskey.LabelNamespaceName:         "testns",
+		metricskeyEventing.Result:             "success",
+		metricskey.LabelEventType:             "eventtype",
+		metricskey.LabelEventSource:           "eventsource",
+		metricskey.LabelImporterName:          "testimporter",
+		metricskey.LabelImporterResourceGroup: "apiserversources.sources.eventing.knative.dev",
 	}
 	e := fmt.Errorf("test error")
 	// test ReportEventCount

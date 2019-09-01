@@ -34,7 +34,8 @@ func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceAddEventType, object, object)
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceAddEventType,
+		object, object)
 }
 
 func MakeUpdateEvent(source string, obj interface{}) (*cloudevents.Event, error) {
@@ -43,7 +44,8 @@ func MakeUpdateEvent(source string, obj interface{}) (*cloudevents.Event, error)
 	}
 	object := obj.(*unstructured.Unstructured)
 
-	return makeEvent(source, sourcesv1alpha1.ApiServerSourceUpdateEventType, object, object)
+	return makeEvent(source, sourcesv1alpha1.ApiServerSourceUpdateEventType,
+		object, object)
 }
 
 func MakeDeleteEvent(source string, obj interface{}) (*cloudevents.Event, error) {

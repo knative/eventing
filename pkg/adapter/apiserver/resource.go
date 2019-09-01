@@ -27,12 +27,13 @@ import (
 )
 
 type resource struct {
-	ce        cloudevents.Client
-	source    string
-	eventType string
-	logger    *zap.SugaredLogger
-	reporter  StatsReporter
-	namespace string
+	ce                cloudevents.Client
+	source            string
+	eventType         string
+	logger            *zap.SugaredLogger
+	reporter          StatsReporter
+	namespace         string
+	apiServerImporter string
 }
 
 var _ cache.Store = (*resource)(nil)
@@ -69,11 +70,13 @@ func (a *resource) Delete(obj interface{}) error {
 	return a.sendEvent(context.Background(), event, a.reporter)
 }
 
-func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event, reporter StatsReporter) error {
+func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event,
+	reporter StatsReporter) error {
 	reportArgs := &ReportArgs{
-		ns:          a.namespace,
-		eventSource: event.Source(),
-		eventType:   event.Type(),
+		ns:                a.namespace,
+		eventSource:       event.Source(),
+		eventType:         event.Type(),
+		apiServerImporter: a.apiServerImporter,
 	}
 	a.reporter.ReportEventCount(reportArgs, nil)
 
@@ -88,7 +91,8 @@ func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event, repo
 
 func (a *resource) addControllerWatch(gvr schema.GroupVersionResource) {
 	// not supported for resource.
-	a.logger.Warn("ignored controller watch request on gvr.", zap.String("gvr", gvr.String()))
+	a.logger.Warn("ignored controller watch request on gvr.",
+		zap.String("gvr", gvr.String()))
 }
 
 // Stub cache.Store impl
@@ -104,12 +108,14 @@ func (a *resource) ListKeys() []string {
 }
 
 // Implements cache.Store
-func (a *resource) Get(obj interface{}) (item interface{}, exists bool, err error) {
+func (a *resource) Get(obj interface{}) (item interface{}, exists bool,
+	err error) {
 	return nil, false, nil
 }
 
 // Implements cache.Store
-func (a *resource) GetByKey(key string) (item interface{}, exists bool, err error) {
+func (a *resource) GetByKey(key string) (item interface{}, exists bool,
+	err error) {
 	return nil, false, nil
 }
 
