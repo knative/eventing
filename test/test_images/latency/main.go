@@ -146,7 +146,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 			defer cancel()
 			sendTime := time.Now()
-			if _, err := c.Send(ctx, event); err != nil {
+			if _, _, err := c.Send(ctx, event); err != nil {
 				resultCh <- state{status: undelivered}
 			}
 			if timeCh, ok := eventTimeMap[seqStr]; ok {

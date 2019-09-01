@@ -91,7 +91,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if resp, err := c.Send(context.Background(), event); err != nil {
+	if _, resp, err := c.Send(context.Background(), event); err != nil {
 		fmt.Printf("Failed to send event to %s: %s\n", target, err)
 		os.Exit(1)
 	} else if resp != nil {

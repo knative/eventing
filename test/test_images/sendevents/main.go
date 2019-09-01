@@ -153,7 +153,7 @@ func main() {
 			log.Fatalf("failed to set data, %v", err)
 		}
 
-		if resp, err := c.Send(context.Background(), event); err != nil {
+		if _, resp, err := c.Send(context.Background(), event); err != nil {
 			log.Printf("send returned an error: %v\n", err)
 		} else if resp != nil {
 			log.Printf("Got response from %s\n%s\n", sink, resp)
