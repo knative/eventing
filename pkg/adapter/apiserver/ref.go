@@ -36,9 +36,10 @@ type ref struct {
 	eventType string
 	logger    *zap.SugaredLogger
 
-	controlledGVRs []schema.GroupVersionResource
-	reporter       StatsReporter
-	namespace      string
+	controlledGVRs    []schema.GroupVersionResource
+	reporter          StatsReporter
+	namespace         string
+	apiServerImporter string
 }
 
 var _ cache.Store = (*ref)(nil)
@@ -105,9 +106,10 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 
 func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 	reportArgs := &ReportArgs{
-		ns:          a.namespace,
-		eventSource: event.Source(),
-		eventType:   event.Type(),
+		ns:                a.namespace,
+		eventSource:       event.Source(),
+		eventType:         event.Type(),
+		apiServerImporter: a.apiServerImporter,
 	}
 	a.reporter.ReportEventCount(reportArgs, nil)
 

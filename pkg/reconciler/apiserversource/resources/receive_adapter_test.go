@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -28,9 +29,10 @@ import (
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
+	name := "source-name"
 	src := &v1alpha1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "source-name",
+			Name:      name,
 			Namespace: "source-namespace",
 			UID:       "1234",
 		},
@@ -62,10 +64,11 @@ func TestMakeReceiveAdapter(t *testing.T) {
 
 	one := int32(1)
 	trueValue := true
+
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
-			Name:      "apiserversource-source-name-1234",
+			Name:      fmt.Sprintf("apiserversource-%s-1234", name),
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
@@ -74,7 +77,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				{
 					APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 					Kind:               "ApiServerSource",
-					Name:               "source-name",
+					Name:               name,
 					UID:                "1234",
 					Controller:         &trueValue,
 					BlockOwnerDeletion: &trueValue,
@@ -131,6 +134,9 @@ func TestMakeReceiveAdapter(t *testing.T) {
 											FieldPath: "metadata.namespace",
 										},
 									},
+								}, {
+									Name:  "APISERVERIMPORTER",
+									Value: name,
 								}, {
 									Name:  "METRICS_DOMAIN",
 									Value: "knative.dev/eventing",

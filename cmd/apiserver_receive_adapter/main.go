@@ -49,12 +49,13 @@ var (
 )
 
 type envConfig struct {
-	Namespace  string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
-	Mode       string   `envconfig:"MODE"`
-	SinkURI    string   `split_words:"true" required:"true"`
-	ApiVersion []string `split_words:"true" required:"true"`
-	Kind       []string `required:"true"`
-	Controller []bool   `required:"true"`
+	Namespace         string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode              string   `envconfig:"MODE"`
+	SinkURI           string   `split_words:"true" required:"true"`
+	ApiVersion        []string `split_words:"true" required:"true"`
+	Kind              []string `required:"true"`
+	Controller        []bool   `required:"true"`
+	ApiServerImporter string   `envconfig:"APISERVERIMPORTER" required:"true"`
 	// MetricsConfigBase64 is a base64 encoded json string of
 	// metrics.ExporterOptions. This is used to configure the metrics exporter
 	// options, the config is stored in a config map inside the controllers
@@ -163,7 +164,7 @@ func main() {
 	}
 
 	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt,
-		reporter)
+		reporter, env.ApiServerImporter)
 	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))

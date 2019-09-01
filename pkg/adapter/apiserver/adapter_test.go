@@ -112,7 +112,7 @@ func TestNewAdaptor(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create a new reporter: %v", err)
 			}
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r)
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r, "test-importer")
 
 			got, ok := a.(*adapter)
 			if !ok {
@@ -155,7 +155,7 @@ func TestAdapter_StartRef(t *testing.T) {
 		t.Fatalf("Failed to create a new reporter: %v", err)
 	}
 
-	a := NewAdaptor(source, k8s, ce, logger, opt, r)
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
 
 	err = errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -193,7 +193,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create a new reporter: %v", err)
 	}
-	a := NewAdaptor(source, k8s, ce, logger, opt, r)
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-adapter")
 
 	err = errors.New("test never ran")
 	stopCh := make(chan struct{})

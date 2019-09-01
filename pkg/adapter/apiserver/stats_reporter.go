@@ -19,10 +19,12 @@ package apiserver
 import (
 	"context"
 
+	"knative.dev/pkg/metrics/metricskey"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"knative.dev/eventing/pkg/metrics/metricskey"
+	metricsKeyEventing "knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics"
 )
 
@@ -34,27 +36,33 @@ var (
 		"Number of events created",
 		stats.UnitDimensionless,
 	)
+	_ StatsReporter = (*reporter)(nil)
 )
 
 type ReportArgs struct {
-	ns          string
-	eventType   string
-	eventSource string
+	ns                string
+	eventType         string
+	eventSource       string
+	apiServerImporter string
 }
+
+const (
+	importerResourceGroupValue = "apiserversources.sources.eventing.knative.dev"
+)
 
 // StatsReporter defines the interface for sending filter metrics.
 type StatsReporter interface {
 	ReportEventCount(args *ReportArgs, err error) error
 }
 
-var _ StatsReporter = (*reporter)(nil)
-
 // reporter holds cached metric objects to report filter metrics.
 type reporter struct {
-	namespaceTagKey tag.Key
-	eventTypeKey    tag.Key
-	eventSourceKey  tag.Key
-	resultKey       tag.Key
+	namespaceTagKey             tag.Key
+	eventTypeTagKey             tag.Key
+	eventSourceTagKey           tag.Key
+	importerNameTagKey          tag.Key
+	importerResourceGroupTagKey tag.Key
+	resultKey                   tag.Key
 }
 
 // NewStatsReporter creates a reporter that collects and reports apiserversource
@@ -63,22 +71,37 @@ func NewStatsReporter() (StatsReporter, error) {
 	var r = &reporter{}
 
 	// Create the tag keys that will be used to add tags to our measurements.
-	nsTag, err := tag.NewKey(metricskey.NamespaceName)
+	nsTag, err := tag.NewKey(metricskey.LabelNamespaceName)
 	if err != nil {
 		return nil, err
 	}
 	r.namespaceTagKey = nsTag
-	eventTypeTag, err := tag.NewKey(metricskey.EventType)
+
+	eventTypeTag, err := tag.NewKey(metricskey.LabelEventType)
 	if err != nil {
 		return nil, err
 	}
-	r.eventTypeKey = eventTypeTag
-	eventSourceTag, err := tag.NewKey(metricskey.EventSource)
+	r.eventTypeTagKey = eventTypeTag
+
+	eventSourceTag, err := tag.NewKey(metricskey.LabelEventSource)
 	if err != nil {
 		return nil, err
 	}
-	r.eventSourceKey = eventSourceTag
-	resultTag, err := tag.NewKey(metricskey.Result)
+	r.eventSourceTagKey = eventSourceTag
+
+	importerNameTag, err := tag.NewKey(metricskey.LabelImporterName)
+	if err != nil {
+		return nil, err
+	}
+	r.importerNameTagKey = importerNameTag
+
+	importerResourceGroupTag, err := tag.NewKey(metricskey.LabelImporterResourceGroup)
+	if err != nil {
+		return nil, err
+	}
+	r.importerResourceGroupTagKey = importerResourceGroupTag
+
+	resultTag, err := tag.NewKey(metricsKeyEventing.Result)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +113,8 @@ func NewStatsReporter() (StatsReporter, error) {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys: []tag.Key{r.namespaceTagKey, r.eventSourceKey,
-				r.eventTypeKey},
+			TagKeys: []tag.Key{r.namespaceTagKey, r.eventSourceTagKey,
+				r.eventTypeTagKey, r.importerNameTagKey, r.importerResourceGroupTagKey},
 		},
 	)
 	if err != nil {
@@ -107,6 +130,11 @@ func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
 	if err != nil {
 		return err
 	}
+	ctx, err = r.generateTag(args, tag.Insert(r.importerResourceGroupTagKey,
+		importerResourceGroupValue))
+	if err != nil {
+		return err
+	}
 	metrics.Record(ctx, eventCountM.M(1))
 	return nil
 }
@@ -115,7 +143,8 @@ func (r *reporter) generateTag(args *ReportArgs, t tag.Mutator) (context.Context
 	return tag.New(
 		context.Background(),
 		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.eventSourceKey, args.eventSource),
-		tag.Insert(r.eventTypeKey, args.eventType),
+		tag.Insert(r.eventSourceTagKey, args.eventSource),
+		tag.Insert(r.eventTypeTagKey, args.eventType),
+		tag.Insert(r.importerNameTagKey, args.apiServerImporter),
 		t)
 }
