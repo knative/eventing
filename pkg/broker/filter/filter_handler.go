@@ -213,7 +213,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if subscriberURIString == "" {
 		err = errors.New("unable to read subscriberURI")
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
+		r.reporter.ReportEventCount(reportArgs, http.StatusForbidden)
 		return nil, err
 	}
 	// We could just send the request to this URI regardless, but let's just check to see if it well
@@ -222,7 +222,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if err != nil {
 		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
+		r.reporter.ReportEventCount(reportArgs, http.StatusForbidden)
 		return nil, err
 	}
 
@@ -328,27 +328,6 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 		}
 	}
 	return passFilter
-}
-
-// triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,
-// returns the any value filter.
-func triggerFilterAttribute(filter *eventingv1alpha1.TriggerFilter, attributeName string) string {
-	attributeValue := eventingv1alpha1.TriggerAnyFilter
-	if filter != nil {
-		if filter.DeprecatedSourceAndType != nil {
-			if attributeName == "type" {
-				attributeValue = filter.DeprecatedSourceAndType.Type
-			} else if attributeName == "source" {
-				attributeValue = filter.DeprecatedSourceAndType.Source
-			}
-		} else if filter.Attributes != nil {
-			attrs := map[string]string(*filter.Attributes)
-			if v, ok := attrs[attributeName]; ok {
-				attributeValue = v
-			}
-		}
-	}
-	return attributeValue
 }
 
 // triggerFilterAttribute returns the filter attribute value for a given `attributeName`. If it doesn't not exist,

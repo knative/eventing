@@ -113,7 +113,7 @@ func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 	}
 	a.reporter.ReportEventCount(reportArgs, nil)
 
-	_, err := a.ce.Send(ctx, *event)
+	_, _, err := a.ce.Send(ctx, *event)
 	if err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 		a.reporter.ReportEventCount(reportArgs, err)

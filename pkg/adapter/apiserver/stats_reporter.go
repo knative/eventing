@@ -24,7 +24,6 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	metricsKeyEventing "knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics"
 )
 
@@ -62,7 +61,9 @@ type reporter struct {
 	eventSourceTagKey           tag.Key
 	importerNameTagKey          tag.Key
 	importerResourceGroupTagKey tag.Key
-	resultKey                   tag.Key
+	responseCodeKey             tag.Key
+	responseCodeClassKey        tag.Key
+	filterResultKey             tag.Key
 }
 
 // NewStatsReporter creates a reporter that collects and reports apiserversource
@@ -101,11 +102,21 @@ func NewStatsReporter() (StatsReporter, error) {
 	}
 	r.importerResourceGroupTagKey = importerResourceGroupTag
 
-	resultTag, err := tag.NewKey(metricsKeyEventing.LabelResult)
+	filterResultTag, err := tag.NewKey(LabelFilterResult)
 	if err != nil {
 		return nil, err
 	}
-	r.resultKey = resultTag
+	r.filterResultKey = filterResultTag
+	responseCodeTag, err := tag.NewKey(LabelResponseCode)
+	if err != nil {
+		return nil, err
+	}
+	r.responseCodeKey = responseCodeTag
+	responseCodeClassTag, err := tag.NewKey(LabelResponseCodeClass)
+	if err != nil {
+		return nil, err
+	}
+	r.responseCodeClassKey = responseCodeClassTag
 
 	// Create view to see our measurements.
 	err = view.Register(
