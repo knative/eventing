@@ -111,15 +111,11 @@ func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 		eventType:         event.Type(),
 		apiServerImporter: a.apiServerImporter,
 	}
-	a.reporter.ReportEventCount(reportArgs, nil)
 
-	_, _, err := a.ce.Send(ctx, *event)
-	if err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		a.reporter.ReportEventCount(reportArgs, err)
-		return err
-	}
-	return nil
+	rctx, _, err := a.ce.Send(ctx, *event)
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
+	a.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
+	return err
 }
 
 // Stub cache.Store impl

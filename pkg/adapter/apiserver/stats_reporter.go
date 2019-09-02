@@ -18,13 +18,16 @@ package apiserver
 
 import (
 	"context"
+	"strconv"
 
-	"knative.dev/pkg/metrics/metricskey"
+	. "knative.dev/eventing/pkg/metrics/metricskey"
+	"knative.dev/eventing/pkg/utils"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/metrics/metricskey"
 )
 
 var (
@@ -35,7 +38,6 @@ var (
 		"Number of events created",
 		stats.UnitDimensionless,
 	)
-	_ StatsReporter = (*reporter)(nil)
 )
 
 type ReportArgs struct {
@@ -51,8 +53,10 @@ const (
 
 // StatsReporter defines the interface for sending filter metrics.
 type StatsReporter interface {
-	ReportEventCount(args *ReportArgs, err error) error
+	ReportEventCount(args *ReportArgs, responseCode int) error
 }
+
+var _ StatsReporter = (*reporter)(nil)
 
 // reporter holds cached metric objects to report filter metrics.
 type reporter struct {
@@ -125,7 +129,9 @@ func NewStatsReporter() (StatsReporter, error) {
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
 			TagKeys: []tag.Key{r.namespaceTagKey, r.eventSourceTagKey,
-				r.eventTypeTagKey, r.importerNameTagKey, r.importerResourceGroupTagKey},
+				r.eventTypeTagKey, r.importerNameTagKey,
+				r.importerResourceGroupTagKey, r.responseCodeKey,
+				r.responseCodeClassKey},
 		},
 	)
 	if err != nil {
@@ -136,13 +142,8 @@ func NewStatsReporter() (StatsReporter, error) {
 }
 
 // ReportEventCount captures the event count.
-func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
-	ctx, err := r.generateTag(args, tag.Insert(r.resultKey, Result(err)))
-	if err != nil {
-		return err
-	}
-	ctx, err = r.generateTag(args, tag.Insert(r.importerResourceGroupTagKey,
-		importerResourceGroupValue))
+func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	ctx, err := r.generateTag(args, responseCode)
 	if err != nil {
 		return err
 	}
@@ -150,12 +151,15 @@ func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
 	return nil
 }
 
-func (r *reporter) generateTag(args *ReportArgs, t tag.Mutator) (context.Context, error) {
+func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
 		context.Background(),
 		tag.Insert(r.namespaceTagKey, args.ns),
 		tag.Insert(r.eventSourceTagKey, args.eventSource),
 		tag.Insert(r.eventTypeTagKey, args.eventType),
-		tag.Insert(r.importerNameTagKey, args.apiServerImporter),
-		t)
+		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
+		tag.Insert(r.importerResourceGroupTagKey,
+			importerResourceGroupValue),
+		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)),
+		tag.Insert(r.importerNameTagKey, args.apiServerImporter))
 }

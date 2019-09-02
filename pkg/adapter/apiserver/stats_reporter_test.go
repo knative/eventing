@@ -17,9 +17,10 @@ limitations under the License.
 package apiserver
 
 import (
-	"fmt"
+	"net/http"
 	"testing"
 
+	. "knative.dev/eventing/pkg/metrics/metricskey"
 	metricskeyEventing "knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
@@ -55,20 +56,22 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelEventSource:           "unit-test",
 		metricskey.LabelImporterName:          "testimporter",
 		metricskey.LabelImporterResourceGroup: "apiserversources.sources.eventing.knative.dev",
+		LabelResponseCode:                     "202",
+		LabelResponseCodeClass:                "2xx",
 	}
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 
 }
 
-func TestReporterForErrorTag(t *testing.T) {
+func TestReporterFor5xxResponse(t *testing.T) {
 	r, err := NewStatsReporter()
 	defer unregister()
 
@@ -90,14 +93,15 @@ func TestReporterForErrorTag(t *testing.T) {
 		metricskey.LabelEventSource:           "eventsource",
 		metricskey.LabelImporterName:          "testimporter",
 		metricskey.LabelImporterResourceGroup: "apiserversources.sources.eventing.knative.dev",
+		LabelResponseCode:                     "500",
+		LabelResponseCodeClass:                "5xx",
 	}
-	e := fmt.Errorf("test error")
 	// test ReportEventCount
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, e)
+		return r.ReportEventCount(args, http.StatusInternalServerError)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, e)
+		return r.ReportEventCount(args, http.StatusInternalServerError)
 	})
 	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 }
