@@ -32,6 +32,12 @@ import (
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
+type mockReporter struct{}
+
+func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	return nil
+}
+
 func TestNewAdaptor(t *testing.T) {
 	ce := kncetesting.NewTestClient()
 	logger := zap.NewExample().Sugar()
@@ -132,10 +138,7 @@ func TestNewAdaptor(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			r, err := NewStatsReporter()
-			if err != nil {
-				t.Fatalf("Failed to create a new reporter: %v", err)
-			}
+			r := &mockReporter{}
 			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r,
 				"test-importer")
 
@@ -175,14 +178,10 @@ func TestAdapter_StartRef(t *testing.T) {
 			},
 		}},
 	}
-	r, err := NewStatsReporter()
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
-
+	r := &mockReporter{}
 	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
 
-	err = errors.New("test never ran")
+	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
@@ -214,13 +213,10 @@ func TestAdapter_StartResource(t *testing.T) {
 			},
 		}},
 	}
-	r, err := NewStatsReporter()
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
+	r := &mockReporter{}
 	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
 
-	err = errors.New("test never ran")
+	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
 	done := make(chan struct{})
 	go func() {
@@ -303,10 +299,7 @@ func makeResourceAndTestingClient(t *testing.T) (*resource, *kncetesting.TestClo
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
-	r, err := NewStatsReporter()
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
+	r := &mockReporter{}
 	return &resource{
 		ce:       ce,
 		source:   source,
@@ -319,10 +312,7 @@ func makeRefAndTestingClient(t *testing.T) (*ref, *kncetesting.TestCloudEventsCl
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
-	r, err := NewStatsReporter()
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
+	r := &mockReporter{}
 	return &ref{
 		ce:       ce,
 		source:   source,
