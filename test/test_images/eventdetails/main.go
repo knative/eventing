@@ -25,16 +25,15 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
-func getHeader(header http.Header, headerName string) string {
-	&value := string(nil)
+func getHeader(header http.Header, headerName string) *string {
 	if header != nil && len(header) > 0 {
 		for k, v := range header {
 			if k == headerName {
-				*value = v				
+				return &v[0]
 			}
 		}
 	}
-	return value
+	return nil
 }
 
 //func handler(event cloudevents.Event) {
@@ -43,8 +42,16 @@ func handler(ctx context.Context, event cloudevents.Event) {
 	tx := cloudevents.HTTPTransportContextFrom(ctx)
 	fmt.Printf("Got Transport Context: %+v\n", tx)
 	fmt.Printf("----------------------------\n")
-	header := tx.Header()
-
+	header := tx.Header
+	headerNameList := []string{"X-B3-Sampled", "X-B3-Traceid", "X-B3-Spanid", "X-B3-ParentSpanId", "X-Custom-Header"}
+	for _, headerName := range headerNameList {
+		headerValue := getHeader(header, headerName)
+		if headerValue != nil {
+			fmt.Printf("Got Header %s: %s\n", headerName, *headerValue)
+		} else {
+			fmt.Printf("Missing Header %s\n", headerName)
+		}
+	}
 	if err := event.Validate(); err == nil {
 		fmt.Printf("eventdetails:\n%s", event.String())
 	} else {

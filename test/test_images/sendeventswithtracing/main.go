@@ -137,7 +137,7 @@ func main() {
 
 	var untyped map[string]interface{}
 	if err := json.Unmarshal([]byte(eventData), &untyped); err != nil {
-		log.Println("Currently sendevent only supports JSON event data")
+		log.Println("Currently sendeventswithtracing only supports JSON event data")
 		os.Exit(1)
 	}
 

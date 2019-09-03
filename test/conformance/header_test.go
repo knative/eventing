@@ -77,8 +77,10 @@ func singleEvent(t *testing.T, encoding string) {
 		}
 
 		// send fake CloudEvent to the channel
-		body := fmt.Sprintf("TestSingleHeaderEvent %s", uuid.NewUUID())
+		eventID := fmt.Sprintf("%s", uuid.NewUUID())
+		body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
 		event := &resources.CloudEvent{
+			ID:       eventID,
 			Source:   senderName,
 			Type:     resources.CloudEventDefaultType,
 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
@@ -96,7 +98,17 @@ func singleEvent(t *testing.T, encoding string) {
 		if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
-		//TODO verify that x-b3-spani and x-b3-traceid are set
+
+		//verify that required x-b3-spani and x-b3-traceid are set
+		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid"}
+		for _, headerName := range requiredHeaderNameList {
+			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
+			if err := client.CheckLog(loggerPodName, common.CheckerContains(expectedHeaderLog)); err != nil {
+				st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedHeaderLog, loggerPodName, err)
+			}
+		}
+
 		//TODO report on optional x-b3-parentspanid and x-b3-sampled if present?
+		//TODO report x-custom-header
 	})
 }
