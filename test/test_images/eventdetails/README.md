@@ -2,7 +2,7 @@
 
 Validates received events and print details for conformance testing.
 
-## Development 
+## Development
 
 Can be run without k8s for quick dev testing of code:
 
