@@ -2,7 +2,7 @@
 
 Send test event with tracing enabled.
 
-## Development 
+## Development
 
 Can be run without k8s for quick dev testing of code:
 
