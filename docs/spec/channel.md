@@ -152,8 +152,8 @@ spec:
 
 Each channel is _namespaced_ and MUST have the following:
 
--   label of `messaging.knative.dev/subscribable: "true"`
--   The category `channel`.
+- label of `messaging.knative.dev/subscribable: "true"`
+- The category `channel`.
 
 ### Data Plane
 
@@ -222,19 +222,19 @@ send CloudEvents to subscribers.
 Channels SHOULD support various retry configuration parameters, including, but
 not limited to:
 
--   the maximum number of retries
--   the time in-between retries
--   the backoff rate
+- the maximum number of retries
+- the time in-between retries
+- the backoff rate
 
 #### Metrics
 
 Channels SHOULD expose a variety of metrics, including, but not limited to:
 
--   Number of malformed incoming event queueing events (`400 Bad Request`
-    responses)
--   Number of accepted incoming event queuing events (`202 Accepted` responses)
--   Number of egress CloudEvents produced (with the former metric, used to
-    derive channel queue size)
+- Number of malformed incoming event queueing events (`400 Bad Request`
+  responses)
+- Number of accepted incoming event queuing events (`202 Accepted` responses)
+- Number of egress CloudEvents produced (with the former metric, used to derive
+  channel queue size)
 
 Metrics SHOULD be enabled by default, with a configuration parameter included to
 disable them if desired.
