@@ -28,7 +28,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"

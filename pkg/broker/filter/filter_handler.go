@@ -222,7 +222,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if err != nil {
 		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
+		r.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
 		return nil, err
 	}
 
@@ -232,7 +232,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if filterResult == failFilter {
 		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusForbidden)
+		r.reporter.ReportEventCount(reportArgs, http.StatusExpectationFailed)
 		return nil, nil
 	}
 
