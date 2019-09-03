@@ -17,7 +17,6 @@ limitations under the License.
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -30,7 +29,6 @@ import (
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
-	"knative.dev/pkg/logging"
 )
 
 const (
@@ -159,8 +157,7 @@ func updateDefaultChannelCM(client *common.Client, updateConfig func(config *def
 	}
 	// update the defaultchannel configmap
 	configMap.Data[channelDefaulterKey] = string(configBytes)
-	channelDefaulter := defaultchannel.New(logging.FromContext(context.Background()).Desugar())
-	channelDefaulter.UpdateConfigMap(configMap)
+	_, err = cmInterface.Update(configMap)
 	return nil
 }
 
