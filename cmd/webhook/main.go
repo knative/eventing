@@ -128,17 +128,18 @@ func main() {
 	}
 
 	options := webhook.ControllerOptions{
-		ServiceName:       logconfig.WebhookName(),
-		DeploymentName:    logconfig.WebhookName(),
-		Namespace:         system.Namespace(),
-		Port:              8443,
-		SecretName:        "eventing-webhook-certs",
-		WebhookName:       "webhook.eventing.knative.dev",
-		StatsReporter:     stats,
-		RegistrationDelay: registrationDelay * time.Second,
+		ServiceName:                     logconfig.WebhookName(),
+		DeploymentName:                  logconfig.WebhookName(),
+		Namespace:                       system.Namespace(),
+		Port:                            8443,
+		SecretName:                      "eventing-webhook-certs",
+		WebhookName:                     "webhook.eventing.knative.dev",
+		StatsReporter:                   stats,
+		RegistrationDelay:               registrationDelay * time.Second,
+		ResourceAdmissionControllerPath: "/",
 	}
 
-	handlers := map[schema.GroupVersionKind]webhook.GenericCRD{
+	resourceHandlers := map[schema.GroupVersionKind]webhook.GenericCRD{
 		// For group eventing.knative.dev,
 		eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
 		eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
@@ -158,7 +159,12 @@ func main() {
 		return ctx
 	}
 
-	controller, err := webhook.NewAdmissionController(kubeClient, options, handlers, logger, ctxFunc, true)
+	resourceAdmissionController := webhook.NewResourceAdmissionController(resourceHandlers, options, true)
+	admissionControllers := map[string]webhook.AdmissionController{
+		options.ResourceAdmissionControllerPath: resourceAdmissionController,
+	}
+
+	controller, err := webhook.New(kubeClient, options, admissionControllers, logger, ctxFunc)
 
 	if err != nil {
 		logger.Fatalw("Failed to create admission controller", zap.Error(err))
