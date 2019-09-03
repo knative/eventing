@@ -18,6 +18,9 @@ package ingress
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -25,8 +28,6 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
-	"strconv"
-	"time"
 )
 
 var (
