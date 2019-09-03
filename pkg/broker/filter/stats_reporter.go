@@ -190,6 +190,7 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 	if err != nil {
 		return err
 	}
+
 	// convert time.Duration in nanoseconds to milliseconds.
 	metrics.Record(ctx, processingTimeInMsecM.M(float64(d/time.Millisecond)))
 	return nil
