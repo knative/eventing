@@ -12,37 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: broker-latency
   namespace: perf-eventing
   labels:
     role: broker-latency-consumer
 spec:
-  serviceAccountName: perf-eventing
-  restartPolicy: Never
-  containers:
-    - name: "broker-latency"
-      image: knative.dev/eventing/test/test_images/latencymako
-      resources:
-        requests:
-          cpu: 1000m
-          memory: 2Gi
-      ports:
-        - containerPort: 8080
-      args:
+  completions: 3
+  parallelism: 3
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        role: broker-latency-consumer
+    spec:
+      serviceAccountName: perf-eventing
+      restartPolicy: Never
+      containers:
+      - name: broker-latency
+        image: knative.dev/eventing/test/test_images/latencymako
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+        args:
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
         - "--pace=100:10,200:20,400:60"
         - "--verbose"
-      volumeMounts:
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+        - name: cloudevents
+          containerPort: 8080
+        volumeMounts:
         - name: config-mako
           mountPath: /etc/config-mako
-      terminationMessagePolicy: FallbackToLogsOnError
-    - name: "mako-stub"
-      image: knative.dev/pkg/test/mako/stub-sidecar
-      terminationMessagePolicy: FallbackToLogsOnError
-  volumes:
-    - name: config-mako
-      configMap:
-        name: config-mako
+        terminationMessagePolicy: FallbackToLogsOnError
+      - name: mako-stub
+        image: knative.dev/pkg/test/mako/stub-sidecar
+        ports:
+        - name: quickstore
+          containerPort: 9813
+        terminationMessagePolicy: FallbackToLogsOnError
+      volumes:
+      - name: config-mako
+        configMap:
+          name: config-mako

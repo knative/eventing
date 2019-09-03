@@ -20,16 +20,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/google/mako/go/quickstore"
-	"knative.dev/eventing/test/common"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/google/mako/go/quickstore"
 	vegeta "github.com/tsenart/vegeta/lib"
+
+	"knative.dev/eventing/test/common"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/test/mako"
 	pkgpacers "knative.dev/pkg/test/vegeta/pacers"
@@ -55,6 +57,11 @@ var (
 	warmupSeconds uint
 	verbose       bool
 	fatalf        = log.Fatalf
+)
+
+// environment variables consumed by the test
+const (
+	podNameEnvVar = "POD_NAME"
 )
 
 // eventStatus is status of the event delivery.
@@ -213,7 +220,10 @@ func main() {
 		time.Sleep(30 * time.Second)
 	}
 
-	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, defaultEventType, defaultEventSource, "binary").VegetaTargeter()
+	// set events defaults
+	eventSrc := eventsSource()
+
+	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, defaultEventType, eventSrc, "binary").VegetaTargeter()
 
 	pacers := make([]vegeta.Pacer, len(pacerSpecs))
 	durations := make([]time.Duration, len(pacerSpecs))
@@ -463,4 +473,11 @@ func printf(f string, args ...interface{}) {
 	if verbose {
 		log.Printf(f, args...)
 	}
+}
+
+func eventsSource() string {
+	if pn := os.Getenv(podNameEnvVar); pn != "" {
+		return pn
+	}
+	return defaultEventSource
 }
