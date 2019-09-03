@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -29,6 +30,7 @@ import (
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	"knative.dev/pkg/logging"
 )
 
 const (
@@ -61,7 +63,9 @@ func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner common.Ch
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
 	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
-		client := common.Setup(st, true)
+		// we cannot run these tests in parallel as the updateDefaultChannelCM function is not thread-safe
+		// TODO(Fredy-Z): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
+		client := common.Setup(st, false)
 		defer common.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *defaultchannel.Config) {
@@ -81,7 +85,7 @@ func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChann
 	loggerPodName := "e2e-defaulter-logger-pod"
 
 	// create channel
-	client.CreateDefaultChannelOrFail(eventingtesting.NewChannel(channelName, client.Namespace))
+	client.CreateChannelWithDefaultOrFail(eventingtesting.NewChannel(channelName, client.Namespace))
 
 	// create logger service as the subscriber
 	pod := resources.EventLoggerPod(loggerPodName)
@@ -155,8 +159,9 @@ func updateDefaultChannelCM(client *common.Client, updateConfig func(config *def
 	}
 	// update the defaultchannel configmap
 	configMap.Data[channelDefaulterKey] = string(configBytes)
-	_, err = cmInterface.Update(configMap)
-	return err
+	channelDefaulter := defaultchannel.New(logging.FromContext(context.Background()).Desugar())
+	channelDefaulter.UpdateConfigMap(configMap)
+	return nil
 }
 
 // setClusterDefaultChannel will set the default channel for cluster-wide

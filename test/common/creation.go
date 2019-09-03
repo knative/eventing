@@ -54,8 +54,8 @@ func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *meta
 	}
 }
 
-// CreateDefaultChannelOrFail will create a default Channel Resource in Eventing or fail the test if there is an error.
-func (client *Client) CreateDefaultChannelOrFail(channel *messagingv1alpha1.Channel) {
+// CreateChannelWithDefaultOrFail will create a default Channel Resource in Eventing or fail the test if there is an error.
+func (client *Client) CreateChannelWithDefaultOrFail(channel *messagingv1alpha1.Channel) {
 	channels := client.Eventing.MessagingV1alpha1().Channels(client.Namespace)
 	_, err := channels.Create(channel)
 	if err != nil {
