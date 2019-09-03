@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	"context"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -68,6 +69,7 @@ func NewCloudEventsTargeter(sinkUrl string, msgSize int, eventType string, event
 
 func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 	seq := uint64(0)
+	ctx := context.TODO()
 
 	codec := cehttp.Codec{
 		DefaultEncodingSelectionFn: cet.encodingSelector,
@@ -90,7 +92,7 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 			panic(err)
 		}
 
-		m, err := codec.Encode(event)
+		m, err := codec.Encode(ctx, event)
 		if err != nil {
 			panic(err)
 		}
