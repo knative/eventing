@@ -20,7 +20,6 @@ package test
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -39,8 +38,8 @@ type KubeClient struct {
 }
 
 // NewSpoofingClient returns a spoofing client to make requests
-func NewSpoofingClient(client *KubeClient, transport *http.Transport, logf logging.FormatLogger, domain string, resolvable bool) (*spoof.SpoofingClient, error) {
-	return spoof.New(client.Kube, transport, logf, domain, resolvable, Flags.IngressEndpoint)
+func NewSpoofingClient(client *KubeClient, logf logging.FormatLogger, domain string, resolvable bool) (*spoof.SpoofingClient, error) {
+	return spoof.New(client.Kube, logf, domain, resolvable, Flags.IngressEndpoint)
 }
 
 // NewKubeClient instantiates and returns several clientsets required for making request to the
