@@ -65,15 +65,15 @@ type adapter struct {
 	namespace string
 	logger    *zap.SugaredLogger
 
-	mode              string
-	delegate          eventDelegate
-	reporter          StatsReporter
-	apiServerImporter string
+	mode     string
+	delegate eventDelegate
+	reporter StatsReporter
+	name     string
 }
 
 func NewAdaptor(source string, k8sClient dynamic.Interface,
 	ceClient cloudevents.Client, logger *zap.SugaredLogger,
-	opt Options, reporter StatsReporter, apiServerImporter string) Adapter {
+	opt Options, reporter StatsReporter, name string) Adapter {
 	mode := opt.Mode
 	switch mode {
 	case ResourceMode, RefMode:
@@ -85,15 +85,15 @@ func NewAdaptor(source string, k8sClient dynamic.Interface,
 	}
 
 	a := &adapter{
-		k8s:               k8sClient,
-		ce:                ceClient,
-		source:            source,
-		logger:            logger,
-		gvrcs:             opt.GVRCs,
-		namespace:         opt.Namespace,
-		mode:              mode,
-		reporter:          reporter,
-		apiServerImporter: apiServerImporter,
+		k8s:       k8sClient,
+		ce:        ceClient,
+		source:    source,
+		logger:    logger,
+		gvrcs:     opt.GVRCs,
+		namespace: opt.Namespace,
+		mode:      mode,
+		reporter:  reporter,
+		name:      name,
 	}
 	return a
 }
@@ -112,22 +112,22 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 	switch a.mode {
 	case ResourceMode:
 		d = &resource{
-			ce:                a.ce,
-			source:            a.source,
-			logger:            a.logger,
-			reporter:          a.reporter,
-			namespace:         a.namespace,
-			apiServerImporter: a.apiServerImporter,
+			ce:        a.ce,
+			source:    a.source,
+			logger:    a.logger,
+			reporter:  a.reporter,
+			namespace: a.namespace,
+			name:      a.name,
 		}
 
 	case RefMode:
 		d = &ref{
-			ce:                a.ce,
-			source:            a.source,
-			logger:            a.logger,
-			reporter:          a.reporter,
-			namespace:         a.namespace,
-			apiServerImporter: a.apiServerImporter,
+			ce:        a.ce,
+			source:    a.source,
+			logger:    a.logger,
+			reporter:  a.reporter,
+			namespace: a.namespace,
+			name:      a.name,
 		}
 
 	default:

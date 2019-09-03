@@ -45,9 +45,8 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
-			Name: utils.GenerateFixedName(args.Source,
-				fmt.Sprintf("apiserversource-%s", args.Source.Name)),
-			Labels: args.Labels,
+			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("apiserversource-%s", args.Source.Name)),
+			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),
 			},
@@ -70,9 +69,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 						{
 							Name:  "receive-adapter",
 							Image: args.Image,
-							Env: makeEnv(args.SinkURI, args.LoggingConfig,
-								args.MetricsConfig, &args.Source.Spec,
-								args.Source.ObjectMeta.Name),
+							Env:   makeEnv(args.SinkURI, args.LoggingConfig, args.MetricsConfig, &args.Source.Spec, args.Source.ObjectMeta.Name),
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
@@ -85,8 +82,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv(sinkURI, loggingConfig, metricsConfig string,
-	spec *v1alpha1.ApiServerSourceSpec, name string) []corev1.EnvVar {
+func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiServerSourceSpec, name string) []corev1.EnvVar {
 	apiversions := ""
 	kinds := ""
 	controlled := ""
@@ -142,7 +138,7 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string,
 			},
 		},
 	}, {
-		Name:  "APISERVERIMPORTER",
+		Name:  "NAME",
 		Value: name,
 	}, {
 		Name:  "METRICS_DOMAIN",

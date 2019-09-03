@@ -139,8 +139,7 @@ func TestNewAdaptor(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			r := &mockReporter{}
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r,
-				"test-importer")
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r, "test-importer")
 
 			got, ok := a.(*adapter)
 			if !ok {

@@ -36,10 +36,10 @@ func unregister() {
 
 func TestStatsReporter(t *testing.T) {
 	args := &ReportArgs{
-		ns:                "testns",
-		eventType:         "dev.knative.apiserver.resource.update",
-		eventSource:       "unit-test",
-		apiServerImporter: "testimporter",
+		ns:          "testns",
+		eventType:   "dev.knative.apiserver.resource.update",
+		eventSource: "unit-test",
+		name:        "testimporter",
 	}
 
 	r, err := NewStatsReporter()
@@ -79,10 +79,10 @@ func TestReporterFor5xxResponse(t *testing.T) {
 	}
 
 	args := &ReportArgs{
-		ns:                "testns",
-		eventType:         "eventtype",
-		eventSource:       "eventsource",
-		apiServerImporter: "testimporter",
+		ns:          "testns",
+		eventType:   "eventtype",
+		eventSource: "eventsource",
+		name:        "testimporter",
 	}
 
 	wantTags := map[string]string{

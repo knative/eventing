@@ -75,8 +75,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "event_dispatch_latencies",
-		wantTags, 2, 1100.0, 9100.0)
+	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
 }
 
 func expectSuccess(t *testing.T, f func() error) {

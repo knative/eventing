@@ -59,14 +59,14 @@ func (s *StringList) Decode(value string) error {
 }
 
 type envConfig struct {
-	Namespace         string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
-	Mode              string     `envconfig:"MODE"`
-	SinkURI           string     `split_words:"true" required:"true"`
-	ApiVersion        []string   `split_words:"true" required:"true"`
-	Kind              []string   `required:"true"`
-	Controller        []bool     `required:"true"`
-	ApiServerImporter string     `envconfig:"APISERVERIMPORTER" required:"true"`
-	LabelSelector     StringList `envconfig:"SELECTOR" required:"true"`
+	Namespace     string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode          string     `envconfig:"MODE"`
+	SinkURI       string     `split_words:"true" required:"true"`
+	ApiVersion    []string   `split_words:"true" required:"true"`
+	Kind          []string   `required:"true"`
+	Controller    []bool     `required:"true"`
+	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
+	Name          string     `envconfig:"NAME" required:"true"`
 	// MetricsConfigBase64 is a base64 encoded json string of
 	// metrics.ExporterOptions. This is used to configure the metrics exporter
 	// options, the config is stored in a config map inside the controllers
@@ -89,12 +89,11 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Error processing env var: %s", err))
 	}
-
+	// TODO move this util to pkg
 	// Convert base64 encoded json logging.Config to logging.Config.
-	loggingConfig, err := utils.Base64ToLoggingConfig(
-		env.LoggingConfigBase64)
+	loggingConfig, err := utils.Base64ToLoggingConfig(env.LoggingConfigBase64)
 	if err != nil {
-		fmt.Printf("[ERROR] filed to process logging config: %s", err.Error())
+		fmt.Printf("[ERROR] failed to process logging config: %s", err.Error())
 		// Use default logging config.
 		if loggingConfig, err = logging.NewConfigFromMap(map[string]string{}); err != nil {
 			// If this fails, there is no recovering.
@@ -135,8 +134,7 @@ func main() {
 		logger.Fatalw("Error building dynamic client", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing(logger, "apiserversource",
-		tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing(logger, "apiserversource", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer
 		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
@@ -159,10 +157,7 @@ func main() {
 			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
 		}
 		// TODO: pass down the resource and the kind so we do not have to guess.
-		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
-			Kind:    kind,
-			Group:   gv.Group,
-			Version: gv.Version})
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
 		gvrcs = append(gvrcs, apiserver.GVRC{
 			GVR:           gvr,
 			Controller:    controlled,
@@ -176,8 +171,7 @@ func main() {
 		GVRCs:     gvrcs,
 	}
 
-	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt,
-		reporter, env.ApiServerImporter)
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt, reporter, env.Name)
 	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))

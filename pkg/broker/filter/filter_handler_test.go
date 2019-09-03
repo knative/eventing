@@ -33,7 +33,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -459,11 +458,11 @@ func makeTriggerFilterWithAttributesAndExtension(t, s, e string) *eventingv1alph
 
 func makeTrigger(filter *eventingv1alpha1.TriggerFilter) *eventingv1alpha1.Trigger {
 	return &eventingv1alpha1.Trigger{
-		TypeMeta: v1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "eventing.knative.dev/v1alpha1",
 			Kind:       "Trigger",
 		},
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
 			Name:      triggerName,
 			UID:       triggerUID,

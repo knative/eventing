@@ -32,7 +32,7 @@ import (
 
 var (
 	// eventCountM is a counter which records the number of events sent
-	// by an Importer.
+	// by the ApiServerSource.
 	eventCountM = stats.Int64(
 		"event_count",
 		"Number of events created",
@@ -41,10 +41,10 @@ var (
 )
 
 type ReportArgs struct {
-	ns                string
-	eventType         string
-	eventSource       string
-	apiServerImporter string
+	ns          string
+	eventType   string
+	eventSource string
+	name        string
 }
 
 const (
@@ -67,7 +67,6 @@ type reporter struct {
 	importerResourceGroupTagKey tag.Key
 	responseCodeKey             tag.Key
 	responseCodeClassKey        tag.Key
-	filterResultKey             tag.Key
 }
 
 // NewStatsReporter creates a reporter that collects and reports apiserversource
@@ -82,17 +81,17 @@ func NewStatsReporter() (StatsReporter, error) {
 	}
 	r.namespaceTagKey = nsTag
 
-	eventTypeTag, err := tag.NewKey(metricskey.LabelEventType)
-	if err != nil {
-		return nil, err
-	}
-	r.eventTypeTagKey = eventTypeTag
-
 	eventSourceTag, err := tag.NewKey(metricskey.LabelEventSource)
 	if err != nil {
 		return nil, err
 	}
 	r.eventSourceTagKey = eventSourceTag
+
+	eventTypeTag, err := tag.NewKey(metricskey.LabelEventType)
+	if err != nil {
+		return nil, err
+	}
+	r.eventTypeTagKey = eventTypeTag
 
 	importerNameTag, err := tag.NewKey(metricskey.LabelImporterName)
 	if err != nil {
@@ -106,11 +105,6 @@ func NewStatsReporter() (StatsReporter, error) {
 	}
 	r.importerResourceGroupTagKey = importerResourceGroupTag
 
-	filterResultTag, err := tag.NewKey(LabelFilterResult)
-	if err != nil {
-		return nil, err
-	}
-	r.filterResultKey = filterResultTag
 	responseCodeTag, err := tag.NewKey(LabelResponseCode)
 	if err != nil {
 		return nil, err
@@ -128,10 +122,7 @@ func NewStatsReporter() (StatsReporter, error) {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys: []tag.Key{r.namespaceTagKey, r.eventSourceTagKey,
-				r.eventTypeTagKey, r.importerNameTagKey,
-				r.importerResourceGroupTagKey, r.responseCodeKey,
-				r.responseCodeClassKey},
+			TagKeys:     []tag.Key{r.namespaceTagKey, r.eventSourceTagKey, r.eventTypeTagKey, r.importerNameTagKey, r.importerResourceGroupTagKey, r.responseCodeKey, r.responseCodeClassKey},
 		},
 	)
 	if err != nil {
@@ -157,9 +148,8 @@ func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Cont
 		tag.Insert(r.namespaceTagKey, args.ns),
 		tag.Insert(r.eventSourceTagKey, args.eventSource),
 		tag.Insert(r.eventTypeTagKey, args.eventType),
+		tag.Insert(r.importerNameTagKey, args.name),
+		tag.Insert(r.importerResourceGroupTagKey, importerResourceGroupValue),
 		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(r.importerResourceGroupTagKey,
-			importerResourceGroupValue),
-		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)),
-		tag.Insert(r.importerNameTagKey, args.apiServerImporter))
+		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
 }

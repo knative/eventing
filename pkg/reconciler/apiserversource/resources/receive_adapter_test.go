@@ -166,7 +166,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 										},
 									},
 								}, {
-									Name:  "APISERVERIMPORTER",
+									Name:  "NAME",
 									Value: name,
 								}, {
 									Name:  "METRICS_DOMAIN",
