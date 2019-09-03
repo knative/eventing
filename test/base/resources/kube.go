@@ -33,7 +33,15 @@ import (
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
-	const imageName = "sendevents"
+	return eventSenderPodImage("sendevents", name, sink, event)
+}
+
+// EventSenderTracingPod creates a Pod that sends a single event to the given address.
+func EventSenderTracingPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
+	return eventSenderPodImage("sendeventstracing", name, sink, event)
+}
+
+func eventSenderPodImage(imageName string, name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -77,7 +85,15 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 
 // EventLoggerPod creates a Pod that logs events received.
 func EventLoggerPod(name string) *corev1.Pod {
-	const imageName = "logevents"
+	return eventLoggerPod("logevents", name)
+}
+
+// EventDetailsPod creates a Pod that vaalidates events received and log details about events.
+func EventDetailsPod(name string) *corev1.Pod {
+	return eventLoggerPod("eventdetails", name)
+}
+
+func eventLoggerPod(imageName string, name string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
