@@ -17,6 +17,7 @@ limitations under the License.
 package filter
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -56,33 +57,34 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelFilterType:    "testeventtype",
 		metricskey.LabelFilterSource:  "testeventsource",
-		LabelResult:                   "success",
+		LabelResponseCode:             "202",
+		LabelResponseCodeClass:        "2xx",
 	}
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 
 	// test ReportEventDispatchTime
 	expectSuccess(t, func() error {
-		return r.ReportEventDispatchTime(args, nil, 1100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, http.StatusAccepted, 1100*time.Millisecond)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventDispatchTime(args, nil, 9100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
 	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
 
 	// test ReportEventProcessingTime
 	expectSuccess(t, func() error {
-		return r.ReportEventProcessingTime(args, nil, 1000*time.Millisecond)
+		return r.ReportEventProcessingTime(args, 1000*time.Millisecond)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventProcessingTime(args, nil, 8000*time.Millisecond)
+		return r.ReportEventProcessingTime(args, 8000*time.Millisecond)
 	})
 	metricstest.CheckDistributionData(t, "event_processing_latencies", wantTags, 2, 1000.0, 8000.0)
 }
@@ -109,21 +111,22 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelFilterType:    AnyValue,
 		metricskey.LabelFilterSource:  AnyValue,
-		LabelResult:                   "success",
+		LabelResponseCode:             "202",
+		LabelResponseCodeClass:        "2xx",
 	}
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	metricstest.CheckCountData(t, "event_count", wantTags, 4)
 }

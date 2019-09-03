@@ -29,22 +29,3 @@ const (
 	// which stands for version("00" is the current version)-traceID-spanID-trace options
 	TraceParent = "traceparent"
 )
-
-// Buckets125 generates an array of buckets with approximate powers-of-two
-// buckets that also aligns with powers of 10 on every 3rd step. This can
-// be used to create a view.Distribution.
-func Buckets125(low, high float64) []float64 {
-	buckets := []float64{low}
-	for last := low; last < high; last = last * 10 {
-		buckets = append(buckets, 2*last, 5*last, 10*last)
-	}
-	return buckets
-}
-
-// Result converts an error to a result string (either "success" or "error").
-func Result(err error) string {
-	if err != nil {
-		return "error"
-	}
-	return "success"
-}

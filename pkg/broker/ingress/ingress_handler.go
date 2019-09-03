@@ -88,18 +88,18 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	send := h.decrementTTL(&event)
 	if !send {
 		// Record the event count.
-		h.Reporter.ReportEventCount(reporterArgs, errors.New("dropped due to TTL"))
+		h.Reporter.ReportEventCount(reporterArgs, http.StatusBadRequest)
 		return nil
 	}
 
 	start := time.Now()
 	sendingCTX := broker.SendingContext(ctx, tctx, h.ChannelURI)
-	// TODO use HTTP codes: https://github.com/cloudevents/sdk-go/pull/177
-	_, err := h.CeClient.Send(sendingCTX, event)
+	rctx, _, err := h.CeClient.Send(sendingCTX, event)
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.
-	h.Reporter.ReportEventDispatchTime(reporterArgs, err, time.Since(start))
+	h.Reporter.ReportEventDispatchTime(reporterArgs, rtctx.StatusCode, time.Since(start))
 	// Record the event count.
-	h.Reporter.ReportEventCount(reporterArgs, err)
+	h.Reporter.ReportEventCount(reporterArgs, rtctx.StatusCode)
 	return err
 }
 

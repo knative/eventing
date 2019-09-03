@@ -3,10 +3,11 @@ package cloudevents
 import (
 	"errors"
 	"fmt"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 // Adhere to EventContextWriter

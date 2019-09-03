@@ -67,7 +67,7 @@ func (a *ref) Add(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
+	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 		return err
 	}
@@ -82,7 +82,7 @@ func (a *ref) Update(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
+	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 		return err
 	}
@@ -97,7 +97,7 @@ func (a *ref) Delete(obj interface{}) error {
 		return err
 	}
 
-	if _, err := a.ce.Send(context.Background(), *event); err != nil {
+	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
 		a.logger.Info("event delivery failed", zap.Error(err))
 		return err
 	}

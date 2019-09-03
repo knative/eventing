@@ -3,9 +3,10 @@ package cloudevents
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"sort"
 	"strings"
+
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 // WIP: AS OF FEB 19, 2019
@@ -72,7 +73,7 @@ func (ec EventContextV03) ExtensionAs(name string, obj interface{}) error {
 			return fmt.Errorf("invalid type for extension %q", name)
 		}
 	default:
-		return fmt.Errorf("unkown extension type %T", obj)
+		return fmt.Errorf("unknown extension type %T", obj)
 	}
 }
 
@@ -114,11 +115,11 @@ func (ec EventContextV03) AsV02() *EventContextV02 {
 	}
 	// Subject was introduced in 0.3, so put it in an extension for 0.2.
 	if ec.Subject != nil {
-		ret.SetExtension(SubjectKey, *ec.Subject)
+		_ = ret.SetExtension(SubjectKey, *ec.Subject)
 	}
 	// DataContentEncoding was introduced in 0.3, so put it in an extension for 0.2.
 	if ec.DataContentEncoding != nil {
-		ret.SetExtension(DataContentEncodingKey, *ec.DataContentEncoding)
+		_ = ret.SetExtension(DataContentEncodingKey, *ec.DataContentEncoding)
 	}
 	if ec.Extensions != nil {
 		for k, v := range ec.Extensions {
