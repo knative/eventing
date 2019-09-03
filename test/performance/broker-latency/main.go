@@ -171,7 +171,7 @@ func main() {
 			defer cancel()
 
 			sendTime := time.Now()
-			_, err := c.Send(ctx, event)
+			_, _, err := c.Send(ctx, event)
 			if err != nil {
 				if qerr := q.AddError(mako.XTime(sendTime), err.Error()); qerr != nil {
 					log.Printf("ERROR AddError: %v", qerr)

@@ -35,3 +35,19 @@ func WithTimeNow() Option {
 		return nil
 	}
 }
+
+// WithConverterFn defines the function the transport will use to delegate
+// conversion of non-decodable messages.
+func WithConverterFn(fn ConvertFn) Option {
+	return func(c *ceClient) error {
+		if fn == nil {
+			return fmt.Errorf("client option was given an nil message converter")
+		}
+		if c.transport.HasConverter() {
+			return fmt.Errorf("transport converter already set")
+		}
+		c.convertFn = fn
+		c.transport.SetConverter(c)
+		return nil
+	}
+}

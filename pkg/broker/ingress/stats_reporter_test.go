@@ -17,6 +17,7 @@ limitations under the License.
 package ingress
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -54,24 +55,25 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelEventType:     "testeventtype",
 		metricskey.LabelEventSource:   "testeventsource",
-		LabelResult:                   "success",
+		LabelResponseCode:             "202",
+		LabelResponseCodeClass:        "2xx",
 	}
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventCount(args, nil)
+		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	metricstest.CheckCountData(t, "event_count", wantTags, 2)
 
 	// test ReportDispatchTime
 	expectSuccess(t, func() error {
-		return r.ReportEventDispatchTime(args, nil, 1100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, http.StatusAccepted, 1100*time.Millisecond)
 	})
 	expectSuccess(t, func() error {
-		return r.ReportEventDispatchTime(args, nil, 9100*time.Millisecond)
+		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
 	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
 }

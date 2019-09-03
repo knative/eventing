@@ -18,13 +18,14 @@ package ingress
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	utils "knative.dev/eventing/pkg/broker"
 	. "knative.dev/eventing/pkg/metrics/metricskey"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -56,19 +57,20 @@ type ReportArgs struct {
 
 // StatsReporter defines the interface for sending ingress metrics.
 type StatsReporter interface {
-	ReportEventCount(args *ReportArgs, err error) error
-	ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error
+	ReportEventCount(args *ReportArgs, responseCode int) error
+	ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error
 }
 
 var _ StatsReporter = (*reporter)(nil)
 
 // Reporter holds cached metric objects to report ingress metrics.
 type reporter struct {
-	namespaceTagKey tag.Key
-	brokerTagKey    tag.Key
-	eventTypeKey    tag.Key
-	eventSourceKey  tag.Key
-	resultKey       tag.Key
+	namespaceTagKey      tag.Key
+	brokerTagKey         tag.Key
+	eventTypeKey         tag.Key
+	eventSourceKey       tag.Key
+	responseCodeKey      tag.Key
+	responseCodeClassKey tag.Key
 }
 
 // NewStatsReporter creates a reporter that collects and reports ingress metrics.
@@ -96,11 +98,16 @@ func NewStatsReporter() (StatsReporter, error) {
 		return nil, err
 	}
 	r.eventSourceKey = eventSourceTag
-	resultTag, err := tag.NewKey(LabelResult)
+	responseCodeTag, err := tag.NewKey(LabelResponseCode)
 	if err != nil {
 		return nil, err
 	}
-	r.resultKey = resultTag
+	r.responseCodeKey = responseCodeTag
+	responseCodeClassTag, err := tag.NewKey(LabelResponseCodeClass)
+	if err != nil {
+		return nil, err
+	}
+	r.responseCodeClassKey = responseCodeClassTag
 
 	// Create view to see our measurements.
 	err = view.Register(
@@ -108,13 +115,13 @@ func NewStatsReporter() (StatsReporter, error) {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.brokerTagKey, r.eventTypeKey, r.eventSourceKey, r.resultKey},
+			TagKeys:     []tag.Key{r.namespaceTagKey, r.brokerTagKey, r.eventTypeKey, r.eventSourceKey, r.responseCodeKey, r.responseCodeClassKey},
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
-			Aggregation: view.Distribution(utils.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.brokerTagKey, r.eventTypeKey, r.eventSourceKey, r.resultKey},
+			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
+			TagKeys:     []tag.Key{r.namespaceTagKey, r.brokerTagKey, r.eventTypeKey, r.eventSourceKey, r.responseCodeKey, r.responseCodeClassKey},
 		},
 	)
 	if err != nil {
@@ -125,8 +132,8 @@ func NewStatsReporter() (StatsReporter, error) {
 }
 
 // ReportEventCount captures the event count.
-func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
-	ctx, err := r.generateTag(args, err)
+func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	ctx, err := r.generateTag(args, responseCode)
 	if err != nil {
 		return err
 	}
@@ -135,8 +142,8 @@ func (r *reporter) ReportEventCount(args *ReportArgs, err error) error {
 }
 
 // ReportEventDispatchTime captures dispatch times.
-func (r *reporter) ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error {
-	ctx, err := r.generateTag(args, err)
+func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
+	ctx, err := r.generateTag(args, responseCode)
 	if err != nil {
 		return err
 	}
@@ -145,12 +152,13 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, err error, d time.D
 	return nil
 }
 
-func (r *reporter) generateTag(args *ReportArgs, err error) (context.Context, error) {
+func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
 		context.Background(),
 		tag.Insert(r.namespaceTagKey, args.ns),
 		tag.Insert(r.brokerTagKey, args.broker),
 		tag.Insert(r.eventTypeKey, args.eventType),
 		tag.Insert(r.eventSourceKey, args.eventSource),
-		tag.Insert(r.resultKey, utils.Result(err)))
+		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
+		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
 }

@@ -213,7 +213,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if subscriberURIString == "" {
 		err = errors.New("unable to read subscriberURI")
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, err)
+		r.reporter.ReportEventCount(reportArgs, http.StatusNotFound)
 		return nil, err
 	}
 	// We could just send the request to this URI regardless, but let's just check to see if it well
@@ -222,7 +222,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if err != nil {
 		r.logger.Error("Unable to parse subscriberURI", zap.Error(err), zap.String("subscriberURIString", subscriberURIString))
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, err)
+		r.reporter.ReportEventCount(reportArgs, http.StatusInternalServerError)
 		return nil, err
 	}
 
@@ -232,7 +232,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if filterResult == failFilter {
 		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
 		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, errors.New("event did not pass filter"))
+		r.reporter.ReportEventCount(reportArgs, http.StatusExpectationFailed)
 		return nil, nil
 	}
 
@@ -242,18 +242,18 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
 		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
 		if err != nil {
-			r.reporter.ReportEventProcessingTime(reportArgs, err, time.Since(arrivalTime))
+			r.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))
 		}
 	}
 
 	start := time.Now()
 	sendingCTX := broker.SendingContext(ctx, tctx, subscriberURI)
-	// TODO use HTTP codes: https://github.com/cloudevents/sdk-go/pull/177
-	replyEvent, err := r.ceClient.Send(sendingCTX, *event)
+	rctx, replyEvent, err := r.ceClient.Send(sendingCTX, *event)
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.
-	r.reporter.ReportEventDispatchTime(reportArgs, err, time.Since(start))
+	r.reporter.ReportEventDispatchTime(reportArgs, rtctx.StatusCode, time.Since(start))
 	// Record the event count.
-	r.reporter.ReportEventCount(reportArgs, err)
+	r.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
 	return replyEvent, err
 }
 

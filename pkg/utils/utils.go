@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -127,4 +128,11 @@ func GenerateFixedName(owner metav1.Object, prefix string) string {
 		pl = len(prefix)
 	}
 	return prefix[:pl] + uid
+}
+
+// ResponseCodeClass converts an HTTP response code to a string representing its response code class.
+// E.g., The response code class is "5xx" for response code 503.
+func ResponseCodeClass(responseCode int) string {
+	// Get the hundred digit of the response code and concatenate "xx".
+	return strconv.Itoa(responseCode/100) + "xx"
 }

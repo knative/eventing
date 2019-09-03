@@ -32,8 +32,8 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -350,15 +350,15 @@ func TestReceiver(t *testing.T) {
 
 type mockReporter struct{}
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, err error) error {
+func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 	return nil
 }
 
-func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, err error, d time.Duration) error {
+func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
 	return nil
 }
 
-func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, err error, d time.Duration) error {
+func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) error {
 	return nil
 }
 
@@ -392,7 +392,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	c := &cehttp.CodecV03{}
-	m, err := c.Encode(*h.returnedEvent)
+	m, err := c.Encode(context.Background(), *h.returnedEvent)
 	if err != nil {
 		h.t.Fatalf("Could not encode message: %v", err)
 	}
