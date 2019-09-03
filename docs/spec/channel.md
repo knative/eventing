@@ -19,6 +19,15 @@ interpreted as described in [RFC2119](https://www.ietf.org/rfc/rfc2119.txt).
 
 ## Channel Spec Parts
 
+### API Group
+
+The CRD's API group MAY be any valid API Group. If it is in `knative.dev`, then
+it SHOULD be `messaging.knative.dev`.
+
+### Kind Naming
+
+The CRD's Kind SHOULD have the suffix `Channel`. The name MAY be just `Channel`.
+
 ### Control Plane
 
 Each Channel implementation is backed by its own CRD (e.g. `InMemoryChannel` or
@@ -50,7 +59,7 @@ created, backing all messages from the channel.
 #### Aggregated Channelable Manipulator ClusterRole
 
 Every CRD MUST create a corresponding ClusterRole, that will be aggregated into
-the `channelable-manipulator` ClusterRole. This ClusterRole must include
+the `channelable-manipulator` ClusterRole. This ClusterRole MUST include
 permissions to create, get, list, watch, patch, and update the CRD's custom
 objects and their status. Below is an example for the `KafkaChannel`:
 
@@ -83,7 +92,7 @@ Each channel MUST have the `duck.knative.dev/channelable: "true"` label on its
 #### Aggregated Addressable Resolver ClusterRole
 
 Every CRD MUST create a corresponding ClusterRole, that will be aggregated into
-the `addressable-resolver` ClusterRole. This ClusterRole must include
+the `addressable-resolver` ClusterRole. This ClusterRole MUST include
 permissions to get, list, and watch the CRD's custom objects and their status.
 Below is an example for the `InMemoryChannel`:
 
@@ -143,8 +152,8 @@ spec:
 
 Each channel is _namespaced_ and MUST have the following:
 
-- label of `messaging.knative.dev/subscribable: "true"`
-- The category `channel`.
+-   label of `messaging.knative.dev/subscribable: "true"`
+-   The category `channel`.
 
 ### Data Plane
 
@@ -213,19 +222,19 @@ send CloudEvents to subscribers.
 Channels SHOULD support various retry configuration parameters, including, but
 not limited to:
 
-- the maximum number of retries
-- the time in-between retries
-- the backoff rate
+-   the maximum number of retries
+-   the time in-between retries
+-   the backoff rate
 
 #### Metrics
 
 Channels SHOULD expose a variety of metrics, including, but not limited to:
 
-- Number of malformed incoming event queueing events (`400 Bad Requests`
-  responses) responses)
-- Number of accepted incoming event queuing events (`202 Accepted` responses)
-- Number of egress CloudEvents produced (with the former metric, used to derive
-  channel queue size)
+-   Number of malformed incoming event queueing events (`400 Bad Request`
+    responses)
+-   Number of accepted incoming event queuing events (`202 Accepted` responses)
+-   Number of egress CloudEvents produced (with the former metric, used to
+    derive channel queue size)
 
 Metrics SHOULD be enabled by default, with a configuration parameter included to
 disable them if desired.
