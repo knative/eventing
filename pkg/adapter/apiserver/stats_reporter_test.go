@@ -59,6 +59,15 @@ func TestStatsReporter(t *testing.T) {
 		LabelResponseCode:                     "202",
 		LabelResponseCodeClass:                "2xx",
 	}
+	wantTags2 := map[string]string{
+		metricskey.LabelNamespaceName:         "testns",
+		metricskey.LabelEventType:             "dev.knative.apiserver.resource.update",
+		metricskey.LabelEventSource:           "unit-test",
+		metricskey.LabelImporterName:          "testimporter",
+		metricskey.LabelImporterResourceGroup: "apiserversources.sources.eventing.knative.dev",
+		LabelResponseCode:                     "500",
+		LabelResponseCodeClass:                "5xx",
+	}
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
@@ -68,6 +77,7 @@ func TestStatsReporter(t *testing.T) {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
 	metricstest.CheckCountData(t, "event_count", wantTags, 2)
+	metricstest.CheckCountData(t, "event_count", wantTags2, 2)
 
 }
 
