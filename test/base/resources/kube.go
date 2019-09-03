@@ -19,8 +19,6 @@ package resources
 // This file contains functions that construct common Kubernetes resources.
 
 import (
-	"encoding/json"
-	"fmt"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,17 +36,11 @@ type PodOption func(*corev1.Pod)
 type ClusterRoleOption func(*rbacv1.ClusterRole)
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
+func EventSenderPod(name string, sink string, event *CloudEvent) *corev1.Pod {
 	const imageName = "sendevents"
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
-	eventExtensionsBytes, error := json.Marshal(event.Extensions)
-	eventExtensions := string(eventExtensionsBytes)
-	if error != nil {
-		return nil, fmt.Errorf("encountered error when we marshall cloud event extensions %v", error)
-	}
-
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -65,8 +57,6 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 					event.Type,
 					"-event-source",
 					event.Source,
-					"-event-extensions",
-					eventExtensions,
 					"-event-data",
 					event.Data,
 					"-event-encoding",
@@ -78,12 +68,67 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
-	}, nil
+	}
+}
+
+// EventSenderTracingPod creates a Pod that sends a single event to the given address.
+func EventSenderTracingPod(name string, sink string, event *CloudEvent) *corev1.Pod {
+	const imageName = "sendeventstracing"
+	if event.Encoding == "" {
+		event.Encoding = CloudEventEncodingBinary
+	}
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-event-id",
+					event.ID,
+					"-event-type",
+					event.Type,
+					"-event-source",
+					event.Source,
+					"-event-data",
+					event.Data,
+					"-event-encoding",
+					event.Encoding,
+					"-sink",
+					sink,
+				},
+			}},
+			//TODO restart on failure?
+			RestartPolicy: corev1.RestartPolicyNever,
+		},
+	}
 }
 
 // EventLoggerPod creates a Pod that logs events received.
 func EventLoggerPod(name string) *corev1.Pod {
 	const imageName = "logevents"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+}
+
+// EventDetailsPod creates a Pod that vaalidates events received and log details about events.
+func EventDetailsPod(name string) *corev1.Pod {
+	const imageName = "eventdetails"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
