@@ -241,7 +241,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	var arrivalTimeStr string
 	if extErr := event.ExtensionAs(broker.EventArrivalTime, &arrivalTimeStr); extErr == nil {
 		arrivalTime, err := time.Parse(time.RFC3339, arrivalTimeStr)
-		if err != nil {
+		if err == nil {
 			r.reporter.ReportEventProcessingTime(reportArgs, time.Since(arrivalTime))
 		}
 	}
