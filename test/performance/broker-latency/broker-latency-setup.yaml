@@ -76,7 +76,7 @@ metadata:
   name: perf-eventing
 rules:
   - apiGroups: [""]
-    resources: ["nodes"]
+    resources: ["nodes", "pods"]
     verbs: ["list"]
 
 ---

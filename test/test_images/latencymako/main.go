@@ -33,15 +33,17 @@ import (
 
 	"knative.dev/eventing/test/common"
 	"knative.dev/pkg/signals"
+	pkgtest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/mako"
 	pkgpacers "knative.dev/pkg/test/vegeta/pacers"
 )
 
 const (
-	defaultEventType   = "perf-test-event-type"
-	defaultEventSource = "perf-test-event-source"
-	warmupRps          = 100
-	defaultDuration    = 10 * time.Second
+	defaultEventType     = "perf-test-event-type"
+	defaultEventSource   = "perf-test-event-source"
+	warmupRps            = 100
+	defaultDuration      = 10 * time.Second
+	defaultTestNamespace = "default"
 )
 
 // flags for the image
@@ -61,7 +63,8 @@ var (
 
 // environment variables consumed by the test
 const (
-	podNameEnvVar = "POD_NAME"
+	podNameEnvVar      = "POD_NAME"
+	podNamespaceEnvVar = "POD_NAMESPACE"
 )
 
 // eventStatus is status of the event delivery.
@@ -156,6 +159,13 @@ func main() {
 
 	printf("Mako configured")
 
+	// wait until all pods are ready (channel, consumers)
+	ns := testNamespace()
+	printf("Waiting for all Pods to be ready in namespace %s", ns)
+	if err := waitForPods(ns); err != nil {
+		fatalf("Timeout waiting for Pods readiness in namespace %s: %v", ns, err)
+	}
+
 	// --- Warmup phase
 
 	if warmupSeconds > 0 {
@@ -213,11 +223,6 @@ func main() {
 	if warmupSeconds > 0 {
 		// Just let the channel relax a bit
 		time.Sleep(5 * time.Second)
-	} else {
-		// sleep 30 seconds before sending the events
-		// TODO(Fredy-Z): this is a bit hacky, as ideally, we need to wait for the Trigger/Subscription that uses it as a
-		//                Subscriber to become ready before sending the events, but we don't have a way to coordinate between them.
-		time.Sleep(30 * time.Second)
 	}
 
 	// set events defaults
@@ -344,11 +349,6 @@ func warmup(warmupSeconds uint) {
 	}
 
 	printf("Pacer configured for warmup: 10 rps to %d rps for %d secs", warmupRps, warmupSeconds)
-
-	// sleep 30 seconds before sending the events
-	// TODO(Fredy-Z): this is a bit hacky, as ideally, we need to wait for the Trigger/Subscription that uses it as a
-	//                Subscriber to become ready before sending the events, but we don't have a way to coordinate between them.
-	time.Sleep(30 * time.Second)
 
 	printf("Starting warmup")
 
@@ -480,4 +480,19 @@ func eventsSource() string {
 		return pn
 	}
 	return defaultEventSource
+}
+
+func testNamespace() string {
+	if pn := os.Getenv(podNamespaceEnvVar); pn != "" {
+		return pn
+	}
+	return defaultTestNamespace
+}
+
+func waitForPods(namespace string) error {
+	c, err := pkgtest.NewKubeClient("", "")
+	if err != nil {
+		return err
+	}
+	return pkgtest.WaitForAllPodsRunning(c, namespace)
 }
