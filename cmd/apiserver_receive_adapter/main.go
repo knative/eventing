@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"log"
+	"strings"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -41,13 +42,24 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+type StringList []string
+
+// Decode splits list of strings separated by '|',
+// overriding the default comma separator which is
+// a valid label selector character.
+func (s *StringList) Decode(value string) error {
+	*s = strings.Split(value, ";")
+	return nil
+}
+
 type envConfig struct {
-	Namespace  string   `envconfig:"SYSTEM_NAMESPACE" default:"default"`
-	Mode       string   `envconfig:"MODE"`
-	SinkURI    string   `split_words:"true" required:"true"`
-	ApiVersion []string `split_words:"true" required:"true"`
-	Kind       []string `required:"true"`
-	Controller []bool   `required:"true"`
+	Namespace     string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode          string     `envconfig:"MODE"`
+	SinkURI       string     `split_words:"true" required:"true"`
+	ApiVersion    StringList `split_words:"true" required:"true"`
+	Kind          StringList `required:"true"`
+	Controller    []bool     `required:"true"`
+	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
 }
 
 // TODO: the controller should take the list of GVR
@@ -101,6 +113,7 @@ func main() {
 	for i, apiVersion := range env.ApiVersion {
 		kind := env.Kind[i]
 		controlled := env.Controller[i]
+		selector := env.LabelSelector[i]
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
@@ -109,8 +122,9 @@ func main() {
 		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
 		gvrcs = append(gvrcs, apiserver.GVRC{
-			GVR:        gvr,
-			Controller: controlled,
+			GVR:           gvr,
+			Controller:    controlled,
+			LabelSelector: selector,
 		})
 	}
 

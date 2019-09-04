@@ -45,6 +45,34 @@ func TestMakeReceiveAdapter(t *testing.T) {
 					Kind:       "Pod",
 					Controller: true,
 				},
+				{
+					APIVersion: "",
+					Kind:       "Pod",
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"test-key1": "test-value1"},
+					},
+				},
+				{
+					APIVersion: "",
+					Kind:       "Pod",
+					LabelSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "akey", Operator: "Exists"},
+							{Key: "anotherkey", Operator: "DoesNotExist"},
+						},
+					},
+				},
+				{
+					APIVersion: "",
+					Kind:       "Pod",
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"test-key2": "test-value2"},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "akey", Operator: "Exists"},
+							{Key: "anotherkey", Operator: "DoesNotExist"},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -112,13 +140,16 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name: "MODE",
 								}, {
 									Name:  "API_VERSION",
-									Value: ",",
+									Value: ";;;;",
 								}, {
 									Name:  "KIND",
-									Value: "Namespace,Pod",
+									Value: "Namespace;Pod;Pod;Pod;Pod",
 								}, {
 									Name:  "CONTROLLER",
-									Value: "false,true",
+									Value: "false,true,false,false,false",
+								}, {
+									Name:  "SELECTOR",
+									Value: ";;test-key1=test-value1;akey,!anotherkey;akey,!anotherkey,test-key2=test-value2",
 								}, {
 									Name: "SYSTEM_NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{

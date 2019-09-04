@@ -105,6 +105,30 @@ func TestNewAdaptor(t *testing.T) {
 				Controller: true,
 			}},
 		},
+		"with label selector": {
+			source: "test-source",
+			opt: Options{
+				GVRCs: []GVRC{{
+					GVR: schema.GroupVersionResource{
+						Group:    "apps",
+						Version:  "v1",
+						Resource: "replicasets",
+					},
+					Controller:    true,
+					LabelSelector: "environment=production,tier!=frontend",
+				}},
+			},
+			wantMode: RefMode,
+			wantGVRCs: []GVRC{{
+				GVR: schema.GroupVersionResource{
+					Group:    "apps",
+					Version:  "v1",
+					Resource: "replicasets",
+				},
+				Controller:    true,
+				LabelSelector: "environment=production,tier!=frontend",
+			}},
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
