@@ -49,6 +49,15 @@ type ReceiverOptions func(*MessageReceiver) error
 // before calling receiverFunc.
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
+// ResolveChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
+// default behaviour defined by ParseChannel function.
+func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) ReceiverOptions {
+	return func(r *MessageReceiver) error {
+		r.hostToChannelFunc = hostToChannelFunc
+		return nil
+	}
+}
+
 // NewMessageReceiver creates a message receiver passing new messages to the
 // receiverFunc.
 func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger, opts ...ReceiverOptions) (*MessageReceiver, error) {
