@@ -80,17 +80,30 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 	apiversions := ""
 	kinds := ""
 	controlled := ""
+	selectors := ""
 	sep := ""
+	boolsep := ""
 
 	for _, res := range spec.Resources {
 		apiversions += sep + res.APIVersion
 		kinds += sep + res.Kind
 		if res.Controller {
-			controlled += sep + "true"
+			controlled += boolsep + "true"
 		} else {
-			controlled += sep + "false"
+			controlled += boolsep + "false"
 		}
-		sep = ","
+		if res.LabelSelector == nil {
+			selectors += sep
+		} else {
+			// No need to check for error here.
+			selector, _ := metav1.LabelSelectorAsSelector(res.LabelSelector)
+			labelSelector := selector.String()
+
+			selectors += sep + labelSelector
+		}
+
+		sep = ";"
+		boolsep = ","
 	}
 
 	return []corev1.EnvVar{{
@@ -108,6 +121,9 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 	}, {
 		Name:  "CONTROLLER",
 		Value: controlled,
+	}, {
+		Name:  "SELECTOR",
+		Value: selectors,
 	}, {
 		Name: "SYSTEM_NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{

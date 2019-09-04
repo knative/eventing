@@ -111,6 +111,11 @@ type ApiServerResource struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	Kind string `json:"kind"`
 
+	// LabelSelector restricts this source to objects with the selected labels
+	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
 }

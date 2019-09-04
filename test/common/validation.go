@@ -18,6 +18,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -48,6 +49,25 @@ func (client *Client) CheckLog(podName string, checker func(string) bool) error 
 		}
 		return checker(string(logs)), nil
 	})
+}
+
+// CheckLogEmpty waits the given amount of time and check the log is empty
+func (client *Client) CheckLogEmpty(podName string, timeout time.Duration) error {
+	time.Sleep(timeout)
+
+	namespace := client.Namespace
+	containerName, err := client.getContainerName(podName, namespace)
+	if err != nil {
+		return err
+	}
+	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
+	if err != nil {
+		return err
+	}
+	if string(logs) != "" {
+		return fmt.Errorf("expected empty log, got %s", string(logs))
+	}
+	return nil
 }
 
 // CheckerContains returns a checker function to check if the log contains the given content.

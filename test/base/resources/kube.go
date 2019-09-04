@@ -31,6 +31,12 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
+// PodOption enables further configuration of a Pod.
+type PodOption func(*corev1.Pod)
+
+// Option enables further configuration of a ClusterRole.
+type ClusterRoleOption func(*rbacv1.ClusterRole)
+
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
 	const imageName = "sendevents"
@@ -122,9 +128,9 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 }
 
 // HelloWorldPod creates a Pod that logs "Hello, World!".
-func HelloWorldPod(name string) *corev1.Pod {
+func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
 	const imageName = "helloworld"
-	return &corev1.Pod{
+	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
@@ -136,6 +142,17 @@ func HelloWorldPod(name string) *corev1.Pod {
 			}},
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
+	}
+	for _, option := range options {
+		option(pod)
+	}
+	return pod
+}
+
+// WithLabelsForPod returns an option setting the pod labels
+func WithLabelsForPod(labels map[string]string) PodOption {
+	return func(p *corev1.Pod) {
+		p.Labels = labels
 	}
 }
 
@@ -288,6 +305,27 @@ func ClusterRoleBinding(saName, saNamespace, crName, crbName string) *rbacv1.Clu
 			Name:     crName,
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 		},
+	}
+}
+
+// EventWatcherClusterRole creates a Kubernetes ClusterRole
+func ClusterRole(crName string, options ...ClusterRoleOption) *rbacv1.ClusterRole {
+	clusterRole := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crName,
+		},
+		Rules: []rbacv1.PolicyRule{},
+	}
+	for _, option := range options {
+		option(clusterRole)
+	}
+	return clusterRole
+}
+
+// WithRuleForClusterRole is a ClusterRole Option for adding a rule
+func WithRuleForClusterRole(rule *rbacv1.PolicyRule) ClusterRoleOption {
+	return func(cr *rbacv1.ClusterRole) {
+		cr.Rules = append(cr.Rules, *rule)
 	}
 }
 

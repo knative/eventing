@@ -20,7 +20,11 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -30,19 +34,109 @@ import (
 
 func TestApiServerSource(t *testing.T) {
 	const (
-		apiServerSourceName = "e2e-api-server-source"
+		baseApiServerSourceName = "e2e-api-server-source"
 
-		clusterRoleName    = "event-watcher-cr"
-		serviceAccountName = "event-watcher-sa"
-		helloworldPodName  = "e2e-api-server-source-helloworld-pod"
-		loggerPodName      = "e2e-api-server-source-logger-pod"
+		clusterRoleName       = "event-watcher-cr"
+		serviceAccountName    = "event-watcher-sa"
+		baseHelloworldPodName = "e2e-api-server-source-helloworld-pod"
+		baseLoggerPodName     = "e2e-api-server-source-logger-pod"
 	)
+
+	mode := "Ref"
+	table := []struct {
+		name     string
+		spec     sourcesv1alpha1.ApiServerSourceSpec
+		pod      func(name string) *corev1.Pod
+		expected string
+	}{
+		{
+			name: "event-ref",
+			spec: sourcesv1alpha1.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha1.ApiServerResource{
+					{
+						APIVersion:    "v1",
+						Kind:          "Event",
+						LabelSelector: &metav1.LabelSelector{},
+					},
+				},
+				Mode:               mode,
+				ServiceAccountName: serviceAccountName,
+			},
+			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
+			expected: "Event",
+		},
+		{
+			name: "event-ref-unmatch-label",
+			spec: sourcesv1alpha1.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha1.ApiServerResource{
+					{
+						APIVersion:    "v1",
+						Kind:          "Pod",
+						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+					},
+				},
+				Mode:               mode,
+				ServiceAccountName: serviceAccountName,
+			},
+			pod:      func(name string) *corev1.Pod { return resources.HelloWorldPod(name) },
+			expected: "",
+		},
+		{
+			name: "event-ref-match-label",
+			spec: sourcesv1alpha1.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha1.ApiServerResource{
+					{
+						APIVersion:    "v1",
+						Kind:          "Pod",
+						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+					},
+				},
+				Mode:               mode,
+				ServiceAccountName: serviceAccountName,
+			},
+			pod: func(name string) *corev1.Pod {
+				return resources.HelloWorldPod(name, resources.WithLabelsForPod(map[string]string{"e2e": "testing"}))
+			},
+			expected: "Pod",
+		},
+		{
+			name: "event-ref-match-label-expr",
+			spec: sourcesv1alpha1.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha1.ApiServerResource{
+					{
+						APIVersion: "v1",
+						Kind:       "Pod",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"e2e": "testing"},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{Key: "e2e", Operator: "Exists"},
+							},
+						},
+					},
+				},
+				Mode:               mode,
+				ServiceAccountName: serviceAccountName,
+			},
+			pod: func(name string) *corev1.Pod {
+				return resources.HelloWorldPod(name, resources.WithLabelsForPod(map[string]string{"e2e": "testing"}))
+			},
+			expected: "Pod",
+		},
+	}
 
 	client := setup(t, true)
 	defer tearDown(client)
 
 	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	cr := resources.EventWatcherClusterRole(clusterRoleName)
+	cr := resources.ClusterRole(clusterRoleName,
+		resources.WithRuleForClusterRole(&rbacv1.PolicyRule{
+			APIGroups: []string{rbacv1.APIGroupAll},
+			Resources: []string{"events"},
+			Verbs:     []string{"get", "list", "watch"}}),
+		resources.WithRuleForClusterRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list", "watch"}}))
 	client.CreateServiceAccountOrFail(serviceAccountName)
 	client.CreateClusterRoleOrFail(cr)
 	client.CreateClusterRoleBindingOrFail(
@@ -51,46 +145,44 @@ func TestApiServerSource(t *testing.T) {
 		fmt.Sprintf("%s-%s", serviceAccountName, clusterRoleName),
 	)
 
-	// create event logger pod and service
-	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	for _, tc := range table {
 
-	// create the ApiServerSource
-	// apiServerSourceResources is the list of resources to watch for this ApiServerSource
-	apiServerSourceResources := []sourcesv1alpha1.ApiServerResource{
-		{
-			APIVersion: "v1",
-			Kind:       "Event",
-		},
-	}
-	// mode is the watch mode: `Ref` sends only the reference to the resource, `Resource` sends the full resource.
-	mode := "Ref"
-	apiServerSource := eventingtesting.NewApiServerSource(
-		apiServerSourceName,
-		client.Namespace,
-		eventingtesting.WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
-			Resources:          apiServerSourceResources,
-			ServiceAccountName: serviceAccountName,
-			Mode:               mode,
-			Sink:               resources.ServiceRef(loggerPodName),
-		}),
-	)
+		// create event logger pod and service
+		loggerPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
+		tc.spec.Sink = resources.ServiceRef(loggerPodName)
 
-	client.CreateApiServerSourceOrFail(apiServerSource)
+		loggerPod := resources.EventLoggerPod(loggerPodName)
+		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
-	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+		apiServerSource := eventingtesting.NewApiServerSource(
+			fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
+			client.Namespace,
+			eventingtesting.WithApiServerSourceSpec(tc.spec),
+		)
 
-	helloworldPod := resources.HelloWorldPod(helloworldPodName)
-	client.CreatePodOrFail(helloworldPod)
+		client.CreateApiServerSourceOrFail(apiServerSource)
 
-	// verify the logger service receives the event(s)
-	// TODO(Fredy-Z): right now it's only doing a very basic check by looking for the "Event" word,
-	//                we can add a json matcher to improve it in the future.
-	data := "Event"
-	if err := client.CheckLog(loggerPodName, common.CheckerContains(data)); err != nil {
-		t.Fatalf("String %q does not appear in logs of logger pod %q: %v", data, loggerPodName, err)
+		// wait for all test resources to be ready
+		if err := client.WaitForAllTestResourcesReady(); err != nil {
+			t.Fatalf("Failed to get all test resources ready: %v", err)
+		}
+
+		helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
+		client.CreatePodOrFail(helloworldPod)
+
+		// verify the logger service receives the event(s)
+		// TODO(Fredy-Z): right now it's only doing a very basic check by looking for the tc.data word,
+		//                we can add a json matcher to improve it in the future.
+
+		if tc.expected == "" {
+			if err := client.CheckLogEmpty(loggerPodName, 10*time.Second); err != nil {
+				t.Fatalf("Log is not empty in logger pod %q: %v", loggerPodName, err)
+			}
+
+		} else {
+			if err := client.CheckLog(loggerPodName, common.CheckerContains(tc.expected)); err != nil {
+				t.Fatalf("String %q does not appear in logs of logger pod %q: %v", tc.expected, loggerPodName, err)
+			}
+		}
 	}
 }

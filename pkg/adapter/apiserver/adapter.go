@@ -50,10 +50,11 @@ type Options struct {
 	GVRCs     []GVRC
 }
 
-// GVRC is a pairing of GroupVersionResource and Controller flag.
+// GVRC is a combination of GroupVersionResource, Controller flag and LabelSelector.
 type GVRC struct {
-	GVR        schema.GroupVersionResource
-	Controller bool
+	GVR           schema.GroupVersionResource
+	Controller    bool
+	LabelSelector string
 }
 
 type adapter struct {
@@ -124,8 +125,8 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 
 	for _, gvrc := range a.gvrcs {
 		lw := &cache.ListWatch{
-			ListFunc:  asUnstructuredLister(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).List),
-			WatchFunc: asUnstructuredWatcher(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).Watch),
+			ListFunc:  asUnstructuredLister(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).List, gvrc.LabelSelector),
+			WatchFunc: asUnstructuredWatcher(a.k8s.Resource(gvrc.GVR).Namespace(a.namespace).Watch, gvrc.LabelSelector),
 		}
 
 		if gvrc.Controller {
@@ -143,8 +144,11 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 
 type unstructuredLister func(metav1.ListOptions) (*unstructured.UnstructuredList, error)
 
-func asUnstructuredLister(ulist unstructuredLister) cache.ListFunc {
+func asUnstructuredLister(ulist unstructuredLister, selector string) cache.ListFunc {
 	return func(opts metav1.ListOptions) (runtime.Object, error) {
+		if selector != "" && opts.LabelSelector == "" {
+			opts.LabelSelector = selector
+		}
 		ul, err := ulist(opts)
 		if err != nil {
 			return nil, err
@@ -153,8 +157,11 @@ func asUnstructuredLister(ulist unstructuredLister) cache.ListFunc {
 	}
 }
 
-func asUnstructuredWatcher(wf cache.WatchFunc) cache.WatchFunc {
+func asUnstructuredWatcher(wf cache.WatchFunc, selector string) cache.WatchFunc {
 	return func(lo metav1.ListOptions) (watch.Interface, error) {
+		if selector != "" && lo.LabelSelector == "" {
+			lo.LabelSelector = selector
+		}
 		return wf(lo)
 	}
 }
