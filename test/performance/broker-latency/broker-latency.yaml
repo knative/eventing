@@ -53,17 +53,3 @@ spec:
         ports:
         - name: cloudevents
           containerPort: 8080
-        volumeMounts:
-        - name: config-mako
-          mountPath: /etc/config-mako
-        terminationMessagePolicy: FallbackToLogsOnError
-      - name: mako-stub
-        image: knative.dev/pkg/test/mako/stub-sidecar
-        ports:
-        - name: quickstore
-          containerPort: 9813
-        terminationMessagePolicy: FallbackToLogsOnError
-      volumes:
-      - name: config-mako
-        configMap:
-          name: config-mako

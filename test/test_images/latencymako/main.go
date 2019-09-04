@@ -28,13 +28,10 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/google/mako/go/quickstore"
 	vegeta "github.com/tsenart/vegeta/lib"
 
 	"knative.dev/eventing/test/common"
-	"knative.dev/pkg/signals"
 	pkgtest "knative.dev/pkg/test"
-	"knative.dev/pkg/test/mako"
 	pkgpacers "knative.dev/pkg/test/vegeta/pacers"
 )
 
@@ -51,14 +48,9 @@ var (
 	sinkURL       string
 	msgSize       int
 	workers       uint64
-	sentCh        chan sentState
-	deliveredCh   chan deliveredState
-	receivedCh    chan receivedState
-	resultCh      chan eventStatus
 	paceFlag      string
 	warmupSeconds uint
 	verbose       bool
-	fatalf        = log.Fatalf
 )
 
 // environment variables consumed by the test
@@ -67,17 +59,36 @@ const (
 	podNamespaceEnvVar = "POD_NAMESPACE"
 )
 
-// eventStatus is status of the event delivery.
-type eventStatus int
+// state is the recorded state of an event.
+type state struct {
+	eventId uint64
+	at      time.Time
+}
 
-const (
-	sent eventStatus = iota
-	received
-	undelivered
-	dropped
-	duplicated // TODO currently unused
-	corrupted  // TODO(Fredy-Z): corrupted status is not being used now
+type (
+	sentState     state
+	acceptedState state
+	failedState   state
+	receivedState state
 )
+
+// state channels
+var (
+	sentCh     chan sentState
+	acceptedCh chan acceptedState
+	failedCh   chan failedState
+	receivedCh chan receivedState
+)
+
+// events recording maps
+var (
+	sentEvents     map[uint64]time.Time
+	acceptedEvents map[uint64]time.Time
+	failedEvents   map[uint64]time.Time
+	receivedEvents map[uint64]time.Time
+)
+
+var fatalf = log.Fatalf
 
 type requestInterceptor struct {
 	before func(*http.Request)
@@ -94,16 +105,6 @@ func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, er
 	}
 	return res, err
 }
-
-type state struct {
-	eventId uint64
-	failed  bool
-	at      time.Time
-}
-
-type sentState state
-type deliveredState state
-type receivedState state
 
 func init() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
@@ -133,31 +134,8 @@ func main() {
 
 	pacerSpecs, err := parsePaceSpec()
 	if err != nil {
-		fatalf("%+v", err)
+		fatalf("Failed to parse pace spec: %v", err)
 	}
-
-	// --- Configure mako
-
-	// We want this for properly handling Kubernetes container lifecycle events.
-	ctx := signals.NewContext()
-
-	// Use the benchmark key created
-	ctx, q, qclose, err := mako.Setup(ctx)
-	if err != nil {
-		log.Fatalf("Failed to setup mako: %v", err)
-	}
-
-	// Use a fresh context here so that our RPC to terminate the sidecar
-	// isn't subject to our timeout (or we won't shut it down when we time out)
-	defer qclose(context.Background())
-
-	// Wrap fatalf in a helper or our sidecar will live forever.
-	fatalf = func(f string, args ...interface{}) {
-		qclose(context.Background())
-		log.Fatalf(f, args...)
-	}
-
-	printf("Mako configured")
 
 	// wait until all pods are ready (channel, consumers)
 	ns := testNamespace()
@@ -168,16 +146,19 @@ func main() {
 
 	// --- Warmup phase
 
+	printf("--- BEGIN WARMUP ---")
 	if warmupSeconds > 0 {
 		warmup(warmupSeconds)
 	} else {
 		printf("Warmup skipped")
 	}
+	printf("---- END WARMUP ----")
 
-	printf("--- BENCHMARK ---")
-	printf("Configuring channels")
+	printf("--- BEGIN BENCHMARK ---")
 
 	// --- Allocate channels
+
+	printf("Configuring channels")
 
 	// We need those estimates to allocate memory before benchmark starts
 	var estimatedNumberOfMessagesInsideAChannel uint64
@@ -185,14 +166,14 @@ func main() {
 
 	for _, pacer := range pacerSpecs {
 		totalMessages := uint64(pacer.rps * int(pacer.duration.Seconds()))
-		// Add a bit more, just to be sure that we don't allocate
+		// Add a bit more, just to be sure that we don't under allocate
 		totalMessages = totalMessages + uint64(float64(totalMessages)*0.1)
-		// Queueing theory stuff: Given our channels can process 50 rps, queueLength = arrival rps / 50 rps = pacer.rps / 50
+		// Queueing theory: given our channels can process 50 rps, queueLength = arrival rps / 50 rps = pacer.rps / 50
 		queueLength := uint64(pacer.rps / 50)
 		if queueLength < 10 {
 			queueLength = 10
 		}
-		estimatedNumberOfTotalMessages = estimatedNumberOfTotalMessages + totalMessages
+		estimatedNumberOfTotalMessages += totalMessages
 		if queueLength > estimatedNumberOfMessagesInsideAChannel {
 			estimatedNumberOfMessagesInsideAChannel = queueLength
 		}
@@ -203,22 +184,26 @@ func main() {
 
 	// Create all channels
 	sentCh = make(chan sentState, estimatedNumberOfMessagesInsideAChannel)
-	deliveredCh = make(chan deliveredState, estimatedNumberOfMessagesInsideAChannel)
+	acceptedCh = make(chan acceptedState, estimatedNumberOfMessagesInsideAChannel)
+	failedCh = make(chan failedState, estimatedNumberOfMessagesInsideAChannel)
 	receivedCh = make(chan receivedState, estimatedNumberOfMessagesInsideAChannel)
-	resultCh = make(chan eventStatus, estimatedNumberOfMessagesInsideAChannel)
 
-	// Small note: both receivedCh and resultCh depends on receive thpt and not send thpt
-	// but we don't care since this is a pessimistic estimate and receive thpt < send thpt
+	// Small note: receivedCh depends on receive thpt and not send thpt but we
+	// don't care since this is a pessimistic estimate and receive thpt < send thpt
 
-	printf("Starting CloudEvents receiver")
+	sentEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
+	acceptedEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
+	failedEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
+	receivedEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
 
 	// Start the events receiver
+	printf("Starting CloudEvents receiver")
 	startCloudEventsReceiver(processReceiveEvent)
 
 	printf("Starting latency processor")
 
-	// Start the goroutine that will process the latencies and publish the data points to mako
-	go processLatencies(q, estimatedNumberOfTotalMessages)
+	// Start the events processor
+	go processEvents()
 
 	if warmupSeconds > 0 {
 		// Just let the channel relax a bit
@@ -249,17 +234,20 @@ func main() {
 		fatalf("Failed to setup combined pacer: %v", err)
 	}
 
-	client := http.Client{Transport: requestInterceptor{before: func(request *http.Request) {
-		id, _ := strconv.ParseUint(request.Header["Ce-Id"][0], 10, 64)
-		sentCh <- sentState{eventId: id, at: time.Now()}
-	}, after: func(request *http.Request, response *http.Response, e error) {
-		id, _ := strconv.ParseUint(request.Header["Ce-Id"][0], 10, 64)
-		if e != nil || response.StatusCode < 200 || response.StatusCode > 300 {
-			deliveredCh <- deliveredState{eventId: id, failed: true}
-		} else {
-			deliveredCh <- deliveredState{eventId: id, at: time.Now()}
-		}
-	}}}
+	client := http.Client{Transport: requestInterceptor{
+		before: func(request *http.Request) {
+			id := parseCloudEventIDHeader(request.Header)
+			sentCh <- sentState{eventId: id, at: time.Now()}
+		},
+		after: func(request *http.Request, response *http.Response, e error) {
+			id := parseCloudEventIDHeader(request.Header)
+			if e != nil || response.StatusCode < 200 || response.StatusCode > 300 {
+				failedCh <- failedState{eventId: id, at: time.Now()}
+			} else {
+				acceptedCh <- acceptedState{eventId: id, at: time.Now()}
+			}
+		},
+	}}
 
 	printf("Starting benchmark")
 
@@ -269,33 +257,17 @@ func main() {
 		vegeta.MaxWorkers(workers),
 	).Attack(targeter, combinedPacer, totalBenchmarkDuration, defaultEventType+"-attack")
 
-	go processVegetaResult(vegetaResults)
+	// doneCh is closed as soon as all results have been processed
+	doneCh := make(chan struct{})
+	go processVegetaResult(vegetaResults, doneCh)
+	<-doneCh
 
-	// count errors
-	var publishErrorCount int
-	var deliverErrorCount int
-	for eventState := range resultCh {
-		switch eventState {
-		case dropped:
-			deliverErrorCount++
-		case undelivered:
-			publishErrorCount++
-		}
-	}
+	printf("---- END BENCHMARK ----")
 
-	printf("Publish error count: %v", publishErrorCount)
-	printf("Deliver error count: %v", deliverErrorCount)
-
-	printf("--- END BENCHMARK ---")
-
-	// publish error counts as aggregate metrics
-	q.AddRunAggregate("pe", float64(publishErrorCount))
-	q.AddRunAggregate("de", float64(deliverErrorCount))
-
-	out, err := q.Store()
-	if err != nil {
-		fatalf("q.Store error: %v: %v", out, err)
-	}
+	printf("%-15s: %d", "Sent count", len(sentEvents))
+	printf("%-15s: %d", "Accepted count", len(acceptedEvents))
+	printf("%-15s: %d", "Failed count", len(failedEvents))
+	printf("%-15s: %d", "Received count", len(receivedEvents))
 }
 
 func parsePaceSpec() ([]paceSpec, error) {
@@ -306,14 +278,14 @@ func parsePaceSpec() ([]paceSpec, error) {
 		ps := strings.Split(p, ":")
 		rps, err := strconv.Atoi(ps[0])
 		if err != nil {
-			return nil, fmt.Errorf("error while parsing pace spec %v: %v", ps, err)
+			return nil, fmt.Errorf("invalid format %q: %v", ps, err)
 		}
 		duration := defaultDuration
 
 		if len(ps) == 2 {
 			durationSec, err := strconv.Atoi(ps[1])
 			if err != nil {
-				return nil, fmt.Errorf("error while parsing pace spec %v: %v", ps, err)
+				return nil, fmt.Errorf("invalid format %q: %v", ps, err)
 			}
 			duration = time.Second * time.Duration(durationSec)
 		}
@@ -325,8 +297,6 @@ func parsePaceSpec() ([]paceSpec, error) {
 }
 
 func warmup(warmupSeconds uint) {
-	printf("--- WARMUP ---")
-
 	cancelCeReceiver := startCloudEventsReceiver(func(event cloudevents.Event) {})
 
 	printf("Started CloudEvents receiver for warmup")
@@ -345,7 +315,7 @@ func warmup(warmupSeconds uint) {
 	)
 
 	if err != nil {
-		fatalf("failed to create pacer: %v\n", err)
+		fatalf("Failed to create pacer: %v", err)
 	}
 
 	printf("Pacer configured for warmup: 10 rps to %d rps for %d secs", warmupRps, warmupSeconds)
@@ -362,8 +332,6 @@ func warmup(warmupSeconds uint) {
 	for _ = range vegetaResults {
 	}
 
-	printf("--- END WARMUP ---")
-
 	cancelCeReceiver()
 }
 
@@ -373,14 +341,14 @@ func startCloudEventsReceiver(eventHandler func(event cloudevents.Event)) contex
 		cloudevents.WithBinaryEncoding(),
 	)
 	if err != nil {
-		fatalf("failed to create transport: %v\n", err)
+		fatalf("Failed to create transport: %v", err)
 	}
 	c, err := cloudevents.NewClient(t,
 		cloudevents.WithTimeNow(),
 		cloudevents.WithUUIDs(),
 	)
 	if err != nil {
-		fatalf("failed to create client: %v\n", err)
+		fatalf("Failed to create client: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -390,7 +358,7 @@ func startCloudEventsReceiver(eventHandler func(event cloudevents.Event)) contex
 	return cancel
 }
 
-func processVegetaResult(vegetaResults <-chan *vegeta.Result) {
+func processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- struct{}) {
 	// Discard all vegeta results and wait the end of this channel
 	for _ = range vegetaResults {
 	}
@@ -398,73 +366,67 @@ func processVegetaResult(vegetaResults <-chan *vegeta.Result) {
 	printf("All requests sent")
 
 	close(sentCh)
-	close(deliveredCh)
+	close(acceptedCh)
 
-	// Let's assume that after 5 seconds all responses are received
+	// assume all responses are received after 5s
 	time.Sleep(5 * time.Second)
 	close(receivedCh)
 
-	// Let's assume that after 3 seconds all responses are processed
-	time.Sleep(3 * time.Second)
-	close(resultCh)
-
 	printf("All channels closed")
+
+	close(doneCh)
 }
 
 func processReceiveEvent(event cloudevents.Event) {
 	id, _ := strconv.ParseUint(event.ID(), 10, 64)
-	receivedCh <- receivedState{eventId: id, at: time.Now()}
+	receivedCh <- receivedState{eventId: id, at: event.Time()}
 }
 
-func processLatencies(q *quickstore.Quickstore, mapSize uint64) {
-	sentEventsMap := make(map[uint64]time.Time, mapSize)
+// processEvents keeps a record of all events (sent, accepted, failed, received).
+func processEvents() {
 	for {
 		select {
-		case s, ok := <-sentCh:
-			if ok {
-				sentEventsMap[s.eventId] = s.at
+
+		case e, ok := <-sentCh:
+			if !ok {
+				continue
 			}
-		case d, ok := <-deliveredCh:
-			if ok {
-				timestampSent, ok := sentEventsMap[d.eventId]
-				if ok {
-					if d.failed {
-						resultCh <- undelivered
-						if qerr := q.AddError(mako.XTime(timestampSent), "undelivered"); qerr != nil {
-							log.Printf("ERROR AddError: %v", qerr)
-						}
-					} else {
-						sendLatency := d.at.Sub(timestampSent)
-						// Uncomment to get CSV directly from this container log
-						//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
-						// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
-						if qerr := q.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
-							log.Printf("ERROR AddSamplePoint: %v", qerr)
-						}
-					}
-				} else {
-					// Send timestamp still not here, reenqueue
-					deliveredCh <- d
-				}
+			sentEvents[e.eventId] = e.at
+
+		case e, ok := <-acceptedCh:
+			if !ok {
+				continue
 			}
-		case r, ok := <-receivedCh:
-			if ok {
-				timestampSent, ok := sentEventsMap[r.eventId]
-				if ok {
-					e2eLatency := r.at.Sub(timestampSent)
-					// Uncomment to get CSV directly from this container log
-					//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
-					// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
-					if qerr := q.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
-						log.Printf("ERROR AddSamplePoint: %v", qerr)
-					}
-				} else {
-					// Send timestamp still not here, reenqueue
-					receivedCh <- r
-				}
-			} else {
+
+			_, sent := sentEvents[e.eventId]
+			if !sent {
+				// Send timestamp not yet recorded, reenqueue
+				acceptedCh <- e
+				continue
+			}
+
+			acceptedEvents[e.eventId] = e.at
+
+		case e, ok := <-failedCh:
+			if !ok {
+				continue
+			}
+
+			_, sent := sentEvents[e.eventId]
+			if !sent {
+				// Send timestamp not yet recorded, reenqueue
+				failedCh <- e
+				continue
+			}
+
+			failedEvents[e.eventId] = e.at
+
+		case e, ok := <-receivedCh:
+			if !ok {
 				return
 			}
+
+			receivedEvents[e.eventId] = e.at
 		}
 	}
 }
@@ -495,4 +457,13 @@ func waitForPods(namespace string) error {
 		return err
 	}
 	return pkgtest.WaitForAllPodsRunning(c, namespace)
+}
+
+func parseCloudEventIDHeader(h http.Header) uint64 {
+	id, err := strconv.ParseUint(h.Get("Ce-Id"), 10, 64)
+	if err != nil {
+		fatalf("Failed to parse CloudEvent id: %v", err)
+	}
+
+	return id
 }
