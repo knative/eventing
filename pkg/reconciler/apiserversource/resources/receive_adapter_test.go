@@ -140,16 +140,16 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name: "MODE",
 								}, {
 									Name:  "API_VERSION",
-									Value: "||||",
+									Value: ";;;;",
 								}, {
 									Name:  "KIND",
-									Value: "Namespace|Pod|Pod|Pod|Pod",
+									Value: "Namespace;Pod;Pod;Pod;Pod",
 								}, {
 									Name:  "CONTROLLER",
 									Value: "false,true,false,false,false",
 								}, {
 									Name:  "SELECTOR",
-									Value: "||test-key1=test-value1|akey,!anotherkey|akey,!anotherkey,test-key2=test-value2",
+									Value: ";;test-key1=test-value1;akey,!anotherkey;akey,!anotherkey,test-key2=test-value2",
 								}, {
 									Name: "SYSTEM_NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{

@@ -102,7 +102,7 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 			selectors += sep + labelSelector
 		}
 
-		sep = "|"
+		sep = ";"
 		boolsep = ","
 	}
 
