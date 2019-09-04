@@ -27,10 +27,15 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc"
+
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	vegeta "github.com/tsenart/vegeta/lib"
 
 	"knative.dev/eventing/test/common"
+	pb "knative.dev/eventing/test/test_images/latencymako"
 	pkgtest "knative.dev/pkg/test"
 	pkgpacers "knative.dev/pkg/test/vegeta/pacers"
 )
@@ -46,6 +51,7 @@ const (
 // flags for the image
 var (
 	sinkURL       string
+	aggregAddr    string
 	msgSize       int
 	workers       uint64
 	paceFlag      string
@@ -61,8 +67,8 @@ const (
 
 // state is the recorded state of an event.
 type state struct {
-	eventId uint64
-	at      time.Time
+	eventId string
+	at      *timestamp.Timestamp
 }
 
 type (
@@ -82,10 +88,10 @@ var (
 
 // events recording maps
 var (
-	sentEvents     map[uint64]time.Time
-	acceptedEvents map[uint64]time.Time
-	failedEvents   map[uint64]time.Time
-	receivedEvents map[uint64]time.Time
+	sentEvents     = pb.EventsRecord{Type: pb.EventsRecord_SENT}
+	acceptedEvents = pb.EventsRecord{Type: pb.EventsRecord_ACCEPTED}
+	failedEvents   = pb.EventsRecord{Type: pb.EventsRecord_FAILED}
+	receivedEvents = pb.EventsRecord{Type: pb.EventsRecord_RECEIVED}
 )
 
 var fatalf = log.Fatalf
@@ -109,6 +115,7 @@ func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, er
 func init() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
 	flag.StringVar(&sinkURL, "sink", "", "The sink URL for the event destination.")
+	flag.StringVar(&aggregAddr, "aggregator", "", "The aggregator address for sending events records.")
 	flag.IntVar(&msgSize, "msg-size", 100, "The size in bytes of each message we want to send. Generate random strings to avoid caching.")
 	flag.UintVar(&warmupSeconds, "warmup", 10, "Duration in seconds of warmup phase. During warmup latencies are not recorded. 0 means no warmup")
 	flag.StringVar(&paceFlag, "pace", "", "Pace array comma separated. Format rps[:duration=10s]. Example 100,200:4,100:1,500:60")
@@ -130,6 +137,10 @@ func main() {
 
 	if sinkURL == "" {
 		fatalf("sink not set!")
+	}
+
+	if aggregAddr == "" {
+		fatalf("aggregator not set!")
 	}
 
 	pacerSpecs, err := parsePaceSpec()
@@ -191,10 +202,10 @@ func main() {
 	// Small note: receivedCh depends on receive thpt and not send thpt but we
 	// don't care since this is a pessimistic estimate and receive thpt < send thpt
 
-	sentEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
-	acceptedEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
-	failedEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
-	receivedEvents = make(map[uint64]time.Time, estimatedNumberOfTotalMessages)
+	sentEvents.Events = make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages)
+	acceptedEvents.Events = make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages)
+	failedEvents.Events = make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages)
+	receivedEvents.Events = make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages)
 
 	// Start the events receiver
 	printf("Starting CloudEvents receiver")
@@ -236,15 +247,15 @@ func main() {
 
 	client := http.Client{Transport: requestInterceptor{
 		before: func(request *http.Request) {
-			id := parseCloudEventIDHeader(request.Header)
-			sentCh <- sentState{eventId: id, at: time.Now()}
+			id := request.Header.Get("Ce-Id")
+			sentCh <- sentState{eventId: id, at: ptypes.TimestampNow()}
 		},
 		after: func(request *http.Request, response *http.Response, e error) {
-			id := parseCloudEventIDHeader(request.Header)
+			id := request.Header.Get("Ce-Id")
 			if e != nil || response.StatusCode < 200 || response.StatusCode > 300 {
-				failedCh <- failedState{eventId: id, at: time.Now()}
+				failedCh <- failedState{eventId: id, at: ptypes.TimestampNow()}
 			} else {
-				acceptedCh <- acceptedState{eventId: id, at: time.Now()}
+				acceptedCh <- acceptedState{eventId: id, at: ptypes.TimestampNow()}
 			}
 		},
 	}}
@@ -264,10 +275,21 @@ func main() {
 
 	printf("---- END BENCHMARK ----")
 
-	printf("%-15s: %d", "Sent count", len(sentEvents))
-	printf("%-15s: %d", "Accepted count", len(acceptedEvents))
-	printf("%-15s: %d", "Failed count", len(failedEvents))
-	printf("%-15s: %d", "Received count", len(receivedEvents))
+	printf("Sending collected data to the aggregator")
+
+	printf("%-15s: %d", "Sent count", len(sentEvents.Events))
+	printf("%-15s: %d", "Accepted count", len(acceptedEvents.Events))
+	printf("%-15s: %d", "Failed count", len(failedEvents.Events))
+	printf("%-15s: %d", "Received count", len(receivedEvents.Events))
+
+	// Create a connection to the aggregator
+	c, connclose := aggregatorClient()
+	defer connclose()
+
+	sendEventsRecord(c, &sentEvents)
+	sendEventsRecord(c, &acceptedEvents)
+	sendEventsRecord(c, &failedEvents)
+	sendEventsRecord(c, &receivedEvents)
 }
 
 func parsePaceSpec() ([]paceSpec, error) {
@@ -368,8 +390,8 @@ func processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- stru
 	close(sentCh)
 	close(acceptedCh)
 
-	// assume all responses are received after 5s
-	time.Sleep(5 * time.Second)
+	// assume all responses are received after a certain time
+	time.Sleep(8 * time.Second)
 	close(receivedCh)
 
 	printf("All channels closed")
@@ -378,8 +400,12 @@ func processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- stru
 }
 
 func processReceiveEvent(event cloudevents.Event) {
-	id, _ := strconv.ParseUint(event.ID(), 10, 64)
-	receivedCh <- receivedState{eventId: id, at: event.Time()}
+	et, err := ptypes.TimestampProto(event.Time())
+	if err != nil {
+		fatalf("Received an invalid timestamp in event %q: %v", event.ID(), err)
+	}
+
+	receivedCh <- receivedState{eventId: event.ID(), at: et}
 }
 
 // processEvents keeps a record of all events (sent, accepted, failed, received).
@@ -391,43 +417,60 @@ func processEvents() {
 			if !ok {
 				continue
 			}
-			sentEvents[e.eventId] = e.at
+			sentEvents.Events[e.eventId] = e.at
 
 		case e, ok := <-acceptedCh:
 			if !ok {
 				continue
 			}
 
-			_, sent := sentEvents[e.eventId]
+			_, sent := sentEvents.Events[e.eventId]
 			if !sent {
 				// Send timestamp not yet recorded, reenqueue
 				acceptedCh <- e
 				continue
 			}
 
-			acceptedEvents[e.eventId] = e.at
+			acceptedEvents.Events[e.eventId] = e.at
 
 		case e, ok := <-failedCh:
 			if !ok {
 				continue
 			}
 
-			_, sent := sentEvents[e.eventId]
+			_, sent := sentEvents.Events[e.eventId]
 			if !sent {
 				// Send timestamp not yet recorded, reenqueue
 				failedCh <- e
 				continue
 			}
 
-			failedEvents[e.eventId] = e.at
+			failedEvents.Events[e.eventId] = e.at
 
 		case e, ok := <-receivedCh:
 			if !ok {
 				return
 			}
 
-			receivedEvents[e.eventId] = e.at
+			receivedEvents.Events[e.eventId] = e.at
 		}
+	}
+}
+
+func aggregatorClient() (cli pb.EventsRecorderClient, closeConnFn func() error) {
+	conn, err := grpc.Dial(aggregAddr, grpc.WithInsecure())
+	if err != nil {
+		fatalf("Failed to connect to the aggregator: %v", err)
+	}
+
+	return pb.NewEventsRecorderClient(conn), conn.Close
+}
+
+func sendEventsRecord(cli pb.EventsRecorderClient, r *pb.EventsRecord) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := cli.RecordEvents(ctx, r); err != nil {
+		fatalf("Failed to send events record: %v", err)
 	}
 }
 
@@ -457,13 +500,4 @@ func waitForPods(namespace string) error {
 		return err
 	}
 	return pkgtest.WaitForAllPodsRunning(c, namespace)
-}
-
-func parseCloudEventIDHeader(h http.Header) uint64 {
-	id, err := strconv.ParseUint(h.Get("Ce-Id"), 10, 64)
-	if err != nil {
-		fatalf("Failed to parse CloudEvent id: %v", err)
-	}
-
-	return id
 }
