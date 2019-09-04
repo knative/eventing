@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	BrokerLabel = "eventing.knative.dev/broker"
+	brokerLabel = "eventing.knative.dev/broker"
 )
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
@@ -44,5 +44,5 @@ func setLabels(t *Trigger) {
 	if len(t.Labels) == 0 {
 		t.Labels = map[string]string{}
 	}
-	t.Labels[BrokerLabel] = t.Spec.Broker
+	t.Labels[brokerLabel] = t.Spec.Broker
 }

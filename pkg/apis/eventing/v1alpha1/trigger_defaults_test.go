@@ -36,7 +36,7 @@ var (
 
 	defaultTrigger = Trigger{
 		ObjectMeta: v1.ObjectMeta{
-			Labels: map[string]string{BrokerLabel: defaultBroker},
+			Labels: map[string]string{brokerLabel: defaultBroker},
 		},
 		Spec: TriggerSpec{
 			Broker: defaultBroker,
@@ -54,7 +54,7 @@ func TestTriggerDefaults(t *testing.T) {
 			initial: Trigger{Spec: TriggerSpec{Filter: otherTriggerFilter}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{BrokerLabel: defaultBroker},
+					Labels: map[string]string{brokerLabel: defaultBroker},
 				},
 				Spec: TriggerSpec{Broker: defaultBroker, Filter: otherTriggerFilter}},
 		},
@@ -62,7 +62,7 @@ func TestTriggerDefaults(t *testing.T) {
 			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}},
 			expected: Trigger{
 				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{BrokerLabel: otherBroker},
+					Labels: map[string]string{brokerLabel: otherBroker},
 				},
 				Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter}},
 		},
@@ -80,7 +80,7 @@ func TestTriggerDefaults(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Labels: map[string]string{
 						"otherLabel": "my-other-label",
-						BrokerLabel:  defaultBroker},
+						brokerLabel:  defaultBroker},
 				},
 				Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
 		},
