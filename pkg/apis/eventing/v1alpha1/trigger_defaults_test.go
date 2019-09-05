@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,6 +35,9 @@ var (
 	}
 
 	defaultTrigger = Trigger{
+		ObjectMeta: v1.ObjectMeta{
+			Labels: map[string]string{brokerLabel: defaultBroker},
+		},
 		Spec: TriggerSpec{
 			Broker: defaultBroker,
 			Filter: defaultTriggerFilter,
@@ -47,16 +51,38 @@ func TestTriggerDefaults(t *testing.T) {
 		expected Trigger
 	}{
 		"nil broker": {
-			initial:  Trigger{Spec: TriggerSpec{Filter: otherTriggerFilter}},
-			expected: Trigger{Spec: TriggerSpec{Broker: defaultBroker, Filter: otherTriggerFilter}},
+			initial: Trigger{Spec: TriggerSpec{Filter: otherTriggerFilter}},
+			expected: Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{brokerLabel: defaultBroker},
+				},
+				Spec: TriggerSpec{Broker: defaultBroker, Filter: otherTriggerFilter}},
 		},
 		"nil filter": {
-			initial:  Trigger{Spec: TriggerSpec{Broker: otherBroker}},
-			expected: Trigger{Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter}},
+			initial: Trigger{Spec: TriggerSpec{Broker: otherBroker}},
+			expected: Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{brokerLabel: otherBroker},
+				},
+				Spec: TriggerSpec{Broker: otherBroker, Filter: defaultTriggerFilter}},
 		},
 		"nil broker and nil filter": {
 			initial:  Trigger{},
 			expected: defaultTrigger,
+		},
+		"with broker and label": {
+			initial: Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{"otherLabel": "my-other-label"},
+				},
+				Spec: TriggerSpec{Broker: defaultBroker}},
+			expected: Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{
+						"otherLabel": "my-other-label",
+						brokerLabel:  defaultBroker},
+				},
+				Spec: TriggerSpec{Broker: defaultBroker, Filter: defaultTriggerFilter}},
 		},
 	}
 	for n, tc := range testCases {
