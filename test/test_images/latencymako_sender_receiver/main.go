@@ -216,11 +216,6 @@ func main() {
 	// Start the events processor
 	go processEvents()
 
-	if warmupSeconds > 0 {
-		// Just let the channel relax a bit
-		time.Sleep(5 * time.Second)
-	}
-
 	// set events defaults
 	eventSrc := eventsSource()
 
@@ -354,6 +349,9 @@ func warmup(warmupSeconds uint) {
 
 	for _ = range vegetaResults {
 	}
+
+	// give the channel a chance to drain the events it may still have enqueued
+	time.Sleep(5 * time.Second)
 
 	cancelCeReceiver()
 }
