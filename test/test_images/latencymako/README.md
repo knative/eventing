@@ -2,11 +2,13 @@
 
 This image is designed to benchmark Knative Eventing channel/brokers.
 
-The image does both the sender and receiver role, allowing the clock to be synchronized to correctly calculate latencies.
+The image does both the sender and receiver role, allowing the clock to be
+synchronized to correctly calculate latencies.
 
 Latencies are calculated and published to the mako sidecar container.
 
-The image is designed to allocate as much memory as possible before the benchmark starts. We suggest to disable Go GC to avoid useless GC pauses.
+The image is designed to allocate as much memory as possible before the
+benchmark starts. We suggest to disable Go GC to avoid useless GC pauses.
 
 ## Usage
 
@@ -54,7 +56,8 @@ There are two required flags: the `sink` and `pace`.
 
 ### Pace configuration
 
-`pace` is a comma separated array of pace configurations in format `rps[:duration=10s]`.
+`pace` is a comma separated array of pace configurations in format
+`rps[:duration=10s]`.
 
 For example the configuration `100,200:20,400:60` means:
 
@@ -64,12 +67,16 @@ For example the configuration `100,200:20,400:60` means:
 
 ### Warmup phase
 
-You can configure a warmup phase to warm the hot path of channel implementations. This is especially required while working with JVM or similar environments. During the warmup phase, no latencies are calculated.
+You can configure a warmup phase to warm the hot path of channel
+implementations. This is especially required while working with JVM or similar
+environments. During the warmup phase, no latencies are calculated.
 
-To configure the duration of warmup phase, use flag `warmup` specifying the number of seconds.
+To configure the duration of warmup phase, use flag `warmup` specifying the
+number of seconds.
 
 If you don't want a warmup phase, use `--warmup=0`.
 
 ### Workers
 
-You can specify the number of vegeta workers that perform requests with flag `workers`.
+You can specify the number of vegeta workers that perform requests with flag
+`workers`.
