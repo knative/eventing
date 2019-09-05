@@ -50,19 +50,6 @@ _Adding the `upstream` remote sets you up nicely for regularly
 Once you reach this point you are ready to do a full build and deploy as
 follows.
 
-## Install Channels
-
-Install the
-[In-Memory-Channel](https://github.com/knative/eventing/tree/master/config/channels/in-memory-channel)
-since this is the
-[default channel](https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md).
-
-```shell
-ko apply -f config/channels/in-memory-channel/
-```
-
-Depending on your needs you might want to install other
-[channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
 
 ## Starting Eventing Controller
 
@@ -86,6 +73,20 @@ You can access the Eventing Controller's logs with:
 ```shell
 kubectl -n knative-eventing logs $(kubectl -n knative-eventing get pods -l app=eventing-controller -o name)
 ```
+
+## Install Channels
+
+Install the
+[In-Memory-Channel](https://github.com/knative/eventing/tree/master/config/channels/in-memory-channel)
+since this is the
+[default channel](https://github.com/knative/docs/blob/master/docs/eventing/channels/default-channels.md).
+
+```shell
+ko apply -f config/channels/in-memory-channel/
+```
+
+Depending on your needs you might want to install other
+[channel implementations](https://github.com/knative/docs/blob/master/docs/eventing/channels/channels-crds.md).
 
 ## Iterating
 
