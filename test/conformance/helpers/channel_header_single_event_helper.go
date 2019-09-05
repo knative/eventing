@@ -90,7 +90,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 		}
 
 		//verify that required x-b3-spani and x-b3-traceid are set
-		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid"}
+		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid", "X-B3-Sampled"}
 		for _, headerName := range requiredHeaderNameList {
 			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
 			if err := client.CheckLog(loggerPodName, common.CheckerContains(expectedHeaderLog)); err != nil {
