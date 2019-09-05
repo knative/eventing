@@ -252,10 +252,11 @@ func main() {
 		},
 		after: func(request *http.Request, response *http.Response, e error) {
 			id := request.Header.Get("Ce-Id")
+			t := ptypes.TimestampNow()
 			if e != nil || response.StatusCode < 200 || response.StatusCode > 300 {
-				failedCh <- failedState{eventId: id, at: ptypes.TimestampNow()}
+				failedCh <- failedState{eventId: id, at: t}
 			} else {
-				acceptedCh <- acceptedState{eventId: id, at: ptypes.TimestampNow()}
+				acceptedCh <- acceptedState{eventId: id, at: t}
 			}
 		},
 	}}

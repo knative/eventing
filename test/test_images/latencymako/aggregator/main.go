@@ -27,6 +27,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
 	pb "knative.dev/eventing/test/test_images/latencymako"
@@ -75,7 +76,7 @@ func main() {
 	printf("Configuring Mako")
 
 	// Use the benchmark key created
-	ctx, _, qclose, err := mako.Setup(ctx)
+	ctx, q, qclose, err := mako.Setup(ctx)
 	if err != nil {
 		fatalf("Failed to setup mako: %v", err)
 	}
@@ -127,10 +128,77 @@ func main() {
 
 	s.GracefulStop()
 
+	// --- Publish results
+
 	printf("%-15s: %d", "Sent count", len(sentEvents.Events))
 	printf("%-15s: %d", "Accepted count", len(acceptedEvents.Events))
 	printf("%-15s: %d", "Failed count", len(failedEvents.Events))
 	printf("%-15s: %d", "Received count", len(receivedEvents.Events))
+
+	printf("Publishing data points to Mako")
+
+	// count errors
+	var publishErrorCount int
+	var deliverErrorCount int
+
+	for sentID := range sentEvents.Events {
+		timestampSentProto := sentEvents.Events[sentID]
+		timestampSent, _ := ptypes.Timestamp(timestampSentProto)
+
+		timestampAcceptedProto, accepted := acceptedEvents.Events[sentID]
+		timestampAccepted, _ := ptypes.Timestamp(timestampAcceptedProto)
+
+		timestampReceivedProto, received := receivedEvents.Events[sentID]
+		timestampReceived, _ := ptypes.Timestamp(timestampReceivedProto)
+
+		if !accepted {
+			errMsg := "Failed on broker"
+			if _, failed := failedEvents.Events[sentID]; !failed {
+				// TODO(antoineco): should never happen, check whether the failed map makes any sense
+				errMsg = "Event not accepted but missing from failed map"
+			}
+
+			deliverErrorCount++
+
+			if qerr := q.AddError(mako.XTime(timestampSent), errMsg); qerr != nil {
+				log.Printf("ERROR AddError: %v", qerr)
+			}
+			continue
+		}
+
+		sendLatency := timestampAccepted.Sub(timestampSent)
+		// Uncomment to get CSV directly from this container log
+		//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
+		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
+		if qerr := q.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
+			log.Printf("ERROR AddSamplePoint: %v", qerr)
+		}
+
+		if !received {
+			publishErrorCount++
+
+			if qerr := q.AddError(mako.XTime(timestampSent), "Event not delivered"); qerr != nil {
+				log.Printf("ERROR AddError: %v", qerr)
+			}
+			continue
+		}
+
+		e2eLatency := timestampReceived.Sub(timestampSent)
+		// Uncomment to get CSV directly from this container log
+		//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
+		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
+		if qerr := q.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
+			log.Printf("ERROR AddSamplePoint: %v", qerr)
+		}
+	}
+
+	// publish error counts as aggregate metrics
+	q.AddRunAggregate("pe", float64(publishErrorCount))
+	q.AddRunAggregate("de", float64(deliverErrorCount))
+
+	if out, err := q.Store(); err != nil {
+		fatalf("Failed to store data: %v\noutput: %v", err, out)
+	}
 }
 
 // waitForEvents blocks until the expected number of events records have been received.
