@@ -27,28 +27,25 @@ import (
 	"strconv"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	_ "go.opencensus.io/trace"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"knative.dev/pkg/tracing"
 )
 
 var (
-	sink            string
-	eventID         string
-	eventType       string
-	eventSource     string
-	eventExtensions string
-	eventData       string
-	eventEncoding   string
-	periodStr       string
-	delayStr        string
-	maxMsgStr       string
-	addTracing      bool
+	sink          string
+	eventID       string
+	eventType     string
+	eventSource   string
+	eventData     string
+	eventEncoding string
+	periodStr     string
+	delayStr      string
+	maxMsgStr     string
 )
 
 func init() {
@@ -56,13 +53,11 @@ func init() {
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
 	flag.StringVar(&eventSource, "event-source", "localhost", "Source URI to use. Defaults to the current machine's hostname")
-	flag.StringVar(&eventExtensions, "event-extensions", "", "The extensions of event with json format.")
 	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
 	flag.StringVar(&delayStr, "delay", "5", "The number of seconds to wait before sending messages.")
 	flag.StringVar(&maxMsgStr, "max-messages", "1", "The number of messages to attempt to send. 0 for unlimited.")
-	flag.BoolVar(&addTracing, "add-tracing", false, "Should tracing be added to events sent.")
 }
 
 func parseDurationStr(durationStr string, defaultDuration int) time.Duration {
@@ -100,6 +95,7 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
+	//TODO consider using kncloudevents.NewDefaultClient and add support for confurable encodingOption?
 	var encodingOption http.Option
 	switch eventEncoding {
 	case "binary":
@@ -112,28 +108,23 @@ func main() {
 	}
 
 	tOpts := []http.Option{
-		cloudevents.WithTarget(sink),
 		encodingOption,
+		// Add input tracing.
+		http.WithMiddleware(tracing.HTTPSpanMiddleware),
 	}
 
-	// Add input tracing.
-	if addTracing {
-		tOpts = append(tOpts, http.WithMiddleware(tracing.HTTPSpanMiddleware))
-	}
+	tOpts = append(tOpts, cloudevents.WithTarget(sink))
 
 	t, err := cloudevents.NewHTTPTransport(tOpts...)
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}
-
 	// Add output tracing.
-	if addTracing {
-		t.Client = &gohttp.Client{
-			Transport: &ochttp.Transport{
-				Propagation:    &b3.HTTPFormat{},
-				NewClientTrace: ochttp.NewSpanAnnotator,
-			},
-		}
+	t.Client = &gohttp.Client{
+		Transport: &ochttp.Transport{
+			Propagation:    &b3.HTTPFormat{},
+			NewClientTrace: ochttp.NewSpanAnnotator,
+		},
 	}
 
 	c, err := cloudevents.NewClient(t,
@@ -146,7 +137,7 @@ func main() {
 
 	var untyped map[string]interface{}
 	if err := json.Unmarshal([]byte(eventData), &untyped); err != nil {
-		log.Println("Currently sendevent only supports JSON event data")
+		log.Println("Currently sendeventswithtracing only supports JSON event data")
 		os.Exit(1)
 	}
 
@@ -163,17 +154,6 @@ func main() {
 		}
 		event.SetType(eventType)
 		event.SetSource(eventSource)
-
-		if eventExtensions != "" {
-			var extensions map[string]interface{}
-			if err := json.Unmarshal([]byte(eventExtensions), &extensions); err != nil {
-				log.Fatalf("Encountered error when unmarshalling cloud event extensions to map[string]interface{}: %v", err)
-			}
-			for k, v := range extensions {
-				event.SetExtension(k, v)
-			}
-		}
-
 		if err := event.SetData(untyped); err != nil {
 			log.Fatalf("failed to set data, %v", err)
 		}
