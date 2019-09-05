@@ -33,8 +33,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-
-	"knative.dev/pkg/tracing"
 )
 
 var (
@@ -114,11 +112,6 @@ func main() {
 	tOpts := []http.Option{
 		cloudevents.WithTarget(sink),
 		encodingOption,
-	}
-
-	// Add input tracing.
-	if addTracing {
-		tOpts = append(tOpts, http.WithMiddleware(tracing.HTTPSpanMiddleware))
 	}
 
 	t, err := cloudevents.NewHTTPTransport(tOpts...)
