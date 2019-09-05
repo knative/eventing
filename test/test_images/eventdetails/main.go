@@ -45,8 +45,7 @@ func handler(ctx context.Context, event cloudevents.Event) {
 	header := tx.Header
 	headerNameList := []string{"X-B3-Sampled", "X-B3-Traceid", "X-B3-Spanid", "X-B3-ParentSpanId", "X-Custom-Header"}
 	for _, headerName := range headerNameList {
-		headerValue := getHeader(header, headerName)
-		if headerValue != nil {
+		if headerValue := getHeader(header, headerName); headerValue != nil {
 			fmt.Printf("Got Header %s: %s\n", headerName, *headerValue)
 		} else {
 			fmt.Printf("Missing Header %s\n", headerName)
