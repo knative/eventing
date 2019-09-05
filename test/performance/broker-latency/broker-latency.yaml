@@ -12,37 +12,86 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: broker-latency
+  name: broker-latency-send-receive
   namespace: perf-eventing
   labels:
     role: broker-latency-consumer
 spec:
+  completions: 3
+  parallelism: 3
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        role: broker-latency-consumer
+    spec:
+      serviceAccountName: perf-eventing
+      restartPolicy: Never
+      containers:
+      - name: sender-receiver
+        image: knative.dev/eventing/test/test_images/latencymako_sender_receiver
+        args:
+        - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
+        - "--aggregator=broker-latency-aggregator:10000"
+        - "--pace=100:10,200:20,400:60"
+        - "--verbose"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+        ports:
+        - name: cloudevents
+          containerPort: 8080
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: broker-latency-aggregator
+  namespace: perf-eventing
+  labels:
+    role: broker-latency-aggregator
+spec:
   serviceAccountName: perf-eventing
   restartPolicy: Never
   containers:
-    - name: "broker-latency"
-      image: knative.dev/eventing/test/test_images/latencymako
-      resources:
-        requests:
-          cpu: 1000m
-          memory: 2Gi
-      ports:
-        - containerPort: 8080
-      args:
-        - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
-        - "--pace=100:10,200:20,400:60"
-        - "--verbose"
-      volumeMounts:
-        - name: config-mako
-          mountPath: /etc/config-mako
-      terminationMessagePolicy: FallbackToLogsOnError
-    - name: "mako-stub"
-      image: knative.dev/pkg/test/mako/stub-sidecar
-      terminationMessagePolicy: FallbackToLogsOnError
-  volumes:
+  - name: aggregator
+    image: knative.dev/eventing/test/test_images/latencymako_aggregator
+    args:
+      # 3 senders/receivers, each of them generates 4 records (sent/accepted/failed/received)
+    - "--expect-records=12"
+    - "--verbose"
+    ports:
+    - name: grpc
+      containerPort: 10000
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+    volumeMounts:
     - name: config-mako
-      configMap:
-        name: config-mako
+      mountPath: /etc/config-mako
+    terminationMessagePolicy: FallbackToLogsOnError
+  - name: mako-stub
+    image: knative.dev/pkg/test/mako/stub-sidecar
+    ports:
+    - name: quickstore
+      containerPort: 9813
+    terminationMessagePolicy: FallbackToLogsOnError
+  volumes:
+  - name: config-mako
+    configMap:
+      name: config-mako

@@ -76,7 +76,7 @@ metadata:
   name: perf-eventing
 rules:
   - apiGroups: [""]
-    resources: ["nodes"]
+    resources: ["nodes", "pods"]
     verbs: ["list"]
 
 ---
@@ -169,7 +169,23 @@ spec:
   selector:
     role: broker-latency-consumer
   ports:
-  - protocol: TCP
+  - name: http
     port: 80
-    targetPort: 8080
-    name: http
+    targetPort: cloudevents
+    protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: broker-latency-aggregator
+  namespace: perf-eventing
+spec:
+  selector:
+    role: broker-latency-aggregator
+  ports:
+  - name: grpc
+    port: 10000
+    targetPort: grpc
+    protocol: TCP

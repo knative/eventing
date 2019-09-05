@@ -20,11 +20,11 @@ import (
 	"context"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"github.com/google/uuid"
 	vegeta "github.com/tsenart/vegeta/lib"
 )
 
@@ -68,7 +68,6 @@ func NewCloudEventsTargeter(sinkUrl string, msgSize int, eventType string, event
 }
 
 func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
-	seq := uint64(0)
 	ctx := context.TODO()
 
 	codec := cehttp.Codec{
@@ -82,11 +81,9 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 		// Generate CloudEvent
 		payload := map[string]string{"msg": generateRandString(cet.msgSize)}
 		event := cloudevents.NewEvent()
-		event.SetID(strconv.FormatUint(seq, 10))
+		event.SetID(uuid.New().String())
 		event.SetType(cet.eventType)
 		event.SetSource(cet.eventSource)
-
-		seq++
 
 		if err := event.SetData(payload); err != nil {
 			panic(err)
