@@ -32,6 +32,7 @@ const (
 
 // The Channel MUST pass through all tracing information as CloudEvents attributes
 func TestMustPassTracingHeaders(t *testing.T) {
+	t.Logf("Starting channel tracing headers test")
 	//singleEvent(t, resources.CloudEventEncodingBinary)
 	helpers.SingleEventHelperForChannelTestHelper(
 		t,

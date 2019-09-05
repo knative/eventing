@@ -39,15 +39,15 @@ type ClusterRoleOption func(*rbacv1.ClusterRole)
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
-	return eventSenderPodImage("sendevents", name, sink, event)
+	return eventSenderPodImage("sendevents", name, sink, event, false)
 }
 
 // EventSenderTracingPod creates a Pod that sends a single event to the given address.
 func EventSenderTracingPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
-	return eventSenderPodImage("sendeventstracing", name, sink, event)
+	return eventSenderPodImage("sendevents", name, sink, event, true)
 }
 
-func eventSenderPodImage(imageName string, name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
+func eventSenderPodImage(imageName string, name string, sink string, event *CloudEvent, addTracing bool) (*corev1.Pod, error) {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -57,6 +57,25 @@ func eventSenderPodImage(imageName string, name string, sink string, event *Clou
 		return nil, fmt.Errorf("encountered error when we marshall cloud event extensions %v", error)
 	}
 
+	args := []string{
+		"-event-id",
+		event.ID,
+		"-event-type",
+		event.Type,
+		"-event-source",
+		event.Source,
+		"-event-extensions",
+		eventExtensions,
+		"-event-data",
+		event.Data,
+		"-event-encoding",
+		event.Encoding,
+		"-sink",
+		sink,
+	}
+	if addTracing {
+		args = append(args, "-add-tracing")
+	}
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -66,22 +85,7 @@ func eventSenderPodImage(imageName string, name string, sink string, event *Clou
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
-				Args: []string{
-					"-event-id",
-					event.ID,
-					"-event-type",
-					event.Type,
-					"-event-source",
-					event.Source,
-					"-event-extensions",
-					eventExtensions,
-					"-event-data",
-					event.Data,
-					"-event-encoding",
-					event.Encoding,
-					"-sink",
-					sink,
-				},
+				Args:            args,
 			}},
 			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
