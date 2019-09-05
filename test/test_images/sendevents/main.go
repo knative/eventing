@@ -141,12 +141,14 @@ func main() {
 		event.SetType(eventType)
 		event.SetSource(eventSource)
 
-		var extensions map[string]interface{}
-		if err := json.Unmarshal([]byte(eventExtensions), &extensions); err != nil {
-			log.Fatalf("Encountered error when unmarshalling cloud event extensions to map[string]interface{}: %v", err)
-		}
-		for k, v := range extensions {
-			event.SetExtension(k, v)
+		if eventExtensions != "" {
+			var extensions map[string]interface{}
+			if err := json.Unmarshal([]byte(eventExtensions), &extensions); err != nil {
+				log.Fatalf("Encountered error when unmarshalling cloud event extensions to map[string]interface{}: %v", err)
+			}
+			for k, v := range extensions {
+				event.SetExtension(k, v)
+			}
 		}
 
 		if err := event.SetData(untyped); err != nil {
