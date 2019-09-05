@@ -19,12 +19,10 @@ limitations under the License.
 package conformance
 
 import (
-	"fmt"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/conformance/helpers"
 )
 
 const (
@@ -34,81 +32,81 @@ const (
 
 // The Channel MUST pass through all tracing information as CloudEvents attributes
 func TestMustPassTracingHeaders(t *testing.T) {
-	singleEvent(t, resources.CloudEventEncodingBinary)
+	//singleEvent(t, resources.CloudEventEncodingBinary)
+	helpers.SingleEventHelperForChannelTestHelper(
+		t,
+		resources.CloudEventEncodingBinary,
+		channelTestRunner,
+	)
+
 }
 
-/*
-singleEvent tests the following scenario:
+// func singleEvent(t *testing.T, encoding string) {
+// 	channelName := "conformance-headers-channel-" + encoding
+// 	senderName := "conformance-headers-sender-" + encoding
+// 	subscriptionName := "conformance-headers-subscription-" + encoding
+// 	loggerPodName := "conformance-headers-logger-pod-" + encoding
 
-EventSource ---> Channel ---> Subscription ---> Service(Logger)
+// 	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
+// 		st.Logf("Running header conformance test with channel %q", channel)
+// 		client := setup(st, true)
+// 		defer tearDown(client)
 
-*/
-func singleEvent(t *testing.T, encoding string) {
-	channelName := "conformance-headers-channel-" + encoding
-	senderName := "conformance-headers-sender-" + encoding
-	subscriptionName := "conformance-headers-subscription-" + encoding
-	loggerPodName := "conformance-headers-logger-pod-" + encoding
+// 		// create channel
+// 		st.Logf("Creating channel")
+// 		channelTypeMeta := getChannelTypeMeta(channel)
+// 		client.CreateChannelOrFail(channelName, channelTypeMeta)
 
-	runTests(t, channels, common.FeatureBasic, func(st *testing.T, channel string) {
-		st.Logf("Running header conformance test with channel %q", channel)
-		client := setup(st, true)
-		defer tearDown(client)
+// 		// create logger service as the subscriber
+// 		pod := resources.EventDetailsPod(loggerPodName)
+// 		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
 
-		// create channel
-		st.Logf("Creating channel")
-		channelTypeMeta := getChannelTypeMeta(channel)
-		client.CreateChannelOrFail(channelName, channelTypeMeta)
+// 		// create subscription to subscribe the channel, and forward the received events to the logger service
+// 		client.CreateSubscriptionOrFail(
+// 			subscriptionName,
+// 			channelName,
+// 			channelTypeMeta,
+// 			resources.WithSubscriberForSubscription(loggerPodName),
+// 		)
 
-		// create logger service as the subscriber
-		pod := resources.EventDetailsPod(loggerPodName)
-		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+// 		// wait for all test resources to be ready, so that we can start sending events
+// 		if err := client.WaitForAllTestResourcesReady(); err != nil {
+// 			st.Fatalf("Failed to get all test resources ready: %v", err)
+// 		}
 
-		// create subscription to subscribe the channel, and forward the received events to the logger service
-		client.CreateSubscriptionOrFail(
-			subscriptionName,
-			channelName,
-			channelTypeMeta,
-			resources.WithSubscriberForSubscription(loggerPodName),
-		)
+// 		// send fake CloudEvent to the channel
+// 		eventID := fmt.Sprintf("%s", uuid.NewUUID())
+// 		body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
+// 		event := &resources.CloudEvent{
+// 			ID:       eventID,
+// 			Source:   senderName,
+// 			Type:     resources.CloudEventDefaultType,
+// 			Data:     fmt.Sprintf(`{"msg":%q}`, body),
+// 			Encoding: encoding,
+// 		}
 
-		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+// 		st.Logf("Sending event to %s", senderName)
+// 		if err := client.SendFakeEventToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
+// 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
+// 		}
 
-		// send fake CloudEvent to the channel
-		eventID := fmt.Sprintf("%s", uuid.NewUUID())
-		body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
-		event := &resources.CloudEvent{
-			ID:       eventID,
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: encoding,
-		}
+// 		// verify the logger service receives the event
+// 		st.Logf("Logging for event with body %s", body)
 
-		st.Logf("Sending event to %s", senderName)
-		if err := client.SendFakeEventToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
-		}
+// 		if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
+// 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
+// 		}
 
-		// verify the logger service receives the event
-		st.Logf("Logging for event with body %s", body)
+// 		//verify that required x-b3-spani and x-b3-traceid are set
+// 		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid"}
+// 		for _, headerName := range requiredHeaderNameList {
+// 			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
+// 			if err := client.CheckLog(loggerPodName, common.CheckerContains(expectedHeaderLog)); err != nil {
+// 				st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedHeaderLog, loggerPodName, err)
+// 			}
+// 		}
 
-		if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
-			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
-		}
-
-		//verify that required x-b3-spani and x-b3-traceid are set
-		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid"}
-		for _, headerName := range requiredHeaderNameList {
-			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
-			if err := client.CheckLog(loggerPodName, common.CheckerContains(expectedHeaderLog)); err != nil {
-				st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedHeaderLog, loggerPodName, err)
-			}
-		}
-
-		//TODO report on optional x-b3-parentspanid and x-b3-sampled if present?
-		//TODO report x-custom-header
-	})
-}
+// 		//TODO report on optional x-b3-parentspanid and x-b3-sampled if present?
+// 		//TODO report x-custom-header
+// 	})
+// }
