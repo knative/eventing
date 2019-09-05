@@ -33,7 +33,6 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
-	"knative.dev/pkg/tracing"
 )
 
 var (
@@ -109,8 +108,6 @@ func main() {
 
 	tOpts := []http.Option{
 		encodingOption,
-		// Add input tracing.
-		http.WithMiddleware(tracing.HTTPSpanMiddleware),
 	}
 
 	tOpts = append(tOpts, cloudevents.WithTarget(sink))
