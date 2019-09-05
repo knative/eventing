@@ -62,8 +62,8 @@ type envConfig struct {
 	Namespace     string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
 	Mode          string     `envconfig:"MODE"`
 	SinkURI       string     `split_words:"true" required:"true"`
-	ApiVersion    []string   `split_words:"true" required:"true"`
-	Kind          []string   `required:"true"`
+	ApiVersion    StringList `split_words:"true" required:"true"`
+	Kind          StringList `required:"true"`
 	Controller    []bool     `required:"true"`
 	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
 	Name          string     `envconfig:"NAME" required:"true"`
