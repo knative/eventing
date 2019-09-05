@@ -94,7 +94,7 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
-	//TODO consider using kncloudevents.NewDefaultClient and add support for confurable encodingOption?
+	// TODO consider using kncloudevents.NewDefaultClient and add support for confurable encodingOption?
 	var encodingOption http.Option
 	switch eventEncoding {
 	case "binary":
