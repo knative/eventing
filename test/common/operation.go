@@ -103,7 +103,10 @@ func (client *Client) sendFakeEventWithTracingToAddress(
 	event *resources.CloudEvent,
 ) error {
 	namespace := client.Namespace
-	pod := resources.EventSenderTracingPod(senderName, uri, event)
+	pod, err := resources.EventSenderTracingPod(senderName, uri, event)
+	if err != nil {
+		return err
+	}
 	client.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
 		return err
