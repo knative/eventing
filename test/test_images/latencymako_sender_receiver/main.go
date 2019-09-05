@@ -35,7 +35,7 @@ import (
 	vegeta "github.com/tsenart/vegeta/lib"
 
 	"knative.dev/eventing/test/common"
-	pb "knative.dev/eventing/test/test_images/latencymako"
+	pb "knative.dev/eventing/test/test_images/latencymako_aggregator/event_state"
 	pkgtest "knative.dev/pkg/test"
 	pkgpacers "knative.dev/pkg/test/vegeta/pacers"
 )

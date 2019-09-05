@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate protoc -I ../ --go_out=plugins=grpc:../ ../event_state.proto
+//go:generate protoc -I ./pb --go_out=plugins=grpc:./pb ./pb/event_state.proto
 
 package main
 
@@ -30,7 +30,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	pb "knative.dev/eventing/test/test_images/latencymako"
+	pb "knative.dev/eventing/test/test_images/latencymako_aggregator/event_state"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/test/mako"
 )
