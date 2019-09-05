@@ -77,8 +77,8 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 			Encoding: encoding,
 		}
 
-		st.Logf("Sending event to %s", senderName)
-		if err := client.SendFakeEventToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
+		st.Logf("Sending event with tracing headers to %s", senderName)
+		if err := client.SendFakeEventWithTracingToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 
