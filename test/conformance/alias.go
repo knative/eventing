@@ -18,8 +18,12 @@ package conformance
 import "knative.dev/eventing/test/common"
 import "knative.dev/eventing/test"
 
-var runTests = common.RunTests
+//var runTests = common.RunTests
 var setup = common.Setup
 var tearDown = common.TearDown
 var getChannelTypeMeta = common.GetChannelTypeMeta
 var channels = test.EventingFlags.Channels
+var channelTestRunner = common.ChannelTestRunner{
+	ChannelFeatureMap: common.ChannelFeatureMap,
+	ChannelsToTest:    test.EventingFlags.Channels,
+}
