@@ -71,8 +71,8 @@ spec:
   - name: aggregator
     image: knative.dev/eventing/test/test_images/latencymako_aggregator
     args:
-      # 3 senders/receivers, each of them generates 4 records (sent/accepted/failed/received)
-    - "--expect-records=12"
+      # set to the number of sender-receiver
+    - "--expect-records=3"
     - "--verbose"
     ports:
     - name: grpc

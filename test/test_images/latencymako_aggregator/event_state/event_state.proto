@@ -21,18 +21,23 @@ message EventsRecord {
 	map<string, google.protobuf.Timestamp> Events = 1;
 
 	enum Type {
-		SENT = 0;
-		ACCEPTED = 1;
-		FAILED = 2;
-		RECEIVED = 3;
+		UNKNOWN = 0;
+		SENT = 1;
+		ACCEPTED = 2;
+		FAILED = 3;
+		RECEIVED = 4;
 	}
-	Type type = 4;
+	Type type = 2;
+}
+
+message EventsRecordList {
+	repeated EventsRecord items = 1;
 }
 
 service EventsRecorder{
-	rpc RecordEvents(EventsRecord) returns (RecordReply) {}
+	rpc RecordEvents(EventsRecordList) returns (RecordReply) {}
 }
 
 message RecordReply {
-	uint64 count = 1;
+	uint32 count = 1;
 }

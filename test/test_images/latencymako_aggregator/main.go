@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate protoc -I ./pb --go_out=plugins=grpc:./pb ./pb/event_state.proto
+//go:generate protoc -I ./event_state --go_out=plugins=grpc:./event_state ./event_state/event_state.proto
 
 package main
 
@@ -36,6 +36,7 @@ import (
 )
 
 const listenAddr = ":10000"
+const maxRcvMsgSize = 1024 * 1024 * 10
 
 // flags for the image
 var (
@@ -47,7 +48,7 @@ var fatalf = log.Fatalf
 
 func init() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
-	flag.UintVar(&expectRecords, "expect-records", 4, "Number of expected events records before aggregating data.")
+	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
 }
 
 // aggregation of received events records
@@ -107,7 +108,7 @@ func main() {
 		fatalf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.MaxRecvMsgSize(maxRcvMsgSize))
 
 	pb.RegisterEventsRecorderServer(s, &server{})
 
@@ -218,36 +219,42 @@ func printf(f string, args ...interface{}) {
 type server struct{}
 
 // RecordSentEvents implements latencymako.EventsRecorder
-func (s *server) RecordEvents(_ context.Context, in *pb.EventsRecord) (*pb.RecordReply, error) {
+func (s *server) RecordEvents(_ context.Context, in *pb.EventsRecordList) (*pb.RecordReply, error) {
 	defer func() { notifyEventsReceived <- struct{}{} }()
 
-	count := uint64(len(in.GetEvents()))
-	recType := in.GetType()
+	for _, recIn := range in.Items {
+		recType := recIn.GetType()
 
-	var rec *eventsRecord
+		var rec *eventsRecord
 
-	switch recType {
-	case pb.EventsRecord_SENT:
-		rec = &sentEvents
-	case pb.EventsRecord_ACCEPTED:
-		rec = &acceptedEvents
-	case pb.EventsRecord_FAILED:
-		rec = &failedEvents
-	case pb.EventsRecord_RECEIVED:
-		rec = &receivedEvents
-	}
-
-	printf("-> Recording %d %s events", count, recType)
-
-	rec.Lock()
-	defer rec.Unlock()
-	for id, t := range in.Events {
-		if _, exists := rec.Events[id]; exists {
-			log.Printf("!! Found duplicate %s event ID %s", recType, id)
+		switch recType {
+		case pb.EventsRecord_SENT:
+			rec = &sentEvents
+		case pb.EventsRecord_ACCEPTED:
+			rec = &acceptedEvents
+		case pb.EventsRecord_FAILED:
+			rec = &failedEvents
+		case pb.EventsRecord_RECEIVED:
+			rec = &receivedEvents
+		default:
+			printf("Ignoring events record of type %s", recType)
 			continue
 		}
-		rec.Events[id] = t
+
+		printf("-> Recording %d %s events", uint64(len(recIn.Events)), recType)
+
+		func() {
+			rec.Lock()
+			defer rec.Unlock()
+			for id, t := range recIn.Events {
+				if _, exists := rec.Events[id]; exists {
+					log.Printf("!! Found duplicate %s event ID %s", recType, id)
+					continue
+				}
+				rec.Events[id] = t
+			}
+		}()
 	}
 
-	return &pb.RecordReply{Count: count}, nil
+	return &pb.RecordReply{Count: uint32(len(in.Items))}, nil
 }
