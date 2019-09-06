@@ -78,6 +78,12 @@ function create_new_cluster() {
   update_cluster $1 $2 || abort "Failed to update the cluster"
 }
 
+# Get cluster credentials for GKE cluster
+function get_gke_credentials() {
+  echo "Updating cluster with name ${name} in zone ${zone}"
+  gcloud container clusters get-credentials ${name} --zone=${zone} --project=${PROJECT_NAME} || abort "Failed to get cluster creds"
+}
+
 # Update resources installed on the cluster with the up-to-date code.
 # $1 -> cluster_name, $2 -> cluster_zone
 function update_cluster() {
@@ -85,8 +91,8 @@ function update_cluster() {
   zone=$2
   local version="v0.8.0"
 
-  echo "Updating cluster with name ${name} in zone ${zone}"
-  gcloud container clusters get-credentials ${name} --zone=${zone} --project=${PROJECT_NAME} || abort "Failed to get cluster creds"
+  # Get user credentials to run on GKE for continous runs.
+  get_gke_credentials
 
   echo ">> Delete all existing jobs and test resources"
   kubectl delete job --all
