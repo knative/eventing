@@ -294,7 +294,7 @@ func validateNotSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want s
 	}
 }
 
-func makeResourceAndTestingClient(t *testing.T) (*resource, *kncetesting.TestCloudEventsClient) {
+func makeResourceAndTestingClient() (*resource, *kncetesting.TestCloudEventsClient) {
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
@@ -307,7 +307,7 @@ func makeResourceAndTestingClient(t *testing.T) (*resource, *kncetesting.TestClo
 	}, ce
 }
 
-func makeRefAndTestingClient(t *testing.T) (*ref, *kncetesting.TestCloudEventsClient) {
+func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
