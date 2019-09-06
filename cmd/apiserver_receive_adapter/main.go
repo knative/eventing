@@ -100,24 +100,25 @@ func main() {
 			panic(err)
 		}
 	}
-	logger, _ := logging.NewLoggerFromConfig(loggingConfig, component)
-	defer flush(logger)
+	loggerSugared, _ := logging.NewLoggerFromConfig(loggingConfig, component)
+	logger := loggerSugared.Desugar()
+	defer flush(loggerSugared)
 
 	// Convert base64 encoded json metrics.ExporterOptions to
 	// metrics.ExporterOptions.
 	metricsConfig, err := utils.Base64ToMetricsOptions(
 		env.MetricsConfigBase64)
 	if err != nil {
-		logger.Errorf("failed to process metrics options: %s", err.Error())
+		logger.Error("failed to process metrics options: ", zap.Error(err))
 	}
 
-	if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
-		logger.Fatalf("Failed to create the metrics exporter: %v", err)
+	if err := metrics.UpdateExporter(*metricsConfig, loggerSugared); err != nil {
+		logger.Error("failed to create the metrics exporter: %v", zap.Error(err))
 	}
 
 	reporter, err := apiserver.NewStatsReporter()
 	if err != nil {
-		logger.Fatalw("Error building statsreporter", zap.Error(err))
+		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -125,16 +126,16 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatalw("Error building kubeconfig", zap.Error(err))
+		logger.Fatal("error building kubeconfig", zap.Error(err))
 	}
 
 	logger.Info("Starting the controller")
 	client, err := dynamic.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalw("Error building dynamic client", zap.Error(err))
+		logger.Fatal("error building dynamic client", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing(logger, "apiserversource", tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing(loggerSugared, "apiserversource", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer
 		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
@@ -142,7 +143,7 @@ func main() {
 
 	eventsClient, err := kncloudevents.NewDefaultClient(env.SinkURI)
 	if err != nil {
-		logger.Fatalw("Error building cloud event client", zap.Error(err))
+		logger.Fatal("error building cloud event client", zap.Error(err))
 	}
 
 	gvrcs := []apiserver.GVRC(nil)
@@ -154,7 +155,7 @@ func main() {
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
-			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
+			logger.Fatal("error parsing APIVersion", zap.Error(err))
 		}
 		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
@@ -171,7 +172,7 @@ func main() {
 		GVRCs:     gvrcs,
 	}
 
-	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt, reporter, env.Name)
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, loggerSugared, opt, reporter, env.Name)
 	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
