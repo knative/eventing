@@ -29,7 +29,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: latency-test
-      image: knative.dev/eventing/test/test_images/latencymako_sender_receiver
+      image: knative.dev/eventing/test/test_images/latencymako
       resources:
         requests:
           cpu: 1000m
@@ -38,6 +38,7 @@ spec:
         - name: cloudevents
           containerPort: 8080
       args:
+        - "--role=sender-receiver"
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
         - "--aggregator=localhost:10000"
         - "--pace=100:10,200:20,400:60"
@@ -53,11 +54,12 @@ spec:
           mountPath: /etc/config-mako
       terminationMessagePolicy: FallbackToLogsOnError
     - name: aggregator
-      image: knative.dev/eventing/test/test_images/latencymako_aggregator
+      image: knative.dev/eventing/test/test_images/latencymako
       ports:
         - name: grpc
           containerPort: 10000
       args:
+        - "--role=aggregator"
         - "--verbose"
       terminationMessagePolicy: FallbackToLogsOnError
     - name: mako-stub
