@@ -50,7 +50,6 @@ _Adding the `upstream` remote sets you up nicely for regularly
 Once you reach this point you are ready to do a full build and deploy as
 follows.
 
-
 ## Starting Eventing Controller
 
 Once you've [setup your development environment](#getting-started), stand up
