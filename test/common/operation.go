@@ -56,6 +56,20 @@ func (client *Client) SendFakeEventToAddressable(
 	return client.sendFakeEventToAddress(senderName, uri, event)
 }
 
+// SendFakeEventWithTracingToAddressable will send the given event with tracing to the given Addressable.
+func (client *Client) SendFakeEventWithTracingToAddressable(
+	senderName,
+	addressableName string,
+	typemeta *metav1.TypeMeta,
+	event *resources.CloudEvent,
+) error {
+	uri, err := client.GetAddressableURI(addressableName, typemeta)
+	if err != nil {
+		return err
+	}
+	return client.sendFakeEventWithTracingToAddress(senderName, uri, event)
+}
+
 // GetAddressableURI returns the URI of the addressable resource.
 // To use this function, the given resource must have implemented the Addressable duck-type.
 func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1.TypeMeta) (string, error) {
@@ -72,6 +86,24 @@ func (client *Client) sendFakeEventToAddress(
 ) error {
 	namespace := client.Namespace
 	pod, err := resources.EventSenderPod(senderName, uri, event)
+	if err != nil {
+		return err
+	}
+	client.CreatePodOrFail(pod)
+	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
+		return err
+	}
+	return nil
+}
+
+// sendFakeEventWithTracingToAddress will create a sender pod, which will send the given event with tracing to the given url.
+func (client *Client) sendFakeEventWithTracingToAddress(
+	senderName string,
+	uri string,
+	event *resources.CloudEvent,
+) error {
+	namespace := client.Namespace
+	pod, err := resources.EventSenderTracingPod(senderName, uri, event)
 	if err != nil {
 		return err
 	}

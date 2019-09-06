@@ -39,7 +39,15 @@ type ClusterRoleOption func(*rbacv1.ClusterRole)
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
-	const imageName = "sendevents"
+	return eventSenderPodImage("sendevents", name, sink, event, false)
+}
+
+// EventSenderTracingPod creates a Pod that sends a single event to the given address.
+func EventSenderTracingPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
+	return eventSenderPodImage("sendevents", name, sink, event, true)
+}
+
+func eventSenderPodImage(imageName string, name string, sink string, event *CloudEvent, addTracing bool) (*corev1.Pod, error) {
 	if event.Encoding == "" {
 		event.Encoding = CloudEventEncodingBinary
 	}
@@ -49,6 +57,25 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 		return nil, fmt.Errorf("encountered error when we marshall cloud event extensions %v", error)
 	}
 
+	args := []string{
+		"-event-id",
+		event.ID,
+		"-event-type",
+		event.Type,
+		"-event-source",
+		event.Source,
+		"-event-extensions",
+		eventExtensions,
+		"-event-data",
+		event.Data,
+		"-event-encoding",
+		event.Encoding,
+		"-sink",
+		sink,
+	}
+	if addTracing {
+		args = append(args, "-add-tracing")
+	}
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -58,22 +85,7 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
-				Args: []string{
-					"-event-id",
-					event.ID,
-					"-event-type",
-					event.Type,
-					"-event-source",
-					event.Source,
-					"-event-extensions",
-					eventExtensions,
-					"-event-data",
-					event.Data,
-					"-event-encoding",
-					event.Encoding,
-					"-sink",
-					sink,
-				},
+				Args:            args,
 			}},
 			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
@@ -83,7 +95,15 @@ func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, e
 
 // EventLoggerPod creates a Pod that logs events received.
 func EventLoggerPod(name string) *corev1.Pod {
-	const imageName = "logevents"
+	return eventLoggerPod("logevents", name)
+}
+
+// EventDetailsPod creates a Pod that vaalidates events received and log details about events.
+func EventDetailsPod(name string) *corev1.Pod {
+	return eventLoggerPod("eventdetails", name)
+}
+
+func eventLoggerPod(imageName string, name string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,

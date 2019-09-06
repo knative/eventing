@@ -22,9 +22,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	gohttp "net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	_ "go.opencensus.io/trace"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -41,19 +46,21 @@ var (
 	periodStr       string
 	delayStr        string
 	maxMsgStr       string
+	addTracing      bool
 )
 
 func init() {
 	flag.StringVar(&sink, "sink", "", "The sink url for the message destination.")
 	flag.StringVar(&eventID, "event-id", "", "Event ID to use. Defaults to a generated UUID")
 	flag.StringVar(&eventType, "event-type", "knative.eventing.test.e2e", "The Event Type to use.")
-	flag.StringVar(&eventSource, "event-source", "", "Source URI to use. Defaults to the current machine's hostname")
+	flag.StringVar(&eventSource, "event-source", "localhost", "Source URI to use. Defaults to the current machine's hostname")
 	flag.StringVar(&eventExtensions, "event-extensions", "", "The extensions of event with json format.")
 	flag.StringVar(&eventData, "event-data", `{"hello": "world!"}`, "Cloudevent data body.")
 	flag.StringVar(&eventEncoding, "event-encoding", "binary", "The encoding of the cloud event, one of(binary, structured).")
 	flag.StringVar(&periodStr, "period", "5", "The number of seconds between messages.")
 	flag.StringVar(&delayStr, "delay", "5", "The number of seconds to wait before sending messages.")
 	flag.StringVar(&maxMsgStr, "max-messages", "1", "The number of messages to attempt to send. 0 for unlimited.")
+	flag.BoolVar(&addTracing, "add-tracing", false, "Should tracing be added to events sent.")
 }
 
 func parseDurationStr(durationStr string, defaultDuration int) time.Duration {
@@ -91,10 +98,6 @@ func main() {
 		log.Printf("awake, continuing")
 	}
 
-	if eventSource == "" {
-		eventSource = "localhost"
-	}
-
 	var encodingOption http.Option
 	switch eventEncoding {
 	case "binary":
@@ -106,13 +109,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	t, err := cloudevents.NewHTTPTransport(
+	tOpts := []http.Option{
 		cloudevents.WithTarget(sink),
 		encodingOption,
-	)
+	}
+
+	t, err := cloudevents.NewHTTPTransport(tOpts...)
 	if err != nil {
 		log.Fatalf("failed to create transport, %v", err)
 	}
+
+	// Add output tracing.
+	if addTracing {
+		t.Client = &gohttp.Client{
+			Transport: &ochttp.Transport{
+				Propagation:    &b3.HTTPFormat{},
+				NewClientTrace: ochttp.NewSpanAnnotator,
+			},
+		}
+	}
+
 	c, err := cloudevents.NewClient(t,
 		cloudevents.WithTimeNow(),
 		cloudevents.WithUUIDs(),
