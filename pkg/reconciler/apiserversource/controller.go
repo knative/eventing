@@ -59,7 +59,7 @@ func NewController(
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 		source:                GetCfgHost(ctx),
-		context:               ctx,
+		loggingContext:        ctx,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
