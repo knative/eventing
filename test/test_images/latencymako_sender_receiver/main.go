@@ -369,10 +369,7 @@ func startCloudEventsReceiver(eventHandler func(event cloudevents.Event)) contex
 	if err != nil {
 		fatalf("Failed to create transport: %v", err)
 	}
-	c, err := cloudevents.NewClient(t,
-		cloudevents.WithTimeNow(),
-		cloudevents.WithUUIDs(),
-	)
+	c, err := cloudevents.NewClient(t)
 	if err != nil {
 		fatalf("Failed to create client: %v", err)
 	}
@@ -404,12 +401,7 @@ func processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- stru
 }
 
 func processReceiveEvent(event cloudevents.Event) {
-	et, err := ptypes.TimestampProto(event.Time())
-	if err != nil {
-		fatalf("Received an invalid timestamp in event %q: %v", event.ID(), err)
-	}
-
-	receivedCh <- receivedState{eventId: event.ID(), at: et}
+	receivedCh <- receivedState{eventId: event.ID(), at: ptypes.TimestampNow()}
 }
 
 // processEvents keeps a record of all events (sent, accepted, failed, received).
