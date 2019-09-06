@@ -39,12 +39,10 @@ func Base64ToMetricsOptions(base64 string) (*metrics.ExporterOptions, error) {
 	quoted64 := strconv.Quote(string(base64))
 
 	var bytes []byte
-	// Do not care about the unmarshal error.
 	if err := json.Unmarshal([]byte(quoted64), &bytes); err != nil {
 		return nil, err
 	}
 
-	// Do not care about the unmarshal error.
 	if err := json.Unmarshal(bytes, &opts); err != nil {
 		return nil, err
 	}
@@ -87,13 +85,11 @@ func Base64ToLoggingConfig(base64 string) (*logging.Config, error) {
 	quoted64 := strconv.Quote(string(base64))
 
 	var bytes []byte
-	// Do not care about the unmarshal error.
 	if err := json.Unmarshal([]byte(quoted64), &bytes); err != nil {
 		return nil, err
 	}
 
 	var configMap map[string]string
-	// Do not care about the unmarshal error.
 	if err := json.Unmarshal(bytes, &configMap); err != nil {
 		return nil, err
 	}
