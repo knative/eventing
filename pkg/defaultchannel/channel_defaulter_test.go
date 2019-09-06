@@ -119,7 +119,7 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 		"key missing in update": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: configYaml,
+					ChannelDefaulterKey: configYaml,
 				},
 			},
 			expectedAfterInitial: config.ClusterDefault,
@@ -129,13 +129,13 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 		"bad yaml is ignored": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: configYaml,
+					ChannelDefaulterKey: configYaml,
 				},
 			},
 			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: "foo -> bar",
+					ChannelDefaulterKey: "foo -> bar",
 				},
 			},
 			expectedAfterUpdate: config.ClusterDefault,
@@ -143,13 +143,13 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 		"empty config is accepted": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: configYaml,
+					ChannelDefaulterKey: configYaml,
 				},
 			},
 			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: "{}",
+					ChannelDefaulterKey: "{}",
 				},
 			},
 			expectedAfterUpdate: nil,
@@ -157,13 +157,13 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 		"empty string is ignored": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: configYaml,
+					ChannelDefaulterKey: configYaml,
 				},
 			},
 			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: "",
+					ChannelDefaulterKey: "",
 				},
 			},
 			expectedAfterUpdate: config.ClusterDefault,
@@ -171,13 +171,13 @@ func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 		"update to same channel": {
 			initialConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: configYaml,
+					ChannelDefaulterKey: configYaml,
 				},
 			},
 			expectedAfterInitial: config.ClusterDefault,
 			updatedConfig: &corev1.ConfigMap{
 				Data: map[string]string{
-					channelDefaulterKey: configYaml,
+					ChannelDefaulterKey: configYaml,
 				},
 			},
 			expectedAfterUpdate: config.ClusterDefault,

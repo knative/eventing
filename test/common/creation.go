@@ -36,7 +36,7 @@ var coreAPIVersion = corev1.SchemeGroupVersion.Version
 var rbacAPIGroup = rbacv1.SchemeGroupVersion.Group
 var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 
-// CreateChannelOrFail will create a Channel Resource in Eventing.
+// CreateChannelOrFail will create a typed Channel Resource in Eventing or fail the test if there is an error.
 func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, channelTypeMeta)
@@ -47,11 +47,21 @@ func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.T
 	client.Tracker.Add(gvr.Group, gvr.Version, gvr.Resource, namespace, name)
 }
 
-// CreateChannelsOrFail will create a list of Channel Resources in Eventing.
+// CreateChannelsOrFail will create a list of typed Channel Resources in Eventing or fail the test if there is an error.
 func (client *Client) CreateChannelsOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
 	for _, name := range names {
 		client.CreateChannelOrFail(name, channelTypeMeta)
 	}
+}
+
+// CreateChannelWithDefaultOrFail will create a default Channel Resource in Eventing or fail the test if there is an error.
+func (client *Client) CreateChannelWithDefaultOrFail(channel *messagingv1alpha1.Channel) {
+	channels := client.Eventing.MessagingV1alpha1().Channels(client.Namespace)
+	_, err := channels.Create(channel)
+	if err != nil {
+		client.T.Fatalf("Failed to create channel %q: %v", channel.Name, err)
+	}
+	client.Tracker.AddObj(channel)
 }
 
 // CreateSubscriptionOrFail will create a Subscription or fail the test if there is an error.

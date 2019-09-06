@@ -32,12 +32,12 @@ const (
 	// channel CRD.
 	ConfigMapName = "default-ch-webhook"
 
-	// channelDefaulterKey is the key in the ConfigMap to get the name of the default
+	// ChannelDefaulterKey is the key in the ConfigMap to get the name of the default
 	// Channel CRD.
-	channelDefaulterKey = "default-ch-config"
+	ChannelDefaulterKey = "default-ch-config"
 )
 
-// Configuration is the data structure serialized to YAML in the config map. When a Channel needs to be
+// Config is the data structure serialized to YAML in the config map. When a Channel needs to be
 // defaulted, the Channel's namespace will be used as a key into NamespaceDefaults, if there is
 // something present, then that is used. If not, then the ClusterDefault is used.
 type Config struct {
@@ -77,9 +77,9 @@ func (cd *ChannelDefaulter) UpdateConfigMap(cm *corev1.ConfigMap) {
 		cd.logger.Info("UpdateConfigMap on a nil map")
 		return
 	}
-	defaultChannelConfig, present := cm.Data[channelDefaulterKey]
+	defaultChannelConfig, present := cm.Data[ChannelDefaulterKey]
 	if !present {
-		cd.logger.Info("ConfigMap is missing key", zap.String("key", channelDefaulterKey), zap.Any("configMap", cm))
+		cd.logger.Info("ConfigMap is missing key", zap.String("key", ChannelDefaulterKey), zap.Any("configMap", cm))
 		return
 	}
 

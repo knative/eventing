@@ -55,8 +55,13 @@ func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	}
 }
 
-// InMemoryChannelTypeMeta is the TypeMeta ref for InMemoryChannel.
-var InMemoryChannelTypeMeta = MessagingTypeMeta(resources.InMemoryChannelKind)
+// GetChannelTypeMeta gets the actual typemeta of the typed channel.
+func GetChannelTypeMeta(channelKind string) *metav1.TypeMeta {
+	return MessagingTypeMeta(channelKind)
+}
+
+// ChannelTypeMeta is the TypeMeta ref for Channel.
+var ChannelTypeMeta = MessagingTypeMeta(resources.ChannelKind)
 
 // SequenceTypeMeta is the TypeMeta ref for Sequence.
 var SequenceTypeMeta = MessagingTypeMeta(resources.SequenceKind)
@@ -70,9 +75,4 @@ func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 		Kind:       kind,
 		APIVersion: resources.MessagingAPIVersion,
 	}
-}
-
-// GetChannelTypeMeta gets the actual typemeta of the channel.
-func GetChannelTypeMeta(channelName string) *metav1.TypeMeta {
-	return MessagingTypeMeta(channelName)
 }

@@ -32,7 +32,7 @@ import (
 )
 
 func TestLatencyForInMemoryBrokerTrigger(t *testing.T) {
-	testLatencyForBrokerTrigger(t, common.InMemoryChannelTypeMeta)
+	testLatencyForBrokerTrigger(t, common.GetChannelTypeMeta(resources.InMemoryChannelKind))
 }
 
 func testLatencyForBrokerTrigger(t *testing.T, channelTypeMeta *metav1.TypeMeta) {
