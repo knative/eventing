@@ -63,7 +63,6 @@ func isValid(channel string) bool {
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
 type EventingEnvironmentFlags struct {
 	Channels
-	ResolvableDomain bool
 }
 
 // InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
@@ -72,8 +71,6 @@ func InitializeEventingFlags() {
 	f := EventingEnvironmentFlags{}
 
 	flag.Var(&f.Channels, "channels", "The names of the channels, which are separated by comma.")
-	flag.BoolVar(&f.ResolvableDomain, "resolvabledomain", false,
-		"Set this flag to true if you have configured the `domainSuffix` on your Route controller to a domain that will resolve to your test cluster.")
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
