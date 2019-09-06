@@ -15,14 +15,26 @@ limitations under the License.
 
 package conformance
 
-import "knative.dev/eventing/test/common"
-import "knative.dev/eventing/test"
+import (
+	"os"
+	"testing"
+
+	"knative.dev/eventing/test"
+	"knative.dev/eventing/test/common"
+)
 
 var setup = common.Setup
 var tearDown = common.TearDown
 var getChannelTypeMeta = common.GetChannelTypeMeta
-var channels = test.EventingFlags.Channels
-var channelTestRunner = common.ChannelTestRunner{
-	ChannelFeatureMap: common.ChannelFeatureMap,
-	ChannelsToTest:    test.EventingFlags.Channels,
+var channels test.Channels
+var channelTestRunner common.ChannelTestRunner
+
+func TestMain(m *testing.M) {
+	test.InitializeEventingFlags()
+	channels = test.EventingFlags.Channels
+	channelTestRunner = common.ChannelTestRunner{
+		ChannelFeatureMap: common.ChannelFeatureMap,
+		ChannelsToTest:    test.EventingFlags.Channels,
+	}
+	os.Exit(m.Run())
 }
