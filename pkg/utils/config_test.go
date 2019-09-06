@@ -105,7 +105,10 @@ func TestLoggingConfig(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			base64 := LoggingConfigToBase64(tc.cfg)
+			base64, err := LoggingConfigToBase64(tc.cfg)
+			if err != nil {
+				t.Errorf("error while converting config to base64: %v", err)
+			}
 			// Test to base64.
 			{
 				want := tc.want

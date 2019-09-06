@@ -67,11 +67,11 @@ func MetricsOptionsToBase64(opts *metrics.ExporterOptions) string {
 		return fmt.Sprintf(`{"error":"%s}`, err.Error())
 	}
 
+	// Turn the base64 encoded []byte back into a string.
 	base64, err := strconv.Unquote(string(base64Opts))
 	if err != nil {
 		return fmt.Sprintf(`{"error":"%s}`, err.Error())
 	}
-	// Turn the base64 encoded []byte back into a string.
 	return base64
 }
 
@@ -105,27 +105,27 @@ func Base64ToLoggingConfig(base64 string) (*logging.Config, error) {
 }
 
 // LoggingConfigToBase64 converts a logging.Config to a json+base64 string.
-func LoggingConfigToBase64(cfg *logging.Config) string {
+func LoggingConfigToBase64(cfg *logging.Config) (string, error) {
 	if cfg == nil || cfg.LoggingConfig == "" {
-		return ""
+		return "", nil
 	}
 
 	jsonCfg, err := json.Marshal(map[string]string{
 		zapLoggerConfig: cfg.LoggingConfig,
 	})
 	if err != nil {
-		return fmt.Sprintf(`{"error":"%s}`, err.Error())
+		return "", err
 	}
 	// if we json.Marshal a []byte, we will get back a base64 encoded quoted string.
 	base64Cfg, err := json.Marshal(jsonCfg)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"%s}`, err.Error())
+		return "", err
 	}
 
+	// Turn the base64 encoded []byte back into a string.
 	base64, err := strconv.Unquote(string(base64Cfg))
 	if err != nil {
-		return fmt.Sprintf(`{"error":"%s}`, err.Error())
+		return "", err
 	}
-	// Turn the base64 encoded []byte back into a string.
-	return base64
+	return base64, nil
 }
