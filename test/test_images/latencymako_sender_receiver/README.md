@@ -3,16 +3,18 @@
 This image is designed to benchmark Knative Eventing channel/brokers.
 
 The image does both the sender and receiver role, allowing the clock to be
-synchronized to correctly calculate latencies.
+synchronized to correctly calculate latencies (only valid with a single
+sender-receiver).
 
-Latencies are calculated and published to the mako sidecar container.
+Latencies are calculated and published to the Mako sidecar container by a
+separate aggregator.
 
 The image is designed to allocate as much memory as possible before the
 benchmark starts. We suggest to disable Go GC to avoid useless GC pauses.
 
 ## Usage
 
-Example of how to use this image with mako stub sidecar:
+Example of how to use this image with the Mako stub sidecar:
 
 ```yaml
 apiVersion: v1
@@ -27,21 +29,36 @@ spec:
   restartPolicy: Never
   containers:
     - name: latency-test
-      image: knative.dev/eventing/test/test_images/latencymako
+      image: knative.dev/eventing/test/test_images/latencymako_sender_receiver
       resources:
         requests:
           cpu: 1000m
           memory: 2Gi
       ports:
-        - containerPort: 8080
+        - name: cloudevents
+          containerPort: 8080
       args:
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
+        - "--aggregator=localhost:10000"
         - "--pace=100:10,200:20,400:60"
         - "--warmup=10"
         - "--verbose"
+      env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       volumeMounts:
         - name: config-mako
           mountPath: /etc/config-mako
+      terminationMessagePolicy: FallbackToLogsOnError
+    - name: aggregator
+      image: knative.dev/eventing/test/test_images/latencymako_aggregator
+      ports:
+        - name: grpc
+          containerPort: 10000
+      args:
+        - "--verbose"
       terminationMessagePolicy: FallbackToLogsOnError
     - name: mako-stub
       image: knative.dev/pkg/test/mako/stub-sidecar

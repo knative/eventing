@@ -20,8 +20,8 @@ metadata:
   labels:
     role: broker-latency-consumer
 spec:
-  completions: 3
-  parallelism: 3
+  completions: 1
+  parallelism: 1
   backoffLimit: 0
   template:
     metadata:
@@ -71,8 +71,8 @@ spec:
   - name: aggregator
     image: knative.dev/eventing/test/test_images/latencymako_aggregator
     args:
-      # 3 senders/receivers, each of them generates 4 records (sent/accepted/failed/received)
-    - "--expect-records=12"
+      # set to the number of sender-receiver
+    - "--expect-records=1"
     - "--verbose"
     ports:
     - name: grpc

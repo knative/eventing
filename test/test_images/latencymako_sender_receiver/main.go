@@ -88,10 +88,10 @@ var (
 
 // events recording maps
 var (
-	sentEvents     = pb.EventsRecord{Type: pb.EventsRecord_SENT}
-	acceptedEvents = pb.EventsRecord{Type: pb.EventsRecord_ACCEPTED}
-	failedEvents   = pb.EventsRecord{Type: pb.EventsRecord_FAILED}
-	receivedEvents = pb.EventsRecord{Type: pb.EventsRecord_RECEIVED}
+	sentEvents     = &pb.EventsRecord{Type: pb.EventsRecord_SENT}
+	acceptedEvents = &pb.EventsRecord{Type: pb.EventsRecord_ACCEPTED}
+	failedEvents   = &pb.EventsRecord{Type: pb.EventsRecord_FAILED}
+	receivedEvents = &pb.EventsRecord{Type: pb.EventsRecord_RECEIVED}
 )
 
 var fatalf = log.Fatalf
@@ -282,10 +282,15 @@ func main() {
 	c, connclose := aggregatorClient()
 	defer connclose()
 
-	sendEventsRecord(c, &sentEvents)
-	sendEventsRecord(c, &acceptedEvents)
-	sendEventsRecord(c, &failedEvents)
-	sendEventsRecord(c, &receivedEvents)
+	err = sendEventsRecordList(c, &pb.EventsRecordList{Items: []*pb.EventsRecord{
+		sentEvents,
+		acceptedEvents,
+		failedEvents,
+		receivedEvents,
+	}})
+	if err != nil {
+		fatalf("Failed to send events record: %v", err)
+	}
 }
 
 func parsePaceSpec() ([]paceSpec, error) {
@@ -465,12 +470,11 @@ func aggregatorClient() (cli pb.EventsRecorderClient, closeConnFn func() error) 
 	return pb.NewEventsRecorderClient(conn), conn.Close
 }
 
-func sendEventsRecord(cli pb.EventsRecorderClient, r *pb.EventsRecord) {
+func sendEventsRecordList(cli pb.EventsRecorderClient, rl *pb.EventsRecordList) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if _, err := cli.RecordEvents(ctx, r); err != nil {
-		fatalf("Failed to send events record: %v", err)
-	}
+	_, err := cli.RecordEvents(ctx, rl)
+	return err
 }
 
 func printf(f string, args ...interface{}) {
