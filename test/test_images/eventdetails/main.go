@@ -20,21 +20,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 )
-
-func getHeader(header http.Header, headerName string) *string {
-	if header != nil && len(header) > 0 {
-		for k, v := range header {
-			if k == headerName {
-				return &v[0]
-			}
-		}
-	}
-	return nil
-}
 
 //func handler(event cloudevents.Event) {
 func handler(ctx context.Context, event cloudevents.Event) {
@@ -45,8 +33,8 @@ func handler(ctx context.Context, event cloudevents.Event) {
 	header := tx.Header
 	headerNameList := []string{"X-B3-Sampled", "X-B3-Traceid", "X-B3-Spanid", "X-B3-ParentSpanId", "X-Custom-Header"}
 	for _, headerName := range headerNameList {
-		if headerValue := getHeader(header, headerName); headerValue != nil {
-			fmt.Printf("Got Header %s: %s\n", headerName, *headerValue)
+		if headerValue := header.Get(headerName); headerValue != "" {
+			fmt.Printf("Got Header %s: %s\n", headerName, headerValue)
 		} else {
 			fmt.Printf("Missing Header %s\n", headerName)
 		}
