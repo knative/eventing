@@ -52,7 +52,10 @@ func TestMetricsOptions(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			base64 := MetricsOptionsToBase64(tc.opts)
+			base64, err := MetricsOptionsToBase64(tc.opts)
+			if err != nil {
+				t.Errorf("error while converting metrics config to base64: %v", err)
+			}
 			// Test to base64.
 			{
 				want := tc.want
@@ -107,7 +110,7 @@ func TestLoggingConfig(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			base64, err := LoggingConfigToBase64(tc.cfg)
 			if err != nil {
-				t.Errorf("error while converting config to base64: %v", err)
+				t.Errorf("error while converting logging config to base64: %v", err)
 			}
 			// Test to base64.
 			{

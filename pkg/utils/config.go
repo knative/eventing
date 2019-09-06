@@ -19,7 +19,6 @@ package utils
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"knative.dev/pkg/logging"
@@ -52,27 +51,27 @@ func Base64ToMetricsOptions(base64 string) (*metrics.ExporterOptions, error) {
 
 // MetricsOptionsToBase64 converts a metrics.ExporterOptions to a json+base64
 // string.
-func MetricsOptionsToBase64(opts *metrics.ExporterOptions) string {
+func MetricsOptionsToBase64(opts *metrics.ExporterOptions) (string, error) {
 	if opts == nil {
-		return ""
+		return "", nil
 	}
 
 	jsonOpts, err := json.Marshal(opts)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"%s}`, err.Error())
+		return "", err
 	}
 	// if we json.Marshal a []byte, we will get back a base64 encoded quoted string.
 	base64Opts, err := json.Marshal(jsonOpts)
 	if err != nil {
-		return fmt.Sprintf(`{"error":"%s}`, err.Error())
+		return "", err
 	}
 
 	// Turn the base64 encoded []byte back into a string.
 	base64, err := strconv.Unquote(string(base64Opts))
 	if err != nil {
-		return fmt.Sprintf(`{"error":"%s}`, err.Error())
+		return "", err
 	}
-	return base64
+	return base64, nil
 }
 
 // Base64ToLoggingConfig converts a json+base64 string of a logging.Config.
