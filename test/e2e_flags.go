@@ -32,7 +32,7 @@ import (
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
-var EventingFlags = initializeEventingFlags()
+var EventingFlags *EventingEnvironmentFlags
 
 // Channels holds the Channels we want to run test against.
 type Channels []string
@@ -65,12 +65,13 @@ type EventingEnvironmentFlags struct {
 	Channels
 }
 
-// initializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
+// InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
 // go1.13+, see https://github.com/knative/test-infra/issues/1329 for details
-func initializeEventingFlags() *EventingEnvironmentFlags {
+func InitializeEventingFlags() {
 	f := EventingEnvironmentFlags{}
 
 	flag.Var(&f.Channels, "channels", "The names of the channels, which are separated by comma.")
+	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
 	if f.Channels == nil || len(f.Channels) == 0 {
@@ -82,5 +83,5 @@ func initializeEventingFlags() *EventingEnvironmentFlags {
 		testLogging.InitializeMetricExporter("eventing")
 	}
 
-	return &f
+	EventingFlags = &f
 }
