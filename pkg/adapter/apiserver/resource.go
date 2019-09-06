@@ -79,6 +79,9 @@ func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event, repo
 	}
 
 	rctx, _, err := a.ce.Send(ctx, *event)
+	if err != nil {
+		a.logger.Info("failed to send a resource based event ", zap.Error(err))
+	}
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	a.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
 	return err

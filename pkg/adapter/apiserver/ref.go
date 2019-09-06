@@ -113,6 +113,9 @@ func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 	}
 
 	rctx, _, err := a.ce.Send(ctx, *event)
+	if err != nil {
+		a.logger.Info("failed to send a ref based event ", zap.Error(err))
+	}
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	a.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
 	return err
