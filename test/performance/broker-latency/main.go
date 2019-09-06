@@ -30,7 +30,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	pb "knative.dev/eventing/test/test_images/latencymako_aggregator/event_state"
+	pb "knative.dev/eventing/test/performance/broker-latency/event_state"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/test/mako"
 )
