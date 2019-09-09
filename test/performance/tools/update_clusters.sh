@@ -26,6 +26,9 @@ for cluster in $(gcloud container clusters list --project="${PROJECT_NAME}" --fo
   name=$(echo $cluster | cut -f1 -d",")
   zone=$(echo $cluster | cut -f2 -d",")
 
+  # Setup user credentials to run on GKE for continous runs.
+  get_gke_credentials
+  
   update_cluster ${name} ${zone}
 done
 

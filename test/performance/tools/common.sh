@@ -65,6 +65,12 @@ function setup_user() {
   echo "Using secret defined in ${PERF_TEST_GOOGLE_APPLICATION_CREDENTIALS}"
 }
 
+# Get cluster credentials for GKE cluster
+function get_gke_credentials() {
+  echo "Updating cluster with name ${name} in zone ${zone}"
+  gcloud container clusters get-credentials ${name} --zone=${zone} --project=${PROJECT_NAME} || abort "Failed to get cluster creds"
+}
+
 # Create a new cluster and install serving components and apply benchmark yamls.
 # $1 -> cluster_name, $2 -> cluster_zone, $3 -> node_count
 function create_new_cluster() {
@@ -74,14 +80,11 @@ function create_new_cluster() {
   # create the secret on the new cluster
   create_secret $1 $2 || abort "Failed to create secrets on the new cluster"
 
+  # Setup user credentials to run on GKE for continous runs.
+  get_gke_credentials
+
   # update components on the cluster, e.g. serving and istio
   update_cluster $1 $2 || abort "Failed to update the cluster"
-}
-
-# Get cluster credentials for GKE cluster
-function get_gke_credentials() {
-  echo "Updating cluster with name ${name} in zone ${zone}"
-  gcloud container clusters get-credentials ${name} --zone=${zone} --project=${PROJECT_NAME} || abort "Failed to get cluster creds"
 }
 
 # Update resources installed on the cluster with the up-to-date code.
@@ -89,10 +92,7 @@ function get_gke_credentials() {
 function update_cluster() {
   name=$1
   zone=$2
-  local version="v0.8.0"
-
-  # Get user credentials to run on GKE for continous runs.
-  get_gke_credentials
+  local version="v0.8.0"  
 
   echo ">> Delete all existing jobs and test resources"
   kubectl delete job --all
