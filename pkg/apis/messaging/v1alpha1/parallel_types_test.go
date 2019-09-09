@@ -18,9 +18,9 @@ package v1alpha1
 
 import "testing"
 
-func TestChoiceKind(t *testing.T) {
-	choice := Choice{}
-	if choice.GetGroupVersionKind().String() != "messaging.knative.dev/v1alpha1, Kind=Choice" {
-		t.Errorf("unexpected gvk: %v", choice.GetGroupVersionKind())
+func TestParallelKind(t *testing.T) {
+	parallel := Parallel{}
+	if parallel.GetGroupVersionKind().String() != "messaging.knative.dev/v1alpha1, Kind=Parallel" {
+		t.Errorf("unexpected gvk: %v", parallel.GetGroupVersionKind())
 	}
 }

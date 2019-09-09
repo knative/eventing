@@ -26,17 +26,17 @@ import (
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
-// ChoiceOption enables further configuration of a Choice.
-type ChoiceOption func(*v1alpha1.Choice)
+// ParallelOption enables further configuration of a Parallel.
+type ParallelOption func(*v1alpha1.Parallel)
 
-// NewChoice creates an Choice with ChoiceOptions.
-func NewChoice(name, namespace string, popt ...ChoiceOption) *v1alpha1.Choice {
-	p := &v1alpha1.Choice{
+// NewParallel creates an Parallel with ParallelOptions.
+func NewParallel(name, namespace string, popt ...ParallelOption) *v1alpha1.Parallel {
+	p := &v1alpha1.Parallel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha1.ChoiceSpec{},
+		Spec: v1alpha1.ParallelSpec{},
 	}
 	for _, opt := range popt {
 		opt(p)
@@ -45,59 +45,59 @@ func NewChoice(name, namespace string, popt ...ChoiceOption) *v1alpha1.Choice {
 	return p
 }
 
-func WithInitChoiceConditions(p *v1alpha1.Choice) {
+func WithInitParallelConditions(p *v1alpha1.Parallel) {
 	p.Status.InitializeConditions()
 }
 
-func WithChoiceDeleted(p *v1alpha1.Choice) {
+func WithParallelDeleted(p *v1alpha1.Parallel) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithChoiceChannelTemplateSpec(cts *eventingduck.ChannelTemplateSpec) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelChannelTemplateSpec(cts *eventingduck.ChannelTemplateSpec) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Spec.ChannelTemplate = cts
 	}
 }
 
-func WithChoiceCases(cases []v1alpha1.ChoiceCase) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelCases(cases []v1alpha1.ParallelCase) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Spec.Cases = cases
 	}
 }
 
-func WithChoiceReply(reply *corev1.ObjectReference) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelReply(reply *corev1.ObjectReference) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Spec.Reply = reply
 	}
 }
 
-func WithChoiceCaseStatuses(caseStatuses []v1alpha1.ChoiceCaseStatus) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelCaseStatuses(caseStatuses []v1alpha1.ParallelCaseStatus) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Status.CaseStatuses = caseStatuses
 	}
 }
 
-func WithChoiceIngressChannelStatus(status v1alpha1.ChoiceChannelStatus) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelIngressChannelStatus(status v1alpha1.ParallelChannelStatus) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Status.IngressChannelStatus = status
 	}
 }
 
-func WithChoiceChannelsNotReady(reason, message string) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelChannelsNotReady(reason, message string) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Status.MarkChannelsNotReady(reason, message)
 	}
 }
 
-func WithChoiceSubscriptionsNotReady(reason, message string) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelSubscriptionsNotReady(reason, message string) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Status.MarkSubscriptionsNotReady(reason, message)
 	}
 }
 
-func WithChoiceAddressableNotReady(reason, message string) ChoiceOption {
-	return func(p *v1alpha1.Choice) {
+func WithParallelAddressableNotReady(reason, message string) ParallelOption {
+	return func(p *v1alpha1.Parallel) {
 		p.Status.MarkAddressableNotReady(reason, message)
 	}
 }

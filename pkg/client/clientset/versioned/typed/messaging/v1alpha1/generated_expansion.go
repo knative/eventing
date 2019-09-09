@@ -20,9 +20,9 @@ package v1alpha1
 
 type ChannelExpansion interface{}
 
-type ChoiceExpansion interface{}
-
 type InMemoryChannelExpansion interface{}
+
+type ParallelExpansion interface{}
 
 type SequenceExpansion interface{}
 

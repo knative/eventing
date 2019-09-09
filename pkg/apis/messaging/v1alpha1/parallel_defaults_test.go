@@ -26,32 +26,32 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
-func TestChoiceSetDefaults(t *testing.T) {
+func TestParallelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
 		channelTemplate     *eventingduckv1alpha1.ChannelTemplateSpec
-		initial             Choice
-		expected            Choice
+		initial             Parallel
+		expected            Parallel
 	}{
 		"nil ChannelDefaulter": {
 			nilChannelDefaulter: true,
-			expected:            Choice{},
+			expected:            Parallel{},
 		},
 		"unset ChannelDefaulter": {
-			expected: Choice{},
+			expected: Parallel{},
 		},
 		"set ChannelDefaulter": {
 			channelTemplate: defaultChannelTemplate,
-			expected: Choice{
-				Spec: ChoiceSpec{
+			expected: Parallel{
+				Spec: ParallelSpec{
 					ChannelTemplate: defaultChannelTemplate,
 				},
 			},
 		},
 		"template already specified": {
 			channelTemplate: defaultChannelTemplate,
-			initial: Choice{
-				Spec: ChoiceSpec{
+			initial: Parallel{
+				Spec: ParallelSpec{
 					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
@@ -60,8 +60,8 @@ func TestChoiceSetDefaults(t *testing.T) {
 					},
 				},
 			},
-			expected: Choice{
-				Spec: ChoiceSpec{
+			expected: Parallel{
+				Spec: ParallelSpec{
 					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
@@ -75,7 +75,7 @@ func TestChoiceSetDefaults(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if !tc.nilChannelDefaulter {
-				eventingduckv1alpha1.ChannelDefaulterSingleton = &choiceChannelDefaulter{
+				eventingduckv1alpha1.ChannelDefaulterSingleton = &parallelChannelDefaulter{
 					channelTemplate: tc.channelTemplate,
 				}
 				defer func() { eventingduckv1alpha1.ChannelDefaulterSingleton = nil }()
@@ -88,10 +88,10 @@ func TestChoiceSetDefaults(t *testing.T) {
 	}
 }
 
-type choiceChannelDefaulter struct {
+type parallelChannelDefaulter struct {
 	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec
 }
 
-func (cd *choiceChannelDefaulter) GetDefault(_ string) *eventingduckv1alpha1.ChannelTemplateSpec {
+func (cd *parallelChannelDefaulter) GetDefault(_ string) *eventingduckv1alpha1.ChannelTemplateSpec {
 	return cd.channelTemplate
 }

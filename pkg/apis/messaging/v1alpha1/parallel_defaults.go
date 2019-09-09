@@ -22,7 +22,7 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
-func (s *Choice) SetDefaults(ctx context.Context) {
+func (s *Parallel) SetDefaults(ctx context.Context) {
 	if s != nil && s.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
@@ -34,4 +34,4 @@ func (s *Choice) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *ChoiceSpec) SetDefaults(ctx context.Context) {}
+func (ss *ParallelSpec) SetDefaults(ctx context.Context) {}

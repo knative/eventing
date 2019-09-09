@@ -65,10 +65,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		// Group=messaging.knative.dev, Version=v1alpha1
 	case messagingv1alpha1.SchemeGroupVersion.WithResource("channels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Channels().Informer()}, nil
-	case messagingv1alpha1.SchemeGroupVersion.WithResource("choices"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Choices().Informer()}, nil
 	case messagingv1alpha1.SchemeGroupVersion.WithResource("inmemorychannels"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().InMemoryChannels().Informer()}, nil
+	case messagingv1alpha1.SchemeGroupVersion.WithResource("parallels"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Parallels().Informer()}, nil
 	case messagingv1alpha1.SchemeGroupVersion.WithResource("sequences"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Sequences().Informer()}, nil
 	case messagingv1alpha1.SchemeGroupVersion.WithResource("subscriptions"):

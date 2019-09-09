@@ -139,8 +139,8 @@ func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
 	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
 }
 
-func (l *Listers) GetChoiceLister() messaginglisters.ChoiceLister {
-	return messaginglisters.NewChoiceLister(l.indexerFor(&messagingv1alpha1.Choice{}))
+func (l *Listers) GetParallelLister() messaginglisters.ParallelLister {
+	return messaginglisters.NewParallelLister(l.indexerFor(&messagingv1alpha1.Parallel{}))
 }
 
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choice
+package parallel
 
 import (
 	"context"
@@ -26,16 +26,16 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/choice"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/parallel"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 )
 
 const (
 	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Choices"
+	ReconcilerName = "Parallels"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "choice-controller"
+	controllerAgentName = "parallel-controller"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -45,13 +45,13 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 
-	choiceInformer := choice.Get(ctx)
+	parallelInformer := parallel.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
 	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
-		choiceLister:       choiceInformer.Lister(),
+		parallelLister:     parallelInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
@@ -59,12 +59,12 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 
 	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	choiceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Register handler for Subscriptions that are owned by Choice, so that
+	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Choice")),
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Parallel")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

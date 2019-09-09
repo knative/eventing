@@ -23,45 +23,45 @@ import (
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-var pChoiceCondSet = apis.NewLivingConditionSet(ChoiceConditionReady, ChoiceConditionChannelsReady, ChoiceConditionSubscriptionsReady, ChoiceConditionAddressable)
+var pParallelCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable)
 
 const (
-	// ChoiceConditionReady has status True when all subconditions below have been set to True.
-	ChoiceConditionReady = apis.ConditionReady
+	// ParallelConditionReady has status True when all subconditions below have been set to True.
+	ParallelConditionReady = apis.ConditionReady
 
-	// ChoiceConditionChannelsReady has status True when all the channels created as part of
-	// this choice are ready.
-	ChoiceConditionChannelsReady apis.ConditionType = "ChannelsReady"
+	// ParallelConditionChannelsReady has status True when all the channels created as part of
+	// this parallel are ready.
+	ParallelConditionChannelsReady apis.ConditionType = "ChannelsReady"
 
-	// ChoiceConditionSubscriptionsReady has status True when all the subscriptions created as part of
-	// this choice are ready.
-	ChoiceConditionSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
+	// ParallelConditionSubscriptionsReady has status True when all the subscriptions created as part of
+	// this parallel are ready.
+	ParallelConditionSubscriptionsReady apis.ConditionType = "SubscriptionsReady"
 
-	// ChoiceConditionAddressable has status true when this Choice meets
+	// ParallelConditionAddressable has status true when this Parallel meets
 	// the Addressable contract and has a non-empty hostname.
-	ChoiceConditionAddressable apis.ConditionType = "Addressable"
+	ParallelConditionAddressable apis.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ps *ChoiceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
-	return pChoiceCondSet.Manage(ps).GetCondition(t)
+func (ps *ParallelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
+	return pParallelCondSet.Manage(ps).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
-func (ps *ChoiceStatus) IsReady() bool {
-	return pChoiceCondSet.Manage(ps).IsHappy()
+func (ps *ParallelStatus) IsReady() bool {
+	return pParallelCondSet.Manage(ps).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
-func (ps *ChoiceStatus) InitializeConditions() {
-	pChoiceCondSet.Manage(ps).InitializeConditions()
+func (ps *ParallelStatus) InitializeConditions() {
+	pParallelCondSet.Manage(ps).InitializeConditions()
 }
 
-// PropagateSubscriptionStatuses sets the ChoiceConditionSubscriptionsReady based on
+// PropagateSubscriptionStatuses sets the ParallelConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Subscription, subscriptions []*Subscription) {
+func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Subscription, subscriptions []*Subscription) {
 	if ps.CaseStatuses == nil {
-		ps.CaseStatuses = make([]ChoiceCaseStatus, len(subscriptions))
+		ps.CaseStatuses = make([]ParallelCaseStatus, len(subscriptions))
 	}
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
@@ -70,7 +70,7 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Sub
 	}
 
 	for i, s := range subscriptions {
-		ps.CaseStatuses[i].SubscriptionStatus = ChoiceSubscriptionStatus{
+		ps.CaseStatuses[i].SubscriptionStatus = ParallelSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: s.APIVersion,
 				Kind:       s.Kind,
@@ -90,7 +90,7 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Sub
 		}
 
 		fs := filterSubscriptions[i]
-		ps.CaseStatuses[i].FilterSubscriptionStatus = ChoiceSubscriptionStatus{
+		ps.CaseStatuses[i].FilterSubscriptionStatus = ParallelSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: fs.APIVersion,
 				Kind:       fs.Kind,
@@ -110,17 +110,17 @@ func (ps *ChoiceStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Sub
 
 	}
 	if allReady {
-		pChoiceCondSet.Manage(ps).MarkTrue(ChoiceConditionSubscriptionsReady)
+		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionSubscriptionsReady)
 	} else {
 		ps.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
 }
 
-// PropagateChannelStatuses sets the ChannelStatuses and ChoiceConditionChannelsReady based on the
+// PropagateChannelStatuses sets the ChannelStatuses and ParallelConditionChannelsReady based on the
 // status of the incoming channels.
-func (ps *ChoiceStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Channelable, channels []*duckv1alpha1.Channelable) {
+func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Channelable, channels []*duckv1alpha1.Channelable) {
 	if ps.CaseStatuses == nil {
-		ps.CaseStatuses = make([]ChoiceCaseStatus, len(channels))
+		ps.CaseStatuses = make([]ParallelCaseStatus, len(channels))
 	}
 	allReady := true
 
@@ -138,11 +138,11 @@ func (ps *ChoiceStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Ch
 		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 		allReady = false
 	}
-	// Propagate ingress channel address to Choice
+	// Propagate ingress channel address to Parallel
 	ps.setAddress(address)
 
 	for i, c := range channels {
-		ps.CaseStatuses[i].FilterChannelStatus = ChoiceChannelStatus{
+		ps.CaseStatuses[i].FilterChannelStatus = ParallelChannelStatus{
 			Channel: corev1.ObjectReference{
 				APIVersion: c.APIVersion,
 				Kind:       c.Kind,
@@ -161,36 +161,36 @@ func (ps *ChoiceStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Ch
 		}
 	}
 	if allReady {
-		pChoiceCondSet.Manage(ps).MarkTrue(ChoiceConditionChannelsReady)
+		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionChannelsReady)
 	} else {
 		ps.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
 }
 
-func (ps *ChoiceStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pChoiceCondSet.Manage(ps).MarkFalse(ChoiceConditionChannelsReady, reason, messageFormat, messageA...)
+func (ps *ParallelStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionChannelsReady, reason, messageFormat, messageA...)
 }
 
-func (ps *ChoiceStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pChoiceCondSet.Manage(ps).MarkFalse(ChoiceConditionSubscriptionsReady, reason, messageFormat, messageA...)
+func (ps *ParallelStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionSubscriptionsReady, reason, messageFormat, messageA...)
 }
 
-func (ps *ChoiceStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pChoiceCondSet.Manage(ps).MarkFalse(ChoiceConditionAddressable, reason, messageFormat, messageA...)
+func (ps *ParallelStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, reason, messageFormat, messageA...)
 }
 
-func (ps *ChoiceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
+func (ps *ParallelStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
 	ps.Address = address
 
 	if address == nil {
-		pChoiceCondSet.Manage(ps).MarkFalse(ChoiceConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyHostname", "hostname is the empty string")
 		return
 	}
 	if address.URL != nil || address.Hostname != "" {
-		pChoiceCondSet.Manage(ps).MarkTrue(ChoiceConditionAddressable)
+		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
 	} else {
 		ps.Address.Hostname = ""
 		ps.Address.URL = nil
-		pChoiceCondSet.Manage(ps).MarkFalse(ChoiceConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
 }
