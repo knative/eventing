@@ -27,6 +27,10 @@ import (
 	"knative.dev/pkg/webhook"
 )
 
+const (
+	DependencyAnnotation = "knative.dev/dependency"
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

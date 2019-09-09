@@ -304,6 +304,22 @@
   revision = "9cad4c3443a7200dd6400aef47183728de563a38"
 
 [[projects]]
+  digest = "1:f0d9d74edbd40fdeada436d5ac9cb5197407899af3fef85ff0137077ffe8ae19"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "8a6fb523712970c966eefc6b39ed2c5e74880354"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:2ed138049ab373f696db2081ca48f15c5abdf20893803612a284f2bdce2bf443"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:13e2fa5735a82a5fb044f290cfd0dba633d1c5e516b27da0509e0dbb3515a18e"
   name = "github.com/hashicorp/golang-lru"
@@ -359,6 +375,17 @@
   pruneopts = "NUT"
   revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
   version = "v1.3.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:314c9403866f4451d4fd13ec823f559e4b576c4272fd0c771991ab5d17f7fa41"
+  name = "github.com/knative/pkg"
+  packages = [
+    "apis/duck",
+    "apis/duck/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "c27053214044899c369bfd6e4d51bbf8cc7ccca2"
 
 [[projects]]
   branch = "master"
@@ -1313,7 +1340,10 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/mako/go/quickstore",
     "github.com/google/uuid",
+    "github.com/hashicorp/go-multierror",
     "github.com/kelseyhightower/envconfig",
+    "github.com/knative/pkg/apis/duck",
+    "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/tsenart/vegeta/lib",

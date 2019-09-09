@@ -17,11 +17,12 @@
 package v1alpha1
 
 import (
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
-var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependencyReady)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
@@ -30,6 +31,8 @@ const (
 	TriggerConditionBroker apis.ConditionType = "Broker"
 
 	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
+
+	TriggerConditionDependencyReady apis.ConditionType = "DependencyReady"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
@@ -84,4 +87,29 @@ func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, message
 
 func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
+}
+
+func (ts *TriggerStatus) MarkDependencyReadySucceeded() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionDependencyReady)
+}
+
+func (ts *TriggerStatus) MarkDependencyReadyFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionDependencyReady, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkDependencyReadyUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionDependencyReady, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1alpha1.KResource) {
+	kc := ks.Status.GetCondition(duckv1alpha1.ConditionReady)
+	if kc != nil && kc.IsTrue() {
+		ts.MarkDependencyReadySucceeded()
+	} else {
+		msg := "nil"
+		if kc != nil {
+			msg = kc.Message
+		}
+		ts.MarkDependencyReadyFailed("DependencyNotReady", "Dependency is not ready: %s", msg)
+	}
 }
