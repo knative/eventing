@@ -133,7 +133,7 @@ func main() {
 		Namespace:                       system.Namespace(),
 		Port:                            8443,
 		SecretName:                      "eventing-webhook-certs",
-		WebhookName:                     "webhook.eventing.knative.dev",
+		ResourceMutatingWebhookName:     "webhook.eventing.knative.dev",
 		StatsReporter:                   stats,
 		RegistrationDelay:               registrationDelay * time.Second,
 		ResourceAdmissionControllerPath: "/",
