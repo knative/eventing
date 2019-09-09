@@ -27,9 +27,9 @@ for cluster in $(gcloud container clusters list --project="${PROJECT_NAME}" --fo
   zone=$(echo $cluster | cut -f2 -d",")
 
   # Setup user credentials to run on GKE for continous runs.
-  get_gke_credentials
+  get_gke_credentials ${name} ${zone}
   
-  update_cluster ${name} ${zone}
+  update_cluster ${name}
 done
 
 header "Done updating all clusters"
