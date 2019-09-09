@@ -35,8 +35,6 @@ var (
 )
 
 func NewOpenCensusTracer(configOptions ...ConfigOption) *OpenCensusTracer {
-	logger, _ := zap.NewDevelopment()
-	logger.Warn(fmt.Sprintf("NewOpenCensusTracker - %v", len(configOptions)))
 	return &OpenCensusTracer{
 		configOptions: configOptions,
 	}
@@ -120,7 +118,6 @@ func createOCTConfig(cfg *config.Config) *trace.Config {
 // WithExporter returns a ConfigOption for use with NewOpenCensusTracer that configures
 // it to export traces based on the configuration read from config-tracing.
 func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
-	logger.Info("WithExporter outer function called")
 	return func(cfg *config.Config) error {
 		logger.Info("WithExporter internal function called")
 		var (
