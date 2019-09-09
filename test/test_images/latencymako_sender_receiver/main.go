@@ -352,7 +352,7 @@ func warmup(warmupSeconds uint) {
 		vegeta.MaxWorkers(workers),
 	).Attack(targeter, pacer, time.Duration(warmupSeconds)*time.Second, defaultEventType+"-warmup")
 
-	for _ = range vegetaResults {
+	for range vegetaResults {
 	}
 
 	// give the channel a chance to drain the events it may still have enqueued
@@ -383,7 +383,7 @@ func startCloudEventsReceiver(eventHandler func(event cloudevents.Event)) contex
 
 func processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- struct{}) {
 	// Discard all vegeta results and wait the end of this channel
-	for _ = range vegetaResults {
+	for range vegetaResults {
 	}
 
 	printf("All requests sent")
