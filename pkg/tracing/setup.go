@@ -66,6 +66,7 @@ func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *t
 	if err != nil {
 		return err
 	}
+	logger.Warnf("SetupStaticPublishing ApplyingConfig %+v", cfg)
 	err = oct.ApplyConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("unable to set OpenCensusTracing config: %v", err)
@@ -118,7 +119,7 @@ func enableZeroSamplingCM(ns string) corev1.ConfigMap {
 			Namespace: ns,
 		},
 		Data: map[string]string{
-			"enable":          "True",
+			"backend":         "zipkin",
 			"debug":           "False",
 			"sample-rate":     "0",
 			"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",

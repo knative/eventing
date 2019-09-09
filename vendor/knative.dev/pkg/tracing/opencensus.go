@@ -2,12 +2,13 @@ package tracing
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	oczipkin "contrib.go.opencensus.io/exporter/zipkin"
-	zipkin "github.com/openzipkin/zipkin-go"
+	"github.com/openzipkin/zipkin-go"
 	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
@@ -16,7 +17,7 @@ import (
 )
 
 // ConfigOption is the interface for adding additional exporters and configuring opencensus tracing.
-type ConfigOption func(*config.Config)
+type ConfigOption func(*config.Config) error
 
 // OpenCensusTracer is responsible for managing and updating configuration of OpenCensus tracing
 type OpenCensusTracer struct {
@@ -34,31 +35,40 @@ var (
 )
 
 func NewOpenCensusTracer(configOptions ...ConfigOption) *OpenCensusTracer {
+	logger, _ := zap.NewDevelopment()
+	logger.Warn(fmt.Sprintf("NewOpenCensusTracker - %v", len(configOptions)))
 	return &OpenCensusTracer{
 		configOptions: configOptions,
 	}
 }
 
 func (oct *OpenCensusTracer) ApplyConfig(cfg *config.Config) error {
+	logger, _ := zap.NewDevelopment()
 	err := oct.acquireGlobal()
 	defer octMutex.Unlock()
 	if err != nil {
+		logger.Info("ApplyConfig - 1 - early err")
 		return err
 	}
 
 	// Short circuit if our config hasnt changed
 	if oct.curCfg != nil && oct.curCfg.Equals(cfg) {
+		logger.Info("ApplyConfig - 2 - no op")
 		return nil
 	}
 
 	// Apply config options
 	for _, configOpt := range oct.configOptions {
-		configOpt(cfg)
+		if err = configOpt(cfg); err != nil {
+			return err
+		}
 	}
+	logger.Info(fmt.Sprintf("ApplyConfig - options applied - %v", len(oct.configOptions)))
 
 	// Set config
 	trace.ApplyConfig(*createOCTConfig(cfg))
 
+	logger.Info("ApplyConfig - healthy exit")
 	return nil
 }
 
@@ -70,7 +80,9 @@ func (oct *OpenCensusTracer) Finish() error {
 	}
 
 	for _, configOpt := range oct.configOptions {
-		configOpt(nil)
+		if err = configOpt(nil); err != nil {
+			return err
+		}
 	}
 	globalOct = nil
 
@@ -108,7 +120,9 @@ func createOCTConfig(cfg *config.Config) *trace.Config {
 // WithExporter returns a ConfigOption for use with NewOpenCensusTracer that configures
 // it to export traces based on the configuration read from config-tracing.
 func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
-	return func(cfg *config.Config) {
+	logger.Info("WithExporter outer function called")
+	return func(cfg *config.Config) error {
+		logger.Info("WithExporter internal function called")
 		var (
 			exporter trace.Exporter
 			closer   io.Closer
@@ -120,15 +134,16 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 			})
 			if err != nil {
 				logger.Errorw("error reading project-id from metadata", zap.Error(err))
-				return
+				return err
 			}
 			exporter = exp
 		case config.Zipkin:
+			logger.Info("Adding Zipkin tracing")
 			hostPort := name + ":80"
 			zipEP, err := zipkin.NewEndpoint(name, hostPort)
 			if err != nil {
 				logger.Errorw("error building zipkin endpoint", zap.Error(err))
-				return
+				return err
 			}
 			reporter := httpreporter.NewReporter(cfg.ZipkinEndpoint)
 			exporter = oczipkin.NewExporter(reporter, zipEP)
@@ -138,6 +153,7 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 		}
 		if exporter != nil {
 			trace.RegisterExporter(exporter)
+			logger.Infof("Registered exporter %T", exporter)
 		}
 		// We know this is set because we are called with acquireGlobal lock held
 		if globalOct.exporter != nil {
@@ -149,5 +165,7 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 
 		globalOct.exporter = exporter
 		globalOct.closer = closer
+		
+		return nil
 	}
 }

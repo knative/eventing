@@ -126,6 +126,7 @@ func main() {
 
 	// Add output tracing.
 	if addTracing {
+		log.Println("addTracing")
 		t.Client = &gohttp.Client{
 			Transport: &ochttp.Transport{
 				Propagation:    &b3.HTTPFormat{},
@@ -135,7 +136,12 @@ func main() {
 				},
 			},
 		}
-		if err := tracing.SetupStaticPublishing(zap.NewNop().Sugar(), "sendevents", tracing.AlwaysSample); err != nil {
+		logger, _ := zap.NewDevelopment()
+		name, err := os.Hostname()
+		if err != nil {
+			log.Fatalf("Couldn't get hostname: %v", err)
+		}
+		if err := tracing.SetupStaticPublishing(logger.Sugar(), name, tracing.AlwaysSample); err != nil {
 			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
 	}

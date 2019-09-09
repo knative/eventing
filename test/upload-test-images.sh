@@ -22,6 +22,7 @@ which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
 function upload_test_images() {
   echo ">> Publishing test images"
   local image_dirs="$(find $(dirname $0)/test_images -mindepth 1 -maxdepth 1 -type d)"
+  local image_dirs=("sendevents")
   local docker_tag=$1
   local registry=${KO_DOCKER_REPO%/*}
 

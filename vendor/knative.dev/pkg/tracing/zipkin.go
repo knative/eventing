@@ -32,7 +32,7 @@ type ZipkinReporterFactory func(*config.Config) (zipkinreporter.Reporter, error)
 //  - WithExporter() in production code
 //  - testing/FakeZipkinExporter() in test code.
 func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmodel.Endpoint) ConfigOption {
-	return func(cfg *config.Config) {
+	return func(cfg *config.Config) error {
 		var (
 			reporter zipkinreporter.Reporter
 			exporter trace.Exporter
@@ -44,7 +44,7 @@ func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmode
 			reporter, err := reporterFact(cfg)
 			if err != nil {
 				// TODO(greghaynes) log this error
-				return
+				return err
 			}
 			exporter := zipkin.NewExporter(reporter, endpoint)
 			trace.RegisterExporter(exporter)
@@ -63,5 +63,7 @@ func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmode
 
 		oct.closer = reporter
 		oct.exporter = exporter
+		
+		return nil
 	}
 }
