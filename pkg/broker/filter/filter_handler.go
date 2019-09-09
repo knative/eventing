@@ -42,6 +42,9 @@ const (
 	passFilter FilterResult = "pass"
 	failFilter FilterResult = "fail"
 	noFilter   FilterResult = "no_filter"
+
+	// readyz is the HTTP path that will be used for readiness checks.
+	readyz = "/readyz"
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -59,7 +62,7 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanMiddleware))
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanIgnoringPaths(readyz)))
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +83,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespa
 
 	httpTransport.Handler = http.NewServeMux()
 	httpTransport.Handler.HandleFunc("/healthz", r.healthZ)
-	httpTransport.Handler.HandleFunc("/readyz", r.readyZ)
+	httpTransport.Handler.HandleFunc(readyz, r.readyZ)
 
 	return r, nil
 }
