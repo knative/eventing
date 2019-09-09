@@ -109,11 +109,11 @@ func main() {
 	metricsConfig, err := utils.Base64ToMetricsOptions(
 		env.MetricsConfigBase64)
 	if err != nil {
-		logger.Error("failed to process metrics options ", zap.Error(err))
+		logger.Error("failed to process metrics options", zap.Error(err))
 	}
 
 	if err := metrics.UpdateExporter(*metricsConfig, loggerSugared); err != nil {
-		logger.Error("failed to create the metrics exporter ", zap.Error(err))
+		logger.Error("failed to create the metrics exporter", zap.Error(err))
 	}
 
 	reporter, err := apiserver.NewStatsReporter()
@@ -173,7 +173,7 @@ func main() {
 	}
 
 	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, loggerSugared, opt, reporter, env.Name)
-	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
+	logger.Info("starting kubernetes api adapter", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
 	}
