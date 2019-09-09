@@ -40,6 +40,13 @@ var (
 		SampleRate:     0.01,
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
 	}
+
+	AlwaysSample = &tracingconfig.Config{
+		Backend:        tracingconfig.Zipkin,
+		Debug:          true,
+		SampleRate:     1.0,
+		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	}
 )
 
 // setupPublishing sets up trace publishing for the process. Note that other pieces

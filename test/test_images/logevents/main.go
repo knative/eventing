@@ -20,7 +20,11 @@ import (
 	"context"
 	"log"
 
+	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/tracing"
+
 	cloudevents "github.com/cloudevents/sdk-go"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 func handler(event cloudevents.Event) {
@@ -32,7 +36,10 @@ func handler(event cloudevents.Event) {
 }
 
 func main() {
-	c, err := cloudevents.NewDefaultClient()
+	if err := tracing.SetupStaticPublishing(zap.NewNop().Sugar(), "sendevents", tracing.AlwaysSample); err != nil {
+		log.Fatalf("Unable to setup trace publishing: %v", err)
+	}
+	c, err := kncloudevents.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}

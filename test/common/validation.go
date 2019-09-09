@@ -34,6 +34,19 @@ const (
 	timeout  = 4 * time.Minute
 )
 
+func (client *Client) GetLog(podName string) (string, error) {
+	namespace := client.Namespace
+	containerName, err := client.getContainerName(podName, namespace)
+	if err != nil {
+		return "", err
+	}
+	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
+	if err != nil {
+		return "", err
+	}
+	return string(logs), nil
+}
+
 // CheckLog waits until logs for the logger Pod satisfy the checker.
 // If the checker does not pass within timeout it returns error.
 func (client *Client) CheckLog(podName string, checker func(string) bool) error {

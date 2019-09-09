@@ -27,6 +27,11 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/tracing"
+
+	"go.opencensus.io/trace"
+
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	_ "go.opencensus.io/trace"
@@ -124,8 +129,14 @@ func main() {
 		t.Client = &gohttp.Client{
 			Transport: &ochttp.Transport{
 				Propagation:    &b3.HTTPFormat{},
-				NewClientTrace: ochttp.NewSpanAnnotator,
+				NewClientTrace: ochttp.NewSpanAnnotatingClientTrace,
+				StartOptions: trace.StartOptions{
+					Sampler: trace.AlwaysSample(),
+				},
 			},
+		}
+		if err := tracing.SetupStaticPublishing(zap.NewNop().Sugar(), "sendevents", tracing.AlwaysSample); err != nil {
+			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
 	}
 
