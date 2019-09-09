@@ -1390,6 +1390,7 @@
     "knative.dev/pkg/apis/duck",
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
+    "knative.dev/pkg/apis/v1alpha1",
     "knative.dev/pkg/client/clientset/versioned/fake",
     "knative.dev/pkg/codegen/cmd/injection-gen",
     "knative.dev/pkg/configmap",

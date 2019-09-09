@@ -23,6 +23,7 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -57,7 +58,17 @@ func TestChannelablePopulate(t *testing.T) {
 					}},
 				},
 			},
+			ErrorChannel: &apisv1alpha1.Destination{
+				ObjectReference: &corev1.ObjectReference{
+					Name: "aname",
+				},
+				URI: &apis.URL{
+					Scheme: "http",
+					Host:   "test-error-domain",
+				},
+			},
 		},
+
 		Status: ChannelableStatus{
 			AddressStatus: v1alpha1.AddressStatus{
 				Address: &v1alpha1.Addressable{
