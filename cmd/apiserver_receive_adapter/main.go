@@ -173,7 +173,7 @@ func main() {
 	}
 
 	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, loggerSugared, opt, reporter, env.Name)
-	logger.Info("starting kubernetes api adapter", zap.Any("adapter", env))
+	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
 	}
