@@ -25,6 +25,7 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 // +genclient
@@ -46,6 +47,12 @@ type Channelable struct {
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableSpec struct {
 	SubscribableTypeSpec `json:",inline"`
+
+	// ErrorChannel is the channel receiving messages that couldn't be sent to
+	// subscribers. One message is sent to this channel per failing subscriber.
+	//
+	// +optional
+	ErrorChannel *apisv1alpha1.Destination `json:"errorChannel,omitempty"`
 }
 
 // ChannelableStatus contains the Status of a Channelable object.
@@ -81,6 +88,15 @@ func (c *Channelable) Populate() {
 			SubscriberURI: "call2",
 			ReplyURI:      "sink2",
 		}},
+	}
+	c.Spec.ErrorChannel = &apisv1alpha1.Destination{
+		ObjectReference: &corev1.ObjectReference{
+			Name: "aname",
+		},
+		URI: &apis.URL{
+			Scheme: "http",
+			Host:   "test-error-domain",
+		},
 	}
 	c.Status = ChannelableStatus{
 		AddressStatus: v1alpha1.AddressStatus{
