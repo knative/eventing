@@ -109,11 +109,11 @@ func main() {
 	metricsConfig, err := utils.Base64ToMetricsOptions(
 		env.MetricsConfigBase64)
 	if err != nil {
-		logger.Error("failed to process metrics options ", zap.Error(err))
+		logger.Error("failed to process metrics options", zap.Error(err))
 	}
 
 	if err := metrics.UpdateExporter(*metricsConfig, loggerSugared); err != nil {
-		logger.Error("failed to create the metrics exporter ", zap.Error(err))
+		logger.Error("failed to create the metrics exporter", zap.Error(err))
 	}
 
 	reporter, err := apiserver.NewStatsReporter()
