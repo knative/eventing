@@ -1201,11 +1201,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c58bb491fe5be973899a0c744db8a283745641503bed8ddb683da4ad9bff09c5"
+  digest = "1:38226cb742766a4f78effcbbae38ce0c83ff696529553356c908467a1871fdd8"
   name = "knative.dev/pkg"
   packages = [
     "apis",
     "apis/duck",
+    "apis/duck/v1",
     "apis/duck/v1alpha1",
     "apis/duck/v1beta1",
     "apis/istio",
@@ -1283,11 +1284,11 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "75da3911c0205df6c1b8acb74662d96a6e37b305"
+  revision = "5f0515d33675c298c4054ac52268700bae3ceaa7"
 
 [[projects]]
   branch = "master"
-  digest = "1:734dbe8e6fccf6d647aa705c8fce103fab5bb287692c5c4d5860cff3f64edc16"
+  digest = "1:3fcdd7e9db923a0289522f2621de1f1b7343ce5784b83dcdec2deb1cb69ff9a0"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
@@ -1299,7 +1300,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "cfee08011fea83b3a3b4fc0d3dfe436789a1ac24"
+  revision = "2c83a176f473acb4b6b851e98e53882f594ffb5c"
 
 [solve-meta]
   analyzer-name = "dep"
