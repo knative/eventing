@@ -30,10 +30,12 @@ import (
 // ReceiveAdapterArgs are the arguments needed to create a ApiServer Receive Adapter.
 // Every field is required.
 type ReceiveAdapterArgs struct {
-	Image   string
-	Source  *v1alpha1.ApiServerSource
-	Labels  map[string]string
-	SinkURI string
+	Image         string
+	Source        *v1alpha1.ApiServerSource
+	Labels        map[string]string
+	SinkURI       string
+	MetricsConfig string
+	LoggingConfig string
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
@@ -67,7 +69,11 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 						{
 							Name:  "receive-adapter",
 							Image: args.Image,
-							Env:   makeEnv(args.SinkURI, &args.Source.Spec),
+							Env:   makeEnv(args.SinkURI, args.LoggingConfig, args.MetricsConfig, &args.Source.Spec, args.Source.ObjectMeta.Name),
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9090,
+							}},
 						},
 					},
 				},
@@ -76,7 +82,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar {
+func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiServerSourceSpec, name string) []corev1.EnvVar {
 	apiversions := ""
 	kinds := ""
 	controlled := ""
@@ -131,5 +137,17 @@ func makeEnv(sinkURI string, spec *v1alpha1.ApiServerSourceSpec) []corev1.EnvVar
 				FieldPath: "metadata.namespace",
 			},
 		},
+	}, {
+		Name:  "NAME",
+		Value: name,
+	}, {
+		Name:  "METRICS_DOMAIN",
+		Value: "knative.dev/eventing",
+	}, {
+		Name:  "K_METRICS_CONFIG",
+		Value: metricsConfig,
+	}, {
+		Name:  "K_LOGGING_CONFIG",
+		Value: loggingConfig,
 	}}
 }

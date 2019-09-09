@@ -25,10 +25,12 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/metrics"
 
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
 	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
+	"knative.dev/pkg/logging"
 )
 
 const (
@@ -57,6 +59,7 @@ func NewController(
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 		source:                GetCfgHost(ctx),
+		loggingContext:        ctx,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -75,6 +78,9 @@ func NewController(
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("ApiServerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
+
+	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
+	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
 
 	return impl
 }

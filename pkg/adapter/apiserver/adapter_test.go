@@ -32,6 +32,12 @@ import (
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
+type mockReporter struct{}
+
+func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	return nil
+}
+
 func TestNewAdaptor(t *testing.T) {
 	ce := kncetesting.NewTestClient()
 	logger := zap.NewExample().Sugar()
@@ -132,8 +138,8 @@ func TestNewAdaptor(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt)
+			r := &mockReporter{}
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r, "test-importer")
 
 			got, ok := a.(*adapter)
 			if !ok {
@@ -171,8 +177,8 @@ func TestAdapter_StartRef(t *testing.T) {
 			},
 		}},
 	}
-
-	a := NewAdaptor(source, k8s, ce, logger, opt)
+	r := &mockReporter{}
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -206,8 +212,8 @@ func TestAdapter_StartResource(t *testing.T) {
 			},
 		}},
 	}
-
-	a := NewAdaptor(source, k8s, ce, logger, opt)
+	r := &mockReporter{}
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -292,11 +298,12 @@ func makeResourceAndTestingClient() (*resource, *kncetesting.TestCloudEventsClie
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
-
+	r := &mockReporter{}
 	return &resource{
-		ce:     ce,
-		source: source,
-		logger: logger,
+		ce:       ce,
+		source:   source,
+		logger:   logger,
+		reporter: r,
 	}, ce
 }
 
@@ -304,10 +311,11 @@ func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
 	ce := kncetesting.NewTestClient()
 	source := "unit-test"
 	logger := zap.NewExample().Sugar()
-
+	r := &mockReporter{}
 	return &ref{
-		ce:     ce,
-		source: source,
-		logger: logger,
+		ce:       ce,
+		source:   source,
+		logger:   logger,
+		reporter: r,
 	}, ce
 }

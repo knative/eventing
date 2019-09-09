@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -24,12 +25,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	_ "knative.dev/pkg/metrics/testing"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {
+	name := "source-name"
 	src := &v1alpha1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "source-name",
+			Name:      name,
 			Namespace: "source-namespace",
 			UID:       "1234",
 		},
@@ -89,10 +92,11 @@ func TestMakeReceiveAdapter(t *testing.T) {
 
 	one := int32(1)
 	trueValue := true
+
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
-			Name:      "apiserversource-source-name-1234",
+			Name:      fmt.Sprintf("apiserversource-%s-1234", name),
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
@@ -101,7 +105,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				{
 					APIVersion:         "sources.eventing.knative.dev/v1alpha1",
 					Kind:               "ApiServerSource",
-					Name:               "source-name",
+					Name:               name,
 					UID:                "1234",
 					Controller:         &trueValue,
 					BlockOwnerDeletion: &trueValue,
@@ -132,6 +136,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 						{
 							Name:  "receive-adapter",
 							Image: "test-image",
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9090,
+							}},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SINK_URI",
@@ -157,6 +165,18 @@ func TestMakeReceiveAdapter(t *testing.T) {
 											FieldPath: "metadata.namespace",
 										},
 									},
+								}, {
+									Name:  "NAME",
+									Value: name,
+								}, {
+									Name:  "METRICS_DOMAIN",
+									Value: "knative.dev/eventing",
+								}, {
+									Name:  "K_METRICS_CONFIG",
+									Value: "",
+								}, {
+									Name:  "K_LOGGING_CONFIG",
+									Value: "",
 								},
 							},
 						},

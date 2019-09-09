@@ -31,11 +31,15 @@ import (
 )
 
 type ref struct {
-	ce     cloudevents.Client
-	source string
-	logger *zap.SugaredLogger
+	ce        cloudevents.Client
+	source    string
+	eventType string
+	logger    *zap.SugaredLogger
 
 	controlledGVRs []schema.GroupVersionResource
+	reporter       StatsReporter
+	namespace      string
+	name           string
 }
 
 var _ cache.Store = (*ref)(nil)
@@ -67,11 +71,7 @@ func (a *ref) Add(obj interface{}) error {
 		return err
 	}
 
-	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-	return nil
+	return a.sendEvent(context.Background(), event)
 }
 
 // Implements cache.Store
@@ -82,11 +82,7 @@ func (a *ref) Update(obj interface{}) error {
 		return err
 	}
 
-	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-	return nil
+	return a.sendEvent(context.Background(), event)
 }
 
 // Implements cache.Store
@@ -97,11 +93,7 @@ func (a *ref) Delete(obj interface{}) error {
 		return err
 	}
 
-	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-	return nil
+	return a.sendEvent(context.Background(), event)
 }
 
 func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
@@ -110,6 +102,23 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 		return
 	}
 	a.controlledGVRs = append(a.controlledGVRs, gvr)
+}
+
+func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
+	reportArgs := &ReportArgs{
+		ns:          a.namespace,
+		eventSource: event.Source(),
+		eventType:   event.Type(),
+		name:        a.name,
+	}
+
+	rctx, _, err := a.ce.Send(ctx, *event)
+	if err != nil {
+		a.logger.Info("failed to send a ref based event ", zap.Error(err))
+	}
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
+	a.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
+	return err
 }
 
 // Stub cache.Store impl

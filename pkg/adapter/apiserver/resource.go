@@ -27,9 +27,13 @@ import (
 )
 
 type resource struct {
-	ce     cloudevents.Client
-	source string
-	logger *zap.SugaredLogger
+	ce        cloudevents.Client
+	source    string
+	eventType string
+	logger    *zap.SugaredLogger
+	reporter  StatsReporter
+	namespace string
+	name      string
 }
 
 var _ cache.Store = (*resource)(nil)
@@ -41,12 +45,7 @@ func (a *resource) Add(obj interface{}) error {
 		return err
 	}
 
-	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
-
-	return nil
+	return a.sendEvent(context.Background(), event, a.reporter)
 }
 
 func (a *resource) Update(obj interface{}) error {
@@ -56,10 +55,7 @@ func (a *resource) Update(obj interface{}) error {
 		return err
 	}
 
-	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
-	}
+	return a.sendEvent(context.Background(), event, a.reporter)
 
 	return nil
 }
@@ -71,12 +67,24 @@ func (a *resource) Delete(obj interface{}) error {
 		return err
 	}
 
-	if _, _, err := a.ce.Send(context.Background(), *event); err != nil {
-		a.logger.Info("event delivery failed", zap.Error(err))
-		return err
+	return a.sendEvent(context.Background(), event, a.reporter)
+}
+
+func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event, reporter StatsReporter) error {
+	reportArgs := &ReportArgs{
+		ns:          a.namespace,
+		eventSource: event.Source(),
+		eventType:   event.Type(),
+		name:        a.name,
 	}
 
-	return nil
+	rctx, _, err := a.ce.Send(ctx, *event)
+	if err != nil {
+		a.logger.Info("failed to send a resource based event ", zap.Error(err))
+	}
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
+	a.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
+	return err
 }
 
 func (a *resource) addControllerWatch(gvr schema.GroupVersionResource) {

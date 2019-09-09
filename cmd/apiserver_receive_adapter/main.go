@@ -18,15 +18,14 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"strings"
 
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// Uncomment the following line to load the gcp plugin
+	// (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -34,7 +33,14 @@ import (
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
+)
+
+const (
+	component = "apiserversource"
 )
 
 var (
@@ -60,6 +66,17 @@ type envConfig struct {
 	Kind          StringList `required:"true"`
 	Controller    []bool     `required:"true"`
 	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
+	Name          string     `envconfig:"NAME" required:"true"`
+	// MetricsConfigBase64 is a base64 encoded json string of
+	// metrics.ExporterOptions. This is used to configure the metrics exporter
+	// options, the config is stored in a config map inside the controllers
+	// namespace and copied here.
+	MetricsConfigBase64 string `envconfig:"K_METRICS_CONFIG" required:"true"`
+
+	// LoggingConfigBase64 is a base64 encoded json string of logging.Config.
+	// This is used to configure the logging config, the config is stored in
+	// a config map inside the controllers namespace and copied here.
+	LoggingConfigBase64 string `envconfig:"K_LOGGING_CONFIG" required:"true"`
 }
 
 // TODO: the controller should take the list of GVR
@@ -67,18 +84,41 @@ type envConfig struct {
 func main() {
 	flag.Parse()
 
-	logCfg := zap.NewProductionConfig()
-	logCfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	dlogger, err := logCfg.Build()
-	if err != nil {
-		log.Fatalf("Error building logger: %v", err)
-	}
-	logger := dlogger.Sugar()
-
 	var env envConfig
-	err = envconfig.Process("", &env)
+	err := envconfig.Process("", &env)
 	if err != nil {
-		logger.Fatalw("Error processing environment", zap.Error(err))
+		panic(fmt.Sprintf("Error processing env var: %s", err))
+	}
+	// TODO move this util to pkg
+	// Convert base64 encoded json logging.Config to logging.Config.
+	loggingConfig, err := utils.Base64ToLoggingConfig(env.LoggingConfigBase64)
+	if err != nil {
+		fmt.Printf("[ERROR] failed to process logging config: %s", err.Error())
+		// Use default logging config.
+		if loggingConfig, err = logging.NewConfigFromMap(map[string]string{}); err != nil {
+			// If this fails, there is no recovering.
+			panic(err)
+		}
+	}
+	loggerSugared, _ := logging.NewLoggerFromConfig(loggingConfig, component)
+	logger := loggerSugared.Desugar()
+	defer flush(loggerSugared)
+
+	// Convert base64 encoded json metrics.ExporterOptions to
+	// metrics.ExporterOptions.
+	metricsConfig, err := utils.Base64ToMetricsOptions(
+		env.MetricsConfigBase64)
+	if err != nil {
+		logger.Error("failed to process metrics options ", zap.Error(err))
+	}
+
+	if err := metrics.UpdateExporter(*metricsConfig, loggerSugared); err != nil {
+		logger.Error("failed to create the metrics exporter ", zap.Error(err))
+	}
+
+	reporter, err := apiserver.NewStatsReporter()
+	if err != nil {
+		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
 	// set up signals so we handle the first shutdown signal gracefully
@@ -86,26 +126,24 @@ func main() {
 
 	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
 	if err != nil {
-		logger.Fatalw("Error building kubeconfig", zap.Error(err))
+		logger.Fatal("error building kubeconfig", zap.Error(err))
 	}
 
-	logger = logger.With(zap.String("controller/apiserver", "adapter"))
 	logger.Info("Starting the controller")
-
 	client, err := dynamic.NewForConfig(cfg)
 	if err != nil {
-		logger.Fatalw("Error building dynamic client", zap.Error(err))
+		logger.Fatal("error building dynamic client", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing(logger, "apiserversource", tracing.OnePercentSampling); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the importer to continue to
-		// start.
+	if err = tracing.SetupStaticPublishing(loggerSugared, "apiserversource", tracing.OnePercentSampling); err != nil {
+		// If tracing doesn't work, we will log an error, but allow the importer
+		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
 	eventsClient, err := kncloudevents.NewDefaultClient(env.SinkURI)
 	if err != nil {
-		logger.Fatalw("Error building cloud event client", zap.Error(err))
+		logger.Fatal("error building cloud event client", zap.Error(err))
 	}
 
 	gvrcs := []apiserver.GVRC(nil)
@@ -117,7 +155,7 @@ func main() {
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
-			logger.Fatalw("Error parsing APIVersion", zap.Error(err))
+			logger.Fatal("error parsing APIVersion", zap.Error(err))
 		}
 		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
@@ -134,9 +172,14 @@ func main() {
 		GVRCs:     gvrcs,
 	}
 
-	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, logger, opt)
-	logger.Info("starting kubernetes api adapter")
+	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, loggerSugared, opt, reporter, env.Name)
+	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
 		logger.Warn("start returned an error,", zap.Error(err))
 	}
+}
+
+func flush(logger *zap.SugaredLogger) {
+	_ = logger.Sync()
+	metrics.FlushExporter()
 }
