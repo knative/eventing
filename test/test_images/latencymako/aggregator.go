@@ -14,13 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate protoc -I ./event_state --go_out=plugins=grpc:./event_state ./event_state/event_state.proto
-
 package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"net"
 	"sync"
@@ -30,49 +27,69 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	pb "knative.dev/eventing/test/test_images/latencymako_aggregator/event_state"
-	"knative.dev/pkg/signals"
+	pb "knative.dev/eventing/test/test_images/latencymako/event_state"
 	"knative.dev/pkg/test/mako"
 )
 
-const listenAddr = ":10000"
 const maxRcvMsgSize = 1024 * 1024 * 10
 
-// flags for the image
-var (
-	verbose       bool
-	expectRecords uint
-)
-
-var fatalf = log.Fatalf
-
-func init() {
-	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
-	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-}
-
-// aggregation of received events records
+// thread-safe events recording map
 type eventsRecord struct {
 	sync.RWMutex
-	pb.EventsRecord
+	*pb.EventsRecord
 }
 
-var (
-	sentEvents     eventsRecord
-	acceptedEvents eventsRecord
-	failedEvents   eventsRecord
-	receivedEvents eventsRecord
-)
+type aggregatorExecutor struct {
+	// thread-safe events recording maps
+	sentEvents     *eventsRecord
+	acceptedEvents *eventsRecord
+	failedEvents   *eventsRecord
+	receivedEvents *eventsRecord
 
-var notifyEventsReceived = make(chan struct{})
+	// channel to notify the main goroutine that an events record has been received
+	notifyEventsReceived chan struct{}
 
-func main() {
-	flag.Parse()
+	// GRPC server
+	listener net.Listener
+	server   *grpc.Server
+}
 
+func newAggregatorExecutor(lis net.Listener) testExecutor {
+	executor := &aggregatorExecutor{
+		listener:             lis,
+		notifyEventsReceived: make(chan struct{}),
+	}
+
+	// --- Create GRPC server
+
+	s := grpc.NewServer(grpc.MaxRecvMsgSize(maxRcvMsgSize))
+	pb.RegisterEventsRecorderServer(s, executor)
+	executor.server = s
+
+	// --- Initialize records maps
+
+	executor.sentEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
+		Type:   pb.EventsRecord_SENT,
+		Events: make(map[string]*timestamp.Timestamp),
+	}}
+	executor.acceptedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
+		Type:   pb.EventsRecord_ACCEPTED,
+		Events: make(map[string]*timestamp.Timestamp),
+	}}
+	executor.failedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
+		Type:   pb.EventsRecord_FAILED,
+		Events: make(map[string]*timestamp.Timestamp),
+	}}
+	executor.receivedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
+		Type:   pb.EventsRecord_RECEIVED,
+		Events: make(map[string]*timestamp.Timestamp),
+	}}
+
+	return executor
+}
+
+func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	// --- Configure mako
-
-	// We want this for properly handling Kubernetes container lifecycle events.
-	ctx := signals.NewContext()
 
 	printf("Configuring Mako")
 
@@ -92,49 +109,33 @@ func main() {
 		fatalf(f, args...)
 	}
 
-	// --- Initialize records maps
-
-	sentEvents.Events = make(map[string]*timestamp.Timestamp)
-	acceptedEvents.Events = make(map[string]*timestamp.Timestamp)
-	failedEvents.Events = make(map[string]*timestamp.Timestamp)
-	receivedEvents.Events = make(map[string]*timestamp.Timestamp)
-
 	// --- Run GRPC events receiver
 
 	printf("Starting events recorder server")
 
-	l, err := net.Listen("tcp", listenAddr)
-	if err != nil {
-		fatalf("Failed to listen: %v", err)
-	}
-
-	s := grpc.NewServer(grpc.MaxRecvMsgSize(maxRcvMsgSize))
-
-	pb.RegisterEventsRecorderServer(s, &server{})
-
 	go func() {
-		if err := s.Serve(l); err != nil {
+		if err := ex.server.Serve(ex.listener); err != nil {
 			fatalf("Failed to serve: %v", err)
 		}
 	}()
 	go func() {
 		<-ctx.Done()
 		printf("Terminating events recorder server")
-		s.GracefulStop()
+		ex.server.GracefulStop()
 	}()
 
 	printf("Expecting %d events records", expectRecords)
-	waitForEvents()
+	ex.waitForEvents()
 	printf("Received all expected events records")
 
-	s.GracefulStop()
+	ex.server.GracefulStop()
 
 	// --- Publish results
 
-	printf("%-15s: %d", "Sent count", len(sentEvents.Events))
-	printf("%-15s: %d", "Accepted count", len(acceptedEvents.Events))
-	printf("%-15s: %d", "Failed count", len(failedEvents.Events))
-	printf("%-15s: %d", "Received count", len(receivedEvents.Events))
+	printf("%-15s: %d", "Sent count", len(ex.sentEvents.Events))
+	printf("%-15s: %d", "Accepted count", len(ex.acceptedEvents.Events))
+	printf("%-15s: %d", "Failed count", len(ex.failedEvents.Events))
+	printf("%-15s: %d", "Received count", len(ex.receivedEvents.Events))
 
 	printf("Publishing data points to Mako")
 
@@ -142,19 +143,19 @@ func main() {
 	var publishErrorCount int
 	var deliverErrorCount int
 
-	for sentID := range sentEvents.Events {
-		timestampSentProto := sentEvents.Events[sentID]
+	for sentID := range ex.sentEvents.Events {
+		timestampSentProto := ex.sentEvents.Events[sentID]
 		timestampSent, _ := ptypes.Timestamp(timestampSentProto)
 
-		timestampAcceptedProto, accepted := acceptedEvents.Events[sentID]
+		timestampAcceptedProto, accepted := ex.acceptedEvents.Events[sentID]
 		timestampAccepted, _ := ptypes.Timestamp(timestampAcceptedProto)
 
-		timestampReceivedProto, received := receivedEvents.Events[sentID]
+		timestampReceivedProto, received := ex.receivedEvents.Events[sentID]
 		timestampReceived, _ := ptypes.Timestamp(timestampReceivedProto)
 
 		if !accepted {
 			errMsg := "Failed on broker"
-			if _, failed := failedEvents.Events[sentID]; !failed {
+			if _, failed := ex.failedEvents.Events[sentID]; !failed {
 				// TODO(antoineco): should never happen, check whether the failed map makes any sense
 				errMsg = "Event not accepted but missing from failed map"
 			}
@@ -202,25 +203,18 @@ func main() {
 	}
 }
 
-// waitForEvents blocks until the expected number of events records have been received.
-func waitForEvents() {
+// waitForEvents blocks until the expected number of events records has been received.
+func (ex *aggregatorExecutor) waitForEvents() {
 	for receivedRecords := uint(0); receivedRecords < expectRecords; receivedRecords++ {
-		<-notifyEventsReceived
+		<-ex.notifyEventsReceived
 	}
 }
 
-func printf(f string, args ...interface{}) {
-	if verbose {
-		log.Printf(f, args...)
-	}
-}
-
-// server is used to implement latencymako.EventsRecorder
-type server struct{}
-
-// RecordSentEvents implements latencymako.EventsRecorder
-func (s *server) RecordEvents(_ context.Context, in *pb.EventsRecordList) (*pb.RecordReply, error) {
-	defer func() { notifyEventsReceived <- struct{}{} }()
+// RecordSentEvents implements event_state.EventsRecorder
+func (ex *aggregatorExecutor) RecordEvents(_ context.Context, in *pb.EventsRecordList) (*pb.RecordReply, error) {
+	defer func() {
+		ex.notifyEventsReceived <- struct{}{}
+	}()
 
 	for _, recIn := range in.Items {
 		recType := recIn.GetType()
@@ -229,13 +223,13 @@ func (s *server) RecordEvents(_ context.Context, in *pb.EventsRecordList) (*pb.R
 
 		switch recType {
 		case pb.EventsRecord_SENT:
-			rec = &sentEvents
+			rec = ex.sentEvents
 		case pb.EventsRecord_ACCEPTED:
-			rec = &acceptedEvents
+			rec = ex.acceptedEvents
 		case pb.EventsRecord_FAILED:
-			rec = &failedEvents
+			rec = ex.failedEvents
 		case pb.EventsRecord_RECEIVED:
-			rec = &receivedEvents
+			rec = ex.receivedEvents
 		default:
 			printf("Ignoring events record of type %s", recType)
 			continue
