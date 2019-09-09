@@ -36,8 +36,8 @@ import (
 	"knative.dev/pkg/logging/logkey"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-	"knative.dev/pkg/injection/clients/kubeclient"
 )
 
 // Base implements the core controller logic, given a Reconciler.

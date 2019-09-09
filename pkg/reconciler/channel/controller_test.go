@@ -26,8 +26,8 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel/fake"
+	_ "knative.dev/pkg/client/injection/kube/client/fake"
 	_ "knative.dev/pkg/injection/clients/dynamicclient/fake"
-	_ "knative.dev/pkg/injection/clients/kubeclient/fake"
 )
 
 func TestNew(t *testing.T) {

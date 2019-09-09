@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	fake "knative.dev/eventing/pkg/client/injection/informers/messaging/factory/fake"
+	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"
 	sequence "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/sequence"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
