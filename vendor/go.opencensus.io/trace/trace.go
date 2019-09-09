@@ -24,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/zap"
-
 	"go.opencensus.io/internal"
 	"go.opencensus.io/trace/tracestate"
 )
@@ -275,8 +273,6 @@ func (s *Span) End() {
 		return
 	}
 	s.endOnce.Do(func() {
-		logger, _ := zap.NewDevelopment()
-		logger.Info(fmt.Sprintf("@@@@ Think about sending trace %+v @@@@", s.spanContext))
 		exp, _ := exporters.Load().(exportersMap)
 		mustExport := s.spanContext.IsSampled() && len(exp) > 0
 		if s.spanStore != nil || mustExport {
@@ -288,8 +284,6 @@ func (s *Span) End() {
 			if mustExport {
 				for e := range exp {
 					e.ExportSpan(sd)
-					logger, _ := zap.NewDevelopment()
-					logger.Info(fmt.Sprintf("**** Sent trace %+v ****", s.spanContext))
 				}
 			}
 		}

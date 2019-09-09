@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"go.uber.org/zap"
-
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
 	"go.opencensus.io/trace"
@@ -54,8 +52,6 @@ func NewExporter(reporter reporter.Reporter, localEndpoint *model.Endpoint) *Exp
 
 // ExportSpan exports a span to a Zipkin server.
 func (e *Exporter) ExportSpan(s *trace.SpanData) {
-	logger, _ := zap.NewDevelopment()
-	logger.Info(fmt.Sprintf("^^^^ ExportSpan %+v ^^^^", s.SpanContext))
 	e.reporter.Send(zipkinSpan(s, e.localEndpoint))
 }
 

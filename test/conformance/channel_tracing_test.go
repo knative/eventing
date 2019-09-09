@@ -31,7 +31,7 @@ import (
 )
 
 // The Channel MUST pass through all tracing information as CloudEvents attributes
-func TestChannelTracing_real(t *testing.T) {
+func TestChannelTracing(t *testing.T) {
 	testCases := map[string]struct {
 		incomingTraceId bool
 		istio           bool
@@ -49,7 +49,7 @@ func TestChannelTracing_real(t *testing.T) {
 		channelName := "chan"
 		loggerPodName := "logger-pod"
 		subscriptionName := "sub"
-		senderName := "sendevents"
+		senderName := "sender"
 		if tc.istio {
 			continue
 		}
@@ -128,56 +128,6 @@ func TestChannelTracing_real(t *testing.T) {
 				// TODO report on optional x-b3-parentspanid and x-b3-sampled if present?
 				// TODO report x-custom-header
 
-			})
-		})
-	}
-}
-
-// The Channel MUST pass through all tracing information as CloudEvents attributes
-func TestChannelTracing(t *testing.T) {
-	testCases := map[string]struct {
-		incomingTraceId bool
-		istio           bool
-	}{
-		"no incoming trace id": {}, /*
-			"includes incoming trace id": {
-				incomingTraceId: true,
-			},
-			"caller has istio": {
-				istio: true,
-			},*/
-	}
-
-	for n, tc := range testCases {
-		channelName := "chan"
-		senderName := "sendevents123"
-		if tc.istio {
-			continue
-		}
-		t.Run(n, func(t *testing.T) {
-			channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
-				st.Logf("Running header conformance test with channel %q", channel)
-				// TODO Run in parallel.
-				client := common.Setup(st, false)
-
-				channelTypeMeta := common.GetChannelTypeMeta(channel)
-
-				// send fake CloudEvent to the channel
-				eventID := fmt.Sprintf("%s", uuid.NewUUID())
-				body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
-				event := &resources.CloudEvent{
-					ID:       eventID,
-					Source:   senderName,
-					Type:     resources.CloudEventDefaultType,
-					Data:     fmt.Sprintf(`{"msg":%q}`, body),
-					Encoding: resources.CloudEventEncodingBinary,
-				}
-
-				st.Logf("Sending event with tracing headers to %s", senderName)
-				if err := client.SendFakeEventWithTracingToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
-					st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
-				}
-				st.Fatalf("Foo")
 			})
 		})
 	}
