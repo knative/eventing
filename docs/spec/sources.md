@@ -73,8 +73,8 @@ aggregationRule:
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
-And new sources MUST include a ClusterRole as part of installing
-themselves into a cluster:
+And new sources MUST include a ClusterRole as part of installing themselves into
+a cluster:
 
 ```yaml
 kind: ClusterRole
