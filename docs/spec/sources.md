@@ -12,7 +12,7 @@ A Source:
 
 In practice, sources are an abstract concept that allow us to create declarative
 configurations through the usage of Custom Resource Definitions (CRDs) extending
-Kubernetes. Those CRDs are instantiated by creating a instance of the resource.
+Kubernetes. Those CRDs are instantiated by creating an instance of the resource.
 It is up to the implementation of the source author to understand the best way
 to realize the source application. This could be as 1:1 deployments inside of
 Kubernetes per resource, as a single multi-tenant application, or even an
