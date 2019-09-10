@@ -66,52 +66,50 @@ function setup_user() {
 }
 
 # Get cluster credentials for GKE cluster
+# $1 -> cluster_name, $2 -> cluster_zone
 function get_gke_credentials() {
+  name=$1
+  zone=$2
   echo "Updating cluster with name ${name} in zone ${zone}"
   gcloud container clusters get-credentials ${name} --zone=${zone} --project=${PROJECT_NAME} || abort "Failed to get cluster creds"
 }
 
-# Create a new cluster and install serving components and apply benchmark yamls.
-# $1 -> cluster_name, $2 -> cluster_zone, $3 -> node_count
-function create_new_cluster() {
-  # create a new cluster
-  create_cluster $1 $2 $3 || abort "Failed to create the new cluster $1"
-
-  # create the secret on the new cluster
-  create_secret $1 $2 || abort "Failed to create secrets on the new cluster"
-
-  # Setup user credentials to run on GKE for continous runs.
-  get_gke_credentials
-
-  # update components on the cluster, e.g. serving and istio
-  update_cluster $1 $2 || abort "Failed to update the cluster"
-}
-
-# Update resources installed on the cluster with the up-to-date code.
-# $1 -> cluster_name, $2 -> cluster_zone
-function update_cluster() {
+# Delete all the benchmark resources
+# $1 -> cluster_name
+function delete_benchmark_resources() {
   name=$1
-  zone=$2
-  local version="v0.8.0"  
 
   echo ">> Delete all existing jobs and test resources"
   kubectl delete job --all
-  ko delete -f "${TEST_ROOT_PATH}/$1"
+  ko delete -f "${TEST_ROOT_PATH}/$name"
+}
 
+# Install the eventing resources from the repo
+function install_eventing_resources() {
   pushd .
-  cd ${GOPATH}/src/knative.dev
+  cd ${GOPATH}/src/knative.dev/eventing
 
-  echo ">> Update eventing"
-  kubectl apply --selector knative.dev/crd-install=true \
-  -f eventing/releases/download/$version/release.yaml || abort "Failed to apply eventing CRD's"
+  echo ">> Update eventing core"
+  ko apply --selector knative.dev/crd-install=true \
+  -f config/ || abort "Failed to apply eventing CRDs"
 
-  kubectl apply -f eventing/releases/download/$version/release.yaml || abort "Failed to apply eventing sources"
+  ko apply \
+  -f config/ || abort "Failed to apply eventing resources"
+
+  echo ">> Update InMemoryChannel"
+  ko apply --selector knative.dev/crd-install=true \
+  -f config/channels/in-memory/ || abort "Failed to apply InMemoryChannel CRDs"
+
+  ko apply \
+  -f config/channels/in-memory/ || abort "Failed to apply InMemoryChannel resources"
 
   popd
+}
 
-  # Patch resources
-
-  echo ">> Setting up config-mako"
+# Install resources required for Mako. Assumes the benchmark is running in
+# the kubectl context's default namespace.
+function install_mako_resources() {
+  echo ">> Setting up config-mako ConfigMap"
   cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: ConfigMap
@@ -121,12 +119,47 @@ data:
   # This should only be used by our performance automation.
   environment: prod
 EOF
+}
 
-  echo ">> Applying all the yamls"
+function apply_benchmark_resources() {
+  name=$1
+
+  echo ">> Applying $name benchmark yamls"
   # install the service and cronjob to run the benchmark
   # NOTE: this assumes we have a benchmark with the same name as the cluster
-  # If service creation takes long time, we will have some intially unreachable errors in the test
-  cd $TEST_ROOT_PATH
+  # If service creation takes long time, we will have some initially unreachable errors in the test
   echo "Using ko version $(ko version)"
-  ko apply -f $1 || abort "Failed to apply benchmarks yaml"
+  ko apply -f "$TEST_ROOT_PATH/$name" || abort "Failed to apply $name benchmark yamls"
+}
+
+# Update resources installed on the cluster with the up-to-date code. This
+# assumes the benchmark is running in the kubectl context's default namespace.
+# $1 -> cluster_name, $2 -> cluster_zone
+function update_cluster() {
+  name=$1
+
+  install_eventing_resources
+  install_mako_resources
+  delete_benchmark_resources $name
+  apply_benchmark_resources $name
+}
+
+# Create a new cluster and install serving components and apply benchmark yamls.
+# $1 -> cluster_name, $2 -> cluster_zone, $3 -> node_count
+function create_new_cluster() {
+  name=$1
+  zone=$2
+  nodes=$3
+
+  # create a new cluster
+  create_cluster $name $zone $nodes || abort "Failed to create the new cluster $name"
+
+  # create the secret on the new cluster
+  create_secret $name $zone || abort "Failed to create secrets on the new cluster"
+
+  # Setup user credentials to run on GKE for continous runs.
+  get_gke_credentials $name $zone || abort "Failed to get GKE credentials for the new cluster"
+
+  # update components on the cluster, e.g. serving and istio
+  update_cluster $name || abort "Failed to update the cluster"
 }

@@ -18,7 +18,7 @@ clusters. It contains of
 
 - update_clusters.sh: This will:
 
-  - Read all the current clusters in the `knative-performance` project
+  - Read all the current clusters in the `knative-eventing-performance` project
   - Kill all the current K8S objects
   - Install knative eventing
   - Apply patches(if any) to setup performance testing
