@@ -58,7 +58,7 @@ todo
 Knative leverages am aggregated RBAC role to allow for controllers to check the
 status of source type resources.
 
-The `source-observer` account looks like:
+The [`source-observer` ClusterRole](../../config/200-source-observer-clusterrole.yaml) looks like:
 
 ```yaml
 # Use this aggregated ClusterRole when you need read "Sources".
