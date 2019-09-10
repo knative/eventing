@@ -124,7 +124,6 @@ func main() {
 		log.Fatalf("failed to create transport, %v", err)
 	}
 
-	// Add output tracing.
 	if addTracing {
 		log.Println("addTracing")
 		t.Client = &gohttp.Client{
@@ -137,11 +136,7 @@ func main() {
 			},
 		}
 		logger, _ := zap.NewDevelopment()
-		name, err := os.Hostname()
-		if err != nil {
-			log.Fatalf("Couldn't get hostname: %v", err)
-		}
-		if err := tracing.SetupStaticPublishing(logger.Sugar(), name, tracing.AlwaysSample); err != nil {
+		if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
 			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
@@ -119,7 +120,6 @@ func createOCTConfig(cfg *config.Config) *trace.Config {
 // it to export traces based on the configuration read from config-tracing.
 func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 	return func(cfg *config.Config) error {
-		logger.Info("WithExporter internal function called")
 		var (
 			exporter trace.Exporter
 			closer   io.Closer
@@ -136,6 +136,16 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 			exporter = exp
 		case config.Zipkin:
 			logger.Info("Adding Zipkin tracing")
+			// If name isn't specified, then zipkin.NewEndpoint will return an error saying that it
+			// can't find the host named ''. So, if not specified, default it to this machine's
+			// hostname.
+			if name == "" {
+				n, err := os.Hostname()
+				if err != nil {
+					return fmt.Errorf("unable to get hostname: %v", err)
+				}
+				name = n
+			}
 			hostPort := name + ":80"
 			zipEP, err := zipkin.NewEndpoint(name, hostPort)
 			if err != nil {

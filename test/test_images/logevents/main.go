@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/tracing"
@@ -37,11 +36,7 @@ func handler(event cloudevents.Event) {
 }
 
 func main() {
-	name, err := os.Hostname()
-	if err != nil {
-		log.Fatalf("Unable to get hostname: %v", err)
-	}
-	if err := tracing.SetupStaticPublishing(zap.NewNop().Sugar(), name, tracing.AlwaysSample); err != nil {
+	if err := tracing.SetupStaticPublishing(zap.NewNop().Sugar(), "", tracing.AlwaysSample); err != nil {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 	c, err := kncloudevents.NewDefaultClient()
