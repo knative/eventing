@@ -40,8 +40,8 @@ import (
 	"knative.dev/pkg/system"
 	pkgtracing "knative.dev/pkg/tracing"
 
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/clients/kubeclient"
 	"knative.dev/pkg/injection/sharedmain"
 )
 

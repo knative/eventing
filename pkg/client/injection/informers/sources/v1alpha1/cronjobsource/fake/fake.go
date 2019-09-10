@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	fake "knative.dev/eventing/pkg/client/injection/informers/sources/factory/fake"
+	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"
 	cronjobsource "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
