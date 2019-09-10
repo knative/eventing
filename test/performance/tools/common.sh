@@ -98,10 +98,10 @@ function install_eventing_resources() {
 
   echo ">> Update InMemoryChannel"
   ko apply --selector knative.dev/crd-install=true \
-  -f config/channels/in-memory/ || abort "Failed to apply InMemoryChannel CRDs"
+  -f config/channels/in-memory-channel/ || abort "Failed to apply InMemoryChannel CRDs"
 
   ko apply \
-  -f config/channels/in-memory/ || abort "Failed to apply InMemoryChannel resources"
+  -f config/channels/in-memory-channel/ || abort "Failed to apply InMemoryChannel resources"
 
   popd
 }
