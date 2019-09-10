@@ -20,11 +20,10 @@ import (
 	"context"
 	"log"
 
-	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/tracing"
-
 	cloudevents "github.com/cloudevents/sdk-go"
+	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/tracing"
 )
 
 func handler(event cloudevents.Event) {

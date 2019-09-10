@@ -42,17 +42,14 @@ func NewOpenCensusTracer(configOptions ...ConfigOption) *OpenCensusTracer {
 }
 
 func (oct *OpenCensusTracer) ApplyConfig(cfg *config.Config) error {
-	logger, _ := zap.NewDevelopment()
 	err := oct.acquireGlobal()
 	defer octMutex.Unlock()
 	if err != nil {
-		logger.Info("ApplyConfig - 1 - early err")
 		return err
 	}
 
 	// Short circuit if our config hasnt changed
 	if oct.curCfg != nil && oct.curCfg.Equals(cfg) {
-		logger.Info("ApplyConfig - 2 - no op")
 		return nil
 	}
 
@@ -62,12 +59,10 @@ func (oct *OpenCensusTracer) ApplyConfig(cfg *config.Config) error {
 			return err
 		}
 	}
-	logger.Info(fmt.Sprintf("ApplyConfig - options applied - %v", len(oct.configOptions)))
 
 	// Set config
 	trace.ApplyConfig(*createOCTConfig(cfg))
 
-	logger.Info("ApplyConfig - healthy exit")
 	return nil
 }
 
@@ -135,7 +130,6 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 			}
 			exporter = exp
 		case config.Zipkin:
-			logger.Info("Adding Zipkin tracing")
 			// If name isn't specified, then zipkin.NewEndpoint will return an error saying that it
 			// can't find the host named ''. So, if not specified, default it to this machine's
 			// hostname.
@@ -160,7 +154,6 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 		}
 		if exporter != nil {
 			trace.RegisterExporter(exporter)
-			logger.Infof("Registered exporter %T", exporter)
 		}
 		// We know this is set because we are called with acquireGlobal lock held
 		if globalOct.exporter != nil {

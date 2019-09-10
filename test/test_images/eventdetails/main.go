@@ -21,14 +21,12 @@ import (
 	"fmt"
 	"log"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
-
-	cloudevents "github.com/cloudevents/sdk-go"
 )
 
-//func handler(event cloudevents.Event) {
 func handler(ctx context.Context, event cloudevents.Event) {
 	fmt.Printf("Got Event Context: %+v\n", event.Context)
 	tx := cloudevents.HTTPTransportContextFrom(ctx)

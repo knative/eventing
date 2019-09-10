@@ -72,7 +72,7 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       2,
 							},
-							/*	ReadinessProbe: &corev1.Probe{
+							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/readyz",
@@ -81,7 +81,7 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 								},
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       2,
-							},*/
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  system.NamespaceEnvKey,

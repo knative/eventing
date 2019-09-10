@@ -66,7 +66,6 @@ func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *t
 	if err != nil {
 		return err
 	}
-	logger.Warnf("SetupStaticPublishing ApplyingConfig %+v", cfg)
 	err = oct.ApplyConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("unable to set OpenCensusTracing config: %v", err)

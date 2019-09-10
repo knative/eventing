@@ -20,10 +20,9 @@ import (
 	"os"
 	"testing"
 
-	"knative.dev/eventing/test/conformance/zipkin"
-
 	"knative.dev/eventing/test"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/conformance/zipkin"
 )
 
 var setup = common.Setup

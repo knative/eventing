@@ -101,6 +101,10 @@ func SetupZipkinTracing(kubeClientset *kubernetes.Clientset, logf logging.Format
 // CleanupZipkinTracingSetup cleans up the Zipkin tracing setup on the machine. This involves killing the process performing port-forward.
 func CleanupZipkinTracingSetup(logf logging.FormatLogger) {
 	teardownOnce.Do(func() {
+		// Because CleanupZipkinTracingSetup only runs once, make sure that now that it has been
+		// called, SetupZipkindTracing will no longer setup any port forwarding.
+		setupOnce.Do(func() {})
+
 		if !ZipkinTracingEnabled {
 			return
 		}
