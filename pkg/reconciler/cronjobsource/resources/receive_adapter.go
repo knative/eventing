@@ -36,15 +36,18 @@ var (
 // ReceiveAdapterArgs are the arguments needed to create a Cron Job Source Receive Adapter. Every
 // field is required.
 type ReceiveAdapterArgs struct {
-	Image   string
-	Source  *v1alpha1.CronJobSource
-	Labels  map[string]string
-	SinkURI string
+	Image         string
+	Source        *v1alpha1.CronJobSource
+	Labels        map[string]string
+	SinkURI       string
+	MetricsConfig string
+	LoggingConfig string
 }
 
 // MakeReceiveAdapter generates (but does not insert into K8s) the Receive Adapter Deployment for
 // Cron Job Sources.
 func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
+	name := args.Source.ObjectMeta.Name
 	RequestResourceCPU, err := resource.ParseQuantity(args.Source.Spec.Resources.Requests.ResourceCPU)
 	if err != nil {
 		RequestResourceCPU = resource.MustParse("250m")
@@ -76,7 +79,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
-			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("cronjobsource-%s", args.Source.Name)),
+			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("cronjobsource-%s", name)),
 			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),
@@ -97,6 +100,11 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 						{
 							Name:  "receive-adapter",
 							Image: args.Image,
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "metrics",
+									ContainerPort: 9090,
+								}},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SCHEDULE",
@@ -117,6 +125,15 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 								{
 									Name:  "NAMESPACE",
 									Value: args.Source.Namespace,
+								}, {
+									Name:  "METRICS_DOMAIN",
+									Value: "knative.dev/eventing",
+								}, {
+									Name:  "K_METRICS_CONFIG",
+									Value: args.MetricsConfig,
+								}, {
+									Name:  "K_LOGGING_CONFIG",
+									Value: args.LoggingConfig,
 								},
 							},
 							Resources: res,

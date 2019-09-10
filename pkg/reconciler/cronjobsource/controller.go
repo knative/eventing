@@ -30,6 +30,9 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
 )
 
 const (
@@ -69,6 +72,7 @@ func NewController(
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
 		env:              *env,
+		context:          ctx,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
@@ -85,6 +89,8 @@ func NewController(
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("CronJobSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
+	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
+	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
 
 	return impl
 }

@@ -49,6 +49,8 @@ type Adapter struct {
 
 	// client sends cloudevents.
 	client cloudevents.Client
+
+	Reporter StatsReporter
 }
 
 // Initialize cloudevent client
@@ -92,10 +94,19 @@ func (a *Adapter) cronTick() {
 	event.SetType(sourcesv1alpha1.CronJobEventType)
 	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
-
-	if _, _, err := a.client.Send(context.TODO(), event); err != nil {
-		logger.Error("failed to send cloudevent", err)
+	reportArgs := &ReportArgs{
+		ns:          a.Namespace,
+		eventSource: event.Source(),
+		eventType:   event.Type(),
+		name:        a.Name,
 	}
+
+	rctx, _, err := a.client.Send(context.TODO(), event)
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
+	if err != nil {
+		logger.Error("failed to send cloudevent", zap.Error(err))
+	}
+	a.Reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
 }
 
 type Message struct {

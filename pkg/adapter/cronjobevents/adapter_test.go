@@ -28,6 +28,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+type mockReporter struct{}
+
+func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	return nil
+}
+
 func TestStart_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		schedule string
@@ -55,10 +61,12 @@ func TestStart_ServeHTTP(t *testing.T) {
 			sinkServer := httptest.NewServer(h)
 			defer sinkServer.Close()
 
+			r := &mockReporter{}
 			a := &Adapter{
 				Schedule: tc.schedule,
 				Data:     "data",
 				SinkURI:  sinkServer.URL,
+				Reporter: r,
 			}
 
 			if err := a.initClient(); err != nil {
@@ -89,8 +97,10 @@ func TestStart_ServeHTTP(t *testing.T) {
 func TestStartBadCron(t *testing.T) {
 	schedule := "bad"
 
+	r := &mockReporter{}
 	a := &Adapter{
 		Schedule: schedule,
+		Reporter: r,
 	}
 
 	stop := make(chan struct{})
@@ -125,9 +135,11 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 			sinkServer := httptest.NewServer(h)
 			defer sinkServer.Close()
 
+			r := &mockReporter{}
 			a := &Adapter{
-				Data:    "data",
-				SinkURI: sinkServer.URL,
+				Data:     "data",
+				SinkURI:  sinkServer.URL,
+				Reporter: r,
 			}
 
 			if err := a.initClient(); err != nil {
