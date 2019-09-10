@@ -193,13 +193,13 @@ func (r *Reconciler) getReceiveAdapterImage() string {
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
-	loggingConfig, err := utils.LoggingConfigToBase64(r.loggingConfig)
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to base64", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Error("error while converting logging config to json", zap.Any("receiveAdapter", err))
 	}
-	metricsConfig, err := utils.MetricsOptionsToBase64(r.metricsConfig)
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting metrics config to base64", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Error("error while converting metrics config to json", zap.Any("receiveAdapter", err))
 	}
 	adapterArgs := resources.ReceiveAdapterArgs{
 		Image:         r.getReceiveAdapterImage(),
