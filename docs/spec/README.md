@@ -16,9 +16,7 @@ Docs in this directory:
 - [Object model specification](spec.md)
 - [Channel specification](channel.md) and
   [older channel (0.6.0) spec](channel_060.md)
-
-<!-- TODO(n3wscott): * [Error conditions and reporting](errors.md) -->
-<!-- TODO(n3wscott): * [Sample API usage](normative_examples.md) -->
+- [Sources specification](sources.md)
 
 See the
 [Knative Eventing Docs Architecture](https://www.knative.dev/docs/eventing/#architecture)
