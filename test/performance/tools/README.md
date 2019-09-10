@@ -24,4 +24,3 @@ clusters. It contains of
   - Apply patches(if any) to setup performance testing
   - Run `ko apply` to all objects in the test-dir. Note that, this assuumes that
     the dir name and cluster name are the same.
-
