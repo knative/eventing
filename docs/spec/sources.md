@@ -33,7 +33,7 @@ metadata:
     duck.knative.dev/source: "true" # <-- required to be a source.
 ```
 
-CRDs should be added to the `sources` category:
+CRDs SHOULD be added to the `sources` category:
 
 ```yaml
 spec:
