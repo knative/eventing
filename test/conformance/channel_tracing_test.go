@@ -36,7 +36,7 @@ func TestChannelTracing(t *testing.T) {
 		incomingTraceId bool
 		istio           bool
 	}{
-		// "no incoming trace id": {},
+		"no incoming trace id": {},
 		"includes incoming trace id": {
 			incomingTraceId: true,
 		}, /*
@@ -50,13 +50,12 @@ func TestChannelTracing(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
 				st.Logf("Running header conformance test with channel %q", channel)
-				// TODO Run in parallel.
-				client := common.Setup(st, false)
+				client := common.Setup(st, true)
 				defer common.TearDown(client)
 
-				// TODO: This probably should happen exactly once, not repeatedly.
+				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
+				// TestMain.
 				zipkin.SetupZipkinTracing(client.Kube.Kube, t.Logf)
-				defer zipkin.CleanupZipkinTracingSetup(t.Logf)
 
 				body := setupChannelTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
 
