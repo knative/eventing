@@ -30,6 +30,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
+	"knative.dev/pkg/metrics"
 )
 
 type Adapter interface {
@@ -41,6 +42,8 @@ const (
 	RefMode = "Ref"
 	// ResourceMode produces payloads of ResourceEvent
 	ResourceMode = "Resource"
+
+	resourceGroup = "apiserversources.sources.eventing.knative.dev"
 )
 
 // Options hold the options for the Adapter.
@@ -67,13 +70,13 @@ type adapter struct {
 
 	mode     string
 	delegate eventDelegate
-	reporter StatsReporter
+	reporter metrics.StatsReporter
 	name     string
 }
 
 func NewAdaptor(source string, k8sClient dynamic.Interface,
 	ceClient cloudevents.Client, logger *zap.SugaredLogger,
-	opt Options, reporter StatsReporter, name string) Adapter {
+	opt Options, reporter metrics.StatsReporter, name string) Adapter {
 	mode := opt.Mode
 	switch mode {
 	case ResourceMode, RefMode:

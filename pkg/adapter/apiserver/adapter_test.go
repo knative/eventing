@@ -17,6 +17,7 @@ limitations under the License.
 package apiserver
 
 import (
+	"knative.dev/pkg/metrics"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,7 +35,7 @@ import (
 
 type mockReporter struct{}
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+func (r *mockReporter) ReportEventCount(args *metrics.ReportArgs, responseCode int) error {
 	return nil
 }
 

@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
+	"knative.dev/pkg/metrics"
 )
 
 type resource struct {
@@ -31,7 +32,7 @@ type resource struct {
 	source    string
 	eventType string
 	logger    *zap.SugaredLogger
-	reporter  StatsReporter
+	reporter  metrics.StatsReporter
 	namespace string
 	name      string
 }
@@ -45,7 +46,7 @@ func (a *resource) Add(obj interface{}) error {
 		return err
 	}
 
-	return a.sendEvent(context.Background(), event, a.reporter)
+	return a.sendEvent(context.Background(), event)
 }
 
 func (a *resource) Update(obj interface{}) error {
@@ -55,7 +56,7 @@ func (a *resource) Update(obj interface{}) error {
 		return err
 	}
 
-	return a.sendEvent(context.Background(), event, a.reporter)
+	return a.sendEvent(context.Background(), event)
 
 	return nil
 }
@@ -67,15 +68,16 @@ func (a *resource) Delete(obj interface{}) error {
 		return err
 	}
 
-	return a.sendEvent(context.Background(), event, a.reporter)
+	return a.sendEvent(context.Background(), event)
 }
 
-func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event, reporter StatsReporter) error {
-	reportArgs := &ReportArgs{
-		ns:          a.namespace,
-		eventSource: event.Source(),
-		eventType:   event.Type(),
-		name:        a.name,
+func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event) error {
+	reportArgs := &metrics.ReportArgs{
+		Namespace:     a.namespace,
+		EventSource:   event.Source(),
+		EventType:     event.Type(),
+		Name:          a.name,
+		ResourceGroup: resourceGroup,
 	}
 
 	rctx, _, err := a.ce.Send(ctx, *event)

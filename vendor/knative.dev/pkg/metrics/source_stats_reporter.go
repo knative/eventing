@@ -14,63 +14,55 @@
  * limitations under the License.
  */
 
-package apiserver
+package metrics
 
 import (
 	"context"
 	"strconv"
 
-	. "knative.dev/eventing/pkg/metrics/metricskey"
-	"knative.dev/eventing/pkg/utils"
-
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
 
 var (
-	// eventCountM is a counter which records the number of events sent
-	// by the ApiServerSource.
+	// eventCountM is a counter which records the number of events sent by the source.
 	eventCountM = stats.Int64(
 		"event_count",
-		"Number of events created",
+		"Number of events sent",
 		stats.UnitDimensionless,
 	)
 )
 
 type ReportArgs struct {
-	ns          string
-	eventType   string
-	eventSource string
-	name        string
+	Namespace     string
+	EventType     string
+	EventSource   string
+	Name          string
+	ResourceGroup string
 }
 
-const (
-	importerResourceGroupValue = "apiserversources.sources.eventing.knative.dev"
-)
-
-// StatsReporter defines the interface for sending filter metrics.
+// StatsReporter defines the interface for sending source metrics.
 type StatsReporter interface {
+	// ReportEventCount captures the event count. It records one per call.
 	ReportEventCount(args *ReportArgs, responseCode int) error
 }
 
 var _ StatsReporter = (*reporter)(nil)
 
-// reporter holds cached metric objects to report filter metrics.
+// reporter holds cached metric objects to report source metrics.
 type reporter struct {
-	namespaceTagKey             tag.Key
-	eventTypeTagKey             tag.Key
-	eventSourceTagKey           tag.Key
-	importerNameTagKey          tag.Key
-	importerResourceGroupTagKey tag.Key
-	responseCodeKey             tag.Key
-	responseCodeClassKey        tag.Key
+	namespaceTagKey           tag.Key
+	eventSourceTagKey         tag.Key
+	eventTypeTagKey           tag.Key
+	sourceNameTagKey          tag.Key
+	sourceResourceGroupTagKey tag.Key
+	responseCodeKey           tag.Key
+	responseCodeClassKey      tag.Key
 }
 
-// NewStatsReporter creates a reporter that collects and reports apiserversource
-// metrics.
+// NewStatsReporter creates a reporter that collects and reports source metrics.
 func NewStatsReporter() (StatsReporter, error) {
 	var r = &reporter{}
 
@@ -93,24 +85,24 @@ func NewStatsReporter() (StatsReporter, error) {
 	}
 	r.eventTypeTagKey = eventTypeTag
 
-	importerNameTag, err := tag.NewKey(metricskey.LabelImporterName)
+	nameTag, err := tag.NewKey(metricskey.LabelImporterName)
 	if err != nil {
 		return nil, err
 	}
-	r.importerNameTagKey = importerNameTag
+	r.sourceNameTagKey = nameTag
 
-	importerResourceGroupTag, err := tag.NewKey(metricskey.LabelImporterResourceGroup)
+	resourceGroupTag, err := tag.NewKey(metricskey.LabelImporterResourceGroup)
 	if err != nil {
 		return nil, err
 	}
-	r.importerResourceGroupTagKey = importerResourceGroupTag
+	r.sourceResourceGroupTagKey = resourceGroupTag
 
-	responseCodeTag, err := tag.NewKey(LabelResponseCode)
+	responseCodeTag, err := tag.NewKey(metricskey.LabelResponseCode)
 	if err != nil {
 		return nil, err
 	}
 	r.responseCodeKey = responseCodeTag
-	responseCodeClassTag, err := tag.NewKey(LabelResponseCodeClass)
+	responseCodeClassTag, err := tag.NewKey(metricskey.LabelResponseCodeClass)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +114,7 @@ func NewStatsReporter() (StatsReporter, error) {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.eventSourceTagKey, r.eventTypeTagKey, r.importerNameTagKey, r.importerResourceGroupTagKey, r.responseCodeKey, r.responseCodeClassKey},
+			TagKeys:     []tag.Key{r.namespaceTagKey, r.eventSourceTagKey, r.eventTypeTagKey, r.sourceNameTagKey, r.sourceResourceGroupTagKey, r.responseCodeKey, r.responseCodeClassKey},
 		},
 	)
 	if err != nil {
@@ -132,24 +124,23 @@ func NewStatsReporter() (StatsReporter, error) {
 	return r, nil
 }
 
-// ReportEventCount captures the event count.
 func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 	ctx, err := r.generateTag(args, responseCode)
 	if err != nil {
 		return err
 	}
-	metrics.Record(ctx, eventCountM.M(1))
+	Record(ctx, eventCountM.M(1))
 	return nil
 }
 
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
 		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.eventSourceTagKey, args.eventSource),
-		tag.Insert(r.eventTypeTagKey, args.eventType),
-		tag.Insert(r.importerNameTagKey, args.name),
-		tag.Insert(r.importerResourceGroupTagKey, importerResourceGroupValue),
+		tag.Insert(r.namespaceTagKey, args.Namespace),
+		tag.Insert(r.eventSourceTagKey, args.EventSource),
+		tag.Insert(r.eventTypeTagKey, args.EventType),
+		tag.Insert(r.sourceNameTagKey, args.Name),
+		tag.Insert(r.sourceResourceGroupTagKey, args.ResourceGroup),
 		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
+		tag.Insert(r.responseCodeClassKey, ResponseCodeClass(responseCode)))
 }
