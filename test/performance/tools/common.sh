@@ -91,17 +91,17 @@ function install_eventing_resources() {
 
   echo ">> Update eventing core"
   ko apply --selector knative.dev/crd-install=true \
-  -f eventing/config || abort "Failed to apply eventing CRDs"
+  -f config/ || abort "Failed to apply eventing CRDs"
 
   ko apply \
-  -f eventing/config || abort "Failed to apply eventing resources"
+  -f config/ || abort "Failed to apply eventing resources"
 
   echo ">> Update InMemoryChannel"
   ko apply --selector knative.dev/crd-install=true \
-  -f eventing/config/channels/in-memory || abort "Failed to apply InMemoryChannel CRDs"
+  -f config/channels/in-memory/ || abort "Failed to apply InMemoryChannel CRDs"
 
   ko apply \
-  -f eventing/config/channels/in-memory || abort "Failed to apply InMemoryChannel resources"
+  -f config/channels/in-memory/ || abort "Failed to apply InMemoryChannel resources"
 
   popd
 }
