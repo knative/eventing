@@ -179,28 +179,12 @@ func newSenderReceiverExecutor(ps []paceSpec, aggCli pb.EventsRecorderClient) te
 	return executor
 }
 
-type requestInterceptor struct {
-	before func(*http.Request)
-	after  func(*http.Request, *http.Response, error)
-}
-
-func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, error) {
-	if r.before != nil {
-		r.before(request)
-	}
-	res, err := http.DefaultTransport.RoundTrip(request)
-	if r.after != nil {
-		r.after(request, res, err)
-	}
-	return res, err
-}
-
 func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	// --- Warmup phase
 
 	printf("--- BEGIN WARMUP ---")
 	if warmupSeconds > 0 {
-		if err := ex.warmup(warmupSeconds); err != nil {
+		if err := ex.warmup(ctx, warmupSeconds); err != nil {
 			fatalf("Failed to run warmup: %v", err)
 		}
 	} else {
@@ -215,11 +199,11 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 
 	waitForPortAvailable(defaultCEReceiverPort)
 
-	cancelCeReceiver, err := ex.startCloudEventsReceiver(ex.processReceiveEvent)
-	if err != nil {
-		fatalf("Failed to start CloudEvents receiver: %v", err)
-	}
-	defer cancelCeReceiver()
+	go func() {
+		if err := ex.startCloudEventsReceiver(ctx, ex.processReceiveEvent); err != nil {
+			fatalf("Failed to start CloudEvents receiver: %v", err)
+		}
+	}()
 
 	// Start the events processor
 	printf("Starting events processor")
@@ -276,20 +260,13 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 
 type receiverFn func(cloudevents.Event)
 
-func (ex *senderReceiverExecutor) startCloudEventsReceiver(eventHandler receiverFn) (context.CancelFunc, error) {
+func (ex *senderReceiverExecutor) startCloudEventsReceiver(ctx context.Context, eventHandler receiverFn) error {
 	cli, err := newCloudEventsClient(sinkURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create CloudEvents client: %v", err)
+		return fmt.Errorf("failed to create CloudEvents client: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		if err := cli.StartReceiver(ctx, eventHandler); err != nil {
-			fatalf("Failed to start CloudEvents receiver: %v", err)
-		}
-	}()
-
-	return cancel, nil
+	return cli.StartReceiver(ctx, eventHandler)
 }
 
 func parsePaceSpec(pace string) ([]paceSpec, error) {
@@ -318,12 +295,16 @@ func parsePaceSpec(pace string) ([]paceSpec, error) {
 	return pacerSpecs, nil
 }
 
-func (ex *senderReceiverExecutor) warmup(warmupSeconds uint) error {
-	cancelCeReceiver, err := ex.startCloudEventsReceiver(func(event cloudevents.Event) {})
-	if err != nil {
-		return fmt.Errorf("failed to start CloudEvents receiver: %v", err)
-	}
-	defer cancelCeReceiver()
+func (ex *senderReceiverExecutor) warmup(ctx context.Context, warmupSeconds uint) error {
+	ignoreEvents := func(event cloudevents.Event) {}
+
+	ctx, cancel := context.WithCancel(ctx)
+	go func() {
+		if err := ex.startCloudEventsReceiver(ctx, ignoreEvents); err != nil {
+			fatalf("Failed to start CloudEvents receiver: %v", err)
+		}
+	}()
+	defer cancel()
 
 	printf("Started CloudEvents receiver for warmup")
 
