@@ -23,7 +23,7 @@ tools to dynamically discover and understand source installations.
 
 ## Source CRDs
 
-CRDs that are to be understood as a `source` must be labeled:
+CRDs that are to be understood as a `source` MUST be labeled:
 
 ```yaml
 apiVersion: apiextensions.k8s.io/v1beta1
