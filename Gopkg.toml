@@ -119,7 +119,3 @@ required = [
 [[constraint]]
   name = "github.com/tsenart/vegeta"
   version = "12.7.0"
-
-[[constraint]]
-  name = "github.com/google/mako"
-  version = "0.1.0"

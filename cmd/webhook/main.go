@@ -30,9 +30,9 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/clients/kubeclient"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/logging/logkey"
@@ -133,7 +133,7 @@ func main() {
 		Namespace:                       system.Namespace(),
 		Port:                            8443,
 		SecretName:                      "eventing-webhook-certs",
-		WebhookName:                     "webhook.eventing.knative.dev",
+		ResourceMutatingWebhookName:     "webhook.eventing.knative.dev",
 		StatsReporter:                   stats,
 		RegistrationDelay:               registrationDelay * time.Second,
 		ResourceAdmissionControllerPath: "/",

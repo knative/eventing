@@ -27,9 +27,9 @@ import (
 	cronjobsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
+	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 )
 
 const (

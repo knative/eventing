@@ -23,7 +23,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	_ "knative.dev/pkg/injection/informers/kubeinformers/corev1/service/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"

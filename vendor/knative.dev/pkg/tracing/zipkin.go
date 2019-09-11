@@ -43,7 +43,6 @@ func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmode
 			// do this before cleanup to minimize time where we have duplicate exporters
 			reporter, err := reporterFact(cfg)
 			if err != nil {
-				// TODO(greghaynes) log this error
 				return err
 			}
 			exporter := zipkin.NewExporter(reporter, endpoint)
@@ -63,7 +62,7 @@ func WithZipkinExporter(reporterFact ZipkinReporterFactory, endpoint *zipkinmode
 
 		oct.closer = reporter
 		oct.exporter = exporter
-		
+
 		return nil
 	}
 }

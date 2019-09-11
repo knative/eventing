@@ -26,9 +26,9 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
-	"knative.dev/pkg/injection/informers/kubeinformers/corev1/namespace"
-	"knative.dev/pkg/injection/informers/kubeinformers/corev1/serviceaccount"
-	"knative.dev/pkg/injection/informers/kubeinformers/rbacv1/rolebinding"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
 
 const (

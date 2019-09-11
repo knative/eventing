@@ -32,8 +32,9 @@ spec:
       restartPolicy: Never
       containers:
       - name: sender-receiver
-        image: knative.dev/eventing/test/test_images/latencymako_sender_receiver
+        image: knative.dev/eventing/test/test_images/latencymako
         args:
+        - "--role=sender-receiver"
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
         - "--aggregator=broker-latency-aggregator:10000"
         - "--pace=100:10,200:20,400:60"
@@ -69,8 +70,9 @@ spec:
   restartPolicy: Never
   containers:
   - name: aggregator
-    image: knative.dev/eventing/test/test_images/latencymako_aggregator
+    image: knative.dev/eventing/test/test_images/latencymako
     args:
+    - "--role=aggregator"
       # set to the number of sender-receiver
     - "--expect-records=1"
     - "--verbose"

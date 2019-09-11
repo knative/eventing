@@ -27,7 +27,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 
-	"knative.dev/pkg/injection/informers/kubeinformers/corev1/service"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"

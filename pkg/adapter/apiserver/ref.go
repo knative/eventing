@@ -20,14 +20,14 @@ import (
 	"context"
 	"reflect"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
-
-	cloudevents "github.com/cloudevents/sdk-go"
-	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
+	"knative.dev/pkg/source"
 )
 
 type ref struct {
@@ -37,7 +37,7 @@ type ref struct {
 	logger    *zap.SugaredLogger
 
 	controlledGVRs []schema.GroupVersionResource
-	reporter       StatsReporter
+	reporter       source.StatsReporter
 	namespace      string
 	name           string
 }
@@ -105,11 +105,12 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 }
 
 func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
-	reportArgs := &ReportArgs{
-		ns:          a.namespace,
-		eventSource: event.Source(),
-		eventType:   event.Type(),
-		name:        a.name,
+	reportArgs := &source.ReportArgs{
+		Namespace:     a.namespace,
+		EventSource:   event.Source(),
+		EventType:     event.Type(),
+		Name:          a.name,
+		ResourceGroup: resourceGroup,
 	}
 
 	rctx, _, err := a.ce.Send(ctx, *event)

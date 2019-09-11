@@ -48,7 +48,7 @@ func (oct *OpenCensusTracer) ApplyConfig(cfg *config.Config) error {
 		return err
 	}
 
-	// Short circuit if our config hasnt changed
+	// Short circuit if our config hasn't changed.
 	if oct.curCfg != nil && oct.curCfg.Equals(cfg) {
 		return nil
 	}
@@ -165,7 +165,7 @@ func WithExporter(name string, logger *zap.SugaredLogger) ConfigOption {
 
 		globalOct.exporter = exporter
 		globalOct.closer = closer
-		
+
 		return nil
 	}
 }
