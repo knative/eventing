@@ -25,15 +25,8 @@ import (
 	"knative.dev/pkg/metrics/metricstest"
 )
 
-// unregister, ehm, unregisters the metrics that were registered, by
-// virtue of StatsReporter creation.
-// Since golang executes test iterations within the same process, the stats reporter
-// returns an error if the metric is already registered and the test panics.
-func unregister() {
-	metricstest.Unregister("event_count", "event_dispatch_latencies", "event_processing_latencies")
-}
-
 func TestStatsReporter(t *testing.T) {
+	setup()
 	args := &ReportArgs{
 		ns:           "testns",
 		trigger:      "testtrigger",
@@ -46,19 +39,18 @@ func TestStatsReporter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create a new reporter: %v", err)
 	}
-	// Without this `go test ... -count=X`, where X > 1, fails, since
-	// we get an error about view already being registered.
-	defer unregister()
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelTriggerName:       "testtrigger",
-		metricskey.LabelBrokerName:        "testbroker",
-		metricskey.LabelFilterType:        "testeventtype",
-		metricskey.LabelFilterSource:      "testeventsource",
-		metricskey.LabelResponseCode:      "202",
-		metricskey.LabelResponseCodeClass: "2xx",
+		metricskey.LabelNamespaceName: "testns",
+		metricskey.LabelTriggerName:   "testtrigger",
+		metricskey.LabelBrokerName:    "testbroker",
+		metricskey.LabelFilterType:    "testeventtype",
+		metricskey.LabelFilterSource:  "testeventsource",
 	}
+
+	wantAllTags := map[string]string(wantTags)
+	wantAllTags[metricskey.LabelResponseCode] = "202"
+	wantAllTags[metricskey.LabelResponseCodeClass] = "2xx"
 
 	// test ReportEventCount
 	expectSuccess(t, func() error {
@@ -67,7 +59,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
-	metricstest.CheckCountData(t, "event_count", wantTags, 2)
+	metricstest.CheckCountData(t, "event_count", wantAllTags, 2)
 
 	// test ReportEventDispatchTime
 	expectSuccess(t, func() error {
@@ -76,7 +68,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantTags, 2, 1100.0, 9100.0)
+	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantAllTags, 2, 1100.0, 9100.0)
 
 	// test ReportEventProcessingTime
 	expectSuccess(t, func() error {
@@ -89,12 +81,7 @@ func TestStatsReporter(t *testing.T) {
 }
 
 func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
-	r, err := NewStatsReporter()
-	defer unregister()
-
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
+	setup()
 
 	args := &ReportArgs{
 		ns:           "testns",
@@ -102,6 +89,11 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		broker:       "testbroker",
 		filterType:   "",
 		filterSource: "",
+	}
+
+	r, err := NewStatsReporter()
+	if err != nil {
+		t.Fatalf("Failed to create a new reporter: %v", err)
 	}
 
 	wantTags := map[string]string{
@@ -135,4 +127,14 @@ func expectSuccess(t *testing.T, f func() error) {
 	if err := f(); err != nil {
 		t.Errorf("Reporter expected success but got error: %v", err)
 	}
+}
+
+func setup() {
+	resetMetrics()
+}
+
+func resetMetrics() {
+	// OpenCensus metrics carry global state that need to be reset between unit tests.
+	metricstest.Unregister("event_count", "event_dispatch_latencies", "event_processing_latencies")
+	register()
 }

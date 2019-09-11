@@ -24,7 +24,6 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -151,5 +150,5 @@ func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Cont
 		tag.Insert(eventTypeKey, args.eventType),
 		tag.Insert(eventSourceKey, args.eventSource),
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 }

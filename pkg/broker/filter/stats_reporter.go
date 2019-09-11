@@ -29,9 +29,6 @@ import (
 )
 
 const (
-	// labelFilterResult is the label for the Trigger filtering result.
-	labelFilterResult = "filter_result"
-
 	// anyValue is the default value if the trigger filter attributes are empty.
 	anyValue = "any"
 )
@@ -71,7 +68,6 @@ var (
 	brokerKey              = tag.MustNewKey(metricskey.LabelBrokerName)
 	triggerFilterTypeKey   = tag.MustNewKey(metricskey.LabelFilterType)
 	triggerFilterSourceKey = tag.MustNewKey(metricskey.LabelFilterSource)
-	filterResultKey        = tag.MustNewKey(labelFilterResult)
 	responseCodeKey        = tag.MustNewKey(metricskey.LabelResponseCode)
 	responseCodeClassKey   = tag.MustNewKey(metricskey.LabelResponseCodeClass)
 )
