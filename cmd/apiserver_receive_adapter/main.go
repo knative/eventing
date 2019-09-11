@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"knative.dev/pkg/metrics"
 	"strings"
 
 	// Uncomment the following line to load the gcp plugin
@@ -34,8 +35,8 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
+	"knative.dev/pkg/source"
 )
 
 const (
@@ -112,7 +113,7 @@ func main() {
 		logger.Error("failed to create the metrics exporter", zap.Error(err))
 	}
 
-	reporter, err := metrics.NewStatsReporter()
+	reporter, err := source.NewStatsReporter()
 	if err != nil {
 		logger.Error("error building statsreporter", zap.Error(err))
 	}

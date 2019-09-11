@@ -1201,7 +1201,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:03c8c36f66fba88d6184f87e0bcc24262a53efc9d47adbd9a071a69ad4c001fc"
+  digest = "1:2aee75bf4e9a4c7a79ab50bb2fe147f7ae8ab7e00967b4a848e7283363c79213"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1266,6 +1266,7 @@
     "profiling",
     "reconciler/testing",
     "signals",
+    "source",
     "system",
     "system/testing",
     "test",
@@ -1284,7 +1285,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "c39ee25c42f53e4024d60511a2edef2065ea7333"
+  revision = "7f779625563a8117c7756af9fe40912b1d5e679e"
 
 [[projects]]
   branch = "master"
@@ -1427,6 +1428,7 @@
     "knative.dev/pkg/metrics/testing",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/signals",
+    "knative.dev/pkg/source",
     "knative.dev/pkg/system",
     "knative.dev/pkg/system/testing",
     "knative.dev/pkg/test",
