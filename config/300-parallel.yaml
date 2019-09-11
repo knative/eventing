@@ -51,10 +51,10 @@ spec:
       properties:
         spec:
           required:
-            - cases
+            - branches
             - channelTemplate
           properties:
-            cases:
+            branches:
               type: array
               items:
                 type: object

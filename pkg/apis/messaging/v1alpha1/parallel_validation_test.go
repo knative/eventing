@@ -33,7 +33,7 @@ func TestParallelValidation(t *testing.T) {
 	parallel := &Parallel{Spec: ParallelSpec{}}
 
 	want := &apis.FieldError{
-		Paths:   []string{"spec.channelTemplate", "spec.cases"},
+		Paths:   []string{"spec.channelTemplate", "spec.branches"},
 		Message: "missing field(s)",
 	}
 
@@ -62,22 +62,22 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "invalid parallel spec - empty",
 		ts:   &ParallelSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channelTemplate", "cases")
+			fe := apis.ErrMissingField("channelTemplate", "branches")
 			return fe
 		}(),
 	}, {
-		name: "invalid parallel spec - empty cases",
+		name: "invalid parallel spec - empty branches",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("cases")
+			fe := apis.ErrMissingField("branches")
 			return fe
 		}(),
 	}, {
 		name: "missing channeltemplatespec",
 		ts: &ParallelSpec{
-			Cases: []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches: []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -87,7 +87,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &ParallelSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, &runtime.RawExtension{}},
-			Cases:           []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -97,7 +97,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &ParallelSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, &runtime.RawExtension{}},
-			Cases:           []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
@@ -107,7 +107,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "valid parallel",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -116,7 +116,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "valid parallel with valid reply",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -126,7 +126,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "valid parallel with invalid missing name",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply: &corev1.ObjectReference{
 				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "inmemorychannel",
@@ -140,7 +140,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "valid parallel with invalid reply",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ParallelCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {

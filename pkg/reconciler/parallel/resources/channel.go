@@ -33,9 +33,9 @@ func ParallelChannelName(parallelName string) string {
 	return fmt.Sprintf("%s-kn-parallel", parallelName)
 }
 
-// ParallelCaseChannelName creates a name for the Channel fronting a specific case
-func ParallelCaseChannelName(parallelName string, caseNumber int) string {
-	return fmt.Sprintf("%s-kn-parallel-%d", parallelName, caseNumber)
+// ParallelBranchChannelName creates a name for the Channel fronting a specific branch
+func ParallelBranchChannelName(parallelName string, branchNumber int) string {
+	return fmt.Sprintf("%s-kn-parallel-%d", parallelName, branchNumber)
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec

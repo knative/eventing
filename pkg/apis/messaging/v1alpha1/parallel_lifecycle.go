@@ -60,17 +60,17 @@ func (ps *ParallelStatus) InitializeConditions() {
 // PropagateSubscriptionStatuses sets the ParallelConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
 func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*Subscription, subscriptions []*Subscription) {
-	if ps.CaseStatuses == nil {
-		ps.CaseStatuses = make([]ParallelCaseStatus, len(subscriptions))
+	if ps.BranchStatuses == nil {
+		ps.BranchStatuses = make([]ParallelBranchStatus, len(subscriptions))
 	}
 	allReady := true
-	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
+	// If there are no subscriptions, treat that as a False branch. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
 		allReady = false
 	}
 
 	for i, s := range subscriptions {
-		ps.CaseStatuses[i].SubscriptionStatus = ParallelSubscriptionStatus{
+		ps.BranchStatuses[i].SubscriptionStatus = ParallelSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: s.APIVersion,
 				Kind:       s.Kind,
@@ -81,7 +81,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*S
 
 		readyCondition := s.Status.GetCondition(SubscriptionConditionReady)
 		if readyCondition != nil {
-			ps.CaseStatuses[i].SubscriptionStatus.ReadyCondition = *readyCondition
+			ps.BranchStatuses[i].SubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
 				allReady = false
 			}
@@ -90,7 +90,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*S
 		}
 
 		fs := filterSubscriptions[i]
-		ps.CaseStatuses[i].FilterSubscriptionStatus = ParallelSubscriptionStatus{
+		ps.BranchStatuses[i].FilterSubscriptionStatus = ParallelSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: fs.APIVersion,
 				Kind:       fs.Kind,
@@ -100,7 +100,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*S
 		}
 		readyCondition = fs.Status.GetCondition(SubscriptionConditionReady)
 		if readyCondition != nil {
-			ps.CaseStatuses[i].FilterSubscriptionStatus.ReadyCondition = *readyCondition
+			ps.BranchStatuses[i].FilterSubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
 				allReady = false
 			}
@@ -119,8 +119,8 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*S
 // PropagateChannelStatuses sets the ChannelStatuses and ParallelConditionChannelsReady based on the
 // status of the incoming channels.
 func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Channelable, channels []*duckv1alpha1.Channelable) {
-	if ps.CaseStatuses == nil {
-		ps.CaseStatuses = make([]ParallelCaseStatus, len(channels))
+	if ps.BranchStatuses == nil {
+		ps.BranchStatuses = make([]ParallelBranchStatus, len(channels))
 	}
 	allReady := true
 
@@ -142,7 +142,7 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.
 	ps.setAddress(address)
 
 	for i, c := range channels {
-		ps.CaseStatuses[i].FilterChannelStatus = ParallelChannelStatus{
+		ps.BranchStatuses[i].FilterChannelStatus = ParallelChannelStatus{
 			Channel: corev1.ObjectReference{
 				APIVersion: c.APIVersion,
 				Kind:       c.Kind,
@@ -154,9 +154,9 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.
 		// addressable, because it might be addressable but not ready.
 		address := c.Status.AddressStatus.Address
 		if address != nil {
-			ps.CaseStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
+			ps.BranchStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
 		} else {
-			ps.CaseStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
+			ps.BranchStatuses[i].FilterChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 			allReady = false
 		}
 	}

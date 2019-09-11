@@ -45,8 +45,8 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 func Get(ctx context.Context) v1alpha1.ParallelInformer {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
-		logging.FromContext(ctx).Fatalf(
-			"Unable to fetch %T from context.", (v1alpha1.ParallelInformer)(nil))
+		logging.FromContext(ctx).Panic(
+			"Unable to fetch knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1alpha1.ParallelInformer from context.")
 	}
 	return untyped.(v1alpha1.ParallelInformer)
 }

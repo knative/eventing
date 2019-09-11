@@ -60,9 +60,9 @@ func WithParallelChannelTemplateSpec(cts *eventingduck.ChannelTemplateSpec) Para
 	}
 }
 
-func WithParallelCases(cases []v1alpha1.ParallelCase) ParallelOption {
+func WithParallelBranches(branches []v1alpha1.ParallelBranch) ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Spec.Cases = cases
+		p.Spec.Branches = branches
 	}
 }
 
@@ -72,9 +72,9 @@ func WithParallelReply(reply *corev1.ObjectReference) ParallelOption {
 	}
 }
 
-func WithParallelCaseStatuses(caseStatuses []v1alpha1.ParallelCaseStatus) ParallelOption {
+func WithParallelBranchStatuses(branchStatuses []v1alpha1.ParallelBranchStatus) ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Status.CaseStatuses = caseStatuses
+		p.Status.BranchStatuses = branchStatuses
 	}
 }
 

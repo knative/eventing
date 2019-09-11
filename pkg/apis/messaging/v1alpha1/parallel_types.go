@@ -56,9 +56,8 @@ var _ runtime.Object = (*Parallel)(nil)
 var _ webhook.GenericCRD = (*Parallel)(nil)
 
 type ParallelSpec struct {
-	// Cases is the list of Filter/Subscribers pairs. Filters are evaluated in the order
-	// provided, until one pass (returns true)
-	Cases []ParallelCase `json:"cases"`
+	// Branches is the list of Filter/Subscribers pairs.
+	Branches []ParallelBranch `json:"branches"`
 
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
@@ -80,8 +79,8 @@ type ParallelSpec struct {
 	Reply *corev1.ObjectReference `json:"reply,omitempty"`
 }
 
-type ParallelCase struct {
-	// Filter is the expression guarding the branch/case
+type ParallelBranch struct {
+	// Filter is the expression guarding the branch
 	Filter *SubscriberSpec `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
@@ -112,9 +111,9 @@ type ParallelStatus struct {
 	// IngressChannelStatus corresponds to the ingress channel status.
 	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus"`
 
-	// CaseStatuses is an array of corresponding to cases status.
-	// Matches the Spec.Cases array in the order.
-	CaseStatuses []ParallelCaseStatus `json:"caseStatuses"`
+	// BranchStatuses is an array of corresponding to branch statuses.
+	// Matches the Spec.Branches array in the order.
+	BranchStatuses []ParallelBranchStatus `json:"branchStatuses"`
 
 	// AddressStatus is the starting point to this Parallel. Sending to this
 	// will target the first subscriber.
@@ -122,8 +121,8 @@ type ParallelStatus struct {
 	duckv1alpha1.AddressStatus `json:",inline"`
 }
 
-// ParallelCaseStatus represents the current state of a Parallel case
-type ParallelCaseStatus struct {
+// ParallelBranchStatus represents the current state of a Parallel branch
+type ParallelBranchStatus struct {
 	// FilterSubscriptionStatus corresponds to the filter subscription status.
 	FilterSubscriptionStatus ParallelSubscriptionStatus `json:"filterSubscriptionStatus"`
 

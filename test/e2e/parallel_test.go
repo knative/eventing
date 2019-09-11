@@ -31,7 +31,7 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
-type caseConfig struct {
+type branchConfig struct {
 	filter bool
 }
 
@@ -40,17 +40,17 @@ func TestParallel(t *testing.T) {
 		senderPodName = "e2e-parallel"
 	)
 	table := []struct {
-		name        string
-		casesConfig []caseConfig
-		expected    string
+		name           string
+		branchesConfig []branchConfig
+		expected       string
 	}{
 		{
-			name: "two-cases-pass-first-case-only",
-			casesConfig: []caseConfig{
+			name: "two-branches-pass-first-branch-only",
+			branchesConfig: []branchConfig{
 				{filter: false},
 				{filter: true},
 			},
-			expected: "parallel-two-cases-pass-first-case-only-case-0-sub",
+			expected: "parallel-two-branches-pass-first-branch-only-branch-0-sub",
 		},
 	}
 	channelTypeMeta := getChannelTypeMeta(common.DefaultChannel)
@@ -59,19 +59,19 @@ func TestParallel(t *testing.T) {
 	defer tearDown(client)
 
 	for _, tc := range table {
-		parallelCases := make([]v1alpha1.ParallelCase, len(tc.casesConfig))
-		for caseNumber, cse := range tc.casesConfig {
+		parallelBranches := make([]v1alpha1.ParallelBranch, len(tc.branchesConfig))
+		for branchNumber, cse := range tc.branchesConfig {
 			// construct filter services
-			filterPodName := fmt.Sprintf("parallel-%s-case-%d-filter", tc.name, caseNumber)
+			filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
 			filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
 			client.CreatePodOrFail(filterPod, common.WithService(filterPodName))
 
-			// construct case subscriber
-			subPodName := fmt.Sprintf("parallel-%s-case-%d-sub", tc.name, caseNumber)
+			// construct branch subscriber
+			subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 			subPod := resources.SequenceStepperPod(subPodName, subPodName)
 			client.CreatePodOrFail(subPod, common.WithService(subPodName))
 
-			parallelCases[caseNumber] = v1alpha1.ParallelCase{
+			parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
 				Filter: &v1alpha1.SubscriberSpec{
 					Ref: resources.ServiceRef(filterPodName),
 				},
@@ -105,7 +105,7 @@ func TestParallel(t *testing.T) {
 
 		parallel := eventingtesting.NewParallel(tc.name, client.Namespace,
 			eventingtesting.WithParallelChannelTemplateSpec(channelTemplate),
-			eventingtesting.WithParallelCases(parallelCases),
+			eventingtesting.WithParallelBranches(parallelBranches),
 			eventingtesting.WithParallelReply(pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)))
 
 		client.CreateParallelOrFail(parallel)

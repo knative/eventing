@@ -4,3 +4,4 @@ bazel-*
 .vscode/
 .DS_Store
 *.swp
+.history

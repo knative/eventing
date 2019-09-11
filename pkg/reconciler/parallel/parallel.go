@@ -113,12 +113,12 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	p.Status.InitializeConditions()
 
 	// Reconciling parallel is pretty straightforward, it does the following things:
-	// 1. Create a channel fronting the whole parallel and one filter channel per case.
-	// 2. For each of the Cases:
+	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
+	// 2. For each of the Branches:
 	//     2.1 create a Subscription to the fronting Channel, subscribe the filter and send reply to the filter Channel
 	//     2.2 create a Subscription to the filter Channel, subcribe the subscriber and send reply to
-	//         either the case Reply. If not present, send reply to the global Reply. If not present, do not send reply.
-	// 3. Rinse and repeat step #2 above for each Case in the list
+	//         either the branch Reply. If not present, send reply to the global Reply. If not present, do not send reply.
+	// 3. Rinse and repeat step #2 above for each branch in the list
 	if p.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
 		return nil
@@ -136,13 +136,13 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	track := r.resourceTracker.TrackInNamespace(p)
 
 	var ingressChannel *duckv1alpha1.Channelable
-	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Cases))
-	for i := -1; i < len(p.Spec.Cases); i++ {
+	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Branches))
+	for i := -1; i < len(p.Spec.Branches); i++ {
 		var channelName string
 		if i == -1 {
 			channelName = resources.ParallelChannelName(p.Name)
 		} else {
-			channelName = resources.ParallelCaseChannelName(p.Name, i)
+			channelName = resources.ParallelBranchChannelName(p.Name, i)
 		}
 
 		c, err := r.reconcileChannel(ctx, channelName, channelResourceInterface, p)
@@ -174,16 +174,16 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	}
 	p.Status.PropagateChannelStatuses(ingressChannel, channels)
 
-	filterSubs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Cases))
-	subs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Cases))
-	for i := 0; i < len(p.Spec.Cases); i++ {
-		filterSub, sub, err := r.reconcileCase(ctx, i, p)
+	filterSubs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Branches))
+	subs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Branches))
+	for i := 0; i < len(p.Spec.Branches); i++ {
+		filterSub, sub, err := r.reconcileBranch(ctx, i, p)
 		if err != nil {
-			return fmt.Errorf("Failed to reconcile Subscription Objects for case: %d : %s", i, err)
+			return fmt.Errorf("Failed to reconcile Subscription Objects for branch: %d : %s", i, err)
 		}
 		subs = append(subs, sub)
 		filterSubs = append(filterSubs, filterSub)
-		logging.FromContext(ctx).Debug(fmt.Sprintf("Reconciled Subscription Objects for case: %d: %+v, %+v", i, filterSub, sub))
+		logging.FromContext(ctx).Debug(fmt.Sprintf("Reconciled Subscription Objects for branch: %d: %+v, %+v", i, filterSub, sub))
 	}
 	p.Status.PropagateSubscriptionStatuses(filterSubs, subs)
 
@@ -234,19 +234,19 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, c
 	return c, nil
 }
 
-func (r *Reconciler) reconcileCase(ctx context.Context, caseNumber int, p *v1alpha1.Parallel) (*v1alpha1.Subscription, *v1alpha1.Subscription, error) {
-	filterExpected := resources.NewFilterSubscription(caseNumber, p)
-	filterSubName := resources.ParallelFilterSubscriptionName(p.Name, caseNumber)
+func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v1alpha1.Parallel) (*v1alpha1.Subscription, *v1alpha1.Subscription, error) {
+	filterExpected := resources.NewFilterSubscription(branchNumber, p)
+	filterSubName := resources.ParallelFilterSubscriptionName(p.Name, branchNumber)
 
-	filterSub, err := r.reconcileSubscription(ctx, caseNumber, filterExpected, filterSubName, p.Namespace)
+	filterSub, err := r.reconcileSubscription(ctx, branchNumber, filterExpected, filterSubName, p.Namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	expected := resources.NewSubscription(caseNumber, p)
-	subName := resources.ParallelSubscriptionName(p.Name, caseNumber)
+	expected := resources.NewSubscription(branchNumber, p)
+	subName := resources.ParallelSubscriptionName(p.Name, branchNumber)
 
-	sub, err := r.reconcileSubscription(ctx, caseNumber, expected, subName, p.Namespace)
+	sub, err := r.reconcileSubscription(ctx, branchNumber, expected, subName, p.Namespace)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -254,7 +254,7 @@ func (r *Reconciler) reconcileCase(ctx context.Context, caseNumber int, p *v1alp
 	return filterSub, sub, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, caseNumber int, expected *v1alpha1.Subscription, subName, ns string) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int, expected *v1alpha1.Subscription, subName, ns string) (*v1alpha1.Subscription, error) {
 	sub, err := r.subscriptionLister.Subscriptions(ns).Get(subName)
 
 	// If the resource doesn't exist, we'll create it.
@@ -265,7 +265,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, caseNumber int, 
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallel's subscription failed: %v", err)
-			return nil, fmt.Errorf("Failed to create Subscription Object for case: %d : %s", caseNumber, err)
+			return nil, fmt.Errorf("Failed to create Subscription Object for branch: %d : %s", branchNumber, err)
 		}
 		return newSub, nil
 	} else if err != nil {
