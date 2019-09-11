@@ -26,8 +26,6 @@ import (
 )
 
 func TestNewDispatcher(t *testing.T) {
-	defer logtesting.ClearAll()
-
 	logger := logtesting.TestLogger(t).Desugar()
 	sh, err := swappable.NewEmptyHandler(logger)
 
