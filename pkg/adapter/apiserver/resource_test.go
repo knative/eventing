@@ -11,36 +11,42 @@ func TestResourceAddEvent(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Add(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddEventType)
+	validateMetric(t, d.reporter, 1)
 }
 
 func TestResourceUpdateEvent(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Update(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateEventType)
+	validateMetric(t, d.reporter, 1)
 }
 
 func TestResourceDeleteEvent(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Delete(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteEventType)
+	validateMetric(t, d.reporter, 1)
 }
 
 func TestResourceAddEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Add(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceAddEventType)
+	validateMetric(t, d.reporter, 0)
 }
 
 func TestResourceUpdateEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Update(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateEventType)
+	validateMetric(t, d.reporter, 0)
 }
 
 func TestResourceDeleteEventNil(t *testing.T) {
 	d, ce := makeResourceAndTestingClient()
 	d.Delete(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteEventType)
+	validateMetric(t, d.reporter, 0)
 }
 
 func TestResourceCoverageHacks(t *testing.T) {
