@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"knative.dev/pkg/metrics"
 	"strings"
 
 	// Uncomment the following line to load the gcp plugin
@@ -35,6 +34,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 )
