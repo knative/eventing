@@ -30,11 +30,15 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/pkg/metrics"
 )
 
-type mockReporter struct{}
+type mockReporter struct {
+	eventCount int
+}
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+func (r *mockReporter) ReportEventCount(args *metrics.ReportArgs, responseCode int) error {
+	r.eventCount += 1
 	return nil
 }
 
@@ -318,4 +322,12 @@ func makeRefAndTestingClient() (*ref, *kncetesting.TestCloudEventsClient) {
 		logger:   logger,
 		reporter: r,
 	}, ce
+}
+
+func validateMetric(t *testing.T, reporter metrics.StatsReporter, want int) {
+	if mockReporter, ok := reporter.(*mockReporter); !ok {
+		t.Errorf("reporter is not a mockReporter")
+	} else if mockReporter.eventCount != want {
+		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
+	}
 }

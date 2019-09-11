@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"context"
+	"knative.dev/pkg/metrics"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -37,7 +38,7 @@ type ref struct {
 	logger    *zap.SugaredLogger
 
 	controlledGVRs []schema.GroupVersionResource
-	reporter       StatsReporter
+	reporter       metrics.StatsReporter
 	namespace      string
 	name           string
 }
@@ -105,11 +106,12 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 }
 
 func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
-	reportArgs := &ReportArgs{
-		ns:          a.namespace,
-		eventSource: event.Source(),
-		eventType:   event.Type(),
-		name:        a.name,
+	reportArgs := &metrics.ReportArgs{
+		Namespace:     a.namespace,
+		EventSource:   event.Source(),
+		EventType:     event.Type(),
+		Name:          a.name,
+		ResourceGroup: resourceGroup,
 	}
 
 	rctx, _, err := a.ce.Send(ctx, *event)

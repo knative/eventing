@@ -33,7 +33,6 @@ import (
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
@@ -67,16 +66,16 @@ type envConfig struct {
 	Controller    []bool     `required:"true"`
 	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
 	Name          string     `envconfig:"NAME" required:"true"`
-	// MetricsConfigBase64 is a base64 encoded json string of
-	// metrics.ExporterOptions. This is used to configure the metrics exporter
-	// options, the config is stored in a config map inside the controllers
+	// MetricsConfigJson is a json string of metrics.ExporterOptions.
+	// This is used to configure the metrics exporter options,
+	// the config is stored in a config map inside the controllers
 	// namespace and copied here.
-	MetricsConfigBase64 string `envconfig:"K_METRICS_CONFIG" required:"true"`
+	MetricsConfigJson string `envconfig:"K_METRICS_CONFIG" required:"true"`
 
-	// LoggingConfigBase64 is a base64 encoded json string of logging.Config.
+	// LoggingConfigJson is a json string of logging.Config.
 	// This is used to configure the logging config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
-	LoggingConfigBase64 string `envconfig:"K_LOGGING_CONFIG" required:"true"`
+	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" required:"true"`
 }
 
 // TODO: the controller should take the list of GVR
@@ -89,9 +88,8 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Error processing env var: %s", err))
 	}
-	// TODO move this util to pkg
-	// Convert base64 encoded json logging.Config to logging.Config.
-	loggingConfig, err := utils.Base64ToLoggingConfig(env.LoggingConfigBase64)
+	// Convert json logging.Config to logging.Config.
+	loggingConfig, err := logging.JsonToLoggingConfig(env.LoggingConfigJson)
 	if err != nil {
 		fmt.Printf("[ERROR] failed to process logging config: %s", err.Error())
 		// Use default logging config.
@@ -104,10 +102,8 @@ func main() {
 	logger := loggerSugared.Desugar()
 	defer flush(loggerSugared)
 
-	// Convert base64 encoded json metrics.ExporterOptions to
-	// metrics.ExporterOptions.
-	metricsConfig, err := utils.Base64ToMetricsOptions(
-		env.MetricsConfigBase64)
+	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
+	metricsConfig, err := metrics.JsonToMetricsOptions(env.MetricsConfigJson)
 	if err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
 	}
@@ -116,7 +112,7 @@ func main() {
 		logger.Error("failed to create the metrics exporter", zap.Error(err))
 	}
 
-	reporter, err := apiserver.NewStatsReporter()
+	reporter, err := metrics.NewStatsReporter()
 	if err != nil {
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
@@ -173,9 +169,9 @@ func main() {
 	}
 
 	a := apiserver.NewAdaptor(cfg.Host, client, eventsClient, loggerSugared, opt, reporter, env.Name)
-	logger.Info("starting kubernetes api adapter.", zap.Any("adapter", env))
+	logger.Info("starting kubernetes api adapter", zap.Any("adapter", env))
 	if err := a.Start(stopCh); err != nil {
-		logger.Warn("start returned an error,", zap.Error(err))
+		logger.Warn("start returned an error", zap.Error(err))
 	}
 }
 
