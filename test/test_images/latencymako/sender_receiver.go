@@ -82,7 +82,7 @@ type attackSpec struct {
 func (a attackSpec) Attack(i int, targeter vegeta.Targeter, attacker *vegeta.Attacker) {
 	printf("Starting attack %d° with pace %v rps for %v seconds", i+1, a.pacer, a.duration)
 	res := attacker.Attack(targeter, a.pacer, a.duration, fmt.Sprintf("%s-attack-%d", eventsSource(), i))
-	for _ = range res {
+	for range res {
 	}
 
 	// Wait for flush
@@ -231,27 +231,24 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource()).VegetaTargeter()
 
 	attacks := make([]attackSpec, len(ex.pacerSpecs))
-	var totalBenchmarkDuration time.Duration = 0
+	var totalBenchmarkDuration time.Duration
 
 	for i, ps := range ex.pacerSpecs {
 		attacks[i] = attackSpec{pacer: vegeta.ConstantPacer{Freq: ps.rps, Per: time.Second}, duration: ps.duration}
 		printf("%d° pace: %d rps for %v seconds", i+1, ps.rps, ps.duration)
-		totalBenchmarkDuration = totalBenchmarkDuration + ps.duration
+		totalBenchmarkDuration += ps.duration
 	}
 
 	printf("Total benchmark duration: %v", totalBenchmarkDuration.Seconds())
 
 	printf("Starting benchmark")
 
-	// doneCh is closed as soon as all results have been processed
-	doneCh := make(chan struct{})
-	go func() {
-		// Run all attacks
-		for i, f := range attacks {
-			f.Attack(i, targeter, ex.attacker)
-		}
-	}()
-	<-doneCh
+	// Run all attacks
+	for i, f := range attacks {
+		f.Attack(i, targeter, ex.attacker)
+	}
+
+	ex.closeChannels()
 
 	printf("---- END BENCHMARK ----")
 
@@ -359,11 +356,7 @@ func (ex *senderReceiverExecutor) warmup(ctx context.Context, warmupSeconds uint
 }
 
 // processVegetaResult processes the results from the Vegeta attackers.
-func (ex *senderReceiverExecutor) processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- struct{}) {
-	// Discard all vegeta results and wait the end of this channel
-	for range vegetaResults {
-	}
-
+func (ex *senderReceiverExecutor) closeChannels() {
 	printf("All requests sent")
 
 	close(ex.sentCh)
@@ -375,8 +368,6 @@ func (ex *senderReceiverExecutor) processVegetaResult(vegetaResults <-chan *vege
 	close(ex.receivedCh)
 
 	printf("All channels closed")
-
-	close(doneCh)
 }
 
 // processReceiveEvent processes the event received by the CloudEvents receiver.
