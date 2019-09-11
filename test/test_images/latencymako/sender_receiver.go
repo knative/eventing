@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -39,7 +40,8 @@ import (
 )
 
 const (
-	defaultEventType      = "perf-test-event-type"
+	warmupEventType       = "warmup.perf-test"
+	benchmarkEventType    = "continue.perf-test"
 	defaultEventSource    = "perf-test-event-source"
 	defaultCEReceiverPort = "8080"
 	warmupRps             = 100
@@ -70,6 +72,24 @@ type (
 type paceSpec struct {
 	rps      int
 	duration time.Duration
+}
+
+type attackSpec struct {
+	pacer    vegeta.Pacer
+	duration time.Duration
+}
+
+func (a attackSpec) Attack(i int, targeter vegeta.Targeter, attacker *vegeta.Attacker) {
+	printf("Starting attack %d° with pace %v rps for %v seconds", i+1, a.pacer, a.duration)
+	res := attacker.Attack(targeter, a.pacer, a.duration, fmt.Sprintf("%s-attack-%d", eventsSource(), i))
+	for range res {
+	}
+
+	// Wait for flush
+	time.Sleep(1 * time.Second)
+
+	// Trigger GC
+	runtime.GC()
 }
 
 type senderReceiverExecutor struct {
@@ -173,7 +193,6 @@ func newSenderReceiverExecutor(ps []paceSpec, aggCli pb.EventsRecorderClient) te
 	executor.attacker = vegeta.NewAttacker(
 		vegeta.Client(&client),
 		vegeta.Workers(workers),
-		vegeta.MaxWorkers(workers),
 	)
 
 	return executor
@@ -209,34 +228,27 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	printf("Starting events processor")
 	go ex.processEvents()
 
-	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, defaultEventType, eventsSource(), "binary").VegetaTargeter()
+	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource()).VegetaTargeter()
 
-	pacers := make([]vegeta.Pacer, len(ex.pacerSpecs))
-	durations := make([]time.Duration, len(ex.pacerSpecs))
-	var totalBenchmarkDuration time.Duration = 0
+	attacks := make([]attackSpec, len(ex.pacerSpecs))
+	var totalBenchmarkDuration time.Duration
 
 	for i, ps := range ex.pacerSpecs {
-		pacers[i] = vegeta.ConstantPacer{ps.rps, time.Second}
-		durations[i] = ps.duration
+		attacks[i] = attackSpec{pacer: vegeta.ConstantPacer{Freq: ps.rps, Per: time.Second}, duration: ps.duration}
 		printf("%d° pace: %d rps for %v seconds", i+1, ps.rps, ps.duration)
-		totalBenchmarkDuration = totalBenchmarkDuration + ps.duration
+		totalBenchmarkDuration += ps.duration
 	}
 
 	printf("Total benchmark duration: %v", totalBenchmarkDuration.Seconds())
 
-	combinedPacer, err := pkgpacers.NewCombined(pacers, durations)
-	if err != nil {
-		fatalf("Failed to setup combined pacer: %v", err)
-	}
-
 	printf("Starting benchmark")
 
-	vegetaResults := ex.attacker.Attack(targeter, combinedPacer, totalBenchmarkDuration, defaultEventType+"-attack")
+	// Run all attacks
+	for i, f := range attacks {
+		f.Attack(i, targeter, ex.attacker)
+	}
 
-	// doneCh is closed as soon as all results have been processed
-	doneCh := make(chan struct{})
-	go ex.processVegetaResult(vegetaResults, doneCh)
-	<-doneCh
+	ex.closeChannels()
 
 	printf("---- END BENCHMARK ----")
 
@@ -247,7 +259,7 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	printf("%-15s: %d", "Failed count", len(ex.failedEvents.Events))
 	printf("%-15s: %d", "Received count", len(ex.receivedEvents.Events))
 
-	err = ex.sendEventsRecordList(&pb.EventsRecordList{Items: []*pb.EventsRecord{
+	err := ex.sendEventsRecordList(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		ex.sentEvents,
 		ex.acceptedEvents,
 		ex.failedEvents,
@@ -328,12 +340,11 @@ func (ex *senderReceiverExecutor) warmup(ctx context.Context, warmupSeconds uint
 
 	printf("Starting warmup")
 
-	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, defaultEventType, defaultEventSource, "binary").VegetaTargeter()
+	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, warmupEventType, defaultEventSource).VegetaTargeter()
 
 	vegetaResults := vegeta.NewAttacker(
 		vegeta.Workers(workers),
-		vegeta.MaxWorkers(workers),
-	).Attack(targeter, pacer, time.Duration(warmupSeconds)*time.Second, defaultEventType+"-warmup")
+	).Attack(targeter, pacer, time.Duration(warmupSeconds)*time.Second, warmupEventType+"-attack")
 
 	for range vegetaResults {
 	}
@@ -345,11 +356,7 @@ func (ex *senderReceiverExecutor) warmup(ctx context.Context, warmupSeconds uint
 }
 
 // processVegetaResult processes the results from the Vegeta attackers.
-func (ex *senderReceiverExecutor) processVegetaResult(vegetaResults <-chan *vegeta.Result, doneCh chan<- struct{}) {
-	// Discard all vegeta results and wait the end of this channel
-	for range vegetaResults {
-	}
-
+func (ex *senderReceiverExecutor) closeChannels() {
 	printf("All requests sent")
 
 	close(ex.sentCh)
@@ -361,8 +368,6 @@ func (ex *senderReceiverExecutor) processVegetaResult(vegetaResults <-chan *vege
 	close(ex.receivedCh)
 
 	printf("All channels closed")
-
-	close(doneCh)
 }
 
 // processReceiveEvent processes the event received by the CloudEvents receiver.

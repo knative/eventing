@@ -20,9 +20,9 @@ EOF
 [`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
 determines the valid keys in this ConfigMap. Current keys are:
 
-*   `environment`: Selects a Mako config file in kodata. E.g. `environment: dev`
-    corresponds to `kodata/dev.config`.
-*   `additionalTags`: Comma-separated list of tags to apply to the Mako run.
+- `environment`: Selects a Mako config file in kodata. E.g. `environment: dev`
+  corresponds to `kodata/dev.config`.
+- `additionalTags`: Comma-separated list of tags to apply to the Mako run.
 
 ## Running a benchmark
 
