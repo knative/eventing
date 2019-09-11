@@ -6,7 +6,8 @@ critical to developing a distributed system that reacts to events.
 
 A Source:
 
-- Represent an off or on-cluster system, service or application.
+- Represents an off or on-cluster system, service or application that produces
+  events to be consumed by a sink.
 - Produces or imports CloudEvents.
 - Sends CloudEvents to the configured **sink**.
 
@@ -55,7 +56,7 @@ todo
 
 ## Source RBAC
 
-Knative leverages am aggregated RBAC role to allow for controllers to check the
+Knative leverages an aggregated RBAC role to allow for controllers to check the
 status of source type resources.
 
 The `source-observer` account looks like:
