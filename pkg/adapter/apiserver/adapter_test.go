@@ -17,7 +17,6 @@ limitations under the License.
 package apiserver
 
 import (
-	"knative.dev/pkg/metrics"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -31,6 +30,7 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/pkg/metrics"
 )
 
 type mockReporter struct {
