@@ -17,13 +17,10 @@ limitations under the License.
 package common
 
 import (
-	"context"
 	"math/rand"
 	"net/http"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/uuid"
 	vegeta "github.com/tsenart/vegeta/lib"
 )
@@ -33,11 +30,10 @@ func init() {
 }
 
 type CloudEventsTargeter struct {
-	sinkUrl          string
-	msgSize          int
-	eventType        string
-	eventSource      string
-	encodingSelector cehttp.EncodingSelector
+	sinkUrl     string
+	msgSize     int
+	eventType   string
+	eventSource string
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -51,51 +47,30 @@ func generateRandString(length int) string {
 	return string(b)
 }
 
-func NewCloudEventsTargeter(sinkUrl string, msgSize int, eventType string, eventSource string, encoding string) CloudEventsTargeter {
-	var encodingSelector cehttp.EncodingSelector
-	if encoding == "binary" {
-		encodingSelector = cehttp.DefaultBinaryEncodingSelectionStrategy
-	} else {
-		encodingSelector = cehttp.DefaultStructuredEncodingSelectionStrategy
-	}
+func NewCloudEventsTargeter(sinkUrl string, msgSize int, eventType string, eventSource string) CloudEventsTargeter {
 	return CloudEventsTargeter{
-		sinkUrl:          sinkUrl,
-		msgSize:          msgSize,
-		eventType:        eventType,
-		eventSource:      eventSource,
-		encodingSelector: encodingSelector,
+		sinkUrl:     sinkUrl,
+		msgSize:     msgSize,
+		eventType:   eventType,
+		eventSource: eventSource,
 	}
 }
 
 func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
-	ctx := context.TODO()
-
-	codec := cehttp.Codec{
-		DefaultEncodingSelectionFn: cet.encodingSelector,
-	}
-
 	return func(t *vegeta.Target) error {
 		t.Method = http.MethodPost
 		t.URL = cet.sinkUrl
 
-		// Generate CloudEvent
-		payload := map[string]string{"msg": generateRandString(cet.msgSize)}
-		event := cloudevents.NewEvent()
-		event.SetID(uuid.New().String())
-		event.SetType(cet.eventType)
-		event.SetSource(cet.eventSource)
+		t.Header = make(http.Header)
 
-		if err := event.SetData(payload); err != nil {
-			panic(err)
-		}
+		t.Header.Set("Ce-Id", uuid.New().String())
+		t.Header.Set("Ce-Type", cet.eventType)
+		t.Header.Set("Ce-Source", cet.eventSource)
+		t.Header.Set("Ce-Specversion", "0.2")
 
-		m, err := codec.Encode(ctx, event)
-		if err != nil {
-			panic(err)
-		}
+		t.Header.Set("Content-Type", "text/plain")
 
-		t.Header = m.(*cehttp.Message).Header
-		t.Body = m.(*cehttp.Message).Body
+		t.Body = []byte(generateRandString(cet.msgSize))
 
 		return nil
 	}
