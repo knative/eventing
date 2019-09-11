@@ -38,6 +38,8 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
+var TestPullSecretName = "kn-eventing-test-pull-secret"
+
 // ChannelTestRunner is used to run tests against channels.
 type ChannelTestRunner struct {
 	ChannelFeatureMap map[string][]Feature
@@ -132,6 +134,55 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		err = waitForServiceAccountExists(t, client, "default", namespace)
 		if err != nil {
 			t.Fatalf("The default ServiceAccount was not created for the Namespace: %s", namespace)
+		}
+
+		// If the "default" Namespace has a secret called
+		// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
+		// on the "default" ServiceAccount in this new Namespace.
+		// This is needed for cases where the images are in a private registry.
+
+		// Get the Interfaces we need to access the resources in the cluster
+		defSecI := client.Kube.Kube.CoreV1().Secrets("default")
+		nsSAI := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
+		nsSecI := client.Kube.Kube.CoreV1().Secrets(namespace)
+
+		testSecret, _ := defSecI.Get(TestPullSecretName, metav1.GetOptions{})
+
+		// Check again. I've seen cases where it lies and if we need it
+		// then the test will fail w/o it, so check again just to be sure.
+		if testSecret == nil {
+			testSecret, _ = defSecI.Get(TestPullSecretName, metav1.GetOptions{})
+		}
+
+		if testSecret != nil {
+			// Found the secret, so now make a copy in our new namespace
+			newSecret, err := nsSecI.Create(
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testSecret.ObjectMeta.Name,
+					},
+					Data: testSecret.Data,
+					Type: testSecret.Type,
+				})
+			if err != nil {
+				t.Fatalf("TestSetup: Error copying the secret: %s", err)
+			}
+
+			// Now add it to the "default" ServiceAccount as a Pull Secret
+			newSecretRef := corev1.LocalObjectReference{
+				Name: newSecret.ObjectMeta.Name,
+			}
+			sa, err := nsSAI.Get("default", metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("TestSetup: Error getting ServiceAccount: %s", err)
+			}
+
+			sa.ImagePullSecrets = append(sa.ImagePullSecrets, newSecretRef)
+			if _, err = nsSAI.Update(sa); err != nil {
+				t.Fatalf("TestSetup: Error adding Secret to ServiceAccount: %s", err)
+			}
+			t.Logf("Copied ImagePullSecret(%s) into namespace: %s",
+				newSecret.ObjectMeta.Name, namespace)
 		}
 	}
 }

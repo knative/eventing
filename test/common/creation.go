@@ -18,10 +18,12 @@ package common
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/test/base"
@@ -220,13 +222,61 @@ func (client *Client) CreateServiceAccountOrFail(saName string) {
 		client.T.Fatalf("Failed to create service account %q: %v", saName, err)
 	}
 	client.Tracker.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
+
+	// If the "default" Namespace has a secret called
+	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
+	// on the new ServiceAccount we just created.
+	// This is needed for cases where the images are in a private registry.
+
+	// Get the Interfaces we need to access the resources in the cluster
+	defSecI := client.Kube.Kube.CoreV1().Secrets("default")
+	nsSAI := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
+	nsSecI := client.Kube.Kube.CoreV1().Secrets(namespace)
+
+	testSecret, _ := defSecI.Get(TestPullSecretName, metav1.GetOptions{})
+
+	// Check again. I've seen cases where it lies and if we need it
+	// then the test will fail w/o it, so check again just to be sure.
+	if testSecret == nil {
+		testSecret, _ = defSecI.Get(TestPullSecretName, metav1.GetOptions{})
+	}
+
+	if testSecret != nil {
+		// Found the secret, so now make a copy in our new namespace, but only
+		// if it doesn't already exist
+		var err error
+
+		// If it already exists in this NS then just use it, otherwise create
+		newSecret, _ := nsSecI.Get(TestPullSecretName, metav1.GetOptions{})
+		if newSecret == nil {
+			newSecret, err = nsSecI.Create(
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: TestPullSecretName,
+					},
+					Data: testSecret.Data,
+					Type: testSecret.Type,
+				})
+			if err != nil {
+				client.T.Fatalf("Error copying the secret: %s", err)
+			}
+		}
+
+		_, err = nsSAI.Patch(saName, types.StrategicMergePatchType,
+			[]byte(`{"imagePullSecrets":[{"name":"`+TestPullSecretName+`"}]}`))
+		if err != nil {
+			client.T.Fatalf("Patch failed on ServiceAccount: %s", err)
+		}
+	}
 }
 
 // CreateClusterRoleOrFail creates the given ClusterRole or fail the test if there is an error.
 func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	crs := client.Kube.Kube.RbacV1().ClusterRoles()
 	if _, err := crs.Create(cr); err != nil {
-		client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
+		if !strings.Contains(err.Error(), "already exists") {
+			client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
+		}
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
 }
@@ -236,8 +286,11 @@ func (client *Client) CreateRoleBindingOrFail(saName, crName, rbName, rbNamespac
 	saNamespace := client.Namespace
 	rb := resources.RoleBinding(saName, saNamespace, crName, rbName, rbNamespace)
 	rbs := client.Kube.Kube.RbacV1().RoleBindings(rbNamespace)
+
 	if _, err := rbs.Create(rb); err != nil {
-		client.T.Fatalf("Failed to create role binding %q: %v", rbName, err)
+		if !strings.Contains(err.Error(), "already exists") {
+			client.T.Fatalf("Failed to create role binding %q: %v", rbName, err)
+		}
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "rolebindings", rbNamespace, rb.GetName())
 }
@@ -248,7 +301,9 @@ func (client *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName str
 	crb := resources.ClusterRoleBinding(saName, saNamespace, crName, crbName)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
 	if _, err := crbs.Create(crb); err != nil {
-		client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
+		if !strings.Contains(err.Error(), "already exists") {
+			client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
+		}
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
 }
