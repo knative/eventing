@@ -228,7 +228,7 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	printf("Starting events processor")
 	go ex.processEvents()
 
-	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource(), "binary").VegetaTargeter()
+	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource()).VegetaTargeter()
 
 	attacks := make([]attackSpec, len(ex.pacerSpecs))
 	var totalBenchmarkDuration time.Duration = 0
@@ -343,7 +343,7 @@ func (ex *senderReceiverExecutor) warmup(ctx context.Context, warmupSeconds uint
 
 	printf("Starting warmup")
 
-	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, warmupEventType, defaultEventSource, "binary").VegetaTargeter()
+	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, warmupEventType, defaultEventSource).VegetaTargeter()
 
 	vegetaResults := vegeta.NewAttacker(
 		vegeta.Workers(workers),
