@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	. "knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
@@ -52,13 +51,13 @@ func TestStatsReporter(t *testing.T) {
 	defer unregister()
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelTriggerName:   "testtrigger",
-		metricskey.LabelBrokerName:    "testbroker",
-		metricskey.LabelFilterType:    "testeventtype",
-		metricskey.LabelFilterSource:  "testeventsource",
-		LabelResponseCode:             "202",
-		LabelResponseCodeClass:        "2xx",
+		metricskey.LabelNamespaceName:     "testns",
+		metricskey.LabelTriggerName:       "testtrigger",
+		metricskey.LabelBrokerName:        "testbroker",
+		metricskey.LabelFilterType:        "testeventtype",
+		metricskey.LabelFilterSource:      "testeventsource",
+		metricskey.LabelResponseCode:      "202",
+		metricskey.LabelResponseCodeClass: "2xx",
 	}
 
 	// test ReportEventCount
@@ -106,13 +105,13 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	}
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelTriggerName:   "testtrigger",
-		metricskey.LabelBrokerName:    "testbroker",
-		metricskey.LabelFilterType:    AnyValue,
-		metricskey.LabelFilterSource:  AnyValue,
-		LabelResponseCode:             "202",
-		LabelResponseCodeClass:        "2xx",
+		metricskey.LabelNamespaceName:     "testns",
+		metricskey.LabelTriggerName:       "testtrigger",
+		metricskey.LabelBrokerName:        "testbroker",
+		metricskey.LabelFilterType:        anyValue,
+		metricskey.LabelFilterSource:      anyValue,
+		metricskey.LabelResponseCode:      "202",
+		metricskey.LabelResponseCodeClass: "2xx",
 	}
 
 	// test ReportEventCount

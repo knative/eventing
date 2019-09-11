@@ -18,7 +18,6 @@ package utils
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 	"testing"
 
@@ -192,30 +191,6 @@ func TestToDNS1123Subdomain(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			a := ToDNS1123Subdomain(tc.name)
-			if a != tc.expected {
-				t.Errorf("Expected %q, actually %q", tc.expected, a)
-			}
-		})
-	}
-}
-
-func TestResponseCodeClass(t *testing.T) {
-	testCases := map[string]struct {
-		responseCode int
-		expected     string
-	}{
-		"2xx": {
-			responseCode: http.StatusOK,
-			expected:     "2xx",
-		},
-		"4xx": {
-			responseCode: http.StatusForbidden,
-			expected:     "4xx",
-		},
-	}
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			a := ResponseCodeClass(tc.responseCode)
 			if a != tc.expected {
 				t.Errorf("Expected %q, actually %q", tc.expected, a)
 			}
