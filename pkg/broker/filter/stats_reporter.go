@@ -104,7 +104,7 @@ func NewStatsReporter() StatsReporter {
 
 func register() {
 	// Create view to see our measurements.
-	if err := view.Register(
+	err := view.Register(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
@@ -123,7 +123,8 @@ func register() {
 			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
 			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, triggerFilterSourceKey},
 		},
-	); err != nil {
+	)
+	if err != nil {
 		panic(err)
 	}
 }
