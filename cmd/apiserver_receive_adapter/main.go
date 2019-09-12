@@ -59,14 +59,16 @@ func (s *StringList) Decode(value string) error {
 }
 
 type envConfig struct {
-	Namespace     string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
-	Mode          string     `envconfig:"MODE"`
-	SinkURI       string     `split_words:"true" required:"true"`
-	ApiVersion    StringList `split_words:"true" required:"true"`
-	Kind          StringList `required:"true"`
-	Controller    []bool     `required:"true"`
-	LabelSelector StringList `envconfig:"SELECTOR" required:"true"`
-	Name          string     `envconfig:"NAME" required:"true"`
+	Namespace       string     `envconfig:"SYSTEM_NAMESPACE" default:"default"`
+	Mode            string     `envconfig:"MODE"`
+	SinkURI         string     `split_words:"true" required:"true"`
+	ApiVersion      StringList `split_words:"true" required:"true"`
+	Kind            StringList `required:"true"`
+	Controller      []bool     `required:"true"`
+	LabelSelector   StringList `envconfig:"SELECTOR" required:"true"`
+	OwnerApiVersion StringList `envconfig:"OWNER_API_VERSION" required:"true"`
+	OwnerKind       StringList `envconfig:"OWNER_KIND" required:"true"`
+	Name            string     `envconfig:"NAME" required:"true"`
 	// MetricsConfigJson is a json string of metrics.ExporterOptions.
 	// This is used to configure the metrics exporter options,
 	// the config is stored in a config map inside the controllers
@@ -149,6 +151,8 @@ func main() {
 		kind := env.Kind[i]
 		controlled := env.Controller[i]
 		selector := env.LabelSelector[i]
+		ownerApiVersion := env.OwnerApiVersion[i]
+		ownerKind := env.OwnerKind[i]
 
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err != nil {
@@ -157,9 +161,11 @@ func main() {
 		// TODO: pass down the resource and the kind so we do not have to guess.
 		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
 		gvrcs = append(gvrcs, apiserver.GVRC{
-			GVR:           gvr,
-			Controller:    controlled,
-			LabelSelector: selector,
+			GVR:             gvr,
+			Controller:      controlled,
+			LabelSelector:   selector,
+			OwnerApiVersion: ownerApiVersion,
+			OwnerKind:       ownerKind,
 		})
 	}
 

@@ -120,6 +120,16 @@ spec:
                   labelSelector:
                     type: object
                     description: "Label selector restricting the list of objects to watch by their labels. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
+                  controllerSelector:
+                    type: object
+                    description: "Controller selector restricting the list of objects to watch by the kind of their controller."
+                    properties:
+                      apiVersion:
+                        type: string
+                        description: "API version of the controller"
+                      kind:
+                        type: string
+                        description: "Kind of the controller"
               type: array
           required:
           - resources
