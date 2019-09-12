@@ -1201,7 +1201,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:dfd153fff295bf8023d8f9eca57d4c3fd76790619093b1e6d216810b82fed7a2"
+  digest = "1:99655a6e1b016f47a8b0bb0695f8276c2e0cd438a8564870b8e9eee2a3ba4b61"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1285,7 +1285,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "87ad483365174cda3ee83f1c0832df930f9adb52"
+  revision = "2e2ab7a878b5dda4e3c89a194fece358b2843ea9"
 
 [[projects]]
   branch = "master"
@@ -1320,7 +1320,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
-    "github.com/openzipkin/zipkin-go/model",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/tsenart/vegeta/lib",
@@ -1436,8 +1435,8 @@
     "knative.dev/pkg/test/helpers",
     "knative.dev/pkg/test/logging",
     "knative.dev/pkg/test/mako",
-    "knative.dev/pkg/test/monitoring",
     "knative.dev/pkg/test/vegeta/pacers",
+    "knative.dev/pkg/test/zipkin",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
