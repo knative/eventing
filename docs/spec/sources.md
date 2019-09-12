@@ -22,6 +22,10 @@ off-cluster implementation; or all combinations in-between.
 There are some guidelines on implementing sources to allow cluster operators and
 tools to dynamically discover and understand source installations.
 
+
+<!-- TODO: expand on CR state of a Source and those expectations. --?>
+
+
 ## Source CRDs
 
 CRDs that are to be understood as a `source` MUST be labeled:
@@ -34,6 +38,8 @@ metadata:
     duck.knative.dev/source: "true" # <-- required to be a source.
 ```
 
+<!-- TODO: Let's expand a bit on this. It would be maybe be useful to include the motivation here, for example, so support the Source in the listing (for example kubectl get ... command). So in addition to MUST be labeled, why would be helpful. Understood is just a bit of a vague term here. -->
+ 
 CRDs SHOULD be added to the `sources` category:
 
 ```yaml
@@ -43,7 +49,26 @@ spec:
       - sources
 ```
 
+<!-- TODO: We should mention consistent use of the Conditions and in particular the one Ready condition that we have defined in the apis.ConditionReady and probably add that as a recommended additional Printer Column for consistency? -->
+
+
+
+<!-- We should also talk about the validation aspects and encourage proper Description for the fields and so forth also?
+
+### Source Validation
+
+OpenAPI
+
+```yaml
+  validation:
+    openAPIV3Schema: 
+```
+
+-->
+
 <!-- TODO(n3wscott,nacho): document the registry reqirements.
+
+
 
 ### Event Type Registry
 
@@ -74,6 +99,14 @@ aggregationRule:
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
+<!-- Might be worth it to mention a use case or two as examples? Motivation section if you will :) 
+
+### Motivation for Aggregated RBAC
+
+TODO.....
+
+-->
+
 And new sources MUST include a ClusterRole as part of installing themselves into
 a cluster:
 
@@ -99,7 +132,7 @@ rules:
 ## Source Resource Shape
 
 The minimum definition of the Kubernetes resource shape is defined in the
-[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1beta1#Source)
+[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source)
 ducktype.
 
 ### duck.Spec
@@ -121,7 +154,7 @@ type SourceSpec struct {
 
 For a full definition of `Sink` and `CloudEventsOverrides`, please see
 [Destination](https://godoc.org/knative.dev/pkg/apis/v1alpha1#Destination), and
-[CloudEventOverrides](https://godoc.org/github.com/knative/pkg/apis/duck/v1beta1#CloudEventOverrides).
+[CloudEventOverrides](https://godoc.org/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
 ### duck.Status
 
@@ -129,7 +162,7 @@ The `status` field is expected to have the following minimum shape:
 
 ```go
 type SourceStatus struct {
-    // inherits duck/v1beta1 Status, which currently provides:
+    // inherits duck/v1 Status, which currently provides:
     // * ObservedGeneration - the 'Generation' of the Service that was last
     //   processed by the controller.
     // * Conditions - the latest available observations of a resource's current
@@ -143,6 +176,12 @@ type SourceStatus struct {
 }
 ```
 
+<!-- TODO
+ 
+ TODO: We should probably mention here about the apis.ConditionSet and each Source IMHO should have the apis.ConditionReady as the one way to look at the readiness of the Source.
+ 
+ -->
+
 For a full definition of `Status` and `SinkURI`, please see
-[Status](https://godoc.org/github.com/knative/pkg/apis/duck/v1beta1#Status), and
+[Status](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Status), and
 [URL](https://godoc.org/knative.dev/pkg/apis#URL).
