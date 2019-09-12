@@ -364,13 +364,13 @@ func TestReceiver(t *testing.T) {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
 			if tc.expectedEventCount != reporter.eventCountReported {
-				t.Errorf("Incorrect event count metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
 			}
 			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
-				t.Errorf("Incorrect event dispatch time metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
 			}
 			if tc.expectedEventProcessingTime != reporter.eventProcessingTimeReported {
-				t.Errorf("Incorrect event processing time metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
+				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
 			}
 
 			// Compare the returned event.
