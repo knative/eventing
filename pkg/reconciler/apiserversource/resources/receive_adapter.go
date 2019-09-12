@@ -87,12 +87,21 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiSer
 	kinds := ""
 	controlled := ""
 	selectors := ""
+	ownerapiversions := ""
+	ownerkinds := ""
 	sep := ""
 	boolsep := ""
 
 	for _, res := range spec.Resources {
 		apiversions += sep + res.APIVersion
 		kinds += sep + res.Kind
+		if res.ControllerSelector != nil {
+			ownerapiversions += sep + res.ControllerSelector.APIVersion
+			ownerkinds += sep + res.ControllerSelector.Kind
+		} else {
+			ownerapiversions += sep
+			ownerkinds += sep
+		}
 		if res.Controller {
 			controlled += boolsep + "true"
 		} else {
@@ -124,6 +133,12 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiSer
 	}, {
 		Name:  "KIND",
 		Value: kinds,
+	}, {
+		Name:  "OWNER_API_VERSION",
+		Value: ownerapiversions,
+	}, {
+		Name:  "OWNER_KIND",
+		Value: ownerkinds,
 	}, {
 		Name:  "CONTROLLER",
 		Value: controlled,

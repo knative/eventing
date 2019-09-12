@@ -34,6 +34,11 @@ func (in *ApiServerResource) DeepCopyInto(out *ApiServerResource) {
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ControllerSelector != nil {
+		in, out := &in.ControllerSelector, &out.ControllerSelector
+		*out = new(v1.OwnerReference)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

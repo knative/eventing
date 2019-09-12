@@ -116,6 +116,11 @@ type ApiServerResource struct {
 	// +optional
 	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 
+	// ControllerSelector restricts this source to objects with the selected controller kind.
+	// Only apiVersion and kind are used. Both are optional
+	// +optional
+	ControllerSelector *metav1.OwnerReference `json:"controllerSelector"`
+
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
 }
