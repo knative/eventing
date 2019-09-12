@@ -16,7 +16,7 @@ limitations under the License.
 
 // error.go helps with error handling
 
-package alerter
+package helpers
 
 import (
 	"errors"
