@@ -35,10 +35,7 @@ func TestStatsReporter(t *testing.T) {
 		eventSource: "testeventsource",
 	}
 
-	r, err := NewStatsReporter()
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
+	r := NewStatsReporter()
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",

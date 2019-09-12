@@ -92,21 +92,14 @@ type StatsReporter interface {
 }
 
 var _ StatsReporter = (*reporter)(nil)
+var emptyContext = context.Background()
 
 // reporter holds cached metric objects to report filter metrics.
-type reporter struct {
-	ctx context.Context
-}
+type reporter struct{}
 
 // NewStatsReporter creates a reporter that collects and reports filter metrics.
-func NewStatsReporter() (StatsReporter, error) {
-	ctx, err := tag.New(
-		context.Background(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &reporter{ctx: ctx}, nil
+func NewStatsReporter() StatsReporter {
+	return &reporter{}
 }
 
 func register() {
@@ -175,7 +168,7 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
 	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
 	ctx, err := tag.New(
-		r.ctx,
+		emptyContext,
 		tag.Insert(namespaceKey, args.ns),
 		tag.Insert(triggerKey, args.trigger),
 		tag.Insert(brokerKey, args.broker),

@@ -91,10 +91,7 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	reporter, err := filter.NewStatsReporter()
-	if err != nil {
-		logger.Fatal("Error creating stats reporter", zap.Error(err))
-	}
+	reporter := filter.NewStatsReporter()
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.

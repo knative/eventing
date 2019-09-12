@@ -119,10 +119,8 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
-	reporter, err := ingress.NewStatsReporter()
-	if err != nil {
-		logger.Fatal("Unable to create StatsReporter", zap.Error(err))
-	}
+
+	reporter := ingress.NewStatsReporter()
 
 	h := &ingress.Handler{
 		Logger:     logger,

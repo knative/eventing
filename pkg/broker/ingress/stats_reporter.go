@@ -76,21 +76,14 @@ type StatsReporter interface {
 }
 
 var _ StatsReporter = (*reporter)(nil)
+var emptyContext = context.Background()
 
 // Reporter holds cached metric objects to report ingress metrics.
-type reporter struct {
-	ctx context.Context
-}
+type reporter struct{}
 
 // NewStatsReporter creates a reporter that collects and reports ingress metrics.
-func NewStatsReporter() (StatsReporter, error) {
-	ctx, err := tag.New(
-		context.Background(),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &reporter{ctx: ctx}, nil
+func NewStatsReporter() StatsReporter {
+	return &reporter{}
 }
 
 func register() {
@@ -144,7 +137,7 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
-		r.ctx,
+		emptyContext,
 		tag.Insert(namespaceKey, args.ns),
 		tag.Insert(brokerKey, args.broker),
 		tag.Insert(eventTypeKey, args.eventType),
