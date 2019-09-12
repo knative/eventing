@@ -147,6 +147,29 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 	}
 }
 
+// EventMutatorPod creates a Pod that response an event with new type.
+func EventMutatorPod(name string, eventType string) *corev1.Pod {
+	const imageName = "eventmutator"
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"e2etest": string(uuid.NewUUID())},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:            imageName,
+				Image:           pkgTest.ImagePath(imageName),
+				ImagePullPolicy: corev1.PullAlways,
+				Args: []string{
+					"-event-type-resp",
+					eventType,
+				},
+			}},
+			RestartPolicy: corev1.RestartPolicyAlways,
+		},
+	}
+}
+
 // HelloWorldPod creates a Pod that logs "Hello, World!".
 func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
 	const imageName = "helloworld"
