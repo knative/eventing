@@ -64,6 +64,13 @@ func TestChannelTracing(t *testing.T) {
 				assertLogContents(st, client, loggerPodName, mustContain)
 
 				traceID := getTraceID(st, client, loggerPodName)
+
+				// We expect the following spans:
+				// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
+				// 2. Channel receives event from sending pod.
+				// 3. Channel sends event to logging pod.
+				// 4. Logging pod receives event from Channel.
+				// So we expect 4 spans if the sending pod is generating a span, 3 if not.
 				expectedNumSpans := 3
 				if tc.incomingTraceId {
 					expectedNumSpans = 4
