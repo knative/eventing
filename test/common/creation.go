@@ -18,10 +18,10 @@ package common
 
 import (
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -273,10 +273,8 @@ func (client *Client) CreateServiceAccountOrFail(saName string) {
 // CreateClusterRoleOrFail creates the given ClusterRole or fail the test if there is an error.
 func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	crs := client.Kube.Kube.RbacV1().ClusterRoles()
-	if _, err := crs.Create(cr); err != nil {
-		if !strings.Contains(err.Error(), "already exists") {
-			client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
-		}
+	if _, err := crs.Create(cr); err != nil && !errors.IsAlreadyExists(err) {
+		client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
 }
@@ -287,10 +285,8 @@ func (client *Client) CreateRoleBindingOrFail(saName, crName, rbName, rbNamespac
 	rb := resources.RoleBinding(saName, saNamespace, crName, rbName, rbNamespace)
 	rbs := client.Kube.Kube.RbacV1().RoleBindings(rbNamespace)
 
-	if _, err := rbs.Create(rb); err != nil {
-		if !strings.Contains(err.Error(), "already exists") {
-			client.T.Fatalf("Failed to create role binding %q: %v", rbName, err)
-		}
+	if _, err := rbs.Create(rb); err != nil && !errors.IsAlreadyExists(err) {
+		client.T.Fatalf("Failed to create role binding %q: %v", rbName, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "rolebindings", rbNamespace, rb.GetName())
 }
@@ -300,10 +296,8 @@ func (client *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName str
 	saNamespace := client.Namespace
 	crb := resources.ClusterRoleBinding(saName, saNamespace, crName, crbName)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
-	if _, err := crbs.Create(crb); err != nil {
-		if !strings.Contains(err.Error(), "already exists") {
-			client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
-		}
+	if _, err := crbs.Create(crb); err != nil && !errors.IsAlreadyExists(err) {
+		client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
 }

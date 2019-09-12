@@ -159,7 +159,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 			newSecret, err := nsSecI.Create(
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: testSecret.ObjectMeta.Name,
+						Name: TestPullSecretName,
 					},
 					Data: testSecret.Data,
 					Type: testSecret.Type,
@@ -170,7 +170,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 
 			// Now add it to the "default" ServiceAccount as a Pull Secret
 			newSecretRef := corev1.LocalObjectReference{
-				Name: newSecret.ObjectMeta.Name,
+				Name: TestPullSecretName,
 			}
 			sa, err := nsSAI.Get("default", metav1.GetOptions{})
 			if err != nil {
