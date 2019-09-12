@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/conformance/zipkin"
+	"knative.dev/pkg/test/zipkin"
 )
 
 func TestChannelTracing(t *testing.T) {
