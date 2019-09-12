@@ -12,86 +12,111 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: batch/v1
-kind: Job
+apiVersion: batch/v1beta1
+kind: CronJob
 metadata:
-  name: broker-latency-send-receive
+  name: broker-latency-in-memory-receiver
+  namespace: default
   labels:
-    role: broker-latency-consumer
+    role: broker-latency-in-memory-receiver
 spec:
-  completions: 1
-  parallelism: 1
-  backoffLimit: 0
-  template:
-    metadata:
-      labels:
-        role: broker-latency-consumer
+  schedule: "0,30 * * * *"
+  jobTemplate:
     spec:
-      serviceAccountName: perf-eventing
-      restartPolicy: Never
-      containers:
-      - name: sender-receiver
-        image: knative.dev/eventing/test/test_images/latencymako
-        args:
-        - "--role=sender-receiver"
-        - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
-        - "--aggregator=broker-latency-aggregator:10000"
-        - "--pace=100:10,200:20,400:60"
-        - "--verbose"
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        resources:
-          requests:
-            cpu: 1000m
-            memory: 2Gi
-        ports:
-        - name: cloudevents
-          containerPort: 8080
+      completions: 1
+      parallelism: 1
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            role: broker-latency-in-memory-receiver
+        spec:
+          serviceAccountName: perf-eventing
+          restartPolicy: Never
+          containers:
+          - name: sender-receiver
+            image: knative.dev/eventing/test/test_images/latencymako
+            args:
+            - "--role=sender-receiver"
+            - "--sink=http://in-memory-broker"
+            - "--aggregator=broker-latency-in-memory-aggregator:10000"
+            - "--pace=100:10,200:20,400:60"
+            - "--verbose"
+            env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 2Gi
+            ports:
+            - name: cloudevents
+              containerPort: 8080
 
 ---
 
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1beta1
+kind: CronJob
 metadata:
-  name: broker-latency-aggregator
+  name: broker-latency-in-memory-aggregator
+  namespace: default
   labels:
-    role: broker-latency-aggregator
+    role: broker-latency-in-memory-aggregator
 spec:
-  serviceAccountName: perf-eventing
-  restartPolicy: Never
-  containers:
-  - name: aggregator
-    image: knative.dev/eventing/test/test_images/latencymako
-    args:
-    - "--role=aggregator"
-      # set to the number of sender-receiver
-    - "--expect-records=1"
-    - "--verbose"
-    ports:
-    - name: grpc
-      containerPort: 10000
-    resources:
-      requests:
-        cpu: 1000m
-        memory: 2Gi
-    volumeMounts:
-    - name: config-mako
-      mountPath: /etc/config-mako
-    terminationMessagePolicy: FallbackToLogsOnError
-  - name: mako-stub
-    image: knative.dev/pkg/test/mako/stub-sidecar
-    ports:
-    - name: quickstore
-      containerPort: 9813
-    terminationMessagePolicy: FallbackToLogsOnError
-  volumes:
-  - name: config-mako
-    configMap:
-      name: config-mako
+  schedule: "0,30 * * * *"
+  jobTemplate:
+    spec:
+      completions: 1
+      parallelism: 1
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            role: broker-latency-in-memory-aggregator
+        spec:
+          serviceAccountName: perf-eventing
+          restartPolicy: Never
+          containers:
+          - name: aggregator
+            image: knative.dev/eventing/test/test_images/latencymako
+            args:
+            - "--role=aggregator"
+              # set to the number of sender-receiver
+            - "--expect-records=1"
+            - "--verbose"
+            ports:
+            - name: grpc
+              containerPort: 10000
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 2Gi
+            volumeMounts:
+            - name: config-mako
+              mountPath: /etc/config-mako
+            terminationMessagePolicy: FallbackToLogsOnError
+          - name: mako
+            image: gcr.io/knative-performance/mako-microservice:latest
+            env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/secret/robot.json
+            volumeMounts:
+            - name: service-account
+              mountPath: /var/secret
+            ports:
+            - name: quickstore
+              containerPort: 9813
+            terminationMessagePolicy: FallbackToLogsOnError
+          volumes:
+          - name: config-mako
+            configMap:
+              name: config-mako
+          - name: service-account
+            secret:
+              secretName: service-account

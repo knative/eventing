@@ -87,7 +87,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eventing-broker-ingress
-  namespace: perf-eventing
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-ingress
@@ -105,7 +104,6 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-filter
-    namespace: perf-eventing
 roleRef:
   kind: ClusterRole
   name: eventing-broker-filter
@@ -132,7 +130,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eventing-config-reader-default-eventing-broker-filter
-  namespace: knative-eventing
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-filter

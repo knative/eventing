@@ -15,7 +15,8 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
 metadata:
-  name: in-memory-test-broker
+  name: in-memory
+  namespace: default
 spec:
   channelTemplateSpec:
     apiVersion: messaging.knative.dev/v1alpha1
@@ -27,13 +28,14 @@ apiVersion: eventing.knative.dev/v1alpha1
 kind: Trigger
 metadata:
   name: broker-latency
+  namespace: default
 spec:
-  broker: in-memory-test-broker
+  broker: in-memory
   subscriber:
     ref:
       apiVersion: v1
       kind: Service
-      name: broker-latency-consumer
+      name: broker-latency-in-memory-receiver
 
 ---
 
@@ -41,6 +43,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: eventing-broker-ingress
+  namespace: default
 
 ---
 
@@ -48,6 +51,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: eventing-broker-filter
+  namespace: default
 
 ---
 
@@ -55,6 +59,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: perf-eventing
+  namespace: default
 
 ---
 
@@ -76,6 +81,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: perf-eventing
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: perf-eventing
@@ -87,10 +93,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eventing-broker-ingress
-  namespace: perf-eventing
+  namespace: default
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-ingress
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: eventing-broker-ingress
@@ -102,10 +109,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: eventing-broker-filter
+  namespace: default
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-filter
-    namespace: perf-eventing
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: eventing-broker-filter
@@ -121,6 +129,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-ingress
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: eventing-config-reader
@@ -136,6 +145,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: eventing-broker-filter
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: eventing-config-reader
@@ -146,10 +156,10 @@ roleRef:
 apiVersion: v1
 kind: Service
 metadata:
-  name: broker-latency-consumer
+  name: broker-latency-in-memory-receiver
 spec:
   selector:
-    role: broker-latency-consumer
+    role: broker-latency-in-memory-receiver
   ports:
   - name: http
     port: 80
@@ -161,10 +171,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: broker-latency-aggregator
+  name: broker-latency-in-memory-aggregator
 spec:
   selector:
-    role: broker-latency-aggregator
+    role: broker-latency-in-memory-aggregator
   ports:
   - name: grpc
     port: 10000

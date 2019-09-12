@@ -54,6 +54,7 @@ spec:
         ports:
         - name: cloudevents
           containerPort: 8080
+        terminationMessagePolicy: FallbackToLogsOnError
 
 ---
 
