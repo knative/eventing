@@ -74,7 +74,7 @@ func NewController(
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
 	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.buildInformerFactory = KResourceTypedInformerFactory(ctx)
+	r.kresourceInformerFactory = KResourceTypedInformerFactory(ctx)
 
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),

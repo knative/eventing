@@ -18,17 +18,11 @@ package trigger
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
 	"time"
-
-	"github.com/hashicorp/go-multierror"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	apisduck "github.com/knative/pkg/apis/duck"
 	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
@@ -36,7 +30,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -70,12 +66,12 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	triggerLister        listers.TriggerLister
-	subscriptionLister   messaginglisters.SubscriptionLister
-	brokerLister         listers.BrokerLister
-	serviceLister        corev1listers.ServiceLister
-	resourceTracker      duck.ResourceTracker
-	buildInformerFactory apisduck.InformerFactory
+	triggerLister            listers.TriggerLister
+	subscriptionLister       messaginglisters.SubscriptionLister
+	brokerLister             listers.BrokerLister
+	serviceLister            corev1listers.ServiceLister
+	resourceTracker          duck.ResourceTracker
+	kresourceInformerFactory apisduck.InformerFactory
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -139,37 +135,14 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	// 3. Find the Subscriber's URI.
 	// 4. Creates a Subscription from the Broker's Trigger Channel to this Trigger via the Broker's
 	//    Filter Service with a specific path, and reply set to the Broker's Ingress Channel.
+	// 5. Find whether there is annotation with key "knative.dev/dependency".
+	// If not, mark Dependency to be succeeded, else figure out whether the dependency is ready and mark Dependency correspondingly
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
 	track := r.resourceTracker.TrackInNamespace(t)
-	dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]
-	if ok {
-		dependencyObjRef, err := getObjRefFromDependencyAnnotation(dependencyAnnotation)
-		if err != nil {
-			logging.FromContext(ctx).Error("Unable to unmarshal objectReference from dependency annotation of trigger:", zap.Error(err))
-			return err
-		}
-		if err := validateDependencyAnnotation(dependencyObjRef); err != nil {
-			logging.FromContext(ctx).Error("Failed to validate dependency annotation of trigger", zap.Error(err))
-			t.Status.MarkDependencyReadyFailed("InvalidDependencyAnnotation", "Failed to validate dependency annotation of trigger")
-			return err
-		}
-		//Assume that trigger and its dependency importer are in the same namespace
-		if err := track(dependencyObjRef); err != nil {
-			logging.FromContext(ctx).Error("Unable to track changes to Dependency", zap.Error(err))
-			return err
-		}
-		e := r.triggerMarkedReadyByDependency(dependencyObjRef, ctx, t)
-		if e != nil {
-			logging.FromContext(ctx).Error("Unable to reconcile dependency", zap.Error(err))
-			return e
-		}
-	} else {
-		t.Status.MarkDependencyReadySucceeded()
-	}
 
 	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
 	brokerObjRef := corev1.ObjectReference{
@@ -237,36 +210,65 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
+	if err := r.checkDependencyAnnotation(t, track, ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (r *Reconciler) triggerMarkedReadyByDependency(dependencyObjRef corev1.ObjectReference, ctx context.Context, t *v1alpha1.Trigger) error {
+func (r *Reconciler) checkDependencyAnnotation(t *v1alpha1.Trigger, track func(corev1.ObjectReference) error, ctx context.Context) error {
+	if dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]; ok {
+		dependencyObjRef, err := v1alpha1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
+		if err != nil {
+			t.Status.MarkDependencyFailed("FAILED TO UNMARSHAL FROM DEPENDENCY ANNOTATION", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
+			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
+		}
+		//trigger and its dependency importer are in the same namespace, we already did the validation when we in the trigger webhook
+		if err := track(dependencyObjRef); err != nil {
+			return fmt.Errorf("tracking dependency: %v", err)
+		}
+		if err := r.propagateDependencyReadiness(dependencyObjRef, ctx, t); err != nil {
+			return fmt.Errorf("propagating dependency readiness: %v", err)
+
+		}
+	} else {
+		t.Status.MarkDependencySucceeded()
+	}
+	return nil
+}
+
+func (r *Reconciler) propagateDependencyReadiness(dependencyObjRef corev1.ObjectReference, ctx context.Context, t *v1alpha1.Trigger) error {
 	gvk := schema.GroupVersionKind{
 		Group:   dependencyObjRef.GroupVersionKind().Group,
 		Version: dependencyObjRef.GroupVersionKind().Version,
 		Kind:    dependencyObjRef.Kind,
 	}
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-	_, lister, err := r.buildInformerFactory.Get(gvr)
+	_, lister, err := r.kresourceInformerFactory.Get(gvr)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting a lister for a resource with gvk '%+v', gvr '%+v'", gvk, gvr), zap.Error(err))
-		t.Status.MarkDependencyReadyUnknown("FailedToListResource", "Failed to list resource")
-		return err
+		t.Status.MarkDependencyUnknown("FailedToListResource", "Failed to list resource: %v", err)
+		return fmt.Errorf("creating lister: %v", err)
 	}
-	dependencyObj, err := lister.ByNamespace(dependencyObjRef.Namespace).Get(dependencyObjRef.Name)
+	dependencyObj, err := lister.ByNamespace(t.GetNamespace()).Get(dependencyObjRef.Name)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the dependency", zap.Error(err))
 		if apierrs.IsNotFound(err) {
-			t.Status.MarkDependencyReadyUnknown("Dependency DoesNotExist", "Dependency does not exist")
+			t.Status.MarkDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: %v", err)
 		} else {
-			t.Status.MarkDependencyReadyUnknown("DependencyGetFailed", "Failed to get dependency")
+			t.Status.MarkDependencyUnknown("DependencyGetFailed", "Failed to get dependency: %v", err)
 		}
-		return err
+		return fmt.Errorf("getting the dependency: %v", err)
 	}
 	dependency := dependencyObj.(*duckv1alpha1.KResource)
-	if dependency.ObjectMeta.Generation != dependency.Status.ObservedGeneration {
-		t.Status.MarkDependencyReadyUnknown("GenerationNotEqual", "The ObjectMeta Generation of dependency is not equal to the observedGeneration of status")
-	}
+	// Temporarily comment it until we figure out whether we update Status.ObservedGeneration when KResource changes
+	// From manual testing, it looks like we never update  Status.ObservedGeneration
+	//if dependency.GetGeneration() != dependency.Status.ObservedGeneration {
+	//	logging.FromContext(ctx).Error("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
+	//		zap.Any("ObjectMeta Generation of dependency", dependency.GetGeneration()),
+	//		zap.Any("ObservedGeneration of status", dependency.Status.ObservedGeneration))
+	//	t.Status.MarkDependencyUnknown("GenerationNotEqual", "The ObjectMeta Generation of dependency %d is not equal to the ObservedGeneration of status %d", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
+	//	return nil
+	//}
 	t.Status.PropagateDependencyStatus(dependency)
 	return nil
 }
@@ -364,26 +366,4 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1alpha1.Trig
 		return nil, err
 	}
 	return newSub, nil
-}
-
-func getObjRefFromDependencyAnnotation(dependencyAnnotation string) (corev1.ObjectReference, error) {
-	var objectRef corev1.ObjectReference
-	if err := json.Unmarshal([]byte(dependencyAnnotation), &objectRef); err != nil {
-		return objectRef, err
-	}
-	return objectRef, nil
-}
-
-func validateDependencyAnnotation(depObjRef corev1.ObjectReference) error {
-	var result *multierror.Error
-	if depObjRef.Namespace == "" {
-		result = multierror.Append(result, fmt.Errorf("failed to validate dependency annotation: Namespace should not be empty"))
-	}
-	if depObjRef.Kind == "" {
-		result = multierror.Append(result, fmt.Errorf("failed to validate dependency annotation: Kind should not be empty"))
-	}
-	if depObjRef.Name == "" {
-		result = multierror.Append(result, fmt.Errorf("failed to validate dependency annotation: Name should not be empty"))
-	}
-	return result.ErrorOrNil()
 }

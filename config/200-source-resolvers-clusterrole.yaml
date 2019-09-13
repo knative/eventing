@@ -22,7 +22,7 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
-      duck.knative.dev/source: "true"
+      duck.knative.dev/sourceObserver: "true"
 rules: [] # Rules are automatically filled in by the controller manager.
 
 ---
@@ -33,8 +33,11 @@ metadata:
   name: eventing-source-resolver
   labels:
     eventing.knative.dev/release: devel
-    duck.knative.dev/source: "true"
+    duck.knative.dev/sourceObserver: "true"
 # Do not use this role directly. These rules will be added to the "source-resolver" role.
+# For resources "awssqssources", "camelsources", "kafkasources", "githubsources",
+# These should eventually be moved to config directories in https://github.com/knative/eventing-contrib.
+# TODO After https://github.com/knative/eventing-contrib/issues/583 gets done, remove "awssqssources", "camelsources", "kafkasources", "githubsources" in resources and modified config/201-clusterrolebinding.yaml
 rules:
 - apiGroups:
   - "sources.eventing.knative.dev"
@@ -52,13 +55,15 @@ rules:
   - watch
 ---
 
+# These should eventually be moved to config directories in https://github.com/google/knative-gcp.
+# TODO After https://github.com/google/knative-gcp/issues/252 gets done, remove this ClusterRole and modified config/201-clusterrolebinding.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: knative-gcp-source-resolver
   labels:
     eventing.knative.dev/release: devel
-    duck.knative.dev/source: "true"
+    duck.knative.dev/sourceObserver: "true"
 # Do not use this role directly. These rules will be added to the "source-resolver" role.
 rules:
   - apiGroups:

@@ -28,6 +28,8 @@ import (
 )
 
 const (
+	// In Trigger annotation, we will use key "knative.dev/dependency" to mark the sources that the Trigger depends on
+	// This will be used when the kn client creates an importer and trigger pair for the user such that the trigger only receives events produced by the paired importer.
 	DependencyAnnotation = "knative.dev/dependency"
 )
 
