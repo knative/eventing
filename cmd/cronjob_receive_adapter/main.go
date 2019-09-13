@@ -76,7 +76,7 @@ func main() {
 	// Convert json logging.Config to logging.Config.
 	loggingConfig, err := logging.JsonToLoggingConfig(env.LoggingConfigJson)
 	if err != nil {
-		fmt.Printf("[ERROR] failed to process logging config: %s", err.Error())
+		fmt.Printf("[ERROR] failed to process logging config: %s", err)
 		// Use default logging config.
 		if loggingConfig, err = logging.NewConfigFromMap(map[string]string{}); err != nil {
 			// If this fails, there is no recovering.
@@ -90,7 +90,7 @@ func main() {
 	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
 	metricsConfig, err := metrics.JsonToMetricsOptions(env.MetricsConfigJson)
 	if err != nil {
-		logger.Error("failed to process metrics options", zap.Error(err))
+		logger.Fatal("failed to process metrics options", zap.Error(err))
 	}
 
 	if err := metrics.UpdateExporter(*metricsConfig, loggerSugared); err != nil {
