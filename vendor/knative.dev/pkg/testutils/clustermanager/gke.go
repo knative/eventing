@@ -71,6 +71,7 @@ type GKECluster struct {
 	NeedCleanup bool
 	Cluster     *container.Cluster
 	operations  GKESDKOperations
+	boskosOps   boskos.Operation
 }
 
 // GKESDKOperations wraps GKE SDK related functions
@@ -152,12 +153,15 @@ func (gs *GKEClient) Setup(numNodes *int64, nodeType *string, region *string, zo
 	}
 	gc.operations = &GKESDKClient{containerService}
 
+	gc.boskosOps = &boskos.Client{}
+
 	return gc
 }
 
 // Initialize sets up GKE SDK client, checks environment for cluster and
 // projects to decide whether use existing cluster/project or creating new ones.
 func (gc *GKECluster) Initialize() error {
+	// Try obtain project name via `kubectl`, `gcloud`
 	if nil == gc.Project {
 		if err := gc.checkEnvironment(); nil != err {
 			return fmt.Errorf("failed checking existing cluster: '%v'", err)
@@ -165,14 +169,13 @@ func (gc *GKECluster) Initialize() error {
 			return nil
 		}
 	}
-	if nil == gc.Cluster {
-		if common.IsProw() {
-			project, err := boskos.AcquireGKEProject(nil)
-			if nil != err {
-				return fmt.Errorf("failed acquire boskos project: '%v'", err)
-			}
-			gc.Project = &project.Name
+	// Get project name from boskos if running in Prow
+	if nil == gc.Project && common.IsProw() {
+		project, err := gc.boskosOps.AcquireGKEProject(nil)
+		if nil != err {
+			return fmt.Errorf("failed acquire boskos project: '%v'", err)
 		}
+		gc.Project = &project.Name
 	}
 	if nil == gc.Project || "" == *gc.Project {
 		return errors.New("gcp project must be set")
