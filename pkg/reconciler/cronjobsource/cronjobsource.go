@@ -20,9 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"knative.dev/pkg/metrics"
 	"reflect"
 	"time"
+
+	"knative.dev/pkg/metrics"
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
@@ -42,7 +43,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
 )
@@ -208,12 +208,12 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 		return nil, err
 	}
 
-	loggingConfig, err := utils.LoggingConfigToBase64(r.loggingConfig)
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to base64", zap.Any("receiveAdapter", err))
 	}
 
-	metricsConfig, err := utils.MetricsOptionsToBase64(r.metricsConfig)
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting metrics config to base64", zap.Any("receiveAdapter", err))
 	}

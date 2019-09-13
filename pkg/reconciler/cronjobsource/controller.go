@@ -30,7 +30,6 @@ import (
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	deploymentinformer "knative.dev/pkg/injection/informers/kubeinformers/appsv1/deployment"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 )

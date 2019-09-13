@@ -26,6 +26,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/source"
 )
 
 // TODO: this should be a k8s cron.
@@ -50,8 +51,12 @@ type Adapter struct {
 	// client sends cloudevents.
 	client cloudevents.Client
 
-	Reporter StatsReporter
+	Reporter source.StatsReporter
 }
+
+const (
+	resourceGroup = "cronjobsources.sources.eventing.knative.dev"
+)
 
 // Initialize cloudevent client
 func (a *Adapter) initClient() error {
@@ -94,11 +99,12 @@ func (a *Adapter) cronTick() {
 	event.SetType(sourcesv1alpha1.CronJobEventType)
 	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
-	reportArgs := &ReportArgs{
-		ns:          a.Namespace,
-		eventSource: event.Source(),
-		eventType:   event.Type(),
-		name:        a.Name,
+	reportArgs := &source.ReportArgs{
+		Namespace:     a.Namespace,
+		EventSource:   event.Source(),
+		EventType:     event.Type(),
+		Name:          a.Name,
+		ResourceGroup: resourceGroup,
 	}
 
 	rctx, _, err := a.client.Send(context.TODO(), event)

@@ -19,8 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/metrics"
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
@@ -29,7 +27,9 @@ import (
 	"knative.dev/eventing/pkg/adapter/cronjobevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
+	"knative.dev/pkg/source"
 )
 
 type envConfig struct {
@@ -48,16 +48,16 @@ type envConfig struct {
 	// Environment variable containing the namespace of the cron job.
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 
-	// MetricsConfigBase64 is a base64 encoded json string of
-	// metrics.ExporterOptions. This is used to configure the metrics exporter
-	// options, the config is stored in a config map inside the controllers
+	// MetricsConfigJson is a json string of metrics.ExporterOptions.
+	// This is used to configure the metrics exporter options,
+	// the config is stored in a config map inside the controllers
 	// namespace and copied here.
-	MetricsConfigBase64 string `envconfig:"K_METRICS_CONFIG" required:"true"`
+	MetricsConfigJson string `envconfig:"K_METRICS_CONFIG" required:"true"`
 
-	// LoggingConfigBase64 is a base64 encoded json string of logging.Config.
+	// LoggingConfigJson is a json string of logging.Config.
 	// This is used to configure the logging config, the config is stored in
 	// a config map inside the controllers namespace and copied here.
-	LoggingConfigBase64 string `envconfig:"K_LOGGING_CONFIG" required:"true"`
+	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" required:"true"`
 }
 
 const (
@@ -73,9 +73,8 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Error processing env var: %s", err))
 	}
-	// TODO move this util to pkg
-	// Convert base64 encoded json logging.Config to logging.Config.
-	loggingConfig, err := utils.Base64ToLoggingConfig(env.LoggingConfigBase64)
+	// Convert json logging.Config to logging.Config.
+	loggingConfig, err := logging.JsonToLoggingConfig(env.LoggingConfigJson)
 	if err != nil {
 		fmt.Printf("[ERROR] failed to process logging config: %s", err.Error())
 		// Use default logging config.
@@ -88,10 +87,8 @@ func main() {
 	logger := loggerSugared.Desugar()
 	defer flush(loggerSugared)
 
-	// Convert base64 encoded json metrics.ExporterOptions to
-	// metrics.ExporterOptions.
-	metricsConfig, err := utils.Base64ToMetricsOptions(
-		env.MetricsConfigBase64)
+	// Convert json metrics.ExporterOptions to metrics.ExporterOptions.
+	metricsConfig, err := metrics.JsonToMetricsOptions(env.MetricsConfigJson)
 	if err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
 	}
@@ -103,18 +100,12 @@ func main() {
 	if err := envconfig.Process("", &env); err != nil {
 		log.Fatal("Failed to process env var", zap.Error(err))
 	}
-<<<<<<< HEAD
-
-	if err = tracing.SetupStaticPublishing(logger, "cronjobsource", tracing.OnePercentSampling); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the source to continue to
-=======
-	reporter, err := cronjobevents.NewStatsReporter()
+	reporter, err := source.NewStatsReporter()
 	if err != nil {
-		logger.Fatal("Error building statsreporter", zap.Error(err))
+		logger.Error("error building statsreporter", zap.Error(err))
 	}
 	if err = tracing.SetupStaticPublishing(loggerSugared, "cronjobsource", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer to continue to
->>>>>>> Added dataplane metrics cronjobsource
 		// start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}

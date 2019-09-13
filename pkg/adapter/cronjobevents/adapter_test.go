@@ -26,11 +26,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/pkg/source"
 )
 
 type mockReporter struct{}
 
-func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
 	return nil
 }
 
