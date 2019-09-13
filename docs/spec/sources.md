@@ -19,14 +19,29 @@ to realize the source application. This could be as 1:1 deployments inside of
 Kubernetes per resource, as a single multi-tenant application, or even an
 off-cluster implementation; or all combinations in-between.
 
+There are two 
+
+For an operator or a cluster to discover  
+
+There is a distinction between a Kubernetes cluster that has a source CRD installed
+and a custom resource (CR is an instance of a CRD). A cluster that has a source CRD 
+installed has the ability to signal to the cluster operator that it is capable of
+producing events of a certain type by using the [Event Type Registry](#event-type-registry).
+
+
+
 There are some guidelines on implementing sources to allow cluster operators and
 tools to dynamically discover and understand source installations.
-
 
 <!-- TODO: expand on CR state of a Source and those expectations. --?>
 
 
 ## Source CRDs
+
+Sources are more useful if they are discoverable. Knative Sources MUST use a
+ducktype label to allow controllers and operators the ability to find which
+CRDs are considered to be adhering to the
+[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype. 
 
 CRDs that are to be understood as a `source` MUST be labeled:
 
@@ -39,7 +54,7 @@ metadata:
 ```
 
 <!-- TODO: Let's expand a bit on this. It would be maybe be useful to include the motivation here, for example, so support the Source in the listing (for example kubectl get ... command). So in addition to MUST be labeled, why would be helpful. Understood is just a bit of a vague term here. -->
- 
+
 CRDs SHOULD be added to the `sources` category:
 
 ```yaml
@@ -51,8 +66,6 @@ spec:
 
 <!-- TODO: We should mention consistent use of the Conditions and in particular the one Ready condition that we have defined in the apis.ConditionReady and probably add that as a recommended additional Printer Column for consistency? -->
 
-
-
 <!-- We should also talk about the validation aspects and encourage proper Description for the fields and so forth also?
 
 ### Source Validation
@@ -61,7 +74,7 @@ OpenAPI
 
 ```yaml
   validation:
-    openAPIV3Schema: 
+    openAPIV3Schema:
 ```
 
 -->
@@ -84,7 +97,9 @@ todo
 Knative leverages an aggregated RBAC role to allow for controllers to check the
 status of source type resources.
 
-The [`source-observer` ClusterRole](../../config/200-source-observer-clusterrole.yaml) looks like:
+The
+[`source-observer` ClusterRole](../../config/200-source-observer-clusterrole.yaml)
+looks like:
 
 ```yaml
 # Use this aggregated ClusterRole when you need read "Sources".
@@ -99,7 +114,7 @@ aggregationRule:
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
-<!-- Might be worth it to mention a use case or two as examples? Motivation section if you will :) 
+<!-- Might be worth it to mention a use case or two as examples? Motivation section if you will :)
 
 ### Motivation for Aggregated RBAC
 
@@ -132,8 +147,7 @@ rules:
 ## Source Resource Shape
 
 The minimum definition of the Kubernetes resource shape is defined in the
-[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source)
-ducktype.
+[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
 
 ### duck.Spec
 
@@ -177,9 +191,9 @@ type SourceStatus struct {
 ```
 
 <!-- TODO
- 
+
  TODO: We should probably mention here about the apis.ConditionSet and each Source IMHO should have the apis.ConditionReady as the one way to look at the readiness of the Source.
- 
+
  -->
 
 For a full definition of `Status` and `SinkURI`, please see
