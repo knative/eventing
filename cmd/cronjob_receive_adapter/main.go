@@ -64,7 +64,7 @@ func main() {
 	}
 
 	if err = tracing.SetupStaticPublishing(logger, "cronjobsource", tracing.OnePercentSampling); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the importer to continue to
+		// If tracing doesn't work, we will log an error, but allow the source to continue to
 		// start.
 		logger.Errorw("Error setting up trace publishing", err)
 	}

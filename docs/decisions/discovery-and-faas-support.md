@@ -45,6 +45,6 @@ implementation will be tracked in
 ## FaaS scenario
 
 When using Broker + Trigger: We will make implementation changes that allow for
-a trigger to be written so that it only receives events from a specific
-importer. The implementation and design is tracked in
+a trigger to be written so that it only receives events from a specific source.
+The implementation and design is tracked in
 [#1555](https://github.com/knative/eventing/issues/1555).

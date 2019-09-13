@@ -35,6 +35,6 @@ specification. Enable a pluggable architecture for the event delivery mechanism
 so that developers and operators can choose the correct event delivery substrate
 for their requirements.
 
-**Event Sourcing:** Provide a specification for how to create event importers as
+**Event Sourcing:** Provide a specification for how to create event sources as
 well as guidelines and tools for event providers to cleanly integrate in a
 CloudEvents environment.
