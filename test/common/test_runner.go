@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
@@ -117,6 +118,58 @@ func TearDown(client *Client) {
 	}
 }
 
+// CopySecret will copy a secret from one namespace into another.
+// If a ServiceAccount name is provided then it'll add it as a PullSecret to
+// it.
+// It'll either return a pointer to the new Secret or and error indicating
+// why it couldn't do it.
+func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string, svcAccount string) (*corev1.Secret, error) {
+	// Get the Interfaces we need to access the resources in the cluster
+	srcSecI := client.Kube.Kube.CoreV1().Secrets(srcNS)
+	tgtNSSvcAccI := client.Kube.Kube.CoreV1().ServiceAccounts(tgtNS)
+	tgtNSSecI := client.Kube.Kube.CoreV1().Secrets(tgtNS)
+
+	// First try to find the secret we're supposed to copy
+	srcSecret, err := srcSecI.Get(srcSecretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Just double checking
+	if srcSecret == nil {
+		return nil, fmt.Errorf("Error copying secret, it's nil w/o error")
+	}
+
+	// Found the secret, so now make a copy in our new namespace
+	newSecret, err := tgtNSSecI.Create(
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: srcSecretName,
+			},
+			Data: srcSecret.Data,
+			Type: srcSecret.Type,
+		})
+
+	// If the secret already exists then that's ok - some other test
+	// must have created it
+	if err != nil && !errors.IsAlreadyExists(err) {
+		client.T.Fatalf("Error copying the secret: %s", err)
+	}
+
+	if svcAccount != "" {
+		_, err = tgtNSSvcAccI.Patch(svcAccount, types.StrategicMergePatchType,
+			[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
+		if err != nil {
+			client.T.Fatalf("Patch failed on NS/ServiceAccount (%s/%s): %s",
+				tgtNS, srcSecretName, err)
+		}
+	}
+	client.T.Logf("Copied ImagePullSecret(%s) into namespace: %s",
+		srcSecretName, tgtNS)
+
+	return newSecret, nil
+}
+
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
@@ -140,49 +193,9 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 		// on the "default" ServiceAccount in this new Namespace.
 		// This is needed for cases where the images are in a private registry.
-
-		// Get the Interfaces we need to access the resources in the cluster
-		defSecI := client.Kube.Kube.CoreV1().Secrets("default")
-		nsSAI := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
-		nsSecI := client.Kube.Kube.CoreV1().Secrets(namespace)
-
-		testSecret, _ := defSecI.Get(TestPullSecretName, metav1.GetOptions{})
-
-		// Check again. I've seen cases where it lies and if we need it
-		// then the test will fail w/o it, so check again just to be sure.
-		if testSecret == nil {
-			testSecret, _ = defSecI.Get(TestPullSecretName, metav1.GetOptions{})
-		}
-
-		if testSecret != nil {
-			// Found the secret, so now make a copy in our new namespace
-			newSecret, err := nsSecI.Create(
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: TestPullSecretName,
-					},
-					Data: testSecret.Data,
-					Type: testSecret.Type,
-				})
-			if err != nil {
-				t.Fatalf("TestSetup: Error copying the secret: %s", err)
-			}
-
-			// Now add it to the "default" ServiceAccount as a Pull Secret
-			newSecretRef := corev1.LocalObjectReference{
-				Name: TestPullSecretName,
-			}
-			sa, err := nsSAI.Get("default", metav1.GetOptions{})
-			if err != nil {
-				t.Fatalf("TestSetup: Error getting ServiceAccount: %s", err)
-			}
-
-			sa.ImagePullSecrets = append(sa.ImagePullSecrets, newSecretRef)
-			if _, err = nsSAI.Update(sa); err != nil {
-				t.Fatalf("TestSetup: Error adding Secret to ServiceAccount: %s", err)
-			}
-			t.Logf("Copied ImagePullSecret(%s) into namespace: %s",
-				newSecret.ObjectMeta.Name, namespace)
+		_, err := CopySecret(client, "default", TestPullSecretName, namespace, "default")
+		if err != nil && !errors.IsNotFound(err) {
+			t.Fatalf("Error copying the secret into ns %q: %s", namespace, err)
 		}
 	}
 }

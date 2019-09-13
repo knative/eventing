@@ -23,7 +23,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/test/base"
@@ -227,46 +226,9 @@ func (client *Client) CreateServiceAccountOrFail(saName string) {
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the new ServiceAccount we just created.
 	// This is needed for cases where the images are in a private registry.
-
-	// Get the Interfaces we need to access the resources in the cluster
-	defSecI := client.Kube.Kube.CoreV1().Secrets("default")
-	nsSAI := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
-	nsSecI := client.Kube.Kube.CoreV1().Secrets(namespace)
-
-	testSecret, _ := defSecI.Get(TestPullSecretName, metav1.GetOptions{})
-
-	// Check again. I've seen cases where it lies and if we need it
-	// then the test will fail w/o it, so check again just to be sure.
-	if testSecret == nil {
-		testSecret, _ = defSecI.Get(TestPullSecretName, metav1.GetOptions{})
-	}
-
-	if testSecret != nil {
-		// Found the secret, so now make a copy in our new namespace, but only
-		// if it doesn't already exist
-		var err error
-
-		// If it already exists in this NS then just use it, otherwise create
-		newSecret, _ := nsSecI.Get(TestPullSecretName, metav1.GetOptions{})
-		if newSecret == nil {
-			newSecret, err = nsSecI.Create(
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: TestPullSecretName,
-					},
-					Data: testSecret.Data,
-					Type: testSecret.Type,
-				})
-			if err != nil {
-				client.T.Fatalf("Error copying the secret: %s", err)
-			}
-		}
-
-		_, err = nsSAI.Patch(saName, types.StrategicMergePatchType,
-			[]byte(`{"imagePullSecrets":[{"name":"`+TestPullSecretName+`"}]}`))
-		if err != nil {
-			client.T.Fatalf("Patch failed on ServiceAccount: %s", err)
-		}
+	_, err := CopySecret(client, "default", TestPullSecretName, namespace, saName)
+	if err != nil && !errors.IsNotFound(err) {
+		client.T.Fatalf("Error copying the secret: %s", err)
 	}
 }
 
