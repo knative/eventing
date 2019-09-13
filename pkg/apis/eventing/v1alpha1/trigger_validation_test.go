@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -56,6 +57,7 @@ var (
 	}
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
+	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -83,8 +85,8 @@ func TestTriggerValidation(t *testing.T) {
 				Subscriber: validSubscriber,
 			}},
 		want: &apis.FieldError{
-			Paths:   []string{"annotation" + "." + DependencyAnnotation},
-			Message: "The provided annotation was not a corev1.ObjectReference: invalid dependency annotation",
+			Paths:   []string{dependencyAnnotationPath},
+			Message: "The provided annotation was not a corev1.ObjectReference: \"invalid dependency annotation\"",
 			Details: "invalid character 'i' looking for beginning of value",
 		},
 	}, {
@@ -101,8 +103,8 @@ func TestTriggerValidation(t *testing.T) {
 				Subscriber: validSubscriber,
 			}},
 		want: &apis.FieldError{
-			Paths:   []string{"annotation" + "." + DependencyAnnotation + "." + "namespace"},
-			Message: "Namespace should be empty or equal to the trigger namespace test-ns-1",
+			Paths:   []string{dependencyAnnotationPath + "." + "namespace"},
+			Message: "Namespace must be empty or equal to the trigger namespace \"test-ns-1\"",
 		},
 	},
 		{
@@ -119,7 +121,7 @@ func TestTriggerValidation(t *testing.T) {
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
-				Paths:   []string{"annotation" + "." + DependencyAnnotation + "." + "kind"},
+				Paths:   []string{dependencyAnnotationPath + "." + "kind"},
 				Message: "missing field(s)",
 			},
 		}, {
@@ -136,7 +138,7 @@ func TestTriggerValidation(t *testing.T) {
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
-				Paths:   []string{"annotation" + "." + DependencyAnnotation + "." + "name"},
+				Paths:   []string{dependencyAnnotationPath + "." + "name"},
 				Message: "missing field(s)",
 			},
 		}, {
@@ -153,7 +155,7 @@ func TestTriggerValidation(t *testing.T) {
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
-				Paths:   []string{"annotation" + "." + DependencyAnnotation + "." + "apiVersion"},
+				Paths:   []string{dependencyAnnotationPath + "." + "apiVersion"},
 				Message: "missing field(s)",
 			},
 		}, {
@@ -171,9 +173,9 @@ func TestTriggerValidation(t *testing.T) {
 				}},
 			want: &apis.FieldError{
 				Paths: []string{
-					"annotation" + "." + DependencyAnnotation + "." + "kind",
-					"annotation" + "." + DependencyAnnotation + "." + "name",
-					"annotation" + "." + DependencyAnnotation + "." + "apiVersion"},
+					dependencyAnnotationPath + "." + "kind",
+					dependencyAnnotationPath + "." + "name",
+					dependencyAnnotationPath + "." + "apiVersion"},
 				Message: "missing field(s)",
 			},
 		},
@@ -189,9 +191,9 @@ func TestTriggerValidation(t *testing.T) {
 			want: &apis.FieldError{
 				Paths: []string{
 					"spec.broker", "spec.filter", "spec.subscriber",
-					"annotation" + "." + DependencyAnnotation + "." + "kind",
-					"annotation" + "." + DependencyAnnotation + "." + "name",
-					"annotation" + "." + DependencyAnnotation + "." + "apiVersion"},
+					dependencyAnnotationPath + "." + "kind",
+					dependencyAnnotationPath + "." + "name",
+					dependencyAnnotationPath + "." + "apiVersion"},
 				Message: "missing field(s)",
 			},
 		},
@@ -265,7 +267,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{
-			Message: "Invalid attribute name: 0invalid",
+			Message: "Invalid attribute name: \"0invalid\"",
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
@@ -280,7 +282,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Subscriber: validSubscriber,
 		},
 		want: &apis.FieldError{
-			Message: "Invalid attribute name: invALID",
+			Message: "Invalid attribute name: \"invALID\"",
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {

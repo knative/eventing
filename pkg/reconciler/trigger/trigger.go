@@ -221,7 +221,7 @@ func (r *Reconciler) checkDependencyAnnotation(t *v1alpha1.Trigger, track func(c
 	if dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]; ok {
 		dependencyObjRef, err := v1alpha1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {
-			t.Status.MarkDependencyFailed("FAILED TO UNMARSHAL FROM DEPENDENCY ANNOTATION", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
+			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
 			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
 		}
 		//trigger and its dependency importer are in the same namespace, we already did the validation when we in the trigger webhook

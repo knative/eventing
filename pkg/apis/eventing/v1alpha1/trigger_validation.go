@@ -39,7 +39,7 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	errs := t.Spec.Validate(ctx).ViaField("spec")
 	dependencyAnnotation, ok := t.GetAnnotations()[DependencyAnnotation]
 	if ok {
-		dependencyAnnotationPrefix := "annotation." + DependencyAnnotation
+		dependencyAnnotationPrefix := fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 		errs = errs.Also(t.validateDependencyAnnotation(dependencyAnnotation).ViaField(dependencyAnnotationPrefix))
 	}
 	return errs
@@ -78,7 +78,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 				for attr := range attrs {
 					if !validAttributeName.MatchString(attr) {
 						fe := &apis.FieldError{
-							Message: fmt.Sprintf("Invalid attribute name: %s", attr),
+							Message: fmt.Sprintf("Invalid attribute name: %q", attr),
 							Paths:   []string{"filter.attributes"},
 						}
 						errs = errs.Also(fe)
@@ -142,7 +142,7 @@ func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *api
 	depObjRef, err := GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 	if err != nil {
 		return &apis.FieldError{
-			Message: fmt.Sprintf("The provided annotation was not a corev1.ObjectReference: %s", dependencyAnnotation),
+			Message: fmt.Sprintf("The provided annotation was not a corev1.ObjectReference: %q", dependencyAnnotation),
 			Details: err.Error(),
 			Paths:   []string{""},
 		}
@@ -150,7 +150,7 @@ func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *api
 	var errs *apis.FieldError
 	if depObjRef.Namespace != "" && depObjRef.Namespace != t.GetNamespace() {
 		fe := &apis.FieldError{
-			Message: fmt.Sprintf("Namespace should be empty or equal to the trigger namespace %s", t.GetNamespace()),
+			Message: fmt.Sprintf("Namespace must be empty or equal to the trigger namespace %q", t.GetNamespace()),
 			Paths:   []string{"namespace"},
 		}
 		errs = errs.Also(fe)
