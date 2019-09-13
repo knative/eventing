@@ -71,7 +71,7 @@ func NewController(
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
 		env:              *env,
-		context:          ctx,
+		loggingContext:   ctx,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)

@@ -67,7 +67,7 @@ type Reconciler struct {
 	deploymentLister appsv1listers.DeploymentLister
 	eventTypeLister  eventinglisters.EventTypeLister
 
-	context        context.Context
+	loggingContext context.Context
 	sinkReconciler *duck.SinkReconciler
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
@@ -347,11 +347,11 @@ func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
 
 	logcfg, err := pkgLogging.NewConfigFromConfigMap(cfg)
 	if err != nil {
-		logging.FromContext(r.context).Warn("failed to create logging config from configmap", zap.String("cfg.Name", cfg.Name))
+		logging.FromContext(r.loggingContext).Warn("failed to create logging config from configmap", zap.String("cfg.Name", cfg.Name))
 		return
 	}
 	r.loggingConfig = logcfg
-	logging.FromContext(r.context).Info("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
+	logging.FromContext(r.loggingContext).Info("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
 }
 
 func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
@@ -364,5 +364,5 @@ func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 		Component: component,
 		ConfigMap: cfg.Data,
 	}
-	logging.FromContext(r.context).Info("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
+	logging.FromContext(r.loggingContext).Info("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }
