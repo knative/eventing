@@ -9,7 +9,7 @@ import (
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	oczipkin "contrib.go.opencensus.io/exporter/zipkin"
-	"github.com/openzipkin/zipkin-go"
+	zipkin "github.com/openzipkin/zipkin-go"
 	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
