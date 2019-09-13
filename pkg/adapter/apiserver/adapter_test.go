@@ -143,7 +143,7 @@ func TestNewAdaptor(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			r := &mockReporter{}
-			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r, "test-importer")
+			a := NewAdaptor(tc.source, k8s, ce, logger, tc.opt, r, "test-source")
 
 			got, ok := a.(*adapter)
 			if !ok {
@@ -182,7 +182,7 @@ func TestAdapter_StartRef(t *testing.T) {
 		}},
 	}
 	r := &mockReporter{}
-	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-source")
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -217,7 +217,7 @@ func TestAdapter_StartResource(t *testing.T) {
 		}},
 	}
 	r := &mockReporter{}
-	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-importer")
+	a := NewAdaptor(source, k8s, ce, logger, opt, r, "test-source")
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
