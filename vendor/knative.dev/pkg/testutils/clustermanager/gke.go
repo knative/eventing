@@ -46,6 +46,7 @@ var (
 	protectedClusters       = []string{"knative-prow"}
 	// These are arbitrary numbers determined based on past experience
 	creationTimeout = 20 * time.Minute
+	deletionTimeout = 10 * time.Minute
 )
 
 // GKEClient implements Client
@@ -77,6 +78,7 @@ type GKECluster struct {
 // GKESDKOperations wraps GKE SDK related functions
 type GKESDKOperations interface {
 	create(string, string, *container.CreateClusterRequest) (*container.Operation, error)
+	delete(string, string, string) (*container.Operation, error)
 	get(string, string, string) (*container.Cluster, error)
 	getOperation(string, string, string) (*container.Operation, error)
 }
@@ -89,6 +91,12 @@ type GKESDKClient struct {
 func (gsc *GKESDKClient) create(project, location string, rb *container.CreateClusterRequest) (*container.Operation, error) {
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	return gsc.Projects.Locations.Clusters.Create(parent, rb).Context(context.Background()).Do()
+}
+
+// delete deletes GKE cluster and waits until completion
+func (gsc *GKESDKClient) delete(project, clusterName, location string) (*container.Operation, error) {
+	parent := fmt.Sprintf("projects/%s/locations/%s/clusters/%s", project, location, clusterName)
+	return gsc.Projects.Locations.Clusters.Delete(parent).Context(context.Background()).Do()
 }
 
 func (gsc *GKESDKClient) get(project, location, cluster string) (*container.Cluster, error) {
@@ -222,7 +230,10 @@ func (gc *GKECluster) Acquire() error {
 		}
 	}
 	var cluster *container.Cluster
+	var op *container.Operation
 	for i, region := range regions {
+		// Restore innocence
+		err = nil
 		rb := &container.CreateClusterRequest{
 			Cluster: &container.Cluster{
 				Name:             clusterName,
@@ -235,24 +246,36 @@ func (gc *GKECluster) Acquire() error {
 		}
 
 		clusterLoc := getClusterLocation(region, gc.Request.Zone)
-		// TODO(chaodaiG): add deleting logic once cluster deletion logic is done
 
-		log.Printf("Creating cluster %q' in %q", clusterName, clusterLoc)
-		var createOp *container.Operation
-		createOp, err = gc.operations.create(*gc.Project, clusterLoc, rb)
+		// Deleting cluster if it already exists
+		existingCluster, _ := gc.operations.get(*gc.Project, clusterLoc, clusterName)
+		if nil != existingCluster {
+			log.Printf("Cluster %q already exists in %q. Deleting...", clusterName, clusterLoc)
+			op, err = gc.operations.delete(*gc.Project, clusterName, clusterLoc)
+			if nil == err {
+				err = gc.wait(clusterLoc, op.Name, deletionTimeout)
+			}
+		}
+		// Creating cluster only if previous step succeeded
 		if nil == err {
-			if err = gc.wait(clusterLoc, createOp.Name, creationTimeout); nil == err {
-				cluster, err = gc.operations.get(*gc.Project, clusterLoc, rb.Cluster.Name)
+			log.Printf("Creating cluster %q in %q", clusterName, clusterLoc)
+			op, err = gc.operations.create(*gc.Project, clusterLoc, rb)
+			if nil == err {
+				if err = gc.wait(clusterLoc, op.Name, creationTimeout); nil == err {
+					cluster, err = gc.operations.get(*gc.Project, clusterLoc, rb.Cluster.Name)
+				}
 			}
 		}
 		if nil != err {
-			errMsg := fmt.Sprintf("error creating cluster: '%v'", err)
+			errMsg := fmt.Sprintf("Error during cluster creation: '%v'. ", err)
 			if gc.NeedCleanup { // Delete half created cluster if it's user created
-				// TODO(chaodaiG): add this part when deletion logic is done
+				errMsg = fmt.Sprintf("%sDeleting cluster %q in %q in background...\n", errMsg, clusterName, clusterLoc)
+				go gc.operations.delete(*gc.Project, clusterName, clusterLoc)
 			}
+			// Retry another region if cluster creation failed.
 			// TODO(chaodaiG): catch specific errors as we know what the error look like for stockout etc.
 			if len(regions) != i+1 {
-				errMsg = fmt.Sprintf("%s. Retry another region '%s' for cluster creation", errMsg, regions[i+1])
+				errMsg = fmt.Sprintf("%sRetry another region %q for cluster creation", errMsg, regions[i+1])
 			}
 			log.Printf(errMsg)
 		} else {
@@ -263,6 +286,39 @@ func (gc *GKECluster) Acquire() error {
 	}
 
 	return err
+}
+
+// Delete takes care of GKE cluster resource cleanup. It only release Boskos resource if running in
+// Prow, otherwise deletes the cluster if marked NeedsCleanup
+func (gc *GKECluster) Delete() error {
+	gc.ensureProtected()
+	// Release Boskos if running in Prow, will let Janitor taking care of
+	// clusters deleting
+	if common.IsProw() {
+		log.Printf("Releasing Boskos resource: '%v'", *gc.Project)
+		return gc.boskosOps.ReleaseGKEProject(nil, *gc.Project)
+	}
+
+	// NeedCleanup is only true if running locally and cluster created by the
+	// process
+	if !gc.NeedCleanup {
+		return nil
+	}
+	// Should only get here if running locally and cluster created by this
+	// client, so at this moment cluster should have been set
+	if nil == gc.Cluster {
+		return fmt.Errorf("cluster doesn't exist")
+	}
+
+	log.Printf("Deleting cluster %q in %q", gc.Cluster.Name, gc.Cluster.Location)
+	op, err := gc.operations.delete(*gc.Project, gc.Cluster.Name, gc.Cluster.Location)
+	if nil == err {
+		err = gc.wait(gc.Cluster.Location, op.Name, deletionTimeout)
+	}
+	if nil != err {
+		return fmt.Errorf("failed deleting cluster: '%v'", err)
+	}
+	return nil
 }
 
 // wait depends on unique opName(operation ID created by cloud), and waits until
