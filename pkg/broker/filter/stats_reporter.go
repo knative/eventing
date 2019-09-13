@@ -24,10 +24,13 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	. "knative.dev/eventing/pkg/metrics/metricskey"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
+)
+
+const (
+	// anyValue is the default value if the trigger filter attributes are empty.
+	anyValue = "any"
 )
 
 var (
@@ -54,6 +57,19 @@ var (
 		"The time spent processing an event before it is dispatched to a Trigger subscriber",
 		stats.UnitMilliseconds,
 	)
+
+	// Create the tag keys that will be used to add tags to our measurements.
+	// Tag keys must conform to the restrictions described in
+	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
+	// - length between 1 and 255 inclusive
+	// - characters are printable US-ASCII
+	namespaceKey           = tag.MustNewKey(metricskey.LabelNamespaceName)
+	triggerKey             = tag.MustNewKey(metricskey.LabelTriggerName)
+	brokerKey              = tag.MustNewKey(metricskey.LabelBrokerName)
+	triggerFilterTypeKey   = tag.MustNewKey(metricskey.LabelFilterType)
+	triggerFilterSourceKey = tag.MustNewKey(metricskey.LabelFilterSource)
+	responseCodeKey        = tag.MustNewKey(metricskey.LabelResponseCode)
+	responseCodeClassKey   = tag.MustNewKey(metricskey.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
@@ -64,6 +80,10 @@ type ReportArgs struct {
 	filterSource string
 }
 
+func init() {
+	register()
+}
+
 // StatsReporter defines the interface for sending filter metrics.
 type StatsReporter interface {
 	ReportEventCount(args *ReportArgs, responseCode int) error
@@ -72,98 +92,48 @@ type StatsReporter interface {
 }
 
 var _ StatsReporter = (*reporter)(nil)
+var emptyContext = context.Background()
 
 // reporter holds cached metric objects to report filter metrics.
-type reporter struct {
-	namespaceTagKey        tag.Key
-	triggerTagKey          tag.Key
-	brokerTagKey           tag.Key
-	triggerFilterTypeKey   tag.Key
-	triggerFilterSourceKey tag.Key
-	responseCodeKey        tag.Key
-	responseCodeClassKey   tag.Key
-	filterResultKey        tag.Key
-}
+type reporter struct{}
 
 // NewStatsReporter creates a reporter that collects and reports filter metrics.
-func NewStatsReporter() (StatsReporter, error) {
-	var r = &reporter{}
+func NewStatsReporter() StatsReporter {
+	return &reporter{}
+}
 
-	// Create the tag keys that will be used to add tags to our measurements.
-	nsTag, err := tag.NewKey(metricskey.LabelNamespaceName)
-	if err != nil {
-		return nil, err
-	}
-	r.namespaceTagKey = nsTag
-	triggerTag, err := tag.NewKey(metricskey.LabelTriggerName)
-	if err != nil {
-		return nil, err
-	}
-	r.triggerTagKey = triggerTag
-	brokerTag, err := tag.NewKey(metricskey.LabelBrokerName)
-	if err != nil {
-		return nil, err
-	}
-	r.brokerTagKey = brokerTag
-	triggerFilterTypeTag, err := tag.NewKey(metricskey.LabelFilterType)
-	if err != nil {
-		return nil, err
-	}
-	r.triggerFilterTypeKey = triggerFilterTypeTag
-	triggerFilterSourceKey, err := tag.NewKey(metricskey.LabelFilterSource)
-	if err != nil {
-		return nil, err
-	}
-	r.triggerFilterSourceKey = triggerFilterSourceKey
-	filterResultTag, err := tag.NewKey(LabelFilterResult)
-	if err != nil {
-		return nil, err
-	}
-	r.filterResultKey = filterResultTag
-	responseCodeTag, err := tag.NewKey(LabelResponseCode)
-	if err != nil {
-		return nil, err
-	}
-	r.responseCodeKey = responseCodeTag
-	responseCodeClassTag, err := tag.NewKey(LabelResponseCodeClass)
-	if err != nil {
-		return nil, err
-	}
-	r.responseCodeClassKey = responseCodeClassTag
-
+func register() {
 	// Create view to see our measurements.
-	err = view.Register(
+	err := view.Register(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.triggerTagKey, r.brokerTagKey, r.triggerFilterTypeKey, r.triggerFilterSourceKey, r.responseCodeKey, r.responseCodeClassKey},
+			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, triggerFilterSourceKey, responseCodeKey, responseCodeClassKey},
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.triggerTagKey, r.brokerTagKey, r.triggerFilterTypeKey, r.triggerFilterSourceKey, r.responseCodeKey, r.responseCodeClassKey},
+			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, triggerFilterSourceKey, responseCodeKey, responseCodeClassKey},
 		},
 		&view.View{
 			Description: processingTimeInMsecM.Description(),
 			Measure:     processingTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.triggerTagKey, r.brokerTagKey, r.triggerFilterTypeKey, r.triggerFilterSourceKey},
+			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, triggerFilterSourceKey},
 		},
 	)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	return r, nil
 }
 
 // ReportEventCount captures the event count.
 func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 	ctx, err := r.generateTag(args,
-		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
+		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 	if err != nil {
 		return err
 	}
@@ -174,8 +144,8 @@ func (r *reporter) ReportEventCount(args *ReportArgs, responseCode int) error {
 // ReportEventDispatchTime captures dispatch times.
 func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
 	ctx, err := r.generateTag(args,
-		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
+		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 	if err != nil {
 		return err
 	}
@@ -199,12 +169,12 @@ func (r *reporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) 
 func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.Context, error) {
 	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
 	ctx, err := tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.triggerTagKey, args.trigger),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.triggerFilterTypeKey, valueOrAny(args.filterType)),
-		tag.Insert(r.triggerFilterSourceKey, valueOrAny(args.filterSource)))
+		emptyContext,
+		tag.Insert(namespaceKey, args.ns),
+		tag.Insert(triggerKey, args.trigger),
+		tag.Insert(brokerKey, args.broker),
+		tag.Insert(triggerFilterTypeKey, valueOrAny(args.filterType)),
+		tag.Insert(triggerFilterSourceKey, valueOrAny(args.filterSource)))
 	if err != nil {
 		return nil, err
 	}
@@ -221,5 +191,5 @@ func valueOrAny(v string) string {
 	if v != "" {
 		return v
 	}
-	return AnyValue
+	return anyValue
 }

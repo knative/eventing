@@ -21,20 +21,13 @@ import (
 	"testing"
 	"time"
 
-	. "knative.dev/eventing/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
 
-// unregister, ehm, unregisters the metrics that were registered, by
-// virtue of StatsReporter creation.
-// Since golang executes test iterations within the same process, the stats reporter
-// returns an error if the metric is already registered and the test panics.
-func unregister() {
-	metricstest.Unregister("event_count", "event_dispatch_latencies")
-}
-
 func TestStatsReporter(t *testing.T) {
+	setup()
+
 	args := &ReportArgs{
 		ns:          "testns",
 		broker:      "testbroker",
@@ -42,21 +35,15 @@ func TestStatsReporter(t *testing.T) {
 		eventSource: "testeventsource",
 	}
 
-	r, err := NewStatsReporter()
-	if err != nil {
-		t.Fatalf("Failed to create a new reporter: %v", err)
-	}
-	// Without this `go test ... -count=X`, where X > 1, fails, since
-	// we get an error about view already being registered.
-	defer unregister()
+	r := NewStatsReporter()
 
 	wantTags := map[string]string{
-		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelBrokerName:    "testbroker",
-		metricskey.LabelEventType:     "testeventtype",
-		metricskey.LabelEventSource:   "testeventsource",
-		LabelResponseCode:             "202",
-		LabelResponseCodeClass:        "2xx",
+		metricskey.LabelNamespaceName:     "testns",
+		metricskey.LabelBrokerName:        "testbroker",
+		metricskey.LabelEventType:         "testeventtype",
+		metricskey.LabelEventSource:       "testeventsource",
+		metricskey.LabelResponseCode:      "202",
+		metricskey.LabelResponseCodeClass: "2xx",
 	}
 
 	// test ReportEventCount
@@ -83,4 +70,14 @@ func expectSuccess(t *testing.T, f func() error) {
 	if err := f(); err != nil {
 		t.Errorf("Reporter expected success but got error: %v", err)
 	}
+}
+
+func setup() {
+	resetMetrics()
+}
+
+func resetMetrics() {
+	// OpenCensus metrics carry global state that need to be reset between unit tests.
+	metricstest.Unregister("event_count", "event_dispatch_latencies")
+	register()
 }

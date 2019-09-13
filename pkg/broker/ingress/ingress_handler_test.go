@@ -22,13 +22,18 @@ const (
 	validHTTPMethod = nethttp.MethodPost
 )
 
-type mockReporter struct{}
+type mockReporter struct {
+	eventCountReported        bool
+	eventDispatchTimeReported bool
+}
 
 func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	r.eventCountReported = true
 	return nil
 }
 
 func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
+	r.eventDispatchTimeReported = true
 	return nil
 }
 
@@ -45,9 +50,11 @@ func (f *fakeClient) StartReceiver(ctx context.Context, fn interface{}) error {
 
 func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 	testCases := map[string]struct {
-		httpmethod     string
-		URI            string
-		expectedStatus int
+		httpmethod                string
+		URI                       string
+		expectedStatus            int
+		expectedEventCount        bool
+		expectedEventDispatchTime bool
 	}{
 		"method not allowed": {
 			httpmethod:     nethttp.MethodGet,
@@ -64,6 +71,7 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			client, _ := cloudevents.NewDefaultClient()
+			reporter := &mockReporter{}
 			handler := Handler{
 				Logger:   zap.NewNop(),
 				CeClient: client,
@@ -74,7 +82,7 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 				},
 				BrokerName: brokerName,
 				Namespace:  namespace,
-				Reporter:   &mockReporter{},
+				Reporter:   reporter,
 			}
 			event := cloudevents.NewEvent()
 			resp := new(cloudevents.EventResponse)
@@ -84,12 +92,19 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 			if resp.Status != tc.expectedStatus {
 				t.Errorf("Unexpected status code. Expected %v, Actual %v", tc.expectedStatus, resp.Status)
 			}
+			if reporter.eventCountReported != tc.expectedEventCount {
+				t.Errorf("Unexpected event count reported. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+			}
+			if reporter.eventDispatchTimeReported != tc.expectedEventDispatchTime {
+				t.Errorf("Unexpected event dispatch time reported. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			}
 		})
 	}
 }
 
 func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 	client := &fakeClient{}
+	reporter := &mockReporter{}
 	handler := Handler{
 		Logger:   zap.NewNop(),
 		CeClient: client,
@@ -100,7 +115,7 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 		},
 		BrokerName: brokerName,
 		Namespace:  namespace,
-		Reporter:   &mockReporter{},
+		Reporter:   reporter,
 	}
 	event := cloudevents.NewEvent()
 	resp := new(cloudevents.EventResponse)
@@ -109,5 +124,11 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 	_ = handler.serveHTTP(ctx, event, resp)
 	if !client.sent {
 		t.Errorf("client should invoke send function")
+	}
+	if !reporter.eventCountReported {
+		t.Errorf("event count should have been reported")
+	}
+	if !reporter.eventDispatchTimeReported {
+		t.Errorf("event dispatch time should have been reported")
 	}
 }
