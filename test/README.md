@@ -99,7 +99,7 @@ you'll need to create a Secret in your `default` Namespace called
 will then be copied into any new Namespace that is created by the testing
 infrastructure, and linked to any ServiceAccount created as a imagePulLSecret.
 Note: some tests will use the `knative-eventing-injection` label to
-automatically create new ServiceAccounts in some Namespaces, This feature
+automatically create new ServiceAccounts in some Namespaces, this feature
 does not yet support private registries. See
 https://github.com/knative/eventing/issues/1862 for status of this issue.
 

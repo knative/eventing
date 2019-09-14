@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	goerrs "errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -137,7 +138,7 @@ func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string
 
 	// Just double checking
 	if srcSecret == nil {
-		return nil, fmt.Errorf("Error copying secret, it's nil w/o error")
+		return nil, goerrs.New("Error copying Secret, it's nil w/o error")
 	}
 
 	// Found the secret, so now make a copy in our new namespace
@@ -153,19 +154,24 @@ func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string
 	// If the secret already exists then that's ok - some other test
 	// must have created it
 	if err != nil && !errors.IsAlreadyExists(err) {
-		client.T.Fatalf("Error copying the secret: %s", err)
+		return nil, fmt.Errorf("Error copying the Secret: %s", err)
 	}
 
+	client.T.Logf("Copied Secret %q into Namespace %q",
+		srcSecretName, tgtNS)
+
+	// If a ServiceAccount was provided then add it as an ImagePullSecret.
+	// Note: if the SA aleady has it then this is no-op
 	if svcAccount != "" {
 		_, err = tgtNSSvcAccI.Patch(svcAccount, types.StrategicMergePatchType,
 			[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
 		if err != nil {
-			client.T.Fatalf("Patch failed on NS/ServiceAccount (%s/%s): %s",
+			return nil, fmt.Errorf("Patch failed on NS/SA (%s/%s): %s",
 				tgtNS, srcSecretName, err)
 		}
+		client.T.Logf("Added Secret %q as ImagePullSecret to SA %q in NS %q",
+			srcSecretName, svcAccount, tgtNS)
 	}
-	client.T.Logf("Copied ImagePullSecret(%s) into namespace: %s",
-		srcSecretName, tgtNS)
 
 	return newSecret, nil
 }
