@@ -210,7 +210,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
 	if err != nil {
-		logging.FromContext(ctx).Error("error while converting logging config to base64", zap.Any("receiveAdapter", err))
+		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
 	}
 
 	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
