@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/configmap"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource/fake"
