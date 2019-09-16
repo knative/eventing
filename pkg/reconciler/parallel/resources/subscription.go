@@ -26,15 +26,15 @@ import (
 	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
-func ChoiceFilterSubscriptionName(choiceName string, caseNumber int) string {
-	return fmt.Sprintf("%s-kn-choice-filter-%d", choiceName, caseNumber)
+func ParallelFilterSubscriptionName(parallelName string, branchNumber int) string {
+	return fmt.Sprintf("%s-kn-parallel-filter-%d", parallelName, branchNumber)
 }
 
-func ChoiceSubscriptionName(choiceName string, caseNumber int) string {
-	return fmt.Sprintf("%s-kn-choice-%d", choiceName, caseNumber)
+func ParallelSubscriptionName(parallelName string, branchNumber int) string {
+	return fmt.Sprintf("%s-kn-parallel-%d", parallelName, branchNumber)
 }
 
-func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscription {
+func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
 	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -42,7 +42,7 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscri
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      ChoiceFilterSubscriptionName(p.Name, caseNumber),
+			Name:      ParallelFilterSubscriptionName(p.Name, branchNumber),
 
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(p),
@@ -52,21 +52,21 @@ func NewFilterSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscri
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       ChoiceChannelName(p.Name),
+				Name:       ParallelChannelName(p.Name),
 			},
-			Subscriber: p.Spec.Cases[caseNumber].Filter,
+			Subscriber: p.Spec.Branches[branchNumber].Filter,
 		},
 	}
 	r.Spec.Reply = &v1alpha1.ReplyStrategy{
 		Channel: &corev1.ObjectReference{
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 			Kind:       p.Spec.ChannelTemplate.Kind,
-			Name:       ChoiceCaseChannelName(p.Name, caseNumber),
+			Name:       ParallelBranchChannelName(p.Name, branchNumber),
 		}}
 	return r
 }
 
-func NewSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscription {
+func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
 	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -74,7 +74,7 @@ func NewSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscription 
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.Namespace,
-			Name:      ChoiceSubscriptionName(p.Name, caseNumber),
+			Name:      ParallelSubscriptionName(p.Name, branchNumber),
 
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(p),
@@ -84,14 +84,14 @@ func NewSubscription(caseNumber int, p *v1alpha1.Choice) *v1alpha1.Subscription 
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       ChoiceCaseChannelName(p.Name, caseNumber),
+				Name:       ParallelBranchChannelName(p.Name, branchNumber),
 			},
-			Subscriber: &p.Spec.Cases[caseNumber].Subscriber,
+			Subscriber: &p.Spec.Branches[branchNumber].Subscriber,
 		},
 	}
 
-	if p.Spec.Cases[caseNumber].Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Cases[caseNumber].Reply}
+	if p.Spec.Branches[branchNumber].Reply != nil {
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Branches[branchNumber].Reply}
 	} else if p.Spec.Reply != nil {
 		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
 	}

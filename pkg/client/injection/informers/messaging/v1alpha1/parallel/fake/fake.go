@@ -22,12 +22,12 @@ import (
 	"context"
 
 	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"
-	choice "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/choice"
+	parallel "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/parallel"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
 )
 
-var Get = choice.Get
+var Get = parallel.Get
 
 func init() {
 	injection.Fake.RegisterInformer(withInformer)
@@ -35,6 +35,6 @@ func init() {
 
 func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	f := fake.Get(ctx)
-	inf := f.Messaging().V1alpha1().Choices()
-	return context.WithValue(ctx, choice.Key{}, inf), inf.Informer()
+	inf := f.Messaging().V1alpha1().Parallels()
+	return context.WithValue(ctx, parallel.Key{}, inf), inf.Informer()
 }

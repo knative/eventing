@@ -30,35 +30,34 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// Choice defines conditional branches that will be wired in
+// Parallel defines conditional branches that will be wired in
 // series through Channels and Subscriptions.
-type Choice struct {
+type Parallel struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of the Choice.
-	Spec ChoiceSpec `json:"spec,omitempty"`
+	// Spec defines the desired state of the Parallel.
+	Spec ParallelSpec `json:"spec,omitempty"`
 
-	// Status represents the current state of the Choice. This data may be out of
+	// Status represents the current state of the Parallel. This data may be out of
 	// date.
 	// +optional
-	Status ChoiceStatus `json:"status,omitempty"`
+	Status ParallelStatus `json:"status,omitempty"`
 }
 
-// Check that Choice can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Choice)(nil)
-var _ apis.Defaultable = (*Choice)(nil)
+// Check that Parallel can be validated, can be defaulted, and has immutable fields.
+var _ apis.Validatable = (*Parallel)(nil)
+var _ apis.Defaultable = (*Parallel)(nil)
 
 // TODO: make appropriate fields immutable.
-//var _ apis.Immutable = (*Choice)(nil)
-var _ runtime.Object = (*Choice)(nil)
-var _ webhook.GenericCRD = (*Choice)(nil)
+//var _ apis.Immutable = (*Parallel)(nil)
+var _ runtime.Object = (*Parallel)(nil)
+var _ webhook.GenericCRD = (*Parallel)(nil)
 
-type ChoiceSpec struct {
-	// Cases is the list of Filter/Subscribers pairs. Filters are evaluated in the order
-	// provided, until one pass (returns true)
-	Cases []ChoiceCase `json:"cases"`
+type ParallelSpec struct {
+	// Branches is the list of Filter/Subscribers pairs.
+	Branches []ParallelBranch `json:"branches"`
 
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
@@ -80,15 +79,15 @@ type ChoiceSpec struct {
 	Reply *corev1.ObjectReference `json:"reply,omitempty"`
 }
 
-type ChoiceCase struct {
-	// Filter is the expression guarding the branch/case
+type ParallelBranch struct {
+	// Filter is the expression guarding the branch
 	Filter *SubscriberSpec `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
 	Subscriber SubscriberSpec `json:"subscriber"`
 
 	// Reply is a Reference to where the result of Subscriber of this case gets sent to.
-	// If not specified, sent the result to the Choice Reply
+	// If not specified, sent the result to the Parallel Reply
 	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
@@ -102,39 +101,39 @@ type ChoiceCase struct {
 	Reply *corev1.ObjectReference `json:"reply,omitempty"`
 }
 
-// ChoiceStatus represents the current state of a Choice.
-type ChoiceStatus struct {
+// ParallelStatus represents the current state of a Parallel.
+type ParallelStatus struct {
 	// inherits duck/v1alpha1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1beta1.Status `json:",inline"`
 
 	// IngressChannelStatus corresponds to the ingress channel status.
-	IngressChannelStatus ChoiceChannelStatus `json:"ingressChannelStatus"`
+	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus"`
 
-	// CaseStatuses is an array of corresponding to cases status.
-	// Matches the Spec.Cases array in the order.
-	CaseStatuses []ChoiceCaseStatus `json:"caseStatuses"`
+	// BranchStatuses is an array of corresponding to branch statuses.
+	// Matches the Spec.Branches array in the order.
+	BranchStatuses []ParallelBranchStatus `json:"branchStatuses"`
 
-	// AddressStatus is the starting point to this Choice. Sending to this
+	// AddressStatus is the starting point to this Parallel. Sending to this
 	// will target the first subscriber.
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
 	duckv1alpha1.AddressStatus `json:",inline"`
 }
 
-// ChoiceCaseStatus represents the current state of a Choice case
-type ChoiceCaseStatus struct {
+// ParallelBranchStatus represents the current state of a Parallel branch
+type ParallelBranchStatus struct {
 	// FilterSubscriptionStatus corresponds to the filter subscription status.
-	FilterSubscriptionStatus ChoiceSubscriptionStatus `json:"filterSubscriptionStatus"`
+	FilterSubscriptionStatus ParallelSubscriptionStatus `json:"filterSubscriptionStatus"`
 
 	// FilterChannelStatus corresponds to the filter channel status.
-	FilterChannelStatus ChoiceChannelStatus `json:"filterChannelStatus"`
+	FilterChannelStatus ParallelChannelStatus `json:"filterChannelStatus"`
 
 	// SubscriptionStatus corresponds to the subscriber subscription status.
-	SubscriptionStatus ChoiceSubscriptionStatus `json:"subscriberSubscriptionStatus"`
+	SubscriptionStatus ParallelSubscriptionStatus `json:"subscriberSubscriptionStatus"`
 }
 
-type ChoiceChannelStatus struct {
+type ParallelChannelStatus struct {
 	// Channel is the reference to the underlying channel.
 	Channel corev1.ObjectReference `json:"channel"`
 
@@ -142,7 +141,7 @@ type ChoiceChannelStatus struct {
 	ReadyCondition apis.Condition `json:"ready"`
 }
 
-type ChoiceSubscriptionStatus struct {
+type ParallelSubscriptionStatus struct {
 	// Subscription is the reference to the underlying Subscription.
 	Subscription corev1.ObjectReference `json:"subscription"`
 
@@ -152,15 +151,15 @@ type ChoiceSubscriptionStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChoiceList is a collection of Choices.
-type ChoiceList struct {
+// ParallelList is a collection of Parallels.
+type ParallelList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Choice `json:"items"`
+	Items           []Parallel `json:"items"`
 }
 
-// GetGroupVersionKind returns GroupVersionKind for Choice
-func (p *Choice) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Choice")
+// GetGroupVersionKind returns GroupVersionKind for Parallel
+func (p *Parallel) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("Parallel")
 }

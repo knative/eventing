@@ -31,59 +31,59 @@ import (
 	v1alpha1 "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 )
 
-// ChoiceInformer provides access to a shared informer and lister for
-// Choices.
-type ChoiceInformer interface {
+// ParallelInformer provides access to a shared informer and lister for
+// Parallels.
+type ParallelInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ChoiceLister
+	Lister() v1alpha1.ParallelLister
 }
 
-type choiceInformer struct {
+type parallelInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewChoiceInformer constructs a new informer for Choice type.
+// NewParallelInformer constructs a new informer for Parallel type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewChoiceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredChoiceInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewParallelInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredParallelInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredChoiceInformer constructs a new informer for Choice type.
+// NewFilteredParallelInformer constructs a new informer for Parallel type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredChoiceInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredParallelInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MessagingV1alpha1().Choices(namespace).List(options)
+				return client.MessagingV1alpha1().Parallels(namespace).List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.MessagingV1alpha1().Choices(namespace).Watch(options)
+				return client.MessagingV1alpha1().Parallels(namespace).Watch(options)
 			},
 		},
-		&messagingv1alpha1.Choice{},
+		&messagingv1alpha1.Parallel{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *choiceInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredChoiceInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *parallelInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredParallelInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *choiceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&messagingv1alpha1.Choice{}, f.defaultInformer)
+func (f *parallelInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&messagingv1alpha1.Parallel{}, f.defaultInformer)
 }
 
-func (f *choiceInformer) Lister() v1alpha1.ChoiceLister {
-	return v1alpha1.NewChoiceLister(f.Informer().GetIndexer())
+func (f *parallelInformer) Lister() v1alpha1.ParallelLister {
+	return v1alpha1.NewParallelLister(f.Informer().GetIndexer())
 }

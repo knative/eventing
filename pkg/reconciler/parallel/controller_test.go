@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choice
+package parallel
 
 import (
 	"testing"
@@ -24,7 +24,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/choice/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/parallel/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription/fake"
 )
 

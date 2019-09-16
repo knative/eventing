@@ -14,7 +14,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: choices.messaging.knative.dev
+  name: parallels.messaging.knative.dev
   labels:
     eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
@@ -22,9 +22,9 @@ spec:
   group: messaging.knative.dev
   version: v1alpha1
   names:
-    kind: Choice
-    plural: choices
-    singular: choice
+    kind: Parallel
+    plural: parallels
+    singular: parallel
     categories:
     - all
     - knative
@@ -51,10 +51,10 @@ spec:
       properties:
         spec:
           required:
-            - cases
+            - branches
             - channelTemplate
           properties:
-            cases:
+            branches:
               type: array
               items:
                 type: object

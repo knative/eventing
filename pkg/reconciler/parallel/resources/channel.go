@@ -28,19 +28,19 @@ import (
 	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
-// ChoiceChannelName creates a name for the Channel fronting choice.
-func ChoiceChannelName(choiceName string) string {
-	return fmt.Sprintf("%s-kn-choice", choiceName)
+// ParallelChannelName creates a name for the Channel fronting parallel.
+func ParallelChannelName(parallelName string) string {
+	return fmt.Sprintf("%s-kn-parallel", parallelName)
 }
 
-// ChoiceCaseChannelName creates a name for the Channel fronting a specific case
-func ChoiceCaseChannelName(choiceName string, caseNumber int) string {
-	return fmt.Sprintf("%s-kn-choice-%d", choiceName, caseNumber)
+// ParallelBranchChannelName creates a name for the Channel fronting a specific branch
+func ParallelBranchChannelName(parallelName string, branchNumber int) string {
+	return fmt.Sprintf("%s-kn-parallel-%d", parallelName, branchNumber)
 }
 
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
-// for a given choice.
-func NewChannel(name string, p *v1alpha1.Choice) (*unstructured.Unstructured, error) {
+// for a given parallel.
+func NewChannel(name string, p *v1alpha1.Parallel) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := eventingduck.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{

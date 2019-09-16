@@ -28,24 +28,24 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-func TestChoiceValidation(t *testing.T) {
-	name := "invalid choice spec"
-	choice := &Choice{Spec: ChoiceSpec{}}
+func TestParallelValidation(t *testing.T) {
+	name := "invalid parallel spec"
+	parallel := &Parallel{Spec: ParallelSpec{}}
 
 	want := &apis.FieldError{
-		Paths:   []string{"spec.channelTemplate", "spec.cases"},
+		Paths:   []string{"spec.channelTemplate", "spec.branches"},
 		Message: "missing field(s)",
 	}
 
 	t.Run(name, func(t *testing.T) {
-		got := choice.Validate(context.TODO())
+		got := parallel.Validate(context.TODO())
 		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("Choice.Validate (-want, +got) = %v", diff)
+			t.Errorf("Parallel.Validate (-want, +got) = %v", diff)
 		}
 	})
 }
 
-func TestChoiceSpecValidation(t *testing.T) {
+func TestParallelSpecValidation(t *testing.T) {
 	subscriberURI := "http://example.com"
 	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
 		metav1.TypeMeta{
@@ -56,28 +56,28 @@ func TestChoiceSpecValidation(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		ts   *ChoiceSpec
+		ts   *ParallelSpec
 		want *apis.FieldError
 	}{{
-		name: "invalid choice spec - empty",
-		ts:   &ChoiceSpec{},
+		name: "invalid parallel spec - empty",
+		ts:   &ParallelSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channelTemplate", "cases")
+			fe := apis.ErrMissingField("channelTemplate", "branches")
 			return fe
 		}(),
 	}, {
-		name: "invalid choice spec - empty cases",
-		ts: &ChoiceSpec{
+		name: "invalid parallel spec - empty branches",
+		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("cases")
+			fe := apis.ErrMissingField("branches")
 			return fe
 		}(),
 	}, {
 		name: "missing channeltemplatespec",
-		ts: &ChoiceSpec{
-			Cases: []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+		ts: &ParallelSpec{
+			Branches: []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -85,9 +85,9 @@ func TestChoiceSpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
-		ts: &ChoiceSpec{
+		ts: &ParallelSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{Kind: "mykind"}, &runtime.RawExtension{}},
-			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -95,38 +95,38 @@ func TestChoiceSpecValidation(t *testing.T) {
 		}(),
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
-		ts: &ChoiceSpec{
+		ts: &ParallelSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{metav1.TypeMeta{APIVersion: "myapiversion"}, &runtime.RawExtension{}},
-			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
 			return fe
 		}(),
 	}, {
-		name: "valid choice",
-		ts: &ChoiceSpec{
+		name: "valid parallel",
+		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			return nil
 		}(),
 	}, {
-		name: "valid choice with valid reply",
-		ts: &ChoiceSpec{
+		name: "valid parallel with valid reply",
+		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
 			return nil
 		}(),
 	}, {
-		name: "valid choice with invalid missing name",
-		ts: &ChoiceSpec{
+		name: "valid parallel with invalid missing name",
+		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply: &corev1.ObjectReference{
 				APIVersion: "messaging.knative.dev/v1alpha1",
 				Kind:       "inmemorychannel",
@@ -137,10 +137,10 @@ func TestChoiceSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "valid choice with invalid reply",
-		ts: &ChoiceSpec{
+		name: "valid parallel with invalid reply",
+		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Cases:           []ChoiceCase{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -154,7 +154,7 @@ func TestChoiceSpecValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.ts.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: Validate ChoiceSpec (-want, +got) = %v", test.name, diff)
+				t.Errorf("%s: Validate ParallelSpec (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}

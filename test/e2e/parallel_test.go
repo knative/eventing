@@ -31,26 +31,26 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
-type caseConfig struct {
+type branchConfig struct {
 	filter bool
 }
 
-func TestChoice(t *testing.T) {
+func TestParallel(t *testing.T) {
 	const (
-		senderPodName = "e2e-choice"
+		senderPodName = "e2e-parallel"
 	)
 	table := []struct {
-		name        string
-		casesConfig []caseConfig
-		expected    string
+		name           string
+		branchesConfig []branchConfig
+		expected       string
 	}{
 		{
-			name: "two-cases-pass-first-case-only",
-			casesConfig: []caseConfig{
+			name: "two-branches-pass-first-branch-only",
+			branchesConfig: []branchConfig{
 				{filter: false},
 				{filter: true},
 			},
-			expected: "choice-two-cases-pass-first-case-only-case-0-sub",
+			expected: "parallel-two-branches-pass-first-branch-only-branch-0-sub",
 		},
 	}
 	channelTypeMeta := getChannelTypeMeta(common.DefaultChannel)
@@ -59,19 +59,19 @@ func TestChoice(t *testing.T) {
 	defer tearDown(client)
 
 	for _, tc := range table {
-		choiceCases := make([]v1alpha1.ChoiceCase, len(tc.casesConfig))
-		for caseNumber, cse := range tc.casesConfig {
+		parallelBranches := make([]v1alpha1.ParallelBranch, len(tc.branchesConfig))
+		for branchNumber, cse := range tc.branchesConfig {
 			// construct filter services
-			filterPodName := fmt.Sprintf("choice-%s-case-%d-filter", tc.name, caseNumber)
+			filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
 			filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
 			client.CreatePodOrFail(filterPod, common.WithService(filterPodName))
 
-			// construct case subscriber
-			subPodName := fmt.Sprintf("choice-%s-case-%d-sub", tc.name, caseNumber)
+			// construct branch subscriber
+			subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 			subPod := resources.SequenceStepperPod(subPodName, subPodName)
 			client.CreatePodOrFail(subPod, common.WithService(subPodName))
 
-			choiceCases[caseNumber] = v1alpha1.ChoiceCase{
+			parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
 				Filter: &v1alpha1.SubscriberSpec{
 					Ref: resources.ServiceRef(filterPodName),
 				},
@@ -90,7 +90,7 @@ func TestChoice(t *testing.T) {
 		loggerPod := resources.EventLoggerPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
-		// create channel as reply of the Choice
+		// create channel as reply of the Parallel
 		// TODO(Fredy-Z): now we'll have to use a channel plus its subscription here, as reply of the Subscription
 		//                must be Addressable.
 		replyChannelName := fmt.Sprintf("reply-%s", tc.name)
@@ -103,19 +103,19 @@ func TestChoice(t *testing.T) {
 			resources.WithSubscriberForSubscription(loggerPodName),
 		)
 
-		choice := eventingtesting.NewChoice(tc.name, client.Namespace,
-			eventingtesting.WithChoiceChannelTemplateSpec(channelTemplate),
-			eventingtesting.WithChoiceCases(choiceCases),
-			eventingtesting.WithChoiceReply(pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)))
+		parallel := eventingtesting.NewParallel(tc.name, client.Namespace,
+			eventingtesting.WithParallelChannelTemplateSpec(channelTemplate),
+			eventingtesting.WithParallelBranches(parallelBranches),
+			eventingtesting.WithParallelReply(pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)))
 
-		client.CreateChoiceOrFail(choice)
+		client.CreateParallelOrFail(parallel)
 
 		if err := client.WaitForAllTestResourcesReady(); err != nil {
 			t.Fatalf("Failed to get all test resources ready: %v", err)
 		}
 
-		// send fake CloudEvent to the Choice
-		msg := fmt.Sprintf("TestChoice %s - ", uuid.NewUUID())
+		// send fake CloudEvent to the Parallel
+		msg := fmt.Sprintf("TestParallel %s - ", uuid.NewUUID())
 		// NOTE: the eventData format must be CloudEventBaseData, as it needs to be correctly parsed in the stepper service.
 		eventData := resources.CloudEventBaseData{Message: msg}
 		eventDataBytes, err := json.Marshal(eventData)
@@ -131,10 +131,10 @@ func TestChoice(t *testing.T) {
 		if err := client.SendFakeEventToAddressable(
 			senderPodName,
 			tc.name,
-			common.ChoiceTypeMeta,
+			common.ParallelTypeMeta,
 			event,
 		); err != nil {
-			t.Fatalf("Failed to send fake CloudEvent to the choice %q", tc.name)
+			t.Fatalf("Failed to send fake CloudEvent to the parallel %q", tc.name)
 		}
 
 		// verify the logger service receives the correct transformed event

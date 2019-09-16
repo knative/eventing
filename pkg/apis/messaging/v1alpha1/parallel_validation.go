@@ -22,18 +22,18 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-func (p *Choice) Validate(ctx context.Context) *apis.FieldError {
+func (p *Parallel) Validate(ctx context.Context) *apis.FieldError {
 	return p.Spec.Validate(ctx).ViaField("spec")
 }
 
-func (ps *ChoiceSpec) Validate(ctx context.Context) *apis.FieldError {
+func (ps *ParallelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	if len(ps.Cases) == 0 {
-		errs = errs.Also(apis.ErrMissingField("cases"))
+	if len(ps.Branches) == 0 {
+		errs = errs.Also(apis.ErrMissingField("branches"))
 	}
 
-	for i, s := range ps.Cases {
+	for i, s := range ps.Branches {
 		if s.Filter != nil {
 			if err := IsValidSubscriberSpec(*s.Filter); err != nil {
 				errs = errs.Also(err.ViaField("filter"))
@@ -41,7 +41,7 @@ func (ps *ChoiceSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 
 		if e := IsValidSubscriberSpec(s.Subscriber); e != nil {
-			errs = errs.Also(apis.ErrInvalidArrayValue(s, "cases", i))
+			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches", i))
 		}
 	}
 

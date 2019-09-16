@@ -139,14 +139,14 @@ func (client *Client) CreateSequenceOrFail(sequence *messagingv1alpha1.Sequence)
 	client.Tracker.AddObj(sequence)
 }
 
-// CreateChoiceOrFail will create a Choice or fail the test if there is an error.
-func (client *Client) CreateChoiceOrFail(choice *messagingv1alpha1.Choice) {
-	choices := client.Eventing.MessagingV1alpha1().Choices(client.Namespace)
-	_, err := choices.Create(choice)
+// CreateParallelOrFail will create a Parallel or fail the test if there is an error.
+func (client *Client) CreateParallelOrFail(parallel *messagingv1alpha1.Parallel) {
+	parallels := client.Eventing.MessagingV1alpha1().Parallels(client.Namespace)
+	_, err := parallels.Create(parallel)
 	if err != nil {
-		client.T.Fatalf("Failed to create choice %q: %v", choice.Name, err)
+		client.T.Fatalf("Failed to create parallel %q: %v", parallel.Name, err)
 	}
-	client.Tracker.AddObj(choice)
+	client.Tracker.AddObj(parallel)
 }
 
 // CreateCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.

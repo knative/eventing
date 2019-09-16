@@ -29,38 +29,38 @@ import (
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
-var choiceConditionReady = apis.Condition{
-	Type:   ChoiceConditionReady,
+var parallelConditionReady = apis.Condition{
+	Type:   ParallelConditionReady,
 	Status: corev1.ConditionTrue,
 }
 
-var choiceConditionChannelsReady = apis.Condition{
-	Type:   ChoiceConditionChannelsReady,
+var parallelConditionChannelsReady = apis.Condition{
+	Type:   ParallelConditionChannelsReady,
 	Status: corev1.ConditionTrue,
 }
 
-var choiceConditionSubscriptionsReady = apis.Condition{
-	Type:   ChoiceConditionSubscriptionsReady,
+var parallelConditionSubscriptionsReady = apis.Condition{
+	Type:   ParallelConditionSubscriptionsReady,
 	Status: corev1.ConditionTrue,
 }
 
-func TestChoiceGetCondition(t *testing.T) {
+func TestParallelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
-		ss        *ChoiceStatus
+		ss        *ParallelStatus
 		condQuery apis.ConditionType
 		want      *apis.Condition
 	}{{
 		name: "single condition",
-		ss: &ChoiceStatus{
+		ss: &ParallelStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{
-					choiceConditionReady,
+					parallelConditionReady,
 				},
 			},
 		},
 		condQuery: apis.ConditionReady,
-		want:      &choiceConditionReady,
+		want:      &parallelConditionReady,
 	}}
 
 	for _, test := range tests {
@@ -73,81 +73,81 @@ func TestChoiceGetCondition(t *testing.T) {
 	}
 }
 
-func TestChoiceInitializeConditions(t *testing.T) {
+func TestParallelInitializeConditions(t *testing.T) {
 	tests := []struct {
 		name string
-		ts   *ChoiceStatus
-		want *ChoiceStatus
+		ts   *ParallelStatus
+		want *ParallelStatus
 	}{{
 		name: "empty",
-		ts:   &ChoiceStatus{},
-		want: &ChoiceStatus{
+		ts:   &ParallelStatus{},
+		want: &ParallelStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   ChoiceConditionAddressable,
+					Type:   ParallelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionChannelsReady,
+					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionReady,
+					Type:   ParallelConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionSubscriptionsReady,
+					Type:   ParallelConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
 	}, {
 		name: "one false",
-		ts: &ChoiceStatus{
+		ts: &ParallelStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   ChoiceConditionChannelsReady,
+					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}},
 			},
 		},
-		want: &ChoiceStatus{
+		want: &ParallelStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   ChoiceConditionAddressable,
+					Type:   ParallelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionChannelsReady,
+					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionFalse,
 				}, {
-					Type:   ChoiceConditionReady,
+					Type:   ParallelConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionSubscriptionsReady,
+					Type:   ParallelConditionSubscriptionsReady,
 					Status: corev1.ConditionUnknown,
 				}},
 			},
 		},
 	}, {
 		name: "one true",
-		ts: &ChoiceStatus{
+		ts: &ParallelStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   ChoiceConditionSubscriptionsReady,
+					Type:   ParallelConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
 				}},
 			},
 		},
-		want: &ChoiceStatus{
+		want: &ParallelStatus{
 			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{
-					Type:   ChoiceConditionAddressable,
+					Type:   ParallelConditionAddressable,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionChannelsReady,
+					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionReady,
+					Type:   ParallelConditionReady,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   ChoiceConditionSubscriptionsReady,
+					Type:   ParallelConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
 				}},
 			},
@@ -164,7 +164,7 @@ func TestChoiceInitializeConditions(t *testing.T) {
 	}
 }
 
-func TestChoicePropagateSubscriptionStatuses(t *testing.T) {
+func TestParallelPropagateSubscriptionStatuses(t *testing.T) {
 	tests := []struct {
 		name  string
 		fsubs []*Subscription
@@ -228,9 +228,9 @@ func TestChoicePropagateSubscriptionStatuses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := ChoiceStatus{}
+			ps := ParallelStatus{}
 			ps.PropagateSubscriptionStatuses(test.fsubs, test.subs)
-			got := ps.GetCondition(ChoiceConditionSubscriptionsReady).Status
+			got := ps.GetCondition(ParallelConditionSubscriptionsReady).Status
 			want := test.want
 			if want != got {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
@@ -239,7 +239,7 @@ func TestChoicePropagateSubscriptionStatuses(t *testing.T) {
 	}
 }
 
-func TestChoicePropagateChannelStatuses(t *testing.T) {
+func TestParallelPropagateChannelStatuses(t *testing.T) {
 	tests := []struct {
 		name     string
 		ichannel *duckv1alpha1.Channelable
@@ -284,9 +284,9 @@ func TestChoicePropagateChannelStatuses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := ChoiceStatus{}
+			ps := ParallelStatus{}
 			ps.PropagateChannelStatuses(test.ichannel, test.channels)
-			got := ps.GetCondition(ChoiceConditionChannelsReady).Status
+			got := ps.GetCondition(ParallelConditionChannelsReady).Status
 			want := test.want
 			if want != got {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", want, got)
@@ -295,7 +295,7 @@ func TestChoicePropagateChannelStatuses(t *testing.T) {
 	}
 }
 
-func TestChoiceReady(t *testing.T) {
+func TestParallelReady(t *testing.T) {
 	tests := []struct {
 		name     string
 		fsubs    []*Subscription
@@ -377,7 +377,7 @@ func TestChoiceReady(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := ChoiceStatus{}
+			ps := ParallelStatus{}
 			ps.PropagateChannelStatuses(test.ichannel, test.channels)
 			ps.PropagateSubscriptionStatuses(test.fsubs, test.subs)
 			got := ps.IsReady()
@@ -389,7 +389,7 @@ func TestChoiceReady(t *testing.T) {
 	}
 }
 
-func TestChoicePropagateSetAddress(t *testing.T) {
+func TestParallelPropagateSetAddress(t *testing.T) {
 	URL, _ := apis.ParseURL("http://example.com")
 	tests := []struct {
 		name       string
@@ -425,13 +425,13 @@ func TestChoicePropagateSetAddress(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ps := ChoiceStatus{}
+			ps := ParallelStatus{}
 			ps.setAddress(test.address)
 			got := ps.Address
 			if diff := cmp.Diff(test.want, got, ignoreAllButTypeAndStatus); diff != "" {
 				t.Errorf("unexpected address (-want, +got) = %v", diff)
 			}
-			gotStatus := ps.GetCondition(ChoiceConditionAddressable).Status
+			gotStatus := ps.GetCondition(ParallelConditionAddressable).Status
 			if test.wantStatus != gotStatus {
 				t.Errorf("unexpected conditions (-want, +got) = %v %v", test.wantStatus, gotStatus)
 			}
