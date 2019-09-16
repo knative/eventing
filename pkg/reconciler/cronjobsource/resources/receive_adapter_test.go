@@ -93,6 +93,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 						{
 							Name:  "receive-adapter",
 							Image: "test-image",
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9090,
+							}},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "SCHEDULE",
@@ -113,6 +117,18 @@ func TestMakeReceiveAdapter(t *testing.T) {
 								{
 									Name:  "NAMESPACE",
 									Value: "source-namespace",
+								},
+								{
+									Name:  "METRICS_DOMAIN",
+									Value: "knative.dev/eventing",
+								},
+								{
+									Name:  "K_METRICS_CONFIG",
+									Value: "",
+								},
+								{
+									Name:  "K_LOGGING_CONFIG",
+									Value: "",
 								},
 							},
 							Resources: corev1.ResourceRequirements{

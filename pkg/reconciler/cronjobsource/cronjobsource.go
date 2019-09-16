@@ -23,6 +23,8 @@ import (
 	"reflect"
 	"time"
 
+	"knative.dev/pkg/metrics"
+
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
 	"knative.dev/pkg/controller"
+	pkgLogging "knative.dev/pkg/logging"
 )
 
 const (
@@ -51,6 +54,7 @@ const (
 	cronJobUpdateStatusFailed      = "CronJobSourceUpdateStatusFailed"
 	cronJobSourceDeploymentCreated = "CronJobSurceDeploymentCreated"
 	cronJobSourceDeploymentUpdated = "CronJobSourceDeploymentUpdated"
+	component                      = "cronjobsource"
 )
 
 type Reconciler struct {
@@ -63,7 +67,10 @@ type Reconciler struct {
 	deploymentLister appsv1listers.DeploymentLister
 	eventTypeLister  eventinglisters.EventTypeLister
 
+	loggingContext context.Context
 	sinkReconciler *duck.SinkReconciler
+	loggingConfig  *pkgLogging.Config
+	metricsConfig  *metrics.ExporterOptions
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -201,11 +208,23 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 		return nil, err
 	}
 
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+	}
+
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+	}
+
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:   r.env.Image,
-		Source:  src,
-		Labels:  resources.Labels(src.Name),
-		SinkURI: sinkURI,
+		Image:         r.env.Image,
+		Source:        src,
+		Labels:        resources.Labels(src.Name),
+		SinkURI:       sinkURI,
+		LoggingConfig: loggingConfig,
+		MetricsConfig: metricsConfig,
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 
@@ -319,4 +338,33 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJob
 	}
 
 	return cj, err
+}
+
+// TODO determine how to push the updated logging config to existing data plane Pods.
+func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
+	if cfg != nil {
+		delete(cfg.Data, "_example")
+	}
+
+	logcfg, err := pkgLogging.NewConfigFromConfigMap(cfg)
+	if err != nil {
+		logging.FromContext(r.loggingContext).Warn("failed to create logging config from configmap", zap.String("cfg.Name", cfg.Name))
+		return
+	}
+	r.loggingConfig = logcfg
+	logging.FromContext(r.loggingContext).Info("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
+}
+
+// TODO determine how to push the updated metrics config to existing data plane Pods.
+func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
+	if cfg != nil {
+		delete(cfg.Data, "_example")
+	}
+
+	r.metricsConfig = &metrics.ExporterOptions{
+		Domain:    metrics.Domain(),
+		Component: component,
+		ConfigMap: cfg.Data,
+	}
+	logging.FromContext(r.loggingContext).Info("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }

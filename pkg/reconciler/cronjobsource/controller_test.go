@@ -20,10 +20,11 @@ import (
 	"os"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
-
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource/fake"
@@ -51,6 +52,15 @@ func TestNew(t *testing.T) {
 						t.Fatalf("Failed to unset env var: %v", err)
 					}
 				}()
+
+				if err := os.Setenv("METRICS_DOMAIN", "knative.dev/eventing"); err != nil {
+					t.Fatalf("Failed to set env var: %v", err)
+				}
+				defer func() {
+					if err := os.Unsetenv("METRICS_DOMAIN"); err != nil {
+						t.Fatalf("Failed to unset env var: %v", err)
+					}
+				}()
 			} else {
 				defer func() {
 					r := recover()
@@ -61,7 +71,27 @@ func TestNew(t *testing.T) {
 			}
 
 			ctx, _ := SetupFakeContext(t)
-			c := NewController(ctx, configmap.NewFixedWatcher())
+			c := NewController(ctx, configmap.NewStaticWatcher(
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "config-observability",
+						Namespace: "knative-eventing",
+					},
+					Data: map[string]string{
+						"_example": "test-config",
+					},
+				}, &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "config-logging",
+						Namespace: "knative-eventing",
+					},
+					Data: map[string]string{
+						"zap-logger-config":   "test-config",
+						"loglevel.controller": "info",
+						"loglevel.webhook":    "info",
+					},
+				},
+			))
 
 			if c == nil {
 				t.Fatal("Expected NewController to return a non-nil value")
