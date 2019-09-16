@@ -59,6 +59,15 @@ func TestChannelTracing(t *testing.T) {
 				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 				// TestMain.
 				zipkin.SetupZipkinTracing(client.Kube.Kube, st.Logf)
+				err := client.Kube.UpdateConfigMap("knative-eventing", "config-tracing", map[string]string{
+					"backend":         "zipkin",
+					"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+					"debug":           "true",
+					"sample-rate":     "1.0",
+				})
+				if err != nil {
+					st.Fatalf("Unable to set the ConfigMap: %v", err)
+				}
 
 				mustContain := setupChannelTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
 				assertLogContents(st, client, loggerPodName, mustContain)
