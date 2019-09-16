@@ -84,7 +84,7 @@ func TestChannelTracing(t *testing.T) {
 				if tc.incomingTraceId {
 					expectedNumSpans = 4
 				}
-				trace, err := zipkin.JSONTrace(traceID, expectedNumSpans, 15*time.Second)
+				trace, err := zipkin.JSONTrace(traceID, expectedNumSpans, 60*time.Second)
 				if err != nil {
 					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, trace)
 				}
