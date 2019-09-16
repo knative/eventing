@@ -1289,7 +1289,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:48d9df2cddc038865feba0d2f98e1aa6515cf6f53050ea43d09aefd22a47f0b3"
+  digest = "1:ab87d04472150900c566dd9e7068564532c47d82a95517846aabf0a337d09438"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
@@ -1301,7 +1301,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "816123d5e71fb88533d1564c331443387967e1dc"
+  revision = "4adb699576a34afae2e163f0ad5a0d2db0b30a5b"
 
 [solve-meta]
   analyzer-name = "dep"
