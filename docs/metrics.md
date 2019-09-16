@@ -1,6 +1,6 @@
 # Metrics
 
-This is a list of metrics exported by Knative Eventing components.
+This is a list of data-plane metrics exported by Knative Eventing components.
 
 ## Broker
 
@@ -8,8 +8,8 @@ These are exported by `broker-ingress` pods.
 
 | Name                   | Type      | Description                | Tags               |
 | ---------------------- | --------- | -------------------------- | ------------------ |
-| `broker_events_total`  | count     | Number of events received. | `result`, `broker` |
-| `broker_dispatch_time` | histogram | Time to dispatch an event. | `result`, `broker` |
+| `event_count`  | count     | Number of events received by a Broker. | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+| `event_dispatch_latencies` | histogram | The time spent dispatching an event to a Channel. | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 ## Trigger
 
@@ -17,22 +17,38 @@ These are exported by `broker-filter` pods.
 
 | Name                               | Type      | Description                                          | Tags                                           |
 | ---------------------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------- |
-| `trigger_events_total`             | count     | Number of events received.                           | `result`, `broker`, `trigger`                  |
-| `trigger_dispatch_time`            | histogram | Time to dispatch an event.                           | `result`, `broker`, `trigger`                  |
-| `trigger_filter_time`              | histogram | Time to filter an event.                             | `result`, `broker`, `trigger`, `filter_result` |
-| `broker_to_function_delivery_time` | histogram | Time from ingress of an event until it is dispatched | `result`, `broker`, `trigger`                  |
+| `event_count`             | count     | Number of events received by a Trigger                           | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
+| `event_dispatch_latencies`            | histogram | The time spent dispatching an event to a Trigger subscriber                           | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
+| `event_processing_latencies` | histogram | The time spent processing an event before it is dispatched to a Trigger subscriber | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type` |
 
-## Access metrics
+## Sources
+
+These are exported by core sources.
+
+### ApiServerSource
+
+| Name                               | Type      | Description                                          | Tags                                           |
+| ---------------------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------- |
+| `event_count`             | count     | Number of events sent                           | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+
+### CronJobSource
+
+| Name                               | Type      | Description                                          | Tags                                           |
+| ---------------------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------- |
+| `event_count`             | count     | Number of events sent                           | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+
+
+# Access metrics
+
+## Prometheus Collection
 
 Accessing metrics requires Prometheus and Grafana installed. Follow the
 [instructions to install Prometheus and Grafana](https://github.com/knative/docs/blob/master/docs/serving/installing-logging-metrics-traces.md)
 in namespace `knative-monitoring`.
 
-## Prometheus Collection
-
 > _All commands assume root of repo._
 
-1. Enable Knatives install of Prometheus to scrape Knative with GCP, run the
+1. Enable Knatives install of Prometheus to scrape Knative Eventing, run the
    following:
 
    ```shell
@@ -90,7 +106,7 @@ in namespace `knative-monitoring`.
 
 #### Remove Scrape Config
 
-Remove the text related to Cloud Run Events from `prometheus-scrape-config`,
+Remove the text related to Knative Eventing from `prometheus-scrape-config`,
 
 ```shell
 kubectl edit configmap -n  knative-monitoring prometheus-scrape-config
@@ -118,3 +134,27 @@ Follow the
 [instructions to open Grafana dashboard](https://github.com/knative/docs/blob/master/docs/serving/accessing-metrics.md#grafana),
 then you will access the metrics at
 [http://localhost:3000](http://localhost:3000).
+
+
+## StackDriver Collection
+
+1.  Install Knative Stackdriver components by running the following command from
+    the root directory of [knative/serving](https://github.com/knative/serving)
+    repository:
+
+    ```shell
+      kubectl apply --recursive --filename config/monitoring/100-namespace.yaml \
+          --filename config/monitoring/metrics/stackdriver
+    ```
+
+1. Run the following command to setup StackDriver as the metrics backend:
+
+   ```
+   kubectl edit cm -n knative-eventing config-observability
+   ```
+
+   Add `metrics.backend-destination: stackdriver` and `metrics.allow-stackdriver-custom-metrics: "true"`
+    to the `data` field. You can find detailed information in `data._example` field in the
+   `ConfigMap` you are editing.
+1. Open the StackDriver UI and see your resource metrics in the StackDriver Metrics Explorer.
+ You should be able to see metrics with the prefix `custom.googleapis.com/knative.dev/`.

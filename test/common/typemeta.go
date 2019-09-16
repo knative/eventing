@@ -66,8 +66,8 @@ var ChannelTypeMeta = MessagingTypeMeta(resources.ChannelKind)
 // SequenceTypeMeta is the TypeMeta ref for Sequence.
 var SequenceTypeMeta = MessagingTypeMeta(resources.SequenceKind)
 
-// ChoiceTypeMeta is the TypeMeta ref for Choice.
-var ChoiceTypeMeta = MessagingTypeMeta(resources.ChoiceKind)
+// ParallelTypeMeta is the TypeMeta ref for Parallel.
+var ParallelTypeMeta = MessagingTypeMeta(resources.ParallelKind)
 
 // MessagingTypeMeta returns the TypeMeta ref for an eventing messaing resource.
 func MessagingTypeMeta(kind string) *metav1.TypeMeta {

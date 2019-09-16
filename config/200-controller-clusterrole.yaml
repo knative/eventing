@@ -80,8 +80,8 @@ rules:
       - "sequences/status"
       - "channels"
       - "channels/status"
-      - "choices"
-      - "choices/status"
+      - "parallels"
+      - "parallels/status"
       - "subscriptions"
       - "subscriptions/status"
     verbs: *everything
@@ -91,7 +91,7 @@ rules:
       - "messaging.knative.dev"
     resources:
       - "sequences/finalizers"
-      - "choices/finalizers"
+      - "parallels/finalizers"
     verbs:
       - "update"
 

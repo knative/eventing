@@ -127,8 +127,8 @@ rules:
   resources:
   - sequences
   - sequences/status
-  - choices
-  - choices/status
+  - parallels
+  - parallels/status
   verbs:
   - get
   - list

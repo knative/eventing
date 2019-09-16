@@ -26,10 +26,10 @@ import (
 type Interface interface {
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
-	// Choices returns a ChoiceInformer.
-	Choices() ChoiceInformer
 	// InMemoryChannels returns a InMemoryChannelInformer.
 	InMemoryChannels() InMemoryChannelInformer
+	// Parallels returns a ParallelInformer.
+	Parallels() ParallelInformer
 	// Sequences returns a SequenceInformer.
 	Sequences() SequenceInformer
 	// Subscriptions returns a SubscriptionInformer.
@@ -52,14 +52,14 @@ func (v *version) Channels() ChannelInformer {
 	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Choices returns a ChoiceInformer.
-func (v *version) Choices() ChoiceInformer {
-	return &choiceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
 // InMemoryChannels returns a InMemoryChannelInformer.
 func (v *version) InMemoryChannels() InMemoryChannelInformer {
 	return &inMemoryChannelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Parallels returns a ParallelInformer.
+func (v *version) Parallels() ParallelInformer {
+	return &parallelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Sequences returns a SequenceInformer.

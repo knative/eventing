@@ -28,6 +28,14 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
+const (
+	unmarshalFailedDependencyAnnotation = "{" +
+		"\"kind\":{CronJobSource}, " +
+		"\"name\":\"test-cronjob-source\"," +
+		"\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"" +
+		"}"
+)
+
 // TriggerOption enables further configuration of a Trigger.
 type TriggerOption func(*v1alpha1.Trigger)
 
@@ -101,6 +109,42 @@ func WithTriggerSubscribed() TriggerOption {
 func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Status.SubscriberURI = uri
+	}
+}
+
+func WithUnmarshalFailedDependencyAnnotation() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		if t.Annotations == nil {
+			t.Annotations = make(map[string]string)
+		}
+		t.Annotations[v1alpha1.DependencyAnnotation] = unmarshalFailedDependencyAnnotation
+	}
+}
+
+func WithDependencyAnnotation(dependencyAnnotation string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		if t.Annotations == nil {
+			t.Annotations = make(map[string]string)
+		}
+		t.Annotations[v1alpha1.DependencyAnnotation] = dependencyAnnotation
+	}
+}
+
+func WithTriggerDependencyReady() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkDependencySucceeded()
+	}
+}
+
+func WithTriggerDependencyFailed(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkDependencyFailed(reason, message)
+	}
+}
+
+func WithTriggerDependencyUnknown(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkDependencyUnknown(reason, message)
 	}
 }
 

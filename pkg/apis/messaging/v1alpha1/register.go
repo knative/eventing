@@ -53,8 +53,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SubscriptionList{},
 		&Channel{},
 		&ChannelList{},
-		&Choice{},
-		&ChoiceList{},
+		&Parallel{},
+		&ParallelList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
