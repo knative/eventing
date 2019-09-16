@@ -362,6 +362,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:314c9403866f4451d4fd13ec823f559e4b576c4272fd0c771991ab5d17f7fa41"
+  name = "github.com/knative/pkg"
+  packages = [
+    "apis/duck",
+    "apis/duck/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "c27053214044899c369bfd6e4d51bbf8cc7ccca2"
+
+[[projects]]
+  branch = "master"
   digest = "1:927762c6729b4e72957ba3310e485ed09cf8451c5a637a52fd016a9fe09e7936"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -1320,6 +1331,8 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
+    "github.com/knative/pkg/apis/duck",
+    "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/tsenart/vegeta/lib",

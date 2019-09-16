@@ -93,3 +93,9 @@ func WithCronJobSourceSpec(spec v1alpha1.CronJobSourceSpec) CronJobSourceOption 
 		c.Spec = spec
 	}
 }
+
+func WithCronJobApiVersion(apiVersion string) CronJobSourceOption {
+	return func(c *v1alpha1.CronJobSource) {
+		c.APIVersion = apiVersion
+	}
+}

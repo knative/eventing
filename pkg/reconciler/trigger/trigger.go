@@ -24,15 +24,17 @@ import (
 	"reflect"
 	"time"
 
+	apisduck "github.com/knative/pkg/apis/duck"
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/pkg/controller"
-
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -44,6 +46,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
+	"knative.dev/pkg/controller"
 )
 
 const (
@@ -63,11 +66,12 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	triggerLister      listers.TriggerLister
-	subscriptionLister messaginglisters.SubscriptionLister
-	brokerLister       listers.BrokerLister
-	serviceLister      corev1listers.ServiceLister
-	resourceTracker    duck.ResourceTracker
+	triggerLister            listers.TriggerLister
+	subscriptionLister       messaginglisters.SubscriptionLister
+	brokerLister             listers.BrokerLister
+	serviceLister            corev1listers.ServiceLister
+	resourceTracker          duck.ResourceTracker
+	kresourceInformerFactory apisduck.InformerFactory
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -131,21 +135,23 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	// 3. Find the Subscriber's URI.
 	// 4. Creates a Subscription from the Broker's Trigger Channel to this Trigger via the Broker's
 	//    Filter Service with a specific path, and reply set to the Broker's Ingress Channel.
+	// 5. Find whether there is annotation with key "knative.dev/dependency".
+	// If not, mark Dependency to be succeeded, else figure out whether the dependency is ready and mark Dependency correspondingly
 
 	if t.DeletionTimestamp != nil {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
+	track := r.resourceTracker.TrackInNamespace(t)
 
 	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
-	objRef := corev1.ObjectReference{
+	brokerObjRef := corev1.ObjectReference{
 		Kind:       brokerGVK.Kind,
 		APIVersion: brokerGVK.GroupVersion().String(),
 		Name:       t.Spec.Broker,
 		Namespace:  t.Namespace,
 	}
-	track := r.resourceTracker.TrackInNamespace(t)
-	if err := track(objRef); err != nil {
+	if err := track(brokerObjRef); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
@@ -204,6 +210,66 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
+	if err := r.checkDependencyAnnotation(t, track, ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Reconciler) checkDependencyAnnotation(t *v1alpha1.Trigger, track func(corev1.ObjectReference) error, ctx context.Context) error {
+	if dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]; ok {
+		dependencyObjRef, err := v1alpha1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
+		if err != nil {
+			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
+			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
+		}
+		//trigger and its dependency importer are in the same namespace, we already did the validation when we in the trigger webhook
+		if err := track(dependencyObjRef); err != nil {
+			return fmt.Errorf("tracking dependency: %v", err)
+		}
+		if err := r.propagateDependencyReadiness(dependencyObjRef, ctx, t); err != nil {
+			return fmt.Errorf("propagating dependency readiness: %v", err)
+
+		}
+	} else {
+		t.Status.MarkDependencySucceeded()
+	}
+	return nil
+}
+
+func (r *Reconciler) propagateDependencyReadiness(dependencyObjRef corev1.ObjectReference, ctx context.Context, t *v1alpha1.Trigger) error {
+	gvk := schema.GroupVersionKind{
+		Group:   dependencyObjRef.GroupVersionKind().Group,
+		Version: dependencyObjRef.GroupVersionKind().Version,
+		Kind:    dependencyObjRef.Kind,
+	}
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+	_, lister, err := r.kresourceInformerFactory.Get(gvr)
+	if err != nil {
+		t.Status.MarkDependencyUnknown("FailedToListResource", "Failed to list resource: %v", err)
+		return fmt.Errorf("creating lister: %v", err)
+	}
+	dependencyObj, err := lister.ByNamespace(t.GetNamespace()).Get(dependencyObjRef.Name)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			t.Status.MarkDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: %v", err)
+		} else {
+			t.Status.MarkDependencyUnknown("DependencyGetFailed", "Failed to get dependency: %v", err)
+		}
+		return fmt.Errorf("getting the dependency: %v", err)
+	}
+	dependency := dependencyObj.(*duckv1alpha1.KResource)
+	// Temporarily comment it until we figure out whether we update Status.ObservedGeneration when KResource changes
+	// From manual testing, it looks like we never update  Status.ObservedGeneration
+	//if dependency.GetGeneration() != dependency.Status.ObservedGeneration {
+	//	logging.FromContext(ctx).Error("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
+	//		zap.Any("ObjectMeta Generation of dependency", dependency.GetGeneration()),
+	//		zap.Any("ObservedGeneration of status", dependency.Status.ObservedGeneration))
+	//	t.Status.MarkDependencyUnknown("GenerationNotEqual", "The ObjectMeta Generation of dependency %d is not equal to the ObservedGeneration of status %d", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
+	//	return nil
+	//}
+	t.Status.PropagateDependencyStatus(dependency)
 	return nil
 }
 

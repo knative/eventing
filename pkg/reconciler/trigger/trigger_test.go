@@ -35,6 +35,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -44,6 +45,21 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
+)
+
+var (
+	sinkRef = corev1.ObjectReference{
+		Name:       sinkName,
+		Kind:       "Channel",
+		APIVersion: "messaging.knative.dev/v1alpha1",
+	}
+	brokerRef = corev1.ObjectReference{
+		Name:       sinkName,
+		Kind:       "Broker",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+	}
+	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI = "http://" + sinkDNS
 )
 
 const (
@@ -56,6 +72,13 @@ const (
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
 	subscriberURI        = "http://example.com/subscriber"
+
+	dependencyAnnotation    = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
+	cronJobSourceName       = "test-cronjob-source"
+	cronJobSourceAPIVersion = "sources.eventing.knative.dev/v1alpha1"
+	testSchedule            = "*/2 * * * *"
+	testData                = "data"
+	sinkName                = "testsink"
 )
 
 var (
@@ -383,6 +406,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyReady(),
 				),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
@@ -416,6 +440,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyReady(),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -447,6 +472,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: test induced [error]"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyReady(),
 				),
 			}},
 		}, {
@@ -476,6 +502,101 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyReady(),
+				),
+			}},
+		}, {
+			Name: "Dependency doesn't exist",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeReadySubscription(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+				),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: propagating dependency readiness: getting the dependency: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerSubscribed(),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+				),
+			}},
+		}, {
+			Name: "Dependency not ready",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeReadySubscription(),
+				makeNotReadyCronJobSource(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled")},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerSubscribed(),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyFailed("DependencyNotReady", "Dependency is not ready: "),
+				),
+			}},
+		}, {
+			Name: "Dependency ready",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeReadySubscription(),
+				makeReadyCronJobSource(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`)},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerSubscribed(),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyReady(),
 				),
 			}},
 		},
@@ -484,12 +605,13 @@ func TestAllCases(t *testing.T) {
 	defer logtesting.ClearAll()
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
-			triggerLister:      listers.GetTriggerLister(),
-			subscriptionLister: listers.GetSubscriptionLister(),
-			brokerLister:       listers.GetBrokerLister(),
-			serviceLister:      listers.GetK8sServiceLister(),
-			resourceTracker:    &MockResourceTracker{},
+			Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
+			triggerLister:            listers.GetTriggerLister(),
+			subscriptionLister:       listers.GetSubscriptionLister(),
+			brokerLister:             listers.GetBrokerLister(),
+			serviceLister:            listers.GetK8sServiceLister(),
+			resourceTracker:          &MockResourceTracker{},
+			kresourceInformerFactory: KResourceTypedInformerFactory(ctx),
 		}
 	},
 		false,
@@ -633,6 +755,27 @@ func makeNotReadySubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
 	s.Status = *v1alpha1.TestHelper.NotReadySubscriptionStatus()
 	return s
+}
+
+func makeNotReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
+	return NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion), WithCronJobSourceSinkNotFound)
+}
+
+func makeReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
+	return NewCronJobSource(cronJobSourceName, testNS,
+		WithCronJobApiVersion(cronJobSourceAPIVersion),
+		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+			Schedule: testSchedule,
+			Data:     testData,
+			Sink:     &brokerRef,
+		}),
+		WithInitCronJobSourceConditions,
+		WithValidCronJobSourceSchedule,
+		WithValidCronJobSourceResources,
+		WithCronJobSourceDeployed,
+		WithCronJobSourceEventType,
+		WithCronJobSourceSink(sinkURI),
+	)
 }
 
 func getOwnerReference() metav1.OwnerReference {

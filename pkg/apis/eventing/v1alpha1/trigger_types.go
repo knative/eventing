@@ -27,6 +27,12 @@ import (
 	"knative.dev/pkg/webhook"
 )
 
+const (
+	// DependencyAnnotation is the annotation key used to mark the sources that the Trigger depends on.
+	// This will be used when the kn client creates an importer and trigger pair for the user such that the trigger only receives events produced by the paired importer.
+	DependencyAnnotation = "knative.dev/dependency"
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
