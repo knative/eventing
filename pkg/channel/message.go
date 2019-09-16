@@ -31,22 +31,6 @@ const (
 
 var historySplitter = regexp.MustCompile(`\s*` + regexp.QuoteMeta(MessageHistorySeparator) + `\s*`)
 
-var forwardHeaders = []string{
-	"content-type",
-	// tracing
-	"x-request-id",
-}
-
-var forwardPrefixes = []string{
-	// knative
-	"knative-",
-	// cloud events
-	"ce-",
-	// tracing
-	"x-b3-",
-	"x-ot-",
-}
-
 // Message represents a chunk of data within a channel dispatcher. The message contains both
 // a map of string headers and a binary payload. This struct gets marshaled/unmarshaled in order to
 // preserve and pass Header information to the event subscriber.

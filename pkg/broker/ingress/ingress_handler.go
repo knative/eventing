@@ -16,6 +16,7 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/utils"
 )
 
 var (
@@ -93,7 +94,7 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	start := time.Now()
-	sendingCTX := broker.SendingContext(ctx, tctx, h.ChannelURI)
+	sendingCTX := utils.SendingContext(ctx, tctx, h.ChannelURI)
 	rctx, _, err := h.CeClient.Send(sendingCTX, event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.

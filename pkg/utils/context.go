@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broker
+package utils
 
 import (
 	"context"
@@ -22,9 +22,11 @@ import (
 	"net/url"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
+
+// TODO add configurable whitelisting of propagated headers/prefixes (configmap?)
 
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
@@ -45,7 +47,7 @@ var (
 	}
 )
 
-// SendingContext creates the context to use when sending a Cloud Event with ceclient.Client. It
+// SendingContext creates the context to use when sending a Cloud Event with cloudevents.Client. It
 // sets the target and attaches a filtered set of headers from the initial request.
 func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
 	sendingCTX := cloudevents.ContextWithTarget(ctx, targetURI.String())
@@ -79,4 +81,26 @@ func ExtractPassThroughHeaders(tctx cloudevents.HTTPTransportContext) http.Heade
 		}
 	}
 	return h
+}
+
+// ExtractPassThroughHeaders extracts the headers that are in the `forwardHeaders` set
+// or has any of the prefixes in `forwardPrefixes`, and converts them to a map.
+func ExtractPassThroughHeadersMap(headers http.Header) map[string][]string {
+	safe := map[string][]string{}
+
+	for h, v := range headers {
+		// Headers are case-insensitive but test case are all lower-case
+		comparable := strings.ToLower(h)
+		if forwardHeaders.Has(comparable) {
+			safe[h] = v
+			continue
+		}
+		for _, p := range forwardPrefixes {
+			if strings.HasPrefix(comparable, p) {
+				safe[h] = v
+				break
+			}
+		}
+	}
+	return safe
 }
