@@ -122,6 +122,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": Error fetching sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} for source "testnamespace/test-container-source, /, Kind=": channels.messaging.knative.dev "testsink" not found"`),
 				),
 			}},
@@ -151,6 +152,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
 				),
 			}},
@@ -180,6 +182,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
 				),
 			}},
@@ -206,6 +209,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkMissing("Sink missing from spec"),
 				),
 			}},
@@ -572,6 +576,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeployFailed(`Could not create deployment: inducing failure for create deployments`),
 				),

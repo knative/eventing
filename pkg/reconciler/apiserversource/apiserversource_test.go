@@ -105,6 +105,7 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
+					WithApiServerSourceStatusObservedGeneration(generation),
 					WithApiServerSourceSinkNotFound,
 				),
 			}},

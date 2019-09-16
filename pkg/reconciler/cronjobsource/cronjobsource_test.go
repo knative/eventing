@@ -127,6 +127,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
+					WithCronJobSourceStatusObservedGeneration(generation),
 					WithInvalidCronJobSourceSchedule,
 				),
 			}},
@@ -156,6 +157,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
+					WithCronJobSourceStatusObservedGeneration(generation),
 					WithValidCronJobSourceSchedule,
 					WithCronJobSourceSinkNotFound,
 				),
