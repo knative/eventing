@@ -36,21 +36,21 @@ import (
 const correlationIDHeaderName = "Knative-Correlation-Id"
 
 type Dispatcher interface {
-	// DispatchMessage dispatches a message to a destination over HTTP.
+	// DispatchEvent dispatches a message to a destination over HTTP.
 	//
 	// The destination and reply are DNS names. For names with a single label,
 	// the default namespace is used to expand it into a fully qualified name
 	// within the cluster.
-	DispatchMessage(message *Message, destination, reply string, defaults DispatchDefaults) error
+	DispatchEvent(message *Message, destination, reply string, defaults DispatchDefaults) error
 }
 
-// MessageDispatcher is the 'real' Dispatcher used everywhere except unit tests.
-var _ Dispatcher = &MessageDispatcher{}
+// EventDispatcher is the 'real' Dispatcher used everywhere except unit tests.
+var _ Dispatcher = &EventDispatcher{}
 
 var propagation = &b3.HTTPFormat{}
 
-// MessageDispatcher dispatches messages to a destination over HTTP.
-type MessageDispatcher struct {
+// EventDispatcher dispatches events to a destination over HTTP.
+type EventDispatcher struct {
 	httpClient       *http.Client
 	forwardHeaders   sets.String
 	forwardPrefixes  []string
@@ -59,15 +59,15 @@ type MessageDispatcher struct {
 	logger *zap.SugaredLogger
 }
 
-// DispatchDefaults provides default parameter values used when dispatching a message.
+// DispatchDefaults provides default parameter values used when dispatching an event.
 type DispatchDefaults struct {
 	Namespace string
 }
 
-// NewMessageDispatcher creates a new message dispatcher that can dispatch
-// messages to HTTP destinations.
-func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
-	return &MessageDispatcher{
+// NewEventDispatcher creates a new event dispatcher that can dispatch
+// events to HTTP destinations.
+func NewEventDispatcher(logger *zap.SugaredLogger) *EventDispatcher {
+	return &EventDispatcher{
 		httpClient: &http.Client{
 			Transport: &ochttp.Transport{
 				Propagation: propagation,
@@ -80,12 +80,12 @@ func NewMessageDispatcher(logger *zap.SugaredLogger) *MessageDispatcher {
 	}
 }
 
-// DispatchMessage dispatches a message to a destination over HTTP.
+// DispatchEvent dispatches a message to a destination over HTTP.
 //
 // The destination and reply are DNS names. For names with a single label,
 // the default namespace is used to expand it into a fully qualified name
 // within the cluster.
-func (d *MessageDispatcher) DispatchMessage(message *Message, destination, reply string, defaults DispatchDefaults) error {
+func (d *EventDispatcher) DispatchEvent(message *Message, destination, reply string, defaults DispatchDefaults) error {
 	var err error
 	// Default to replying with the original message. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
@@ -108,7 +108,7 @@ func (d *MessageDispatcher) DispatchMessage(message *Message, destination, reply
 	return nil
 }
 
-func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Message, error) {
+func (d *EventDispatcher) executeRequest(url *url.URL, message *Message) (*Message, error) {
 	d.logger.Infof("Dispatching message to %s", url.String())
 	req, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(message.Payload))
 	if err != nil {
@@ -161,7 +161,7 @@ func isFailure(statusCode int) bool {
 // toHTTPHeaders converts message headers to HTTP headers.
 //
 // Only headers whitelisted as safe are copied.
-func (d *MessageDispatcher) toHTTPHeaders(headers map[string]string) http.Header {
+func (d *EventDispatcher) toHTTPHeaders(headers map[string]string) http.Header {
 	safe := http.Header{}
 
 	for name, value := range headers {
@@ -187,7 +187,7 @@ func (d *MessageDispatcher) toHTTPHeaders(headers map[string]string) http.Header
 //
 // Only headers whitelisted as safe are copied. If an HTTP header exists
 // multiple times, a single value will be retained.
-func (d *MessageDispatcher) fromHTTPHeaders(headers http.Header) map[string]string {
+func (d *EventDispatcher) fromHTTPHeaders(headers http.Header) map[string]string {
 	safe := map[string]string{}
 
 	// TODO handle multi-value headers
@@ -209,7 +209,7 @@ func (d *MessageDispatcher) fromHTTPHeaders(headers http.Header) map[string]stri
 	return safe
 }
 
-func (d *MessageDispatcher) resolveURL(destination string, defaultNamespace string) *url.URL {
+func (d *EventDispatcher) resolveURL(destination string, defaultNamespace string) *url.URL {
 	if url, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(url.Scheme) {
 		// Already a URL with a known scheme.
 		return url

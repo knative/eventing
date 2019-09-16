@@ -50,8 +50,8 @@ type Handler struct {
 	config Config
 
 	receivedMessages chan *forwardMessage
-	receiver         *channel.MessageReceiver
-	dispatcher       *channel.MessageDispatcher
+	receiver         *channel.EventReceiver
+	dispatcher       *channel.EventDispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -73,13 +73,13 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
 		logger:           logger,
 		config:           config,
-		dispatcher:       channel.NewMessageDispatcher(logger.Sugar()),
+		dispatcher:       channel.NewEventDispatcher(logger.Sugar()),
 		receivedMessages: make(chan *forwardMessage, messageBufferSize),
 		timeout:          defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
+	receiver, err := channel.NewEventReceiver(createReceiverFunction(handler), logger.Sugar())
 	if err != nil {
 		return nil, err
 	}
@@ -133,5 +133,5 @@ func (f *Handler) dispatch(msg *channel.Message) error {
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *Handler) makeFanoutRequest(m channel.Message, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchMessage(&m, sub.SubscriberURI, sub.ReplyURI, channel.DispatchDefaults{})
+	return f.dispatcher.DispatchEvent(&m, sub.SubscriberURI, sub.ReplyURI, channel.DispatchDefaults{})
 }

@@ -240,9 +240,9 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				h.config.AsyncHandler = true
 			}
 			if tc.receiverFunc != nil {
-				receiver, err := channel.NewMessageReceiver(tc.receiverFunc, zap.NewNop().Sugar())
+				receiver, err := channel.NewEventReceiver(tc.receiverFunc, zap.NewNop().Sugar())
 				if err != nil {
-					t.Fatalf("NewMessageReceiver failed. Error:%s", err)
+					t.Fatalf("NewEventReceiver failed. Error:%s", err)
 				}
 				h.receiver = receiver
 			}
