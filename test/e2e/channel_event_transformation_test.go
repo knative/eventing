@@ -25,7 +25,7 @@ import (
 )
 
 /*
-TestEventTransformationForSubscriptiop tests the following scenario:
+TestEventTransForSubscriptiop tests the following scenario:
 
              1            2                 5            6                  7
 EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> Service(Logger)
@@ -35,6 +35,6 @@ EventSource ---> Channel ---> Subscription ---> Channel ---> Subscription ----> 
                                    |  ---------
                                    -----------> Service(Transformation)
 */
-func TestEventTransformationForSubscription(t *testing.T) {
+func TestEventTransForSubscription(t *testing.T) {
 	helpers.EventTransformationForSubscriptionTestHelper(t, channelTestRunner)
 }

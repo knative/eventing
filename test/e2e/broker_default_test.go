@@ -92,7 +92,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			},
 			deprecatedTriggerFilter: true,
 		}, {
-			name: "test default broker with many attribute triggers",
+			name: "test default broker with many attrs triggers",
 			eventsToReceive: []eventReceiver{
 				{eventContext{Type: any, Source: any}, newSelector()},
 				{eventContext{Type: eventType1, Source: any}, newSelector()},
@@ -108,7 +108,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			deprecatedTriggerFilter: false,
 		},
 		{
-			name: "test default broker with many attribute and extension triggers",
+			name: "test default broker with many attrs and exts triggers",
 			eventsToReceive: []eventReceiver{
 				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
 				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}}, newSelector()},
@@ -131,6 +131,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			deprecatedTriggerFilter: false,
 		},
 	}
+	t.Parallel()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			client := setup(t, true)

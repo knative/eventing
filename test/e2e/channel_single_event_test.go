@@ -32,7 +32,7 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 
 */
 
-func TestSingleBinaryEventForChannel(t *testing.T) {
+func TestOneBinaryEventForChannel(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		resources.CloudEventEncodingBinary,
@@ -40,7 +40,7 @@ func TestSingleBinaryEventForChannel(t *testing.T) {
 	)
 }
 
-func TestSingleStructuredEventForChannel(t *testing.T) {
+func TestOneStructedEventForChannel(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		resources.CloudEventEncodingStructured,

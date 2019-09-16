@@ -24,7 +24,7 @@ import (
 )
 
 /*
-TestEventTransformationForTrigger tests the following scenario:
+TestEventTransForTrigger tests the following scenario:
 
                          5                 4
                    ------------- ----------------------
@@ -37,6 +37,6 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 
 Note: the number denotes the sequence of the event that flows in this test case.
 */
-func TestEventTransformationForTrigger(t *testing.T) {
+func TestEventTransForTrigger(t *testing.T) {
 	helpers.EventTransformationForTriggerTestHelper(t, channelTestRunner)
 }
