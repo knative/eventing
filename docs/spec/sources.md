@@ -244,9 +244,9 @@ Sources can by any shape and are expected to be extensions onto Kubernetes. To
 prevent cluster operators from re-deploying, or re-creating RBAC for all
 accounts that will interact with sources, Knative leverages aggregated RBAC
 roles to dynamically update the rights of controllers that are using common
-service accounts provided by Knative. This allows Eventing controllers to to
-check the status of source type resources without being aware of the exact
-source type or implementation at compile time.
+service accounts provided by Knative. This allows Eventing controllers to check
+the status of source type resources without being aware of the exact source type
+or implementation at compile time.
 
 The
 [`source-observer` ClusterRole](../../config/200-source-observer-clusterrole.yaml)
