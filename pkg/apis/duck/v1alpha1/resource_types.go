@@ -26,7 +26,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Resource is a skeleton type wrapping all Kubernetes resources. It is typically used to watch
-// arbitrary other resources (such as any Importer or Addressable). This is not a real resource.
+// arbitrary other resources (such as any Source or Addressable). This is not a real resource.
 type Resource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

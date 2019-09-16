@@ -26,7 +26,17 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/pkg/source"
 )
+
+type mockReporter struct {
+	eventCount int
+}
+
+func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
+	r.eventCount++
+	return nil
+}
 
 func TestStart_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
@@ -55,10 +65,12 @@ func TestStart_ServeHTTP(t *testing.T) {
 			sinkServer := httptest.NewServer(h)
 			defer sinkServer.Close()
 
+			r := &mockReporter{}
 			a := &Adapter{
 				Schedule: tc.schedule,
 				Data:     "data",
 				SinkURI:  sinkServer.URL,
+				Reporter: r,
 			}
 
 			if err := a.initClient(); err != nil {
@@ -77,6 +89,7 @@ func TestStart_ServeHTTP(t *testing.T) {
 			}()
 
 			a.cronTick() // force a tick.
+			validateMetric(t, a.Reporter, 1)
 
 			if tc.reqBody != string(h.body) {
 				t.Errorf("expected request body %q, but got %q", tc.reqBody, h.body)
@@ -89,8 +102,10 @@ func TestStart_ServeHTTP(t *testing.T) {
 func TestStartBadCron(t *testing.T) {
 	schedule := "bad"
 
+	r := &mockReporter{}
 	a := &Adapter{
 		Schedule: schedule,
+		Reporter: r,
 	}
 
 	stop := make(chan struct{})
@@ -99,6 +114,8 @@ func TestStartBadCron(t *testing.T) {
 		t.Errorf("failed to fail, %v", err)
 
 	}
+
+	validateMetric(t, a.Reporter, 0)
 }
 
 func TestPostMessage_ServeHTTP(t *testing.T) {
@@ -125,9 +142,11 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 			sinkServer := httptest.NewServer(h)
 			defer sinkServer.Close()
 
+			r := &mockReporter{}
 			a := &Adapter{
-				Data:    "data",
-				SinkURI: sinkServer.URL,
+				Data:     "data",
+				SinkURI:  sinkServer.URL,
+				Reporter: r,
 			}
 
 			if err := a.initClient(); err != nil {
@@ -139,6 +158,7 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 			if tc.reqBody != string(h.body) {
 				t.Errorf("expected request body %q, but got %q", tc.reqBody, h.body)
 			}
+			validateMetric(t, a.Reporter, 1)
 		})
 	}
 }
@@ -205,4 +225,12 @@ func sinkAccepted(writer http.ResponseWriter, req *http.Request) {
 
 func sinkRejected(writer http.ResponseWriter, _ *http.Request) {
 	writer.WriteHeader(http.StatusRequestTimeout)
+}
+
+func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
+	if mockReporter, ok := reporter.(*mockReporter); !ok {
+		t.Errorf("reporter is not a mockReporter")
+	} else if mockReporter.eventCount != want {
+		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
+	}
 }

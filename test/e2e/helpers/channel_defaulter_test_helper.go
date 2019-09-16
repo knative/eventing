@@ -19,6 +19,7 @@ package helpers
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -158,6 +159,9 @@ func updateDefaultChannelCM(client *common.Client, updateConfig func(config *def
 	// update the defaultchannel configmap
 	configMap.Data[channelDefaulterKey] = string(configBytes)
 	_, err = cmInterface.Update(configMap)
+	// In cmd/webhook.go, configMapWatcher watches the configmap changes and set the config for channeldefaulter,
+	// the resync time is set to 0, so 5 seconds should be enough to get the OnChange callback triggered.
+	time.Sleep(5 * time.Second)
 	return nil
 }
 

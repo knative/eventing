@@ -24,8 +24,6 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	. "knative.dev/eventing/pkg/metrics/metricskey"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -46,6 +44,18 @@ var (
 		"The time spent dispatching an event to a Channel",
 		stats.UnitMilliseconds,
 	)
+
+	// Create the tag keys that will be used to add tags to our measurements.
+	// Tag keys must conform to the restrictions described in
+	// go.opencensus.io/tag/validate.go. Currently those restrictions are:
+	// - length between 1 and 255 inclusive
+	// - characters are printable US-ASCII
+	namespaceKey         = tag.MustNewKey(metricskey.LabelNamespaceName)
+	brokerKey            = tag.MustNewKey(metricskey.LabelBrokerName)
+	eventSourceKey       = tag.MustNewKey(metricskey.LabelEventSource)
+	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
+	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
+	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
@@ -55,6 +65,10 @@ type ReportArgs struct {
 	eventSource string
 }
 
+func init() {
+	register()
+}
+
 // StatsReporter defines the interface for sending ingress metrics.
 type StatsReporter interface {
 	ReportEventCount(args *ReportArgs, responseCode int) error
@@ -62,73 +76,43 @@ type StatsReporter interface {
 }
 
 var _ StatsReporter = (*reporter)(nil)
+var emptyContext = context.Background()
 
 // Reporter holds cached metric objects to report ingress metrics.
-type reporter struct {
-	namespaceTagKey      tag.Key
-	brokerTagKey         tag.Key
-	eventTypeKey         tag.Key
-	eventSourceKey       tag.Key
-	responseCodeKey      tag.Key
-	responseCodeClassKey tag.Key
-}
+type reporter struct{}
 
 // NewStatsReporter creates a reporter that collects and reports ingress metrics.
-func NewStatsReporter() (StatsReporter, error) {
-	var r = &reporter{}
+func NewStatsReporter() StatsReporter {
+	return &reporter{}
+}
 
-	// Create the tag keys that will be used to add tags to our measurements.
-	nsTag, err := tag.NewKey(metricskey.LabelNamespaceName)
-	if err != nil {
-		return nil, err
-	}
-	r.namespaceTagKey = nsTag
-	brokerTag, err := tag.NewKey(metricskey.LabelBrokerName)
-	if err != nil {
-		return nil, err
-	}
-	r.brokerTagKey = brokerTag
-	eventTypeTag, err := tag.NewKey(metricskey.LabelEventType)
-	if err != nil {
-		return nil, err
-	}
-	r.eventTypeKey = eventTypeTag
-	eventSourceTag, err := tag.NewKey(metricskey.LabelEventSource)
-	if err != nil {
-		return nil, err
-	}
-	r.eventSourceKey = eventSourceTag
-	responseCodeTag, err := tag.NewKey(LabelResponseCode)
-	if err != nil {
-		return nil, err
-	}
-	r.responseCodeKey = responseCodeTag
-	responseCodeClassTag, err := tag.NewKey(LabelResponseCodeClass)
-	if err != nil {
-		return nil, err
-	}
-	r.responseCodeClassKey = responseCodeClassTag
+func register() {
+	tagKeys := []tag.Key{
+		namespaceKey,
+		brokerKey,
+		eventSourceKey,
+		eventTypeKey,
+		responseCodeKey,
+		responseCodeClassKey}
 
 	// Create view to see our measurements.
-	err = view.Register(
+	err := view.Register(
 		&view.View{
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.brokerTagKey, r.eventTypeKey, r.eventSourceKey, r.responseCodeKey, r.responseCodeClassKey},
+			TagKeys:     tagKeys,
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
-			TagKeys:     []tag.Key{r.namespaceTagKey, r.brokerTagKey, r.eventTypeKey, r.eventSourceKey, r.responseCodeKey, r.responseCodeClassKey},
+			TagKeys:     tagKeys,
 		},
 	)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	return r, nil
 }
 
 // ReportEventCount captures the event count.
@@ -154,11 +138,11 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
-		context.Background(),
-		tag.Insert(r.namespaceTagKey, args.ns),
-		tag.Insert(r.brokerTagKey, args.broker),
-		tag.Insert(r.eventTypeKey, args.eventType),
-		tag.Insert(r.eventSourceKey, args.eventSource),
-		tag.Insert(r.responseCodeKey, strconv.Itoa(responseCode)),
-		tag.Insert(r.responseCodeClassKey, utils.ResponseCodeClass(responseCode)))
+		emptyContext,
+		tag.Insert(namespaceKey, args.ns),
+		tag.Insert(brokerKey, args.broker),
+		tag.Insert(eventTypeKey, args.eventType),
+		tag.Insert(eventSourceKey, args.eventSource),
+		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
+		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 }

@@ -67,16 +67,19 @@ func init() {
 
 func TestReceiver(t *testing.T) {
 	testCases := map[string]struct {
-		triggers         []*eventingv1alpha1.Trigger
-		tctx             *cloudevents.HTTPTransportContext
-		event            *cloudevents.Event
-		requestFails     bool
-		returnedEvent    *cloudevents.Event
-		expectNewToFail  bool
-		expectedErr      bool
-		expectedDispatch bool
-		expectedStatus   int
-		expectedHeaders  http.Header
+		triggers                    []*eventingv1alpha1.Trigger
+		tctx                        *cloudevents.HTTPTransportContext
+		event                       *cloudevents.Event
+		requestFails                bool
+		returnedEvent               *cloudevents.Event
+		expectNewToFail             bool
+		expectedErr                 bool
+		expectedDispatch            bool
+		expectedStatus              int
+		expectedHeaders             http.Header
+		expectedEventCount          bool
+		expectedEventDispatchTime   bool
+		expectedEventProcessingTime bool
 	}{
 		"Not POST": {
 			tctx: &cloudevents.HTTPTransportContext{
@@ -126,19 +129,23 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
 			},
-			expectedErr: true,
+			expectedErr:        true,
+			expectedEventCount: true,
 		},
 		"Trigger with bad SubscriberURI": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithBadSubscriberURI(),
 			},
-			expectedErr: true,
+			expectedErr:        true,
+			expectedEventCount: true,
 		},
 		"Trigger without a Filter": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutFilter(),
 			},
-			expectedDispatch: true,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
 		},
 		"No TTL": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -150,78 +157,108 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("some-other-type", "")),
 			},
+			expectedEventCount: true,
 		},
 		"Wrong type with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
 			},
+			expectedEventCount: true,
 		},
 		"Wrong source": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "some-other-source")),
 			},
+			expectedEventCount: true,
 		},
 		"Wrong source with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
+			expectedEventCount: true,
 		},
 		"Wrong extension": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
+			expectedEventCount: true,
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
-			requestFails:     true,
-			expectedErr:      true,
-			expectedDispatch: true,
+			requestFails:              true,
+			expectedErr:               true,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Any": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
-			expectedDispatch: true,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Any with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "")),
 			},
-			expectedDispatch: true,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Specific": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType(eventType, eventSource)),
 			},
-			expectedDispatch: true,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Specific with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes(eventType, eventSource)),
 			},
-			expectedDispatch: true,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
 		},
 		"Dispatch succeeded - Extension with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, extensionValue)),
 			},
-			event:            makeEventWithExtension(),
-			expectedDispatch: true,
+			event:                     makeEventWithExtension(extensionName, extensionValue),
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+		},
+		"Dispatch succeeded - Any with attribs - Arrival extension": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			event:                       makeEventWithExtension(broker.EventArrivalTime, "2019-08-26T23:38:17.834384404Z"),
+			expectedDispatch:            true,
+			expectedEventCount:          true,
+			expectedEventDispatchTime:   true,
+			expectedEventProcessingTime: true,
 		},
 		"Dispatch failed - Extension with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
 			},
-			event: makeEventWithExtension(),
+			event:              makeEventWithExtension(extensionName, extensionValue),
+			expectedEventCount: true,
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
 			},
-			expectedDispatch: true,
-			returnedEvent:    makeDifferentEvent(),
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			returnedEvent:             makeDifferentEvent(),
 		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -258,8 +295,10 @@ func TestReceiver(t *testing.T) {
 				// X-Ot-Foo will pass as a prefix match.
 				"X-Ot-Foo": []string{"haden"},
 			},
-			expectedDispatch: true,
-			returnedEvent:    makeDifferentEvent(),
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			returnedEvent:             makeDifferentEvent(),
 		},
 	}
 	for n, tc := range testCases {
@@ -282,11 +321,11 @@ func TestReceiver(t *testing.T) {
 				}
 				correctURI = append(correctURI, trig)
 			}
-
+			reporter := &mockReporter{}
 			r, err := NewHandler(
 				zap.NewNop(),
 				getFakeTriggerLister(correctURI),
-				&mockReporter{})
+				reporter)
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")
@@ -324,6 +363,15 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedDispatch != fh.requestReceived {
 				t.Errorf("Incorrect dispatch. Expected %v, Actual %v", tc.expectedDispatch, fh.requestReceived)
 			}
+			if tc.expectedEventCount != reporter.eventCountReported {
+				t.Errorf("Incorrect event count reported metric. Expected %v, Actual %v", tc.expectedEventCount, reporter.eventCountReported)
+			}
+			if tc.expectedEventDispatchTime != reporter.eventDispatchTimeReported {
+				t.Errorf("Incorrect event dispatch time reported metric. Expected %v, Actual %v", tc.expectedEventDispatchTime, reporter.eventDispatchTimeReported)
+			}
+			if tc.expectedEventProcessingTime != reporter.eventProcessingTimeReported {
+				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
+			}
 
 			// Compare the returned event.
 			if tc.returnedEvent == nil {
@@ -347,17 +395,24 @@ func TestReceiver(t *testing.T) {
 	}
 }
 
-type mockReporter struct{}
+type mockReporter struct {
+	eventCountReported          bool
+	eventDispatchTimeReported   bool
+	eventProcessingTimeReported bool
+}
 
 func (r *mockReporter) ReportEventCount(args *ReportArgs, responseCode int) error {
+	r.eventCountReported = true
 	return nil
 }
 
 func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d time.Duration) error {
+	r.eventDispatchTimeReported = true
 	return nil
 }
 
 func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Duration) error {
+	r.eventProcessingTimeReported = true
 	return nil
 }
 
@@ -535,7 +590,7 @@ func makeDifferentEvent() *cloudevents.Event {
 	}
 }
 
-func makeEventWithExtension() *cloudevents.Event {
+func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 	noTTL := &cloudevents.Event{
 		Context: cloudevents.EventContextV02{
 			Type: eventType,
@@ -546,7 +601,7 @@ func makeEventWithExtension() *cloudevents.Event {
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
 			Extensions: map[string]interface{}{
-				extensionName: extensionValue,
+				extName: extValue,
 			},
 		}.AsV03(),
 	}

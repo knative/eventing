@@ -1,3 +1,13 @@
+# Revert Renaming Sources to Importers
+
+As of 13 September 2019, we are reverting the decision to rename sources to
+importers as described in issue
+[#1857](https://github.com/knative/eventing/issues/1857).
+
+---
+
+_Archived_
+
 # Renaming Sources to Importers
 
 Decision date: 4 June 2019
