@@ -113,6 +113,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		return nil
 	}
 
+	source.Status.ObservedGeneration = source.Generation
 	source.Status.InitializeConditions()
 
 	annotations := make(map[string]string)
@@ -157,7 +158,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		source.Status.MarkDeployed()
 		r.Recorder.Eventf(source, corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
 	}
-
 	return nil
 }
 

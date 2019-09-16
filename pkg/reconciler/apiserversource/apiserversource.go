@@ -141,6 +141,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
+	source.Status.ObservedGeneration = source.Generation
+
 	source.Status.InitializeConditions()
 
 	track := r.resourceTracker.TrackInNamespace(source)
