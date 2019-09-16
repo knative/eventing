@@ -59,6 +59,8 @@ func TestChannelTracing(t *testing.T) {
 				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 				// TestMain.
 				zipkin.SetupZipkinTracing(client.Kube.Kube, st.Logf)
+
+				// TODO This should really be upsert.
 				err := client.Kube.UpdateConfigMap("knative-eventing", "config-tracing", map[string]string{
 					"backend":         "zipkin",
 					"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",

@@ -32,21 +32,19 @@ var channels test.Channels
 var channelTestRunner common.ChannelTestRunner
 
 func TestMain(m *testing.M) {
-	os.Exit(wrappedMain(m))
-}
+	os.Exit(func() int {
+		test.InitializeEventingFlags()
+		channels = test.EventingFlags.Channels
+		channelTestRunner = common.ChannelTestRunner{
+			ChannelFeatureMap: common.ChannelFeatureMap,
+			ChannelsToTest:    test.EventingFlags.Channels,
+		}
 
-func wrappedMain(m *testing.M) int {
-	test.InitializeEventingFlags()
-	channels = test.EventingFlags.Channels
-	channelTestRunner = common.ChannelTestRunner{
-		ChannelFeatureMap: common.ChannelFeatureMap,
-		ChannelsToTest:    test.EventingFlags.Channels,
-	}
+		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
+		// place that cleans it up. If an individual test calls this instead, then it will break other
+		// tests that need the tracing in place.
+		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
 
-	// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
-	// place that cleans it up. If an individual test calls this instead, then it will break other
-	// tests that need the tracing in place.
-	defer zipkin.CleanupZipkinTracingSetup(log.Printf)
-
-	return m.Run()
+		return m.Run()
+	}())
 }

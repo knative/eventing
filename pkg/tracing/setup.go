@@ -41,6 +41,9 @@ var (
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
 	}
 
+	// AlwaysSample is a configuration that samples 100% of the requests and sends them to Zipkin.
+	// It is expected to be used only for testing purposes (e.g. in e2e tests).
+	// TODO(#1712): Remove this and pull "static" configuration from the environment instead.
 	AlwaysSample = &tracingconfig.Config{
 		Backend:        tracingconfig.Zipkin,
 		Debug:          true,
