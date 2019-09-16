@@ -58,10 +58,7 @@ const (
 	triggerChannel channelType = "TriggerChannel"
 	ingressChannel channelType = "IngressChannel"
 
-	triggerChannelName = "test-broker-kn-trigger"
-	ingressChannelName = "test-broker-kn-ingress"
-
-	ingressCRDChannelName = "test-broker-kn2-ingress"
+	ingressCRDChannelName = "test-broker-kne-ingress"
 )
 
 var (
@@ -955,7 +952,7 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 	var hostname string
 	var url string
 	if t == triggerChannel {
-		name = fmt.Sprintf("%s-kn2-trigger", brokerName)
+		name = fmt.Sprintf("%s-kne-trigger", brokerName)
 		labels = map[string]interface{}{
 			"eventing.knative.dev/broker":           brokerName,
 			"eventing.knative.dev/brokerEverything": "true",
@@ -963,7 +960,7 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 		hostname = triggerChannelHostname
 		url = fmt.Sprintf("http://%s", triggerChannelHostname)
 	} else {
-		name = fmt.Sprintf("%s-kn2-ingress", brokerName)
+		name = fmt.Sprintf("%s-kne-ingress", brokerName)
 		labels = map[string]interface{}{
 			"eventing.knative.dev/broker":        brokerName,
 			"eventing.knative.dev/brokerIngress": "true",
@@ -1026,30 +1023,12 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 	}
 }
 
-func createTriggerChannelRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
-	}
-}
-
-func createIngressChannelRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
-	}
-}
-
 func createTriggerChannelCRDRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn2-trigger", brokerName),
+		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
 	}
 }
 
@@ -1058,6 +1037,6 @@ func createIngressChannelCRDRef() *corev1.ObjectReference {
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn2-ingress", brokerName),
+		Name:       fmt.Sprintf("%s-kne-ingress", brokerName),
 	}
 }
