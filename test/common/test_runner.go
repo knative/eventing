@@ -17,7 +17,7 @@ limitations under the License.
 package common
 
 import (
-	goerrs "errors"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -26,7 +26,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -40,7 +40,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
-var TestPullSecretName = "kn-eventing-test-pull-secret"
+const TestPullSecretName = "kn-eventing-test-pull-secret"
 
 // ChannelTestRunner is used to run tests against channels.
 type ChannelTestRunner struct {
@@ -138,7 +138,7 @@ func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string
 
 	// Just double checking
 	if srcSecret == nil {
-		return nil, goerrs.New("Error copying Secret, it's nil w/o error")
+		return nil, errors.New("error copying Secret, it's nil w/o error")
 	}
 
 	// Found the secret, so now make a copy in our new namespace
@@ -153,8 +153,8 @@ func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string
 
 	// If the secret already exists then that's ok - some other test
 	// must have created it
-	if err != nil && !errors.IsAlreadyExists(err) {
-		return nil, fmt.Errorf("Error copying the Secret: %s", err)
+	if err != nil && !apierrs.IsAlreadyExists(err) {
+		return nil, fmt.Errorf("error copying the Secret: %s", err)
 	}
 
 	client.T.Logf("Copied Secret %q into Namespace %q",
@@ -166,7 +166,7 @@ func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string
 		_, err = tgtNSSvcAccI.Patch(svcAccount, types.StrategicMergePatchType,
 			[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
 		if err != nil {
-			return nil, fmt.Errorf("Patch failed on NS/SA (%s/%s): %s",
+			return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
 				tgtNS, srcSecretName, err)
 		}
 		client.T.Logf("Added Secret %q as ImagePullSecret to SA %q in NS %q",
@@ -180,7 +180,7 @@ func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string
 func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && apierrs.IsNotFound(err) {
 		nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 		_, err = client.Kube.Kube.CoreV1().Namespaces().Create(nsSpec)
 
@@ -200,8 +200,8 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		// on the "default" ServiceAccount in this new Namespace.
 		// This is needed for cases where the images are in a private registry.
 		_, err := CopySecret(client, "default", TestPullSecretName, namespace, "default")
-		if err != nil && !errors.IsNotFound(err) {
-			t.Fatalf("Error copying the secret into ns %q: %s", namespace, err)
+		if err != nil && !apierrs.IsNotFound(err) {
+			t.Fatalf("error copying the secret into ns %q: %s", namespace, err)
 		}
 	}
 }
@@ -220,7 +220,7 @@ func waitForServiceAccountExists(t *testing.T, client *Client, name, namespace s
 // DeleteNameSpace deletes the namespace that has the given name.
 func DeleteNameSpace(client *Client) error {
 	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
-	if err == nil || !errors.IsNotFound(err) {
+	if err == nil || !apierrs.IsNotFound(err) {
 		return client.Kube.Kube.CoreV1().Namespaces().Delete(client.Namespace, nil)
 	}
 	return err
