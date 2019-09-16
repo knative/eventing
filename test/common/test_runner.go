@@ -18,9 +18,6 @@ package common
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"testing"
 	"time"
 
@@ -77,6 +74,8 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 	// Create a new namespace to run this test case.
 	baseFuncName := helpers.GetBaseFuncName(t.Name())
 	namespace := helpers.MakeK8sNamePrefix(baseFuncName)
+	// Append random postfix for the namespace name.
+	namespace = helpers.AppendRandomString(namespace)
 	t.Logf("namespace is : %q", namespace)
 	client, err := NewClient(
 		pkgTest.Flags.Kubeconfig,
@@ -86,18 +85,10 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 	if err != nil {
 		t.Fatalf("Couldn't initialize clients: %v", err)
 	}
-
 	CreateNamespaceIfNeeded(t, client, namespace)
 
-	// Disallow manually interrupting the tests.
-	// TODO(Fredy-Z): t.Skip() can only be called on its own goroutine.
-	//                Investigate if there is other way to gracefully terminte the tests in the middle.
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		fmt.Printf("Test %q running, please don't interrupt...\n", t.Name())
-	}()
+	// Clean up the resources for this test if it's interrupted.
+	pkgTest.CleanupOnInterrupt(func() { TearDown(client) }, t.Logf)
 
 	// Run the test case in parallel if needed.
 	if runInParallel {
@@ -109,6 +100,7 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 
 // TearDown will delete created names using clients.
 func TearDown(client *Client) {
+	client.T.Logf("Cleaning up for test %s", client.T.Name())
 	client.Tracker.Clean(true)
 	if err := DeleteNameSpace(client); err != nil {
 		client.T.Logf("Could not delete the namespace %q: %v", client.Namespace, err)
