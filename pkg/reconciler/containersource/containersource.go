@@ -157,7 +157,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 		source.Status.MarkDeployed()
 		r.Recorder.Eventf(source, corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
 	}
-
+	source.Status.ObservedGeneration = source.Generation
 	return nil
 }
 

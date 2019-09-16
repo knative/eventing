@@ -175,6 +175,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		return err
 	}
 	source.Status.MarkEventTypes()
+	source.Status.ObservedGeneration = source.Generation
 
 	return nil
 }

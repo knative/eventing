@@ -169,6 +169,7 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		return fmt.Errorf("reconciling event types: %v", err)
 	}
 	cronjob.Status.MarkEventType()
+	cronjob.Status.ObservedGeneration = cronjob.Generation
 
 	return nil
 }
