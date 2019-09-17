@@ -28,6 +28,7 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -150,6 +151,10 @@ func main() {
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Parallel"):        &messagingv1alpha1.Parallel{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
 		messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
+		// For group sources.eventing.knative.dev
+		sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
+		sourcesv1alpha1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha1.ContainerSource{},
+		sourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &sourcesv1alpha1.CronJobSource{},
 	}
 
 	// Decorate contexts with the current state of the config.
