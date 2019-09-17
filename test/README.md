@@ -93,6 +93,16 @@ environment that meets
 [the e2e test environment requirements](#environment-requirements), and you need
 to specify the build tag `e2e`.
 
+If you are using a private registry that will require authentication then
+you'll need to create a Secret in your `default` Namespace called
+`kn-eventing-test-pull-secret` with the Docker login credentials. This Secret
+will then be copied into any new Namespace that is created by the testing
+infrastructure, and linked to any ServiceAccount created as a imagePulLSecret.
+Note: some tests will use the `knative-eventing-injection` label to
+automatically create new ServiceAccounts in some Namespaces, this feature
+does not yet support private registries. See
+https://github.com/knative/eventing/issues/1862 for status of this issue.
+
 ```bash
 go test -v -tags=e2e -count=1 ./test/e2e
 ```

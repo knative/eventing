@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -220,12 +221,21 @@ func (client *Client) CreateServiceAccountOrFail(saName string) {
 		client.T.Fatalf("Failed to create service account %q: %v", saName, err)
 	}
 	client.Tracker.Add(coreAPIGroup, coreAPIVersion, "serviceaccounts", namespace, saName)
+
+	// If the "default" Namespace has a secret called
+	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
+	// on the new ServiceAccount we just created.
+	// This is needed for cases where the images are in a private registry.
+	_, err := CopySecret(client, "default", TestPullSecretName, namespace, saName)
+	if err != nil && !errors.IsNotFound(err) {
+		client.T.Fatalf("Error copying the secret: %s", err)
+	}
 }
 
 // CreateClusterRoleOrFail creates the given ClusterRole or fail the test if there is an error.
 func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	crs := client.Kube.Kube.RbacV1().ClusterRoles()
-	if _, err := crs.Create(cr); err != nil {
+	if _, err := crs.Create(cr); err != nil && !errors.IsAlreadyExists(err) {
 		client.T.Fatalf("Failed to create cluster role %q: %v", cr.Name, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
@@ -236,7 +246,8 @@ func (client *Client) CreateRoleBindingOrFail(saName, crName, rbName, rbNamespac
 	saNamespace := client.Namespace
 	rb := resources.RoleBinding(saName, saNamespace, crName, rbName, rbNamespace)
 	rbs := client.Kube.Kube.RbacV1().RoleBindings(rbNamespace)
-	if _, err := rbs.Create(rb); err != nil {
+
+	if _, err := rbs.Create(rb); err != nil && !errors.IsAlreadyExists(err) {
 		client.T.Fatalf("Failed to create role binding %q: %v", rbName, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "rolebindings", rbNamespace, rb.GetName())
@@ -247,7 +258,7 @@ func (client *Client) CreateClusterRoleBindingOrFail(saName, crName, crbName str
 	saNamespace := client.Namespace
 	crb := resources.ClusterRoleBinding(saName, saNamespace, crName, crbName)
 	crbs := client.Kube.Kube.RbacV1().ClusterRoleBindings()
-	if _, err := crbs.Create(crb); err != nil {
+	if _, err := crbs.Create(crb); err != nil && !errors.IsAlreadyExists(err) {
 		client.T.Fatalf("Failed to create cluster role binding %q: %v", crbName, err)
 	}
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterrolebindings", "", crb.GetName())
