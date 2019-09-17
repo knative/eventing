@@ -62,15 +62,15 @@ type DispatchDefaults struct {
 
 // NewEventDispatcher creates a new event dispatcher that can dispatch
 // events to HTTP destinations.
-func NewEventDispatcher(logger *zap.SugaredLogger) *EventDispatcher {
+func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 	ceClient, err := cloudevents.NewDefaultClient()
 	if err != nil {
-		logger.Desugar().Fatal("failed to create cloudevents client", zap.Error(err))
+		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
 	return &EventDispatcher{
 		ceClient:         ceClient,
 		supportedSchemes: sets.NewString("http", "https"),
-		logger:           logger.Desugar(),
+		logger:           logger,
 	}
 }
 

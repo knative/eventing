@@ -22,7 +22,9 @@ limitations under the License.
 package fanout
 
 import (
+	"context"
 	"errors"
+	"github.com/cloudevents/sdk-go"
 	"net/http"
 	"time"
 
@@ -73,13 +75,13 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
 		logger:           logger,
 		config:           config,
-		dispatcher:       channel.NewEventDispatcher(logger.Sugar()),
+		dispatcher:       channel.NewEventDispatcher(logger),
 		receivedMessages: make(chan *forwardMessage, messageBufferSize),
 		timeout:          defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewEventReceiver(createReceiverFunction(handler), logger.Sugar())
+	receiver, err := channel.NewEventReceiver(createReceiverFunction(handler), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -87,16 +89,16 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	return handler, nil
 }
 
-func createReceiverFunction(f *Handler) func(channel.ChannelReference, *channel.Message) error {
-	return func(_ channel.ChannelReference, m *channel.Message) error {
+func createReceiverFunction(f *Handler) func(context.Context, cloudevents.Event) error {
+	return func(ctx context.Context, event cloudevents.Event) error {
 		if f.config.AsyncHandler {
 			go func() {
 				// Any returned error is already logged in f.dispatch().
-				_ = f.dispatch(m)
+				_ = f.dispatch(ctx, event)
 			}()
 			return nil
 		}
-		return f.dispatch(m)
+		return f.dispatch(ctx, event)
 	}
 }
 
@@ -104,13 +106,13 @@ func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.receiver.HandleRequest(w, r)
 }
 
-// dispatch takes the request, fans it out to each subscription in f.config. If all the fanned out
-// requests return successfully, then return nil. Else, return an error.
-func (f *Handler) dispatch(msg *channel.Message) error {
+// dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
+// events return successfully, then return nil. Else, return an error.
+func (f *Handler) dispatch(ctx context.Context, event cloudevents.Event) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
 	for _, sub := range f.config.Subscriptions {
 		go func(s eventingduck.SubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(*msg, s)
+			errorCh <- f.makeFanoutRequest(ctx, event, s)
 		}(sub)
 	}
 
@@ -132,6 +134,6 @@ func (f *Handler) dispatch(msg *channel.Message) error {
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *Handler) makeFanoutRequest(m channel.Message, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchEvent(&m, sub.SubscriberURI, sub.ReplyURI, channel.DispatchDefaults{})
+func (f *Handler) makeFanoutRequest(ctx context.Context, event cloudevents.Event, sub eventingduck.SubscriberSpec) error {
+	return f.dispatcher.DispatchEvent(ctx, event, sub.SubscriberURI, sub.ReplyURI, channel.DispatchDefaults{})
 }

@@ -17,30 +17,35 @@
 package channel
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/utils"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/pkg/tracing"
 )
 
-const (
-	// MessageReceiverPort is the port that EventReceiver opens an HTTP server on.
-	MessageReceiverPort = 8080
+var (
+	shutdownTimeout = 1 * time.Minute
 )
 
 // EventReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
 type EventReceiver struct {
-	receiverFunc      func(ChannelReference, *Message) error
-	forwardHeaders    sets.String
-	forwardPrefixes   []string
-	logger            *zap.SugaredLogger
+	ceClient          cloudevents.Client
+	receiverFunc      ReceiverFunc
+	logger            *zap.Logger
 	hostToChannelFunc ResolveChannelFromHostFunc
 }
+
+type ReceiverFunc func(context.Context, ChannelReference, cloudevents.Event) error
 
 // ReceiverOptions provides functional options to EventReceiver function.
 type ReceiverOptions func(*EventReceiver) error
@@ -60,11 +65,14 @@ func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) 
 
 // NewEventReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewEventReceiver(receiverFunc func(ChannelReference, *Message) error, logger *zap.SugaredLogger, opts ...ReceiverOptions) (*EventReceiver, error) {
+func NewEventReceiver(receiverFunc ReceiverFunc, logger *zap.Logger, opts ...ReceiverOptions) (*EventReceiver, error) {
+	ceClient, err := cloudevents.NewDefaultClient()
+	if err != nil {
+		logger.Fatal("failed to create cloudevents client", zap.Error(err))
+	}
 	receiver := &EventReceiver{
+		ceClient:          ceClient,
 		receiverFunc:      receiverFunc,
-		forwardHeaders:    sets.NewString(forwardHeaders...),
-		forwardPrefixes:   forwardPrefixes,
 		hostToChannelFunc: ResolveChannelFromHostFunc(ParseChannel),
 		logger:            logger,
 	}
@@ -76,94 +84,84 @@ func NewEventReceiver(receiverFunc func(ChannelReference, *Message) error, logge
 	return receiver, nil
 }
 
-// Start begings to receive events for the receiver.
+// Start begins to receive events for the receiver.
 //
 // Only HTTP POST requests to the root path (/) are accepted. If other paths or
 // methods are needed, use the HandleRequest method directly with another HTTP
 // server.
-//
-// This method will block until a message is received on the stop channel.
-func (r *EventReceiver) Start(stopCh <-chan struct{}) error {
-	svr := r.start()
-	defer r.stop(svr)
+func (r *EventReceiver) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	<-stopCh
-	return nil
-}
-
-func (r *EventReceiver) start() *http.Server {
-	r.logger.Info("Starting web server")
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", MessageReceiverPort),
-		Handler: r.handler(),
-	}
+	errCh := make(chan error, 1)
 	go func() {
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			r.logger.Errorf("HTTPServer: ListenAndServe() error: %v", err)
-		}
+		errCh <- r.ceClient.StartReceiver(ctx, r.receiverFunc)
 	}()
-	return srv
-}
 
-func (r *EventReceiver) stop(srv *http.Server) {
-	r.logger.Info("Shutdown web server")
-	if err := srv.Shutdown(nil); err != nil {
-		r.logger.Fatal(err)
+	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		break
+	}
+
+	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
+	cancel()
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(shutdownTimeout):
+		return errors.New("timeout shutting down ceClient")
 	}
 }
 
-// handler creates the http.Handler used by the http.Server started in EventReceiver.Run.
-func (r *EventReceiver) handler() http.Handler {
-	return tracing.HTTPSpanMiddleware(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/" {
-			res.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if req.Method != http.MethodPost {
-			res.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
+func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
+	if tctx.Method != http.MethodPost {
+		resp.Status = http.StatusMethodNotAllowed
+		return nil
+	}
 
-		r.HandleRequest(res, req)
-	}))
-}
+	// tctx.URI is actually the path...
+	if tctx.URI != "/" {
+		resp.Status = http.StatusNotFound
+		return nil
+	}
 
-// HandleRequest is an http.Handler function. The request is converted to a
-// Message and emitted to the receiver func.
-//
-// The response status codes:
-//   202 - the message was sent to subscribers
-//   404 - the request was for an unknown channel
-//   500 - an error occurred processing the request
-func (r *EventReceiver) HandleRequest(res http.ResponseWriter, req *http.Request) {
-	host := req.Host
-	r.logger.Infof("Received request for %s", host)
+	// The response status codes:
+	//   202 - the message was sent to subscribers
+	//   404 - the request was for an unknown channel
+	//   500 - an error occurred processing the request
+
+	host := tctx.Host
+	r.logger.Debug("Received request", zap.String("host", host))
 	channel, err := r.hostToChannelFunc(host)
 	if err != nil {
-		r.logger.Infow("Could not extract channel", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
-		return
+		r.logger.Info("Could not extract channel", zap.Error(err))
+		resp.Status = http.StatusInternalServerError
+		return err
 	}
-	r.logger.Infof("Request mapped to channel: %s", channel.String())
-	message, err := r.fromRequest(req)
-	if err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
+
+	header := utils.ExtractPassThroughHeaders(tctx)
+
 	// setting common channel information in the request
 	message.AppendToHistory(host)
 
 	err = r.receiverFunc(channel, message)
 	if err != nil {
 		if err == ErrUnknownChannel {
-			res.WriteHeader(http.StatusNotFound)
+			resp.Status = http.StatusNotFound
 		} else {
-			res.WriteHeader(http.StatusInternalServerError)
+			resp.Status = http.StatusInternalServerError
 		}
-		return
+		return err
 	}
 
-	res.WriteHeader(http.StatusAccepted)
+	resp.Status = http.StatusAccepted
+	return nil
 }
 
 func (r *EventReceiver) fromRequest(req *http.Request) (*Message, error) {

@@ -35,7 +35,7 @@ type Handler struct {
 }
 
 func (h *Handler) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	errCh := make(chan error, 1)
