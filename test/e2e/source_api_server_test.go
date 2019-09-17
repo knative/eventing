@@ -54,9 +54,10 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion:    "v1",
-						Kind:          "Event",
-						LabelSelector: &metav1.LabelSelector{},
+						APIVersion:         "v1",
+						Kind:               "Event",
+						LabelSelector:      &metav1.LabelSelector{},
+						ControllerSelector: &metav1.OwnerReference{},
 					},
 				},
 				Mode:               mode,
@@ -70,9 +71,10 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion:    "v1",
-						Kind:          "Pod",
-						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+						APIVersion:         "v1",
+						Kind:               "Pod",
+						LabelSelector:      &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+						ControllerSelector: &metav1.OwnerReference{},
 					},
 				},
 				Mode:               mode,
@@ -86,9 +88,10 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion:    "v1",
-						Kind:          "Pod",
-						LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+						APIVersion:         "v1",
+						Kind:               "Pod",
+						LabelSelector:      &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
+						ControllerSelector: &metav1.OwnerReference{},
 					},
 				},
 				Mode:               mode,
@@ -112,6 +115,7 @@ func TestApiServerSource(t *testing.T) {
 								{Key: "e2e", Operator: "Exists"},
 							},
 						},
+						ControllerSelector: &metav1.OwnerReference{},
 					},
 				},
 				Mode:               mode,

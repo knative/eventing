@@ -52,11 +52,13 @@ type Options struct {
 	GVRCs     []GVRC
 }
 
-// GVRC is a combination of GroupVersionResource, Controller flag and LabelSelector.
+// GVRC is a combination of GroupVersionResource, Controller flag, LabelSelector and OwnerRef
 type GVRC struct {
-	GVR           schema.GroupVersionResource
-	Controller    bool
-	LabelSelector string
+	GVR             schema.GroupVersionResource
+	Controller      bool
+	LabelSelector   string
+	OwnerApiVersion string
+	OwnerKind       string
 }
 
 type adapter struct {
@@ -146,7 +148,18 @@ func (a *adapter) Start(stopCh <-chan struct{}) error {
 			d.addControllerWatch(gvrc.GVR)
 		}
 
-		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, d, resyncPeriod)
+		var store cache.Store
+		if gvrc.OwnerApiVersion != "" || gvrc.OwnerKind != "" {
+			store = &controller{
+				apiVersion: gvrc.OwnerApiVersion,
+				kind:       gvrc.OwnerKind,
+				delegate:   store,
+			}
+		} else {
+			store = d
+		}
+
+		reflector := cache.NewReflector(lw, &unstructured.Unstructured{}, store, resyncPeriod)
 		go reflector.Run(stop)
 	}
 

@@ -75,6 +75,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 							{Key: "anotherkey", Operator: "DoesNotExist"},
 						},
 					},
+					ControllerSelector: &metav1.OwnerReference{
+						APIVersion: "foo/v1alpha1",
+						Kind:       "Foo",
+					},
 				},
 			},
 		},
@@ -152,6 +156,12 @@ func TestMakeReceiveAdapter(t *testing.T) {
 								}, {
 									Name:  "KIND",
 									Value: "Namespace;Pod;Pod;Pod;Pod",
+								}, {
+									Name:  "OWNER_API_VERSION",
+									Value: ";;;;foo/v1alpha1",
+								}, {
+									Name:  "OWNER_KIND",
+									Value: ";;;;Foo",
 								}, {
 									Name:  "CONTROLLER",
 									Value: "false,true,false,false,false",
