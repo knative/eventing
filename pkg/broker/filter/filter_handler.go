@@ -191,7 +191,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 	resp.Event = responseEvent
 	resp.Context = &cloudevents.HTTPTransportResponseContext{
-		Header: utils.PassThroughHeadersFrom(tctx),
+		Header: utils.PassThroughHeadersFromTransport(tctx),
 	}
 
 	return nil

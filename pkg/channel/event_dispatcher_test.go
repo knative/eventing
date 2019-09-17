@@ -18,6 +18,7 @@ package channel
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -25,6 +26,8 @@ import (
 	"strings"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -52,7 +55,9 @@ func TestDispatchMessage(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination    bool
 		sendToReply          bool
-		message              *Message
+		eventExtensions      map[string]string
+		header               http.Header
+		body                 string
 		fakeResponse         *http.Response
 		expectedErr          bool
 		expectedDestRequest  *requestValidation
@@ -60,16 +65,16 @@ func TestDispatchMessage(t *testing.T) {
 	}{
 		"destination - only": {
 			sendToDestination: true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("destination"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -86,16 +91,16 @@ func TestDispatchMessage(t *testing.T) {
 		},
 		"destination - only -- error": {
 			sendToDestination: true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("destination"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -117,16 +122,16 @@ func TestDispatchMessage(t *testing.T) {
 		},
 		"reply - only": {
 			sendToReply: true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("reply"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "reply",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -143,16 +148,16 @@ func TestDispatchMessage(t *testing.T) {
 		},
 		"reply - only -- error": {
 			sendToReply: true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("reply"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "reply",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -175,16 +180,16 @@ func TestDispatchMessage(t *testing.T) {
 		"destination and reply - dest returns bad status code": {
 			sendToDestination: true,
 			sendToReply:       true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("destination"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -207,16 +212,16 @@ func TestDispatchMessage(t *testing.T) {
 		"destination and reply - dest returns empty body": {
 			sendToDestination: true,
 			sendToReply:       true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("destination"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -244,17 +249,14 @@ func TestDispatchMessage(t *testing.T) {
 		"destination and reply": {
 			sendToDestination: true,
 			sendToReply:       true,
-			message: &Message{
-				Headers: map[string]string{
-					// do-not-forward should not get forwarded.
-					"do-not-forward": "header",
-					"x-request-id":   "id123",
-					"knative-1":      "knative-1-value",
-					"knative-2":      "knative-2-value",
-					"ce-abc":         "ce-abc-value",
-				},
-				Payload: []byte("destination"),
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
 			},
+			body: "destination",
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
 					"x-request-id": {"id123"},
@@ -307,11 +309,23 @@ func TestDispatchMessage(t *testing.T) {
 			replyServer := httptest.NewServer(replyHandler)
 			defer replyServer.Close()
 
-			md := NewEventDispatcher(zap.NewNop().Sugar())
-			err := md.DispatchEvent(tc.message,
-				getDomain(t, tc.sendToDestination, destServer.URL),
-				getDomain(t, tc.sendToReply, replyServer.URL),
-				DispatchDefaults{})
+			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event.SetType("testtype")
+			event.SetSource("testsource")
+			for n, v := range tc.eventExtensions {
+				event.SetExtension(n, v)
+			}
+			event.SetData(tc.body)
+
+			ctx := context.Background()
+			tctx := cloudevents.HTTPTransportContextFrom(ctx)
+			tctx.Header = tc.header
+			ctx = cehttp.WithTransportContext(ctx, tctx)
+
+			md := NewEventDispatcher(zap.NewNop())
+			destination := getDomain(t, tc.sendToDestination, destServer.URL)
+			reply := getDomain(t, tc.sendToReply, replyServer.URL)
+			err := md.DispatchEvent(ctx, event, destination, reply, DispatchDefaults{})
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
 			}

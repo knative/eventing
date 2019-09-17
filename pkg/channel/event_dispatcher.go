@@ -24,10 +24,12 @@ import (
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -63,7 +65,7 @@ type DispatchDefaults struct {
 // NewEventDispatcher creates a new event dispatcher that can dispatch
 // events to HTTP destinations.
 func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
-	ceClient, err := cloudevents.NewDefaultClient()
+	ceClient, err := kncloudevents.NewDefaultClient()
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
@@ -81,7 +83,7 @@ func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 // within the cluster.
 func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string, defaults DispatchDefaults) error {
 	var err error
-	// Default to replying with the original message. If there is a destination, then replace it
+	// Default to replying with the original event. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
 	response := &event
 	if destination != "" {
@@ -103,7 +105,7 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 }
 
 func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
-	d.logger.Info("Dispatching message", zap.String("url", url.String()))
+	d.logger.Info("Dispatching event", zap.String("url", url.String()))
 
 	tctx := addOutGoingTracing(ctx, url)
 	sctx := utils.ContextFrom(tctx, url)
@@ -116,11 +118,12 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 		// reject non-successful responses
 		return rctx, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
 	}
-	headers := utils.PassThroughHeadersMapFrom(rtctx.Header)
+	headers := utils.PassThroughHeadersFromHeaders(rtctx.Header)
 	if correlationID, ok := tctx.Header[correlationIDHeaderName]; ok {
 		headers[correlationIDHeaderName] = correlationID
 	}
 	rtctx.Header = http.Header(headers)
+	rctx = cehttp.WithTransportContext(rctx, rtctx)
 	return rctx, reply, nil
 }
 
