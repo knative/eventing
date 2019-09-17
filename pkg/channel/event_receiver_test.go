@@ -17,12 +17,11 @@ limitations under the License.
 package channel
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"io"
+	"github.com/cloudevents/sdk-go"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -39,9 +38,8 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 		path         string
 		header       http.Header
 		body         string
-		bodyReader   io.Reader
 		expected     int
-		receiverFunc func(ChannelReference, *Message) error
+		receiverFunc ReceiverFunc
 	}{
 		"non '/' path": {
 			path:     "/something",
@@ -55,18 +53,14 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 			host:     "no-dot",
 			expected: http.StatusInternalServerError,
 		},
-		"unreadable body": {
-			bodyReader: &errorReader{},
-			expected:   http.StatusInternalServerError,
-		},
 		"unknown channel error": {
-			receiverFunc: func(_ ChannelReference, _ *Message) error {
+			receiverFunc: func(_ context.Context, _ ChannelReference, _ cloudevents.Event) error {
 				return ErrUnknownChannel
 			},
 			expected: http.StatusNotFound,
 		},
 		"other receiver function error": {
-			receiverFunc: func(_ ChannelReference, _ *Message) error {
+			receiverFunc: func(_ context.Context, _ ChannelReference, _ cloudevents.Event) error {
 				return errors.New("test induced receiver function error")
 			},
 			expected: http.StatusInternalServerError,
@@ -86,12 +80,13 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 			},
 			body: "message-body",
 			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
-			receiverFunc: func(r ChannelReference, m *Message) error {
+			receiverFunc: func(ctx context.Context, r ChannelReference, e cloudevents.Event) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
 				}
-				if string(m.Payload) != "message-body" {
-					return fmt.Errorf("test receiver func -- bad payload: %v", m.Payload)
+				payload := fmt.Sprintf("%v", e.Data)
+				if payload != "message-body" {
+					return fmt.Errorf("test receiver func -- bad payload: %v", payload)
 				}
 				expectedHeaders := map[string]string{
 					"x-requEst-id": "1234",
@@ -104,7 +99,12 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 					"x-ot-pass":                 "true",
 					"ce-knativehistory":         "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
 				}
-				if diff := cmp.Diff(expectedHeaders, m.Headers); diff != "" {
+				tctx := cloudevents.HTTPTransportContextFrom(ctx)
+				actualHeaders := make(map[string]string)
+				for h, v := range tctx.Header {
+					actualHeaders[h] = v[0]
+				}
+				if diff := cmp.Diff(expectedHeaders, actualHeaders); diff != "" {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
 				}
 				return nil
@@ -126,34 +126,27 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewEventReceiver(f, zap.NewNop().Sugar())
+			r, err := NewEventReceiver(f, zap.NewNop())
 			if err != nil {
 				t.Fatalf("Error creating new message receiver. Error:%s", err)
 			}
-			h := r.handler()
 
-			body := tc.bodyReader
-			if body == nil {
-				body = strings.NewReader(tc.body)
-			}
+			ctx := context.Background()
+			tctx := cloudevents.HTTPTransportContextFrom(ctx)
+			tctx.Host = tc.host
+			tctx.Method = tc.method
+			tctx.Header = tc.header
+			tctx.URI = tc.path
+			sctx := utils.SendingContext(ctx, tctx, nil)
 
-			req := httptest.NewRequest(tc.method, tc.path, body)
-			req.Host = tc.host
-			req.Header = tc.header
+			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event.Data = tc.body
+			eventResponse := cloudevents.EventResponse{}
 
-			resp := httptest.NewRecorder()
-			h.ServeHTTP(resp, req)
-			if resp.Code != tc.expected {
-				t.Fatalf("Unexpected status code. Expected %v. Actual %v", tc.expected, resp.Code)
+			r.serveHTTP(sctx, event, &eventResponse)
+			if eventResponse.Status != tc.expected {
+				t.Fatalf("Unexpected status code. Expected %v. Actual %v", tc.expected, eventResponse.Status)
 			}
 		})
 	}
-}
-
-type errorReader struct{}
-
-var _ io.Reader = &errorReader{}
-
-func (*errorReader) Read(p []byte) (n int, err error) {
-	return 0, errors.New("errorReader returns an error")
 }

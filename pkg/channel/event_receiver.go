@@ -120,6 +120,7 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 }
 
 func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	// TODO HTTPSpanMiddleware
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
