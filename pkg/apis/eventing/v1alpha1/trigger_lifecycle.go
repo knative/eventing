@@ -17,11 +17,12 @@
 package v1alpha1
 
 import (
+	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
-var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
@@ -30,6 +31,8 @@ const (
 	TriggerConditionBroker apis.ConditionType = "Broker"
 
 	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
+
+	TriggerConditionDependency apis.ConditionType = "Dependency"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
@@ -84,4 +87,29 @@ func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, message
 
 func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
+}
+
+func (ts *TriggerStatus) MarkDependencySucceeded() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionDependency)
+}
+
+func (ts *TriggerStatus) MarkDependencyFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionDependency, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkDependencyUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionDependency, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1alpha1.KResource) {
+	kc := ks.Status.GetCondition(duckv1alpha1.ConditionReady)
+	if kc != nil && kc.IsTrue() {
+		ts.MarkDependencySucceeded()
+	} else {
+		msg := "nil"
+		if kc != nil {
+			msg = kc.Message
+		}
+		ts.MarkDependencyFailed("DependencyNotReady", "Dependency is not ready: %s", msg)
+	}
 }

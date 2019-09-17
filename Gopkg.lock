@@ -362,6 +362,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:314c9403866f4451d4fd13ec823f559e4b576c4272fd0c771991ab5d17f7fa41"
+  name = "github.com/knative/pkg"
+  packages = [
+    "apis/duck",
+    "apis/duck/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "c27053214044899c369bfd6e4d51bbf8cc7ccca2"
+
+[[projects]]
+  branch = "master"
   digest = "1:927762c6729b4e72957ba3310e485ed09cf8451c5a637a52fd016a9fe09e7936"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -903,7 +914,7 @@
   version = "kubernetes-1.12.9"
 
 [[projects]]
-  digest = "1:58293c3a67fbca0336cd3cc2140dfe630545694452cf73980d2e4b6e6ce2660c"
+  digest = "1:d64a381c707fd3af188b0104888fa6704c4b729e96787dc35e0d422c2b3ac832"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -940,6 +951,7 @@
     "pkg/util/mergepatch",
     "pkg/util/naming",
     "pkg/util/net",
+    "pkg/util/rand",
     "pkg/util/runtime",
     "pkg/util/sets",
     "pkg/util/sets/types",
@@ -957,6 +969,14 @@
   pruneopts = "NUT"
   revision = "01f179d85dbce0f2e0e4351a92394b38694b7cae"
   version = "kubernetes-1.12.9"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f4399da66c191adee58287b4069dbd3f040c4b42c7050e426b9b906c263c65b6"
+  name = "k8s.io/apiserver"
+  packages = ["pkg/storage/names"]
+  pruneopts = "NUT"
+  revision = "d6b22d09ee11be9e99a9391e94513ea18952f6d7"
 
 [[projects]]
   digest = "1:e816108bd65d5e1956b2ddcf71e7d1360503be42a94b151bdeb9de1896589f3b"
@@ -1289,7 +1309,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:48d9df2cddc038865feba0d2f98e1aa6515cf6f53050ea43d09aefd22a47f0b3"
+  digest = "1:c620d55af3c74b36413512d5850db67f0efaec7a9b4cdbcc0697462fdc35740b"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
@@ -1301,7 +1321,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "816123d5e71fb88533d1564c331443387967e1dc"
+  revision = "efad44559f944cfc58dc5bca076eeb3ec20fb346"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -1320,6 +1340,8 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
+    "github.com/knative/pkg/apis/duck",
+    "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/tsenart/vegeta/lib",
@@ -1365,6 +1387,7 @@
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/apimachinery/pkg/watch",
+    "k8s.io/apiserver/pkg/storage/names",
     "k8s.io/client-go/discovery",
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",

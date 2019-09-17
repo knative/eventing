@@ -89,3 +89,15 @@ func WithApiServerSourceSpec(spec v1alpha1.ApiServerSourceSpec) ApiServerSourceO
 		c.Spec = spec
 	}
 }
+
+func WithApiServerSourceStatusObservedGeneration(generation int64) ApiServerSourceOption {
+	return func(c *v1alpha1.ApiServerSource) {
+		c.Status.ObservedGeneration = generation
+	}
+}
+
+func WithApiServerSourceObjectMetaGeneration(generation int64) ApiServerSourceOption {
+	return func(c *v1alpha1.ApiServerSource) {
+		c.ObjectMeta.Generation = generation
+	}
+}

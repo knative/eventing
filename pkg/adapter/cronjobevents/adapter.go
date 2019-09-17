@@ -26,6 +26,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/source"
 )
 
 // TODO: this should be a k8s cron.
@@ -49,7 +50,13 @@ type Adapter struct {
 
 	// client sends cloudevents.
 	client cloudevents.Client
+
+	Reporter source.StatsReporter
 }
+
+const (
+	resourceGroup = "cronjobsources.sources.eventing.knative.dev"
+)
 
 // Initialize cloudevent client
 func (a *Adapter) initClient() error {
@@ -92,10 +99,20 @@ func (a *Adapter) cronTick() {
 	event.SetType(sourcesv1alpha1.CronJobEventType)
 	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
-
-	if _, _, err := a.client.Send(context.TODO(), event); err != nil {
-		logger.Error("failed to send cloudevent", err)
+	reportArgs := &source.ReportArgs{
+		Namespace:     a.Namespace,
+		EventSource:   event.Source(),
+		EventType:     event.Type(),
+		Name:          a.Name,
+		ResourceGroup: resourceGroup,
 	}
+
+	rctx, _, err := a.client.Send(context.TODO(), event)
+	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
+	if err != nil {
+		logger.Error("failed to send cloudevent", zap.Error(err))
+	}
+	a.Reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
 }
 
 type Message struct {

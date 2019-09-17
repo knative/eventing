@@ -82,9 +82,6 @@ func MakeFactory(ctor Ctor, unstructured bool) Factory {
 		statsReporter := &FakeStatsReporter{}
 		//ctx = reconciler.WithStatsReporter(ctx, statsReporter) // TODO: upstream stats interface from eventing to PKG
 
-		PrependGenerateNameReactor(&client.Fake)
-		PrependGenerateNameReactor(&dynamicClient.Fake)
-
 		// Set up our Controller from the fakes.
 		c := ctor(ctx, &ls, configmap.NewFixedWatcher())
 
