@@ -20,20 +20,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/utils"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
-	"knative.dev/pkg/tracing"
+	"knative.dev/eventing/pkg/utils"
 )
 
 var (
 	shutdownTimeout = 1 * time.Minute
+
+	// ErrUnknownChannel is returned when an event is received by a channel dispatcher for a
+	// channel that does not exist.
+	ErrUnknownChannel = errors.New("unknown channel")
 )
 
 // EventReceiver starts a server to receive new events for the channel dispatcher. The new
@@ -45,6 +46,7 @@ type EventReceiver struct {
 	hostToChannelFunc ResolveChannelFromHostFunc
 }
 
+// ReceiverFunc is the function to be called for handling the event.
 type ReceiverFunc func(context.Context, ChannelReference, cloudevents.Event) error
 
 // ReceiverOptions provides functional options to EventReceiver function.
@@ -131,7 +133,7 @@ func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, 
 	}
 
 	// The response status codes:
-	//   202 - the message was sent to subscribers
+	//   202 - the event was sent to subscribers
 	//   404 - the request was for an unknown channel
 	//   500 - an error occurred processing the request
 
@@ -145,12 +147,11 @@ func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, 
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	header := utils.ExtractPassThroughHeaders(tctx)
+	sctx := utils.SendingContext(ctx, tctx, nil)
+	// Setting common channel information.
+	AppendHistory(&event, host)
 
-	// setting common channel information in the request
-	message.AppendToHistory(host)
-
-	err = r.receiverFunc(channel, message)
+	err = r.receiverFunc(sctx, channel, event)
 	if err != nil {
 		if err == ErrUnknownChannel {
 			resp.Status = http.StatusNotFound
@@ -162,45 +163,6 @@ func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, 
 
 	resp.Status = http.StatusAccepted
 	return nil
-}
-
-func (r *EventReceiver) fromRequest(req *http.Request) (*Message, error) {
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	headers := r.fromHTTPHeaders(req.Header)
-	message := &Message{
-		Headers: headers,
-		Payload: body,
-	}
-	return message, nil
-}
-
-// fromHTTPHeaders converts HTTP headers into a message header map.
-//
-// Only headers whitelisted as safe are copied. If an HTTP header exists
-// multiple times, a single value will be retained.
-func (r *EventReceiver) fromHTTPHeaders(headers http.Header) map[string]string {
-	safe := map[string]string{}
-
-	// TODO handle multi-value headers
-	for h, v := range headers {
-		// Headers are case-insensitive but test case are all lower-case
-		comparable := strings.ToLower(h)
-		if r.forwardHeaders.Has(comparable) {
-			safe[h] = v[0]
-			continue
-		}
-		for _, p := range r.forwardPrefixes {
-			if strings.HasPrefix(comparable, p) {
-				safe[h] = v[0]
-				break
-			}
-		}
-	}
-
-	return safe
 }
 
 // ParseChannel converts the channel's hostname into a channel

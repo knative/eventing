@@ -51,7 +51,7 @@ type Config struct {
 type Handler struct {
 	config Config
 
-	receivedMessages chan *forwardMessage
+	receivedMessages chan *forwardEvent
 	receiver         *channel.EventReceiver
 	dispatcher       *channel.EventDispatcher
 
@@ -64,10 +64,10 @@ type Handler struct {
 
 var _ http.Handler = &Handler{}
 
-// forwardMessage is passed between the Receiver and the Dispatcher.
-type forwardMessage struct {
-	msg  *channel.Message
-	done chan<- error
+// forwardEvent is passed between the Receiver and the Dispatcher.
+type forwardEvent struct {
+	event cloudevents.Event
+	done  chan<- error
 }
 
 // NewHandler creates a new fanout.Handler.
@@ -76,7 +76,7 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 		logger:           logger,
 		config:           config,
 		dispatcher:       channel.NewEventDispatcher(logger),
-		receivedMessages: make(chan *forwardMessage, messageBufferSize),
+		receivedMessages: make(chan *forwardEvent, messageBufferSize),
 		timeout:          defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after

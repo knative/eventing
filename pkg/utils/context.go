@@ -48,9 +48,12 @@ var (
 )
 
 // SendingContext creates the context to use when sending a Cloud Event with cloudevents.Client. It
-// sets the target and attaches a filtered set of headers from the initial request.
+// sets the target if specified, and attaches a filtered set of headers from the initial request.
 func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
-	sendingCTX := cloudevents.ContextWithTarget(ctx, targetURI.String())
+	sendingCTX := ctx
+	if targetURI != nil {
+		sendingCTX = cloudevents.ContextWithTarget(ctx, targetURI.String())
+	}
 
 	h := ExtractPassThroughHeaders(tctx)
 	for n, v := range h {
