@@ -25,8 +25,10 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/tracing"
 )
 
 var (
@@ -68,7 +70,18 @@ func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) 
 // NewEventReceiver creates an event receiver passing new events to the
 // receiverFunc.
 func NewEventReceiver(receiverFunc ReceiverFunc, logger *zap.Logger, opts ...ReceiverOptions) (*EventReceiver, error) {
-	ceClient, err := cloudevents.NewDefaultClient()
+	tOpts := []cehttp.Option{
+		cloudevents.WithBinaryEncoding(),
+		cehttp.WithMiddleware(tracing.HTTPSpanMiddleware),
+	}
+	transport, err := cloudevents.NewHTTPTransport(tOpts...)
+	if err != nil {
+		logger.Fatal("failed to create cloudevents transport", zap.Error(err))
+	}
+	ceClient, err := cloudevents.NewClient(transport,
+		cloudevents.WithUUIDs(),
+		cloudevents.WithTimeNow(),
+	)
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
@@ -120,7 +133,6 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 }
 
 func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	// TODO HTTPSpanMiddleware
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed

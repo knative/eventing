@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudevents/sdk-go"
 	"net/http"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"knative.dev/eventing/pkg/utils"
 	_ "knative.dev/pkg/system/testing"
@@ -31,7 +32,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestMessageReceiver_HandleRequest(t *testing.T) {
+func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		method       string
 		host         string
@@ -137,13 +138,13 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 			tctx.Method = tc.method
 			tctx.Header = tc.header
 			tctx.URI = tc.path
-			sctx := utils.SendingContext(ctx, tctx, nil)
+			ctx = cehttp.WithTransportContext(ctx, tctx)
 
 			event := cloudevents.NewEvent(cloudevents.VersionV03)
 			event.Data = tc.body
 			eventResponse := cloudevents.EventResponse{}
 
-			r.serveHTTP(sctx, event, &eventResponse)
+			r.serveHTTP(ctx, event, &eventResponse)
 			if eventResponse.Status != tc.expected {
 				t.Fatalf("Unexpected status code. Expected %v. Actual %v", tc.expected, eventResponse.Status)
 			}
