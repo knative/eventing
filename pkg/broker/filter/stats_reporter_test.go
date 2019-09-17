@@ -39,7 +39,7 @@ func TestStatsReporter(t *testing.T) {
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelTriggerName:   "testtrigger",
+		metricskey.LabelName:          "testtrigger",
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelFilterType:    "testeventtype",
 		metricskey.LabelFilterSource:  "testeventsource",
@@ -92,7 +92,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelTriggerName:       "testtrigger",
+		metricskey.LabelName:              "testtrigger",
 		metricskey.LabelBrokerName:        "testbroker",
 		metricskey.LabelFilterType:        anyValue,
 		metricskey.LabelFilterSource:      anyValue,
