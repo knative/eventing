@@ -55,7 +55,7 @@ func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, 
 		sendingCTX = cloudevents.ContextWithTarget(ctx, targetURI.String())
 	}
 
-	h := ExtractPassThroughHeaders(tctx)
+	h := PassThroughHeadersFrom(tctx)
 	for n, v := range h {
 		for _, iv := range v {
 			sendingCTX = cloudevents.ContextWithHeader(sendingCTX, n, iv)
@@ -65,9 +65,9 @@ func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, 
 	return sendingCTX
 }
 
-// ExtractPassThroughHeaders extracts the headers that are in the `forwardHeaders` set
+// PassThroughHeadersFrom extracts the headers that are in the `forwardHeaders` set
 // or has any of the prefixes in `forwardPrefixes`.
-func ExtractPassThroughHeaders(tctx cloudevents.HTTPTransportContext) http.Header {
+func PassThroughHeadersFrom(tctx cloudevents.HTTPTransportContext) http.Header {
 	h := http.Header{}
 
 	for n, v := range tctx.Header {
@@ -86,9 +86,9 @@ func ExtractPassThroughHeaders(tctx cloudevents.HTTPTransportContext) http.Heade
 	return h
 }
 
-// ExtractPassThroughHeaders extracts the headers that are in the `forwardHeaders` set
+// PassThroughHeadersMapFrom extracts the headers that are in the `forwardHeaders` set
 // or has any of the prefixes in `forwardPrefixes`, and converts them to a map.
-func ExtractPassThroughHeadersMap(headers http.Header) map[string][]string {
+func PassThroughHeadersMapFrom(headers http.Header) map[string][]string {
 	safe := map[string][]string{}
 
 	for h, v := range headers {

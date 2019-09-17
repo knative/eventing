@@ -116,7 +116,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 		// reject non-successful responses
 		return rctx, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
 	}
-	headers := utils.ExtractPassThroughHeadersMap(rtctx.Header)
+	headers := utils.PassThroughHeadersMapFrom(rtctx.Header)
 	if correlationID, ok := tctx.Header[correlationIDHeaderName]; ok {
 		headers[correlationIDHeaderName] = correlationID
 	}

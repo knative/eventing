@@ -98,7 +98,6 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 					"cE-pass-through":           "true",
 					"x-B3-pass":                 "true",
 					"x-ot-pass":                 "true",
-					"ce-knativehistory":         "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
 				}
 				tctx := cloudevents.HTTPTransportContextFrom(ctx)
 				actualHeaders := make(map[string]string)
@@ -107,6 +106,14 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				}
 				if diff := cmp.Diff(expectedHeaders, actualHeaders); diff != "" {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
+				}
+				var h string
+				if err := e.ExtensionAs(EventHistory, &h); err != nil {
+					return fmt.Errorf("test receiver func -- history not added: %v", err)
+				}
+				expectedHistory := "test-name.test-namespace.svc." + utils.GetClusterDomainName()
+				if h != expectedHistory {
+					return fmt.Errorf("test receiver func -- bad history: %v", h)
 				}
 				return nil
 			},
@@ -144,8 +151,11 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			event.Data = tc.body
 			eventResponse := cloudevents.EventResponse{}
 
-			r.serveHTTP(ctx, event, &eventResponse)
+			err = r.serveHTTP(ctx, event, &eventResponse)
 			if eventResponse.Status != tc.expected {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
 				t.Fatalf("Unexpected status code. Expected %v. Actual %v", tc.expected, eventResponse.Status)
 			}
 		})
