@@ -25,10 +25,22 @@ import (
 	"testing"
 )
 
-var bannedImports = []string{
-	"github.com/knative",
-	"github.com/kubernetes",
-	"github.com/istio",
+type vbTuple struct {
+	banned string
+	vanity string
+}
+
+var bannedImports = []vbTuple{
+	{
+		banned: "github.com/knative",
+		vanity: "knative.dev",
+	}, {
+		banned: "github.com/kubernetes",
+		vanity: "k8s.io",
+	}, {
+		banned: "github.com/istio",
+		vanity: "istio.io",
+	},
 }
 
 func TestBannedImports(t *testing.T) {
@@ -40,9 +52,9 @@ func TestBannedImports(t *testing.T) {
 		if !info.IsDir() {
 			return nil
 		}
-		for _, banned := range bannedImports {
-			if strings.HasSuffix(path, banned) {
-				return fmt.Errorf("%s is a banned import", banned)
+		for _, vb := range bannedImports {
+			if strings.HasSuffix(path, vb.banned) {
+				return fmt.Errorf("%q is a banned import, use vanity import instead %q", vb.banned, vb.vanity)
 			}
 		}
 		return nil
