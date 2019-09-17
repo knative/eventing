@@ -78,14 +78,14 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"x-B3-pass":                 {"true"},
 				"x-ot-pass":                 {"true"},
 			},
-			body: "message-body",
+			body: "event-body",
 			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
 			receiverFunc: func(ctx context.Context, r ChannelReference, e cloudevents.Event) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
 				}
 				payload := fmt.Sprintf("%v", e.Data)
-				if payload != "message-body" {
+				if payload != "event-body" {
 					return fmt.Errorf("test receiver func -- bad payload: %v", payload)
 				}
 				expectedHeaders := map[string]string{
@@ -134,7 +134,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			f := tc.receiverFunc
 			r, err := NewEventReceiver(f, zap.NewNop())
 			if err != nil {
-				t.Fatalf("Error creating new message receiver. Error:%s", err)
+				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
 
 			ctx := context.Background()

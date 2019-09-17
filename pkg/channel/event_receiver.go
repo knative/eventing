@@ -25,10 +25,9 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/tracing"
 )
 
 var (
@@ -70,18 +69,7 @@ func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) 
 // NewEventReceiver creates an event receiver passing new events to the
 // receiverFunc.
 func NewEventReceiver(receiverFunc ReceiverFunc, logger *zap.Logger, opts ...ReceiverOptions) (*EventReceiver, error) {
-	tOpts := []cehttp.Option{
-		cloudevents.WithBinaryEncoding(),
-		cehttp.WithMiddleware(tracing.HTTPSpanMiddleware),
-	}
-	transport, err := cloudevents.NewHTTPTransport(tOpts...)
-	if err != nil {
-		logger.Fatal("failed to create cloudevents transport", zap.Error(err))
-	}
-	ceClient, err := cloudevents.NewClient(transport,
-		cloudevents.WithUUIDs(),
-		cloudevents.WithTimeNow(),
-	)
+	ceClient, err := kncloudevents.NewDefaultClient()
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
