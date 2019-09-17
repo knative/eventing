@@ -23,12 +23,12 @@ import (
 	"strings"
 	"time"
 
+	container "google.golang.org/api/container/v1beta1"
 	"knative.dev/pkg/testutils/clustermanager/boskos"
 	"knative.dev/pkg/testutils/common"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/container/v1"
 )
 
 const (
@@ -60,6 +60,7 @@ type GKERequest struct {
 	Region        string
 	Zone          string
 	BackupRegions []string
+	Addons        []string
 }
 
 // GKECluster implements ClusterOperations
@@ -114,14 +115,18 @@ func (gsc *GKESDKClient) getOperation(project, location, opName string) (*contai
 // nodeType: default to n1-standard-4 if not provided
 // region: default to regional cluster if not provided, and use default backup regions
 // zone: default is none, must be provided together with region
-func (gs *GKEClient) Setup(numNodes *int64, nodeType *string, region *string, zone *string, project *string) ClusterOperations {
+// project: no default
+// addons: cluster addons to be added to cluster
+func (gs *GKEClient) Setup(numNodes *int64, nodeType *string, region *string, zone *string, project *string, addons []string) ClusterOperations {
 	gc := &GKECluster{
 		Request: &GKERequest{
 			NumNodes:      DefaultGKENumNodes,
 			NodeType:      DefaultGKENodeType,
 			Region:        DefaultGKERegion,
 			Zone:          DefaultGKEZone,
-			BackupRegions: DefaultGKEBackupRegions},
+			BackupRegions: DefaultGKEBackupRegions,
+			Addons:        addons,
+		},
 	}
 
 	if nil != project { // use provided project and create cluster
@@ -236,7 +241,11 @@ func (gc *GKECluster) Acquire() error {
 		err = nil
 		rb := &container.CreateClusterRequest{
 			Cluster: &container.Cluster{
-				Name:             clusterName,
+				Name: clusterName,
+				// Installing addons after cluster creation takes at least 5
+				// minutes, so install addons as part of cluster creation, which
+				// doesn't seem to add much time on top of cluster creation
+				AddonsConfig:     gc.getAddonsConfig(),
 				InitialNodeCount: gc.Request.NumNodes,
 				NodeConfig: &container.NodeConfig{
 					MachineType: gc.Request.NodeType,
@@ -319,6 +328,27 @@ func (gc *GKECluster) Delete() error {
 		return fmt.Errorf("failed deleting cluster: '%v'", err)
 	}
 	return nil
+}
+
+// getAddonsConfig gets AddonsConfig from Request, contains the logic of
+// converting string argument to typed AddonsConfig, for example `IstioConfig`.
+// Currently supports istio
+func (gc *GKECluster) getAddonsConfig() *container.AddonsConfig {
+	const (
+		// Define all supported addons here
+		istio = "istio"
+	)
+	ac := &container.AddonsConfig{}
+	for _, name := range gc.Request.Addons {
+		switch strings.ToLower(name) {
+		case istio:
+			ac.IstioConfig = &container.IstioConfig{Disabled: false}
+		default:
+			panic(fmt.Sprintf("addon type %q not supported. Has to be one of: %q", name, istio))
+		}
+	}
+
+	return ac
 }
 
 // wait depends on unique opName(operation ID created by cloud), and waits until
