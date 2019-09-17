@@ -30,10 +30,10 @@ import (
 
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
-	duckv1alpha1 "github.com/knative/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 

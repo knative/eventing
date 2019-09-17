@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,10 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Api versions allow the api contract for a resource to be changed while keeping
-// backward compatibility by support multiple concurrent versions
-// of the same resource
-
-// +k8s:deepcopy-gen=package
-// +groupName=duck.knative.dev
 package v1alpha1
+
+import (
+	"context"
+)
+
+func (s *ApiServerSource) SetDefaults(ctx context.Context) {
+	s.Spec.SetDefaults(ctx)
+}
+
+func (ss *ApiServerSourceSpec) SetDefaults(ctx context.Context) {
+	// TODO anything?
+}

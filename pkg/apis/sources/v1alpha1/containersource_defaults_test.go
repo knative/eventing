@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package duck
+package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/cache"
+	"context"
+	"testing"
 )
 
-// InformerFactory is used to create Informer/Lister pairs for a schema.GroupVersionResource
-type InformerFactory interface {
-	// Get returns a synced Informer/Lister pair for the provided schema.GroupVersionResource.
-	Get(schema.GroupVersionResource) (cache.SharedIndexInformer, cache.GenericLister, error)
+// No-op test because method does nothing.
+func TestContainerSourceDefaults(t *testing.T) {
+	s := ContainerSource{}
+	s.SetDefaults(context.TODO())
 }
