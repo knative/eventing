@@ -59,7 +59,7 @@ func (in *Broker) DeepCopyObject() runtime.Object {
 func (in *BrokerList) DeepCopyInto(out *BrokerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Broker, len(*in))
@@ -169,7 +169,7 @@ func (in *EventType) DeepCopyObject() runtime.Object {
 func (in *EventTypeList) DeepCopyInto(out *EventTypeList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]EventType, len(*in))
@@ -333,7 +333,7 @@ func (in *TriggerFilterSourceAndType) DeepCopy() *TriggerFilterSourceAndType {
 func (in *TriggerList) DeepCopyInto(out *TriggerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Trigger, len(*in))

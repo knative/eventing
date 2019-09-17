@@ -131,7 +131,7 @@ func (c *FakeParallels) DeleteCollection(options *v1.DeleteOptions, listOptions 
 // Patch applies the patch and returns the patched parallel.
 func (c *FakeParallels) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Parallel, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(parallelsResource, c.ns, name, data, subresources...), &v1alpha1.Parallel{})
+		Invokes(testing.NewPatchSubresourceAction(parallelsResource, c.ns, name, pt, data, subresources...), &v1alpha1.Parallel{})
 
 	if obj == nil {
 		return nil, err

@@ -131,7 +131,7 @@ func (c *FakeSequences) DeleteCollection(options *v1.DeleteOptions, listOptions 
 // Patch applies the patch and returns the patched sequence.
 func (c *FakeSequences) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Sequence, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(sequencesResource, c.ns, name, data, subresources...), &v1alpha1.Sequence{})
+		Invokes(testing.NewPatchSubresourceAction(sequencesResource, c.ns, name, pt, data, subresources...), &v1alpha1.Sequence{})
 
 	if obj == nil {
 		return nil, err

@@ -84,7 +84,7 @@ func (in *ApiServerSource) DeepCopyObject() runtime.Object {
 func (in *ApiServerSourceList) DeepCopyInto(out *ApiServerSourceList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ApiServerSource, len(*in))
@@ -190,7 +190,7 @@ func (in *ContainerSource) DeepCopyObject() runtime.Object {
 func (in *ContainerSourceList) DeepCopyInto(out *ContainerSourceList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ContainerSource, len(*in))
@@ -356,7 +356,7 @@ func (in *CronJobSource) DeepCopyObject() runtime.Object {
 func (in *CronJobSourceList) DeepCopyInto(out *CronJobSourceList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]CronJobSource, len(*in))

@@ -131,7 +131,7 @@ func (c *FakeInMemoryChannels) DeleteCollection(options *v1.DeleteOptions, listO
 // Patch applies the patch and returns the patched inMemoryChannel.
 func (c *FakeInMemoryChannels) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.InMemoryChannel, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(inmemorychannelsResource, c.ns, name, data, subresources...), &v1alpha1.InMemoryChannel{})
+		Invokes(testing.NewPatchSubresourceAction(inmemorychannelsResource, c.ns, name, pt, data, subresources...), &v1alpha1.InMemoryChannel{})
 
 	if obj == nil {
 		return nil, err

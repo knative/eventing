@@ -30,14 +30,8 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Eventing() eventingv1alpha1.EventingV1alpha1Interface
 	MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Messaging() messagingv1alpha1.MessagingV1alpha1Interface
 	SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Sources() sourcesv1alpha1.SourcesV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -54,31 +48,13 @@ func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interfac
 	return c.eventingV1alpha1
 }
 
-// Deprecated: Eventing retrieves the default version of EventingClient.
-// Please explicitly pick a version.
-func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
-	return c.eventingV1alpha1
-}
-
 // MessagingV1alpha1 retrieves the MessagingV1alpha1Client
 func (c *Clientset) MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface {
 	return c.messagingV1alpha1
 }
 
-// Deprecated: Messaging retrieves the default version of MessagingClient.
-// Please explicitly pick a version.
-func (c *Clientset) Messaging() messagingv1alpha1.MessagingV1alpha1Interface {
-	return c.messagingV1alpha1
-}
-
 // SourcesV1alpha1 retrieves the SourcesV1alpha1Client
 func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return c.sourcesV1alpha1
-}
-
-// Deprecated: Sources retrieves the default version of SourcesClient.
-// Please explicitly pick a version.
-func (c *Clientset) Sources() sourcesv1alpha1.SourcesV1alpha1Interface {
 	return c.sourcesV1alpha1
 }
 

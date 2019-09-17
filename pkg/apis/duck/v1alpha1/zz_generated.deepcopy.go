@@ -118,7 +118,7 @@ func (in *Channelable) DeepCopyObject() runtime.Object {
 func (in *ChannelableList) DeepCopyInto(out *ChannelableList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Channelable, len(*in))
@@ -213,7 +213,7 @@ func (in *Resource) DeepCopyObject() runtime.Object {
 func (in *ResourceList) DeepCopyInto(out *ResourceList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Resource, len(*in))
@@ -318,7 +318,7 @@ func (in *SubscribableType) DeepCopyObject() runtime.Object {
 func (in *SubscribableTypeList) DeepCopyInto(out *SubscribableTypeList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]SubscribableType, len(*in))
