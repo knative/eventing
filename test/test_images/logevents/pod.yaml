@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: logevents
+spec:
+  containers:
+    - name: logevents
+      image: knative.dev/eventing/test/test_images/logevents
+
