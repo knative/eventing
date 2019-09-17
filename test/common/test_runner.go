@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apiserver/pkg/storage/names"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/test/helpers"
 
@@ -76,7 +77,7 @@ func contains(features []Feature, feature Feature) bool {
 func Setup(t *testing.T, runInParallel bool) *Client {
 	// Create a new namespace to run this test case.
 	baseFuncName := helpers.GetBaseFuncName(t.Name())
-	namespace := helpers.MakeK8sNamePrefix(baseFuncName)
+	namespace := makeK8sNamespace(baseFuncName)
 	t.Logf("namespace is : %q", namespace)
 	client, err := NewClient(
 		pkgTest.Flags.Kubeconfig,
@@ -91,7 +92,7 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 
 	// Disallow manually interrupting the tests.
 	// TODO(Fredy-Z): t.Skip() can only be called on its own goroutine.
-	//                Investigate if there is other way to gracefully terminte the tests in the middle.
+	//                Investigate if there is other way to gracefully terminate the tests in the middle.
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -105,6 +106,11 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 	}
 
 	return client
+}
+
+func makeK8sNamespace(baseFuncName string) string {
+	base := helpers.MakeK8sNamePrefix(baseFuncName)
+	return names.SimpleNameGenerator.GenerateName(base + "-")
 }
 
 // TearDown will delete created names using clients.

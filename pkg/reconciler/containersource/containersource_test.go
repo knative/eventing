@@ -47,6 +47,7 @@ const (
 	sourceUID  = "1234-5678-90"
 	testNS     = "testnamespace"
 	sinkName   = "testsink"
+	generation = 1
 )
 
 var (
@@ -104,6 +105,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &sinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key:     testNS + "/" + sourceName,
@@ -117,8 +119,10 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &sinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": Error fetching sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} for source "testnamespace/test-container-source, /, Kind=": channels.messaging.knative.dev "testsink" not found"`),
 				),
 			}},
@@ -130,6 +134,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &nonsinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 				NewTrigger(sinkName, testNS, ""),
 			},
@@ -144,8 +149,10 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &nonsinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
 				),
 			}},
@@ -157,6 +164,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &sinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS),
 			},
@@ -171,8 +179,10 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &sinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
 				),
 			}},
@@ -183,6 +193,7 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						DeprecatedImage: image,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key:     testNS + "/" + sourceName,
@@ -195,8 +206,10 @@ func TestAllCases(t *testing.T) {
 					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
 						DeprecatedImage: image,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSinkMissing("Sink missing from spec"),
 				),
 			}},
@@ -218,6 +231,7 @@ func TestAllCases(t *testing.T) {
 						},
 						Sink: &sinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithContainerSourceUID(sourceUID),
 				),
 				NewChannel(sinkName, testNS,
@@ -246,10 +260,12 @@ func TestAllCases(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -269,6 +285,7 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithChannelAddress(sinkDNS),
@@ -285,11 +302,13 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 						Sink:            &sinkRef,
 					}),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithContainerSourceUID(sourceUID),
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -319,6 +338,7 @@ func TestAllCases(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeploying(`Created deployment ""`),
@@ -356,10 +376,12 @@ func TestAllCases(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					// Status Update:
 					WithContainerSourceDeployed,
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 		}, {
@@ -371,6 +393,7 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeploying(`Created deployment ""`),
@@ -398,10 +421,12 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					// Status Update:
 					WithContainerSourceDeployed,
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 		}, {
@@ -423,6 +448,7 @@ func TestAllCases(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
 					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
 				),
@@ -452,12 +478,14 @@ func TestAllCases(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
 					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -477,6 +505,7 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
 					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
 				),
@@ -496,12 +525,14 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					WithContainerSourceLabels(map[string]string{"label": "labeled"}),
 					WithContainerSourceAnnotations(map[string]string{"annotation": "annotated"}),
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeploying(fmt.Sprintf(`Created deployment "%s"`, deploymentName)),
+					WithContainerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -521,6 +552,7 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithChannelAddress(sinkDNS),
@@ -541,8 +573,10 @@ func TestAllCases(t *testing.T) {
 						Sink:            &sinkRef,
 					}),
 					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
 					WithContainerSourceSink(sinkURI),
 					WithContainerSourceDeployFailed(`Could not create deployment: inducing failure for create deployments`),
 				),

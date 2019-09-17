@@ -68,6 +68,8 @@ const (
 
 	sinkName = "testsink"
 	source   = "apiserveraddr"
+
+	generation = 1
 )
 
 func init() {
@@ -89,6 +91,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key:     testNS + "/" + sourceName,
@@ -99,8 +102,10 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
+					WithApiServerSourceStatusObservedGeneration(generation),
 					WithApiServerSourceSinkNotFound,
 				),
 			}},
@@ -119,6 +124,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -143,11 +149,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 		},
@@ -165,6 +173,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -189,11 +198,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
 					WithApiServerSourceDeploymentUnavailable,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -215,6 +226,7 @@ func TestReconcile(t *testing.T) {
 						ServiceAccountName: "malin",
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -240,11 +252,13 @@ func TestReconcile(t *testing.T) {
 						ServiceAccountName: "malin",
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeploymentUnavailable,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -265,6 +279,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -289,11 +304,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeploymentUnavailable,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -314,6 +331,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -339,11 +357,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &sinkRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
@@ -364,6 +384,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &brokerRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -388,11 +409,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &brokerRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -418,6 +441,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &brokerRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -445,11 +469,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &brokerRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -472,6 +498,7 @@ func TestReconcile(t *testing.T) {
 						Sink: &brokerRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -502,11 +529,13 @@ func TestReconcile(t *testing.T) {
 						Sink: &brokerRef,
 					}),
 					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
 					WithApiServerSourceSink(sinkURI),
 					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{

@@ -128,6 +128,7 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
 	// 3. Create the EventType that it can emit.
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
+	cronjob.Status.ObservedGeneration = cronjob.Generation
 
 	cronjob.Status.InitializeConditions()
 
