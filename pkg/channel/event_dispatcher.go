@@ -106,7 +106,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 	d.logger.Info("Dispatching message", zap.String("url", url.String()))
 
 	tctx := addOutGoingTracing(ctx, url)
-	sctx := utils.SendingContext(ctx, tctx, url)
+	sctx := utils.ContextFrom(tctx, url)
 	rctx, reply, err := d.ceClient.Send(sctx, event)
 	if err != nil {
 		return rctx, nil, err

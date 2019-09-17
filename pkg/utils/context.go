@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -41,25 +42,32 @@ var (
 	forwardPrefixes = []string{
 		// knative
 		"knative-",
+		// cloud events
+		"ce-",
 		// tracing
 		"x-b3-",
 		"x-ot-",
 	}
 )
 
-// SendingContext creates the context to use when sending a Cloud Event with cloudevents.Client. It
+// ContextFrom creates the context to use when sending a Cloud Event with cloudevents.Client. It
 // sets the target if specified, and attaches a filtered set of headers from the initial request.
-func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
-	sendingCTX := ctx
-	if targetURI != nil {
-		sendingCTX = cloudevents.ContextWithTarget(ctx, targetURI.String())
-	}
-
+func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
+	// Get the allowed set of headers.
 	h := PassThroughHeadersFrom(tctx)
+	// Override the headers.
+	tctx.Header = h
+	// Create the sending context with the overriden transport context.
+	sendingCTX := cehttp.WithTransportContext(context.Background(), tctx)
+
 	for n, v := range h {
 		for _, iv := range v {
 			sendingCTX = cloudevents.ContextWithHeader(sendingCTX, n, iv)
 		}
+	}
+
+	if targetURI != nil {
+		sendingCTX = cloudevents.ContextWithTarget(sendingCTX, targetURI.String())
 	}
 
 	return sendingCTX

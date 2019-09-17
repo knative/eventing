@@ -160,7 +160,7 @@ func (r *EventReceiver) serveHTTP(ctx context.Context, event cloudevents.Event, 
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	sctx := utils.SendingContext(ctx, tctx, nil)
+	sctx := utils.ContextFrom(tctx, nil)
 	// Setting common channel information.
 	AppendHistory(&event, host)
 

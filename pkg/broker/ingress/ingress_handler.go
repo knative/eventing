@@ -94,7 +94,7 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	start := time.Now()
-	sendingCTX := utils.SendingContext(ctx, tctx, h.ChannelURI)
+	sendingCTX := utils.ContextFrom(tctx, h.ChannelURI)
 	rctx, _, err := h.CeClient.Send(sendingCTX, event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.

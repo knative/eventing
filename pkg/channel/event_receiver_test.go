@@ -73,7 +73,6 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"not":                       {"passed", "through"},
 				"nor":                       {"this-one"},
 				"x-requEst-id":              {"1234"},
-				"contenT-type":              {"text/json"},
 				"knatIve-will-pass-through": {"true", "always"},
 				"cE-pass-through":           {"true"},
 				"x-B3-pass":                 {"true"},
@@ -91,7 +90,6 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				}
 				expectedHeaders := map[string]string{
 					"x-requEst-id": "1234",
-					"contenT-type": "text/json",
 					// Note that only the first value was passed through, the remaining values were
 					// discarded.
 					"knatIve-will-pass-through": "true",
