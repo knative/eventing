@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
@@ -48,7 +48,15 @@ var (
 		// checking them.
 		"x-b3-spanid",
 		"x-b3-traceid",
+		// CloudEvents headers, they will have random values, so don't bother checking them.
+		"ce-id",
+		"ce-time",
 	)
+)
+
+const (
+	testCeSource = "testsource"
+	testCeType   = "testtype"
 )
 
 func TestDispatchMessage(t *testing.T) {
@@ -78,15 +86,20 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "destination",
+				Body: `"destination"`,
 			},
 		},
 		"destination - only -- error": {
@@ -104,15 +117,20 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "destination",
+				Body: `"destination"`,
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
@@ -135,15 +153,20 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "reply",
+				Body: `"reply"`,
 			},
 		},
 		"reply - only -- error": {
@@ -161,15 +184,20 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "reply",
+				Body: `"reply"`,
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusNotFound,
@@ -193,15 +221,20 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "destination",
+				Body: `"destination"`,
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusInternalServerError,
@@ -225,15 +258,20 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "destination",
+				Body: `"destination"`,
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
@@ -257,17 +295,25 @@ func TestDispatchMessage(t *testing.T) {
 				"knative-2":      {"knative-2-value"},
 			},
 			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": "ce-abc-value",
+			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
-					"x-request-id": {"id123"},
-					"knative-1":    {"knative-1-value"},
-					"knative-2":    {"knative-2-value"},
-					"ce-abc":       {"ce-abc-value"},
-					"x-b3-sampled": {"0"},
-					"x-b3-spanid":  {"random-value"},
-					"x-b3-traceid": {"random-value"},
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"ignored-value-header"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
 				},
-				Body: "destination",
+				Body: `"destination"`,
 			},
 			fakeResponse: &http.Response{
 				StatusCode: http.StatusAccepted,
