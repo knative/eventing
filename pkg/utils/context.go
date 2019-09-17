@@ -39,11 +39,12 @@ var (
 		"b3",
 	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
+	// Removing CloudEvents ce- prefixes on purpose as they should be set in the CloudEvent itself as extensions.
+	// Then the SDK will set them as ce- headers when sending them through HTTP. Otherwise, when using replies we would
+	// duplicate ce- headers.
 	forwardPrefixes = []string{
 		// knative
 		"knative-",
-		// cloud events
-		"ce-",
 		// tracing
 		"x-b3-",
 		"x-ot-",

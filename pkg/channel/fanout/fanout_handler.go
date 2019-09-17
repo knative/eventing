@@ -36,7 +36,7 @@ import (
 const (
 	defaultTimeout = 15 * time.Minute
 
-	messageBufferSize = 500
+	eventBufferSize = 500
 )
 
 // Config for a fanout.Handler.
@@ -51,9 +51,9 @@ type Config struct {
 type Handler struct {
 	config Config
 
-	receivedMessages chan *forwardEvent
-	receiver         *channel.EventReceiver
-	dispatcher       *channel.EventDispatcher
+	receivedEvents chan *forwardEvent
+	receiver       *channel.EventReceiver
+	dispatcher     *channel.EventDispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -73,11 +73,11 @@ type forwardEvent struct {
 // NewHandler creates a new fanout.Handler.
 func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
-		logger:           logger,
-		config:           config,
-		dispatcher:       channel.NewEventDispatcher(logger),
-		receivedMessages: make(chan *forwardEvent, messageBufferSize),
-		timeout:          defaultTimeout,
+		logger:         logger,
+		config:         config,
+		dispatcher:     channel.NewEventDispatcher(logger),
+		receivedEvents: make(chan *forwardEvent, eventBufferSize),
+		timeout:        defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
@@ -89,8 +89,8 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	return handler, nil
 }
 
-func createReceiverFunction(f *Handler) func(context.Context, cloudevents.Event) error {
-	return func(ctx context.Context, event cloudevents.Event) error {
+func createReceiverFunction(f *Handler) func(context.Context, channel.ChannelReference, cloudevents.Event) error {
+	return func(ctx context.Context, _ channel.ChannelReference, event cloudevents.Event) error {
 		if f.config.AsyncHandler {
 			go func() {
 				// Any returned error is already logged in f.dispatch().

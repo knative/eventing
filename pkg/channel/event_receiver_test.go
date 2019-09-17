@@ -74,9 +74,11 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"nor":                       {"this-one"},
 				"x-requEst-id":              {"1234"},
 				"knatIve-will-pass-through": {"true", "always"},
-				"cE-pass-through":           {"true"},
-				"x-B3-pass":                 {"true"},
-				"x-ot-pass":                 {"true"},
+				// Ce headers won't pass through our header filtering as they should actually be set in the CloudEvent itself,
+				// as extensions. The SDK then sets them as as Ce- headers when sending them through HTTP.
+				"cE-not-pass-through": {"true"},
+				"x-B3-pass":           {"true"},
+				"x-ot-pass":           {"true"},
 			},
 			body: "event-body",
 			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
@@ -93,7 +95,6 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 					// Note that only the first value was passed through, the remaining values were
 					// discarded.
 					"knatIve-will-pass-through": "true",
-					"cE-pass-through":           "true",
 					"x-B3-pass":                 "true",
 					"x-ot-pass":                 "true",
 				}
