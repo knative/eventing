@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -89,6 +90,7 @@ func (a attackSpec) Attack(i int, targeter vegeta.Targeter, attacker *vegeta.Att
 	time.Sleep(1 * time.Second)
 
 	// Trigger GC
+	printf("Triggering GC")
 	runtime.GC()
 }
 
@@ -227,6 +229,11 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	// Start the events processor
 	printf("Starting events processor")
 	go ex.processEvents()
+
+	// Clean mess before starting
+	runtime.GC()
+	// Disable the GC
+	debug.SetGCPercent(-1)
 
 	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource()).VegetaTargeter()
 
