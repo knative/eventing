@@ -362,17 +362,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:314c9403866f4451d4fd13ec823f559e4b576c4272fd0c771991ab5d17f7fa41"
-  name = "github.com/knative/pkg"
-  packages = [
-    "apis/duck",
-    "apis/duck/v1alpha1",
-  ]
-  pruneopts = "NUT"
-  revision = "c27053214044899c369bfd6e4d51bbf8cc7ccca2"
-
-[[projects]]
-  branch = "master"
   digest = "1:927762c6729b4e72957ba3310e485ed09cf8451c5a637a52fd016a9fe09e7936"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -1220,8 +1209,8 @@
   revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [[projects]]
-  branch = "release-0.9"
-  digest = "1:19beb74b5d34a69dc256f965c3ef2519fdb2ae74590174b1231a1f0da7e26fd4"
+  branch = "master"
+  digest = "1:9c5f27ee00497a71cec253447cf4c6c89e2a5cbd233c861bdac64ca53080b4db"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1305,11 +1294,11 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "74659889c421b26b9a416fd203f5a8d3e602bfb2"
+  revision = "24f524cb25af0f824ad227a1726affc9c2a58ba9"
 
 [[projects]]
   branch = "master"
-  digest = "1:ab87d04472150900c566dd9e7068564532c47d82a95517846aabf0a337d09438"
+  digest = "1:c620d55af3c74b36413512d5850db67f0efaec7a9b4cdbcc0697462fdc35740b"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
@@ -1321,7 +1310,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "4adb699576a34afae2e163f0ad5a0d2db0b30a5b"
+  revision = "efad44559f944cfc58dc5bca076eeb3ec20fb346"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -1340,8 +1329,6 @@
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
-    "github.com/knative/pkg/apis/duck",
-    "github.com/knative/pkg/apis/duck/v1alpha1",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/tsenart/vegeta/lib",

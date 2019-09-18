@@ -77,7 +77,8 @@ const (
 	testSchedule = "*/2 * * * *"
 	testData     = "data"
 
-	sinkName = "testsink"
+	sinkName   = "testsink"
+	generation = 1
 )
 
 func init() {
@@ -107,13 +108,15 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
-			//WantEvents: []string{
-			//	Eventf(corev1.EventTypeWarning, "Fail", ""), // TODO: BUGBUGBUG This should make an event.
-			//},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "CronJobSourceUpdateStatusFailed",
+					"Failed to update CronJobSource's status: invalid schedule: Expected exactly 5 fields, found 2: invalid schedule"),
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewCronJobSource(sourceName, testNS,
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
@@ -122,8 +125,10 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
+					WithCronJobSourceStatusObservedGeneration(generation),
 					WithInvalidCronJobSourceSchedule,
 				),
 			}},
@@ -137,6 +142,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 				),
 			},
 			Key:     testNS + "/" + sourceName,
@@ -149,8 +155,10 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
+					WithCronJobSourceStatusObservedGeneration(generation),
 					WithValidCronJobSourceSchedule,
 					WithCronJobSourceSinkNotFound,
 				),
@@ -165,6 +173,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -185,6 +194,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
@@ -192,6 +202,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
 					WithCronJobSourceEventType,
+					WithCronJobSourceStatusObservedGeneration(generation),
 				),
 			}},
 		}, {
@@ -204,6 +215,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &brokerRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -224,6 +236,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &brokerRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
@@ -231,6 +244,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceDeployed,
 					WithCronJobSourceEventType,
 					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -251,6 +265,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &brokerRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 				),
 				NewBroker(sinkName, testNS,
 					WithInitBrokerConditions,
@@ -277,6 +292,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &brokerRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
@@ -284,6 +300,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceDeployed,
 					WithCronJobSourceEventType,
 					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceStatusObservedGeneration(generation),
 				),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
@@ -307,6 +324,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 				),
 				NewChannel(sinkName, testNS,
 					WithInitChannelConditions,
@@ -327,6 +345,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
@@ -334,6 +353,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceDeployed,
 					WithCronJobSourceSink(sinkURI),
 					WithCronJobSourceEventType,
+					WithCronJobSourceStatusObservedGeneration(generation),
 				),
 			}},
 		}, {
@@ -346,6 +366,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
 					WithValidCronJobSourceResources,
@@ -360,6 +381,25 @@ func TestAllCases(t *testing.T) {
 				makeAvailableReceiveAdapter(sinkRef),
 			},
 			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronJobSource(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
+					WithCronJobSourceStatusObservedGeneration(generation),
+				),
+			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
@@ -373,6 +413,7 @@ func TestAllCases(t *testing.T) {
 						Sink:     &sinkRef,
 					}),
 					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
 					WithInitCronJobSourceConditions,
 					WithValidCronJobSourceSchedule,
 					WithValidCronJobSourceResources,
@@ -394,6 +435,25 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeOwnerReference(ownerRef)),
 			},
 			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronJobSource(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkRef,
+					}),
+					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
+					WithCronJobSourceStatusObservedGeneration(generation),
+				),
+			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
 			},

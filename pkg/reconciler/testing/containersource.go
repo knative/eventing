@@ -111,3 +111,15 @@ func WithContainerSourceAnnotations(annotations map[string]string) ContainerSour
 		c.Annotations = annotations
 	}
 }
+
+func WithContainerSourceStatusObservedGeneration(generation int64) ContainerSourceOption {
+	return func(c *v1alpha1.ContainerSource) {
+		c.Status.ObservedGeneration = generation
+	}
+}
+
+func WithContainerSourceObjectMetaGeneration(generation int64) ContainerSourceOption {
+	return func(c *v1alpha1.ContainerSource) {
+		c.ObjectMeta.Generation = generation
+	}
+}

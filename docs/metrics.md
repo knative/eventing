@@ -6,20 +6,20 @@ This is a list of data-plane metrics exported by Knative Eventing components.
 
 These are exported by `broker-ingress` pods.
 
-| Name                   | Type      | Description                | Tags               |
-| ---------------------- | --------- | -------------------------- | ------------------ |
-| `event_count`  | count     | Number of events received by a Broker. | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+| Name                       | Type      | Description                                       | Tags                                                                                                  |
+| -------------------------- | --------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `event_count`              | count     | Number of events received by a Broker.            | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 | `event_dispatch_latencies` | histogram | The time spent dispatching an event to a Channel. | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 ## Trigger
 
 These are exported by `broker-filter` pods.
 
-| Name                               | Type      | Description                                          | Tags                                           |
-| ---------------------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------- |
-| `event_count`             | count     | Number of events received by a Trigger                           | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
-| `event_dispatch_latencies`            | histogram | The time spent dispatching an event to a Trigger subscriber                           | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
-| `event_processing_latencies` | histogram | The time spent processing an event before it is dispatched to a Trigger subscriber | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type` |
+| Name                         | Type      | Description                                                                        | Tags                                                                                                                    |
+| ---------------------------- | --------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `event_count`                | count     | Number of events received by a Trigger                                             | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
+| `event_dispatch_latencies`   | histogram | The time spent dispatching an event to a Trigger subscriber                        | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
+| `event_processing_latencies` | histogram | The time spent processing an event before it is dispatched to a Trigger subscriber | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`                                         |
 
 ## Sources
 
@@ -27,16 +27,15 @@ These are exported by core sources.
 
 ### ApiServerSource
 
-| Name                               | Type      | Description                                          | Tags                                           |
-| ---------------------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------- |
-| `event_count`             | count     | Number of events sent                           | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+| Name          | Type  | Description           | Tags                                                                                                                           |
+| ------------- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `event_count` | count | Number of events sent | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 ### CronJobSource
 
-| Name                               | Type      | Description                                          | Tags                                           |
-| ---------------------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------- |
-| `event_count`             | count     | Number of events sent                           | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
-
+| Name          | Type  | Description           | Tags                                                                                                                           |
+| ------------- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `event_count` | count | Number of events sent | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 # Access metrics
 
@@ -135,7 +134,6 @@ Follow the
 then you will access the metrics at
 [http://localhost:3000](http://localhost:3000).
 
-
 ## StackDriver Collection
 
 1.  Install Knative Stackdriver components by running the following command from
@@ -147,14 +145,17 @@ then you will access the metrics at
           --filename config/monitoring/metrics/stackdriver
     ```
 
-1. Run the following command to setup StackDriver as the metrics backend:
+1.  Run the following command to setup StackDriver as the metrics backend:
 
-   ```
-   kubectl edit cm -n knative-eventing config-observability
-   ```
+    ```
+    kubectl edit cm -n knative-eventing config-observability
+    ```
 
-   Add `metrics.backend-destination: stackdriver` and `metrics.allow-stackdriver-custom-metrics: "true"`
-    to the `data` field. You can find detailed information in `data._example` field in the
-   `ConfigMap` you are editing.
-1. Open the StackDriver UI and see your resource metrics in the StackDriver Metrics Explorer.
- You should be able to see metrics with the prefix `custom.googleapis.com/knative.dev/`.
+    Add `metrics.backend-destination: stackdriver` and
+    `metrics.allow-stackdriver-custom-metrics: "true"` to the `data` field. You
+    can find detailed information in `data._example` field in the `ConfigMap`
+    you are editing.
+
+1.  Open the StackDriver UI and see your resource metrics in the StackDriver
+    Metrics Explorer. You should be able to see metrics with the prefix
+    `custom.googleapis.com/knative.dev/`.

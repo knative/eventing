@@ -57,8 +57,6 @@ func (a *resource) Update(obj interface{}) error {
 	}
 
 	return a.sendEvent(context.Background(), event)
-
-	return nil
 }
 
 func (a *resource) Delete(obj interface{}) error {

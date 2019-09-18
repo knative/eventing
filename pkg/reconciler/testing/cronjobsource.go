@@ -99,3 +99,15 @@ func WithCronJobApiVersion(apiVersion string) CronJobSourceOption {
 		c.APIVersion = apiVersion
 	}
 }
+
+func WithCronJobSourceStatusObservedGeneration(generation int64) CronJobSourceOption {
+	return func(c *v1alpha1.CronJobSource) {
+		c.Status.ObservedGeneration = generation
+	}
+}
+
+func WithCronJobSourceObjectMetaGeneration(generation int64) CronJobSourceOption {
+	return func(c *v1alpha1.CronJobSource) {
+		c.ObjectMeta.Generation = generation
+	}
+}

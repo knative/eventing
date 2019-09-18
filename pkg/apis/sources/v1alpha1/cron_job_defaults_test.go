@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,24 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package duck
+package v1alpha1
 
 import (
-	"encoding/json"
+	"context"
+	"testing"
 )
 
-// Marshallable is implementated by the Unstructured K8s types.
-type Marshalable interface {
-	MarshalJSON() ([]byte, error)
-}
-
-// FromUnstructured takes unstructured object from (say from client-go/dynamic) and
-// converts it into our duck types.
-func FromUnstructured(obj Marshalable, target interface{}) error {
-	// Use the unstructured marshaller to ensure it's proper JSON
-	raw, err := obj.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(raw, &target)
+// No-op test because method does nothing.
+func TestCronJobSourceDefaults(t *testing.T) {
+	s := CronJobSource{}
+	s.SetDefaults(context.TODO())
 }
