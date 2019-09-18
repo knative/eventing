@@ -1327,6 +1327,7 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
+    "github.com/google/mako/go/quickstore",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
     "github.com/pkg/errors",

@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -232,8 +231,6 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 
 	// Clean mess before starting
 	runtime.GC()
-	// Disable the GC
-	debug.SetGCPercent(-1)
 
 	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource()).VegetaTargeter()
 
