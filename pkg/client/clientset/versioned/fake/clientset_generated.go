@@ -45,7 +45,7 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 		}
 	}
 
-	cs := &Clientset{}
+	cs := &Clientset{tracker: o}
 	cs.discovery = &fakediscovery.FakeDiscovery{Fake: &cs.Fake}
 	cs.AddReactor("*", "*", testing.ObjectReaction(o))
 	cs.AddWatchReactor("*", func(action testing.Action) (handled bool, ret watch.Interface, err error) {
@@ -67,10 +67,15 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 type Clientset struct {
 	testing.Fake
 	discovery *fakediscovery.FakeDiscovery
+	tracker   testing.ObjectTracker
 }
 
 func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 	return c.discovery
+}
+
+func (c *Clientset) Tracker() testing.ObjectTracker {
+	return c.tracker
 }
 
 var _ clientset.Interface = &Clientset{}
@@ -80,27 +85,12 @@ func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interfac
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
 }
 
-// Eventing retrieves the EventingV1alpha1Client
-func (c *Clientset) Eventing() eventingv1alpha1.EventingV1alpha1Interface {
-	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
-}
-
 // MessagingV1alpha1 retrieves the MessagingV1alpha1Client
 func (c *Clientset) MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface {
 	return &fakemessagingv1alpha1.FakeMessagingV1alpha1{Fake: &c.Fake}
 }
 
-// Messaging retrieves the MessagingV1alpha1Client
-func (c *Clientset) Messaging() messagingv1alpha1.MessagingV1alpha1Interface {
-	return &fakemessagingv1alpha1.FakeMessagingV1alpha1{Fake: &c.Fake}
-}
-
 // SourcesV1alpha1 retrieves the SourcesV1alpha1Client
 func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
-}
-
-// Sources retrieves the SourcesV1alpha1Client
-func (c *Clientset) Sources() sourcesv1alpha1.SourcesV1alpha1Interface {
 	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
 }

@@ -492,7 +492,7 @@ func (r *Reconciler) patchPhysicalFrom(ctx context.Context, namespace string, or
 		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return err
 	}
-	patched, err := resourceClient.Patch(origChannel.GetName(), types.MergePatchType, patch, metav1.UpdateOptions{})
+	patched, err := resourceClient.Patch(origChannel.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return err

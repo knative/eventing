@@ -89,6 +89,7 @@ func (a attackSpec) Attack(i int, targeter vegeta.Targeter, attacker *vegeta.Att
 	time.Sleep(1 * time.Second)
 
 	// Trigger GC
+	printf("Triggering GC")
 	runtime.GC()
 }
 
@@ -227,6 +228,9 @@ func (ex *senderReceiverExecutor) Run(ctx context.Context) {
 	// Start the events processor
 	printf("Starting events processor")
 	go ex.processEvents()
+
+	// Clean mess before starting
+	runtime.GC()
 
 	targeter := common.NewCloudEventsTargeter(sinkURL, msgSize, benchmarkEventType, eventsSource()).VegetaTargeter()
 

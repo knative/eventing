@@ -58,7 +58,7 @@ func (in *Channel) DeepCopyObject() runtime.Object {
 func (in *ChannelList) DeepCopyInto(out *ChannelList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Channel, len(*in))
@@ -169,7 +169,7 @@ func (in *InMemoryChannel) DeepCopyObject() runtime.Object {
 func (in *InMemoryChannelList) DeepCopyInto(out *InMemoryChannelList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]InMemoryChannel, len(*in))
@@ -334,7 +334,7 @@ func (in *ParallelChannelStatus) DeepCopy() *ParallelChannelStatus {
 func (in *ParallelList) DeepCopyInto(out *ParallelList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Parallel, len(*in))
@@ -511,7 +511,7 @@ func (in *SequenceChannelStatus) DeepCopy() *SequenceChannelStatus {
 func (in *SequenceList) DeepCopyInto(out *SequenceList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Sequence, len(*in))
@@ -686,7 +686,7 @@ func (in *Subscription) DeepCopyObject() runtime.Object {
 func (in *SubscriptionList) DeepCopyInto(out *SubscriptionList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Subscription, len(*in))

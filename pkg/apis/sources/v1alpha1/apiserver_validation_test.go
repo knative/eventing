@@ -35,7 +35,7 @@ func TestAPIServerValidation(t *testing.T) {
 		spec: ApiServerSourceSpec{
 			Mode: "Resource",
 			Resources: []ApiServerResource{
-				ApiServerResource{},
+				{},
 			},
 			Sink: &corev1.ObjectReference{
 				APIVersion: "v1alpha1",
@@ -49,7 +49,7 @@ func TestAPIServerValidation(t *testing.T) {
 		spec: ApiServerSourceSpec{
 			Mode: "Resource",
 			Resources: []ApiServerResource{
-				ApiServerResource{},
+				{},
 			},
 		},
 		want: func() *apis.FieldError {
@@ -63,7 +63,7 @@ func TestAPIServerValidation(t *testing.T) {
 		spec: ApiServerSourceSpec{
 			Mode: "Test",
 			Resources: []ApiServerResource{
-				ApiServerResource{},
+				{},
 			},
 			Sink: &corev1.ObjectReference{
 				APIVersion: "v1alpha1",

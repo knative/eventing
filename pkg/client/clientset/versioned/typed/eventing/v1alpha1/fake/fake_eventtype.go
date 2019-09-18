@@ -131,7 +131,7 @@ func (c *FakeEventTypes) DeleteCollection(options *v1.DeleteOptions, listOptions
 // Patch applies the patch and returns the patched eventType.
 func (c *FakeEventTypes) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.EventType, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(eventtypesResource, c.ns, name, data, subresources...), &v1alpha1.EventType{})
+		Invokes(testing.NewPatchSubresourceAction(eventtypesResource, c.ns, name, pt, data, subresources...), &v1alpha1.EventType{})
 
 	if obj == nil {
 		return nil, err
