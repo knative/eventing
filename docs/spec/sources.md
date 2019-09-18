@@ -183,7 +183,7 @@ validation:
                   on the event as an attribute extension independently."
 ```
 
-<!-- 
+<!--
 
 TODO: There is still debate about how to implement the registry. Commenting out for now.
 
