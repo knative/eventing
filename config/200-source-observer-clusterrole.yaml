@@ -40,11 +40,8 @@ rules:
       - sources.eventing.knative.dev
     resources:
       - containersources
-      - containersources/status
       - cronjobsources
-      - cronjobsources/status
       - apiserversources
-      - apiserversources/status
     verbs:
       - get
       - list
