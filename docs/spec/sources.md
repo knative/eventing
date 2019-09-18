@@ -280,7 +280,6 @@ rules:
       - example.com
     resources:
       - foos
-      - foos/status
     verbs:
       - get
       - list
