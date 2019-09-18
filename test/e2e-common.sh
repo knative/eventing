@@ -57,7 +57,7 @@ END
 
   echo "Installing Knative Monitoring"
   kubectl create namespace istio-system
-  kubectl apply --filename https://github.com/knative/serving/releases/download/v0.8.0/monitoring-tracing-zipkin-in-mem.yaml || return 1
+  kubectl apply --filename "${KNATIVE_MONITORING_RELEASE}" || return 1
   wait_until_pods_running istio-system || fail_test "Knative Monitoring did not come up"
 }
 
