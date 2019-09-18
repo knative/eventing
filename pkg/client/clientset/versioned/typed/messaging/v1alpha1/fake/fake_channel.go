@@ -131,7 +131,7 @@ func (c *FakeChannels) DeleteCollection(options *v1.DeleteOptions, listOptions v
 // Patch applies the patch and returns the patched channel.
 func (c *FakeChannels) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Channel, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(channelsResource, c.ns, name, data, subresources...), &v1alpha1.Channel{})
+		Invokes(testing.NewPatchSubresourceAction(channelsResource, c.ns, name, pt, data, subresources...), &v1alpha1.Channel{})
 
 	if obj == nil {
 		return nil, err

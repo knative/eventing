@@ -41,38 +41,36 @@ required = [
 [[override]]
   name = "gopkg.in/yaml.v2"
   version = "v2.2.1"
-# TODO(https://github.com/knative/eventing/issues/1065): if we get to update k8s.io to > 1.13, we can remove
-# k8s-dynamic-fake-simple.patch in ./hack/update-deps.sh
-#
+
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-01-24 is 1.11
+# GKE version as of 2019-09-19 is 1.14
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.15.3"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-01-24 is 1.11
+# GKE version as of 2019-09-19 is 1.14
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.15.3"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-01-24 is 1.11
+# GKE version as of 2019-09-19 is 1.14
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.15.3"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-01-24 is 1.11
+# GKE version as of 2019-09-19 is 1.14
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.15.3"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-01-24 is 1.11
+# GKE version as of 2019-09-19 is 1.14
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.12.9"
+  version = "kubernetes-1.15.3"
 
 # This is the commit at which k8s depends on this in 1.11
 # It seems to be broken at HEAD.

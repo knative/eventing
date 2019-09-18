@@ -131,7 +131,7 @@ func (c *FakeApiServerSources) DeleteCollection(options *v1.DeleteOptions, listO
 // Patch applies the patch and returns the patched apiServerSource.
 func (c *FakeApiServerSources) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ApiServerSource, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(apiserversourcesResource, c.ns, name, data, subresources...), &v1alpha1.ApiServerSource{})
+		Invokes(testing.NewPatchSubresourceAction(apiserversourcesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ApiServerSource{})
 
 	if obj == nil {
 		return nil, err
