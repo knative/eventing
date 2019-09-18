@@ -35,7 +35,8 @@ func handler(event cloudevents.Event) {
 }
 
 func main() {
-	if err := tracing.SetupStaticPublishing(zap.NewNop().Sugar(), "", tracing.AlwaysSample); err != nil {
+	logger, _ := zap.NewDevelopment()
+	if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
 		log.Fatalf("Unable to setup trace publishing: %v", err)
 	}
 	c, err := kncloudevents.NewDefaultClient()
