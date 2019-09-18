@@ -77,9 +77,15 @@ func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) cont
 // PassThroughHeadersFromTransport extracts the headers from the transport that are in the `forwardHeaders` set
 // or has any of the prefixes in `forwardPrefixes`.
 func PassThroughHeadersFromTransport(tctx cloudevents.HTTPTransportContext) http.Header {
+	return PassThroughHeadersFromHeaders(tctx.Header)
+}
+
+// PassThroughHeadersFromHeaders extracts the headers from headers that are in the `forwardHeaders` set
+// or has any of the prefixes in `forwardPrefixes`.
+func PassThroughHeadersFromHeaders(headers http.Header) http.Header {
 	h := http.Header{}
 
-	for n, v := range tctx.Header {
+	for n, v := range headers {
 		lower := strings.ToLower(n)
 		if forwardHeaders.Has(lower) {
 			h[n] = v
@@ -93,26 +99,4 @@ func PassThroughHeadersFromTransport(tctx cloudevents.HTTPTransportContext) http
 		}
 	}
 	return h
-}
-
-// PassThroughHeadersFromHeaders extracts the headers from headers that are in the `forwardHeaders` set
-// or has any of the prefixes in `forwardPrefixes`.
-func PassThroughHeadersFromHeaders(headers http.Header) http.Header {
-	safe := map[string][]string{}
-
-	for h, v := range headers {
-		// Headers are case-insensitive but test case are all lower-case
-		comparable := strings.ToLower(h)
-		if forwardHeaders.Has(comparable) {
-			safe[h] = v
-			continue
-		}
-		for _, p := range forwardPrefixes {
-			if strings.HasPrefix(comparable, p) {
-				safe[h] = v
-				break
-			}
-		}
-	}
-	return safe
 }

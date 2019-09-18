@@ -90,7 +90,7 @@ func NewController(
 
 	// Start the dispatcher.
 	go func() {
-		err := inMemoryDispatcher.Start(ctx.Done())
+		err := inMemoryDispatcher.Start(ctx)
 		if err != nil {
 			r.Logger.Error("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}

@@ -101,7 +101,7 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 		errCh <- r.ceClient.StartReceiver(ctx, r.receiverFunc)
 	}()
 
-	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
+	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
 	select {
 	case err := <-errCh:
 		return err
@@ -109,7 +109,7 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 		break
 	}
 
-	// stopCh has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// Done channel has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
 	cancel()
 	select {

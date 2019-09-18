@@ -53,7 +53,7 @@ func (d *InMemoryDispatcher) UpdateConfig(config *multichannelfanout.Config) err
 // Start starts the inmemory dispatcher's message processing.
 // This is a blocking call.
 func (d *InMemoryDispatcher) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	errCh := make(chan error, 1)
@@ -61,7 +61,7 @@ func (d *InMemoryDispatcher) Start(ctx context.Context) error {
 		errCh <- d.ceClient.StartReceiver(ctx, d.handler.ServeHTTP)
 	}()
 
-	// Stop either if the receiver stops (sending to errCh) or if the context is Done.
+	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
 	select {
 	case err := <-errCh:
 		return err
@@ -69,7 +69,7 @@ func (d *InMemoryDispatcher) Start(ctx context.Context) error {
 		break
 	}
 
-	// context Done, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// Done channel has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
 	cancel()
 	select {

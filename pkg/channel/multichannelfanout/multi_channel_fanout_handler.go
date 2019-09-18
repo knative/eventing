@@ -92,14 +92,14 @@ func (h *Handler) CopyWithNewConfig(conf Config) (*Handler, error) {
 
 // ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the
 // request's channel key.
-func (h *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, eventResponse *cloudevents.EventResponse) error {
+func (h *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	channelKey := tctx.Host
 	fh, ok := h.handlers[channelKey]
 	if !ok {
 		h.logger.Error("Unable to find a handler for request", zap.String("channelKey", channelKey))
-		eventResponse.Status = http.StatusInternalServerError
+		resp.Status = http.StatusInternalServerError
 		return errors.New("unable to find handler for request")
 	}
-	return fh.ServeHTTP(ctx, event, eventResponse)
+	return fh.ServeHTTP(ctx, event, resp)
 }
