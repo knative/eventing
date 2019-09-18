@@ -39,20 +39,6 @@ function knative_setup() {
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
   ko apply -f ${EVENTING_CONFIG} || return 1
-
-  # Force tracing to 100%.
-  kubectl apply -f - << END
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: knative-eventing
-  name: config-tracing
-data:
-  backend: stackdriver
-  zipkin-endpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
-  debug: "true"
-  sample-rate: "1.0"
-END
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing Knative Monitoring"
