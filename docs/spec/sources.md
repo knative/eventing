@@ -183,6 +183,10 @@ validation:
                   on the event as an attribute extension independently."
 ```
 
+<!-- 
+
+TODO: There is still debate about how to implement the registry. Commenting out for now.
+
 ### Event Type Registry
 
 The Event Type Registry is a feature that allows for software to find all CRDs
@@ -237,6 +241,7 @@ that emits Kubernetes event,
                       type: string
                 ...
 ```
+-->
 
 ## Source RBAC
 
