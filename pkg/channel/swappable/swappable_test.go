@@ -17,12 +17,13 @@ limitations under the License.
 package swappable
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
@@ -176,10 +177,22 @@ func updateConfigAndTest(t *testing.T, h *Handler, config multichannelfanout.Con
 }
 
 func assertRequestAccepted(t *testing.T, h *Handler) {
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, makeRequest(hostName))
-	if w.Code != http.StatusAccepted {
-		t.Errorf("Unexpected response code. Expected 202. Actual %v", w.Code)
+	ctx := context.Background()
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
+	tctx.Method = http.MethodPost
+	tctx.Host = hostName
+	tctx.URI = "/"
+	ctx = cehttp.WithTransportContext(ctx, tctx)
+
+	event := cloudevents.NewEvent(cloudevents.VersionV03)
+	event.SetType("testtype")
+	event.SetSource("testsource")
+	event.SetData("")
+
+	resp := &cloudevents.EventResponse{}
+	h.ServeHTTP(ctx, event, resp)
+	if resp.Status != http.StatusAccepted {
+		t.Errorf("Unexpected response code. Expected 202. Actual %v", resp.Status)
 	}
 }
 
@@ -188,11 +201,6 @@ type successHandler struct{}
 func (*successHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = r.Body.Close()
-}
-
-func makeRequest(hostName string) *http.Request {
-	r := httptest.NewRequest("POST", fmt.Sprintf("http://%s/", hostName), strings.NewReader(""))
-	return r
 }
 
 func replaceDomains(c multichannelfanout.Config, replacement string) multichannelfanout.Config {
