@@ -164,9 +164,9 @@ func jsonTrace(traceID string) ([]model.SpanModel, error) {
 	var empty []model.SpanModel
 
 	// Check if zipkin port forwarding is setup correctly
-	if err := CheckZipkinPortAvailability(); err == nil {
-		return empty, err
-	}
+	// if err := CheckZipkinPortAvailability(); err == nil {
+	// 	return empty, err
+	// }
 
 	resp, err := http.Get(ZipkinTraceEndpoint + traceID)
 	if err != nil {

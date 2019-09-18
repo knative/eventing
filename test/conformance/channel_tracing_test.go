@@ -35,7 +35,7 @@ func TestChannelTracing(t *testing.T) {
 		incomingTraceId bool
 		istio           bool
 	}{
-		"no incoming trace id": {},
+		//"no incoming trace id": {},
 		"includes incoming trace id": {
 			incomingTraceId: true,
 		}, /*
