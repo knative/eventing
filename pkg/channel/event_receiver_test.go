@@ -150,7 +150,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			event.Data = tc.body
 			eventResponse := cloudevents.EventResponse{}
 
-			err = r.serveHTTP(ctx, event, &eventResponse)
+			err = r.ServeHTTP(ctx, event, &eventResponse)
 			if eventResponse.Status != tc.expected {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)

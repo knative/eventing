@@ -24,10 +24,9 @@ package fanout
 import (
 	"context"
 	"errors"
-	"github.com/cloudevents/sdk-go"
-	"net/http"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
@@ -61,8 +60,6 @@ type Handler struct {
 
 	logger *zap.Logger
 }
-
-var _ http.Handler = &Handler{}
 
 // forwardEvent is passed between the Receiver and the Dispatcher.
 type forwardEvent struct {
@@ -102,8 +99,8 @@ func createReceiverFunction(f *Handler) func(context.Context, channel.ChannelRef
 	}
 }
 
-func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.receiver.HandleRequest(w, r)
+func (f *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	return f.receiver.ServeHTTP(ctx, event, resp)
 }
 
 // dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
