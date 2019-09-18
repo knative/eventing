@@ -18,9 +18,12 @@ package main
 
 import (
 	"context"
+	"github.com/google/mako/go/quickstore"
 	"log"
 	"net"
+	"sort"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -31,7 +34,7 @@ import (
 	"knative.dev/pkg/test/mako"
 )
 
-const maxRcvMsgSize = 1024 * 1024 * 10
+const maxRcvMsgSize = 1024 * 1024 * 100
 
 // thread-safe events recording map
 type eventsRecord struct {
@@ -130,14 +133,14 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 
 	ex.server.GracefulStop()
 
-	// --- Publish results
+	// --- Publish latencies
 
 	printf("%-15s: %d", "Sent count", len(ex.sentEvents.Events))
 	printf("%-15s: %d", "Accepted count", len(ex.acceptedEvents.Events))
 	printf("%-15s: %d", "Failed count", len(ex.failedEvents.Events))
 	printf("%-15s: %d", "Received count", len(ex.receivedEvents.Events))
 
-	printf("Publishing data points to Mako")
+	printf("Publishing latencies")
 
 	// count errors
 	var publishErrorCount int
@@ -194,13 +197,61 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 		}
 	}
 
-	// publish error counts as aggregate metrics
+	// --- Publish throughput
+
+	printf("Publishing throughputs")
+
+	sentTimestamps := eventsToTimestampsArray(&ex.sentEvents.Events)
+	err = publishThpt(sentTimestamps, q, "st")
+	if err != nil {
+		log.Printf("ERROR AddSamplePoint: %v", err)
+	}
+
+	receivedTimestamps := eventsToTimestampsArray(&ex.receivedEvents.Events)
+	err = publishThpt(receivedTimestamps, q, "dt")
+	if err != nil {
+		log.Printf("ERROR AddSamplePoint: %v", err)
+	}
+
+	// --- Publish error counts as aggregate metrics
+
+	printf("Publishing aggregates")
+
 	q.AddRunAggregate("pe", float64(publishErrorCount))
 	q.AddRunAggregate("de", float64(deliverErrorCount))
+
+	printf("Store to mako")
 
 	if out, err := q.Store(); err != nil {
 		fatalf("Failed to store data: %v\noutput: %v", err, out)
 	}
+
+	printf("Aggregation completed")
+}
+
+func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Time {
+	values := make([]time.Time, 0, len(*events))
+	for _, v := range *events {
+		t, _ := ptypes.Timestamp(v)
+		values = append(values, t)
+	}
+	sort.Slice(values, func(x, y int) bool { return values[x].Before(values[y]) })
+	return values
+}
+
+func publishThpt(timestamps []time.Time, q *quickstore.Quickstore, metricName string) error {
+	for i, t := range timestamps[1:] {
+		var thpt uint
+		j := i - 1
+		for j >= 0 && t.Sub(timestamps[j]) <= time.Second {
+			thpt++
+			j--
+		}
+		if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
+			return qerr
+		}
+	}
+	return nil
 }
 
 // waitForEvents blocks until the expected number of events records has been received.
