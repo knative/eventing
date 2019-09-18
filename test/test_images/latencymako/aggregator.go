@@ -201,8 +201,8 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 
 	printf("Publishing throughputs")
 
-	acceptedTimestamps := eventsToTimestampsArray(&ex.acceptedEvents.Events)
-	err = publishThpt(acceptedTimestamps, q, "pt")
+	sentTimestamps := eventsToTimestampsArray(&ex.sentEvents.Events)
+	err = publishThpt(sentTimestamps, q, "st")
 	if err != nil {
 		log.Printf("ERROR AddSamplePoint: %v", err)
 	}
@@ -225,6 +225,8 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	if out, err := q.Store(); err != nil {
 		fatalf("Failed to store data: %v\noutput: %v", err, out)
 	}
+
+	printf("Aggregation completed")
 }
 
 func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Time {
