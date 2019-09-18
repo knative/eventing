@@ -46,7 +46,7 @@ const (
 
 	ChannelKind  string = "Channel"
 	SequenceKind string = "Sequence"
-	ParallelKind   string = "Parallel"
+	ParallelKind string = "Parallel"
 )
 
 // Kind for sources resources.

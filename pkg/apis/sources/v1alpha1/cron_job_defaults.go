@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,10 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package duck defines logic for defining and consuming "duck typed"
-// Kubernetes resources.  Producers define partial resource definitions
-// that resource authors may choose to implement to interoperate with
-// consumers of these "duck typed" interfaces.
-// For more information see:
-// https://docs.google.com/document/d/16j8C91jML4fQRQPhnHihNJUJDcbvW0RM1YAX2REHgyY/edit#
-package duck
+package v1alpha1
+
+import (
+	"context"
+)
+
+func (s *CronJobSource) SetDefaults(ctx context.Context) {
+	s.Spec.SetDefaults(ctx)
+}
+
+func (ss *CronJobSourceSpec) SetDefaults(ctx context.Context) {
+	// TODO anything?
+}

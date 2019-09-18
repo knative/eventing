@@ -113,9 +113,10 @@ func TestAllCases(t *testing.T) {
 			},
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
-			//WantEvents: []string{
-			//	Eventf(corev1.EventTypeWarning, "Fail", ""), // TODO: BUGBUGBUG This should make an event.
-			//},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "CronJobSourceUpdateStatusFailed",
+					"Failed to update CronJobSource's status: invalid schedule: Expected exactly 5 fields, found 2: invalid schedule"),
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewCronJobSource(sourceName, testNS,
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{

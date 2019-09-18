@@ -200,6 +200,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: true,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink missing from spec`),
+				Eventf(corev1.EventTypeWarning, "ContainerSourceUpdateStatusFailed", `Failed to update ContainerSource's status: sink missing from spec`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,

@@ -64,7 +64,7 @@ var (
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
 	namespaceKey           = tag.MustNewKey(metricskey.LabelNamespaceName)
-	triggerKey             = tag.MustNewKey(metricskey.LabelTriggerName)
+	triggerKey             = tag.MustNewKey(metricskey.LabelName)
 	brokerKey              = tag.MustNewKey(metricskey.LabelBrokerName)
 	triggerFilterTypeKey   = tag.MustNewKey(metricskey.LabelFilterType)
 	triggerFilterSourceKey = tag.MustNewKey(metricskey.LabelFilterSource)

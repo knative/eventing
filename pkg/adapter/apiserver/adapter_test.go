@@ -139,6 +139,30 @@ func TestNewAdaptor(t *testing.T) {
 				LabelSelector: "environment=production,tier!=frontend",
 			}},
 		},
+		"with owner selector": {
+			source: "test-source",
+			opt: Options{
+				GVRCs: []GVRC{{
+					GVR: schema.GroupVersionResource{
+						Group:    "apps",
+						Version:  "v1",
+						Resource: "replicasets",
+					},
+					OwnerApiVersion: "v1",
+					OwnerKind:       "pod",
+				}},
+			},
+			wantMode: RefMode,
+			wantGVRCs: []GVRC{{
+				GVR: schema.GroupVersionResource{
+					Group:    "apps",
+					Version:  "v1",
+					Resource: "replicasets",
+				},
+				OwnerApiVersion: "v1",
+				OwnerKind:       "pod",
+			}},
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
