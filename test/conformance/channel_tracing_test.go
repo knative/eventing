@@ -49,8 +49,8 @@ func TestChannelTracing(t *testing.T) {
 		loggerPodName := "logger"
 		t.Run(n, func(t *testing.T) {
 			channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
-				// Don't accidentally use t, use st instead. To ensure this, shadow 't' to some a
-				// useless type.
+				// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless
+				// type.
 				t := struct{}{}
 				_ = fmt.Sprintf("%s", t)
 
@@ -60,17 +60,6 @@ func TestChannelTracing(t *testing.T) {
 				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 				// TestMain.
 				helpers.SetupZipkinTracing(st, client)
-
-				// TODO This should really be upsert.
-				err := client.Kube.UpdateConfigMap("knative-eventing", "config-tracing", map[string]string{
-					"backend":         "zipkin",
-					"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
-					"debug":           "true",
-					"sample-rate":     "1.0",
-				})
-				if err != nil {
-					st.Fatalf("Unable to set the ConfigMap: %v", err)
-				}
 
 				mustContain := setupChannelTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
 				assertLogContents(st, client, loggerPodName, mustContain)
@@ -165,10 +154,10 @@ func getTraceID(t *testing.T, client *common.Client, loggerPodName string) strin
 	}
 	// This is the format that the eventdetails image prints headers.
 	re := regexp.MustCompile("\nGot Header X-B3-Traceid: ([a-zA-Z0-9]{32})\n")
-	submatches := re.FindStringSubmatch(logs)
-	if len(submatches) != 2 {
+	matches := re.FindStringSubmatch(logs)
+	if len(matches) != 2 {
 		t.Fatalf("Unable to extract traceID: %q", logs)
 	}
-	traceID := submatches[1]
+	traceID := matches[1]
 	return traceID
 }
