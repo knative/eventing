@@ -83,7 +83,7 @@ func MakeFactory(ctor Ctor, unstructured bool) Factory {
 		//ctx = reconciler.WithStatsReporter(ctx, statsReporter) // TODO: upstream stats interface from eventing to PKG
 
 		// Set up our Controller from the fakes.
-		c := ctor(ctx, &ls, configmap.NewFixedWatcher())
+		c := ctor(ctx, &ls, configmap.NewStaticWatcher())
 
 		for _, reactor := range r.WithReactors {
 			kubeClient.PrependReactor("*", "*", reactor)
