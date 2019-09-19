@@ -23,11 +23,12 @@ limitations under the License.
 package swappable
 
 import (
+	"context"
 	"errors"
-	"net/http"
 	"sync"
 	"sync/atomic"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
@@ -101,8 +102,8 @@ func (h *Handler) UpdateConfig(config *multichannelfanout.Config) error {
 }
 
 // ServeHTTP delegates all HTTP requests to the current multichannelfanout.Handler.
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	// Hand work off to the current multi channel fanout handler.
 	h.logger.Debug("ServeHTTP request received")
-	h.getMultiChannelFanoutHandler().ServeHTTP(w, r)
+	return h.getMultiChannelFanoutHandler().ServeHTTP(ctx, event, resp)
 }

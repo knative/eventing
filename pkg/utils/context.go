@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broker
+package utils
 
 import (
 	"context"
@@ -22,9 +22,12 @@ import (
 	"net/url"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
+
+// TODO add configurable whitelisting of propagated headers/prefixes (configmap?)
 
 var (
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
@@ -36,6 +39,9 @@ var (
 		"b3",
 	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
+	// Removing CloudEvents ce- prefixes on purpose as they should be set in the CloudEvent itself as extensions.
+	// Then the SDK will set them as ce- headers when sending them through HTTP. Otherwise, when using replies we would
+	// duplicate ce- headers.
 	forwardPrefixes = []string{
 		// knative
 		"knative-",
@@ -45,27 +51,35 @@ var (
 	}
 )
 
-// SendingContext creates the context to use when sending a Cloud Event with ceclient.Client. It
-// sets the target and attaches a filtered set of headers from the initial request.
-func SendingContext(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
-	sendingCTX := cloudevents.ContextWithTarget(ctx, targetURI.String())
+// ContextFrom creates the context to use when sending a Cloud Event with cloudevents.Client. It
+// sets the target if specified, and attaches a filtered set of headers from the initial request.
+func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
+	// Get the allowed set of headers.
+	h := PassThroughHeaders(tctx.Header)
+	// Override the headers.
+	tctx.Header = h
+	// Create the sending context with the overriden transport context.
+	sendingCTX := cehttp.WithTransportContext(context.Background(), tctx)
 
-	h := ExtractPassThroughHeaders(tctx)
 	for n, v := range h {
 		for _, iv := range v {
 			sendingCTX = cloudevents.ContextWithHeader(sendingCTX, n, iv)
 		}
 	}
 
+	if targetURI != nil {
+		sendingCTX = cloudevents.ContextWithTarget(sendingCTX, targetURI.String())
+	}
+
 	return sendingCTX
 }
 
-// ExtractPassThroughHeaders extracts the headers that are in the `forwardHeaders` set
+// PassThroughHeaders extracts the headers from headers that are in the `forwardHeaders` set
 // or has any of the prefixes in `forwardPrefixes`.
-func ExtractPassThroughHeaders(tctx cloudevents.HTTPTransportContext) http.Header {
+func PassThroughHeaders(headers http.Header) http.Header {
 	h := http.Header{}
 
-	for n, v := range tctx.Header {
+	for n, v := range headers {
 		lower := strings.ToLower(n)
 		if forwardHeaders.Has(lower) {
 			h[n] = v

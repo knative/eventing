@@ -18,6 +18,8 @@ package channel
 
 import (
 	"testing"
+
+	cloudevents "github.com/cloudevents/sdk-go"
 )
 
 func TestMessageHistory(t *testing.T) {
@@ -81,23 +83,24 @@ func TestMessageHistory(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.expected, func(t *testing.T) {
-			m := Message{}
+			event := cloudevents.NewEvent(cloudevents.VersionV03)
 			if tc.start != "" {
-				m.Headers = make(map[string]string)
-				m.Headers[MessageHistoryHeader] = tc.start
+				event.SetExtension(EventHistory, tc.start)
 			}
 			if tc.set != nil {
-				m.setHistory(tc.set)
+				setHistory(&event, tc.set)
 			}
 			for _, name := range tc.append {
-				m.AppendToHistory(name)
+				AppendHistory(&event, name)
 			}
-			history := m.History()
-			if len(history) != tc.len {
-				t.Errorf("Unexpected number of elements. Want %d, got %d", tc.len, len(history))
+			h := history(&event)
+			if len(h) != tc.len {
+				t.Errorf("Unexpected number of elements. Want %d, got %d", tc.len, len(h))
 			}
-			if m.Headers[MessageHistoryHeader] != tc.expected {
-				t.Errorf("Unexpected history. Want %q, got %q", tc.expected, m.Headers[MessageHistoryHeader])
+			var actualHistory string
+			event.ExtensionAs(EventHistory, &actualHistory)
+			if actualHistory != tc.expected {
+				t.Errorf("Unexpected history. Want %q, got %q", tc.expected, actualHistory)
 			}
 		})
 	}
