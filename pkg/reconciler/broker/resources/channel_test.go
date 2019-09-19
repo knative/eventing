@@ -26,17 +26,6 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
-func TestNonCRDBrokerChannelName(t *testing.T) {
-	brokerName := "default"
-	channelType := "ingress"
-
-	nonCRD := NonCRDBrokerChannelName(brokerName, channelType)
-	crd := BrokerChannelName(brokerName, channelType)
-	if nonCRD == crd {
-		t.Fatalf("NonCRD and CRD Channel names should be different: %q == %q", nonCRD, crd)
-	}
-}
-
 func TestBrokerChannelName(t *testing.T) {
 	// Any changes to this name are breaking changes, this test is here so that changes can't be
 	// made by accident.
