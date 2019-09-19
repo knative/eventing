@@ -260,15 +260,16 @@ func (r *Reconciler) propagateDependencyReadiness(dependencyObjRef corev1.Object
 		return fmt.Errorf("getting the dependency: %v", err)
 	}
 	dependency := dependencyObj.(*duckv1alpha1.KResource)
-	// Temporarily comment it until we figure out whether we update Status.ObservedGeneration when KResource changes
-	// From manual testing, it looks like we never update  Status.ObservedGeneration
-	//if dependency.GetGeneration() != dependency.Status.ObservedGeneration {
-	//	logging.FromContext(ctx).Error("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
-	//		zap.Any("ObjectMeta Generation of dependency", dependency.GetGeneration()),
-	//		zap.Any("ObservedGeneration of status", dependency.Status.ObservedGeneration))
-	//	t.Status.MarkDependencyUnknown("GenerationNotEqual", "The ObjectMeta Generation of dependency %d is not equal to the ObservedGeneration of status %d", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
-	//	return nil
-	//}
+
+	// The dependency hasn't yet reconciled our latest changes to
+	// its desired state, so its conditions are outdated.
+	if dependency.GetGeneration() != dependency.Status.ObservedGeneration {
+		logging.FromContext(ctx).Info("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
+			zap.Any("objectMetaGeneration", dependency.GetGeneration()),
+			zap.Any("statusObservedGeneration", dependency.Status.ObservedGeneration))
+		t.Status.MarkDependencyUnknown("GenerationNotEqual", "The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
+		return nil
+	}
 	t.Status.PropagateDependencyStatus(dependency)
 	return nil
 }

@@ -79,6 +79,9 @@ const (
 	testSchedule            = "*/2 * * * *"
 	testData                = "data"
 	sinkName                = "testsink"
+
+	currentGeneration  = 1
+	outdatedGeneration = 0
 )
 
 var (
@@ -568,6 +571,37 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "Dependency generation not equal",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeReadySubscription(),
+				makeGenerationNotEqualCronJobSource(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled")},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerSubscribed(),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", currentGeneration, outdatedGeneration))),
+			}},
+		},
+		{
 			Name: "Dependency ready",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -759,6 +793,13 @@ func makeNotReadySubscription() *messagingv1alpha1.Subscription {
 
 func makeNotReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
 	return NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion), WithCronJobSourceSinkNotFound)
+}
+
+func makeGenerationNotEqualCronJobSource() *sourcesv1alpha1.CronJobSource {
+	c := makeNotReadyCronJobSource()
+	c.Generation = currentGeneration
+	c.Status.ObservedGeneration = outdatedGeneration
+	return c
 }
 
 func makeReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
