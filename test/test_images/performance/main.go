@@ -26,7 +26,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	pb "knative.dev/eventing/test/test_images/latencymako/event_state"
+	pb "knative.dev/eventing/test/test_images/performance/event_state"
 	"knative.dev/pkg/signals"
 )
 

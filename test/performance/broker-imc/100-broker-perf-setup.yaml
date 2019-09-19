@@ -34,7 +34,7 @@ spec:
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Trigger
 metadata:
-  name: broker-latency
+  name: broker-perf
   namespace: perf-eventing
 spec:
   broker: in-memory-test-broker
@@ -42,7 +42,7 @@ spec:
     ref:
       apiVersion: v1
       kind: Service
-      name: broker-latency-consumer
+      name: broker-perf-consumer
 
 ---
 
@@ -163,11 +163,11 @@ roleRef:
 apiVersion: v1
 kind: Service
 metadata:
-  name: broker-latency-consumer
+  name: broker-perf-consumer
   namespace: perf-eventing
 spec:
   selector:
-    role: broker-latency-consumer
+    role: broker-perf-consumer
   ports:
   - name: http
     port: 80
@@ -179,11 +179,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: broker-latency-aggregator
+  name: broker-perf-aggregator
   namespace: perf-eventing
 spec:
   selector:
-    role: broker-latency-aggregator
+    role: broker-perf-aggregator
   ports:
   - name: grpc
     port: 10000

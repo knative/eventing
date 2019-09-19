@@ -15,10 +15,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: broker-latency-send-receive
+  name: broker-perf-send-receive
   namespace: perf-eventing
   labels:
-    role: broker-latency-consumer
+    role: broker-perf-consumer
 spec:
   completions: 1
   parallelism: 1
@@ -26,18 +26,18 @@ spec:
   template:
     metadata:
       labels:
-        role: broker-latency-consumer
+        role: broker-perf-consumer
     spec:
       serviceAccountName: perf-eventing
       restartPolicy: Never
       containers:
       - name: sender-receiver
-        image: knative.dev/eventing/test/test_images/latencymako
+        image: knative.dev/eventing/test/test_images/performance
         args:
         - "--role=sender-receiver"
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
-        - "--aggregator=broker-latency-aggregator:10000"
-        - "--pace=100:10,200:20,400:60"
+        - "--aggregator=broker-perf-aggregator:10000"
+        - "--pace=1000:30"
         - "--verbose"
         env:
         - name: POD_NAME
@@ -61,16 +61,16 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: broker-latency-aggregator
+  name: broker-perf-aggregator
   namespace: perf-eventing
   labels:
-    role: broker-latency-aggregator
+    role: broker-perf-aggregator
 spec:
   serviceAccountName: perf-eventing
   restartPolicy: Never
   containers:
   - name: aggregator
-    image: knative.dev/eventing/test/test_images/latencymako
+    image: knative.dev/eventing/test/test_images/performance
     args:
     - "--role=aggregator"
       # set to the number of sender-receiver
@@ -93,6 +93,9 @@ spec:
     - name: quickstore
       containerPort: 9813
     terminationMessagePolicy: FallbackToLogsOnError
+    resources:
+      requests:
+        memory: 4Gi
   volumes:
   - name: config-mako
     configMap:
