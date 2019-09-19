@@ -51,7 +51,7 @@ var (
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
 	namespaceKey         = tag.MustNewKey(metricskey.LabelNamespaceName)
-	brokerKey            = tag.MustNewKey(metricskey.LabelBrokerName)
+	brokerKey            = tag.MustNewKey(metricskey.LabelName)
 	eventSourceKey       = tag.MustNewKey(metricskey.LabelEventSource)
 	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
 	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)

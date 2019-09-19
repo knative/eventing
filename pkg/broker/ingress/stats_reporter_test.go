@@ -39,7 +39,7 @@ func TestStatsReporter(t *testing.T) {
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelBrokerName:        "testbroker",
+		metricskey.LabelName:              "testbroker",
 		metricskey.LabelEventType:         "testeventtype",
 		metricskey.LabelEventSource:       "testeventsource",
 		metricskey.LabelResponseCode:      "202",
