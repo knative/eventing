@@ -83,7 +83,7 @@ func TestMessageHistory(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.expected, func(t *testing.T) {
-			event := cloudevents.Event{}
+			event := cloudevents.NewEvent(cloudevents.VersionV03)
 			if tc.start != "" {
 				event.SetExtension(EventHistory, tc.start)
 			}
@@ -98,9 +98,7 @@ func TestMessageHistory(t *testing.T) {
 				t.Errorf("Unexpected number of elements. Want %d, got %d", tc.len, len(h))
 			}
 			var actualHistory string
-			if err := event.ExtensionAs(EventHistory, &actualHistory); err != nil {
-				t.Error("history not found")
-			}
+			event.ExtensionAs(EventHistory, &actualHistory)
 			if actualHistory != tc.expected {
 				t.Errorf("Unexpected history. Want %q, got %q", tc.expected, actualHistory)
 			}

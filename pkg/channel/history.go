@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go"
 )
 
 const (
@@ -46,9 +46,9 @@ func AppendHistory(event *cloudevents.Event, host string) {
 func history(event *cloudevents.Event) []string {
 	var h string
 	if err := event.ExtensionAs(EventHistory, &h); err != nil {
-		return decodeEventHistory(h)
+		return nil
 	}
-	return nil
+	return decodeEventHistory(h)
 }
 
 // setHistory sets the event history to the given value.
