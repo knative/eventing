@@ -25,7 +25,6 @@ import (
 
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
-	logtesting "knative.dev/pkg/logging/testing"
 )
 
 // SetupFakeContext sets up the the Context and the fake informers for the tests.
@@ -37,7 +36,7 @@ func SetupFakeContext(t *testing.T) (context.Context, []controller.Informer) {
 // SetupFakeContextWithCancel sets up the the Context and the fake informers for the tests
 // The provided context can be canceled using provided callback.
 func SetupFakeContextWithCancel(t *testing.T) (context.Context, context.CancelFunc, []controller.Informer) {
-	ctx, c := context.WithCancel(logtesting.TestContextWithLogger(t))
+	ctx, c := context.WithCancel(context.TODO())
 	ctx = controller.WithEventRecorder(ctx, record.NewFakeRecorder(1000))
 	ctx, is := injection.Fake.SetupInformers(ctx, &rest.Config{})
 	return ctx, c, is
