@@ -284,6 +284,11 @@ func (s *succeedOnce) handler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
+	writer.Header().Set("ce-specversion", cloudevents.VersionV03)
+	writer.Header().Set("ce-type", "com.example.someotherevent")
+	writer.Header().Set("ce-source", "/myothercontext")
+	writer.Header().Set("ce-id", "B234-1234-1234")
+	writer.Header().Set("Content-Type", cloudevents.ApplicationJSON)
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte("{}"))
 }
