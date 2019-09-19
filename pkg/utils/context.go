@@ -55,7 +55,7 @@ var (
 // sets the target if specified, and attaches a filtered set of headers from the initial request.
 func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
 	// Get the allowed set of headers.
-	h := PassThroughHeadersFromTransport(tctx)
+	h := PassThroughHeaders(tctx.Header)
 	// Override the headers.
 	tctx.Header = h
 	// Create the sending context with the overriden transport context.
@@ -74,15 +74,9 @@ func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) cont
 	return sendingCTX
 }
 
-// PassThroughHeadersFromTransport extracts the headers from the transport that are in the `forwardHeaders` set
+// PassThroughHeaders extracts the headers from headers that are in the `forwardHeaders` set
 // or has any of the prefixes in `forwardPrefixes`.
-func PassThroughHeadersFromTransport(tctx cloudevents.HTTPTransportContext) http.Header {
-	return PassThroughHeadersFromHeaders(tctx.Header)
-}
-
-// PassThroughHeadersFromHeaders extracts the headers from headers that are in the `forwardHeaders` set
-// or has any of the prefixes in `forwardPrefixes`.
-func PassThroughHeadersFromHeaders(headers http.Header) http.Header {
+func PassThroughHeaders(headers http.Header) http.Header {
 	h := http.Header{}
 
 	for n, v := range headers {
