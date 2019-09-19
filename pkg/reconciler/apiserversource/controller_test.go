@@ -38,7 +38,7 @@ func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 	ctx = withCfgHost(ctx, &rest.Config{Host: "unit_test"})
 	os.Setenv("METRICS_DOMAIN", "knative.dev/eventing")
-	c := NewController(ctx, configmap.NewFixedWatcher(&corev1.ConfigMap{
+	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "config-observability",
 			Namespace: "knative-eventing",
