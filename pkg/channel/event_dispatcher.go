@@ -118,7 +118,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 		// reject non-successful responses
 		return rctx, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
 	}
-	headers := utils.PassThroughHeaders(rtctx.Header)
+	headers := utils.ExtractPassThroughHeaders(rtctx.Header)
 	if correlationID, ok := tctx.Header[correlationIDHeaderName]; ok {
 		headers[correlationIDHeaderName] = correlationID
 	}
@@ -129,7 +129,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 
 func addOutGoingTracing(ctx context.Context, url *url.URL) cloudevents.HTTPTransportContext {
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	// Creating a dummy request to leverage propagation.SpanContextFromRequest method
+	// Creating a dummy request to leverage propagation.SpanContextFromRequest method.
 	req := &http.Request{
 		Header: tctx.Header,
 	}
