@@ -264,10 +264,10 @@ func (r *Reconciler) propagateDependencyReadiness(dependencyObjRef corev1.Object
 	// The dependency hasn't yet reconciled our latest changes to
 	// its desired state, so its conditions are outdated.
 	if dependency.GetGeneration() != dependency.Status.ObservedGeneration {
-		logging.FromContext(ctx).Error("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
-			zap.Any("ObjectMeta Generation of dependency", dependency.GetGeneration()),
-			zap.Any("ObservedGeneration of status", dependency.Status.ObservedGeneration))
-		t.Status.MarkDependencyUnknown("GenerationNotEqual", "The ObjectMeta Generation of dependency %q is not equal to the ObservedGeneration of status %q", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
+		logging.FromContext(ctx).Info("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
+			zap.Any("objectMetaGeneration", dependency.GetGeneration()),
+			zap.Any("statusObservedGeneration", dependency.Status.ObservedGeneration))
+		t.Status.MarkDependencyUnknown("GenerationNotEqual", "The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
 		return nil
 	}
 	t.Status.PropagateDependencyStatus(dependency)
