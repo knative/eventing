@@ -40,7 +40,7 @@ func TestNew(t *testing.T) {
 	_ = os.Setenv("BROKER_FILTER_IMAGE", "FILTER_IMAGE")
 	_ = os.Setenv("BROKER_FILTER_SERVICE_ACCOUNT", "FILTER_SERVICE_ACCOUNT")
 
-	c := NewController(ctx, configmap.NewFixedWatcher())
+	c := NewController(ctx, configmap.NewStaticWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
