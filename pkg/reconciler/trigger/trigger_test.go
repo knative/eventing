@@ -598,7 +598,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerBrokerReady(),
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
-					reconciletesting.WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The ObjectMeta Generation of dependency %q is not equal to the ObservedGeneration of status %q", currentGeneration, outdatedGeneration))),
+					reconciletesting.WithTriggerDependencyUnknown("GenerationNotEqual", fmt.Sprintf("The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", currentGeneration, outdatedGeneration))),
 			}},
 		},
 		{
