@@ -18,12 +18,13 @@ package main
 
 import (
 	"context"
-	"github.com/google/mako/go/quickstore"
 	"log"
 	"net"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/google/mako/go/quickstore"
 
 	"google.golang.org/grpc"
 

@@ -139,6 +139,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
+			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/issues/193 is fixed",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
@@ -176,6 +177,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"all subs succeed with async handler": {
+			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/issues/193 is fixed",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
