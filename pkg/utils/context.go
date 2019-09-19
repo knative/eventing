@@ -58,7 +58,7 @@ func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) cont
 	h := PassThroughHeaders(tctx.Header)
 	// Override the headers.
 	tctx.Header = h
-	// Create the sending context with the overriden transport context.
+	// Create the sending context with the overridden transport context.
 	sendingCTX := cehttp.WithTransportContext(context.Background(), tctx)
 
 	for n, v := range h {
