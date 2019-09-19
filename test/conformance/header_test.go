@@ -25,11 +25,6 @@ import (
 	"knative.dev/eventing/test/conformance/helpers"
 )
 
-const (
-	userHeaderKey   = "this-was-user-set"
-	userHeaderValue = "a value"
-)
-
 // The Channel MUST pass through all tracing information as CloudEvents attributes
 func TestMustPassTracingHeaders(t *testing.T) {
 	t.Logf("Starting channel tracing headers test")
@@ -38,5 +33,4 @@ func TestMustPassTracingHeaders(t *testing.T) {
 		resources.CloudEventEncodingBinary,
 		channelTestRunner,
 	)
-
 }

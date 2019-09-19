@@ -1,5 +1,3 @@
-// +build e2e
-
 /*
 Copyright 2019 The Knative Authors
 
@@ -16,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package helpers
+package tracing
 
 import (
 	"sync"
@@ -26,9 +24,9 @@ import (
 	"knative.dev/pkg/test/zipkin"
 )
 
-// SetupZipkinTracing sets up port forwarding to Zipkin and sets the knative-eventing tracing config
-// to debug mode (everything is sampled).
-func SetupZipkinTracing(t *testing.T, client *common.Client) {
+// Setup sets up port forwarding to Zipkin and sets the knative-eventing tracing config to debug
+// mode (everything is sampled).
+func Setup(t *testing.T, client *common.Client) {
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.
 	zipkin.SetupZipkinTracing(client.Kube.Kube, t.Logf)
