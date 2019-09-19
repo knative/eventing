@@ -121,7 +121,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerDeletionTimestamp),
 			},
@@ -131,7 +131,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
 			WantCreates: []runtime.Object{
@@ -140,7 +140,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithInitBrokerConditions,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
@@ -156,7 +156,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
 			WantCreates: []runtime.Object{
@@ -165,7 +165,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithInitBrokerConditions,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
 		},
@@ -174,13 +174,13 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
@@ -190,7 +190,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 			},
@@ -206,7 +206,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -222,7 +222,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -236,7 +236,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -259,7 +259,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -279,7 +279,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -295,7 +295,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -319,7 +319,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -335,7 +335,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -361,7 +361,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
@@ -378,7 +378,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -408,7 +408,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
@@ -425,7 +425,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -454,7 +454,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
@@ -471,7 +471,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -504,7 +504,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
@@ -521,7 +521,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
@@ -551,7 +551,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -570,7 +570,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				createChannel(testNS, ingressChannel, true),
@@ -602,7 +602,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -628,7 +628,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				createChannel(testNS, ingressChannel, true),
@@ -661,7 +661,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -687,7 +687,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				createChannel(testNS, ingressChannel, true),
@@ -727,7 +727,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -753,7 +753,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				createChannel(testNS, ingressChannel, true),
@@ -784,7 +784,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(hannel()),
+					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithBrokerIngressChannel(createIngressChannelRef()),
@@ -826,7 +826,7 @@ func ownerReferences() []metav1.OwnerReference {
 	}}
 }
 
-func hannel() metav1.TypeMeta {
+func channel() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
