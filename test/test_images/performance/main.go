@@ -76,7 +76,8 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-	flag.Var(&additionalTags, "additional-tags", "Array of environment specific additional tags.")
+	flag.Var(&additionalTags, "additional-tags", "Array of environment specific additional tags. Example " +
+		"--additional-tags=tag1 --additional-tags=tag2")
 }
 
 type testExecutor interface {
