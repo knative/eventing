@@ -214,6 +214,14 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 		log.Printf("ERROR AddSamplePoint: %v", err)
 	}
 
+	failureTimestamps := eventsToTimestampsArray(&ex.failedEvents.Events)
+	if len(failureTimestamps) > 2 {
+		err = publishThpt(failureTimestamps, q, "ft")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint: %v", err)
+		}
+	}
+
 	// --- Publish error counts as aggregate metrics
 
 	printf("Publishing aggregates")
