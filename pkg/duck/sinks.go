@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/reconciler/names"
 	pkgapisduck "knative.dev/pkg/apis/duck"
@@ -40,7 +41,7 @@ type SinkReconciler struct {
 }
 
 // NewSinkReconciler creates and initializes a new SinkReconciler
-func NewSinkReconciler(ctx context.Context, callback func(string)) *SinkReconciler {
+func NewSinkReconciler(ctx context.Context, callback func(types.NamespacedName)) *SinkReconciler {
 	ret := &SinkReconciler{}
 
 	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))

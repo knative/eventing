@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
@@ -105,7 +106,7 @@ func TestResourceTracker(t *testing.T) {
 				duck:     fif,
 				concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
 			}
-			rt := ri.NewTracker(func(string) {}, time.Minute)
+			rt := ri.NewTracker(func(types.NamespacedName) {}, time.Minute)
 			track := rt.TrackInNamespace(&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,

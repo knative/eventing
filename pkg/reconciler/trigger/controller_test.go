@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"knative.dev/pkg/configmap"
-	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
@@ -32,7 +31,6 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
 	ctx, _ := SetupFakeContext(t)
 
 	c := NewController(ctx, configmap.NewStaticWatcher())

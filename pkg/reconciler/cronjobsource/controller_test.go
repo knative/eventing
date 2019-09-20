@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/configmap"
-	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -41,7 +40,6 @@ func TestNew(t *testing.T) {
 			setEnv: true,
 		},
 	}
-	defer logtesting.ClearAll()
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if tc.setEnv {
