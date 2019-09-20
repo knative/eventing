@@ -2,18 +2,13 @@
 
 
 [[projects]]
-  digest = "1:1fcfe718410c4fa878eca5e13fd79abc2e897e68f92cd8ca9c05328e3d93c34e"
+  digest = "1:f35566aa630edc74e86b7988a724dbdfe0c5bef21b7cbd401338328cbc233cd5"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
     "container/apiv1",
-    "iam",
-    "internal",
-    "internal/optional",
-    "internal/trace",
     "internal/version",
     "monitoring/apiv3",
-    "storage",
     "trace/apiv2",
   ]
   pruneopts = "NUT"
@@ -667,17 +662,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d7c2254211f0984c81559eef4b67c1cbaa061212ecadaf4eb8a88c2cdd45dd0b"
+  digest = "1:9b9245bd124d95af7072487cd1e5861174b859ebc31cbe9fbab3b88456701485"
   name = "google.golang.org/api"
   packages = [
-    "gensupport",
-    "googleapi",
-    "googleapi/internal/uritemplates",
     "googleapi/transport",
     "internal",
     "iterator",
     "option",
-    "storage/v1",
     "support/bundler",
     "transport",
     "transport/grpc",
@@ -709,7 +700,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:870823dd85a84228c78de88838fbe9255cae24037d47337ece47dcc76976946f"
+  digest = "1:3689f4cc57cc55b4631efc4b778c47d2a888a7060b4108f42cf289a2033be5ba"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api",
@@ -720,9 +711,7 @@
     "googleapis/api/monitoredres",
     "googleapis/container/v1",
     "googleapis/devtools/cloudtrace/v2",
-    "googleapis/iam/v1",
     "googleapis/monitoring/v3",
-    "googleapis/rpc/code",
     "googleapis/rpc/status",
     "protobuf/field_mask",
   ]
@@ -1297,15 +1286,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c620d55af3c74b36413512d5850db67f0efaec7a9b4cdbcc0697462fdc35740b"
+  digest = "1:964a4f9e12d5021b9d550e04c36cf23feb880e286ceede1b246d5c0e43b523b9"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
-    "shared/common",
-    "shared/gcs",
-    "shared/junit",
-    "shared/prow",
-    "shared/testgrid",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
@@ -1350,7 +1334,6 @@
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "golang.org/x/net/context",
-    "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
@@ -1461,8 +1444,6 @@
     "knative.dev/pkg/version",
     "knative.dev/pkg/webhook",
     "knative.dev/test-infra/scripts",
-    "knative.dev/test-infra/shared/junit",
-    "knative.dev/test-infra/shared/testgrid",
     "knative.dev/test-infra/tools/dep-collector",
   ]
   solver-name = "gps-cdcl"
