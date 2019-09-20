@@ -98,7 +98,7 @@ func EventLoggerPod(name string) *corev1.Pod {
 	return eventLoggerPod("logevents", name)
 }
 
-// EventDetailsPod creates a Pod that vaalidates events received and log details about events.
+// EventDetailsPod creates a Pod that validates events received and log details about events.
 func EventDetailsPod(name string) *corev1.Pod {
 	return eventLoggerPod("eventdetails", name)
 }

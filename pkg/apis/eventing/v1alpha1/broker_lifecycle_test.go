@@ -385,20 +385,20 @@ func TestBrokerIsReady(t *testing.T) {
 			if test.markTriggerChannelReady != nil {
 				var c *duckv1alpha1.ChannelableStatus
 				if *test.markTriggerChannelReady {
-					c = TestHelper.ReadyChannelStatusCRD()
+					c = TestHelper.ReadyChannelStatus()
 				} else {
-					c = TestHelper.NotReadyChannelStatusCRD()
+					c = TestHelper.NotReadyChannelStatus()
 				}
-				bs.PropagateTriggerChannelReadinessCRD(c)
+				bs.PropagateTriggerChannelReadiness(c)
 			}
 			if test.markIngressChannelReady != nil {
 				var c *duckv1alpha1.ChannelableStatus
 				if *test.markIngressChannelReady {
-					c = TestHelper.ReadyChannelStatusCRD()
+					c = TestHelper.ReadyChannelStatus()
 				} else {
-					c = TestHelper.NotReadyChannelStatusCRD()
+					c = TestHelper.NotReadyChannelStatus()
 				}
-				bs.PropagateIngressChannelReadinessCRD(c)
+				bs.PropagateIngressChannelReadiness(c)
 			}
 			if !test.markIngressSubscriptionOwned {
 				bs.MarkIngressSubscriptionNotOwned(&messagingv1alpha1.Subscription{})

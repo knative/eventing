@@ -165,7 +165,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 
 	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
 	logging.FromContext(ctx).Info("Reconciling the trigger channel CRD")
-	triggerChan, err := r.reconcileTriggerChannelCRD(ctx, triggerChannelName, channelResourceInterface, b)
+	triggerChan, err := r.reconcileTriggerChannel(ctx, triggerChannelName, channelResourceInterface, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
@@ -199,7 +199,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Name:       triggerChan.Name,
 		Namespace:  triggerChan.Namespace,
 	}
-	b.Status.PropagateTriggerChannelReadinessCRD(&triggerChan.Status)
+	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
 	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
 	if err != nil {
@@ -215,7 +215,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
 
-	ingressDeployment, err := r.reconcileIngressDeploymentCRD(ctx, b, triggerChan)
+	ingressDeployment, err := r.reconcileIngressDeployment(ctx, b, triggerChan)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
 		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
@@ -235,7 +235,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	})
 
 	ingressChannelName := resources.BrokerChannelName(b.Name, "ingress")
-	ingressChan, err := r.reconcileIngressChannelCRD(ctx, ingressChannelName, channelResourceInterface, b)
+	ingressChan, err := r.reconcileIngressChannel(ctx, ingressChannelName, channelResourceInterface, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
 		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
@@ -247,7 +247,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Name:       ingressChan.Name,
 		Namespace:  ingressChan.Namespace,
 	}
-	b.Status.PropagateIngressChannelReadinessCRD(&ingressChan.Status)
+	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
 
 	// Start tracking ingress channel...
 	if err = track(utils.ObjectRef(ingressChan, ingressChan.GroupVersionKind())); err != nil {
@@ -255,7 +255,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return err
 	}
 
-	ingressSub, err := r.reconcileIngressSubscriptionCRD(ctx, b, ingressChan, svc)
+	ingressSub, err := r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress subscription", zap.Error(err))
 		b.Status.MarkIngressSubscriptionFailed("SubscriptionFailure", "%v", err)
@@ -312,33 +312,33 @@ func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Bro
 	return r.reconcileService(ctx, expected)
 }
 
-func newTriggerChannelCRD(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
+func newTriggerChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
 	return resources.NewChannel("trigger", b, TriggerChannelLabels(b.Name))
 }
 
-func newIngressChannelCRD(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
+func newIngressChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
 	return resources.NewChannel("ingress", b, IngressChannelLabels(b.Name))
 }
 
-func (r *Reconciler) reconcileTriggerChannelCRD(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
-	c, err := newTriggerChannelCRD(b)
+func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+	c, err := newTriggerChannel(b)
 	if err != nil {
 		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel CRD object: %s/%s", b.Namespace, channelName), zap.Error(err))
 		return nil, err
 	}
-	return r.reconcileChannelCRD(ctx, channelName, channelResourceInterface, c, b)
+	return r.reconcileChannel(ctx, channelName, channelResourceInterface, c, b)
 }
 
-func (r *Reconciler) reconcileIngressChannelCRD(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
-	c, err := newIngressChannelCRD(b)
+func (r *Reconciler) reconcileIngressChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+	c, err := newIngressChannel(b)
 	if err != nil {
 		return nil, err
 	}
-	return r.reconcileChannelCRD(ctx, channelName, channelResourceInterface, c, b)
+	return r.reconcileChannel(ctx, channelName, channelResourceInterface, c, b)
 }
 
 // reconcileChannelCRD reconciles Broker's 'b' underlying channel for CRD based Channels
-func (r *Reconciler) reconcileChannelCRD(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
@@ -445,7 +445,7 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 }
 
 // reconcileIngressDeploymentCRD reconciles the Ingress Deployment for a CRD backed channel.
-func (r *Reconciler) reconcileIngressDeploymentCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
 	expected := resources.MakeIngress(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
@@ -461,8 +461,8 @@ func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Br
 	return r.reconcileService(ctx, expected)
 }
 
-func (r *Reconciler) reconcileIngressSubscriptionCRD(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
-	expected := resources.MakeSubscriptionCRD(b, c, svc)
+func (r *Reconciler) reconcileIngressSubscription(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+	expected := resources.MakeSubscription(b, c, svc)
 
 	sub, err := r.subscriptionLister.Subscriptions(b.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it

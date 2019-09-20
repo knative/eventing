@@ -61,8 +61,8 @@ const (
 	replyResolveFailed                  = "ReplyResolveFailed"
 
 	// Label to specify valid subscribable channel CRDs.
-	channelCrdLabelKey   = "messaging.knative.dev/subscribable"
-	channelCrdLabelValue = "true"
+	channelLabelKey   = "messaging.knative.dev/subscribable"
+	channelLabelValue = "true"
 )
 
 type Reconciler struct {
@@ -308,10 +308,10 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 	//	return fmt.Errorf("error tracking channel crd '%s': %v", crd.Name, err)
 	//}
 
-	if val, ok := crd.Labels[channelCrdLabelKey]; !ok {
-		return fmt.Errorf("crd %q does not contain mandatory label %q", crdName, channelCrdLabelKey)
-	} else if val != channelCrdLabelValue {
-		return fmt.Errorf("crd label %s has invalid value %q", channelCrdLabelKey, val)
+	if val, ok := crd.Labels[channelLabelKey]; !ok {
+		return fmt.Errorf("crd %q does not contain mandatory label %q", crdName, channelLabelKey)
+	} else if val != channelLabelValue {
+		return fmt.Errorf("crd label %s has invalid value %q", channelLabelKey, val)
 	}
 	return nil
 }

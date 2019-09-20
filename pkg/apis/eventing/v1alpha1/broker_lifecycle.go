@@ -82,7 +82,7 @@ func (bs *BrokerStatus) MarkTriggerChannelFailed(reason, format string, args ...
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionTriggerChannel, reason, format, args...)
 }
 
-func (bs *BrokerStatus) PropagateTriggerChannelReadinessCRD(cs *duckv1alpha1.ChannelableStatus) {
+func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1alpha1.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
 	address := cs.AddressStatus.Address
 	if address != nil {
@@ -96,7 +96,7 @@ func (bs *BrokerStatus) MarkIngressChannelFailed(reason, format string, args ...
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, reason, format, args...)
 }
 
-func (bs *BrokerStatus) PropagateIngressChannelReadinessCRD(cs *duckv1alpha1.ChannelableStatus) {
+func (bs *BrokerStatus) PropagateIngressChannelReadiness(cs *duckv1alpha1.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
 	address := cs.AddressStatus.Address
 	if address != nil {

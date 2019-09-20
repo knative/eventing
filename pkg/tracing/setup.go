@@ -40,6 +40,16 @@ var (
 		SampleRate:     0.01,
 		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
 	}
+
+	// AlwaysSample is a configuration that samples 100% of the requests and sends them to Zipkin.
+	// It is expected to be used only for testing purposes (e.g. in e2e tests).
+	// TODO(#1712): Remove this and pull "static" configuration from the environment instead.
+	AlwaysSample = &tracingconfig.Config{
+		Backend:        tracingconfig.Zipkin,
+		Debug:          true,
+		SampleRate:     1.0,
+		ZipkinEndpoint: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
+	}
 )
 
 // setupPublishing sets up trace publishing for the process. Note that other pieces
@@ -111,7 +121,7 @@ func enableZeroSamplingCM(ns string) corev1.ConfigMap {
 			Namespace: ns,
 		},
 		Data: map[string]string{
-			"enable":          "True",
+			"backend":         "zipkin",
 			"debug":           "False",
 			"sample-rate":     "0",
 			"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",

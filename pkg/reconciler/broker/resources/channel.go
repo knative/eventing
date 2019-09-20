@@ -27,16 +27,9 @@ import (
 	"knative.dev/pkg/kmeta"
 )
 
-// NonCRDBrokerChannelName creates a name for the non-CRD based Channel for a Broker for the given
-// Channel type.
-func NonCRDBrokerChannelName(brokerName, channelType string) string {
-	return fmt.Sprintf("%s-kn-%s", brokerName, channelType)
-}
-
 // BrokerChannelName creates a name for the Channel for a Broker for a given
 // Channel type.
 func BrokerChannelName(brokerName, channelType string) string {
-	// TODO Come up with a better name than kn2.
 	return fmt.Sprintf("%s-kn2-%s", brokerName, channelType)
 }
 

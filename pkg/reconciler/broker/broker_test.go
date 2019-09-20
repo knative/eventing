@@ -58,10 +58,7 @@ const (
 	triggerChannel channelType = "TriggerChannel"
 	ingressChannel channelType = "IngressChannel"
 
-	triggerChannelName = "test-broker-kn-trigger"
-	ingressChannelName = "test-broker-kn-ingress"
-
-	ingressCRDChannelName = "test-broker-kn2-ingress"
+	ingressChannelName = "test-broker-kn2-ingress"
 )
 
 var (
@@ -104,7 +101,7 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func TestReconcileCRD(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -124,7 +121,7 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerDeletionTimestamp),
 			},
@@ -134,16 +131,16 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
 			WantCreates: []runtime.Object{
-				createChannelCRD(testNS, triggerChannel, false),
+				createChannel(testNS, triggerChannel, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithInitBrokerConditions,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
@@ -159,16 +156,16 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
 			WantCreates: []runtime.Object{
-				createChannelCRD(testNS, triggerChannel, false),
+				createChannel(testNS, triggerChannel, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithInitBrokerConditions,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
 		},
@@ -177,13 +174,13 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, false),
+				createChannel(testNS, triggerChannel, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
@@ -193,9 +190,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "deployments"),
@@ -209,10 +206,10 @@ func TestReconcileCRD(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
@@ -225,9 +222,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -239,10 +236,10 @@ func TestReconcileCRD(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterFailed("DeploymentFailure", "inducing failure for update deployments")),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -262,9 +259,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -282,10 +279,10 @@ func TestReconcileCRD(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterFailed("ServiceFailure", "inducing failure for create services")),
 			}},
 			WantEvents: []string{
@@ -298,9 +295,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -322,10 +319,10 @@ func TestReconcileCRD(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterFailed("ServiceFailure", "inducing failure for update services")),
 			}},
 			WantEvents: []string{
@@ -338,9 +335,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -364,11 +361,11 @@ func TestReconcileCRD(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
@@ -381,9 +378,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -411,11 +408,11 @@ func TestReconcileCRD(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("DeploymentFailure", "inducing failure for update deployments")),
 			}},
 			WantEvents: []string{
@@ -428,9 +425,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -457,11 +454,11 @@ func TestReconcileCRD(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("ServiceFailure", "inducing failure for create services")),
 			}},
 			WantEvents: []string{
@@ -474,9 +471,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -507,11 +504,11 @@ func TestReconcileCRD(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("ServiceFailure", "inducing failure for update services")),
 			}},
 			WantEvents: []string{
@@ -524,9 +521,9 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
+				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -550,14 +547,14 @@ func TestReconcileCRD(t *testing.T) {
 				InduceFailure("create", "inmemorychannels"),
 			},
 			WantCreates: []runtime.Object{
-				createChannelCRD(testNS, ingressChannel, false),
+				createChannel(testNS, ingressChannel, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterDeploymentAvailable(),
 					WithIngressDeploymentAvailable(),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
@@ -573,10 +570,10 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
-				createChannelCRD(testNS, ingressChannel, true),
+				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, ingressChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -600,20 +597,20 @@ func TestReconcileCRD(t *testing.T) {
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(imcGVK, ingressCRDChannelName),
+					WithSubscriptionChannel(imcGVK, ingressChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterDeploymentAvailable(),
 					WithIngressDeploymentAvailable(),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
 					WithBrokerIngressChannelReady(),
-					WithBrokerIngressChannel(createIngressChannelCRDRef()),
+					WithBrokerIngressChannel(createIngressChannelRef()),
 					WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for create subscriptions"),
 				),
 			}},
@@ -631,10 +628,10 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
-				createChannelCRD(testNS, ingressChannel, true),
+				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, ingressChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -656,7 +653,7 @@ func TestReconcileCRD(t *testing.T) {
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(channelGVK, ingressCRDChannelName),
+					WithSubscriptionChannel(channelGVK, ingressChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, "")),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
@@ -664,15 +661,15 @@ func TestReconcileCRD(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterDeploymentAvailable(),
 					WithIngressDeploymentAvailable(),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
 					WithBrokerIngressChannelReady(),
-					WithBrokerIngressChannel(createIngressChannelCRDRef()),
+					WithBrokerIngressChannel(createIngressChannelRef()),
 					WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for delete subscriptions"),
 				),
 			}},
@@ -690,10 +687,10 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
-				createChannelCRD(testNS, ingressChannel, true),
+				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, ingressChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -715,7 +712,7 @@ func TestReconcileCRD(t *testing.T) {
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(channelGVK, ingressCRDChannelName),
+					WithSubscriptionChannel(channelGVK, ingressChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, "")),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
@@ -725,20 +722,20 @@ func TestReconcileCRD(t *testing.T) {
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(imcGVK, ingressCRDChannelName),
+					WithSubscriptionChannel(imcGVK, ingressChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithFilterDeploymentAvailable(),
 					WithIngressDeploymentAvailable(),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
 					WithBrokerIngressChannelReady(),
-					WithBrokerIngressChannel(createIngressChannelCRDRef()),
+					WithBrokerIngressChannel(createIngressChannelRef()),
 					WithBrokerIngressSubscriptionFailed("SubscriptionFailure", "inducing failure for create subscriptions"),
 				),
 			}},
@@ -756,10 +753,10 @@ func TestReconcileCRD(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannelCRD(testNS, triggerChannel, true),
-				createChannelCRD(testNS, ingressChannel, true),
+				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, ingressChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.FilterLabels(brokerName)),
@@ -781,16 +778,16 @@ func TestReconcileCRD(t *testing.T) {
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
-					WithSubscriptionChannel(imcGVK, ingressCRDChannelName),
+					WithSubscriptionChannel(imcGVK, ingressChannelName),
 					WithSubscriptionSubscriberRef(serviceGVK, ingressServiceName),
 					WithSubscriptionReady),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannelCRD(channelCRD()),
+					WithBrokerChannel(channel()),
 					WithBrokerReady,
-					WithBrokerTriggerChannel(createTriggerChannelCRDRef()),
-					WithBrokerIngressChannel(createIngressChannelCRDRef()),
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
+					WithBrokerIngressChannel(createIngressChannelRef()),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
 				),
 			}},
@@ -829,7 +826,7 @@ func ownerReferences() []metav1.OwnerReference {
 	}}
 }
 
-func channelCRD() metav1.TypeMeta {
+func channel() metav1.TypeMeta {
 	return metav1.TypeMeta{
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
@@ -949,7 +946,7 @@ func servicePorts(containerName string, httpInternal int) []corev1.ServicePort {
 	return svcPorts
 }
 
-func createChannelCRD(namespace string, t channelType, ready bool) *unstructured.Unstructured {
+func createChannel(namespace string, t channelType, ready bool) *unstructured.Unstructured {
 	var labels map[string]interface{}
 	var name string
 	var hostname string
@@ -1028,24 +1025,6 @@ func createChannelCRD(namespace string, t channelType, ready bool) *unstructured
 
 func createTriggerChannelRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
-	}
-}
-
-func createIngressChannelRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
-		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
-	}
-}
-
-func createTriggerChannelCRDRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
@@ -1053,7 +1032,7 @@ func createTriggerChannelCRDRef() *corev1.ObjectReference {
 	}
 }
 
-func createIngressChannelCRDRef() *corev1.ObjectReference {
+func createIngressChannelRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
