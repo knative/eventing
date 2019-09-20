@@ -16,11 +16,13 @@ limitations under the License.
 package conformance
 
 import (
+	"log"
 	"os"
 	"testing"
 
 	"knative.dev/eventing/test"
 	"knative.dev/eventing/test/common"
+	"knative.dev/pkg/test/zipkin"
 )
 
 var setup = common.Setup
@@ -30,11 +32,19 @@ var channels test.Channels
 var channelTestRunner common.ChannelTestRunner
 
 func TestMain(m *testing.M) {
-	test.InitializeEventingFlags()
-	channels = test.EventingFlags.Channels
-	channelTestRunner = common.ChannelTestRunner{
-		ChannelFeatureMap: common.ChannelFeatureMap,
-		ChannelsToTest:    test.EventingFlags.Channels,
-	}
-	os.Exit(m.Run())
+	os.Exit(func() int {
+		test.InitializeEventingFlags()
+		channels = test.EventingFlags.Channels
+		channelTestRunner = common.ChannelTestRunner{
+			ChannelFeatureMap: common.ChannelFeatureMap,
+			ChannelsToTest:    test.EventingFlags.Channels,
+		}
+
+		// Any tests may SetupZipkinTracing, it will only actually be done once. This should be the ONLY
+		// place that cleans it up. If an individual test calls this instead, then it will break other
+		// tests that need the tracing in place.
+		defer zipkin.CleanupZipkinTracingSetup(log.Printf)
+
+		return m.Run()
+	}())
 }

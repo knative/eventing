@@ -1454,6 +1454,7 @@
     "knative.dev/pkg/test/logging",
     "knative.dev/pkg/test/mako",
     "knative.dev/pkg/test/vegeta/pacers",
+    "knative.dev/pkg/test/zipkin",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
