@@ -275,7 +275,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -306,7 +306,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 9090))),
+					WithServicePorts(servicePorts(9090))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "services"),
@@ -315,7 +315,7 @@ func TestReconcile(t *testing.T) {
 				Object: NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -346,7 +346,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "deployments"),
@@ -389,7 +389,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -436,7 +436,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -450,7 +450,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -482,7 +482,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -491,7 +491,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 9090))),
+					WithServicePorts(servicePorts(9090))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "services"),
@@ -500,7 +500,7 @@ func TestReconcile(t *testing.T) {
 				Object: NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts( 8080))),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -532,7 +532,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -541,7 +541,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "inmemorychannels"),
@@ -582,7 +582,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -591,7 +591,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts( 8080))),
 			},
 			WantCreates: []runtime.Object{
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
@@ -640,7 +640,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -649,7 +649,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
@@ -699,7 +699,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -708,7 +708,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
@@ -765,7 +765,7 @@ func TestReconcile(t *testing.T) {
 				NewService(filterServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
-					WithServicePorts(servicePorts(filterContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -774,7 +774,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts(ingressContainerName, 8080))),
+					WithServicePorts(servicePorts(8080))),
 				NewSubscription(ingressSubscriptionGenerateName, testNS,
 					WithSubscriptionOwnerReferences(ownerReferences()),
 					WithSubscriptionLabels(ingressSubscriptionLabels(brokerName)),
@@ -932,7 +932,7 @@ func containerPorts(httpInternal int32) []corev1.ContainerPort {
 	}
 }
 
-func servicePorts(containerName string, httpInternal int) []corev1.ServicePort {
+func servicePorts(httpInternal int) []corev1.ServicePort {
 	svcPorts := []corev1.ServicePort{
 		{
 			Name:       "http",
