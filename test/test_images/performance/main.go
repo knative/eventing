@@ -21,6 +21,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 
@@ -31,6 +32,8 @@ import (
 )
 
 // flags for the image
+type Tags []string
+
 var (
 	role    string
 	verbose bool
@@ -44,9 +47,19 @@ var (
 	warmupSeconds uint
 
 	// role=aggregator
-	expectRecords uint
-	listenAddr    string
+	expectRecords  uint
+	listenAddr     string
+	additionalTags Tags
 )
+
+func (tags *Tags) String() string {
+	return fmt.Sprint(*tags)
+}
+
+func (tags *Tags) Set(value string) error {
+	*tags = append(*tags, value)
+	return nil
+}
 
 func init() {
 	flag.StringVar(&role, "role", "", `Role of this instance. One of ("sender-receiver", "aggregator")`)
@@ -63,6 +76,7 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
+	flag.Var(&additionalTags, "additional-tags", "Array of environment specific additional tags.")
 }
 
 type testExecutor interface {
