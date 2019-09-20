@@ -9,13 +9,19 @@ sender-receiver).
 Latencies are calculated and published to the Mako sidecar container by a
 separate aggregator. In particular:
 
-* Publish latency represents how long the sender took to publish the event to its sink
-* Delivery latency represents how much long the event took to go from the "intent" of publish (before publishing request happens) to the delivery of the event in the receiver
+- Publish latency represents how long the sender took to publish the event to
+  its sink
+- Delivery latency represents how much long the event took to go from the
+  "intent" of publish (before publishing request happens) to the delivery of the
+  event in the receiver
 
-Throughputs are calculated doing the finite difference of timestamp - count vector. In particular: 
+Throughputs are calculated doing the finite difference of timestamp - count
+vector. In particular:
 
-* Send throughput are calculated from the timestamps stored before the publish request
-* Delivery throughput are calculated from the timestamps stored when the message are received
+- Send throughput are calculated from the timestamps stored before the publish
+  request
+- Delivery throughput are calculated from the timestamps stored when the message
+  are received
 
 The image is designed to allocate as much memory as possible before the
 benchmark starts. We suggest to disable Go GC to avoid useless GC pauses.
@@ -105,5 +111,5 @@ If you don't want a warmup phase, use `--warmup=0`.
 
 ### Workers
 
-You can specify the number of initial vegeta workers that perform requests with flag
-`workers`.
+You can specify the number of initial vegeta workers that perform requests with
+flag `workers`.
