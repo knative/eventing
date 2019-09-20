@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openzipkin/zipkin-go/model"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -55,28 +56,20 @@ func ChannelTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTest
 				// TestMain.
 				tracinghelper.Setup(st, client)
 
-				mustContain := setupChannelTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
+				expected, mustContain := setupChannelTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
 				assertLogContents(st, client, loggerPodName, mustContain)
 
 				traceID := getTraceID(st, client, loggerPodName)
-
-				// We expect the following spans:
-				// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
-				// 2. Channel receives event from sending pod.
-				// 3. Channel sends event to logging pod.
-				// 4. Logging pod receives event from Channel.
-				// So we expect 4 spans if the sending pod is generating a span, 3 if not.
-				expectedNumSpans := 3
-				if tc.incomingTraceId {
-					expectedNumSpans = 4
-				}
-				trace, err := zipkin.JSONTrace(traceID, expectedNumSpans, 60*time.Second)
+				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 60*time.Second)
 				if err != nil {
 					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, trace)
 				}
 				st.Logf("I got the trace, %q!\n%+v", traceID, trace)
 
-				// TODO: Assert information in the trace.
+				tree := tracinghelper.GetTraceTree(st, trace)
+				if err := expected.Matches(tree); err != nil {
+					st.Fatalf("Trace Tree did not match expected: %v", err)
+				}
 			})
 		})
 	}
@@ -84,17 +77,17 @@ func ChannelTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTest
 
 // setupChannelTracing is the general setup for TestChannelTracing. It creates the following:
 // SendEvents (Pod) -> Channel -> Subscription -> K8s Service -> LogEvents (Pod)
-// It returns a string that is expected to be sent by the SendEvents Pod and should be present in
-// the LogEvents Pod logs.
-func setupChannelTracing(t *testing.T, channel string, client *common.Client, loggerPodName string, incomingTraceId bool) string {
+// It returns the expected trace tree and a string that is expected to be sent by the SendEvents Pod
+// and should be present in the LogEvents Pod logs.
+func setupChannelTracing(t *testing.T, channel string, client *common.Client, loggerPodName string, incomingTraceId bool) (tracinghelper.TestSpanTree, string) {
 	// Create the Channel.
 	channelName := "ch"
 	channelTypeMeta := common.GetChannelTypeMeta(channel)
 	client.CreateChannelOrFail(channelName, channelTypeMeta)
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
-	pod := resources.EventDetailsPod(loggerPodName)
-	client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+	loggerPod := resources.EventDetailsPod(loggerPodName)
+	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// Create the Subscription linking the Channel to the LogEvents K8s Service.
 	client.CreateSubscriptionOrFail(
@@ -129,7 +122,72 @@ func setupChannelTracing(t *testing.T, channel string, client *common.Client, lo
 	if err := sendEvent(senderName, channelName, channelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 	}
-	return body
+
+	// We expect the following spans:
+	// 0. Artificial root span.
+	// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
+	// 2. Channel receives event from sending pod.
+	// 3. Channel sends event to logging pod.
+	// 4. Logging pod receives event from Channel.
+	expected := tracinghelper.TestSpanTree{
+		// 0. Artificial root span.
+		Root: true,
+		// 1 is added below if it is needed.
+		Children: []tracinghelper.TestSpanTree{
+			{
+				// 2. Channel receives event from sending pod.
+				Kind: model.Server,
+				Tags: map[string]string{
+					"http.method":      "POST",
+					"http.status_code": "202",
+					"http.host":        fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
+					"http.path":        "/",
+				},
+				Children: []tracinghelper.TestSpanTree{
+					{
+						// 3. Channel sends event to logging pod.
+						Kind: model.Client,
+						Tags: map[string]string{
+							"http.method":      "POST",
+							"http.path":        "/",
+							"http.status_code": "202",
+							"http.url":         fmt.Sprintf("http://%s.%s.svc.cluster.local/", loggerPod.Name, client.Namespace),
+						},
+						Children: []tracinghelper.TestSpanTree{
+							{
+								// 4. Logging pod receives event from Channel.
+								Kind:                     model.Server,
+								LocalEndpointServiceName: "logger",
+								Tags: map[string]string{
+									"http.method":      "POST",
+									"http.path":        "/",
+									"http.status_code": "202",
+									"http.host":        fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if incomingTraceId {
+		expected.Children = []tracinghelper.TestSpanTree{
+			{
+				// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
+				Kind:                     model.Client,
+				LocalEndpointServiceName: "sender",
+				Tags: map[string]string{
+					"http.method":      "POST",
+					"http.status_code": "202",
+					"http.url":         fmt.Sprintf("http://%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
+				},
+				Children: expected.Children,
+			},
+		}
+	}
+	return expected, body
 }
 
 // assertLogContents verifies that loggerPodName's logs contains mustContain. It is used to show
