@@ -100,8 +100,6 @@ func TestMessageReceiver_HandleRequest(t *testing.T) {
 					// discarded.
 					"knatIve-will-pass-through": "true",
 					"cE-pass-through":           "true",
-					"x-B3-pass":                 "true",
-					"x-ot-pass":                 "true",
 					"ce-knativehistory":         "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
 				}
 				if diff := cmp.Diff(expectedHeaders, m.Headers); diff != "" {

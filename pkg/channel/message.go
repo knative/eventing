@@ -35,6 +35,7 @@ var historySplitter = regexp.MustCompile(`\s*` + regexp.QuoteMeta(MessageHistory
 
 var forwardHeaders = []string{
 	"content-type",
+	"x-request-id",
 }
 
 var forwardPrefixes = []string{
