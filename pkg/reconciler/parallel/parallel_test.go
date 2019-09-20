@@ -405,7 +405,7 @@ func TestAllBranches(t *testing.T) {
 		},
 	}
 
-	defer logtesting.ClearAll()
+	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -413,7 +413,7 @@ func TestAllBranches(t *testing.T) {
 			resourceTracker:    fakeResourceTracker{},
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
-	}, false))
+	}, false, logger))
 }
 
 func createBranchReplyChannel(caseNumber int) *corev1.ObjectReference {

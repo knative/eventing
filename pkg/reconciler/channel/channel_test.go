@@ -35,8 +35,8 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+	logtesting "knative.dev/pkg/logging/testing"
 )
 
 const (
@@ -244,7 +244,7 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	defer logtesting.ClearAll()
+	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -253,6 +253,7 @@ func TestReconcile(t *testing.T) {
 		}
 	},
 		false,
+		logger,
 	))
 }
 

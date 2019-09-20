@@ -310,7 +310,7 @@ func TestAllCases(t *testing.T) {
 	// TODO: we need a existing default un-owned test.
 	}
 
-	defer logtesting.ClearAll()
+	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:                 reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -320,5 +320,5 @@ func TestAllCases(t *testing.T) {
 			roleBindingLister:    listers.GetRoleBindingLister(),
 			tracker:              tracker.New(func(types.NamespacedName) {}, 0),
 		}
-	}, false))
+	}, false, logger))
 }

@@ -36,9 +36,9 @@ import (
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	logtesting "knative.dev/pkg/logging/testing"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -632,7 +632,7 @@ func TestAllCases(t *testing.T) {
 		//},
 	}
 
-	defer logtesting.ClearAll()
+	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -643,6 +643,7 @@ func TestAllCases(t *testing.T) {
 		return r
 	},
 		true,
+		logger,
 	))
 }
 
