@@ -90,7 +90,7 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 		destinationURL := d.resolveURL(destination, defaults.Namespace)
 		ctx, response, err = d.executeRequest(ctx, destinationURL, event)
 		if err != nil {
-			return fmt.Errorf("unable to complete request %v", err)
+			return fmt.Errorf("unable to complete request to %s: %v", destinationURL, err)
 		}
 	}
 
@@ -98,14 +98,14 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 		replyURL := d.resolveURL(reply, defaults.Namespace)
 		_, _, err = d.executeRequest(ctx, replyURL, *response)
 		if err != nil {
-			return fmt.Errorf("failed to forward reply %v", err)
+			return fmt.Errorf("failed to forward reply to %s: %v", replyURL, err)
 		}
 	}
 	return nil
 }
 
 func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
-	d.logger.Info("Dispatching event", zap.String("url", url.String()))
+	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	tctx := addOutGoingTracing(ctx, url)
 	sctx := utils.ContextFrom(tctx, url)
