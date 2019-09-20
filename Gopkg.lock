@@ -1321,6 +1321,7 @@
     "github.com/google/mako/go/quickstore",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
+    "github.com/openzipkin/zipkin-go/model",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/tsenart/vegeta/lib",
