@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck"
@@ -35,7 +36,7 @@ import (
 
 // ResourceInformer is an informer that allows tracking arbitrary Resources.
 type ResourceInformer interface {
-	NewTracker(callback func(string), lease time.Duration) ResourceTracker
+	NewTracker(callback func(types.NamespacedName), lease time.Duration) ResourceTracker
 }
 
 // ResourceTracker is a tracker capable of tracking Resources.
@@ -68,7 +69,7 @@ func NewResourceInformer(ctx context.Context) ResourceInformer {
 }
 
 // NewTracker creates a new ResourceTracker, backed by this ResourceInformer.
-func (i *resourceInformer) NewTracker(callback func(string), lease time.Duration) ResourceTracker {
+func (i *resourceInformer) NewTracker(callback func(types.NamespacedName), lease time.Duration) ResourceTracker {
 	return &resourceTracker{
 		informer: i,
 		tracker:  tracker.New(callback, lease),

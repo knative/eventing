@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
@@ -638,7 +639,7 @@ func TestAllCases(t *testing.T) {
 			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(string) {})
+		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r
 	},
 		true,

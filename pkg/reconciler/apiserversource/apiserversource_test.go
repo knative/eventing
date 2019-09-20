@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
@@ -561,7 +562,7 @@ func TestReconcile(t *testing.T) {
 			source:                source,
 			resourceTracker:       &MockResourceTracker{},
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(string) {})
+		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r
 	},
 		true,
