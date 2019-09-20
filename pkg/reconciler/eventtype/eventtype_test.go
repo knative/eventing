@@ -27,6 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -161,7 +162,7 @@ func TestReconcile(t *testing.T) {
 			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 			eventTypeLister: listers.GetEventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
-			tracker:         tracker.New(func(string) {}, 0),
+			tracker:         tracker.New(func(types.NamespacedName) {}, 0),
 		}
 	},
 		false,
