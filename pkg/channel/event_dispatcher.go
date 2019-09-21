@@ -107,8 +107,10 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
-	tctx := addOutGoingTracing(ctx, url)
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	sctx := utils.ContextFrom(tctx, url)
+	sctx = addOutGoingTracing(sctx, url)
+
 	rctx, reply, err := d.ceClient.Send(sctx, event)
 	if err != nil {
 		return rctx, nil, err
@@ -127,7 +129,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 	return rctx, reply, nil
 }
 
-func addOutGoingTracing(ctx context.Context, url *url.URL) cloudevents.HTTPTransportContext {
+func addOutGoingTracing(ctx context.Context, url *url.URL) context.Context {
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	// Creating a dummy request to leverage propagation.SpanContextFromRequest method
 	req := &http.Request{
@@ -136,9 +138,9 @@ func addOutGoingTracing(ctx context.Context, url *url.URL) cloudevents.HTTPTrans
 	// Attach the Span context that is currently saved in the request's headers.
 	if sc, ok := propagation.SpanContextFromRequest(req); ok {
 		newCtx, _ := trace.StartSpanWithRemoteParent(ctx, url.Path, sc)
-		return cloudevents.HTTPTransportContextFrom(newCtx)
+		return newCtx
 	}
-	return tctx
+	return ctx
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
