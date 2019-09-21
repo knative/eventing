@@ -20,8 +20,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"knative.dev/eventing/pkg/adapter/cronjobevents"
@@ -73,6 +75,14 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Error processing env var: %s", err))
 	}
+
+	// Report stats on Go memory usage every 30 seconds.
+	msp := metrics.NewMemStatsAll()
+	msp.Start(ctx, 30*time.Second)
+	if err := view.Register(msp.DefaultViews()...); err != nil {
+		log.Fatalf("Error exporting go memstats view: %v", err)
+	}
+
 	// Convert json logging.Config to logging.Config.
 	loggingConfig, err := logging.JsonToLoggingConfig(env.LoggingConfigJson)
 	if err != nil {

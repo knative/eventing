@@ -19,10 +19,12 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"knative.dev/pkg/configmap"
@@ -66,6 +68,13 @@ func main() {
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
 		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
+
+	// Report stats on Go memory usage every 30 seconds.
+	msp := metrics.NewMemStatsAll()
+	msp.Start(ctx, 30*time.Second)
+	if err := view.Register(msp.DefaultViews()...); err != nil {
+		log.Fatalf("Error exporting go memstats view: %v", err)
 	}
 
 	cfg, err := sharedmain.GetConfig(*masterURL, *kubeconfig)
