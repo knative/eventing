@@ -47,6 +47,7 @@ var (
 		"knative-",
 		// tracing
 		// TODO check if we can remove this once we address the issue in ContextFrom.
+		//  Issue: https://github.com/knative/eventing/issues/1953
 		"x-b3-",
 		"x-ot-",
 	}
@@ -60,7 +61,7 @@ func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) cont
 	// Override the headers.
 	tctx.Header = h
 	// Create the sending context with the overridden transport context.
-	// TODO use the current context here instead of context.Background.
+	// TODO use the current context here instead of context.Background. Issue: https://github.com/knative/eventing/issues/1953
 	//  The reason we are using context.Background is that there is no easy way in the sdk to override
 	//  headers, and they will all be passed through. Also note that the sdk does not use the headers from
 	//  the transport context to set the request headers.

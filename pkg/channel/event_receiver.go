@@ -63,6 +63,7 @@ type ReceiverOptions func(*EventReceiver) error
 // before calling receiverFunc.
 // TODO change this to take in a URL, rather than just the host string.
 //  That will allow us to use the path to distinguish between Channels too.
+//  Issue: https://github.com/knative/eventing/issues/1952
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the

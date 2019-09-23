@@ -130,7 +130,7 @@ func addOutGoingTracing(ctx context.Context, url *url.URL) context.Context {
 	req := &http.Request{
 		Header: tctx.Header,
 	}
-	// TODO use traceparent header as mentioned in https://github.com/knative/eventing/pull/1933#discussion_r327255621
+	// TODO use traceparent header. Issue: https://github.com/knative/eventing/issues/1951
 	// Attach the Span context that is currently saved in the request's headers.
 	if sc, ok := propagation.SpanContextFromRequest(req); ok {
 		newCtx, _ := trace.StartSpanWithRemoteParent(ctx, url.Path, sc)
