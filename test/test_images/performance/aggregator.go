@@ -160,7 +160,6 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 		if !accepted {
 			errMsg := "Failed on broker"
 			if _, failed := ex.failedEvents.Events[sentID]; !failed {
-				// TODO(antoineco): should never happen, check whether the failed map makes any sense
 				errMsg = "Event not accepted but missing from failed map"
 			}
 
