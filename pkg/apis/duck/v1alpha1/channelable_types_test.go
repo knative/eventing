@@ -41,6 +41,9 @@ func TestChannelableGetListType(t *testing.T) {
 func TestChannelablePopulate(t *testing.T) {
 	got := &Channelable{}
 
+	retry := int32(5)
+	linear := BackoffPolicyLinear
+	delay := "5s"
 	want := &Channelable{
 		Spec: ChannelableSpec{
 			SubscribableTypeSpec: SubscribableTypeSpec{
@@ -58,14 +61,19 @@ func TestChannelablePopulate(t *testing.T) {
 					}},
 				},
 			},
-			ErrorChannel: &apisv1alpha1.Destination{
-				ObjectReference: &corev1.ObjectReference{
-					Name: "aname",
+			Delivery: &DeliverySpec{
+				ErrorSink: &apisv1alpha1.Destination{
+					ObjectReference: &corev1.ObjectReference{
+						Name: "aname",
+					},
+					URI: &apis.URL{
+						Scheme: "http",
+						Host:   "test-error-domain",
+					},
 				},
-				URI: &apis.URL{
-					Scheme: "http",
-					Host:   "test-error-domain",
-				},
+				Retry:         &retry,
+				BackoffPolicy: &linear,
+				BackoffDelay:  &delay,
 			},
 		},
 
