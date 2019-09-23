@@ -250,27 +250,21 @@ func (c *Impl) EnqueueLabelOfClusterScopedResource(nameLabel string) func(obj in
 			return
 		}
 
-		ns, name, err := cache.SplitMetaNamespaceKey(controllerKey)
-		if err != nil {
-			c.logger.Error(err)
-			return
-		}
-
-		c.EnqueueKey(types.NamespacedName{Namespace: ns, Name: name})
+		c.EnqueueKey(types.NamespacedName{Namespace: "", Name: controllerKey})
 	}
 }
 
 // EnqueueKey takes a namespace/name string and puts it onto the work queue.
 func (c *Impl) EnqueueKey(key types.NamespacedName) {
 	c.WorkQueue.Add(key)
-	c.logger.Debugf("Adding to queue %s (depth: %d)", key.String(), c.WorkQueue.Len())
+	c.logger.Debugf("Adding to queue %s (depth: %d)", safeKey(key), c.WorkQueue.Len())
 }
 
 // EnqueueKeyAfter takes a namespace/name string and schedules its execution in
 // the work queue after given delay.
 func (c *Impl) EnqueueKeyAfter(key types.NamespacedName, delay time.Duration) {
 	c.WorkQueue.AddAfter(key, delay)
-	c.logger.Debugf("Adding to queue %s (delay: %v, depth: %d)", key.String(), delay, c.WorkQueue.Len())
+	c.logger.Debugf("Adding to queue %s (delay: %v, depth: %d)", safeKey(key), delay, c.WorkQueue.Len())
 }
 
 // Run starts the controller's worker threads, the number of which is threadiness.
@@ -314,9 +308,9 @@ func (c *Impl) processNextWorkItem() bool {
 		return false
 	}
 	key := obj.(types.NamespacedName)
-	keyStr := key.String()
+	keyStr := safeKey(key)
 
-	c.logger.Debugf("Processing from queue %s (depth: %d)", key, c.WorkQueue.Len())
+	c.logger.Debugf("Processing from queue %s (depth: %d)", safeKey(key), c.WorkQueue.Len())
 
 	startTime := time.Now()
 	// Send the metrics for the current queue depth
@@ -368,7 +362,7 @@ func (c *Impl) handleErr(err error, key types.NamespacedName) {
 	// being processed, queue.Len==0).
 	if !IsPermanentError(err) && !c.WorkQueue.ShuttingDown() {
 		c.WorkQueue.AddRateLimited(key)
-		c.logger.Debugf("Requeuing key %s due to non-permanent error (depth: %d)", key.String(), c.WorkQueue.Len())
+		c.logger.Debugf("Requeuing key %s due to non-permanent error (depth: %d)", safeKey(key), c.WorkQueue.Len())
 		return
 	}
 
@@ -507,4 +501,11 @@ func GetEventRecorder(ctx context.Context) record.EventRecorder {
 		return nil
 	}
 	return untyped.(record.EventRecorder)
+}
+
+func safeKey(key types.NamespacedName) string {
+	if key.Namespace == "" {
+		return key.Name
+	}
+	return key.String()
 }
