@@ -20,6 +20,8 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -33,7 +35,6 @@ var historySplitter = regexp.MustCompile(`\s*` + regexp.QuoteMeta(MessageHistory
 
 var forwardHeaders = []string{
 	"content-type",
-	// tracing
 	"x-request-id",
 }
 
@@ -42,9 +43,6 @@ var forwardPrefixes = []string{
 	"knative-",
 	// cloud events
 	"ce-",
-	// tracing
-	"x-b3-",
-	"x-ot-",
 }
 
 // Message represents a chunk of data within a channel dispatcher. The message contains both
@@ -53,6 +51,9 @@ var forwardPrefixes = []string{
 //
 // A message may represent a CloudEvent.
 type Message struct {
+	// Span is the tracing Span that was associated with the incoming request.
+	Span *trace.Span
+
 	// Headers provide metadata about the message payload. All header keys
 	// should be lowercase.
 	Headers map[string]string `json:"headers,omitempty"`

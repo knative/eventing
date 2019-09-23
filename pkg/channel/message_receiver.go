@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/pkg/tracing"
@@ -76,7 +77,7 @@ func NewMessageReceiver(receiverFunc func(ChannelReference, *Message) error, log
 	return receiver, nil
 }
 
-// Start begings to receive messages for the receiver.
+// Start begins to receive messages for the receiver.
 //
 // Only HTTP POST requests to the root path (/) are accepted. If other paths or
 // methods are needed, use the HandleRequest method directly with another HTTP
@@ -150,7 +151,9 @@ func (r *MessageReceiver) HandleRequest(res http.ResponseWriter, req *http.Reque
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	// setting common channel information in the request
+	message.Span = trace.FromContext(req.Context())
+
+	// Setting common channel information in the request.
 	message.AppendToHistory(host)
 
 	err = r.receiverFunc(channel, message)

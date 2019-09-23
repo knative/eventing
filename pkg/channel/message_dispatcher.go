@@ -117,10 +117,7 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 	req.Header = d.toHTTPHeaders(message.Headers)
 
 	// Attach the Span context that is currently saved in the request's headers.
-	if sc, ok := propagation.SpanContextFromRequest(req); ok {
-		newCtx, _ := trace.StartSpanWithRemoteParent(req.Context(), req.URL.Path, sc)
-		req = req.WithContext(newCtx)
-	}
+	req = req.WithContext(trace.NewContext(req.Context(), message.Span))
 
 	res, err := d.httpClient.Do(req)
 	if err != nil {
@@ -149,7 +146,14 @@ func (d *MessageDispatcher) executeRequest(url *url.URL, message *Message) (*Mes
 		// The response body is empty, the event has 'finished'.
 		return nil, nil
 	}
-	return &Message{headers, payload}, nil
+
+	return &Message{
+		// I'm not sure this is what we want. It will cause replies to be a child of the original
+		// request, not the call to the subscriber.
+		Span:    message.Span,
+		Headers: headers,
+		Payload: payload,
+	}, nil
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
