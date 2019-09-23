@@ -22,7 +22,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"k8s.io/apimachinery/pkg/util/sets"
 )

@@ -28,11 +28,11 @@ package multichannelfanout
 import (
 	"context"
 	"fmt"
-	"github.com/cloudevents/sdk-go"
-	"github.com/pkg/errors"
 	"net/http"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/channel/fanout"
 )
