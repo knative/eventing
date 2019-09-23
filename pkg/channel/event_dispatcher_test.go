@@ -381,7 +381,7 @@ func TestDispatchMessage(t *testing.T) {
 			md := NewEventDispatcher(zap.NewNop())
 			destination := getDomain(t, tc.sendToDestination, destServer.URL)
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
-			err := md.DispatchEvent(ctx, event, destination, reply, DispatchDefaults{})
+			err := md.DispatchEvent(ctx, event, destination, reply)
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
 			}

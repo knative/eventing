@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -38,10 +37,8 @@ const correlationIDHeaderName = "Knative-Correlation-Id"
 type Dispatcher interface {
 	// DispatchEvent dispatches an event to a destination over HTTP.
 	//
-	// The destination and reply are DNS names. For names with a single label,
-	// the default namespace is used to expand it into a fully qualified name
-	// within the cluster.
-	DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string, defaults DispatchDefaults) error
+	// The destination and reply are URLs.
+	DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string) error
 }
 
 // EventDispatcher is the 'real' Dispatcher used everywhere except unit tests.
@@ -55,11 +52,6 @@ type EventDispatcher struct {
 	supportedSchemes sets.String
 
 	logger *zap.Logger
-}
-
-// DispatchDefaults provides default parameter values used when dispatching an event.
-type DispatchDefaults struct {
-	Namespace string
 }
 
 // NewEventDispatcher creates a new event dispatcher that can dispatch
@@ -78,16 +70,14 @@ func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 
 // DispatchEvent dispatches an event to a destination over HTTP.
 //
-// The destination and reply are DNS names. For names with a single label,
-// the default namespace is used to expand it into a fully qualified name
-// within the cluster.
-func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string, defaults DispatchDefaults) error {
+// The destination and reply are URLs.
+func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string) error {
 	var err error
 	// Default to replying with the original event. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
 	response := &event
 	if destination != "" {
-		destinationURL := d.resolveURL(destination, defaults.Namespace)
+		destinationURL := d.resolveURL(destination)
 		ctx, response, err = d.executeRequest(ctx, destinationURL, event)
 		if err != nil {
 			return fmt.Errorf("unable to complete request to %s: %v", destinationURL, err)
@@ -95,7 +85,7 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 	}
 
 	if reply != "" && response != nil {
-		replyURL := d.resolveURL(reply, defaults.Namespace)
+		replyURL := d.resolveURL(reply)
 		_, _, err = d.executeRequest(ctx, replyURL, *response)
 		if err != nil {
 			return fmt.Errorf("failed to forward reply to %s: %v", replyURL, err)
@@ -105,7 +95,7 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 }
 
 func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
-	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
+	d.logger.Debug("Dispatching event", zap.String("event.id", event.ID()), zap.String("url", url.String()))
 
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	sctx := utils.ContextFrom(tctx, url)
@@ -117,7 +107,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 	}
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	if isFailure(rtctx.StatusCode) {
-		// reject non-successful responses
+		// Reject non-successful responses.
 		return rctx, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
 	}
 	headers := utils.PassThroughHeaders(rtctx.Header)
@@ -131,7 +121,7 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 
 func addOutGoingTracing(ctx context.Context, url *url.URL) context.Context {
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	// Creating a dummy request to leverage propagation.SpanContextFromRequest method
+	// Creating a dummy request to leverage propagation.SpanContextFromRequest method.
 	req := &http.Request{
 		Header: tctx.Header,
 	}
@@ -149,13 +139,10 @@ func isFailure(statusCode int) bool {
 		statusCode >= http.StatusMultipleChoices /* 300 */
 }
 
-func (d *EventDispatcher) resolveURL(destination string, defaultNamespace string) *url.URL {
+func (d *EventDispatcher) resolveURL(destination string) *url.URL {
 	if url, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(url.Scheme) {
 		// Already a URL with a known scheme.
 		return url
-	}
-	if strings.Index(destination, ".") == -1 {
-		destination = fmt.Sprintf("%s.%s.svc.%s", destination, defaultNamespace, utils.GetClusterDomainName())
 	}
 	return &url.URL{
 		Scheme: "http",

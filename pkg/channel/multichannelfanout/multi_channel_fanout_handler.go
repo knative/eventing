@@ -97,7 +97,7 @@ func (h *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, resp *
 	channelKey := tctx.Host
 	fh, ok := h.handlers[channelKey]
 	if !ok {
-		h.logger.Error("Unable to find a handler for request", zap.String("channelKey", channelKey))
+		h.logger.Info("Unable to find a handler for request", zap.String("channelKey", channelKey))
 		resp.Status = http.StatusInternalServerError
 		return errors.New("unable to find handler for request")
 	}

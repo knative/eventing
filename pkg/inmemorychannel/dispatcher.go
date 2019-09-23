@@ -69,7 +69,7 @@ func (d *InMemoryDispatcher) Start(ctx context.Context) error {
 		break
 	}
 
-	// Done channel has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// Done channel has been closed, we need to gracefully shutdown d.ceClient. The cancel() method will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
 	cancel()
 	select {

@@ -32,7 +32,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestMessageReceiver_ServeHTTP(t *testing.T) {
+func TestEventReceiver_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		method       string
 		host         string
@@ -55,8 +55,8 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			expected: http.StatusInternalServerError,
 		},
 		"unknown channel error": {
-			receiverFunc: func(_ context.Context, _ ChannelReference, _ cloudevents.Event) error {
-				return ErrUnknownChannel
+			receiverFunc: func(_ context.Context, c ChannelReference, _ cloudevents.Event) error {
+				return &UnknownChannelError{c: c}
 			},
 			expected: http.StatusNotFound,
 		},

@@ -32,11 +32,17 @@ import (
 
 var (
 	shutdownTimeout = 1 * time.Minute
-
-	// ErrUnknownChannel is returned when an event is received by a channel dispatcher for a
-	// channel that does not exist.
-	ErrUnknownChannel = errors.New("unknown channel")
 )
+
+// UnknownChannelError represents the error when an event is received by a channel dispatcher for a
+// channel that does not exist.
+type UnknownChannelError struct {
+	c ChannelReference
+}
+
+func (e *UnknownChannelError) Error() string {
+	return fmt.Sprintf("unknown channel: %v", e.c)
+}
 
 // EventReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
@@ -71,7 +77,7 @@ func ResolveChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) 
 func NewEventReceiver(receiverFunc ReceiverFunc, logger *zap.Logger, opts ...ReceiverOptions) (*EventReceiver, error) {
 	ceClient, err := kncloudevents.NewDefaultClient()
 	if err != nil {
-		logger.Fatal("failed to create cloudevents client", zap.Error(err))
+		return nil, fmt.Errorf("failed to create cloudevents client: %v", err)
 	}
 	receiver := &EventReceiver{
 		ceClient:          ceClient,
@@ -109,7 +115,7 @@ func (r *EventReceiver) Start(ctx context.Context) error {
 		break
 	}
 
-	// Done channel has been closed, we need to gracefully shutdown h.ceClient. cancel() will start its
+	// Done channel has been closed, we need to gracefully shutdown r.ceClient. The cancel() method will start its
 	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
 	cancel()
 	select {
@@ -153,7 +159,7 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 
 	err = r.receiverFunc(sctx, channel, event)
 	if err != nil {
-		if err == ErrUnknownChannel {
+		if _, ok := err.(*UnknownChannelError); ok {
 			resp.Status = http.StatusNotFound
 		} else {
 			resp.Status = http.StatusInternalServerError
@@ -170,7 +176,7 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 func ParseChannel(host string) (ChannelReference, error) {
 	chunks := strings.Split(host, ".")
 	if len(chunks) < 2 {
-		return ChannelReference{}, fmt.Errorf("bad host format '%s'", host)
+		return ChannelReference{}, fmt.Errorf("bad host format %q", host)
 	}
 	return ChannelReference{
 		Name:      chunks[0],
