@@ -57,15 +57,14 @@ type aggregatorExecutor struct {
 	listener net.Listener
 	server   *grpc.Server
 
-	// Mako additional tags
-	additionalTags []string
+	makoTags []string
 }
 
 func newAggregatorExecutor(lis net.Listener, additionalTags []string) testExecutor {
 	executor := &aggregatorExecutor{
 		listener:             lis,
 		notifyEventsReceived: make(chan struct{}),
-		additionalTags:       additionalTags,
+		makoTags:             additionalTags,
 	}
 
 	// --- Create GRPC server
@@ -102,7 +101,7 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	printf("Configuring Mako")
 
 	// Use the benchmark key created
-	ctx, q, qclose, err := mako.Setup(ctx, ex.additionalTags...)
+	ctx, q, qclose, err := mako.Setup(ctx, ex.makoTags...)
 	if err != nil {
 		fatalf("Failed to setup mako: %v", err)
 	}

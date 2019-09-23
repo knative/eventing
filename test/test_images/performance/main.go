@@ -23,12 +23,12 @@ import (
 	"flag"
 	"log"
 	"net"
+	"strings"
 
 	"google.golang.org/grpc"
 
 	pb "knative.dev/eventing/test/test_images/performance/event_state"
 	"knative.dev/pkg/signals"
-	"strings"
 )
 
 var (
@@ -64,8 +64,8 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-	flag.StringVar(&additionalTags, "additional-tags", "", "Array of environment specific "+
-		"additional tags. Example --additional-tags=tag1,tag2,tag3")
+	flag.StringVar(&additionalTags, "additional-tags", "", "Comma separated tags to tag individual"+
+		" Mako runs with specifics of their environment.")
 }
 
 type testExecutor interface {
