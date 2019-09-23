@@ -34,38 +34,41 @@ const (
 	timeout  = 4 * time.Minute
 )
 
+// GetLog gets the logs from the given Pod in the namespace of this client. It will get the logs
+// from the first container, whichever it is.
+func (client *Client) GetLog(podName string) (string, error) {
+	containerName, err := client.getContainerName(podName, client.Namespace)
+	if err != nil {
+		return "", err
+	}
+	logs, err := client.Kube.PodLogs(podName, containerName, client.Namespace)
+	if err != nil {
+		return "", err
+	}
+	return string(logs), nil
+}
+
 // CheckLog waits until logs for the logger Pod satisfy the checker.
 // If the checker does not pass within timeout it returns error.
 func (client *Client) CheckLog(podName string, checker func(string) bool) error {
-	namespace := client.Namespace
-	containerName, err := client.getContainerName(podName, namespace)
-	if err != nil {
-		return err
-	}
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		logs, err := client.Kube.PodLogs(podName, containerName, namespace)
+		logs, err := client.GetLog(podName)
 		if err != nil {
 			return true, err
 		}
-		return checker(string(logs)), nil
+		return checker(logs), nil
 	})
 }
 
 // CheckLogEmpty waits the given amount of time and check the log is empty
 func (client *Client) CheckLogEmpty(podName string, timeout time.Duration) error {
 	time.Sleep(timeout)
-
-	namespace := client.Namespace
-	containerName, err := client.getContainerName(podName, namespace)
+	logs, err := client.GetLog(podName)
 	if err != nil {
 		return err
 	}
-	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
-	if err != nil {
-		return err
-	}
-	if string(logs) != "" {
-		return fmt.Errorf("expected empty log, got %s", string(logs))
+	if logs != "" {
+		return fmt.Errorf("expected empty log, got %s", logs)
 	}
 	return nil
 }
@@ -106,16 +109,11 @@ func CheckerContainsAtLeast(content string, count int) func(string) bool {
 // FindAnyLogContents attempts to find logs for given Pod/Container that has 'any' of the given contents.
 // It returns an error if it couldn't retrieve the logs. In case 'any' of the contents are there, it returns true.
 func (client *Client) FindAnyLogContents(podName string, contents []string) (bool, error) {
-	namespace := client.Namespace
-	containerName, err := client.getContainerName(podName, namespace)
+	logs, err := client.GetLog(podName)
 	if err != nil {
 		return false, err
 	}
-	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
-	if err != nil {
-		return false, err
-	}
-	eventContentsSet, err := parseEventContentsFromPodLogs(string(logs))
+	eventContentsSet, err := parseEventContentsFromPodLogs(logs)
 	if err != nil {
 		return false, err
 	}

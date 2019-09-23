@@ -31,7 +31,7 @@ type testHelper struct{}
 // TestHelper contains helpers for unit tests.
 var TestHelper = testHelper{}
 
-func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
+func (testHelper) ReadyChannelStatus() *duckv1alpha1.ChannelableStatus {
 	cs := &duckv1alpha1.ChannelableStatus{
 		Status: duckv1beta1.Status{},
 		AddressStatus: pkgduckv1alpha1.AddressStatus{
@@ -46,7 +46,7 @@ func (testHelper) ReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
 	return cs
 }
 
-func (t testHelper) NotReadyChannelStatusCRD() *duckv1alpha1.ChannelableStatus {
+func (t testHelper) NotReadyChannelStatus() *duckv1alpha1.ChannelableStatus {
 	return &duckv1alpha1.ChannelableStatus{}
 }
 
@@ -68,8 +68,8 @@ func (testHelper) NotReadySubscriptionStatus() *messagingv1alpha1.SubscriptionSt
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateIngressChannelReadinessCRD(t.ReadyChannelStatusCRD())
-	bs.PropagateTriggerChannelReadinessCRD(t.ReadyChannelStatusCRD())
+	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
+	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
 	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
 	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
@@ -78,7 +78,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 
 func (t testHelper) NotReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
-	bs.PropagateIngressChannelReadinessCRD(&duckv1alpha1.ChannelableStatus{})
+	bs.PropagateIngressChannelReadiness(&duckv1alpha1.ChannelableStatus{})
 	return bs
 }
 

@@ -27,12 +27,13 @@ import (
 	"strconv"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
-	_ "go.opencensus.io/trace"
-
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+	"go.opencensus.io/trace"
+	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/tracing"
 )
 
 var (
@@ -119,13 +120,20 @@ func main() {
 		log.Fatalf("failed to create transport, %v", err)
 	}
 
-	// Add output tracing.
 	if addTracing {
+		log.Println("addTracing")
 		t.Client = &gohttp.Client{
 			Transport: &ochttp.Transport{
 				Propagation:    &b3.HTTPFormat{},
-				NewClientTrace: ochttp.NewSpanAnnotator,
+				NewClientTrace: ochttp.NewSpanAnnotatingClientTrace,
+				StartOptions: trace.StartOptions{
+					Sampler: trace.AlwaysSample(),
+				},
 			},
+		}
+		logger, _ := zap.NewDevelopment()
+		if err := tracing.SetupStaticPublishing(logger.Sugar(), "", tracing.AlwaysSample); err != nil {
+			log.Fatalf("Unable to setup trace publishing: %v", err)
 		}
 	}
 

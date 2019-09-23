@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -108,7 +109,7 @@ func TestGetSinkURI(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.objects...)
-			sr := NewSinkReconciler(ctx, func(string) {})
+			sr := NewSinkReconciler(ctx, func(types.NamespacedName) {})
 			sourceName := "nilRef"
 			if tc.ref != nil {
 				sourceName = tc.ref.Name

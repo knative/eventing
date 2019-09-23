@@ -30,9 +30,9 @@ import (
 
 	"k8s.io/client-go/tools/record"
 
+	"go.uber.org/zap"
 	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
-	logtesting "knative.dev/pkg/logging/testing"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
@@ -51,12 +51,11 @@ const (
 type Ctor func(context.Context, *Listers, configmap.Watcher) controller.Reconciler
 
 // MakeFactory creates a reconciler factory with fake clients and controller created by `ctor`.
-func MakeFactory(ctor Ctor, unstructured bool) Factory {
+func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factory {
 	return func(t *testing.T, r *TableRow) (controller.Reconciler, ActionRecorderList, EventList, *FakeStatsReporter) {
 		ls := NewListers(r.Objects)
 
 		ctx := context.Background()
-		logger := logtesting.TestLogger(t)
 		ctx = logging.WithLogger(ctx, logger)
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
@@ -83,7 +82,7 @@ func MakeFactory(ctor Ctor, unstructured bool) Factory {
 		//ctx = reconciler.WithStatsReporter(ctx, statsReporter) // TODO: upstream stats interface from eventing to PKG
 
 		// Set up our Controller from the fakes.
-		c := ctor(ctx, &ls, configmap.NewFixedWatcher())
+		c := ctor(ctx, &ls, configmap.NewStaticWatcher())
 
 		for _, reactor := range r.WithReactors {
 			kubeClient.PrependReactor("*", "*", reactor)

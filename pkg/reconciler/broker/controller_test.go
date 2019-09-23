@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"knative.dev/pkg/configmap"
-	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
@@ -32,7 +31,6 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	defer logtesting.ClearAll()
 	ctx, _ := SetupFakeContext(t)
 
 	_ = os.Setenv("BROKER_INGRESS_IMAGE", "INGRESS_IMAGE")
@@ -40,7 +38,7 @@ func TestNew(t *testing.T) {
 	_ = os.Setenv("BROKER_FILTER_IMAGE", "FILTER_IMAGE")
 	_ = os.Setenv("BROKER_FILTER_SERVICE_ACCOUNT", "FILTER_SERVICE_ACCOUNT")
 
-	c := NewController(ctx, configmap.NewFixedWatcher())
+	c := NewController(ctx, configmap.NewStaticWatcher())
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

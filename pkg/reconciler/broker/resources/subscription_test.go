@@ -25,7 +25,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
-func TestMakeSubscriptionCRD(t *testing.T) {
+func TestMakeSubscription(t *testing.T) {
 	testCases := map[string]struct {
 		channelable duckv1alpha1.Channelable
 	}{
@@ -66,7 +66,7 @@ func TestMakeSubscriptionCRD(t *testing.T) {
 					Name: "my-svc",
 				},
 			}
-			sub := MakeSubscriptionCRD(b, &tc.channelable, svc)
+			sub := MakeSubscription(b, &tc.channelable, svc)
 
 			if ns := sub.Namespace; ns != b.Namespace {
 				t.Errorf("Expected namespace %q, actually %q", b.Namespace, ns)

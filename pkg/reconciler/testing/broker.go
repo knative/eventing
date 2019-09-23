@@ -55,8 +55,8 @@ func WithBrokerDeletionTimestamp(b *v1alpha1.Broker) {
 	b.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-// WithBrokerChannelCRD sets the Broker's ChannelTemplateSpec to the specified CRD.
-func WithBrokerChannelCRD(crdType metav1.TypeMeta) BrokerOption {
+// WithBrokerChannel sets the Broker's ChannelTemplateSpec to the specified CRD.
+func WithBrokerChannel(crdType metav1.TypeMeta) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
 			TypeMeta: crdType,
@@ -110,7 +110,7 @@ func WithIngressChannelFailed(reason, msg string) BrokerOption {
 // WithTriggerChannelReady calls .Status.PropagateTriggerChannelReadiness on the Broker.
 func WithTriggerChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateTriggerChannelReadinessCRD(v1alpha1.TestHelper.ReadyChannelStatusCRD())
+		b.Status.PropagateTriggerChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
 	}
 }
 
@@ -128,7 +128,7 @@ func WithIngressDeploymentAvailable() BrokerOption {
 
 func WithBrokerIngressChannelReady() BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Status.PropagateIngressChannelReadinessCRD(v1alpha1.TestHelper.ReadyChannelStatusCRD())
+		b.Status.PropagateIngressChannelReadiness(v1alpha1.TestHelper.ReadyChannelStatus())
 	}
 }
 

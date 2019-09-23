@@ -66,11 +66,11 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	}
 
 	res := corev1.ResourceRequirements{
-		Limits: corev1.ResourceList{
+		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    RequestResourceCPU,
 			corev1.ResourceMemory: RequestResourceMemory,
 		},
-		Requests: corev1.ResourceList{
+		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:    LimitResourceCPU,
 			corev1.ResourceMemory: LimitResourceMemory,
 		},

@@ -121,7 +121,7 @@ func TestAllCases(t *testing.T) {
 		}, {},
 	}
 
-	defer logtesting.ClearAll()
+	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -130,7 +130,7 @@ func TestAllCases(t *testing.T) {
 			inmemorychannelInformer: nil,
 			dispatcher:              &fakeDispatcher{},
 		}
-	}, false))
+	}, false, logger))
 }
 
 type fakeDispatcher struct{}
