@@ -21,7 +21,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 
@@ -29,10 +28,8 @@ import (
 
 	pb "knative.dev/eventing/test/test_images/performance/event_state"
 	"knative.dev/pkg/signals"
+	"strings"
 )
-
-// flags for the image
-type Tags []string
 
 var (
 	role    string
@@ -49,17 +46,8 @@ var (
 	// role=aggregator
 	expectRecords  uint
 	listenAddr     string
-	additionalTags Tags
+	additionalTags string
 )
-
-func (tags *Tags) String() string {
-	return fmt.Sprint(*tags)
-}
-
-func (tags *Tags) Set(value string) error {
-	*tags = append(*tags, value)
-	return nil
-}
 
 func init() {
 	flag.StringVar(&role, "role", "", `Role of this instance. One of ("sender-receiver", "aggregator")`)
@@ -76,8 +64,8 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-	flag.Var(&additionalTags, "additional-tags", "Array of environment specific additional tags. Example " +
-		"--additional-tags=tag1 --additional-tags=tag2")
+	flag.StringVar(&additionalTags, "additional-tags", "", "Array of environment specific "+
+		"additional tags. Example --additional-tags=tag1,tag2,tag3")
 }
 
 type testExecutor interface {
@@ -127,12 +115,17 @@ func main() {
 		exec = newSenderReceiverExecutor(pacerSpecs, aggCli)
 
 	case "aggregator":
+		var tags []string
+		if additionalTags != "" {
+			tags = strings.Split(additionalTags, ",")
+		}
+
 		l, err := net.Listen("tcp", listenAddr)
 		if err != nil {
 			fatalf("Failed to create listener: %v", err)
 		}
 
-		exec = newAggregatorExecutor(l)
+		exec = newAggregatorExecutor(l, tags)
 
 	default:
 		fatalf("Invalid role %q", role)
