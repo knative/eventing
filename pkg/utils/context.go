@@ -46,6 +46,7 @@ var (
 		// knative
 		"knative-",
 		// tracing
+		// TODO check if we can remove this once we address the issue in ContextFrom.
 		"x-b3-",
 		"x-ot-",
 	}
