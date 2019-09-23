@@ -41,8 +41,8 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
