@@ -500,7 +500,7 @@ func TestReconcile(t *testing.T) {
 				Object: NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts( 8080))),
+					WithServicePorts(servicePorts(8080))),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -591,7 +591,7 @@ func TestReconcile(t *testing.T) {
 				NewService(ingressServiceName, testNS,
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
-					WithServicePorts(servicePorts( 8080))),
+					WithServicePorts(servicePorts(8080))),
 			},
 			WantCreates: []runtime.Object{
 				NewSubscription(ingressSubscriptionGenerateName, testNS,

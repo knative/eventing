@@ -35,8 +35,8 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	. "knative.dev/pkg/reconciler/testing"
 	logtesting "knative.dev/pkg/logging/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (

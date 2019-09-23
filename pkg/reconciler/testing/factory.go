@@ -30,8 +30,8 @@ import (
 
 	"k8s.io/client-go/tools/record"
 
-	ktesting "k8s.io/client-go/testing"
 	"go.uber.org/zap"
+	ktesting "k8s.io/client-go/testing"
 	"knative.dev/pkg/controller"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
