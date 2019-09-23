@@ -61,6 +61,8 @@ type ReceiverOptions func(*EventReceiver) error
 
 // ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
 // before calling receiverFunc.
+// TODO change this to take in a URL, rather than just the host string.
+//  That will allow us to use the path to distinguish between Channels too.
 type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
 
 // ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
