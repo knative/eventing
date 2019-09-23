@@ -17,12 +17,13 @@ limitations under the License.
 package multichannelfanout
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -264,10 +265,6 @@ func TestServeHTTP(t *testing.T) {
 			expectedStatusCode: http.StatusAccepted,
 		},
 	}
-	requestWithChannelKey := func(key string) *http.Request {
-		r := httptest.NewRequest("POST", fmt.Sprintf("http://%s/", key), strings.NewReader("{}"))
-		return r
-	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			server := httptest.NewServer(&fakeHandler{statusCode: tc.respStatusCode})
@@ -281,15 +278,25 @@ func TestServeHTTP(t *testing.T) {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}
 
-			r := requestWithChannelKey(tc.key)
-			w := httptest.NewRecorder()
-			h.ServeHTTP(w, r)
-			resp := w.Result()
-			if resp.StatusCode != tc.expectedStatusCode {
-				t.Errorf("Unexpected status code. Expected %v, actual %v", tc.expectedStatusCode, resp.StatusCode)
+			ctx := context.Background()
+			tctx := cloudevents.HTTPTransportContextFrom(ctx)
+			tctx.Method = http.MethodPost
+			tctx.Host = tc.key
+			tctx.URI = "/"
+			ctx = cehttp.WithTransportContext(ctx, tctx)
+
+			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event.SetType("testtype")
+			event.SetSource("testsource")
+			event.SetData("{}")
+
+			resp := &cloudevents.EventResponse{}
+			h.ServeHTTP(ctx, event, resp)
+			if resp.Status != tc.expectedStatusCode {
+				t.Errorf("Unexpected status code. Expected %v, actual %v", tc.expectedStatusCode, resp.Status)
 			}
-			if w.Body.String() != "" {
-				t.Errorf("Expected empty response body. Actual: %v", w.Body)
+			if resp.Event != nil {
+				t.Errorf("Expected nil event. Actual: %s", resp.Event.String())
 			}
 		})
 	}

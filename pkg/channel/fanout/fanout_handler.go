@@ -22,10 +22,11 @@ limitations under the License.
 package fanout
 
 import (
+	"context"
 	"errors"
-	"net/http"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
@@ -34,7 +35,7 @@ import (
 const (
 	defaultTimeout = 15 * time.Minute
 
-	messageBufferSize = 500
+	eventBufferSize = 500
 )
 
 // Config for a fanout.Handler.
@@ -49,9 +50,9 @@ type Config struct {
 type Handler struct {
 	config Config
 
-	receivedMessages chan *forwardMessage
-	receiver         *channel.MessageReceiver
-	dispatcher       *channel.MessageDispatcher
+	receivedEvents chan *forwardEvent
+	receiver       *channel.EventReceiver
+	dispatcher     *channel.EventDispatcher
 
 	// TODO: Plumb context through the receiver and dispatcher and use that to store the timeout,
 	// rather than a member variable.
@@ -60,26 +61,24 @@ type Handler struct {
 	logger *zap.Logger
 }
 
-var _ http.Handler = &Handler{}
-
-// forwardMessage is passed between the Receiver and the Dispatcher.
-type forwardMessage struct {
-	msg  *channel.Message
-	done chan<- error
+// forwardEvent is passed between the Receiver and the Dispatcher.
+type forwardEvent struct {
+	event cloudevents.Event
+	done  chan<- error
 }
 
 // NewHandler creates a new fanout.Handler.
 func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
-		logger:           logger,
-		config:           config,
-		dispatcher:       channel.NewMessageDispatcher(logger.Sugar()),
-		receivedMessages: make(chan *forwardMessage, messageBufferSize),
-		timeout:          defaultTimeout,
+		logger:         logger,
+		config:         config,
+		dispatcher:     channel.NewEventDispatcher(logger),
+		receivedEvents: make(chan *forwardEvent, eventBufferSize),
+		timeout:        defaultTimeout,
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(createReceiverFunction(handler), logger.Sugar())
+	receiver, err := channel.NewEventReceiver(createReceiverFunction(handler), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -87,30 +86,30 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	return handler, nil
 }
 
-func createReceiverFunction(f *Handler) func(channel.ChannelReference, *channel.Message) error {
-	return func(_ channel.ChannelReference, m *channel.Message) error {
+func createReceiverFunction(f *Handler) func(context.Context, channel.ChannelReference, cloudevents.Event) error {
+	return func(ctx context.Context, _ channel.ChannelReference, event cloudevents.Event) error {
 		if f.config.AsyncHandler {
 			go func() {
 				// Any returned error is already logged in f.dispatch().
-				_ = f.dispatch(m)
+				_ = f.dispatch(ctx, event)
 			}()
 			return nil
 		}
-		return f.dispatch(m)
+		return f.dispatch(ctx, event)
 	}
 }
 
-func (f *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.receiver.HandleRequest(w, r)
+func (f *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	return f.receiver.ServeHTTP(ctx, event, resp)
 }
 
-// dispatch takes the request, fans it out to each subscription in f.config. If all the fanned out
-// requests return successfully, then return nil. Else, return an error.
-func (f *Handler) dispatch(msg *channel.Message) error {
+// dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
+// events return successfully, then return nil. Else, return an error.
+func (f *Handler) dispatch(ctx context.Context, event cloudevents.Event) error {
 	errorCh := make(chan error, len(f.config.Subscriptions))
 	for _, sub := range f.config.Subscriptions {
 		go func(s eventingduck.SubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(*msg, s)
+			errorCh <- f.makeFanoutRequest(ctx, event, s)
 		}(sub)
 	}
 
@@ -132,6 +131,6 @@ func (f *Handler) dispatch(msg *channel.Message) error {
 
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
-func (f *Handler) makeFanoutRequest(m channel.Message, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchMessage(&m, sub.SubscriberURI, sub.ReplyURI, channel.DispatchDefaults{})
+func (f *Handler) makeFanoutRequest(ctx context.Context, event cloudevents.Event, sub eventingduck.SubscriberSpec) error {
+	return f.dispatcher.DispatchEvent(ctx, event, sub.SubscriberURI, sub.ReplyURI)
 }

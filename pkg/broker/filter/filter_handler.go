@@ -33,6 +33,7 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/tracing"
 )
 
@@ -190,7 +191,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 	resp.Event = responseEvent
 	resp.Context = &cloudevents.HTTPTransportResponseContext{
-		Header: broker.ExtractPassThroughHeaders(tctx),
+		Header: utils.PassThroughHeaders(tctx.Header),
 	}
 
 	return nil
@@ -250,7 +251,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	}
 
 	start := time.Now()
-	sendingCTX := broker.SendingContext(ctx, tctx, subscriberURI)
+	sendingCTX := utils.ContextFrom(tctx, subscriberURI)
 	rctx, replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.

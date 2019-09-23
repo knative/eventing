@@ -26,10 +26,13 @@ limitations under the License.
 package multichannelfanout
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/channel/fanout"
 )
@@ -38,11 +41,6 @@ import (
 // MakeChannelKey.
 func makeChannelKeyFromConfig(config ChannelConfig) string {
 	return config.HostName
-}
-
-// getChannelKey extracts the channel key from the given HTTP request.
-func getChannelKey(r *http.Request) string {
-	return r.Host
 }
 
 // Handler is an http.Handler that introspects the incoming request to determine what Channel it is
@@ -94,13 +92,14 @@ func (h *Handler) CopyWithNewConfig(conf Config) (*Handler, error) {
 
 // ServeHTTP delegates the actual handling of the request to a fanout.Handler, based on the
 // request's channel key.
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	channelKey := getChannelKey(r)
+func (h *Handler) ServeHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
+	channelKey := tctx.Host
 	fh, ok := h.handlers[channelKey]
 	if !ok {
-		h.logger.Error("Unable to find a handler for request", zap.String("channelKey", channelKey))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		h.logger.Info("Unable to find a handler for request", zap.String("channelKey", channelKey))
+		resp.Status = http.StatusInternalServerError
+		return errors.New("unable to find handler for request")
 	}
-	fh.ServeHTTP(w, r)
+	return fh.ServeHTTP(ctx, event, resp)
 }

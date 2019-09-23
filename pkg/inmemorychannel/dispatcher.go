@@ -17,14 +17,14 @@ package inmemorychannel
 
 import (
 	"context"
-	"fmt"
-	"net/http"
+	"errors"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	"knative.dev/eventing/pkg/channel/swappable"
-	pkgtracing "knative.dev/pkg/tracing"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 type Dispatcher interface {
@@ -32,10 +32,10 @@ type Dispatcher interface {
 }
 
 type InMemoryDispatcher struct {
-	handler *swappable.Handler
-	server  *http.Server
-
-	logger *zap.Logger
+	handler      *swappable.Handler
+	ceClient     cloudevents.Client
+	writeTimeout time.Duration
+	logger       *zap.Logger
 }
 
 type InMemoryDispatcherArgs struct {
@@ -52,39 +52,45 @@ func (d *InMemoryDispatcher) UpdateConfig(config *multichannelfanout.Config) err
 
 // Start starts the inmemory dispatcher's message processing.
 // This is a blocking call.
-func (d *InMemoryDispatcher) Start(stopCh <-chan struct{}) error {
-	d.logger.Info("in memory dispatcher listening", zap.String("address", d.server.Addr))
-	go func() {
-		err := d.server.ListenAndServe()
-		if err != nil {
-			d.logger.Error("Failed to ListenAndServe.", zap.Error(err))
-		}
-	}()
-	<-stopCh
-	ctx, cancel := context.WithTimeout(context.Background(), d.server.WriteTimeout)
+func (d *InMemoryDispatcher) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	err := d.server.Shutdown(ctx)
-	if err != nil {
-		d.logger.Error("Shutdown returned an error", zap.Error(err))
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- d.ceClient.StartReceiver(ctx, d.handler.ServeHTTP)
+	}()
+
+	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		break
 	}
-	return err
+
+	// Done channel has been closed, we need to gracefully shutdown d.ceClient. The cancel() method will start its
+	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
+	cancel()
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(d.writeTimeout):
+		return errors.New("timeout shutting down ceClient")
+	}
 }
 
 func NewDispatcher(args *InMemoryDispatcherArgs) *InMemoryDispatcher {
-
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", args.Port),
-		Handler:      pkgtracing.HTTPSpanMiddleware(args.Handler),
-		ErrorLog:     zap.NewStdLog(args.Logger),
-		ReadTimeout:  args.ReadTimeout,
-		WriteTimeout: args.WriteTimeout,
+	// TODO set read and write timeouts and port?
+	ceClient, err := kncloudevents.NewDefaultClient()
+	if err != nil {
+		args.Logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
 
 	dispatcher := &InMemoryDispatcher{
-		handler: args.Handler,
-		server:  server,
-		logger:  args.Logger,
+		handler:  args.Handler,
+		ceClient: ceClient,
+		logger:   args.Logger,
 	}
 
 	return dispatcher
