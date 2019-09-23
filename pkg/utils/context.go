@@ -59,6 +59,12 @@ func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) cont
 	// Override the headers.
 	tctx.Header = h
 	// Create the sending context with the overridden transport context.
+	// TODO use the current context here instead of context.Background.
+	//  The reason we are using context.Background is that there is no easy way in the sdk to override
+	//  headers, and they will all be passed through. Also note that the sdk does not use the headers from
+	//  the transport context to set the request headers.
+	//  Further, in the case of replies, the sdk creates the reply context based on the sending context,
+	//  thus it ends up adding more headers to the sending context.
 	sendingCTX := cehttp.WithTransportContext(context.Background(), tctx)
 
 	for n, v := range h {

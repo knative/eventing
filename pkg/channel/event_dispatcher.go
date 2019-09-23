@@ -84,6 +84,11 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 		}
 	}
 
+	if reply == "" && response != nil {
+		d.logger.Debug("cannot forward response as reply is empty", zap.Any("response", response))
+		return nil
+	}
+
 	if reply != "" && response != nil {
 		replyURL := d.resolveURL(reply)
 		_, _, err = d.executeRequest(ctx, replyURL, *response)
@@ -125,6 +130,7 @@ func addOutGoingTracing(ctx context.Context, url *url.URL) context.Context {
 	req := &http.Request{
 		Header: tctx.Header,
 	}
+	// TODO use traceparent header as mentioned in https://github.com/knative/eventing/pull/1933#discussion_r327255621
 	// Attach the Span context that is currently saved in the request's headers.
 	if sc, ok := propagation.SpanContextFromRequest(req); ok {
 		newCtx, _ := trace.StartSpanWithRemoteParent(ctx, url.Path, sc)
