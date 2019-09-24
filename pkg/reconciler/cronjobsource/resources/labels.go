@@ -25,7 +25,7 @@ const (
 // Labels are the labels attached to all resources based on a CronJobSource.
 func Labels(name string) map[string]string {
 	return map[string]string{
-		"sources.eventing.knative.dev/cronJobSource": name,
-		"eventing.knative.dev/source":                controllerAgentName,
+		"eventing.knative.dev/source":     controllerAgentName,
+		"eventing.knative.dev/sourceName": name,
 	}
 }
