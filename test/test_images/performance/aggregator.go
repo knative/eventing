@@ -60,11 +60,11 @@ type aggregatorExecutor struct {
 	makoTags []string
 }
 
-func newAggregatorExecutor(lis net.Listener, additionalTags []string) testExecutor {
+func newAggregatorExecutor(lis net.Listener, makoTags []string) testExecutor {
 	executor := &aggregatorExecutor{
 		listener:             lis,
 		notifyEventsReceived: make(chan struct{}),
-		makoTags:             additionalTags,
+		makoTags:             makoTags,
 	}
 
 	// --- Create GRPC server
