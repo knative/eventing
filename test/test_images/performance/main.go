@@ -44,9 +44,9 @@ var (
 	warmupSeconds uint
 
 	// role=aggregator
-	expectRecords  uint
-	listenAddr     string
-	additionalTags string
+	expectRecords uint
+	listenAddr    string
+	makoTags      string
 )
 
 func init() {
@@ -64,7 +64,7 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-	flag.StringVar(&additionalTags, "additional-tags", "", "Comma separated list of benchmark" +
+	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark" +
 		" specific Mako tags.")
 }
 
@@ -116,8 +116,8 @@ func main() {
 
 	case "aggregator":
 		var tags []string
-		if additionalTags != "" {
-			tags = strings.Split(additionalTags, ",")
+		if makoTags != "" {
+			tags = strings.Split(makoTags, ",")
 		}
 
 		l, err := net.Listen("tcp", listenAddr)
