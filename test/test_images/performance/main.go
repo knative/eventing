@@ -23,6 +23,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"strings"
 
 	"google.golang.org/grpc"
 
@@ -30,7 +31,6 @@ import (
 	"knative.dev/pkg/signals"
 )
 
-// flags for the image
 var (
 	role    string
 	verbose bool
@@ -46,6 +46,7 @@ var (
 	// role=aggregator
 	expectRecords uint
 	listenAddr    string
+	makoTags      string
 )
 
 func init() {
@@ -63,6 +64,8 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
+	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark" +
+		" specific Mako tags.")
 }
 
 type testExecutor interface {
@@ -112,12 +115,17 @@ func main() {
 		exec = newSenderReceiverExecutor(pacerSpecs, aggCli)
 
 	case "aggregator":
+		var tags []string
+		if makoTags != "" {
+			tags = strings.Split(makoTags, ",")
+		}
+
 		l, err := net.Listen("tcp", listenAddr)
 		if err != nil {
 			fatalf("Failed to create listener: %v", err)
 		}
 
-		exec = newAggregatorExecutor(l)
+		exec = newAggregatorExecutor(l, tags)
 
 	default:
 		fatalf("Invalid role %q", role)
