@@ -30,9 +30,10 @@ import (
 // BrokerChannelName creates a name for the Channel for a Broker for a given
 // Channel type.
 func BrokerChannelName(brokerName, channelType string) string {
-	return fmt.Sprintf("%s-kn2-%s", brokerName, channelType)
+	return fmt.Sprintf("%s-kne-%s", brokerName, channelType)
 }
 
+// test
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
 // for a given Broker.
 func NewChannel(channelType string, b *v1alpha1.Broker, l map[string]string) (*unstructured.Unstructured, error) {

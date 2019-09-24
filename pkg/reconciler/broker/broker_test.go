@@ -58,7 +58,7 @@ const (
 	triggerChannel channelType = "TriggerChannel"
 	ingressChannel channelType = "IngressChannel"
 
-	ingressChannelName = "test-broker-kn2-ingress"
+	ingressChannelName = "test-broker-kne-ingress"
 )
 
 var (
@@ -953,7 +953,7 @@ func createChannel(namespace string, t channelType, ready bool) *unstructured.Un
 	var hostname string
 	var url string
 	if t == triggerChannel {
-		name = fmt.Sprintf("%s-kn2-trigger", brokerName)
+		name = fmt.Sprintf("%s-kne-trigger", brokerName)
 		labels = map[string]interface{}{
 			"eventing.knative.dev/broker":           brokerName,
 			"eventing.knative.dev/brokerEverything": "true",
@@ -961,7 +961,7 @@ func createChannel(namespace string, t channelType, ready bool) *unstructured.Un
 		hostname = triggerChannelHostname
 		url = fmt.Sprintf("http://%s", triggerChannelHostname)
 	} else {
-		name = fmt.Sprintf("%s-kn2-ingress", brokerName)
+		name = fmt.Sprintf("%s-kne-ingress", brokerName)
 		labels = map[string]interface{}{
 			"eventing.knative.dev/broker":        brokerName,
 			"eventing.knative.dev/brokerIngress": "true",
@@ -1029,7 +1029,7 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn2-trigger", brokerName),
+		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
 	}
 }
 
@@ -1038,6 +1038,6 @@ func createIngressChannelRef() *corev1.ObjectReference {
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn2-ingress", brokerName),
+		Name:       fmt.Sprintf("%s-kne-ingress", brokerName),
 	}
 }
