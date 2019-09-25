@@ -113,13 +113,11 @@ type ApiServerResource struct {
 
 	// LabelSelector restricts this source to objects with the selected labels
 	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
-	// +optional
-	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+	LabelSelector metav1.LabelSelector `json:"labelSelector"`
 
 	// ControllerSelector restricts this source to objects with a controlling owner reference of the specified kind.
 	// Only apiVersion and kind are used. Both are optional.
-	// +optional
-	ControllerSelector *metav1.OwnerReference `json:"controllerSelector"`
+	ControllerSelector metav1.OwnerReference `json:"controllerSelector"`
 
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
