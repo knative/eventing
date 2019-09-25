@@ -48,52 +48,10 @@ type Channelable struct {
 type ChannelableSpec struct {
 	SubscribableTypeSpec `json:",inline"`
 
+	// DeliverySpec contains options controlling the event delivery
 	// +optional
 	Delivery *DeliverySpec `json:"delivery,omitempty"`
 }
-
-// DeliverySpec contains the channel delivery options
-//
-type DeliverySpec struct {
-	// ErrorSink is the sink receiving messages that couldn't be sent to
-	// subscribers. One message is sent per failing subscriber.
-	//
-	// Depending on the capabilities of the channel implementation, either:
-	// * ErrorSink is a subscription to the channel's errorChannel (see ChannelableStatus), or
-	// * the channel attempts to deliver the error to ErrorSink directly.
-	//
-	// Either way, the channel implementation should honor the supported delivery options (retry, etc...)
-	// +optional
-	ErrorSink *apisv1alpha1.Destination `json:"errorSink,omitempty"`
-
-	// Retry is the mimimum number of retries the channel should attempt when
-	// sending a message before moving it to the error sink.
-	// +optional
-	Retry *int32 `json:"retry,omitempty"`
-
-	// BackoffPolicy is the retry backoff policy (linear, exponential)
-	// +optional
-	BackoffPolicy *BackoffPolicyType `json:"backoffPolicy,omitempty"`
-
-	// BackoffDelay is the delay before retrying.
-	// More information on Duration format: https://www.ietf.org/rfc/rfc3339.txt
-	//
-	// For linear policy, backoff delay is the time interval between retries.
-	// For exponential policy , backoff delay is backoffDelay*10^<numberOfRetries>
-	// +optional
-	BackoffDelay *string
-}
-
-// BackoffPolicyType is the type for backoff policies
-type BackoffPolicyType string
-
-const (
-	// Linear backoff policy
-	BackoffPolicyLinear BackoffPolicyType = "linear"
-
-	// Exponential backoff policy
-	BackoffPolicyExponential BackoffPolicyType = "exponential"
-)
 
 // ChannelableStatus contains the Status of a Channelable object.
 type ChannelableStatus struct {
@@ -105,7 +63,7 @@ type ChannelableStatus struct {
 	v1alpha1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	SubscribableTypeStatus `json:",inline"`
-	// ErrorChannel is the reference to the channel where failed events are sent to.
+	// ErrorChannel is set by the channel when it supports native error handling via a channel
 	// +optional
 	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
 }
