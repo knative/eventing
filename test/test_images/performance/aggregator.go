@@ -163,7 +163,6 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 		if !accepted {
 			errMsg := "Failed on broker"
 			if _, failed := ex.failedEvents.Events[sentID]; !failed {
-				// TODO(antoineco): should never happen, check whether the failed map makes any sense
 				errMsg = "Event not accepted but missing from failed map"
 			}
 
@@ -215,6 +214,14 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	err = publishThpt(receivedTimestamps, q, "dt")
 	if err != nil {
 		log.Printf("ERROR AddSamplePoint: %v", err)
+	}
+
+	failureTimestamps := eventsToTimestampsArray(&ex.failedEvents.Events)
+	if len(failureTimestamps) > 2 {
+		err = publishThpt(failureTimestamps, q, "ft")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint: %v", err)
+		}
 	}
 
 	// --- Publish error counts as aggregate metrics

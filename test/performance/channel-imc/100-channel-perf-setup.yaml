@@ -56,46 +56,35 @@ data:
 
 ---
 
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Broker
+apiVersion: v1
+kind: Service
 metadata:
-  name: in-memory-test-broker
+  name: channel-perf-consumer
   namespace: perf-eventing
 spec:
-  channelTemplateSpec:
-    apiVersion: messaging.knative.dev/v1alpha1
-    kind: InMemoryChannel
-
----
-
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Trigger
-metadata:
-  name: broker-perf
-  namespace: perf-eventing
-spec:
-  broker: in-memory-test-broker
-  subscriber:
-    ref:
-      apiVersion: v1
-      kind: Service
-      name: broker-perf-consumer
+  selector:
+    role: channel-perf-consumer
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: cloudevents
+    name: http
 
 ---
 
 apiVersion: v1
-kind: ServiceAccount
+kind: Service
 metadata:
-  name: eventing-broker-ingress
+  name: channel-perf-aggregator
   namespace: perf-eventing
-
----
-
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: eventing-broker-filter
-  namespace: perf-eventing
+spec:
+  selector:
+    role: channel-perf-aggregator
+  ports:
+    - name: grpc
+      port: 10000
+      targetPort: grpc
+      protocol: TCP
 
 ---
 
@@ -133,96 +122,24 @@ roleRef:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+apiVersion: messaging.knative.dev/v1alpha1
+kind: InMemoryChannel
 metadata:
-  name: eventing-broker-ingress
+  name: in-memory-test-channel
   namespace: perf-eventing
-subjects:
-  - kind: ServiceAccount
-    name: eventing-broker-ingress
-    namespace: perf-eventing
-roleRef:
-  kind: ClusterRole
-  name: eventing-broker-ingress
-  apiGroup: rbac.authorization.k8s.io
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
 metadata:
-  name: eventing-broker-filter
-  namespace: perf-eventing
-subjects:
-  - kind: ServiceAccount
-    name: eventing-broker-filter
-    namespace: perf-eventing
-roleRef:
-  kind: ClusterRole
-  name: eventing-broker-filter
-  apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: eventing-config-reader-default-eventing-broker-ingress
-  namespace: knative-eventing
-subjects:
-  - kind: ServiceAccount
-    name: eventing-broker-ingress
-    namespace: perf-eventing
-roleRef:
-  kind: ClusterRole
-  name: eventing-config-reader
-  apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: eventing-config-reader-default-eventing-broker-filter
-  namespace: knative-eventing
-subjects:
-  - kind: ServiceAccount
-    name: eventing-broker-filter
-    namespace: perf-eventing
-roleRef:
-  kind: ClusterRole
-  name: eventing-config-reader
-  apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: broker-perf-consumer
+  name: in-memory-test-channel-sub
   namespace: perf-eventing
 spec:
-  selector:
-    role: broker-perf-consumer
-  ports:
-  - name: http
-    port: 80
-    targetPort: cloudevents
-    protocol: TCP
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: broker-perf-aggregator
-  namespace: perf-eventing
-spec:
-  selector:
-    role: broker-perf-aggregator
-  ports:
-  - name: grpc
-    port: 10000
-    targetPort: grpc
-    protocol: TCP
+  channel:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: InMemoryChannel
+    name: in-memory-test-channel
+  subscriber:
+    uri: "http://channel-perf-consumer.perf-eventing.svc.cluster.local"

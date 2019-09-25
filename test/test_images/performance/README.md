@@ -22,6 +22,7 @@ vector. In particular:
   request
 - Delivery throughput are calculated from the timestamps stored when the message
   are received
+- Failures throughput are calculated from the timestamps / failures vector
 
 The image is designed to allocate as much memory as possible before the
 benchmark starts. We suggest to disable Go GC to avoid useless GC pauses.
