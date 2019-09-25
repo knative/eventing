@@ -64,14 +64,14 @@ func ChannelTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTest
 				if err != nil {
 					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, trace)
 				}
-				st.Logf("I got the trace, %q!\n%+v", traceID, trace)
+				st.Logf("I got the trace, %q!\n%+v", traceID, tracinghelper.PrettyPrintTrace(trace))
 
 				// TODO uncomment once we use traceparent in event_dispatcher.addOutGoingTracing method.
 				//  Issue https://github.com/knative/eventing/issues/1951
-				//tree := tracinghelper.GetTraceTree(st, trace)
-				//if err := expected.Matches(tree); err != nil {
-				//	st.Fatalf("Trace Tree did not match expected: %v", err)
-				//}
+				tree := tracinghelper.GetTraceTree(st, trace)
+				if err := expected.Matches(tree); err != nil {
+					st.Fatalf("Trace Tree did not match expected: %v", err)
+				}
 			})
 		})
 	}
