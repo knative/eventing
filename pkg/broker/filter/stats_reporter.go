@@ -114,13 +114,13 @@ func register() {
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
+			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
 			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, triggerFilterSourceKey, responseCodeKey, responseCodeClassKey},
 		},
 		&view.View{
 			Description: processingTimeInMsecM.Description(),
 			Measure:     processingTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
+			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
 			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, triggerFilterSourceKey},
 		},
 	)
