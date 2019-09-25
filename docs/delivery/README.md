@@ -20,7 +20,7 @@ Sending events can fail for a variety of reasons (downstream system is down, app
 
 * Security: No security model has been defined yet at the Knative eventing level. Native brokers might define their own security model and Knative eventing should not prevent using it.
 
-## Proposal
+## Day 1 Proposal
 
 ### Error Sink
 
@@ -42,7 +42,7 @@ the number of retries and the interval between retries.
 
 ### Delivery Specification
 
-The goal of this delivery specification is to formally define the vocabulary related to capabilities defined above (error sink, dead-letter queues and retry) to provide consistency accross all Knative event sources, channels and brokers.
+The goal of this delivery specification is to formally define the vocabulary related to capabilities defined above (error sink, dead-letter queues and retry) to provide consistency across all Knative event sources, channels and brokers.
 
 The minimal delivery specification looks like this:
 
@@ -56,7 +56,7 @@ type DeliverySpec struct {
 	// +optional
 	ErrorSink *apisv1alpha1.Destination `json:"errorSink,omitempty"`
 
-	// Retry is the mimimum number of retries the sender should attempt when
+	// Retry is the minimum number of retries the sender should attempt when
 	// sending a message before moving it to the error sink.
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`

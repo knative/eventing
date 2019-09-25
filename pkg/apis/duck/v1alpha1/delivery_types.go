@@ -29,7 +29,7 @@ type DeliverySpec struct {
 	// +optional
 	ErrorSink *apisv1alpha1.Destination `json:"errorSink,omitempty"`
 
-	// Retry is the mimimum number of retries the sender should attempt when
+	// Retry is the minimum number of retries the sender should attempt when
 	// sending a message before moving it to the error sink.
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
