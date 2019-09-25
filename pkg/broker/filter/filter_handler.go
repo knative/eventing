@@ -33,8 +33,9 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/tracing"
+	pkgtracing "knative.dev/pkg/tracing"
 )
 
 const (
@@ -63,7 +64,7 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(tracing.HTTPSpanIgnoringPaths(readyz)))
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
 	if err != nil {
 		return nil, err
 	}
@@ -250,8 +251,13 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		}
 	}
 
-	start := time.Now()
 	sendingCTX := utils.ContextFrom(tctx, subscriberURI)
+	sendingCTX, err = tracing.AddSpanFromTraceparentAttribute(sendingCTX, "name", *event)
+	if err != nil {
+		r.logger.Info("Unable to attach trace", zap.Error(err))
+	}
+
+	start := time.Now()
 	rctx, replyEvent, err := r.ceClient.Send(sendingCTX, *event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.
