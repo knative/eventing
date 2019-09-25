@@ -1,0 +1,19 @@
+apiVersion: messaging.knative.dev/v1alpha1
+kind: InMemoryChannel
+metadata:
+  name: imc
+spec:
+  delivery:
+    errorSink:
+        apiVersion: messaging.knative.dev/v1alpha1
+        kind: Channel
+        name: subscriber
+    retry: 5
+    backoffPolicy: exponential
+    backoffDelay: 3s
+  subscribable:
+    subscribers:
+    - ref:
+        apiVersion: messaging.knative.dev/v1alpha1
+        kind: Subscription
+        name: subscriber
