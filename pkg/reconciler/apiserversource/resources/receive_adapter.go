@@ -95,27 +95,20 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiSer
 	for _, res := range spec.Resources {
 		apiversions += sep + res.APIVersion
 		kinds += sep + res.Kind
-		if res.ControllerSelector != nil {
-			ownerapiversions += sep + res.ControllerSelector.APIVersion
-			ownerkinds += sep + res.ControllerSelector.Kind
-		} else {
-			ownerapiversions += sep
-			ownerkinds += sep
-		}
+		ownerapiversions += sep + res.ControllerSelector.APIVersion
+		ownerkinds += sep + res.ControllerSelector.Kind
+
 		if res.Controller {
 			controlled += boolsep + "true"
 		} else {
 			controlled += boolsep + "false"
 		}
-		if res.LabelSelector == nil {
-			selectors += sep
-		} else {
-			// No need to check for error here.
-			selector, _ := metav1.LabelSelectorAsSelector(res.LabelSelector)
-			labelSelector := selector.String()
 
-			selectors += sep + labelSelector
-		}
+		// No need to check for error here.
+		selector, _ := metav1.LabelSelectorAsSelector(&res.LabelSelector)
+		labelSelector := selector.String()
+
+		selectors += sep + labelSelector
 
 		sep = ";"
 		boolsep = ","
