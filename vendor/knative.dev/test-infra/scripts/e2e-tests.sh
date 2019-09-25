@@ -94,12 +94,14 @@ function dump_cluster_state() {
   echo "***    Start of information dump    ***"
   echo "***************************************"
   echo ">>> All resources:"
-  kubectl get all --all-namespaces
+  kubectl get all --all-namespaces --show-labels -o wide
   echo ">>> Services:"
-  kubectl get services --all-namespaces
+  kubectl get services --all-namespaces --show-labels -o wide
   echo ">>> Events:"
-  kubectl get events --all-namespaces
+  kubectl get events --all-namespaces --show-labels -o wide
   function_exists dump_extra_cluster_state && dump_extra_cluster_state
+  echo ">>> Full dump: ${ARTIFACTS}/k8s.dump.txt"
+  kubectl get all --all-namespaces -o yaml > ${ARTIFACTS}/k8s.dump.txt
   echo "***************************************"
   echo "***         E2E TEST FAILED         ***"
   echo "***     End of information dump     ***"
