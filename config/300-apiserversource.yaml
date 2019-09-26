@@ -29,7 +29,7 @@ metadata:
         { "type": "dev.knative.apiserver.resource.update" },
         { "type": "dev.knative.apiserver.ref.add" },
         { "type": "dev.knative.apiserver.ref.delete" },
-        { "type": "dev.knative.apiserver.ref.update" },
+        { "type": "dev.knative.apiserver.ref.update" }
       ]
   name: apiserversources.sources.eventing.knative.dev
 spec:
