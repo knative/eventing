@@ -4,10 +4,10 @@ metadata:
   name: imc
 spec:
   delivery:
-    errorSink:
-        apiVersion: messaging.knative.dev/v1alpha1
-        kind: Channel
-        name: subscriber
+    deadLetterSink:
+        apiVersion: serving.knative.dev/v1beta1
+        kind: Service
+        name: handle-error
     retry: 5
     backoffPolicy: exponential
     backoffDelay: 3s
