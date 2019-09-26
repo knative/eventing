@@ -27,3 +27,7 @@ import (
 func TestChannelTracing(t *testing.T) {
 	helpers.ChannelTracingTestHelper(t, channelTestRunner)
 }
+
+func TestChannelTracingWithReply(t *testing.T) {
+	helpers.ChannelTracingTestHelperWithReply(t, channelTestRunner)
+}

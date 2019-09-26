@@ -19,6 +19,7 @@ package tracing
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -36,6 +37,39 @@ type SpanTree struct {
 	Children []SpanTree
 }
 
+func (t SpanTree) String() string {
+	b, _ := json.Marshal(t)
+	return string(b)
+}
+
+func (t SpanTree) ToTestSpanTree() TestSpanTree {
+	children := make([]TestSpanTree, len(t.Children))
+	for i := range t.Children {
+		children[i] = t.Children[i].toTestSpanTreeHelper()
+	}
+	return TestSpanTree{
+		Root:     true,
+		Children: children,
+	}
+}
+
+func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
+	name := ""
+	if t.Span.LocalEndpoint != nil {
+		name = t.Span.LocalEndpoint.ServiceName
+	}
+	children := make([]TestSpanTree, len(t.Children))
+	for i := range t.Children {
+		children[i] = t.Children[i].toTestSpanTreeHelper()
+	}
+	return TestSpanTree{
+		Kind:                     t.Span.Kind,
+		LocalEndpointServiceName: name,
+		Tags:                     t.Span.Tags,
+		Children:                 children,
+	}
+}
+
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
 type TestSpanTree struct {
 	Root                     bool
@@ -44,6 +78,11 @@ type TestSpanTree struct {
 	Tags                     map[string]string
 
 	Children []TestSpanTree
+}
+
+func (t TestSpanTree) String() string {
+	b, _ := json.Marshal(t)
+	return string(b)
 }
 
 // GetTraceTree converts a set slice of spans into a SpanTree.
@@ -85,6 +124,17 @@ func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanMod
 		})
 		delete(parents, span.ID)
 	}
+
+	// Sort order:
+	// 1. Number of Children, fewest first.
+	// 2. LocalEndpointServiceName asciibetical
+	sort.Slice(children, func(i, j int) bool {
+		if il, jl := len(children[i].Children), len(children[j].Children); il != jl {
+			return il < jl
+		}
+		return children[i].Span.LocalEndpoint.ServiceName < children[j].Span.LocalEndpoint.ServiceName
+	})
+
 	return children, nil
 }
 
@@ -104,7 +154,11 @@ func (t TestSpanTree) SpanCount() int {
 // Matches checks to see if this TestSpanTree matches an actual SpanTree. It is intended to be used
 // for assertions while testing.
 func (t TestSpanTree) Matches(actual SpanTree) error {
-	return traceTreeMatches(".", t, actual)
+	err := traceTreeMatches(".", t, actual)
+	if err != nil {
+		return fmt.Errorf("spanTree did not match: %v. Actual %v, Expected %v", err, actual.ToTestSpanTree().String(), t.String())
+	}
+	return nil
 }
 
 func traceTreeMatches(pos string, want TestSpanTree, got SpanTree) error {
