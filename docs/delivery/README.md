@@ -4,7 +4,7 @@ This document synthetizes the [error handling design document](https://docs.goog
 
 ## Problem
 
-Sending events can fail for a variety of reasons (downstream system is down, application logic rejects the invalid message, a runtime exception occurs, etc...) but right now there is no way to control or define the expected behavior in these situations.
+Sending events can fail for a variety of reasons (downstream system is down, application logic rejects the invalid event, a runtime exception occurs, etc...) but right now there is no way to control or define the expected behavior in these situations.
 
 ## Requirements
 
@@ -25,7 +25,7 @@ underlying platform (eg. RabbitMQ dead letter exchange, Amazon SQS dead letter q
 
 ### Dead Letter Sink
 
-Channels are responsible for forwarding received messages to subscribers. When they fail to do so, they are responsible for sending the failing events to an **dead letter sink**. It could be a channel but it does not have to.
+Channels are responsible for forwarding received events to subscribers. When they fail to do so, they are responsible for sending the failing events to an **dead letter sink**. It could be a channel but it does not have to.
 
 Similarly Event Sources are responsible for sending events to a sink and when they fail to do so, they are responsible for sending the failing events to an **dead letter sink**.
 
@@ -55,7 +55,7 @@ type DeliverySpec struct {
 	// DeadLetterSink is the sink receiving events that couldn't be sent to
 	// a destination.
 	// +optional
-	DeadLetterSink *apisv1alpha1.Destination `json:"errorSink,omitempty"`
+	DeadLetterSink *apisv1alpha1.Destination `json:"deadLetterSink,omitempty"`
 
 	// Retry is the minimum number of retries the sender should attempt when
 	// sending av event before moving it to the dead letter sink
@@ -99,15 +99,15 @@ Channel implementation supporting dead letter channel should advertise it in the
 type DeliverStatus struct {
 	// DeadLetterChannel is the reference to the native, platform specific channel where failed events are sent to.
 	// +optional
-	DeadLetterChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
+	DeadLetterChannel *corev1.ObjectReference `json:"deadLetterChannel,omitempty"`
 }
 ```
 
 ### Error events
 
-The error event is the original events annotated with various CloudEvents attributes, eg. to be able to tell why the message couldn’t be delivered.
+The error event is the original events annotated with various CloudEvents attributes, eg. to be able to tell why the event could not be delivered.
 
-Note that multiple copies of the same message can be sent to the error sink due to multiple subscription failures.
+Note that multiple copies of the same event can be sent to the error sink due to multiple subscription failures.
 
 Brokers might decide to change the event type before reposting the failed event into the broker. This could be done by having a special error sink specific to broker.
 

@@ -24,13 +24,13 @@ import (
 // DeliverySpec contains the delivery options for event senders,
 // such as channelable and source.
 type DeliverySpec struct {
-	// ErrorSink is the sink receiving messages that couldn't be sent to
+	// DeadLetterSink is the sink receiving event that couldn't be sent to
 	// a destination.
 	// +optional
-	ErrorSink *apisv1alpha1.Destination `json:"errorSink,omitempty"`
+	DeadLetterSink *apisv1alpha1.Destination `json:"deadLetterSink,omitempty"`
 
 	// Retry is the minimum number of retries the sender should attempt when
-	// sending a message before moving it to the error sink.
+	// sending an event before moving it to the dead letter sink.
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
 
@@ -60,7 +60,8 @@ const (
 
 // DeliverStatus contains the Status of an object supporting delivery options.
 type DeliverStatus struct {
-	// ErrorChannel is the reference to the channel where failed events are sent to.
+	// DeadLetterChannel is the reference to the native, platform specific channel
+	// where failed events are sent to.
 	// +optional
-	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
+	DeadLetterChannel *corev1.ObjectReference `json:"deadLetterChannel,omitempty"`
 }

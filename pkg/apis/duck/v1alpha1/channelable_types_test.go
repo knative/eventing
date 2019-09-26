@@ -62,7 +62,7 @@ func TestChannelablePopulate(t *testing.T) {
 				},
 			},
 			Delivery: &DeliverySpec{
-				ErrorSink: &apisv1alpha1.Destination{
+				DeadLetterSink: &apisv1alpha1.Destination{
 					ObjectReference: &corev1.ObjectReference{
 						Name: "aname",
 					},
