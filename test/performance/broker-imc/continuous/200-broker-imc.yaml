@@ -29,8 +29,8 @@ spec:
       completions: 1
       parallelism: 1
       backoffLimit: 0
-      # Allow up to 9 minutes, then clean up to make room for the next attempt
-      activeDeadlineSeconds: 540
+      # Allow up to 14 minutes, then clean up to make room for the next attempt
+      activeDeadlineSeconds: 840
       template:
         metadata:
           labels:
@@ -83,8 +83,8 @@ spec:
       completions: 1
       parallelism: 1
       backoffLimit: 0
-      # Allow up to 9 minutes, then clean up to make room for the next attempt
-      activeDeadlineSeconds: 540
+      # Allow up to 14 minutes, then clean up to make room for the next attempt
+      activeDeadlineSeconds: 840
       template:
         metadata:
           labels:
