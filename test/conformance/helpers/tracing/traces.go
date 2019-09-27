@@ -19,10 +19,10 @@ package tracing
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // PrettyPrintTrace pretty prints a Trace.
@@ -125,16 +125,6 @@ func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanMod
 		delete(parents, span.ID)
 	}
 
-	// Sort order:
-	// 1. Number of Children, fewest first.
-	// 2. LocalEndpointServiceName asciibetical
-	sort.Slice(children, func(i, j int) bool {
-		if il, jl := len(children[i].Children), len(children[j].Children); il != jl {
-			return il < jl
-		}
-		return children[i].Span.LocalEndpoint.ServiceName < children[j].Span.LocalEndpoint.ServiceName
-	})
-
 	return children, nil
 }
 
@@ -177,14 +167,36 @@ func traceTreeMatches(pos string, want TestSpanTree, got SpanTree) error {
 			return fmt.Errorf("unexpected tag[%s] value at %q: got %q, want %q", k, pos, g, w)
 		}
 	}
-	if g, w := len(got.Children), len(want.Children); g != w {
+	return unorderedTraceTreesMatch(pos, want.Children, got.Children)
+}
+
+// unorderedTraceTreesMatch checks to see if for every TestSpanTree in want, there is a
+// corresponding SpanTree in got. It's comparison is done unordered, but slowly. It should not be
+// called with too many entries in either slice.
+func unorderedTraceTreesMatch(pos string, want []TestSpanTree, got []SpanTree) error {
+	if g, w := len(got), len(want); g != w {
 		return fmt.Errorf("unexpected number of children at %q: got %v, want %v", pos, g, w)
 	}
-	// TODO: Children are actually unordered, assert them in an unordered fashion.
-	for i := range want.Children {
-		if err := traceTreeMatches(fmt.Sprintf("%s%d.", pos, i), want.Children[i], got.Children[i]); err != nil {
-			return err
-		}
+	unmatchedGot := sets.NewInt()
+	for i := range got {
+		unmatchedGot.Insert(i)
 	}
+	// This is an O(n^4) algorithm. It compares every item in want to every item in got, O(n^2).
+	// Those comparisons do the same recursively O(n^2). We expect there to be not too many traces,
+	// so n should be small (say 50 in the largest cases).
+OuterLoop:
+	for i, w := range want {
+		for ug := range unmatchedGot {
+			err := w.Matches(got[ug])
+			// If there is no error, then it matched successfully.
+			if err == nil {
+				unmatchedGot.Delete(ug)
+				continue OuterLoop
+			}
+		}
+		// Nothing matched.
+		return fmt.Errorf("unable to find child match %s[%d]: Want: %s **** Got: %s", pos, i, w.String(), got)
+	}
+	// Everything matched.
 	return nil
 }
