@@ -19,6 +19,8 @@ export PROJECT_NAME="knative-eventing-performance"
 export USER_NAME="mako-job@knative-eventing-performance.iam.gserviceaccount.com"
 export TEST_ROOT_PATH="$GOPATH/src/knative.dev/eventing/test/performance"
 export KO_DOCKER_REPO="gcr.io/knative-eventing-performance"
+export TEST_CONFIG_VARIANT="continuous"
+export TEST_NAMESPACE="default"
 
 function header() {
   echo "***** $1 *****"
@@ -74,16 +76,6 @@ function get_gke_credentials() {
   gcloud container clusters get-credentials ${name} --zone=${zone} --project=${PROJECT_NAME} || abort "Failed to get cluster creds"
 }
 
-# Delete all the benchmark resources
-# $1 -> cluster_name
-function delete_benchmark_resources() {
-  name=$1
-
-  echo ">> Delete all existing jobs and test resources"
-  kubectl delete job --all
-  ko delete -f "${TEST_ROOT_PATH}/$name"
-}
-
 # Install the eventing resources from the repo
 function install_eventing_resources() {
   pushd .
@@ -110,7 +102,7 @@ function install_eventing_resources() {
 # the kubectl context's default namespace.
 function install_mako_resources() {
   echo ">> Setting up config-mako ConfigMap"
-  cat <<EOF | kubectl apply -f -
+  cat <<EOF | kubectl apply -n ${TEST_NAMESPACE} -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -121,27 +113,41 @@ data:
 EOF
 }
 
+# Delete all the benchmark resources
+# $1 -> cluster_name, $2 -> test config variant
+function delete_benchmark_resources() {
+  name=$1
+  variant=$2
+
+  echo ">> Delete all existing jobs and test resources"
+  kubectl delete job --all
+  ko delete -n ${TEST_NAMESPACE} -f "${TEST_ROOT_PATH}/${name}/${variant}/" || abort "Failed to delete ${name}/${variant} resources"
+}
+
+# Apply all the benchmark resources
+# $1 -> cluster_name, $2 -> test config variant
 function apply_benchmark_resources() {
   name=$1
+  variant=$2
 
   echo ">> Applying $name benchmark yamls"
   # install the service and cronjob to run the benchmark
   # NOTE: this assumes we have a benchmark with the same name as the cluster
   # If service creation takes long time, we will have some initially unreachable errors in the test
   echo "Using ko version $(ko version)"
-  ko apply -f "$TEST_ROOT_PATH/$name" || abort "Failed to apply $name benchmark yamls"
+  ko apply -n ${TEST_NAMESPACE} -f "$TEST_ROOT_PATH/$name/${variant}/" || abort "Failed to apply ${name}/${variant} benchmark yamls"
 }
 
 # Update resources installed on the cluster with the up-to-date code. This
 # assumes the benchmark is running in the kubectl context's default namespace.
-# $1 -> cluster_name, $2 -> cluster_zone
+# $1 -> cluster_name
 function update_cluster() {
   name=$1
 
   install_eventing_resources
   install_mako_resources
-  delete_benchmark_resources $name
-  apply_benchmark_resources $name
+  delete_benchmark_resources $name $TEST_CONFIG_VARIANT
+  apply_benchmark_resources $name $TEST_CONFIG_VARIANT
 }
 
 # Create a new cluster and install serving components and apply benchmark yamls.

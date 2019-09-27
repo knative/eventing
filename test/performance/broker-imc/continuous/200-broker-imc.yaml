@@ -1,0 +1,133 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: broker-imc-receiver
+  namespace: default
+  labels:
+    role: broker-imc-receiver
+spec:
+  schedule: "0/15 * * * *"
+  # History must be zero to ensure no failed pods stick around and block the next job
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 0
+  jobTemplate:
+    spec:
+      completions: 1
+      parallelism: 1
+      backoffLimit: 0
+      # Allow up to 14 minutes, then clean up to make room for the next attempt
+      activeDeadlineSeconds: 840
+      template:
+        metadata:
+          labels:
+            role: broker-imc-receiver
+        spec:
+          serviceAccountName: perf-eventing
+          restartPolicy: Never
+          containers:
+          - name: sender-receiver
+            image: knative.dev/eventing/test/test_images/performance
+            args:
+            - "--role=sender-receiver"
+            - "--sink=http://imc-broker"
+            - "--aggregator=broker-imc-aggregator:10000"
+            - "--pace=100:10,400:20,800:30,1000:60,2000:60,3000:60"
+            - "--verbose"
+            env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 2Gi
+            ports:
+            - name: cloudevents
+              containerPort: 8080
+
+---
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: broker-imc-aggregator
+  namespace: default
+  labels:
+    role: broker-imc-aggregator
+spec:
+  schedule: "0/15 * * * *"
+  # History must be zero to ensure no failed pods stick around and block the next job
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 0
+  jobTemplate:
+    spec:
+      completions: 1
+      parallelism: 1
+      backoffLimit: 0
+      # Allow up to 14 minutes, then clean up to make room for the next attempt
+      activeDeadlineSeconds: 840
+      template:
+        metadata:
+          labels:
+            role: broker-imc-aggregator
+        spec:
+          serviceAccountName: perf-eventing
+          restartPolicy: Never
+          containers:
+          - name: aggregator
+            image: knative.dev/eventing/test/test_images/performance
+            args:
+            - "--role=aggregator"
+              # set to the number of sender-receiver
+            - "--expect-records=1"
+            - "--mako-tags=channel=imc"
+            - "--verbose"
+            ports:
+            - name: grpc
+              containerPort: 10000
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 2Gi
+            volumeMounts:
+            - name: config-mako
+              mountPath: /etc/config-mako
+            terminationMessagePolicy: FallbackToLogsOnError
+          - name: mako
+            image: gcr.io/knative-performance/mako-microservice:latest
+            env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/secret/robot.json
+            volumeMounts:
+            - name: service-account
+              mountPath: /var/secret
+            ports:
+            - name: quickstore
+              containerPort: 9813
+            terminationMessagePolicy: FallbackToLogsOnError
+          volumes:
+          - name: config-mako
+            configMap:
+              name: config-mako
+          - name: service-account
+            secret:
+              secretName: service-account
