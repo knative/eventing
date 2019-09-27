@@ -64,7 +64,7 @@ func init() {
 	// role=aggregator
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark" +
+	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark"+
 		" specific Mako tags.")
 }
 

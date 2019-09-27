@@ -54,10 +54,8 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion:         "v1",
-						Kind:               "Event",
-						LabelSelector:      &metav1.LabelSelector{},
-						ControllerSelector: &metav1.OwnerReference{},
+						APIVersion: "v1",
+						Kind:       "Event",
 					},
 				},
 				Mode:               mode,
@@ -71,10 +69,9 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion:         "v1",
-						Kind:               "Pod",
-						LabelSelector:      &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
-						ControllerSelector: &metav1.OwnerReference{},
+						APIVersion:    "v1",
+						Kind:          "Pod",
+						LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 					},
 				},
 				Mode:               mode,
@@ -88,10 +85,9 @@ func TestApiServerSource(t *testing.T) {
 			spec: sourcesv1alpha1.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha1.ApiServerResource{
 					{
-						APIVersion:         "v1",
-						Kind:               "Pod",
-						LabelSelector:      &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
-						ControllerSelector: &metav1.OwnerReference{},
+						APIVersion:    "v1",
+						Kind:          "Pod",
+						LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 					},
 				},
 				Mode:               mode,
@@ -109,13 +105,12 @@ func TestApiServerSource(t *testing.T) {
 					{
 						APIVersion: "v1",
 						Kind:       "Pod",
-						LabelSelector: &metav1.LabelSelector{
+						LabelSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{"e2e": "testing"},
 							MatchExpressions: []metav1.LabelSelectorRequirement{
 								{Key: "e2e", Operator: "Exists"},
 							},
 						},
-						ControllerSelector: &metav1.OwnerReference{},
 					},
 				},
 				Mode:               mode,

@@ -106,7 +106,7 @@ func register() {
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
-			Aggregation: view.Distribution(metrics.Buckets125(1, 100)...), // 1, 2, 5, 10, 20, 50, 100
+			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000
 			TagKeys:     tagKeys,
 		},
 	)

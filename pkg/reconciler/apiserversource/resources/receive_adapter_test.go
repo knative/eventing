@@ -51,14 +51,14 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				{
 					APIVersion: "",
 					Kind:       "Pod",
-					LabelSelector: &metav1.LabelSelector{
+					LabelSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{"test-key1": "test-value1"},
 					},
 				},
 				{
 					APIVersion: "",
 					Kind:       "Pod",
-					LabelSelector: &metav1.LabelSelector{
+					LabelSelector: metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{Key: "akey", Operator: "Exists"},
 							{Key: "anotherkey", Operator: "DoesNotExist"},
@@ -68,14 +68,14 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				{
 					APIVersion: "",
 					Kind:       "Pod",
-					LabelSelector: &metav1.LabelSelector{
+					LabelSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{"test-key2": "test-value2"},
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{Key: "akey", Operator: "Exists"},
 							{Key: "anotherkey", Operator: "DoesNotExist"},
 						},
 					},
-					ControllerSelector: &metav1.OwnerReference{
+					ControllerSelector: metav1.OwnerReference{
 						APIVersion: "foo/v1alpha1",
 						Kind:       "Foo",
 					},
