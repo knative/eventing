@@ -271,29 +271,23 @@ func TestReceiver(t *testing.T) {
 				Header: http.Header{
 					// foo won't pass filtering.
 					"foo": []string{"bar"},
-					// X-Request-Id will pass as an exact header match.
-					"X-Request-Id": []string{"123"},
-					// b3 will pass as an exact header match.
+					// b3 will not pass filtering.
 					"B3": []string{"0"},
-					// X-B3-Foo will pass as a prefix match.
+					// X-B3-Foo will not pass filtering.
 					"X-B3-Foo": []string{"abc"},
+					// X-Ot-Foo will not pass filtering.
+					"X-Ot-Foo": []string{"haden"},
 					// Knative-Foo will pass as a prefix match.
 					"Knative-Foo": []string{"baz", "qux"},
-					// X-Ot-Foo will pass as a prefix match.
-					"X-Ot-Foo": []string{"haden"},
+					// X-Request-Id will pass as an exact header match.
+					"X-Request-Id": []string{"123"},
 				},
 			},
 			expectedHeaders: http.Header{
 				// X-Request-Id will pass as an exact header match.
 				"X-Request-Id": []string{"123"},
-				// b3 will pass as an exact header match.
-				"B3": []string{"0"},
-				// X-B3-Foo will pass as a prefix match.
-				"X-B3-Foo": []string{"abc"},
 				// Knative-Foo will pass as a prefix match.
 				"Knative-Foo": []string{"baz", "qux"},
-				// X-Ot-Foo will pass as a prefix match.
-				"X-Ot-Foo": []string{"haden"},
 			},
 			expectedDispatch:          true,
 			expectedEventCount:        true,
