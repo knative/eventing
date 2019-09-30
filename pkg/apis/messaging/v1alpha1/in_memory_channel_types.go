@@ -24,7 +24,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -66,8 +65,6 @@ var (
 type InMemoryChannelSpec struct {
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
-
-	Delivery InMemoryDeliverySpec `json:"delivery,omitempty"`
 }
 
 // ChannelStatus represents the current state of a Channel.
@@ -86,14 +83,6 @@ type InMemoryChannelStatus struct {
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	eventingduck.SubscribableTypeStatus `json:",inline"`
-}
-
-// TEMPORARY. WILL BE REPLACED
-type InMemoryDeliverySpec struct {
-	// DeadLetterSink is the sink receiving events that couldn't be sent to
-	// a destination.
-	// +optional
-	DeadLetterSink *apisv1alpha1.Destination `json:"deadLetterSink,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
