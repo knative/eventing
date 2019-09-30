@@ -14,27 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package sender
 
-import (
-	"flag"
-	"knative.dev/eventing/test/common/performance"
-	"knative.dev/eventing/test/common/performance/sender"
-)
+import "net/http"
 
-var minWorkers uint64
-var sinkURL string
-
-func init() {
-	performance.DeclareFlags()
-
-	// Specific to http load generator
-	flag.Uint64Var(&minWorkers, "min-workers", 10, "Number of vegeta workers")
-	flag.StringVar(&sinkURL, "sink", "", "The sink URL for the event destination.")
+type requestInterceptor struct {
+	before func(*http.Request)
+	after  func(*http.Request, *http.Response, error)
 }
 
-func main() {
-	flag.Parse()
-
-	performance.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers))
+func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, error) {
+	if r.before != nil {
+		r.before(request)
+	}
+	res, err := http.DefaultTransport.RoundTrip(request)
+	if r.after != nil {
+		r.after(request, res, err)
+	}
+	return res, err
 }

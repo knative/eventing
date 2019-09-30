@@ -34,8 +34,9 @@ ko apply -f test/performance/broker-imc
 
 ## Available benchmarks
 
-- `direct`: Source -> Sink test for baseline
+- `direct`: Source -> Sink (baseline test)
 - `broker-imc`: Source -> Broker IMC -> Sink
+- `channel-imc`: Source -> Channel IMC -> Sink
 
 ## Plotting results from mako-stub
 
