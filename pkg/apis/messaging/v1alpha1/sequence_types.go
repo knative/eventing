@@ -130,3 +130,8 @@ type SequenceList struct {
 func (p *Sequence) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Sequence")
 }
+
+// GetUntypedSpec returns the spec of the Sequence.
+func (s *Sequence) GetUntypedSpec() interface{} {
+	return s.Spec
+}

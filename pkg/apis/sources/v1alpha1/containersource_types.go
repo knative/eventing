@@ -109,3 +109,8 @@ type ContainerSourceList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ContainerSource `json:"items"`
 }
+
+// GetUntypedSpec returns the spec of the ContainerSource.
+func (c *ContainerSource) GetUntypedSpec() interface{} {
+	return c.Spec
+}

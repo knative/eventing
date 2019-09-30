@@ -121,3 +121,8 @@ type CronJobSourceList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CronJobSource `json:"items"`
 }
+
+// GetUntypedSpec returns the spec of the CronJobSource.
+func (c *CronJobSource) GetUntypedSpec() interface{} {
+	return c.Spec
+}

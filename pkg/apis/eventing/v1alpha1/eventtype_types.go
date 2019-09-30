@@ -81,3 +81,8 @@ type EventTypeList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EventType `json:"items"`
 }
+
+// GetUntypedSpec returns the spec of the EventType.
+func (e *EventType) GetUntypedSpec() interface{} {
+	return e.Spec
+}

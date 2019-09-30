@@ -99,3 +99,8 @@ type ChannelList struct {
 func (dc *Channel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Channel")
 }
+
+// GetUntypedSpec returns the spec of the Channel.
+func (c *Channel) GetUntypedSpec() interface{} {
+	return c.Spec
+}

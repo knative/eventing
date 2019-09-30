@@ -163,3 +163,8 @@ type ParallelList struct {
 func (p *Parallel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Parallel")
 }
+
+// GetUntypedSpec returns the spec of the Parallel.
+func (p *Parallel) GetUntypedSpec() interface{} {
+	return p.Spec
+}

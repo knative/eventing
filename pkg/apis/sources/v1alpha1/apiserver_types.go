@@ -122,3 +122,8 @@ type ApiServerResource struct {
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
 }
+
+// GetUntypedSpec returns the spec of the ApiServerSource.
+func (a *ApiServerSource) GetUntypedSpec() interface{} {
+	return a.Spec
+}

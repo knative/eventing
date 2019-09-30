@@ -91,3 +91,8 @@ type InMemoryChannelList struct {
 func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("InMemoryChannel")
 }
+
+// GetUntypedSpec returns the spec of the InMemoryChannel.
+func (i *InMemoryChannel) GetUntypedSpec() interface{} {
+	return i.Spec
+}
