@@ -17,14 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
-	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -258,93 +255,6 @@ func TestSubscriptionIsReady(t *testing.T) {
 			got := ss.IsReady()
 			if test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
-			}
-		})
-	}
-}
-
-func TestSubscriptionAnnotateUserInfo(t *testing.T) {
-	const (
-		u1 = "oveja@knative.dev"
-		u2 = "cabra@knative.dev"
-		u3 = "vaca@knative.dev"
-	)
-
-	withUserAnns := func(creator, updater string, s *Subscription) *Subscription {
-		a := s.GetAnnotations()
-		if a == nil {
-			a = map[string]string{}
-			defer s.SetAnnotations(a)
-		}
-
-		a[eventing.CreatorAnnotation] = creator
-		a[eventing.UpdaterAnnotation] = updater
-
-		return s
-	}
-
-	tests := []struct {
-		name       string
-		user       string
-		this       *Subscription
-		prev       *Subscription
-		wantedAnns map[string]string
-	}{{
-		"create new subscription",
-		u1,
-		&Subscription{},
-		nil,
-		map[string]string{
-			eventing.CreatorAnnotation: u1,
-			eventing.UpdaterAnnotation: u1,
-		},
-	}, {
-		"update subscription which has no annotations without diff",
-		u1,
-		&Subscription{},
-		&Subscription{},
-		map[string]string{},
-	}, {
-		"update subscription which has annotations without diff",
-		u2,
-		withUserAnns(u1, u1, &Subscription{}),
-		withUserAnns(u1, u1, &Subscription{}),
-		map[string]string{
-			eventing.CreatorAnnotation: u1,
-			eventing.UpdaterAnnotation: u1,
-		},
-	}, {
-		"update subscription which has no annotations with diff",
-		u2,
-		&Subscription{Spec: SubscriptionSpec{DeprecatedGeneration: 1}},
-		&Subscription{},
-		map[string]string{
-			eventing.UpdaterAnnotation: u2,
-		}}, {
-		"update subscription which has annotations with diff",
-		u3,
-		withUserAnns(u1, u2, &Subscription{Spec: SubscriptionSpec{DeprecatedGeneration: 1}}),
-		withUserAnns(u1, u2, &Subscription{}),
-		map[string]string{
-			eventing.CreatorAnnotation: u1,
-			eventing.UpdaterAnnotation: u3,
-		},
-	}}
-
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := apis.WithUserInfo(context.Background(), &authv1.UserInfo{
-				Username: test.user,
-			})
-			if test.prev != nil {
-				ctx = apis.WithinUpdate(ctx, test.prev)
-			}
-			test.this.SetDefaults(ctx)
-
-			if got, want := test.this.GetAnnotations(), test.wantedAnns; !cmp.Equal(got, want) {
-				t.Errorf("Annotations = %v, want: %v, diff (-got, +want): %s", got, want, cmp.Diff(got, want))
 			}
 		})
 	}

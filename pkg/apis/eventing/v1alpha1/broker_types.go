@@ -107,7 +107,7 @@ func (t *Broker) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Broker")
 }
 
-// GetSpec returns the spec of the Broker.
-func (b *Broker) GetSpec() interface{} {
+// GetUntypedSpec returns the spec of the Broker.
+func (b *Broker) GetUntypedSpec() interface{} {
 	return b.Spec
 }

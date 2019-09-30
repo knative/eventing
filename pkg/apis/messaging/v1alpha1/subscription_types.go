@@ -201,7 +201,7 @@ func (t *Subscription) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Subscription")
 }
 
-// GetSpec returns the spec of the Subscription.
-func (s *Subscription) GetSpec() interface{} {
+// GetUntypedSpec returns the spec of the Subscription.
+func (s *Subscription) GetUntypedSpec() interface{} {
 	return s.Spec
 }
