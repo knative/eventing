@@ -108,7 +108,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 			triggerName3,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
-			resources.WithSubscriberURIForTrigger(&channelURL),
+			resources.WithSubscriberURIForTrigger(channelURL),
 		)
 
 		// create logger pod and service for subscription

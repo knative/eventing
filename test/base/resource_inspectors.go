@@ -23,17 +23,16 @@ import (
 	"k8s.io/client-go/dynamic"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/apis"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // GetAddressableURL returns the uri for the given resource that implements Addressable duck-type.
-func GetAddressableURL(dynamicClient dynamic.Interface, obj *resources.MetaResource) (apis.URL, error) {
-	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1alpha1.AddressableType{})
+func GetAddressableURL(dynamicClient dynamic.Interface, obj *resources.MetaResource) (*apis.URL, error) {
+	untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.AddressableType{})
 	if err != nil {
-		return apis.URL{}, err
+		return nil, err
 	}
 
-	at := untyped.(*duckv1alpha1.AddressableType)
-	url := apis.URL{Scheme: "http", Host: at.Status.Address.Hostname}
-	return url, nil
+	at := untyped.(*duckv1beta1.AddressableType)
+	return at.Status.Address.URL, nil
 }

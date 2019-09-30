@@ -18,7 +18,6 @@ package sequence
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -95,7 +94,7 @@ func createSubscriber(stepNumber int) v1alpha1.SubscriberSpec {
 	url := apis.URL{
 		Scheme: "http",
 		Host:   "example.com",
-		Path:   fmt.Sprint("/", strconv.Itoa(stepNumber)),
+		Path:   strconv.Itoa(stepNumber),
 	}
 
 	return v1alpha1.SubscriberSpec{
