@@ -25,13 +25,15 @@ underlying platform (eg. RabbitMQ dead letter exchange, Amazon SQS dead letter q
 
 ### Dead Letter Sink
 
-Channels are responsible for forwarding received events to subscribers. When they fail to do so, they are responsible for sending the failing events to an **dead letter sink**. It could be a channel but it does not have to.
+Channels are responsible for forwarding received events to subscribers. When they fail to do so, they are responsible for sending the failing events to an **dead letter sink**, potentially one per subscriber.
 
 Similarly Event Sources are responsible for sending events to a sink and when they fail to do so, they are responsible for sending the failing events to an **dead letter sink**.
 
+The dead letter sink can be a channel but it does not have to.
+
 ### Dead-Letter Channel
 
-Knative Channel implementations may leverage existing platform native error handling support they might provide, like a a [_Dead Letter Channel_](https://www.enterpriseintegrationpatterns.com/patterns/messaging/DeadLetterChannel.html), to forward failed events from their _Dead Letter Channel_ to the configured error sink.
+Knative Channel implementations may leverage existing platform native error handling support they might provide, like [_Dead Letter Channel_](https://www.enterpriseintegrationpatterns.com/patterns/messaging/DeadLetterChannel.html), to forward failed events from their _Dead Letter Channel_ to the configured error sink(s).
 
 ### Retry
 
@@ -58,7 +60,7 @@ type DeliverySpec struct {
 	DeadLetterSink *apisv1alpha1.Destination `json:"deadLetterSink,omitempty"`
 
 	// Retry is the minimum number of retries the sender should attempt when
-	// sending av event before moving it to the dead letter sink
+	// sending a event before moving it to the dead letter sink
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
 
@@ -87,7 +89,7 @@ const (
 )
 ```
 
-Channel, brokers and event sources  are not required to support all this capabilities and are free to add more delivery options.
+Channel, brokers and event sources are not required to support all these capabilities and are free to add more delivery options.
 
 ### Exposing underlying DLC
 

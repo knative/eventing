@@ -3,15 +3,14 @@ kind: InMemoryChannel
 metadata:
   name: imc
 spec:
+  # Channel delivery configuration
   delivery:
-    deadLetterSink:
-        apiVersion: serving.knative.dev/v1beta1
-        kind: Service
-        name: handle-error
     retry: 5
     backoffPolicy: exponential
     backoffDelay: 3s
   subscribable: # populated by Subscription
     subscribers:
     - subscriberURI: mysub.default.svc.cluster.local
+      delivery:
+        deadLetterSinkURI: mydls.default.svc.cluster.local
 
