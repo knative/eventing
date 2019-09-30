@@ -19,6 +19,8 @@ package common
 import (
 	"fmt"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -117,7 +119,7 @@ func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav
 }
 
 // CreateTriggerOrFail will create a Trigger or fail the test if there is an error.
-func (client *Client) CreateTriggerOrFail(name string, options ...resources.TriggerOption) {
+func (client *Client) CreateTriggerOrFail(name string, options ...resources.TriggerOption) *v1alpha1.Trigger {
 	namespace := client.Namespace
 	trigger := resources.Trigger(name, options...)
 
@@ -128,6 +130,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
 	client.Tracker.AddObj(trigger)
+	return trigger
 }
 
 // CreateSequenceOrFail will create a Sequence or fail the test if there is an error.
