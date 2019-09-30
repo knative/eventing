@@ -56,6 +56,8 @@ type SubscriberSpec struct {
 	SubscriberURI string `json:"subscriberURI,omitempty"`
 	// +optional
 	ReplyURI string `json:"replyURI,omitempty"`
+	// +optional
+	DeadLetterSinkURI string `json:"deadLetterSink,omitempty"`
 }
 
 // SubscribableStatus is the schema for the subscribable's status portion of the status
