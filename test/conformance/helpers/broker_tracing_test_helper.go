@@ -49,6 +49,11 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 				client := common.Setup(st, true)
 				defer common.TearDown(client)
 
+				// Label namespace so that it creates the default broker.
+				if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+					st.Fatalf("Error annotating namespace: %v", err)
+				}
+
 				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 				// TestMain.
 				tracinghelper.Setup(st, client)
@@ -86,6 +91,9 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 	)
 	channelTypeMeta := common.GetChannelTypeMeta(channel)
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta)
+
+	// DO NOT SUBMIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111!!!!!!!!!!!!!!!!!!
+	time.Sleep(10 * time.Second)
 
 	// Create an logger (EventDetails) Pod and a K8s Service that points to it.
 	logPod := resources.EventDetailsPod(loggerPodName)

@@ -139,7 +139,9 @@ func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
 // WaitForAllTestResourcesReady waits until all test resources in the namespace are Ready.
 func (client *Client) WaitForAllTestResourcesReady() error {
 	// wait for all Knative resources created in this test to become ready.
-	client.Tracker.WaitForKResourcesReady()
+	if err := client.Tracker.WaitForKResourcesReady(); err != nil {
+		return err
+	}
 	// explicitly wait for all pods to become ready.
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err
