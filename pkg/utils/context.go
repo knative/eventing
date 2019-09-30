@@ -34,9 +34,6 @@ var (
 	forwardHeaders = sets.NewString(
 		// tracing
 		"x-request-id",
-		// Single header for b3 tracing. See
-		// https://github.com/openzipkin/b3-propagation#single-header.
-		"b3",
 	)
 	// These MUST be lowercase strings, as they will be compared against lowercase strings.
 	// Removing CloudEvents ce- prefixes on purpose as they should be set in the CloudEvent itself as extensions.
@@ -45,11 +42,6 @@ var (
 	forwardPrefixes = []string{
 		// knative
 		"knative-",
-		// tracing
-		// TODO check if we can remove this once we address the issue in ContextFrom.
-		//  Issue: https://github.com/knative/eventing/issues/1953
-		"x-b3-",
-		"x-ot-",
 	}
 )
 

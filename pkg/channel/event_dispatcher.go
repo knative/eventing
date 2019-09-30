@@ -25,10 +25,10 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
-	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -101,42 +101,43 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 
 func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	d.logger.Debug("Dispatching event", zap.String("event.id", event.ID()), zap.String("url", url.String()))
+	originalTransportCTX := cloudevents.HTTPTransportContextFrom(ctx)
+	sendingCTX := d.generateSendingContext(originalTransportCTX, url, event)
 
-	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	sctx := utils.ContextFrom(tctx, url)
-	sctx = addOutGoingTracing(sctx, url)
-
-	rctx, reply, err := d.ceClient.Send(sctx, event)
+	replyCTX, reply, err := d.ceClient.Send(sendingCTX, event)
 	if err != nil {
-		return rctx, nil, err
+		return nil, nil, err
 	}
+	replyCTX, err = generateReplyContext(replyCTX, originalTransportCTX)
+	if err != nil {
+		return nil, nil, err
+	}
+	return replyCTX, reply, nil
+}
+
+func (d *EventDispatcher) generateSendingContext(originalTransportCTX cehttp.TransportContext, url *url.URL, event cloudevents.Event) context.Context {
+	sctx := utils.ContextFrom(originalTransportCTX, url)
+	sctx, err := tracing.AddSpanFromTraceparentAttribute(sctx, url.Path, event)
+	if err != nil {
+		d.logger.Info("Unable to connect outgoing span", zap.Error(err))
+	}
+	return sctx
+}
+
+func generateReplyContext(rctx context.Context, originalTransportCTX cehttp.TransportContext) (context.Context, error) {
+	// rtctx = Reply transport context
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	if isFailure(rtctx.StatusCode) {
 		// Reject non-successful responses.
-		return rctx, nil, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
+		return rctx, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
 	}
 	headers := utils.PassThroughHeaders(rtctx.Header)
-	if correlationID, ok := tctx.Header[correlationIDHeaderName]; ok {
+	if correlationID, ok := originalTransportCTX.Header[correlationIDHeaderName]; ok {
 		headers[correlationIDHeaderName] = correlationID
 	}
 	rtctx.Header = http.Header(headers)
 	rctx = cehttp.WithTransportContext(rctx, rtctx)
-	return rctx, reply, nil
-}
-
-func addOutGoingTracing(ctx context.Context, url *url.URL) context.Context {
-	tctx := cloudevents.HTTPTransportContextFrom(ctx)
-	// Creating a dummy request to leverage propagation.SpanContextFromRequest method.
-	req := &http.Request{
-		Header: tctx.Header,
-	}
-	// TODO use traceparent header. Issue: https://github.com/knative/eventing/issues/1951
-	// Attach the Span context that is currently saved in the request's headers.
-	if sc, ok := propagation.SpanContextFromRequest(req); ok {
-		newCtx, _ := trace.StartSpanWithRemoteParent(ctx, url.Path, sc)
-		return newCtx
-	}
-	return ctx
+	return rctx, nil
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
@@ -146,9 +147,9 @@ func isFailure(statusCode int) bool {
 }
 
 func (d *EventDispatcher) resolveURL(destination string) *url.URL {
-	if url, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(url.Scheme) {
+	if u, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(u.Scheme) {
 		// Already a URL with a known scheme.
-		return url
+		return u
 	}
 	return &url.URL{
 		Scheme: "http",
