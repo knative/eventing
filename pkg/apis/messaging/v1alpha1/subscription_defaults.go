@@ -22,7 +22,6 @@ import (
 
 func (s *Subscription) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
-	setUserInfoAnnotations(ctx, s)
 }
 
 func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {

@@ -26,7 +26,6 @@ const (
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
 	t.Spec.SetDefaults(ctx)
-	setUserInfoAnnotations(ctx, t)
 	setLabels(t)
 }
 
