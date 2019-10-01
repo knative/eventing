@@ -82,10 +82,12 @@ func TestAddTraceparentAttributeFromContext(t *testing.T) {
 func TestAddSpanFromTraceparentAttribute(t *testing.T) {
 	traceID := "1234567890abcdef1234567890abcdef"
 	spanID := "1234567890abcdef"
-	options := "01"
+	sampledOptions := "01"
+	notSampledOptions := "00"
 	testCases := map[string]struct {
 		present     bool
 		notAString  bool
+		sampled     bool
 		traceparent string
 		expectError bool
 	}{
@@ -104,12 +106,12 @@ func TestAddSpanFromTraceparentAttribute(t *testing.T) {
 		},
 		"bad traceID": {
 			present:     true,
-			traceparent: fmt.Sprintf("00-%s-%s-%s", "bad", spanID, options),
+			traceparent: fmt.Sprintf("00-%s-%s-%s", "bad", spanID, sampledOptions),
 			expectError: true,
 		},
 		"bad spanID": {
 			present:     true,
-			traceparent: fmt.Sprintf("00-%s-%s-%s", traceID, "bad", options),
+			traceparent: fmt.Sprintf("00-%s-%s-%s", traceID, "bad", sampledOptions),
 			expectError: true,
 		},
 		"bad options": {
@@ -119,7 +121,13 @@ func TestAddSpanFromTraceparentAttribute(t *testing.T) {
 		},
 		"good": {
 			present:     true,
-			traceparent: fmt.Sprintf("00-%s-%s-%s", traceID, spanID, options),
+			sampled:     true,
+			traceparent: fmt.Sprintf("00-%s-%s-%s", traceID, spanID, sampledOptions),
+		},
+		"not sampled": {
+			present:     true,
+			sampled:     false,
+			traceparent: fmt.Sprintf("00-%s-%s-%s", traceID, spanID, notSampledOptions),
 		},
 	}
 	for n, tc := range testCases {
@@ -148,8 +156,13 @@ func TestAddSpanFromTraceparentAttribute(t *testing.T) {
 			if actual := span.SpanContext().SpanID.String(); spanID != actual {
 				t.Errorf("Incorrect SpanID. Got %q. Want %q", actual, spanID)
 			}
-			if actual := span.SpanContext().TraceOptions; 1 != actual {
-				t.Errorf("Incorrect options. Got %q. Want %q", actual, 1)
+
+			wantOptions := uint32(0)
+			if tc.sampled {
+				wantOptions = uint32(1)
+			}
+			if actualOptions := uint32(span.SpanContext().TraceOptions); wantOptions != actualOptions {
+				t.Errorf("Incorrect options. Got %q. Want %q", actualOptions, wantOptions)
 			}
 		})
 	}

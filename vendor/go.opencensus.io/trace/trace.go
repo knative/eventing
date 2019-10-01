@@ -262,7 +262,9 @@ func startSpanInternal(name string, hasParent bool, parent SpanContext, remotePa
 }
 
 func (s *Span) SetSpanID(spanID SpanID) {
-	s.data.SpanID = spanID
+	if s.data != nil {
+		s.data.SpanID = spanID
+	}
 	s.spanContext.SpanID = spanID
 }
 
