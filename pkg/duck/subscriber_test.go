@@ -44,7 +44,7 @@ var (
 	channelURL     = fmt.Sprintf("http://%s", channelAddress)
 
 	legacyCallableAddress = "legacy-callable.domain-internal"
-	legacyCallableURL     = fmt.Sprintf("http://%s", legacyCallableAddress)
+	legacyCallableURL     = fmt.Sprintf("http://%s/", legacyCallableAddress)
 )
 
 func init() {
@@ -137,7 +137,7 @@ func TestSubscriberSpec(t *testing.T) {
 			Objects: []runtime.Object{
 				k8sService("does-exist"),
 			},
-			Expected: fmt.Sprintf("http://does-exist.%s.svc.cluster.local", testNS),
+			Expected: fmt.Sprintf("http://does-exist.%s.svc.cluster.local/", testNS),
 		},
 		"Addressable": {
 			Sub: &v1alpha1.SubscriberSpec{

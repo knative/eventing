@@ -66,7 +66,7 @@ var (
 	replyDNS      = "reply.mynamespace.svc." + utils.GetClusterDomainName()
 	replyURI      = &apis.URL{Host: replyDNS, Scheme: "http"}
 	serviceDNS    = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
-	serviceURI    = &apis.URL{Host: serviceDNS, Scheme: "http"}
+	serviceURI    = &apis.URL{Host: serviceDNS, Scheme: "http", Path: "/"}
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -710,8 +710,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, fmt.Sprintf("Failed to resolve spec.subscriber: services %q not found", serviceName)),
 				),
 			}},
-		},
-		{
+		}, {
 			Name: "subscription, valid channel+subscriber as service",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -760,8 +759,7 @@ func TestAllCases(t *testing.T) {
 					}),
 				patchFinalizers(testNS, subscriptionName),
 			},
-		},
-		{
+		}, {
 			Name: "subscription, two subscribers for a channel",
 			Objects: []runtime.Object{
 				NewSubscription("a_"+subscriptionName, testNS,

@@ -34,12 +34,6 @@ import (
 const (
 	// The httptest.Server's host name will replace this value in all ChannelConfigs.
 	replaceDomain = "replaceDomain"
-	firstToDomain = "first-to-domain"
-)
-
-var (
-	replaceSubscriber = &apis.URL{Scheme: "http", Host: replaceDomain}
-	replaceChannel    = &apis.URL{Scheme: "http", Host: firstToDomain}
 )
 
 func TestNewHandler(t *testing.T) {
@@ -226,7 +220,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: replaceChannel,
+									ReplyURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 								},
 							},
 						},
@@ -248,7 +242,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: replaceChannel,
+									ReplyURI: &apis.URL{Scheme: "http", Host: "first-to-domain"},
 								},
 							},
 						},
@@ -260,7 +254,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: replaceSubscriber,
+									SubscriberURI: &apis.URL{Scheme: "http", Host: replaceDomain},
 								},
 							},
 						},
