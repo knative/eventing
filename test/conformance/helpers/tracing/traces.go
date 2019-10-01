@@ -144,9 +144,12 @@ func (t TestSpanTree) SpanCount() int {
 // Matches checks to see if this TestSpanTree matches an actual SpanTree. It is intended to be used
 // for assertions while testing.
 func (t TestSpanTree) Matches(actual SpanTree) error {
+	if g, w := actual.ToTestSpanTree().SpanCount(), t.SpanCount(); g != w {
+		return fmt.Errorf("unexpected number of spans")
+	}
 	err := traceTreeMatches(".", t, actual)
 	if err != nil {
-		return fmt.Errorf("spanTree did not match: %v. Actual %v, Expected %v", err, actual.ToTestSpanTree().String(), t.String())
+		return fmt.Errorf("spanTree did not match: %v. \n*****Actual***** %v\n*****Expected***** %v", err, actual.ToTestSpanTree().String(), t.String())
 	}
 	return nil
 }

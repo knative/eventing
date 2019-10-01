@@ -20,8 +20,6 @@ limitations under the License.
 package common
 
 import (
-	"encoding/json"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -115,17 +113,17 @@ func (t *Tracker) AddObj(obj kmeta.OwnerRefable) {
 // Clean will delete all registered resources
 func (t *Tracker) Clean(awaitDeletion bool) error {
 	for _, deleter := range t.resourcesToClean {
-		r, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{})
+		_, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{})
 		if err != nil {
 			t.logf("Failed to get to-be cleaned resource %q : %v", deleter.Name, err)
 		} else {
-			bytes, _ := json.MarshalIndent(r, "", "  ")
-			t.logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
+			// bytes, _ := json.MarshalIndent(r, "", "  ")
+			// t.logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
 		}
 		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
 			t.logf("Failed to clean the resource %q : %v", deleter.Name, err)
 		} else if awaitDeletion {
-			t.logf("Waiting for %s to be deleted", deleter.Name)
+			// t.logf("Waiting for %s to be deleted", deleter.Name)
 			if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 				if _, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{}); err != nil {
 					return true, nil
