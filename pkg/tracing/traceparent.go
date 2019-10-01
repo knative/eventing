@@ -22,13 +22,11 @@ import (
 	"regexp"
 	"strconv"
 
-	"go.uber.org/zap"
-
-	"knative.dev/eventing/pkg/logging"
-
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
+	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/logging"
 )
 
 const (

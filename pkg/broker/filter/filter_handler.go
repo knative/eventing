@@ -25,17 +25,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
-
-	"go.opencensus.io/trace"
-
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/tracing"
@@ -74,14 +71,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespa
 		return nil, err
 	}
 
-	// Add output tracing.
-	httpTransport.Client = &http.Client{
-		Transport: &ochttp.Transport{
-			Propagation: &b3.HTTPFormat{},
-		},
-	}
-
-	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
 	if err != nil {
 		return nil, err
 	}

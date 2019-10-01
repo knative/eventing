@@ -8,9 +8,8 @@ import (
 	"reflect"
 	"time"
 
-	"go.opencensus.io/trace"
-
 	cloudevents "github.com/cloudevents/sdk-go"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/tracing"
