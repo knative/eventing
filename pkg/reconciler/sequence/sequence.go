@@ -24,6 +24,7 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -242,6 +243,20 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, step int, p *v1a
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Sequences's subscription failed: %v", err)
 		return nil, fmt.Errorf("Failed to get subscription: %s", err)
+	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
+		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
+		// it instead, and re-create it.
+		err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
+		if err != nil {
+			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
+			return nil, err
+		}
+		newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(expected)
+		if err != nil {
+			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
+			return nil, err
+		}
+		return newSub, nil
 	}
 	return sub, nil
 }

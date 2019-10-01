@@ -466,6 +466,67 @@ func TestAllCases(t *testing.T) {
 					})),
 			}},
 		},
+		{
+			Name: "sequenceupdatesubscription",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(1)})),
+				createChannel(sequenceName, 0),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
+			},
+			WantDeletes: []clientgotesting.DeleteActionImpl{
+				{Name: resources.SequenceChannelName(sequenceName, 0)},
+			},
+			WantCreates: []runtime.Object{
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(1)}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(1)}),
+					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
+							},
+						},
+					}),
+					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+						},
+					})),
+			}},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
