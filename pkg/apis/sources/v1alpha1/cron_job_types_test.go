@@ -26,3 +26,11 @@ func TestCronJobSource_GetGroupVersionKind(t *testing.T) {
 		t.Errorf("Should be CronJobSource.")
 	}
 }
+
+func TestCronJobSource_CronJobEventSource(t *testing.T) {
+	ceCronJobSource := CronJobEventSource("ns1", "job1")
+
+	if ceCronJobSource != "/apis/v1/namespaces/ns1/cronjobsources/job1" {
+		t.Errorf("Should be '/apis/v1/namespaces/ns1/cronjobsources/job1'")
+	}
+}
