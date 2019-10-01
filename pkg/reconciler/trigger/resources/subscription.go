@@ -32,9 +32,7 @@ import (
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger,
-	brokerIngress *corev1.ObjectReference,
-	url *apis.URL) *messagingv1alpha1.Subscription {
+func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, url *apis.URL) *messagingv1alpha1.Subscription {
 	return &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,

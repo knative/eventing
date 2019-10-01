@@ -84,7 +84,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							SubscriberURI: &apis.URL{Host: "subscriberdomain"},
+							SubscriberURI: &apis.URL{Scheme: "http", Host: "subscriberdomain"},
 						},
 					},
 				},
@@ -99,7 +99,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							ReplyURI: &apis.URL{Host: "replydomain"},
+							ReplyURI: &apis.URL{Scheme: "http", Host: "replydomain"},
 						},
 					},
 				},
@@ -137,7 +137,7 @@ func TestConfigDiff(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							SubscriberURI: &apis.URL{Host: "subscriberdomain"},
+							SubscriberURI: &apis.URL{Scheme: "http", Host: "subscriberdomain"},
 						},
 					},
 				},
@@ -167,7 +167,7 @@ func TestConfigDiff(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: &apis.URL{Host: "different"},
+									SubscriberURI: &apis.URL{Scheme: "http", Host: "different"},
 								},
 							},
 						},
