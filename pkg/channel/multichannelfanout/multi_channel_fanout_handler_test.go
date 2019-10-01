@@ -277,8 +277,8 @@ func TestServeHTTP(t *testing.T) {
 			server := httptest.NewServer(&fakeHandler{statusCode: tc.respStatusCode})
 			defer server.Close()
 
-			replaceSubscriber.Host = server.URL[7:]
-			replaceChannel.Host = server.URL[7:]
+			// Rewrite the replaceDomains to call the server we just created.
+			replaceDomains(tc.config, server.URL[7:])
 
 			h, err := NewHandler(zap.NewNop(), tc.config)
 			if err != nil {
@@ -307,6 +307,22 @@ func TestServeHTTP(t *testing.T) {
 			}
 		})
 
+	}
+}
+
+func replaceDomains(config Config, replacement string) {
+	for i, cc := range config.ChannelConfigs {
+		for j, sub := range cc.FanoutConfig.Subscriptions {
+
+			if sub.SubscriberURI != nil && sub.SubscriberURI.Host == replaceDomain {
+				sub.SubscriberURI.Host = replacement
+			}
+			if sub.ReplyURI != nil && sub.ReplyURI.Host == replaceDomain {
+				sub.ReplyURI.Host = replacement
+			}
+			cc.FanoutConfig.Subscriptions[j] = sub
+		}
+		config.ChannelConfigs[i] = cc
 	}
 }
 

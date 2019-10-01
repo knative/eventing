@@ -209,17 +209,29 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			callableServer := httptest.NewServer(&fakeHandler{
 				handler: tc.subscriber,
 			})
-			replaceSubscriber.Host = callableServer.URL[7:] // strip the leading 'http://'
+			callableServerURL := &apis.URL{Scheme: "http", Host: callableServer.URL[7:]} // strip the leading 'http://'
 
 			defer callableServer.Close()
 			channelServer := httptest.NewServer(&fakeHandler{
 				handler: tc.channel,
 			})
-			replaceChannel.Host = channelServer.URL[7:] // strip the leading 'http://'
+			channelServerURL := &apis.URL{Scheme: "http", Host: channelServer.URL[7:]} // strip the leading 'http://'
 
 			defer channelServer.Close()
 
-			h, err := NewHandler(zap.NewNop(), Config{Subscriptions: tc.subs})
+			// Rewrite the subs to use the servers we just started.
+			subs := make([]eventingduck.SubscriberSpec, 0)
+			for _, sub := range tc.subs {
+				if sub.SubscriberURI == replaceSubscriber {
+					sub.SubscriberURI = callableServerURL
+				}
+				if sub.ReplyURI == replaceChannel {
+					sub.ReplyURI = channelServerURL
+				}
+				subs = append(subs, sub)
+			}
+
+			h, err := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
 			if err != nil {
 				t.Fatalf("NewHandler failed. Error:%s", err)
 			}
