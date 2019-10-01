@@ -108,24 +108,3 @@ spec:
                       minLength: 1
             delivery:
               type: object
-              properties:
-                deadLetterSink:
-                  description: sink receiving events that could not be sent to the subscriber and/or reply
-                  type: object
-                  properties:
-                    apiVersion:
-                      type: string
-                    kind:
-                      type: string
-                    name:
-                      type: string
-                      minLength: 1
-                    uri:
-                      type: string
-                      description: direct dead letter sink URI destination.
-                    path:
-                      type: string
-                      description: >-
-                        Path is used with the resulting URL from Addressable ObjectReference or URI.
-                        Must start with `/`. An empty path should be represented as the nil value,
-                        not `` or `/`.  Will be appended to the path of the resulting URL from the Addressable, or URI.
