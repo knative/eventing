@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
 
@@ -42,12 +43,21 @@ type EventType struct {
 	Status EventTypeStatus `json:"status,omitempty"`
 }
 
-// Check that EventType can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*EventType)(nil)
-var _ apis.Defaultable = (*EventType)(nil)
-var _ apis.Immutable = (*EventType)(nil)
-var _ runtime.Object = (*EventType)(nil)
-var _ webhook.GenericCRD = (*EventType)(nil)
+var (
+	// Check that EventType can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable = (*EventType)(nil)
+	_ apis.Defaultable = (*EventType)(nil)
+	_ apis.Immutable   = (*EventType)(nil)
+
+	// Check that EventType can return its spec untyped.
+	_ apis.HasSpec = (*EventType)(nil)
+
+	_ runtime.Object     = (*EventType)(nil)
+	_ webhook.GenericCRD = (*EventType)(nil)
+
+	// Check that we can create OwnerReferences to an EventType.
+	_ kmeta.OwnerRefable = (*EventType)(nil)
+)
 
 type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
