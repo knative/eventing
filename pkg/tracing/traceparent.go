@@ -69,7 +69,7 @@ func AddSpanFromTraceparentAttribute(ctx context.Context, name string, event clo
 	}
 	tps, ok := tp.(string)
 	if !ok {
-		return ctx, fmt.Errorf("extention attribute %q's value was not a string: %T", traceparentAttribute, tps)
+		return ctx, fmt.Errorf("extension attribute %q's value was not a string: %T", traceparentAttribute, tps)
 	}
 	sc, err := parseTraceparent(tps)
 	if err != nil {
