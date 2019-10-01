@@ -121,7 +121,7 @@ function delete_benchmark_resources() {
 
   echo ">> Delete all existing jobs and test resources"
   kubectl delete job --all
-  ko delete -n ${TEST_NAMESPACE} -f "${TEST_ROOT_PATH}/${name}/${variant}/" || abort "Failed to delete ${name}/${variant} resources"
+  ko delete -f "${TEST_ROOT_PATH}/${name}/${variant}/" || abort "Failed to delete ${name}/${variant} resources"
 }
 
 # Apply all the benchmark resources
@@ -135,7 +135,7 @@ function apply_benchmark_resources() {
   # NOTE: this assumes we have a benchmark with the same name as the cluster
   # If service creation takes long time, we will have some initially unreachable errors in the test
   echo "Using ko version $(ko version)"
-  ko apply -n ${TEST_NAMESPACE} -f "$TEST_ROOT_PATH/$name/${variant}/" || abort "Failed to apply ${name}/${variant} benchmark yamls"
+  ko apply -f "$TEST_ROOT_PATH/$name/${variant}/" || abort "Failed to apply ${name}/${variant} benchmark yamls"
 }
 
 # Update resources installed on the cluster with the up-to-date code. This
