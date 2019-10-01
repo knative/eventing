@@ -23,6 +23,9 @@ import (
 	"net/url"
 	"time"
 
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -124,6 +127,12 @@ func main() {
 		writer.WriteHeader(http.StatusOK)
 	})
 
+	// Add output tracing.
+	httpTransport.Client = &http.Client{
+		Transport: &ochttp.Transport{
+			Propagation: &b3.HTTPFormat{},
+		},
+	}
 	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))

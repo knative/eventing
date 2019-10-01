@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"time"
 
+	"go.opencensus.io/trace"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
@@ -73,7 +75,7 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	tracing.AddTraceparentAttributeFromContext(ctx, event)
+	event = tracing.AddTraceparentAttributeFromContext(ctx, event)
 
 	reporterArgs := &ReportArgs{
 		ns:          h.Namespace,
@@ -91,6 +93,11 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 	start := time.Now()
 	sendingCTX := utils.ContextFrom(tctx, h.ChannelURI)
+	// Due to an issue in utils.ContextFrom, we don't retain the original trace context from ctx, so
+	// bring it in manually.
+	sendingCTX = trace.NewContext(sendingCTX, trace.FromContext(ctx))
+
+	h.Logger.Info("QQQQQQQQQQQ - sending with traceparent", zap.Any("traceparent", event.Extensions()["traceparent"]))
 	rctx, _, err := h.CeClient.Send(sendingCTX, event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.

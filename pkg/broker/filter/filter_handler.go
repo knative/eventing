@@ -25,6 +25,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+
+	"go.opencensus.io/trace"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
@@ -67,6 +72,13 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespa
 	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
 	if err != nil {
 		return nil, err
+	}
+
+	// Add output tracing.
+	httpTransport.Client = &http.Client{
+		Transport: &ochttp.Transport{
+			Propagation: &b3.HTTPFormat{},
+		},
 	}
 
 	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
@@ -149,6 +161,8 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		resp.Status = http.StatusMethodNotAllowed
 		return nil
 	}
+
+	r.logger.Info("QQQQQ - incoming span", zap.Any("traceID", trace.FromContext(ctx).SpanContext().TraceID.String()), zap.Any("traceparentAttribute", event.Extensions()["traceparent"]))
 
 	// tctx.URI is actually the path...
 	triggerRef, err := path.Parse(tctx.URI)

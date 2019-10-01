@@ -41,8 +41,8 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 		loggerPodName := "logger"
 		t.Run(n, func(t *testing.T) {
 			channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
-				// Don't accidentally use t, use st instead. To ensure this, shadow 't' to some a
-				// useless type.
+				// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless
+				// type.
 				t := struct{}{}
 				_ = fmt.Sprintf("%s", t)
 

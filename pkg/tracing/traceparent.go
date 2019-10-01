@@ -22,6 +22,10 @@ import (
 	"regexp"
 	"strconv"
 
+	"go.uber.org/zap"
+
+	"knative.dev/eventing/pkg/logging"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
@@ -44,6 +48,7 @@ func AddTraceparentAttributeFromContext(ctx context.Context, event cloudevents.E
 	span := trace.FromContext(ctx)
 	if span != nil {
 		event.SetExtension(traceparentAttribute, traceparentAttributeValue(span))
+		logging.FromContext(ctx).Info("QQQQQQQQQQQ - Added traceparent", zap.Any("traceparent", event.Extensions()[traceparentAttribute]))
 	}
 	return event
 }
