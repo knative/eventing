@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/webhook"
@@ -80,6 +81,11 @@ type EventTypeList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EventType `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for EventType
+func (p *EventType) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("EventType")
 }
 
 // GetUntypedSpec returns the spec of the EventType.
