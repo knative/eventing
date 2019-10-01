@@ -102,7 +102,7 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 	// Callable interface.
 	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
 		// This Service must exist because ObjectReference did not return an error.
-		return &duckapis.URL{Host: names.ServiceHostName(s.Ref.Name, namespace), Scheme: "http", Path: "/"}, nil
+		return &duckapis.URL{Host: names.ServiceHostName(s.Ref.Name, namespace), Scheme: "http"}, nil
 	}
 
 	t := duckv1alpha1.AddressableType{}
@@ -116,7 +116,7 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 	legacy := duckv1alpha1.LegacyTarget{}
 	if err = duck.FromUnstructured(obj, &legacy); err == nil {
 		if legacy.Status.DomainInternal != "" {
-			return &duckapis.URL{Host: legacy.Status.DomainInternal, Scheme: "http", Path: "/"}, nil
+			return &duckapis.URL{Host: legacy.Status.DomainInternal, Scheme: "http"}, nil
 		}
 	}
 

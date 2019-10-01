@@ -79,24 +79,26 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 	// with the response from the call to the destination instead.
 	response := &event
 	if destination != nil {
-		destinationURL := d.resolveURL(destination)
-		ctx, response, err = d.executeRequest(ctx, destinationURL, event)
+
+		ctx, response, err = d.executeRequest(ctx, destination.URL(), event)
 		if err != nil {
-			return fmt.Errorf("unable to complete request to %s: %v", destinationURL, err)
+			return fmt.Errorf("unable to complete request to %s: %v", destination.String(), err)
 		}
 	}
 
-	if reply == nil && response != nil {
+	if response == nil {
+		d.logger.Debug("cannot forward response as response object is nil")
+		return nil
+	}
+
+	if reply == nil {
 		d.logger.Debug("cannot forward response as reply is empty", zap.Any("response", response))
 		return nil
 	}
 
-	if reply != nil && response != nil {
-		replyURL := d.resolveURL(reply)
-		_, _, err = d.executeRequest(ctx, replyURL, *response)
-		if err != nil {
-			return fmt.Errorf("failed to forward reply to %s: %v", replyURL, err)
-		}
+	_, _, err = d.executeRequest(ctx, reply.URL(), *response)
+	if err != nil {
+		return fmt.Errorf("failed to forward reply to %s: %v", reply.String(), err)
 	}
 	return nil
 }
@@ -146,8 +148,4 @@ func generateReplyContext(rctx context.Context, originalTransportCTX cehttp.Tran
 func isFailure(statusCode int) bool {
 	return statusCode < http.StatusOK /* 200 */ ||
 		statusCode >= http.StatusMultipleChoices /* 300 */
-}
-
-func (d *EventDispatcher) resolveURL(destination *apis.URL) *url.URL {
-	return destination.URL()
 }

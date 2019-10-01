@@ -34,6 +34,12 @@ import (
 const (
 	// The httptest.Server's host name will replace this value in all ChannelConfigs.
 	replaceDomain = "replaceDomain"
+	firstToDomain = "first-to-domain"
+)
+
+var (
+	replaceSubscriber = &apis.URL{Scheme: "http", Host: replaceDomain}
+	replaceChannel    = &apis.URL{Scheme: "http", Host: firstToDomain}
 )
 
 func TestNewHandler(t *testing.T) {
@@ -220,7 +226,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: &apis.URL{Scheme: "http", Host: replaceDomain},
+									ReplyURI: replaceChannel,
 								},
 							},
 						},
@@ -242,7 +248,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: &apis.URL{Scheme: "http", Host: "first-to-domain"},
+									ReplyURI: replaceChannel,
 								},
 							},
 						},
@@ -254,7 +260,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: &apis.URL{Scheme: "http", Host: replaceDomain},
+									SubscriberURI: replaceSubscriber,
 								},
 							},
 						},
@@ -271,8 +277,8 @@ func TestServeHTTP(t *testing.T) {
 			server := httptest.NewServer(&fakeHandler{statusCode: tc.respStatusCode})
 			defer server.Close()
 
-			// Rewrite the replaceDomains to call the server we just created.
-			replaceDomains(tc.config, server.URL[7:])
+			replaceSubscriber.Host = server.URL[7:]
+			replaceChannel.Host = server.URL[7:]
 
 			h, err := NewHandler(zap.NewNop(), tc.config)
 			if err != nil {
@@ -301,22 +307,6 @@ func TestServeHTTP(t *testing.T) {
 			}
 		})
 
-	}
-}
-
-func replaceDomains(config Config, replacement string) {
-	for i, cc := range config.ChannelConfigs {
-		for j, sub := range cc.FanoutConfig.Subscriptions {
-
-			if sub.SubscriberURI != nil && sub.SubscriberURI.Host == replaceDomain {
-				sub.SubscriberURI.Host = replacement
-			}
-			if sub.ReplyURI != nil && sub.ReplyURI.Host == replaceDomain {
-				sub.ReplyURI.Host = replacement
-			}
-			cc.FanoutConfig.Subscriptions[j] = sub
-		}
-		config.ChannelConfigs[i] = cc
 	}
 }
 
