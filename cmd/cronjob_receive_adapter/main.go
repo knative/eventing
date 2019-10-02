@@ -114,7 +114,7 @@ func main() {
 	if err != nil {
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
-	if err = tracing.SetupStaticPublishing(loggerSugared, "cronjobsource", tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing(loggerSugared, "", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the importer to continue to
 		// start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
