@@ -72,12 +72,13 @@ func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
 
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
 type TestSpanTree struct {
-	Root                     bool
-	Kind                     model.Kind
-	LocalEndpointServiceName string
-	Tags                     map[string]string
+	Note                     string            `json:"aaNote,omitempty"`
+	Root                     bool              `json:"root,omitempty"`
+	Kind                     model.Kind        `json:"aKind,omitempty"`
+	LocalEndpointServiceName string            `json:"aName,omitempty"`
+	Tags                     map[string]string `json:"tags,omitempty"`
 
-	Children []TestSpanTree
+	Children []TestSpanTree `json:"zChildren,omitempty"`
 }
 
 func (t TestSpanTree) String() string {
