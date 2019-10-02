@@ -180,7 +180,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 
 	// Useful constants we will use below.
 	ingressHost := fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, client.Namespace, domain)
-	triggerChanHost := fmt.Sprintf("%s-kne-trigger.%s.svc.%s", brokerName, client.Namespace, domain)
+	triggerChanHost := fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", brokerName, client.Namespace, domain)
 	ingressChanHost := fmt.Sprintf("%s-kne-ingress.%s.svc.%s", brokerName, client.Namespace, domain)
 	filterHost := fmt.Sprintf("%s-broker-filter.%s.svc.%s", brokerName, client.Namespace, domain)
 	loggerTriggerPath := fmt.Sprintf("/triggers/%s/%s/%s", client.Namespace, loggerTrigger.Name, loggerTrigger.UID)
@@ -394,7 +394,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		Tags: map[string]string{
 			"http.method":      "POST",
 			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s/%s", filterHost, loggerTriggerPath),
+			"http.url":         fmt.Sprintf("http://%s%s", filterHost, loggerTriggerPath),
 		},
 		Children: []tracinghelper.TestSpanTree{
 			{
