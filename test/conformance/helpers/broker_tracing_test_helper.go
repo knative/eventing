@@ -61,7 +61,7 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 				expected, mustContain := setupBrokerTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
 				assertLogContents(st, client, loggerPodName, mustContain)
 				traceID := getTraceID(st, client, loggerPodName)
-				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 160*time.Second)
+				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
 				if err != nil {
 					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
 				}
