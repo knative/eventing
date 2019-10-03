@@ -181,7 +181,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 	// Useful constants we will use below.
 	ingressHost := fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, client.Namespace, domain)
 	triggerChanHost := fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", brokerName, client.Namespace, domain)
-	ingressChanHost := fmt.Sprintf("%s-kne-ingress.%s.svc.%s", brokerName, client.Namespace, domain)
+	ingressChanHost := fmt.Sprintf("%s-kne-ingress-kn-channel.%s.svc.%s", brokerName, client.Namespace, domain)
 	filterHost := fmt.Sprintf("%s-broker-filter.%s.svc.%s", brokerName, client.Namespace, domain)
 	loggerTriggerPath := fmt.Sprintf("/triggers/%s/%s/%s", client.Namespace, loggerTrigger.Name, loggerTrigger.UID)
 	transformerTriggerPath := fmt.Sprintf("/triggers/%s/%s/%s", client.Namespace, transformerTrigger.Name, transformerTrigger.UID)
@@ -230,7 +230,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 					"http.method":      "POST",
 					"http.status_code": "202",
 					"http.host":        filterHost,
-					"http.path":        transformerTriggerPath,
+					"http.path":        loggerTriggerPath,
 				},
 				Children: []tracinghelper.TestSpanTree{
 					{
@@ -249,7 +249,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 									"http.method":      "POST",
 									"http.path":        "/",
 									"http.status_code": "202",
-									"http.host":        fmt.Sprintf("unknown-foobar="),
+									"http.host":        loggerSVCHost,
 								},
 							},
 						},
@@ -287,7 +287,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 						Tags: map[string]string{
 							"http.method":      "POST",
 							"http.status_code": "202",
-							"http.url":         fmt.Sprintf("http://%s", triggerChanHost),
+							"http.url":         fmt.Sprintf("http://%s/", triggerChanHost),
 						},
 						Children: []tracinghelper.TestSpanTree{
 							{
@@ -314,13 +314,13 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 	}
 
 	// Steps 7-22. Directly steps 7-12. 13-22 are included as children.
-	// Steps 7-12: Event from TrChannel sent to transformer Trigger and its reply to the InChannel.
+	// Steps 7-10: Event from TrChannel sent to transformer Trigger and its reply to the InChannel.
 	transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 		Note: "7. Broker TrChannel sends the event to the Broker Filter for the 'transformer' trigger.",
 		Kind: model.Client,
 		Tags: map[string]string{
 			"http.method":      "POST",
-			"http.status_code": "202",
+			"http.status_code": "200", ///////////////////////////////////////////////////////////////// Weird, probably should be 200
 			"http.url":         fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
 		},
 		Children: []tracinghelper.TestSpanTree{
@@ -339,7 +339,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 						Kind: model.Client,
 						Tags: map[string]string{
 							"http.method":      "POST",
-							"http.status_code": "202",
+							"http.status_code": "200",
 							"http.url":         fmt.Sprintf("http://%s/", transformerSVCHost),
 						},
 						Children: []tracinghelper.TestSpanTree{
@@ -349,8 +349,8 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 								Tags: map[string]string{
 									"http.method":      "POST",
 									"http.path":        "/",
-									"http.status_code": "202",
-									"http.host":        fmt.Sprintf("unknown-bazqux="),
+									"http.status_code": "200",
+									"http.host":        transformerSVCHost,
 								},
 							},
 						},
@@ -360,6 +360,9 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		},
 	}
 
+	// Step 11-22. Directly steps 11-12. Steps 13-22 are children.
+	// Steps 11-12 Reply from the 'transformer' is sent by the Broker TrChannel to the Broker
+	// InChannel.
 	transformerEventResponseFromTrChannel := tracinghelper.TestSpanTree{
 		Note: "11. Broker TrChannel for the 'transformer' sends the transformer pod's reply to the Broker InChannel.",
 		Kind: model.Client,
@@ -375,7 +378,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 				Tags: map[string]string{
 					"http.method":      "POST",
 					"http.status_code": "202",
-					"http.url":         ingressChanHost,
+					"http.host":        ingressChanHost,
 					"http.path":        "/",
 				},
 				Children: []tracinghelper.TestSpanTree{
@@ -386,7 +389,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		},
 	}
 
-	// Steps 5-6:  Event from TrChannel sent to logger Trigger.
+	// Steps 5-6: Event from TrChannel sent to logger Trigger.
 	transformerEventSentFromTrChannelToLogger := tracinghelper.TestSpanTree{
 		Note: "5. Broker TrChannel sends the event to the Broker Filter for the 'logger' trigger.",
 		Kind: model.Client,
@@ -408,12 +411,6 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 			},
 		},
 	}
-
-	// 0. Artificial root span.
-	// 1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).
-	// 2. Broker Ingress receives the event from the sending pod.
-	// 3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).
-	// 4. Broker TrChannel receives the event from the Broker Ingress.
 
 	// Steps 0-22. Directly steps 0-4 (missing 1)
 	// Steps 0-4 (missing 1, which is optional and added below if present): Event sent to the Broker
@@ -438,7 +435,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 						Tags: map[string]string{
 							"http.method":      "POST",
 							"http.status_code": "202",
-							"http.url":         fmt.Sprintf("http://%s", triggerChanHost),
+							"http.url":         fmt.Sprintf("http://%s/", triggerChanHost),
 						},
 						Children: []tracinghelper.TestSpanTree{
 							{
@@ -455,6 +452,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 									transformerEventSentFromTrChannelToLogger,
 									// Steps 7-10.
 									transformerEventSentFromTrChannelToTransformer,
+									// Steps 11-22
 									transformerEventResponseFromTrChannel,
 								},
 							},
