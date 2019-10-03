@@ -61,7 +61,7 @@ func DeclareFlags() {
 		" specific Mako tags.")
 }
 
-func StartPerformanceImage(factory sender.LoadGeneratorFactory) {
+func StartPerformanceImage(factory sender.LoadGeneratorFactory, extractor receiver.TypeExtractor) {
 	// We want this for properly handling Kubernetes container lifecycle events.
 	ctx := signals.NewContext()
 
@@ -82,7 +82,7 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory) {
 
 		log.Println("Creating a receiver")
 
-		receiver, err := receiver.NewReceiver(paceFlag, aggregAddr)
+		receiver, err := receiver.NewReceiver(paceFlag, aggregAddr, extractor)
 		if err != nil {
 			panic(err)
 		}

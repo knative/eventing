@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"knative.dev/eventing/test/common/performance"
+	"knative.dev/eventing/test/common/performance/receiver"
 	"knative.dev/eventing/test/common/performance/sender"
 )
 
@@ -36,5 +37,5 @@ func init() {
 func main() {
 	flag.Parse()
 
-	performance.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers))
+	performance.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers), receiver.EventTypeExtractor)
 }

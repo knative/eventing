@@ -32,6 +32,8 @@ import (
 )
 
 type Receiver struct {
+	typeExtractor TypeExtractor
+
 	receivedCh     chan common.EventTimestamp
 	endCh          chan bool
 	receivedEvents *pb.EventsRecord
@@ -40,7 +42,7 @@ type Receiver struct {
 	aggregatorClient *pb.AggregatorClient
 }
 
-func NewReceiver(paceFlag string, aggregAddr string) (common.Executor, error) {
+func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor) (common.Executor, error) {
 	pace, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
 		return nil, err
@@ -55,8 +57,9 @@ func NewReceiver(paceFlag string, aggregAddr string) (common.Executor, error) {
 	channelSize, totalMessages := common.CalculateMemoryConstraintsForPaceSpecs(pace)
 
 	return &Receiver{
-		receivedCh: make(chan common.EventTimestamp, channelSize),
-		endCh:      make(chan bool, 1),
+		typeExtractor: typeExtractor,
+		receivedCh:    make(chan common.EventTimestamp, channelSize),
+		endCh:         make(chan bool, 1),
 		receivedEvents: &pb.EventsRecord{
 			Type:   pb.EventsRecord_RECEIVED,
 			Events: make(map[string]*timestamp.Timestamp, totalMessages),
@@ -123,11 +126,12 @@ func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
 
 // processReceiveEvent processes the event received by the CloudEvents receiver.
 func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
-	if event.Type() == common.MeasureEventType {
+	t := r.typeExtractor(event)
+	if t == common.MeasureEventType {
 		r.receivedCh <- common.EventTimestamp{EventId: event.ID(), At: ptypes.TimestampNow()}
-	} else if event.Type() == common.GCEventType {
+	} else if t == common.GCEventType {
 		runtime.GC()
-	} else if event.Type() == common.EndEventType {
+	} else if t == common.EndEventType {
 		// Wait a bit so all messages on wire are processed
 		time.AfterFunc(time.Second*5, func() {
 			close(r.endCh)
