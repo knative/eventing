@@ -103,7 +103,7 @@ func main() {
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.WebhookName()))
 
 	if err := version.CheckMinimumVersion(kubeClient.Discovery()); err != nil {
-		logger.Fatalw("Version check failed", err)
+		logger.Fatalw("Version check failed", zap.Error(err))
 	}
 
 	logger.Infow("Starting the Eventing Webhook")
