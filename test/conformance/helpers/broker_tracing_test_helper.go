@@ -61,7 +61,7 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 				expected, mustContain := setupBrokerTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
 				assertLogContents(st, client, loggerPodName, mustContain)
 				traceID := getTraceID(st, client, loggerPodName)
-				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 60*time.Second)
+				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 160*time.Second)
 				if err != nil {
 					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
 				}
@@ -197,7 +197,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		Tags: map[string]string{
 			"http.method":      "POST",
 			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s/%s", filterHost, transformerTriggerPath),
+			"http.url":         fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
 		},
 		Children: []tracinghelper.TestSpanTree{
 			{
@@ -220,7 +220,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		Tags: map[string]string{
 			"http.method":      "POST",
 			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s/%s", filterHost, loggerTriggerPath),
+			"http.url":         fmt.Sprintf("http://%s%s", filterHost, loggerTriggerPath),
 		},
 		Children: []tracinghelper.TestSpanTree{
 			{
@@ -321,7 +321,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		Tags: map[string]string{
 			"http.method":      "POST",
 			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s/%s", filterHost, transformerTriggerPath),
+			"http.url":         fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
 		},
 		Children: []tracinghelper.TestSpanTree{
 			{
@@ -352,36 +352,35 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 									"http.status_code": "202",
 									"http.host":        fmt.Sprintf("unknown-bazqux="),
 								},
-								Children: []tracinghelper.TestSpanTree{
-									{
-										Note: "11. Broker Filter for the 'transformer' sends the transformer pod's reply to the Broker InChannel.",
-										Kind: model.Client,
-										Tags: map[string]string{
-											"http.method":      "POST",
-											"http.status_code": "202",
-											"http.url":         fmt.Sprintf("http://%s", ingressChanHost),
-										},
-										Children: []tracinghelper.TestSpanTree{
-											{
-												Note: "12. Broker InChannel receives the event from the Broker Filter for the 'transformer' trigger.",
-												Kind: model.Server,
-												Tags: map[string]string{
-													"http.method":      "POST",
-													"http.status_code": "202",
-													"http.url":         ingressChanHost,
-													"http.path":        "/",
-												},
-												Children: []tracinghelper.TestSpanTree{
-													// Steps 13-22.
-													loggerEventIngressToTrigger,
-												},
-											},
-										},
-									},
-								},
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+
+	transformerEventResponseFromTrChannel := tracinghelper.TestSpanTree{
+		Note: "11. Broker TrChannel for the 'transformer' sends the transformer pod's reply to the Broker InChannel.",
+		Kind: model.Client,
+		Tags: map[string]string{
+			"http.method":      "POST",
+			"http.status_code": "202",
+			"http.url":         fmt.Sprintf("http://%s", ingressChanHost),
+		},
+		Children: []tracinghelper.TestSpanTree{
+			{
+				Note: "12. Broker InChannel receives the event from the Broker TrChannel for the 'transformer' trigger.",
+				Kind: model.Server,
+				Tags: map[string]string{
+					"http.method":      "POST",
+					"http.status_code": "202",
+					"http.url":         ingressChanHost,
+					"http.path":        "/",
+				},
+				Children: []tracinghelper.TestSpanTree{
+					// Steps 13-22.
+					loggerEventIngressToTrigger,
 				},
 			},
 		},
@@ -454,8 +453,9 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 								Children: []tracinghelper.TestSpanTree{
 									// Steps 5-6.
 									transformerEventSentFromTrChannelToLogger,
-									// Steps 7-22.
+									// Steps 7-10.
 									transformerEventSentFromTrChannelToTransformer,
+									transformerEventResponseFromTrChannel,
 								},
 							},
 						},

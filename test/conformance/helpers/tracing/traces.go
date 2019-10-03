@@ -19,6 +19,7 @@ package tracing
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -62,12 +63,14 @@ func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
 	for i := range t.Children {
 		children[i] = t.Children[i].toTestSpanTreeHelper()
 	}
-	return TestSpanTree{
+	tst := TestSpanTree{
 		Kind:                     t.Span.Kind,
 		LocalEndpointServiceName: name,
 		Tags:                     t.Span.Tags,
 		Children:                 children,
 	}
+	tst.SortChildren()
+	return tst
 }
 
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
@@ -84,6 +87,42 @@ type TestSpanTree struct {
 func (t TestSpanTree) String() string {
 	b, _ := json.Marshal(t)
 	return string(b)
+}
+
+func (t *TestSpanTree) SortChildren() {
+	for _, child := range t.Children {
+		child.SortChildren()
+	}
+	sort.Slice(t.Children, func(i, j int) bool {
+		ic := t.Children[i]
+		jc := t.Children[j]
+
+		if ic.height() != jc.height() {
+			return ic.height() < jc.height()
+		}
+
+		if ic.Kind != jc.Kind {
+			return ic.Kind < jc.Kind
+		}
+		it := ic.Tags
+		jt := jc.Tags
+		for _, key := range []string{"http.url", "http.host", "http.path"} {
+			if it[key] != jt[key] {
+				return it[key] < jt[key]
+			}
+		}
+		panic(fmt.Errorf("can't tell the difference between %v, %v", ic, jc))
+	})
+}
+
+func (t TestSpanTree) height() int {
+	height := 0
+	for _, child := range t.Children {
+		if ch := child.height(); ch > height {
+			height = ch + 1
+		}
+	}
+	return height
 }
 
 // GetTraceTree converts a set slice of spans into a SpanTree.
@@ -148,6 +187,7 @@ func (t TestSpanTree) Matches(actual SpanTree) error {
 	if g, w := actual.ToTestSpanTree().SpanCount(), t.SpanCount(); g != w {
 		return fmt.Errorf("unexpected number of spans")
 	}
+	t.SortChildren()
 	err := traceTreeMatches(".", t, actual)
 	if err != nil {
 		return fmt.Errorf("spanTree did not match: %v. \n*****Actual***** %v\n*****Expected***** %v", err, actual.ToTestSpanTree().String(), t.String())
