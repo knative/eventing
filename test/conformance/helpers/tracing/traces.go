@@ -34,6 +34,7 @@ func PrettyPrintTrace(trace []model.SpanModel) string {
 
 // SpanTree is the tree of Spans representation of a Trace.
 type SpanTree struct {
+	Root     bool
 	Span     model.SpanModel
 	Children []SpanTree
 }
@@ -49,7 +50,7 @@ func (t SpanTree) ToTestSpanTree() TestSpanTree {
 		children[i] = t.Children[i].toTestSpanTreeHelper()
 	}
 	return TestSpanTree{
-		Root:     true,
+		Root:     t.Root,
 		Children: children,
 	}
 }
@@ -143,6 +144,7 @@ func GetTraceTree(t *testing.T, trace []model.SpanModel) SpanTree {
 	}
 
 	tree := SpanTree{
+		Root:     true,
 		Children: children,
 	}
 	if len(parents) != 0 {
@@ -185,7 +187,7 @@ func (t TestSpanTree) SpanCount() int {
 // for assertions while testing.
 func (t TestSpanTree) Matches(actual SpanTree) error {
 	if g, w := actual.ToTestSpanTree().SpanCount(), t.SpanCount(); g != w {
-		return fmt.Errorf("unexpected number of spans")
+		return fmt.Errorf("unexpected number of spans. got %d want %d", g, w)
 	}
 	t.SortChildren()
 	err := traceTreeMatches(".", t, actual)
@@ -230,16 +232,17 @@ func unorderedTraceTreesMatch(pos string, want []TestSpanTree, got []SpanTree) e
 	// so n should be small (say 50 in the largest cases).
 OuterLoop:
 	for i, w := range want {
+		var lastErr error
 		for ug := range unmatchedGot {
-			err := w.Matches(got[ug])
+			lastErr = w.Matches(got[ug])
 			// If there is no error, then it matched successfully.
-			if err == nil {
+			if lastErr == nil {
 				unmatchedGot.Delete(ug)
 				continue OuterLoop
 			}
 		}
 		// Nothing matched.
-		return fmt.Errorf("unable to find child match %s[%d]: Want: %s **** Got: %s", pos, i, w.String(), got)
+		return fmt.Errorf("unable to find child match %s[%d]: Last Err %v. Want: %s **** Got: %s", pos, i, lastErr, w.String(), got)
 	}
 	// Everything matched.
 	return nil
