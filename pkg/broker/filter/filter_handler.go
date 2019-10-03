@@ -151,8 +151,6 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	r.logger.Info("QQQQQ - incoming span", zap.Any("traceID", trace.FromContext(ctx).SpanContext().TraceID.String()), zap.Any("traceparentAttribute", event.Extensions()["traceparent"]))
-
 	// tctx.URI is actually the path...
 	triggerRef, err := path.Parse(tctx.URI)
 	if err != nil {

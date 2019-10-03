@@ -119,7 +119,7 @@ func (t *TestSpanTree) SortChildren() {
 func (t TestSpanTree) height() int {
 	height := 0
 	for _, child := range t.Children {
-		if ch := child.height(); ch > height {
+		if ch := child.height(); ch >= height {
 			height = ch + 1
 		}
 	}

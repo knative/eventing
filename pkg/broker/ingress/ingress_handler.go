@@ -74,7 +74,7 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return nil
 	}
 
-	event = tracing.AddTraceparentAttributeFromContext(ctx, event)
+	event = tracing.AddTraceparentAttributeFromContext(ctx, event) /////////////////////////////////  Is this needed?
 
 	reporterArgs := &ReportArgs{
 		ns:          h.Namespace,
@@ -96,7 +96,6 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	// bring it in manually.
 	sendingCTX = trace.NewContext(sendingCTX, trace.FromContext(ctx))
 
-	h.Logger.Info("QQQQQQQQQQQ - sending with traceparent", zap.Any("traceparent", event.Extensions()["traceparent"]))
 	rctx, _, err := h.CeClient.Send(sendingCTX, event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	// Record the dispatch time.
