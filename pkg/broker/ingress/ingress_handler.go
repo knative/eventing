@@ -12,7 +12,6 @@ import (
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -73,8 +72,6 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		resp.Status = http.StatusNotFound
 		return nil
 	}
-
-	event = tracing.AddTraceparentAttributeFromContext(ctx, event) /////////////////////////////////  Is this needed?
 
 	reporterArgs := &ReportArgs{
 		ns:          h.Namespace,
