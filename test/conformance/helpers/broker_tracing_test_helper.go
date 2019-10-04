@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
@@ -92,8 +93,15 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 	channelTypeMeta := common.GetChannelTypeMeta(channel)
 	client.CreateBrokerOrFail(brokerName, channelTypeMeta)
 
-	// DO NOT SUBMIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111!!!!!!!!!!!!!!!!!!
-	time.Sleep(10 * time.Second)
+	// Due to https://github.com/knative/eventing/issues/1998, wait for the Broker to become ready
+	// before creating the Triggers.
+	err := client.WaitForResourceReady(brokerName, &metav1.TypeMeta{
+		APIVersion: resources.EventingAPIVersion,
+		Kind:       "Broker",
+	})
+	if err != nil {
+		t.Fatalf("Broker did not become ready: %v", err)
+	}
 
 	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
 	logPod := resources.EventDetailsPod(loggerPodName)
