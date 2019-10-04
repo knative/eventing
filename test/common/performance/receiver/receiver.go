@@ -33,6 +33,7 @@ import (
 
 type Receiver struct {
 	typeExtractor TypeExtractor
+	idExtractor   IdExtractor
 
 	receivedCh     chan common.EventTimestamp
 	endCh          chan bool
@@ -42,7 +43,7 @@ type Receiver struct {
 	aggregatorClient *pb.AggregatorClient
 }
 
-func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor) (common.Executor, error) {
+func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor, idExtractor IdExtractor) (common.Executor, error) {
 	pace, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
 		return nil, err
@@ -58,6 +59,7 @@ func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor
 
 	return &Receiver{
 		typeExtractor: typeExtractor,
+		idExtractor:   idExtractor,
 		receivedCh:    make(chan common.EventTimestamp, channelSize),
 		endCh:         make(chan bool, 1),
 		receivedEvents: &pb.EventsRecord{
@@ -128,7 +130,7 @@ func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
 func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 	t := r.typeExtractor(event)
 	if t == common.MeasureEventType {
-		r.receivedCh <- common.EventTimestamp{EventId: event.ID(), At: ptypes.TimestampNow()}
+		r.receivedCh <- common.EventTimestamp{EventId: r.idExtractor(event), At: ptypes.TimestampNow()}
 	} else if t == common.GCEventType {
 		runtime.GC()
 	} else if t == common.EndEventType {
