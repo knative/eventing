@@ -65,7 +65,6 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 				if err != nil {
 					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
 				}
-				st.Logf("I got the trace, %q!\n%+v", traceID, tracinghelper.PrettyPrintTrace(trace))
 
 				tree := tracinghelper.GetTraceTree(st, trace)
 				if err := expected.Matches(tree); err != nil {
@@ -80,6 +79,7 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 // 1. Broker.
 // 2. Trigger on 'foo' events -> K8s Service -> transformer Pod (which replies with a 'bar' event).
 // 3. Trigger on 'bar' events -> K8s Service -> eventdetails Pod.
+// 4. Sender Pod which sends a 'foo' event.
 // It returns a string that is expected to be sent by the SendEvents Pod and should be present in
 // the LogEvents Pod logs.
 func setupBrokerTracing(t *testing.T, channel string, client *common.Client, loggerPodName string, incomingTraceId bool) (tracinghelper.TestSpanTree, string) {
@@ -95,11 +95,11 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 	// DO NOT SUBMIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111!!!!!!!!!!!!!!!!!!
 	time.Sleep(10 * time.Second)
 
-	// Create an logger (EventDetails) Pod and a K8s Service that points to it.
+	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
 	logPod := resources.EventDetailsPod(loggerPodName)
 	client.CreatePodOrFail(logPod, common.WithService(loggerPodName))
 
-	// Create a Trigger that receive events (type=bar) and send to logger Pod.
+	// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 	loggerTrigger := client.CreateTriggerOrFail(
 		"logger",
 		resources.WithBroker(brokerName),
@@ -107,13 +107,14 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		resources.WithSubscriberRefForTrigger(loggerPodName),
 	)
 
-	// Create an event mutator to response an event with type bar
+	// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
+	// except the reply's event's type is changed to bar.
 	eventTransformerPod := resources.EventTransformationPod("transformer", &resources.CloudEvent{
 		Type: etLogger,
 	})
 	client.CreatePodOrFail(eventTransformerPod, common.WithService(eventTransformerPod.Name))
 
-	// Create a Trigger that receive events (type=foo) and send to event mutator Pod.
+	// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
 	transformerTrigger := client.CreateTriggerOrFail(
 		"transformer",
 		resources.WithBroker(brokerName),
@@ -180,8 +181,8 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 
 	// Useful constants we will use below.
 	ingressHost := fmt.Sprintf("%s-broker.%s.svc.%s", brokerName, client.Namespace, domain)
-	triggerChanHost := fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", brokerName, client.Namespace, domain)
 	ingressChanHost := fmt.Sprintf("%s-kne-ingress-kn-channel.%s.svc.%s", brokerName, client.Namespace, domain)
+	triggerChanHost := fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", brokerName, client.Namespace, domain)
 	filterHost := fmt.Sprintf("%s-broker-filter.%s.svc.%s", brokerName, client.Namespace, domain)
 	loggerTriggerPath := fmt.Sprintf("/triggers/%s/%s/%s", client.Namespace, loggerTrigger.Name, loggerTrigger.UID)
 	transformerTriggerPath := fmt.Sprintf("/triggers/%s/%s/%s", client.Namespace, transformerTrigger.Name, transformerTrigger.UID)
@@ -313,15 +314,13 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		},
 	}
 
-	// Steps 7-22. Directly steps 7-12. 13-22 are included as children.
 	// Steps 7-10: Event from TrChannel sent to transformer Trigger and its reply to the InChannel.
 	transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 		Note: "7. Broker TrChannel sends the event to the Broker Filter for the 'transformer' trigger.",
 		Kind: model.Client,
 		Tags: map[string]string{
-			"http.method":      "POST",
-			"http.status_code": "200", ///////////////////////////////////////////////////////////////// Weird, probably should be 200
-			"http.url":         fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
+			"http.method": "POST",
+			"http.url":    fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
 		},
 		Children: []tracinghelper.TestSpanTree{
 			{
@@ -412,7 +411,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		},
 	}
 
-	// Steps 0-22. Directly steps 0-4 (missing 1)
+	// Steps 0-22. Directly steps 0-4 (missing 1).
 	// Steps 0-4 (missing 1, which is optional and added below if present): Event sent to the Broker
 	// Ingress.
 	expected := tracinghelper.TestSpanTree{

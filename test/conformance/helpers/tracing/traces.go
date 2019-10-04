@@ -112,7 +112,9 @@ func (t *TestSpanTree) SortChildren() {
 				return it[key] < jt[key]
 			}
 		}
-		panic(fmt.Errorf("can't tell the difference between %v, %v", ic, jc))
+		// We don't have anything to reliably differentiate by. So this isn't going to really be
+		// sorted, just leave the existing one first arbitrarily.
+		return i < j
 	})
 }
 
