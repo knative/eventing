@@ -49,3 +49,27 @@ rules:
     resources: ["*"]
     verbs: ["*"]
 
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-namespaced-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev"]
+    resources: ["*"]
+    verbs: ["create", "update", "patch", "delete"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-eventing-namespaced-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    eventing.knative.dev/release: devel
+rules:
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
