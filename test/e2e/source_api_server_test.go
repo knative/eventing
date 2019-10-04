@@ -36,7 +36,7 @@ func TestApiServerSource(t *testing.T) {
 	const (
 		baseApiServerSourceName = "e2e-api-server-source"
 
-		clusterRoleName       = "event-watcher-cr"
+		roleName              = "event-watcher-r"
 		serviceAccountName    = "event-watcher-sa"
 		baseHelloworldPodName = "e2e-api-server-source-helloworld-pod"
 		baseLoggerPodName     = "e2e-api-server-source-logger-pod"
@@ -126,22 +126,20 @@ func TestApiServerSource(t *testing.T) {
 	client := setup(t, true)
 	defer tearDown(client)
 
-	// creates ServiceAccount and ClusterRoleBinding with default cluster-admin role
-	cr := resources.ClusterRole(clusterRoleName,
-		resources.WithRuleForClusterRole(&rbacv1.PolicyRule{
-			APIGroups: []string{rbacv1.APIGroupAll},
-			Resources: []string{"events"},
-			Verbs:     []string{"get", "list", "watch"}}),
-		resources.WithRuleForClusterRole(&rbacv1.PolicyRule{
+	// creates ServiceAccount and RoleBinding with a role for reading pods and events
+	r := resources.Role(roleName,
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
 			APIGroups: []string{""},
-			Resources: []string{"pods"},
+			Resources: []string{"events", "pods"},
 			Verbs:     []string{"get", "list", "watch"}}))
 	client.CreateServiceAccountOrFail(serviceAccountName)
-	client.CreateClusterRoleOrFail(cr)
-	client.CreateClusterRoleBindingOrFail(
+	client.CreateRoleOrFail(r)
+	client.CreateRoleBindingOrFail(
 		serviceAccountName,
-		clusterRoleName,
-		fmt.Sprintf("%s-%s", serviceAccountName, clusterRoleName),
+		common.RoleKind,
+		roleName,
+		fmt.Sprintf("%s-%s", serviceAccountName, roleName),
+		client.Namespace,
 	)
 
 	for _, tc := range table {

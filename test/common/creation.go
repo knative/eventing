@@ -241,10 +241,25 @@ func (client *Client) CreateClusterRoleOrFail(cr *rbacv1.ClusterRole) {
 	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "clusterroles", "", cr.Name)
 }
 
+// CreateRoleOrFail creates the given Role in the Client namespace or fail the test if there is an error.
+func (client *Client) CreateRoleOrFail(r *rbacv1.Role) {
+	namespace := client.Namespace
+	rs := client.Kube.Kube.RbacV1().Roles(namespace)
+	if _, err := rs.Create(r); err != nil && !errors.IsAlreadyExists(err) {
+		client.T.Fatalf("Failed to create cluster role %q: %v", r.Name, err)
+	}
+	client.Tracker.Add(rbacAPIGroup, rbacAPIVersion, "roles", namespace, r.Name)
+}
+
+const (
+	ClusterRoleKind = "ClusterRole"
+	RoleKind        = "Role"
+)
+
 // CreateRoleBindingOrFail will create a RoleBinding or fail the test if there is an error.
-func (client *Client) CreateRoleBindingOrFail(saName, crName, rbName, rbNamespace string) {
+func (client *Client) CreateRoleBindingOrFail(saName, rKind, rName, rbName, rbNamespace string) {
 	saNamespace := client.Namespace
-	rb := resources.RoleBinding(saName, saNamespace, crName, rbName, rbNamespace)
+	rb := resources.RoleBinding(saName, saNamespace, rKind, rName, rbName, rbNamespace)
 	rbs := client.Kube.Kube.RbacV1().RoleBindings(rbNamespace)
 
 	if _, err := rbs.Create(rb); err != nil && !errors.IsAlreadyExists(err) {
@@ -283,12 +298,14 @@ func (client *Client) CreateRBACResourcesForBrokers() {
 	// The two RoleBindings are required for running Brokers correctly.
 	client.CreateRoleBindingOrFail(
 		saIngressName,
+		ClusterRoleKind,
 		crIngressName,
 		fmt.Sprintf("%s-%s", saIngressName, crIngressName),
 		client.Namespace,
 	)
 	client.CreateRoleBindingOrFail(
 		saFilterName,
+		ClusterRoleKind,
 		crFilterName,
 		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
 		client.Namespace,
@@ -297,12 +314,14 @@ func (client *Client) CreateRBACResourcesForBrokers() {
 	// tracing, and metrics configuration.
 	client.CreateRoleBindingOrFail(
 		saIngressName,
+		ClusterRoleKind,
 		crConfigReaderName,
 		fmt.Sprintf("%s-%s-%s", saIngressName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
 		resources.SystemNamespace,
 	)
 	client.CreateRoleBindingOrFail(
 		saFilterName,
+		ClusterRoleKind,
 		crConfigReaderName,
 		fmt.Sprintf("%s-%s-%s", saFilterName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
 		resources.SystemNamespace,

@@ -34,8 +34,8 @@ import (
 // PodOption enables further configuration of a Pod.
 type PodOption func(*corev1.Pod)
 
-// Option enables further configuration of a ClusterRole.
-type ClusterRoleOption func(*rbacv1.ClusterRole)
+// Option enables further configuration of a Role.
+type RoleOption func(*rbacv1.Role)
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
 func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
@@ -284,8 +284,8 @@ func ServiceAccount(name, namespace string) *corev1.ServiceAccount {
 }
 
 // RoleBinding creates a Kubernetes RoleBinding with the given ServiceAccount name and
-// namespace, ClusterRole name, RoleBinding name and namespace.
-func RoleBinding(saName, saNamespace, crName, rbName, rbNamespace string) *rbacv1.RoleBinding {
+// namespace, Role or ClusterRole Kind, name, RoleBinding name and namespace.
+func RoleBinding(saName, saNamespace, rKind, rName, rbName, rbNamespace string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rbName,
@@ -299,8 +299,8 @@ func RoleBinding(saName, saNamespace, crName, rbName, rbNamespace string) *rbacv
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     crName,
+			Kind:     rKind,
+			Name:     rName,
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 		},
 	}
@@ -328,39 +328,23 @@ func ClusterRoleBinding(saName, saNamespace, crName, crbName string) *rbacv1.Clu
 	}
 }
 
-// EventWatcherClusterRole creates a Kubernetes ClusterRole
-func ClusterRole(crName string, options ...ClusterRoleOption) *rbacv1.ClusterRole {
-	clusterRole := &rbacv1.ClusterRole{
+// EventWatcherRole creates a Kubernetes Role
+func Role(rName string, options ...RoleOption) *rbacv1.Role {
+	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: crName,
+			Name: rName,
 		},
 		Rules: []rbacv1.PolicyRule{},
 	}
 	for _, option := range options {
-		option(clusterRole)
+		option(role)
 	}
-	return clusterRole
+	return role
 }
 
-// WithRuleForClusterRole is a ClusterRole Option for adding a rule
-func WithRuleForClusterRole(rule *rbacv1.PolicyRule) ClusterRoleOption {
-	return func(cr *rbacv1.ClusterRole) {
-		cr.Rules = append(cr.Rules, *rule)
-	}
-}
-
-// EventWatcherClusterRole creates a Kubernetes ClusterRole that can be used to watch Events.
-func EventWatcherClusterRole(crName string) *rbacv1.ClusterRole {
-	return &rbacv1.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: crName,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{rbacv1.APIGroupAll},
-				Resources: []string{"events"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-		},
+// WithRuleForRole is a Role Option for adding a rule
+func WithRuleForRole(rule *rbacv1.PolicyRule) RoleOption {
+	return func(r *rbacv1.Role) {
+		r.Rules = append(r.Rules, *rule)
 	}
 }
