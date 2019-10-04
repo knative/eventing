@@ -96,11 +96,11 @@ type HttpLoadGenerator struct {
 }
 
 func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
-	if sinkUrl == "" {
-		panic("Missing --sink flag")
-	}
-
 	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp, failedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
+		if sinkUrl == "" {
+			panic("Missing --sink flag")
+		}
+
 		loadGen := &HttpLoadGenerator{
 			eventSource: eventSource,
 			sinkUrl:     sinkUrl,
