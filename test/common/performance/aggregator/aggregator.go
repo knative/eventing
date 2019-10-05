@@ -107,7 +107,7 @@ func NewAggregator(listenAddr string, expectRecords uint, makoTags []string) (co
 }
 
 func (ex *Aggregator) Run(ctx context.Context) {
-	fmt.Printf("Configuring Mako\n")
+	log.Printf("Configuring Mako\n")
 
 	// Use the benchmark key created
 	// TODO support to check benchmark key for dev or prod
@@ -127,33 +127,33 @@ func (ex *Aggregator) Run(ctx context.Context) {
 	}
 
 	// --- Run GRPC events receiver
-	fmt.Printf("Starting events recorder server\n")
+	log.Printf("Starting events recorder server\n")
 
 	go func() {
 		if err := ex.server.Serve(ex.listener); err != nil {
-			fmt.Printf("Failed to serve: %v\n", err)
+			log.Printf("Failed to serve: %v\n", err)
 		}
 	}()
 	go func() {
 		<-ctx.Done()
-		fmt.Printf("Terminating events recorder server\n")
+		log.Printf("Terminating events recorder server\n")
 		ex.server.GracefulStop()
 	}()
 
 	// --- Wait for all records
-	fmt.Printf("Expecting %d events records\n", ex.expectRecords)
+	log.Printf("Expecting %d events records\n", ex.expectRecords)
 	ex.waitForEvents()
-	fmt.Printf("Received all expected events records\n")
+	log.Printf("Received all expected events records\n")
 
 	ex.server.GracefulStop()
 
 	// --- Publish latencies
-	fmt.Printf("%-15s: %d", "Sent count\n", len(ex.sentEvents.Events))
-	fmt.Printf("%-15s: %d", "Accepted count\n", len(ex.acceptedEvents.Events))
-	fmt.Printf("%-15s: %d", "Failed count\n", len(ex.failedEvents.Events))
-	fmt.Printf("%-15s: %d", "Received count\n", len(ex.receivedEvents.Events))
+	log.Printf("%-15s: %d", "Sent count\n", len(ex.sentEvents.Events))
+	log.Printf("%-15s: %d", "Accepted count\n", len(ex.acceptedEvents.Events))
+	log.Printf("%-15s: %d", "Failed count\n", len(ex.failedEvents.Events))
+	log.Printf("%-15s: %d", "Received count\n", len(ex.receivedEvents.Events))
 
-	fmt.Printf("Publishing latencies\n")
+	log.Printf("Publishing latencies\n")
 
 	// count errors
 	var publishErrorCount int
@@ -211,7 +211,7 @@ func (ex *Aggregator) Run(ctx context.Context) {
 
 	// --- Publish throughput
 
-	fmt.Printf("Publishing throughputs\n")
+	log.Printf("Publishing throughputs\n")
 
 	sentTimestamps := eventsToTimestampsArray(&ex.sentEvents.Events)
 	err = publishThpt(sentTimestamps, client.Quickstore, "st")
@@ -235,18 +235,18 @@ func (ex *Aggregator) Run(ctx context.Context) {
 
 	// --- Publish error counts as aggregate metrics
 
-	fmt.Printf("Publishing aggregates\n")
+	log.Printf("Publishing aggregates\n")
 
 	client.Quickstore.AddRunAggregate("pe", float64(publishErrorCount))
 	client.Quickstore.AddRunAggregate("de", float64(deliverErrorCount))
 
-	fmt.Printf("Store to mako\n")
+	log.Printf("Store to mako\n")
 
 	if out, err := client.Quickstore.Store(); err != nil {
 		fatalf("Failed to store data: %v\noutput: %v", err, out)
 	}
 
-	fmt.Printf("Aggregation completed\n")
+	log.Printf("Aggregation completed\n")
 }
 
 func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Time {
@@ -302,11 +302,11 @@ func (ex *Aggregator) RecordEvents(_ context.Context, in *pb.EventsRecordList) (
 		case pb.EventsRecord_RECEIVED:
 			rec = ex.receivedEvents
 		default:
-			fmt.Printf("Ignoring events record of type %s\n", recType)
+			log.Printf("Ignoring events record of type %s\n", recType)
 			continue
 		}
 
-		fmt.Printf("-> Recording %d %s events\n", uint64(len(recIn.Events)), recType)
+		log.Printf("-> Recording %d %s events\n", uint64(len(recIn.Events)), recType)
 
 		func() {
 			rec.Lock()

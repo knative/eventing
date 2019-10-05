@@ -167,6 +167,6 @@ func waitForPortAvailable(port string) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	if !free {
-		log.Fatalf("Timeout waiting for TCP port %s to become available\n")
+		log.Fatalf("Timeout waiting for TCP port %s to become available\n", port)
 	}
 }
