@@ -101,18 +101,18 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	printf("Configuring Mako")
 
 	// Use the benchmark key created
-	ctx, q, qclose, err := mako.Setup(ctx, ex.makoTags...)
+	client, err := mako.Setup(ctx, ex.makoTags...)
 	if err != nil {
 		fatalf("Failed to setup mako: %v", err)
 	}
 
 	// Use a fresh context here so that our RPC to terminate the sidecar
 	// isn't subject to our timeout (or we won't shut it down when we time out)
-	defer qclose(context.Background())
+	defer client.ShutDownFunc(context.Background())
 
 	// Wrap fatalf in a helper or our sidecar will live forever.
 	fatalf = func(f string, args ...interface{}) {
-		qclose(context.Background())
+		client.ShutDownFunc(context.Background())
 		fatalf(f, args...)
 	}
 
@@ -168,7 +168,7 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 
 			deliverErrorCount++
 
-			if qerr := q.AddError(mako.XTime(timestampSent), errMsg); qerr != nil {
+			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), errMsg); qerr != nil {
 				log.Printf("ERROR AddError: %v", qerr)
 			}
 			continue
@@ -178,14 +178,14 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 		// Uncomment to get CSV directly from this container log
 		//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
 		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
-		if qerr := q.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
+		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
 			log.Printf("ERROR AddSamplePoint: %v", qerr)
 		}
 
 		if !received {
 			publishErrorCount++
 
-			if qerr := q.AddError(mako.XTime(timestampSent), "Event not delivered"); qerr != nil {
+			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), "Event not delivered"); qerr != nil {
 				log.Printf("ERROR AddError: %v", qerr)
 			}
 			continue
@@ -195,7 +195,7 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 		// Uncomment to get CSV directly from this container log
 		//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
 		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
-		if qerr := q.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
+		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
 			log.Printf("ERROR AddSamplePoint: %v", qerr)
 		}
 	}
@@ -205,20 +205,20 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	printf("Publishing throughputs")
 
 	sentTimestamps := eventsToTimestampsArray(&ex.sentEvents.Events)
-	err = publishThpt(sentTimestamps, q, "st")
+	err = publishThpt(sentTimestamps, client.Quickstore, "st")
 	if err != nil {
 		log.Printf("ERROR AddSamplePoint: %v", err)
 	}
 
 	receivedTimestamps := eventsToTimestampsArray(&ex.receivedEvents.Events)
-	err = publishThpt(receivedTimestamps, q, "dt")
+	err = publishThpt(receivedTimestamps, client.Quickstore, "dt")
 	if err != nil {
 		log.Printf("ERROR AddSamplePoint: %v", err)
 	}
 
 	failureTimestamps := eventsToTimestampsArray(&ex.failedEvents.Events)
 	if len(failureTimestamps) > 2 {
-		err = publishThpt(failureTimestamps, q, "ft")
+		err = publishThpt(failureTimestamps, client.Quickstore, "ft")
 		if err != nil {
 			log.Printf("ERROR AddSamplePoint: %v", err)
 		}
@@ -228,12 +228,12 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 
 	printf("Publishing aggregates")
 
-	q.AddRunAggregate("pe", float64(publishErrorCount))
-	q.AddRunAggregate("de", float64(deliverErrorCount))
+	client.Quickstore.AddRunAggregate("pe", float64(publishErrorCount))
+	client.Quickstore.AddRunAggregate("de", float64(deliverErrorCount))
 
 	printf("Store to mako")
 
-	if out, err := q.Store(); err != nil {
+	if out, err := client.Quickstore.Store(); err != nil {
 		fatalf("Failed to store data: %v\noutput: %v", err, out)
 	}
 

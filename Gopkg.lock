@@ -212,6 +212,22 @@
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
 
 [[projects]]
+  digest = "1:91099c6f78b1e7bdf9ed06eb4cb7f017174293a3689d76b995a06f4c8d64a7f0"
+  name = "github.com/google/go-github"
+  packages = ["github"]
+  pruneopts = "NUT"
+  revision = "9686ff0746200cf521ce225525b421e13b4eac1a"
+  version = "v28.1.1"
+
+[[projects]]
+  digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = "NUT"
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:52c5834e2bebac9030c97cc0798ac11c3aa8a39f098aeb419f142533da6cd3cc"
   name = "github.com/google/gofuzz"
@@ -558,9 +574,18 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
+  digest = "1:741e9bcf4ee7c70f379f62f32702ecb7cf221ed7d531d77272cd9abc67259936"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = [
+    "cast5",
+    "openpgp",
+    "openpgp/armor",
+    "openpgp/elgamal",
+    "openpgp/errors",
+    "openpgp/packet",
+    "openpgp/s2k",
+    "ssh/terminal",
+  ]
   pruneopts = "NUT"
   revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
 
@@ -1197,7 +1222,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d772e1e5cb8dee04f869b516c450bb12ca799de9add802a07c49c8c8cf0907ad"
+  digest = "1:6a49899e2a14244b533e459e62a53abd4a675f20b87f73989aa170edb8da0337"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1266,12 +1291,17 @@
     "system",
     "system/testing",
     "test",
+    "test/ghutil",
     "test/helpers",
     "test/ingress",
     "test/logging",
     "test/mako",
+    "test/mako/alerter",
+    "test/mako/alerter/github",
+    "test/mako/alerter/slack",
     "test/mako/config",
     "test/monitoring",
+    "test/slackutil",
     "test/spoof",
     "test/vegeta/pacers",
     "test/zipkin",
@@ -1282,18 +1312,18 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "d02c80dc625667d793a732b019503197913fa756"
+  revision = "c119a8065cf96c7f9bb5cf27aa4f5ddb522c505b"
 
 [[projects]]
   branch = "master"
-  digest = "1:d65a0f4c8458b9720f97b17d6d04c9efe341298f1c3f6c37e124a6c83c716668"
+  digest = "1:8009d9ea7464198279c5c1b1a760365c1f731aa88239632c08929df5b7f323f6"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "e253fe07d282bd3d80bd9dd9f439fa550fbb9365"
+  revision = "0a634c8ec9d3c6599eec7e4a262df223389138d1"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"

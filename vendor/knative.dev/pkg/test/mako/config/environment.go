@@ -18,33 +18,47 @@ package config
 
 import (
 	"log"
-	"path/filepath"
-
-	"knative.dev/pkg/configmap"
 )
 
 // TODO: perhaps cache the loaded CM.
 
+const defaultOrg = "knative"
+
+// GetOrganization returns the organization from the configmap.
+// It will return the defaultOrg if any error happens or it's empty.
+func GetOrganization() string {
+	cfg, err := loadConfig()
+	if err != nil {
+		return defaultOrg
+	}
+	if cfg.Organization == "" {
+		return defaultOrg
+	}
+	return cfg.Organization
+}
+
+// GetRepository returns the repository from the configmap.
+// It will return an empty string if any error happens.
+func GetRepository() string {
+	cfg, err := loadConfig()
+	if err != nil {
+		return ""
+	}
+	return cfg.Repository
+}
+
 // MustGetTags returns the additional tags from the configmap, or dies.
 func MustGetTags() []string {
-	makoCM, err := configmap.Load(filepath.Join("/etc", ConfigName))
+	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("unable to load configmap: %v", err)
-	}
-	cfg, err := NewConfigFromMap(makoCM)
-	if err != nil {
-		log.Fatalf("unable to parse configmap: %v", err)
+		log.Fatalf("unable to load config from the configmap: %v", err)
 	}
 	return cfg.AdditionalTags
 }
 
 // getEnvironment fetches the Mako config environment to which this cluster should publish.
 func getEnvironment() (string, error) {
-	makoCM, err := configmap.Load(filepath.Join("/etc", ConfigName))
-	if err != nil {
-		return "", err
-	}
-	cfg, err := NewConfigFromMap(makoCM)
+	cfg, err := loadConfig()
 	if err != nil {
 		return "", err
 	}
