@@ -45,7 +45,7 @@ spec:
                 - "--role=sender-receiver"
                 - "--sink=http://channel-imc-kn-channel.default.svc.cluster.local"
                 - "--aggregator=channel-imc-aggregator:10000"
-                - "--pace=100:10,400:20,800:30,1000:60"
+                - "--pace=100:10,400:20,800:30,1000:60,2000:60,3000:60"
                 - "--verbose"
               env:
                 - name: GOGC
