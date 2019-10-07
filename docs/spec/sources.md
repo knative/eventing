@@ -1,56 +1,60 @@
 # Sources
 
-A **source** is any resource that generates or imports an event and relays that
-event to another resource on the cluster via CloudEvents. Sourcing events is
-critical to developing a distributed system that reacts to events.
+A **Source** is any Kubernetes object that generates or imports an event and
+relays that event to another endpoint on the cluster via
+[CloudEvents](https://cloudevents.io). Sourcing events is critical to developing
+a distributed system that reacts to events.
+
+A **Sink** is an [_addressable_](./interfaces.md#addressable) resource that
+takes responsibility for the event. A **Sink** could be a consumer of events, or
+middleware. A **Sink** will respond with 2xx when it has accepted and processed
+the event.
 
 A Source:
 
-- Represents an off or on-cluster system, service or application that produces
-  events to be consumed by a sink.
+- Represents an off- or on-cluster system, service or application that produces
+  events to be consumed by a **Sink**.
 - Produces or imports CloudEvents.
-- Sends CloudEvents to the configured **sink**.
+- Sends CloudEvents to the configured **Sink**.
 
 In practice, sources are an abstract concept that allow us to create declarative
 configurations through the usage of Custom Resource Definitions (CRDs) extending
-Kubernetes. Those CRDs are instantiated by creating an instance of the resource.
-It is up to the implementation of the source author to understand the best way
-to realize the source application. This could be as 1:1 deployments inside of
-Kubernetes per resource, as a single multi-tenant application, or even an
-off-cluster implementation; or all combinations in-between.
+Kubernetes. Source systems are configured by creating an instance of the
+resource described by the CRD. It is up to the implementation of the source
+author to understand the best way to realize the source application. This could
+be as 1:1 deployments inside of Kubernetes per resource, as a single
+multi-tenant application, or even an off-cluster implementation; or all
+combinations in-between.
 
-For Kubernetes Operators, there are two states to sources:
+For operators of a Kubernetes cluster, there are two states to sources:
 
-1. A source CRD and controller (if required) have been installed into the
+1. A Source CRD and controller (if required) have been installed into the
    cluster.
 
-   A cluster with a source CRD installed allows the other operators in the
-   cluster to find and discover what is possible to source events from. These
-   CRDs define the credentials, input parameters, k8s categories, event types,
-   duck types, and aggregated RBAC roles required to interpret the source as the
-   source author expects. This topic is expanded upon in the
-   [Source CRDs](#source-crds) section.
+   A cluster with a source CRD installed allows the developers in the cluster to
+   find and discover what is possible to source events from. This topic is
+   expanded upon in the [Source CRDs](#source-crds) section.
 
-1. A source custom object has been created in the cluster.
+1. A Source custom object has been created in the cluster.
 
-   Once a cluster operator creates an instance of a source and provides the
-   necessary credentials, input parameters, and event sink, the source
-   controller will realize this into whatever is required for that source for
-   the current situation. While this resource is running, a cluster operator
-   would like to inspect the resource without needing to be fully aware of the
-   implementation. This is done by conforming to the [Source]() ducktype. This
-   topic is expanded upon in the [Source Custom Objects](#source-custom-objects)
-   section.
+   Once a developer creates an instance of a source and provides the necessary
+   parameters, the source controller will realize this into whatever is required
+   for that source for the current situation. While this resource is running, a
+   cluster operator would like to inspect the resource without needing to be
+   fully aware of the implementation. This is done by conforming to the
+   [Source]() ducktype. This topic is expanded upon in the
+   [Source Custom Objects](#source-custom-objects) section.
 
-The goal of requiring CRD labels and running resource shapes is to aid in
+The goal of requiring CRD labels and running resource shapes is to enable
 discovery and understanding of potential sources that could be leveraged in the
-cluster, and sources that exist and are running in the cluster.
+cluster. This structure also aids in understanding sources that exist and are
+running in the cluster.
 
 ## Source CRDs
 
 Sources are more useful if they are discoverable. Knative Sources MUST use a
-ducktype label to allow controllers and operators the ability to find which CRDs
-are considered to be adhering to the
+standardized label to allow controllers and operators the ability to find which
+CRDs are considered to be adhering to the
 [Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
 
 CRDs that are to be understood as a `source` MUST be labeled:
@@ -63,9 +67,7 @@ metadata:
     duck.knative.dev/source: "true" # <-- required to be a source.
 ```
 
-Labeling sources in this way allows for cluster operators to list CRDs and
-filter on which ones are choosing to adhere to the source ducktype. To make this
-query,
+Labeling sources in this way allows for developers to filter the list of CRDs:
 
 ```shell
 kubectl get crds -l duck.knative.dev/source=true
@@ -81,7 +83,7 @@ spec:
 ```
 
 By adding to the sources category, we give an easy way to list running sources
-in the cluster with,
+in the cluster with:
 
 ```shell
 kubectl get sources
@@ -178,80 +180,22 @@ validation:
               extensions:
                 type: object
                 description:
-                  "Extensions specify what attribute are added or overridden on
+                  "Extensions specify what attributes are added or overridden on
                   the outbound event. Each `Extensions` key-value pair are set
-                  on the event as an attribute extension independently."
+                  on the event as an extension attribute independently."
 ```
 
-<!--
-
-TODO: There is still debate about how to implement the registry. Commenting out for now.
-
-### Event Type Registry
-
-The Event Type Registry is a feature that allows for software to find all CRDs
-labeled as a `Source` ducktype, and extract the defined
-[EventType](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)s
-that could be emitted from a source instance.
-
-To be included in the event type registry a fake `registry` component is defined
-in the `openAPIV3Schema` section inside the CRD. It is not our intention to have
-cluster operators create resources with this filled out, it is to signal to
-other software some metadata about the runtime/dataplane characteristics of this
-type of source.
-
-As an example, here is a snip the registry entry for ApiServerSource, a source
-that emits Kubernetes event,
-
-```yaml
-  validation:
-    openAPIV3Schema:
-      properties:
-        registry:
-          type: object
-          description: "Internal information, users should not set this property"
-          properties:
-            eventTypes:
-              type: object
-              description: "Event types that ApiServerSource can produce"
-              properties:
-                addResource:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                      pattern: "dev.knative.apiserver.resource.add"
-                    schema:
-                      type: string
-                deleteResource:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                      pattern: "dev.knative.apiserver.resource.delete"
-                    schema:
-                      type: string
-                updateResource:
-                  type: object
-                  properties:
-                    type:
-                      type: string
-                      pattern: "dev.knative.apiserver.resource.update"
-                    schema:
-                      type: string
-                ...
-```
--->
+<!-- TOOD(#1550): Follow-up with a registry implementation. -->
 
 ## Source RBAC
 
-Sources can by any shape and are expected to be extensions onto Kubernetes. To
-prevent cluster operators from re-deploying, or re-creating RBAC for all
-accounts that will interact with sources, Knative leverages aggregated RBAC
-roles to dynamically update the rights of controllers that are using common
-service accounts provided by Knative. This allows Eventing controllers to check
-the status of source type resources without being aware of the exact source type
-or implementation at compile time.
+Sources are expected to be extensions onto Kubernetes. To prevent cluster
+operators from duplicating RBAC for all accounts that will interact with
+sources, cluster operators should leverage aggregated RBAC roles to dynamically
+update the rights of controllers that are using common service accounts provided
+by Knative. This allows Eventing controllers to check the status of source type
+resources without being aware of the exact source type or implementation at
+compile time.
 
 The
 [`source-observer` ClusterRole](../../config/200-source-observer-clusterrole.yaml)
@@ -266,7 +210,7 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        duck.knative.dev/source: "true"
+        duck.knative.dev/source: "true" # Matched by source-observer ClusterRole
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
@@ -293,8 +237,9 @@ rules:
 
 ## Source Custom Objects
 
-The minimum definition of the Kubernetes resource shape is defined in the
+All Source custom objects MUST implement the
 [Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
+Additional data in spec and status is explicitly permitted.
 
 ### duck.Spec
 
@@ -313,8 +258,9 @@ type SourceSpec struct {
 }
 ```
 
-For a full definition of `Sink` and `CloudEventsOverrides`, please see
-[Destination](https://godoc.org/knative.dev/pkg/apis/v1alpha1#Destination), and
+For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
+see [Destination](https://godoc.org/knative.dev/pkg/apis/v1alpha1#Destination),
+and
 [CloudEventOverrides](https://godoc.org/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
 ### duck.Status
