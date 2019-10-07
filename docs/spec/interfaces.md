@@ -53,8 +53,8 @@ represent the return type of the _Callable_.
 ## Composable
 
 A **Composable** resource represents an _Addressable_ endpoint which receives
-events and optionally directly forward events to downstream sink. One example of a
-_Composable_ is Sequence.
+events and optionally directly forward events to downstream sink. Examples of
+_Composable_ are Sequence and Parallel.
 
 ### Control Plane
 
