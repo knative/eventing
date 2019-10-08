@@ -101,6 +101,9 @@ spec:
             - "--expect-records=1"
             - "--mako-tags=channel=imc"
             - "--verbose"
+              # benchmark key and benchmark name come from dev.config
+            - "--benchmark-key=5903682180743168"
+            - "--benchmark-name=Development - Broker Latency & Throughput"
             ports:
             - name: grpc
               containerPort: 10000

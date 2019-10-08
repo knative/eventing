@@ -101,7 +101,8 @@ func (ex *aggregatorExecutor) Run(ctx context.Context) {
 	printf("Configuring Mako")
 
 	// Use the benchmark key created
-	client, err := mako.Setup(ctx, ex.makoTags...)
+	// TODO support to check benchmark key for dev or prod
+	client, err := mako.SetupWithBenchmarkConfig(ctx, &benchmarkKey, &benchmarkName, ex.makoTags...)
 	if err != nil {
 		fatalf("Failed to setup mako: %v", err)
 	}
