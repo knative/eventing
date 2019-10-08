@@ -137,7 +137,7 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 		} else {
 			<-endExecutorCh
 			waitingExecutors--
-			log.Printf("Waiting %d executors\n", waitingExecutors)
+			log.Printf("Waiting %d executors", waitingExecutors)
 		}
 	}
 

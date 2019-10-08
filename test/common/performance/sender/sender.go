@@ -75,7 +75,7 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 	// wait until all pods are ready (channel, consumers) to ensure events aren't dropped by the broker
 	// during the test and the GRPC client can connect to the aggregator
 	ns := testNamespace()
-	log.Printf("Waiting for all Pods to be ready in namespace %s\n", ns)
+	log.Printf("Waiting for all Pods to be ready in namespace %s", ns)
 	if err := waitForPods(ns); err != nil {
 		return nil, fmt.Errorf("Timeout waiting for Pods readiness in namespace %s: %v", ns, err)
 	}
@@ -130,17 +130,17 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 
 func (s *Sender) Run(ctx context.Context) {
 	// --- Warmup phase
-	log.Printf("--- BEGIN WARMUP ---\n")
+	log.Printf("--- BEGIN WARMUP ---")
 	if s.warmupSeconds > 0 {
 		if err := s.warmup(ctx, s.warmupSeconds); err != nil {
 			log.Fatalf("Failed to run warmup: %v", err)
 		}
 	} else {
-		log.Printf("Warmup skipped\n")
+		log.Printf("Warmup skipped")
 	}
-	log.Printf("---- END WARMUP ----\n")
+	log.Printf("---- END WARMUP ----")
 
-	log.Printf("--- BEGIN BENCHMARK ---\n")
+	log.Printf("--- BEGIN BENCHMARK ---")
 
 	// Start the events processor
 	log.Println("Starting events processor")
@@ -154,7 +154,7 @@ func (s *Sender) Run(ctx context.Context) {
 	// Run all pace configurations
 	benchmarkBeginning := time.Now()
 	for i, pace := range s.paceSpecs {
-		log.Printf("Starting pace %d° at %v rps for %v seconds\n", i+1, pace.Rps, pace.Duration)
+		log.Printf("Starting pace %d° at %v rps for %v seconds", i+1, pace.Rps, pace.Duration)
 		s.loadGenerator.RunPace(i, pace, s.msgSize)
 
 		// Wait for flush
@@ -171,7 +171,7 @@ func (s *Sender) Run(ctx context.Context) {
 
 	s.loadGenerator.SendEndEvent()
 
-	log.Printf("Benchmark completed in %v\n", time.Since(benchmarkBeginning))
+	log.Printf("Benchmark completed in %v", time.Since(benchmarkBeginning))
 
 	s.closeChannels()
 
@@ -179,9 +179,9 @@ func (s *Sender) Run(ctx context.Context) {
 
 	log.Println("Sending collected data to the aggregator")
 
-	log.Printf("%-15s: %d\n", "Sent count", len(s.sentEvents.Events))
-	log.Printf("%-15s: %d\n", "Accepted count", len(s.acceptedEvents.Events))
-	log.Printf("%-15s: %d\n", "Failed count", len(s.failedEvents.Events))
+	log.Printf("%-15s: %d", "Sent count", len(s.sentEvents.Events))
+	log.Printf("%-15s: %d", "Accepted count", len(s.acceptedEvents.Events))
+	log.Printf("%-15s: %d", "Failed count", len(s.failedEvents.Events))
 
 	err := s.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		s.sentEvents,
@@ -206,7 +206,7 @@ func (s *Sender) warmup(ctx context.Context, warmupSeconds uint) error {
 
 // processVegetaResult processes the results from the Vegeta attackers.
 func (s *Sender) closeChannels() {
-	log.Printf("All requests sent\n")
+	log.Printf("All requests sent")
 
 	close(s.sentCh)
 	close(s.acceptedCh)
@@ -215,7 +215,7 @@ func (s *Sender) closeChannels() {
 	// assume all responses are received after a certain time
 	time.Sleep(8 * time.Second)
 
-	log.Printf("All channels closed\n")
+	log.Printf("All channels closed")
 }
 
 // processEvents keeps a record of all events (sent, accepted, failed, received).

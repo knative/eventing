@@ -88,7 +88,7 @@ func (r *Receiver) Run(ctx context.Context) {
 
 	log.Println("Receiver closed")
 
-	log.Printf("%-15s: %d\n", "Received count", len(r.receivedEvents.Events))
+	log.Printf("%-15s: %d", "Received count", len(r.receivedEvents.Events))
 
 	err := r.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		r.receivedEvents,
