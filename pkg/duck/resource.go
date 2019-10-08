@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
@@ -43,6 +44,8 @@ type ResourceTracker interface {
 	// TrackInNamespace returns a function that can be used to watch arbitrary Resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
 	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
+	// OnChanged is called when the particular obj changes.
+	OnChanged(obj interface{})
 }
 
 // resourceInformer is a concrete implementation of ResourceInformer. It caches informers and
@@ -68,7 +71,7 @@ func (i *resourceInformer) NewTracker(callback func(types.NamespacedName), lease
 	return &resourceTracker{
 		informer: i,
 		tracker:  tracker.New(callback, lease),
-		concrete: map[schema.GroupVersionResource]struct{}{},
+		concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
 	}
 }
 
@@ -76,7 +79,7 @@ type resourceTracker struct {
 	informer *resourceInformer
 	tracker  tracker.Interface
 
-	concrete     map[schema.GroupVersionResource]struct{}
+	concrete     map[schema.GroupVersionResource]cache.SharedIndexInformer
 	concreteLock sync.RWMutex
 }
 
@@ -113,7 +116,7 @@ func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 			gvk,
 		),
 	))
-	t.concrete[gvr] = struct{}{}
+	t.concrete[gvr] = informer
 	return nil
 }
 
@@ -128,4 +131,9 @@ func (t *resourceTracker) TrackInNamespace(obj metav1.Object) func(corev1.Object
 		}
 		return t.tracker.Track(ref, obj)
 	}
+}
+
+// OnChanged satisfies the ResourceTracker interface.
+func (t *resourceTracker) OnChanged(obj interface{}) {
+	t.tracker.OnChanged(obj)
 }
