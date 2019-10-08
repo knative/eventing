@@ -47,6 +47,8 @@ var (
 	expectRecords uint
 	listenAddr    string
 	makoTags      string
+	benchmarkKey  string
+	benchmarkName string
 )
 
 func init() {
@@ -66,6 +68,8 @@ func init() {
 	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
 	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark"+
 		" specific Mako tags.")
+	flag.StringVar(&benchmarkKey, "benchmark-key", "", "Benchmark key")
+	flag.StringVar(&benchmarkName, "benchmark-name", "", "Benchmark name")
 }
 
 type testExecutor interface {
