@@ -68,7 +68,7 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 		t.Header.Set("Ce-Source", cet.eventSource)
 		t.Header.Set("Ce-Specversion", "0.2")
 
-		t.Header.Set("Content-Type", "text/plain")
+		t.Header.Set("Content-Type", "application/json")
 
 		t.Body = []byte(generateRandString(cet.msgSize))
 
