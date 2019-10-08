@@ -81,7 +81,7 @@ func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 	t.concreteLock.Lock()
 	defer t.concreteLock.Unlock()
 	// Now that we have acquired the write lock, make sure no one has added tracking handlers.
-	if _, present := t.concrete[gvr]; present {
+	if _, present = t.concrete[gvr]; present {
 		return nil
 	}
 	informer, _, err := t.informerFactory.Get(gvr)
