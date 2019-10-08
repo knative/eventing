@@ -75,14 +75,18 @@ func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
 }
 
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
+//
+// The JSON names of the fields are weird because we want a specific order when pretty printing
+// JSON. The JSON will be printed in alphabetical order, so we are imposing a certain order by
+// prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type TestSpanTree struct {
-	Note                     string            `json:"aaNote,omitempty"`
-	Root                     bool              `json:"root,omitempty"`
-	Kind                     model.Kind        `json:"aKind,omitempty"`
-	LocalEndpointServiceName string            `json:"aName,omitempty"`
-	Tags                     map[string]string `json:"tags,omitempty"`
+	Note                     string            `json:"a_Note,omitempty"`
+	Root                     bool              `json:"b_Root,omitempty"`
+	Kind                     model.Kind        `json:"c_Kind,omitempty"`
+	LocalEndpointServiceName string            `json:"d_Name,omitempty"`
+	Tags                     map[string]string `json:"e_Tags,omitempty"`
 
-	Children []TestSpanTree `json:"zChildren,omitempty"`
+	Children []TestSpanTree `json:"z_Children,omitempty"`
 }
 
 func (t TestSpanTree) String() string {
@@ -90,6 +94,16 @@ func (t TestSpanTree) String() string {
 	return string(b)
 }
 
+// SortChildren attempts to sort the children of this TestSpanTree. The children are siblings, order
+// does not actually matter. TestSpanTree.Matches() correctly handles this, by matching in any
+// order. SortChildren() is most useful before JSON pretty printing the structure and comparing
+// manually.
+//
+// The order it uses:
+//   1. Shorter children first.
+//   2. Span kind.
+//   3. "http.url", "http.host", "http.path" tag presence and values.
+// If all of those are equal, then arbitrarily chose the earlier index.
 func (t *TestSpanTree) SortChildren() {
 	for _, child := range t.Children {
 		child.SortChildren()
@@ -192,8 +206,7 @@ func (t TestSpanTree) Matches(actual SpanTree) error {
 		return fmt.Errorf("unexpected number of spans. got %d want %d", g, w)
 	}
 	t.SortChildren()
-	err := traceTreeMatches(".", t, actual)
-	if err != nil {
+	if err := traceTreeMatches(".", t, actual); err != nil {
 		return fmt.Errorf("spanTree did not match: %v. \n*****Actual***** %v\n*****Expected***** %v", err, actual.ToTestSpanTree().String(), t.String())
 	}
 	return nil

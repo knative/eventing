@@ -97,7 +97,7 @@ func (client *Client) CreateSubscriptionsOrFail(
 }
 
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
-func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
+func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta) *v1alpha1.Broker {
 	namespace := client.Namespace
 	broker := resources.Broker(name, resources.WithChannelTemplateForBroker(*channelTypeMeta))
 
@@ -108,6 +108,7 @@ func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.Ty
 		client.T.Fatalf("Failed to create broker %q: %v", name, err)
 	}
 	client.Tracker.AddObj(broker)
+	return broker
 }
 
 // CreateBrokersOrFail will create a list of Brokers.

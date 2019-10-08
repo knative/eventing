@@ -145,7 +145,7 @@ func (t *Tracker) WaitForKResourcesReady() error {
 	t.logf("Waiting for all KResources to become ready")
 	for _, metaResource := range t.resourcesToCheckStatus {
 		if err := base.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
-			return fmt.Errorf("waiting for %+v to become ready: %v", metaResource, err)
+			return fmt.Errorf("failed waiting for %+v to become ready: %v", metaResource, err)
 		}
 	}
 	return nil
