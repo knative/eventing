@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/cache"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
@@ -50,9 +49,6 @@ type ResourceTracker interface {
 // ensures TypeMeta.
 type resourceInformer struct {
 	duck duck.InformerFactory
-
-	concrete     map[schema.GroupVersionResource]cache.SharedIndexInformer
-	concreteLock sync.RWMutex
 }
 
 // NewResourceInformer creates a new ResourceInformer.
@@ -64,7 +60,6 @@ func NewResourceInformer(ctx context.Context) ResourceInformer {
 			ResyncPeriod: controller.GetResyncPeriod(ctx),
 			StopChannel:  ctx.Done(),
 		},
-		concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
 	}
 }
 

@@ -103,8 +103,7 @@ func TestResourceTracker(t *testing.T) {
 				fif.err = tc.informerFactoryError
 			}
 			ri := &resourceInformer{
-				duck:     fif,
-				concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
+				duck: fif,
 			}
 			rt := ri.NewTracker(func(types.NamespacedName) {}, time.Minute)
 			track := rt.TrackInNamespace(&corev1.Service{
