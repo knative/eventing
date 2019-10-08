@@ -57,22 +57,6 @@ If you have set up a running environment that meets
 [the e2e test environment requirements](#environment-requirements), you can run
 with `test/e2e-tests.sh --run-tests --skip-knative-setup`.
 
-### Performance tests
-
-[`performance-tests.sh`](./performance-tests.sh) is the entry point for running
-all performance tests.
-
-You can run it simply with:
-
-```shell
-test/performance-tests.sh
-```
-
-The steps and flags are exactly the same as e2e tests described above. After the
-tests are done, test results named as `artifacts` will be saved under
-`./performance`. You can also check the historic test result through
-[testgrid](https://testgrid.knative.dev/eventing#performance).
-
 ## Running tests with `go test` command
 
 ### Running unit tests

@@ -121,7 +121,7 @@ function delete_benchmark_resources() {
 
   echo ">> Delete all existing jobs and test resources"
   kubectl delete job --all
-  ko delete -f "${TEST_ROOT_PATH}/${name}/${variant}/" || abort "Failed to delete ${name}/${variant} resources"
+  ko delete -f "${TEST_ROOT_PATH}/${name}/${variant}/"
 }
 
 # Apply all the benchmark resources
