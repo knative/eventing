@@ -57,7 +57,6 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 	serviceInformer := service.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -73,16 +72,8 @@ func NewController(
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		// Call the tracker's OnChanged method, but we've seen the objects
-		// coming through this path missing TypeMeta, so ensure it is properly
-		// populated.
-		controller.EnsureTypeMeta(
-			r.resourceTracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
-		),
-	))
+	r.resourceTracker = duck.NewTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+
 	r.kresourceInformerFactory = KResourceTypedInformerFactory(ctx)
 
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

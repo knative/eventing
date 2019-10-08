@@ -22,7 +22,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 )
 
-// MockResourceTracker is a mock AddressableTracker.
+// MockResourceTracker is a mock ResourceTracker.
 type MockResourceTracker struct {
 	err error
 }

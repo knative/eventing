@@ -34,50 +34,30 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
-// ResourceInformer is an informer that allows tracking arbitrary Resources.
-type ResourceInformer interface {
-	NewTracker(callback func(types.NamespacedName), lease time.Duration) ResourceTracker
-}
-
 // ResourceTracker is a tracker capable of tracking Resources.
 type ResourceTracker interface {
 	// TrackInNamespace returns a function that can be used to watch arbitrary Resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
 	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
-	// OnChanged is called when the particular obj changes.
-	OnChanged(obj interface{})
 }
 
-// resourceInformer is a concrete implementation of ResourceInformer. It caches informers and
-// ensures TypeMeta.
-type resourceInformer struct {
-	duck duck.InformerFactory
-}
-
-// NewResourceInformer creates a new ResourceInformer.
-func NewResourceInformer(ctx context.Context) ResourceInformer {
-	return &resourceInformer{
-		duck: &duck.TypedInformerFactory{
+// NewTracker creates a new ResourceTracker, backed by a TypedInformerFactory.
+func NewTracker(ctx context.Context, callback func(types.NamespacedName), lease time.Duration) ResourceTracker {
+	return &resourceTracker{
+		informerFactory: &duck.TypedInformerFactory{
 			Client:       dynamicclient.Get(ctx),
 			Type:         &duckv1alpha1.Resource{},
 			ResyncPeriod: controller.GetResyncPeriod(ctx),
 			StopChannel:  ctx.Done(),
 		},
-	}
-}
-
-// NewTracker creates a new ResourceTracker, backed by this ResourceInformer.
-func (i *resourceInformer) NewTracker(callback func(types.NamespacedName), lease time.Duration) ResourceTracker {
-	return &resourceTracker{
-		informer: i,
 		tracker:  tracker.New(callback, lease),
 		concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
 	}
 }
 
 type resourceTracker struct {
-	informer *resourceInformer
-	tracker  tracker.Interface
+	informerFactory duck.InformerFactory
+	tracker         tracker.Interface
 
 	concrete     map[schema.GroupVersionResource]cache.SharedIndexInformer
 	concreteLock sync.RWMutex
@@ -104,7 +84,7 @@ func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 	if _, present := t.concrete[gvr]; present {
 		return nil
 	}
-	informer, _, err := t.informer.duck.Get(gvr)
+	informer, _, err := t.informerFactory.Get(gvr)
 	if err != nil {
 		return err
 	}
@@ -131,9 +111,4 @@ func (t *resourceTracker) TrackInNamespace(obj metav1.Object) func(corev1.Object
 		}
 		return t.tracker.Track(ref, obj)
 	}
-}
-
-// OnChanged satisfies the ResourceTracker interface.
-func (t *resourceTracker) OnChanged(obj interface{}) {
-	t.tracker.OnChanged(obj)
 }
