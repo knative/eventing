@@ -72,7 +72,7 @@ func NewController(
 
 	// Tracker is used to notify us that a Trigger's Broker has changed so that
 	// we can reconcile.
-	r.resourceTracker = duck.NewTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	r.kresourceInformerFactory = KResourceTypedInformerFactory(ctx)
 

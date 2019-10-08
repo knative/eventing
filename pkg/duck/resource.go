@@ -41,8 +41,8 @@ type ResourceTracker interface {
 	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
 }
 
-// NewTracker creates a new ResourceTracker, backed by a TypedInformerFactory.
-func NewTracker(ctx context.Context, callback func(types.NamespacedName), lease time.Duration) ResourceTracker {
+// NewResourceTracker creates a new ResourceTracker, backed by a TypedInformerFactory.
+func NewResourceTracker(ctx context.Context, callback func(types.NamespacedName), lease time.Duration) ResourceTracker {
 	return &resourceTracker{
 		informerFactory: &duck.TypedInformerFactory{
 			Client:       dynamicclient.Get(ctx),

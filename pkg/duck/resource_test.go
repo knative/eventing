@@ -93,7 +93,7 @@ func TestResourceTracker(t *testing.T) {
 				fif.err = tc.informerFactoryError
 			}
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
-			tr := NewTracker(ctx, func(types.NamespacedName) {}, time.Minute)
+			tr := NewResourceTracker(ctx, func(types.NamespacedName) {}, time.Minute)
 			rt, _ := tr.(*resourceTracker)
 			rt.informerFactory = fif
 			track := rt.TrackInNamespace(&corev1.Service{

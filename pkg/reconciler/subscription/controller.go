@@ -60,7 +60,7 @@ func NewController(
 
 	// AddressableTracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.resourceTracker = duck.NewTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }
