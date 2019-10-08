@@ -77,34 +77,6 @@ func (i *resourceInformer) NewTracker(callback func(types.NamespacedName), lease
 	}
 }
 
-// ensureInformer ensures that there is an informer watching on a concrete GVK.
-func (i *resourceInformer) ensureInformer(ref corev1.ObjectReference) (cache.SharedIndexInformer, error) {
-	gvk := ref.GroupVersionKind()
-	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-
-	i.concreteLock.RLock()
-	informer, present := i.concrete[gvr]
-	i.concreteLock.RUnlock()
-	if present {
-		// There is already an informer running for this GVR, we don't need or want to make
-		// a second one.
-		return informer, nil
-	}
-	// There is not an informer for this GVR, make one.
-	i.concreteLock.Lock()
-	defer i.concreteLock.Unlock()
-	// Now that we have acquired the write lock, make sure no one has made the informer.
-	if informer, present = i.concrete[gvr]; present {
-		return informer, nil
-	}
-	informer, _, err := i.duck.Get(gvr)
-	if err != nil {
-		return nil, err
-	}
-	i.concrete[gvr] = informer
-	return informer, nil
-}
-
 type resourceTracker struct {
 	informer *resourceInformer
 	tracker  tracker.Interface
@@ -131,10 +103,10 @@ func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 	t.concreteLock.Lock()
 	defer t.concreteLock.Unlock()
 	// Now that we have acquired the write lock, make sure no one has added tracking handlers.
-	if _, present = t.concrete[gvr]; present {
+	if _, present := t.concrete[gvr]; present {
 		return nil
 	}
-	informer, err := t.informer.ensureInformer(ref)
+	informer, _, err := t.informer.duck.Get(gvr)
 	if err != nil {
 		return err
 	}
