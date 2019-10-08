@@ -70,7 +70,7 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 
 		t.Header.Set("Content-Type", "application/json")
 
-		t.Body = []byte(generateRandString(cet.msgSize))
+		t.Body = []byte("\"" + generateRandString(cet.msgSize) + "\"")
 
 		return nil
 	}
