@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-const defaultDuration = 10 * time.Second
+const defaultPaceDuration = 10 * time.Second
 
 type PaceSpec struct {
 	Rps      int
@@ -59,7 +59,7 @@ func ParsePaceSpec(pace string) ([]PaceSpec, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid format %q: %v", ps, err)
 		}
-		duration := defaultDuration
+		duration := defaultPaceDuration
 
 		if len(ps) == 2 {
 			durationSec, err := strconv.Atoi(ps[1])

@@ -18,13 +18,14 @@ package performance
 
 import (
 	"flag"
+	"log"
+	"strings"
+	"sync"
+
 	"knative.dev/eventing/test/common/performance/aggregator"
 	"knative.dev/eventing/test/common/performance/receiver"
 	"knative.dev/eventing/test/common/performance/sender"
 	"knative.dev/pkg/signals"
-	"log"
-	"strings"
-	"sync"
 )
 
 //go:generate protoc -I ./event_state --go_out=plugins=grpc:./event_state ./event_state/event_state.proto
@@ -60,8 +61,7 @@ func DeclareFlags() {
 	// aggregator flags
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 2, "Number of expected events records before aggregating data.")
-	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark"+
-		" specific Mako tags.")
+	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark specific Mako tags.")
 	flag.StringVar(&benchmarkKey, "benchmark-key", "TODO", "Benchmark key")
 	flag.StringVar(&benchmarkName, "benchmark-name", "TODO", "Benchmark name")
 }
@@ -138,5 +138,4 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 	waitingExecutors.Wait()
 
 	log.Println("Performance image completed")
-
 }

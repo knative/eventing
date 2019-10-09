@@ -19,8 +19,9 @@ package event_state
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 const publishTimeout = 1 * time.Minute

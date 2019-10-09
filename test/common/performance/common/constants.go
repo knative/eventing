@@ -16,8 +16,10 @@ limitations under the License.
 
 package common
 
-const WarmupEventType = "warmup.perf-test"
-const MeasureEventType = "measure.perf-test"
-const GCEventType = "gc.perf-test"
-const EndEventType = "end.perf-test"
-const CEReceiverPort = "8080"
+const (
+	WarmupEventType  = "warmup.perf-test"
+	MeasureEventType = "measure.perf-test"
+	GCEventType      = "gc.perf-test"
+	EndEventType     = "end.perf-test"
+	CEReceiverPort   = "8080"
+)

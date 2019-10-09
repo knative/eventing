@@ -19,16 +19,17 @@ package receiver
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
+	"runtime"
+	"time"
+
 	"github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
-	"log"
-	"net"
-	"runtime"
-	"time"
 )
 
 const shutdownWaitTime = time.Second * 5
@@ -131,11 +132,12 @@ func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
 // processReceiveEvent processes the event received by the CloudEvents receiver.
 func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 	t := r.typeExtractor(event)
-	if t == common.MeasureEventType {
+	switch {
+	case t == common.MeasureEventType:
 		r.receivedCh <- common.EventTimestamp{EventId: r.idExtractor(event), At: ptypes.TimestampNow()}
-	} else if t == common.GCEventType {
+	case t == common.GCEventType:
 		runtime.GC()
-	} else if t == common.EndEventType {
+	case t == common.EndEventType:
 		// Wait a bit so all messages on wire are processed
 		time.AfterFunc(shutdownWaitTime, func() {
 			close(r.endCh)
