@@ -49,7 +49,7 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: eventing-controller-source-resolver
+  name: eventing-controller-source-observer
   labels:
     eventing.knative.dev/release: devel
 subjects:
@@ -58,7 +58,7 @@ subjects:
     namespace: knative-eventing
 roleRef:
   kind: ClusterRole
-  name: source-resolver
+  name: source-observer
   apiGroup: rbac.authorization.k8s.io
 
 ---
