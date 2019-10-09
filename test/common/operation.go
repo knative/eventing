@@ -17,6 +17,7 @@ limitations under the License.
 package common
 
 import (
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,9 +143,11 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 	if err := client.Tracker.WaitForKResourcesReady(); err != nil {
 		return err
 	}
-	// explicitly wait for all pods to become ready.
-	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
-		return err
+	// Explicitly wait for all pods that were created directly by this test to become ready.
+	for _, n := range client.podsCreated {
+		if err := pkgTest.WaitForPodRunning(client.Kube, n, client.Namespace); err != nil {
+			return fmt.Errorf("created Pod %q did not become ready: %v", n, err)
+		}
 	}
 	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness.
 	// Will delete it after we find the root cause and fix.
