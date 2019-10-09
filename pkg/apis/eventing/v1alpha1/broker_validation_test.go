@@ -58,7 +58,7 @@ func TestBrokerImmutableFields(t *testing.T) {
 	}
 	diff, err := kmp.ShortDiff(original.Spec.ChannelTemplate, current.Spec.ChannelTemplate)
 	if err != nil {
-		t.Fatalf("failed to diff current and origional Broker ChannelTemplate: %v", err)
+		t.Fatalf("failed to diff current and original Broker ChannelTemplate: %v", err)
 	}
 
 	tests := []struct {
@@ -69,6 +69,9 @@ func TestBrokerImmutableFields(t *testing.T) {
 		name:    "invalid original",
 		og:      &noBroker{},
 		wantErr: &apis.FieldError{Message: "The provided original was not a Broker"},
+	}, {
+		name:    "nil original",
+		wantErr: nil,
 	}, {
 		name:    "no ChannelTemplateSpec mutation",
 		og:      current,

@@ -55,6 +55,9 @@ func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis
 }
 
 func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
+	if og == nil {
+		return nil
+	}
 	original, ok := og.(*Broker)
 	if !ok {
 		return &apis.FieldError{Message: "The provided original was not a Broker"}
