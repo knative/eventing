@@ -23,6 +23,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/test/base"
@@ -96,7 +97,7 @@ func (client *Client) CreateSubscriptionsOrFail(
 }
 
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
-func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
+func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta) *v1alpha1.Broker {
 	namespace := client.Namespace
 	broker := resources.Broker(name, resources.WithChannelTemplateForBroker(*channelTypeMeta))
 
@@ -107,6 +108,7 @@ func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.Ty
 		client.T.Fatalf("Failed to create broker %q: %v", name, err)
 	}
 	client.Tracker.AddObj(broker)
+	return broker
 }
 
 // CreateBrokersOrFail will create a list of Brokers.
@@ -117,7 +119,7 @@ func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav
 }
 
 // CreateTriggerOrFail will create a Trigger or fail the test if there is an error.
-func (client *Client) CreateTriggerOrFail(name string, options ...resources.TriggerOption) {
+func (client *Client) CreateTriggerOrFail(name string, options ...resources.TriggerOption) *v1alpha1.Trigger {
 	namespace := client.Namespace
 	trigger := resources.Trigger(name, options...)
 
@@ -128,6 +130,7 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
 	}
 	client.Tracker.AddObj(trigger)
+	return trigger
 }
 
 // CreateSequenceOrFail will create a Sequence or fail the test if there is an error.

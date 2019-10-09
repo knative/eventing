@@ -25,7 +25,7 @@ func TestBrokerIngressName(t *testing.T) {
 		Namespace:  testNS,
 		BrokerName: broker,
 	}
-	if got, want := BrokerIngressName(args), "my-broker-broker-ingress.test-namespace"; got != want {
+	if got, want := BrokerIngressName(args), "my-broker-broker.test-namespace"; got != want {
 		t.Errorf("BrokerIngressName = %q, want %q", got, want)
 	}
 }

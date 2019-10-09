@@ -27,13 +27,14 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 	pkgtracing "knative.dev/pkg/tracing"
 )
@@ -69,7 +70,7 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespa
 		return nil, err
 	}
 
-	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
 	if err != nil {
 		return nil, err
 	}
@@ -252,10 +253,9 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	}
 
 	sendingCTX := utils.ContextFrom(tctx, subscriberURI)
-	sendingCTX, err = tracing.AddSpanFromTraceparentAttribute(sendingCTX, "name", *event)
-	if err != nil {
-		r.logger.Info("Unable to attach trace", zap.Error(err))
-	}
+	// Due to an issue in utils.ContextFrom, we don't retain the original trace context from ctx, so
+	// bring it in manually.
+	sendingCTX = trace.NewContext(sendingCTX, trace.FromContext(ctx))
 
 	start := time.Now()
 	rctx, replyEvent, err := r.ceClient.Send(sendingCTX, *event)

@@ -25,6 +25,12 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewDefaultClientGivenHttpTransport(t)
+}
+
+// NewDefaultClientGivenHttpTransport creates a new CloudEvents client using the provided HTTP
+// transport. Note that it does modify the provided HTTP Transport by adding tracing to its Client.
+func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport) (cloudevents.Client, error) {
 	// Add output tracing.
 	t.Client = &gohttp.Client{
 		Transport: &ochttp.Transport{
