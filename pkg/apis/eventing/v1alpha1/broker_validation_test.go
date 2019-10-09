@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 // No-op test because method does nothing.
@@ -38,11 +39,58 @@ func TestBrokerSpecValidation(t *testing.T) {
 	_ = bs.Validate(context.TODO())
 }
 
-// No-op test because method does nothing.
+type noBroker struct{}
+
+func (nb noBroker) CheckImmutableFields(_ context.Context, _ apis.Immutable) *apis.FieldError {
+	return nil
+}
+
 func TestBrokerImmutableFields(t *testing.T) {
-	original := &Broker{}
-	current := &Broker{}
-	_ = current.CheckImmutableFields(context.TODO(), original)
+	original := &Broker{
+		Spec: BrokerSpec{
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-kind"}},
+		},
+	}
+	current := &Broker{
+		Spec: BrokerSpec{
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-other-kind"}},
+		},
+	}
+	diff, err := kmp.ShortDiff(original.Spec.ChannelTemplate, current.Spec.ChannelTemplate)
+	if err != nil {
+		t.Fatalf("failed to diff current and origional Broker ChannelTemplate: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		og      apis.Immutable
+		wantErr *apis.FieldError
+	}{{
+		name:    "invalid original",
+		og:      &noBroker{},
+		wantErr: &apis.FieldError{Message: "The provided original was not a Broker"},
+	}, {
+		name:    "no ChannelTemplateSpec mutation",
+		og:      current,
+		wantErr: nil,
+	}, {
+		name: "ChannelTemplateSpec mutated",
+		og:   original,
+		wantErr: &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec", "channelTemplate"},
+			Details: diff,
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotErr := current.CheckImmutableFields(context.TODO(), test.og)
+			if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
+				t.Errorf("Broker.CheckImmutableFields (-want, +got) = %v", diff)
+			}
+		})
+	}
 }
 
 func TestValidSpec(t *testing.T) {
