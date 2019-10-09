@@ -52,7 +52,6 @@ func NewController(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -63,7 +62,7 @@ func NewController(
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")

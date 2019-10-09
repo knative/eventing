@@ -44,7 +44,6 @@ func NewController(
 ) *controller.Impl {
 
 	channelInformer := channelinformer.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -52,7 +51,7 @@ func NewController(
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	r.Logger.Info("Setting up event handlers")
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

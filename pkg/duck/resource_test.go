@@ -71,16 +71,6 @@ func newFakeInformerFactory() *fakeInformerFactory {
 	}
 }
 
-func TestNewResourceInformer(t *testing.T) {
-	ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
-	ri := NewResourceInformer(ctx)
-	switch ri.(type) {
-	case ResourceInformer:
-	default:
-		t.Errorf("Expected a ResourceInformer, actually: %T", ri)
-	}
-}
-
 func TestResourceTracker(t *testing.T) {
 	testCases := map[string]struct {
 		informerFactoryError error
@@ -102,11 +92,10 @@ func TestResourceTracker(t *testing.T) {
 			if tc.informerFactoryError != nil {
 				fif.err = tc.informerFactoryError
 			}
-			ri := &resourceInformer{
-				duck:     fif,
-				concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
-			}
-			rt := ri.NewTracker(func(types.NamespacedName) {}, time.Minute)
+			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
+			tr := NewResourceTracker(ctx, func(types.NamespacedName) {}, time.Minute)
+			rt, _ := tr.(*resourceTracker)
+			rt.informerFactory = fif
 			track := rt.TrackInNamespace(&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,

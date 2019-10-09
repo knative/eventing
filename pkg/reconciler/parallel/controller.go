@@ -47,7 +47,6 @@ func NewController(
 
 	parallelInformer := parallel.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -58,7 +57,7 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	parallelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Parallel, so that

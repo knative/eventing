@@ -47,7 +47,6 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	customResourceDefinitionInformer := crd.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -61,7 +60,7 @@ func NewController(
 
 	// AddressableTracker is used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }
