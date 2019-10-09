@@ -41,6 +41,8 @@ var (
 	expectRecords uint
 	listenAddr    string
 	makoTags      string
+	benchmarkKey  string
+	benchmarkName string
 )
 
 func DeclareFlags() {
@@ -59,6 +61,8 @@ func DeclareFlags() {
 	flag.UintVar(&expectRecords, "expect-records", 2, "Number of expected events records before aggregating data.")
 	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark"+
 		" specific Mako tags.")
+	flag.StringVar(&benchmarkKey, "benchmark-key", "", "Benchmark key")
+	flag.StringVar(&benchmarkName, "benchmark-name", "", "Benchmark name")
 }
 
 func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor receiver.TypeExtractor, idExtractor receiver.IdExtractor) {
@@ -119,7 +123,15 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 	if strings.Contains(roles, "aggregator") {
 		log.Println("Creating an aggregator")
 
-		aggr, err := aggregator.NewAggregator(listenAddr, expectRecords, strings.Split(makoTags, ","))
+		if benchmarkName == "" {
+			panic("--benchmark-name not set!")
+		}
+
+		if benchmarkKey == "" {
+			panic("--benchmark-key not set!")
+		}
+
+		aggr, err := aggregator.NewAggregator(benchmarkKey, benchmarkName, listenAddr, expectRecords, strings.Split(makoTags, ","))
 		if err != nil {
 			panic(err)
 		}
