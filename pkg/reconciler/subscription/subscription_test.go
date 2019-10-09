@@ -789,7 +789,7 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:             listers.GetSubscriptionLister(),
-			resourceTracker:                &MockResourceTracker{},
+			resourceTracker:                &MockListableTracker{},
 			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	}, false, logger))

@@ -71,7 +71,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	subscriptionLister             listers.SubscriptionLister
 	customResourceDefinitionLister apiextensionslisters.CustomResourceDefinitionLister
-	resourceTracker                eventingduck.ResourceTracker
+	resourceTracker                eventingduck.ListableTracker
 }
 
 // Check that our Reconciler implements controller.Reconciler

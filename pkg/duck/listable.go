@@ -18,6 +18,8 @@ package duck
 
 import (
 	"context"
+	"fmt"
+	"knative.dev/pkg/apis"
 	"sync"
 	"time"
 
@@ -27,45 +29,53 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/tracker"
 )
 
-// ResourceTracker is a tracker capable of tracking Resources.
-type ResourceTracker interface {
-	// TrackInNamespace returns a function that can be used to watch arbitrary Resources in the same
+// ListableTracker is a tracker capable of tracking any object that implements the apis.Listable interface.
+type ListableTracker interface {
+	// TrackInNamespace returns a function that can be used to watch arbitrary apis.Listable resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
 	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
+	// ListerFor returns the lister for the object reference. It returns an error if the lister does not exist.
+	ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error)
+	// InformerFor returns the informer for the object reference. It returns an error if the informer does not exist.
+	InformerFor(ref corev1.ObjectReference) (cache.SharedIndexInformer, error)
 }
 
-// NewResourceTracker creates a new ResourceTracker, backed by a TypedInformerFactory.
-func NewResourceTracker(ctx context.Context, callback func(types.NamespacedName), lease time.Duration) ResourceTracker {
-	return &resourceTracker{
+// NewListableTracker creates a new ListableTracker, backed by a TypedInformerFactory.
+func NewListableTracker(ctx context.Context, listable apis.Listable, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
+	return &listableTracker{
 		informerFactory: &duck.TypedInformerFactory{
 			Client:       dynamicclient.Get(ctx),
-			Type:         &duckv1alpha1.Resource{},
+			Type:         listable,
 			ResyncPeriod: controller.GetResyncPeriod(ctx),
 			StopChannel:  ctx.Done(),
 		},
 		tracker:  tracker.New(callback, lease),
-		concrete: map[schema.GroupVersionResource]cache.SharedIndexInformer{},
+		concrete: map[schema.GroupVersionResource]informerListerPair{},
 	}
 }
 
-type resourceTracker struct {
+type listableTracker struct {
 	informerFactory duck.InformerFactory
 	tracker         tracker.Interface
 
-	concrete     map[schema.GroupVersionResource]cache.SharedIndexInformer
+	concrete     map[schema.GroupVersionResource]informerListerPair
 	concreteLock sync.RWMutex
 }
 
+type informerListerPair struct {
+	informer cache.SharedIndexInformer
+	lister   cache.GenericLister
+}
+
 // ensureInformer ensures that there is an informer watching and sending events to tracker for the
-// concrete GVK.
-func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
+// concrete GVK. It also ensures that there is the corresponding lister for that informer.
+func (t *listableTracker) ensureTracking(ref corev1.ObjectReference) error {
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
@@ -84,7 +94,7 @@ func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 	if _, present = t.concrete[gvr]; present {
 		return nil
 	}
-	informer, _, err := t.informerFactory.Get(gvr)
+	informer, lister, err := t.informerFactory.Get(gvr)
 	if err != nil {
 		return err
 	}
@@ -96,12 +106,12 @@ func (t *resourceTracker) ensureTracking(ref corev1.ObjectReference) error {
 			gvk,
 		),
 	))
-	t.concrete[gvr] = informer
+	t.concrete[gvr] = informerListerPair{informer: informer, lister: lister}
 	return nil
 }
 
-// TrackInNamespace satisfies the ResourceTracker interface.
-func (t *resourceTracker) TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error {
+// TrackInNamespace satisfies the ListableTracker interface.
+func (t *listableTracker) TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error {
 	return func(ref corev1.ObjectReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
 		// specify the namespace.
@@ -111,4 +121,32 @@ func (t *resourceTracker) TrackInNamespace(obj metav1.Object) func(corev1.Object
 		}
 		return t.tracker.Track(ref, obj)
 	}
+}
+
+// ListerFor satisfies the ListableTracker interface.
+func (t *listableTracker) ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error) {
+	gvk := ref.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+
+	t.concreteLock.RLock()
+	informerListerPair, present := t.concrete[gvr]
+	t.concreteLock.RUnlock()
+	if !present {
+		return nil, fmt.Errorf("no lister available for GVR %s", gvr.String())
+	}
+	return informerListerPair.lister, nil
+}
+
+// InformerFor satisfies the ListableTracker interface.
+func (t *listableTracker) InformerFor(ref corev1.ObjectReference) (cache.SharedIndexInformer, error) {
+	gvk := ref.GroupVersionKind()
+	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
+
+	t.concreteLock.RLock()
+	informerListerPair, present := t.concrete[gvr]
+	t.concreteLock.RUnlock()
+	if !present {
+		return nil, fmt.Errorf("no informer available for GVR %s", gvr.String())
+	}
+	return informerListerPair.informer, nil
 }

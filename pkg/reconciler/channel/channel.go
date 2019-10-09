@@ -58,7 +58,7 @@ type Reconciler struct {
 
 	// listers index properties about resources
 	channelLister   listers.ChannelLister
-	resourceTracker eventingduck.ResourceTracker
+	resourceTracker eventingduck.ListableTracker
 }
 
 // Check that our Reconciler implements controller.Reconciler

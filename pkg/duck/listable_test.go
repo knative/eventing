@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
@@ -93,8 +94,8 @@ func TestResourceTracker(t *testing.T) {
 				fif.err = tc.informerFactoryError
 			}
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme)
-			tr := NewResourceTracker(ctx, func(types.NamespacedName) {}, time.Minute)
-			rt, _ := tr.(*resourceTracker)
+			tr := NewListableTracker(ctx, &eventingduckv1alpha1.Resource{}, func(types.NamespacedName) {}, time.Minute)
+			rt, _ := tr.(*listableTracker)
 			rt.informerFactory = fif
 			track := rt.TrackInNamespace(&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{

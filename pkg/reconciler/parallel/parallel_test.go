@@ -59,7 +59,7 @@ func init() {
 
 type fakeAddressableInformer struct{}
 
-func (*fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.ResourceTracker {
+func (*fakeAddressableInformer) NewTracker(callback func(string), lease time.Duration) duck.ListableTracker {
 	return fakeResourceTracker{}
 }
 

@@ -82,7 +82,7 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewListableTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 

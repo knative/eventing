@@ -72,7 +72,7 @@ type Reconciler struct {
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister messaginglisters.SubscriptionLister
 
-	resourceTracker duck.ResourceTracker
+	resourceTracker duck.ListableTracker
 
 	ingressImage              string
 	ingressServiceAccountName string

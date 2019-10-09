@@ -51,7 +51,7 @@ func NewController(
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.resourceTracker = duck.NewListableTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	r.Logger.Info("Setting up event handlers")
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

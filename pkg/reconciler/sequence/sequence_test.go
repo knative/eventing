@@ -534,7 +534,7 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			sequenceLister:     listers.GetSequenceLister(),
-			resourceTracker:    &MockResourceTracker{},
+			resourceTracker:    &MockListableTracker{},
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false, logger))

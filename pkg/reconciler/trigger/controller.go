@@ -18,23 +18,21 @@ package trigger
 
 import (
 	"context"
-
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
 
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
-	apisduck "knative.dev/pkg/apis/duck"
-
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 const (
@@ -70,24 +68,28 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Tracker is used to notify us that a Trigger's Broker has changed so that
-	// we can reconcile.
-	r.resourceTracker = duck.NewResourceTracker(ctx, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	// Regular tracker to track static resources. In particular, it tracks Broker's changes.
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
-	r.kresourceInformerFactory = KResourceTypedInformerFactory(ctx)
+	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
+		// Call the tracker's OnChanged method, but we've seen the objects
+		// coming through this path missing TypeMeta, so ensure it is properly
+		// populated.
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
+		),
+	))
 
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
-	return impl
-}
 
-func KResourceTypedInformerFactory(ctx context.Context) apisduck.InformerFactory {
-	return &apisduck.TypedInformerFactory{
-		Client:       dynamicclient.Get(ctx),
-		Type:         &duckv1alpha1.KResource{},
-		ResyncPeriod: controller.GetResyncPeriod(ctx),
-		StopChannel:  ctx.Done(),
-	}
+	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
+	r.kresourceTracker = duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	// Dynamic tracker to track Resources. In particular, it tracks Trigger subscribers.
+	r.resourceTracker = duck.NewListableTracker(ctx, &eventingduckv1alpha1.Resource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+
+	return impl
 }

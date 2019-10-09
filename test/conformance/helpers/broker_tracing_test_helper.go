@@ -50,11 +50,6 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 	channelTypeMeta := common.GetChannelTypeMeta(channel)
 	broker := client.CreateBrokerOrFail("br", channelTypeMeta)
 
-	// TODO Remove this wait once https://github.com/knative/eventing/issues/1998 is fixed.
-	if err := client.WaitForResourceReady(broker.Name, common.BrokerTypeMeta); err != nil {
-		t.Fatalf("Broker did not become ready: %v", err)
-	}
-
 	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
 	logPod := resources.EventDetailsPod(loggerPodName)
 	client.CreatePodOrFail(logPod, common.WithService(loggerPodName))

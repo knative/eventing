@@ -19,6 +19,7 @@ package apiserversource
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/tracker"
 	"os"
 	"reflect"
 	"sync"
@@ -87,7 +88,7 @@ type Reconciler struct {
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
 
-	resourceTracker duck.ResourceTracker
+	tracker tracker.Interface
 
 	source         string
 	sinkReconciler *duck.SinkReconciler
@@ -145,8 +146,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 
 	source.Status.InitializeConditions()
 
-	track := r.resourceTracker.TrackInNamespace(source)
-
 	sinkObjRef := source.Spec.Sink
 	if sinkObjRef.Namespace == "" {
 		sinkObjRef.Namespace = source.Namespace
@@ -167,7 +166,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	}
 	// Update source status
 	source.Status.PropagateDeploymentAvailability(ra)
-	if err = track(utils.ObjectRef(ra, deploymentGVK)); err != nil {
+	if err = r.tracker.Track(utils.ObjectRef(ra, deploymentGVK), source); err != nil {
 		return fmt.Errorf("unable to track receive adapter: %v", err)
 	}
 

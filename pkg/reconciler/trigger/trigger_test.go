@@ -19,6 +19,9 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/pkg/tracker"
 	"net/url"
 	"testing"
 
@@ -28,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -42,9 +46,8 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
 
-	. "knative.dev/pkg/reconciler/testing"
-
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 var (
@@ -639,13 +642,14 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
-			triggerLister:            listers.GetTriggerLister(),
-			subscriptionLister:       listers.GetSubscriptionLister(),
-			brokerLister:             listers.GetBrokerLister(),
-			serviceLister:            listers.GetK8sServiceLister(),
-			resourceTracker:          &MockResourceTracker{},
-			kresourceInformerFactory: KResourceTypedInformerFactory(ctx),
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			triggerLister:      listers.GetTriggerLister(),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			brokerLister:       listers.GetBrokerLister(),
+			serviceLister:      listers.GetK8sServiceLister(),
+			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
+			resourceTracker:    duck.NewListableTracker(ctx, &eventingduckv1alpha1.Resource{}, func(types.NamespacedName) {}, 0),
+			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
 		}
 	},
 		false,

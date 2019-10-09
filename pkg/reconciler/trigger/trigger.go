@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"knative.dev/pkg/tracker"
 	"net/url"
 	"reflect"
 	"time"
@@ -28,9 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -44,7 +43,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
-	apisduck "knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
 )
@@ -66,12 +64,13 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	triggerLister            listers.TriggerLister
-	subscriptionLister       messaginglisters.SubscriptionLister
-	brokerLister             listers.BrokerLister
-	serviceLister            corev1listers.ServiceLister
-	resourceTracker          duck.ResourceTracker
-	kresourceInformerFactory apisduck.InformerFactory
+	triggerLister      listers.TriggerLister
+	subscriptionLister messaginglisters.SubscriptionLister
+	brokerLister       listers.BrokerLister
+	serviceLister      corev1listers.ServiceLister
+	tracker            tracker.Interface
+	kresourceTracker   duck.ListableTracker
+	resourceTracker    duck.ListableTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -142,8 +141,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
-	track := r.resourceTracker.TrackInNamespace(t)
-
 	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
 	brokerObjRef := corev1.ObjectReference{
 		Kind:       brokerGVK.Kind,
@@ -151,7 +148,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		Name:       t.Spec.Broker,
 		Namespace:  t.Namespace,
 	}
-	if err := track(brokerObjRef); err != nil {
+
+	if err := r.tracker.Track(brokerObjRef, t); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
@@ -195,7 +193,9 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, track)
+	trackResource := r.resourceTracker.TrackInNamespace(t)
+
+	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, trackResource)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err
@@ -210,25 +210,26 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
-	if err := r.checkDependencyAnnotation(t, track, ctx); err != nil {
+	if err := r.checkDependencyAnnotation(ctx, t); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *Reconciler) checkDependencyAnnotation(t *v1alpha1.Trigger, track func(corev1.ObjectReference) error, ctx context.Context) error {
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1alpha1.Trigger) error {
 	if dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]; ok {
 		dependencyObjRef, err := v1alpha1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {
 			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
 			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
 		}
-		//trigger and its dependency importer are in the same namespace, we already did the validation when we in the trigger webhook
-		if err := track(dependencyObjRef); err != nil {
+		trackKResource := r.kresourceTracker.TrackInNamespace(t)
+		// Trigger and its dependent source are in the same namespace, we already did the validation in the webhook.
+		if err := trackKResource(dependencyObjRef); err != nil {
 			return fmt.Errorf("tracking dependency: %v", err)
 		}
-		if err := r.propagateDependencyReadiness(dependencyObjRef, ctx, t); err != nil {
+		if err := r.propagateDependencyReadiness(ctx, t, dependencyObjRef); err != nil {
 			return fmt.Errorf("propagating dependency readiness: %v", err)
 
 		}
@@ -238,17 +239,11 @@ func (r *Reconciler) checkDependencyAnnotation(t *v1alpha1.Trigger, track func(c
 	return nil
 }
 
-func (r *Reconciler) propagateDependencyReadiness(dependencyObjRef corev1.ObjectReference, ctx context.Context, t *v1alpha1.Trigger) error {
-	gvk := schema.GroupVersionKind{
-		Group:   dependencyObjRef.GroupVersionKind().Group,
-		Version: dependencyObjRef.GroupVersionKind().Version,
-		Kind:    dependencyObjRef.Kind,
-	}
-	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
-	_, lister, err := r.kresourceInformerFactory.Get(gvr)
+func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1alpha1.Trigger, dependencyObjRef corev1.ObjectReference) error {
+	lister, err := r.kresourceTracker.ListerFor(dependencyObjRef)
 	if err != nil {
-		t.Status.MarkDependencyUnknown("FailedToListResource", "Failed to list resource: %v", err)
-		return fmt.Errorf("creating lister: %v", err)
+		t.Status.MarkDependencyUnknown("ListerDoesNotExist", "Failed to retrieve lister: %v", err)
+		return fmt.Errorf("retrieving lister: %v", err)
 	}
 	dependencyObj, err := lister.ByNamespace(t.GetNamespace()).Get(dependencyObjRef.Name)
 	if err != nil {

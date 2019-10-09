@@ -249,7 +249,7 @@ func TestReconcile(t *testing.T) {
 		return &Reconciler{
 			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 			channelLister:   listers.GetMessagingChannelLister(),
-			resourceTracker: &MockResourceTracker{},
+			resourceTracker: &MockListableTracker{},
 		}
 	},
 		false,

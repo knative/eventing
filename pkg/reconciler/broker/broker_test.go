@@ -809,7 +809,7 @@ func TestReconcile(t *testing.T) {
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
-			resourceTracker:           &MockResourceTracker{},
+			resourceTracker:           &MockListableTracker{},
 		}
 	},
 		false,

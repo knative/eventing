@@ -57,7 +57,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	sequenceLister     listers.SequenceLister
 	tracker            tracker.Interface
-	resourceTracker    duck.ResourceTracker
+	resourceTracker    duck.ListableTracker
 	subscriptionLister listers.SubscriptionLister
 }
 
