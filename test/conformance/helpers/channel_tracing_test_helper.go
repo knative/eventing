@@ -54,11 +54,6 @@ func tracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner,
 				client := common.Setup(st, true)
 				defer common.TearDown(client)
 
-				// Label namespace so that it creates the default broker.
-				if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
-					st.Fatalf("Error annotating namespace: %v", err)
-				}
-
 				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 				// TestMain.
 				tracinghelper.Setup(st, client)

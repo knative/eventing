@@ -46,6 +46,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		etTransformer = "transformer"
 		etLogger      = "logger"
 	)
+	client.CreateRBACResourcesForBrokers()
 	channelTypeMeta := common.GetChannelTypeMeta(channel)
 	broker := client.CreateBrokerOrFail("br", channelTypeMeta)
 
