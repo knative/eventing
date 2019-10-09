@@ -100,4 +100,7 @@ spec:
     kind: InMemoryChannel
     name: channel-imc
   subscriber:
-    uri: "http://channel-imc-consumer.default.svc.cluster.local"
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: channel-imc-consumer
