@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -28,55 +27,10 @@ import (
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
-	"knative.dev/pkg/test/zipkin"
 )
 
 func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	testCases := map[string]struct {
-		incomingTraceId bool
-		istio           bool
-	}{
-		"includes incoming trace id": {
-			incomingTraceId: true,
-		},
-	}
-
-	for n, tc := range testCases {
-		loggerPodName := "logger"
-		t.Run(n, func(t *testing.T) {
-			channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
-				// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless
-				// type.
-				t := struct{}{}
-				_ = fmt.Sprintf("%s", t)
-
-				client := common.Setup(st, true)
-				defer common.TearDown(client)
-
-				// Label namespace so that it creates the default broker.
-				if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
-					st.Fatalf("Error annotating namespace: %v", err)
-				}
-
-				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
-				// TestMain.
-				tracinghelper.Setup(st, client)
-
-				expected, mustContain := setupBrokerTracing(st, channel, client, loggerPodName, tc.incomingTraceId)
-				assertLogContents(st, client, loggerPodName, mustContain)
-				traceID := getTraceID(st, client, loggerPodName)
-				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
-				if err != nil {
-					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
-				}
-
-				tree := tracinghelper.GetTraceTree(st, trace)
-				if err := expected.Matches(tree); err != nil {
-					st.Fatalf("Trace Tree did not match expected: %v", err)
-				}
-			})
-		})
-	}
+	tracingTestHelper(t, channelTestRunner, setupBrokerTracing)
 }
 
 // setupBrokerTracing is the general setup for TestBrokerTracing. It creates the following:
@@ -92,6 +46,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		etTransformer = "transformer"
 		etLogger      = "logger"
 	)
+	client.CreateRBACResourcesForBrokers()
 	channelTypeMeta := common.GetChannelTypeMeta(channel)
 	broker := client.CreateBrokerOrFail("br", channelTypeMeta)
 
