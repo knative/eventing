@@ -103,7 +103,7 @@ func (t TestSpanTree) String() string {
 //   1. Shorter children first.
 //   2. Span kind.
 //   3. "http.url", "http.host", "http.path" tag presence and values.
-// If all of those are equal, then arbitrarily chose the earlier index.
+// If all of those are equal, then arbitrarily choose the earlier index.
 func (t *TestSpanTree) SortChildren() {
 	for _, child := range t.Children {
 		child.SortChildren()
