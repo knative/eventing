@@ -56,36 +56,36 @@ func TestBrokerImmutableFields(t *testing.T) {
 		},
 	}
 
-	tests := []struct {
-		name    string
+	tests := map[string]struct {
 		og      apis.Immutable
 		wantErr *apis.FieldError
-	}{{
-		name:    "invalid original",
-		og:      &noBroker{},
-		wantErr: &apis.FieldError{Message: "The provided original was not a Broker"},
-	}, {
-		name:    "nil original",
-		wantErr: nil,
-	}, {
-		name:    "no ChannelTemplateSpec mutation",
-		og:      current,
-		wantErr: nil,
-	}, {
-		name: "ChannelTemplateSpec mutated",
-		og:   original,
-		wantErr: &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
-			Paths:   []string{"spec", "channelTemplate"},
-			Details: `{*v1alpha1.ChannelTemplateSpec}.TypeMeta.Kind:
+	}{
+		"invalid original": {
+			og:      &noBroker{},
+			wantErr: &apis.FieldError{Message: "The provided original was not a Broker"},
+		},
+		"nil original": {
+			wantErr: nil,
+		},
+		"no ChannelTemplateSpec mutation": {
+			og:      current,
+			wantErr: nil,
+		},
+		"ChannelTemplateSpec mutated": {
+			og: original,
+			wantErr: &apis.FieldError{
+				Message: "Immutable fields changed (-old +new)",
+				Paths:   []string{"spec", "channelTemplate"},
+				Details: `{*v1alpha1.ChannelTemplateSpec}.TypeMeta.Kind:
 	-: "my-kind"
 	+: "my-other-kind"
 `,
+			},
 		},
-	}}
+	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for n, test := range tests {
+		t.Run(n, func(t *testing.T) {
 			gotErr := current.CheckImmutableFields(context.Background(), test.og)
 			if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
 				t.Errorf("Broker.CheckImmutableFields (-want, +got) = %v", diff)
