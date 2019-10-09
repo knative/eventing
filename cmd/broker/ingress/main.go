@@ -34,17 +34,17 @@ import (
 	"go.opencensus.io/stats/view"
 	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 	pkgtracing "knative.dev/pkg/tracing"
-
-	kubeclient "knative.dev/pkg/client/injection/kube/client"
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/sharedmain"
 )
 
 var (
@@ -124,7 +124,7 @@ func main() {
 		writer.WriteHeader(http.StatusOK)
 	})
 
-	ceClient, err := cloudevents.NewClient(httpTransport, cloudevents.WithTimeNow(), cloudevents.WithUUIDs())
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}

@@ -24,6 +24,6 @@ import (
 	"knative.dev/eventing/test/conformance/helpers"
 )
 
-func TestChannelTracingWithReply(t *testing.T) {
-	helpers.ChannelTracingTestHelperWithReply(t, channelTestRunner)
+func TestBrokerTracing(t *testing.T) {
+	helpers.BrokerTracingTestHelper(t, channelTestRunner)
 }

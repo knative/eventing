@@ -27,7 +27,7 @@ type BrokerIngressNameArgs struct {
 // BrokerIngressName creates the service name for Broker Ingresses to use when writing Zipkin
 // traces.
 func BrokerIngressName(args BrokerIngressNameArgs) string {
-	return fmt.Sprintf("%s-broker-ingress.%s", args.BrokerName, args.Namespace)
+	return fmt.Sprintf("%s-broker.%s", args.BrokerName, args.Namespace)
 }
 
 // BrokerFilterNameArgs are the arguments needed to generate the BrokerFilterName.

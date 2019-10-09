@@ -21,6 +21,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,7 +145,7 @@ func (t *Tracker) WaitForKResourcesReady() error {
 	t.logf("Waiting for all KResources to become ready")
 	for _, metaResource := range t.resourcesToCheckStatus {
 		if err := base.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
-			return err
+			return fmt.Errorf("failed waiting for %+v to become ready: %v", metaResource, err)
 		}
 	}
 	return nil
