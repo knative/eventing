@@ -99,7 +99,6 @@ spec:
               # set to the number of sender-receiver
             - "--expect-records=2"
             - "--mako-tags=channel=imc"
-            - "--verbose"
               # benchmark key and benchmark name come from dev.config
             - "--benchmark-key=5903682180743168"
             - "--benchmark-name=Development - Broker Latency & Throughput"
