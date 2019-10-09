@@ -21,6 +21,7 @@ import (
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmp"
 )
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
@@ -54,9 +55,27 @@ func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis
 }
 
 func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	// Currently there are no immutable fields. We could make spec.channelTemplate immutable, as
-	// changing it will normally not have the desired effect of changing the Channel inside the
-	// Broker. It would have an effect if the existing Channel was then deleted, the newly created
-	// Channel would use the new spec.channelTemplate.
+	if og == nil {
+		return nil
+	}
+	original, ok := og.(*Broker)
+	if !ok {
+		return &apis.FieldError{Message: "The provided original was not a Broker"}
+	}
+
+	if diff, err := kmp.ShortDiff(original.Spec.ChannelTemplate, b.Spec.ChannelTemplate); err != nil {
+		return &apis.FieldError{
+			Message: "Failed to diff Broker",
+			Paths:   []string{"spec"},
+			Details: err.Error(),
+		}
+	} else if diff != "" {
+		return &apis.FieldError{
+			Message: "Immutable fields changed (-old +new)",
+			Paths:   []string{"spec", "channelTemplate"},
+			Details: diff,
+		}
+	}
+
 	return nil
 }

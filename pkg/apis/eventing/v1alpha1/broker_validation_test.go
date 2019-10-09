@@ -29,20 +29,69 @@ import (
 // No-op test because method does nothing.
 func TestBrokerValidation(t *testing.T) {
 	b := Broker{}
-	_ = b.Validate(context.TODO())
+	_ = b.Validate(context.Background())
 }
 
 // No-op test because method does nothing.
 func TestBrokerSpecValidation(t *testing.T) {
 	bs := BrokerSpec{}
-	_ = bs.Validate(context.TODO())
+	_ = bs.Validate(context.Background())
 }
 
-// No-op test because method does nothing.
+type noBroker struct{}
+
+func (nb noBroker) CheckImmutableFields(_ context.Context, _ apis.Immutable) *apis.FieldError {
+	return nil
+}
+
 func TestBrokerImmutableFields(t *testing.T) {
-	original := &Broker{}
-	current := &Broker{}
-	_ = current.CheckImmutableFields(context.TODO(), original)
+	original := &Broker{
+		Spec: BrokerSpec{
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-kind"}},
+		},
+	}
+	current := &Broker{
+		Spec: BrokerSpec{
+			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-other-kind"}},
+		},
+	}
+
+	tests := map[string]struct {
+		og      apis.Immutable
+		wantErr *apis.FieldError
+	}{
+		"invalid original": {
+			og:      &noBroker{},
+			wantErr: &apis.FieldError{Message: "The provided original was not a Broker"},
+		},
+		"nil original": {
+			wantErr: nil,
+		},
+		"no ChannelTemplateSpec mutation": {
+			og:      current,
+			wantErr: nil,
+		},
+		"ChannelTemplateSpec mutated": {
+			og: original,
+			wantErr: &apis.FieldError{
+				Message: "Immutable fields changed (-old +new)",
+				Paths:   []string{"spec", "channelTemplate"},
+				Details: `{*v1alpha1.ChannelTemplateSpec}.TypeMeta.Kind:
+	-: "my-kind"
+	+: "my-other-kind"
+`,
+			},
+		},
+	}
+
+	for n, test := range tests {
+		t.Run(n, func(t *testing.T) {
+			gotErr := current.CheckImmutableFields(context.Background(), test.og)
+			if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
+				t.Errorf("Broker.CheckImmutableFields (-want, +got) = %v", diff)
+			}
+		})
+	}
 }
 
 func TestValidSpec(t *testing.T) {
@@ -94,7 +143,7 @@ func TestValidSpec(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.spec.Validate(context.TODO())
+			got := test.spec.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("BrokerSpec.Validate (-want, +got) = %v", diff)
 			}
