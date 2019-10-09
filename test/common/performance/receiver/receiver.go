@@ -31,6 +31,8 @@ import (
 	"time"
 )
 
+const shutdownWaitTime = time.Second * 5
+
 type Receiver struct {
 	typeExtractor TypeExtractor
 	idExtractor   IdExtractor
@@ -135,7 +137,7 @@ func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 		runtime.GC()
 	} else if t == common.EndEventType {
 		// Wait a bit so all messages on wire are processed
-		time.AfterFunc(time.Second*5, func() {
+		time.AfterFunc(shutdownWaitTime, func() {
 			close(r.endCh)
 		})
 	}

@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+const publishTimeout = 1 * time.Minute
+
 type AggregatorClient struct {
 	conn   *grpc.ClientConn
 	aggCli EventsRecorderClient
@@ -41,7 +43,7 @@ func NewAggregatorClient(aggregAddr string) (*AggregatorClient, error) {
 }
 
 func (ac *AggregatorClient) Publish(rl *EventsRecordList) error {
-	return ac.publishWithTimeout(time.Second*10, rl)
+	return ac.publishWithTimeout(publishTimeout, rl)
 }
 
 func (ac *AggregatorClient) publishWithTimeout(timeout time.Duration, rl *EventsRecordList) error {

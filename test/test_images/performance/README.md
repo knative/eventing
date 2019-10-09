@@ -74,7 +74,7 @@ spec:
           mountPath: /etc/config-mako
       terminationMessagePolicy: FallbackToLogsOnError
     - name: aggregator
-      image: knative.dev/eventing/test/test_images/performanceaggregator
+      image: knative.dev/eventing/test/test_images/performance
       ports:
         - name: grpc
           containerPort: 10000

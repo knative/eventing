@@ -42,6 +42,7 @@ const (
 	// But if latency is higher than 1 sec, something else is wrong
 	waitForFlush      = 1 * time.Second
 	waitForReceiverGC = 1 * time.Second
+	waitAfterWarmup   = 5 * time.Second
 )
 
 type Sender struct {
@@ -199,21 +200,17 @@ func (s *Sender) warmup(ctx context.Context, warmupSeconds uint) error {
 	s.loadGenerator.Warmup(common.PaceSpec{Rps: warmupRps, Duration: time.Duration(warmupSeconds) * time.Second}, s.msgSize)
 
 	// give the channel some time to drain the events it may still have enqueued
-	time.Sleep(5 * time.Second)
+	time.Sleep(waitAfterWarmup)
 
 	return nil
 }
 
-// processVegetaResult processes the results from the Vegeta attackers.
 func (s *Sender) closeChannels() {
 	log.Printf("All requests sent")
 
 	close(s.sentCh)
 	close(s.acceptedCh)
 	close(s.failedCh)
-
-	// assume all responses are received after a certain time
-	time.Sleep(8 * time.Second)
 
 	log.Printf("All channels closed")
 }

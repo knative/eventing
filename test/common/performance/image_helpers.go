@@ -24,6 +24,7 @@ import (
 	"knative.dev/pkg/signals"
 	"log"
 	"strings"
+	"sync"
 )
 
 //go:generate protoc -I ./event_state --go_out=plugins=grpc:./event_state ./event_state/event_state.proto
@@ -48,15 +49,15 @@ var (
 func DeclareFlags() {
 	flag.StringVar(&roles, "roles", "", `Role of this instance. One or multiple (comma-separated) of ("sender", "receiver", "aggregator")`)
 
-	// role=receiver & role=receiver
+	// receiver & sender flags
 	flag.StringVar(&paceFlag, "pace", "", "Pace array comma separated. Format rps[:duration=10s]. Example 100,200:4,100:1,500:60")
 
-	// role=sender
+	// sender flags
 	flag.StringVar(&aggregAddr, "aggregator", "", "The aggregator address for sending events records.")
 	flag.UintVar(&msgSize, "msg-size", 100, "The size in bytes of each message we want to send. Generate random strings to avoid caching.")
 	flag.UintVar(&warmupSeconds, "warmup", 10, "Duration in seconds of warmup phase. During warmup latencies are not recorded. 0 means no warmup")
 
-	// role=aggregator
+	// aggregator flags
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 2, "Number of expected events records before aggregating data.")
 	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark"+
@@ -73,8 +74,7 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 		panic("--roles not set!")
 	}
 
-	waitingExecutors := 0
-	endExecutorCh := make(chan bool)
+	waitingExecutors := sync.WaitGroup{}
 
 	if strings.Contains(roles, "receiver") {
 		if paceFlag == "" {
@@ -91,10 +91,10 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 			panic(err)
 		}
 
-		waitingExecutors++
+		waitingExecutors.Add(1)
 		go func() {
 			receiver.Run(ctx)
-			endExecutorCh <- true
+			waitingExecutors.Done()
 		}()
 	}
 
@@ -113,10 +113,10 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 			panic(err)
 		}
 
-		waitingExecutors++
+		waitingExecutors.Add(1)
 		go func() {
 			sender.Run(ctx)
-			endExecutorCh <- true
+			waitingExecutors.Done()
 		}()
 	}
 
@@ -128,22 +128,14 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 			panic(err)
 		}
 
-		waitingExecutors++
+		waitingExecutors.Add(1)
 		go func() {
 			aggr.Run(ctx)
-			endExecutorCh <- true
+			waitingExecutors.Done()
 		}()
 	}
 
-	for {
-		if waitingExecutors == 0 {
-			break
-		} else {
-			<-endExecutorCh
-			waitingExecutors--
-			log.Printf("Waiting %d executors", waitingExecutors)
-		}
-	}
+	waitingExecutors.Wait()
 
 	log.Println("Performance image completed")
 
