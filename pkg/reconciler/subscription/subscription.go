@@ -189,7 +189,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	subscriberURI, err := eventingduck.SubscriberSpec(ctx, subscription.Namespace, subscription.Spec.Subscriber, r.addressableTracker, trackAddressable)
+	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber, r.addressableTracker, trackAddressable)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 			zap.Error(err),

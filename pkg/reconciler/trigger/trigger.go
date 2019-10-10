@@ -201,7 +201,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		}
 	}
 
-	subscriberURI, err := duck.SubscriberSpec(ctx, t.Namespace, t.Spec.Subscriber, r.addressableTracker, trackAddressable)
+	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, r.addressableTracker, trackAddressable)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err
