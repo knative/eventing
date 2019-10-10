@@ -392,10 +392,10 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 
 	lister, err := r.addressableTracker.ListerFor(*replyStrategy.Channel)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for ObjecRef: %s/%s", replyStrategy.Channel.Namespace, replyStrategy.Channel.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for ObjecRef: %s/%s", namespace, replyStrategy.Channel.Name), zap.Error(err))
 	}
 
-	a, err := lister.ByNamespace(replyStrategy.Channel.Namespace).Get(replyStrategy.Channel.Name)
+	a, err := lister.ByNamespace(namespace).Get(replyStrategy.Channel.Name)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel", zap.Any("replyStrategy.Channel", replyStrategy.Channel), zap.Error(err))
 		return "", err
@@ -403,8 +403,8 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 
 	addressable, ok := a.(*duckv1alpha1.AddressableType)
 	if !ok {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", replyStrategy.Channel.Namespace, replyStrategy.Channel.Name), zap.Error(err))
-		return "", fmt.Errorf("object is not addressable: %s/%s", replyStrategy.Channel.Namespace, replyStrategy.Channel.Name)
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", namespace, replyStrategy.Channel.Name), zap.Error(err))
+		return "", fmt.Errorf("object is not addressable: %s/%s", namespace, replyStrategy.Channel.Name)
 	}
 	if addressable.Status.Address != nil {
 		if url := addressable.Status.Address.GetURL(); url.Host != "" {
