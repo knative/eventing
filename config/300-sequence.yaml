@@ -43,9 +43,9 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
-    - name: Hostname
+    - name: URL
       type: string
-      JSONPath: .status.address.hostname
+      JSONPath: .status.address.url
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
