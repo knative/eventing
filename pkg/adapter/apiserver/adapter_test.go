@@ -307,17 +307,17 @@ func simpleOwnedPod(name, namespace string) *unstructured.Unstructured {
 }
 
 func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
-	if got := len(ce.Sent); got != 1 {
+	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
 
-	if got := ce.Sent[0].Type(); got != want {
+	if got := ce.Sent()[0].Type(); got != want {
 		t.Errorf("Expected %q event to be sent, got %q", want, got)
 	}
 }
 
 func validateNotSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, want string) {
-	if got := len(ce.Sent); got != 0 {
+	if got := len(ce.Sent()); got != 0 {
 		t.Errorf("Expected 0 event to be sent, got %d", got)
 	}
 }
