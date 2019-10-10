@@ -25,41 +25,28 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
-	"golang.org/x/net/context"
-	"knative.dev/eventing/pkg/adapter/cronjobevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter"
+	"knative.dev/eventing/pkg/adapter/cronjobevents"
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
 type envConfig struct {
+	adapter.EnvConfig
+
 	// Environment variable container schedule.
 	Schedule string `envconfig:"SCHEDULE" required:"true"`
 
 	// Environment variable containing data.
 	Data string `envconfig:"DATA" required:"true"`
 
-	// Sink for messages.
-	Sink string `envconfig:"SINK_URI" required:"true"`
-
 	// Environment variable containing the name of the cron job.
 	Name string `envconfig:"NAME" required:"true"`
-
-	// Environment variable containing the namespace of the cron job.
-	Namespace string `envconfig:"NAMESPACE" required:"true"`
-
-	// MetricsConfigJson is a json string of metrics.ExporterOptions.
-	// This is used to configure the metrics exporter options,
-	// the config is stored in a config map inside the controllers
-	// namespace and copied here.
-	MetricsConfigJson string `envconfig:"K_METRICS_CONFIG" required:"true"`
-
-	// LoggingConfigJson is a json string of logging.Config.
-	// This is used to configure the logging config, the config is stored in
-	// a config map inside the controllers namespace and copied here.
-	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" required:"true"`
 }
 
 const (
@@ -69,11 +56,11 @@ const (
 func main() {
 	flag.Parse()
 
-	ctx := context.Background()
+	ctx := signals.NewContext()
+
 	var env envConfig
-	err := envconfig.Process("", &env)
-	if err != nil {
-		panic(fmt.Sprintf("Error processing env var: %s", err))
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatalf("Error processing env var: %s", err)
 	}
 
 	// Report stats on Go memory usage every 30 seconds.
@@ -107,33 +94,36 @@ func main() {
 		logger.Error("failed to create the metrics exporter", zap.Error(err))
 	}
 
-	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
-	}
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
+
 	if err = tracing.SetupStaticPublishing(loggerSugared, "", tracing.OnePercentSampling); err != nil {
-		// If tracing doesn't work, we will log an error, but allow the importer to continue to
-		// start.
+		// If tracing doesn't work, we will log an error, but allow the adapter
+		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
+
+	eventsClient, err := kncloudevents.NewDefaultClient(env.SinkURI)
+	if err != nil {
+		logger.Fatal("error building cloud event client", zap.Error(err))
+	}
+
+	// Configuring the adapter
 
 	adapter := &cronjobevents.Adapter{
 		Schedule:  env.Schedule,
 		Data:      env.Data,
-		SinkURI:   env.Sink,
 		Name:      env.Name,
 		Namespace: env.Namespace,
 		Reporter:  reporter,
+		Client:    eventsClient,
 	}
 
 	logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
 
-	stopCh := signals.SetupSignalHandler()
-
-	if err := adapter.Start(ctx, stopCh); err != nil {
+	if err := adapter.Start(ctx, ctx.Done()); err != nil {
 		logger.Fatal("Failed to start adapter", zap.Error(err))
 	}
 }

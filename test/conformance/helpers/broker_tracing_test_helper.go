@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
@@ -29,8 +30,36 @@ import (
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 )
 
-func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	tracingTestHelper(t, channelTestRunner, setupBrokerTracing)
+// BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
+// the ChannelTestRunner.
+func BrokerTracingTestHelperWithChannelTestRunner(
+	t *testing.T,
+	channelTestRunner common.ChannelTestRunner,
+	setupClient SetupClientFunc,
+) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
+		t := struct{}{}
+		_ = fmt.Sprintf("%s", t)
+
+		channelTypeMeta := common.GetChannelTypeMeta(channel)
+		BrokerTracingTestHelper(st, *channelTypeMeta, setupClient)
+	})
+}
+
+// BrokerTracingTestHelper runs the Broker tracing test using the given TypeMeta.
+func BrokerTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient SetupClientFunc) {
+	testCases := map[string]TracingTestCase{
+		"includes incoming trace id": {
+			IncomingTraceId: true,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			tracingTest(t, setupClient, setupBrokerTracing, channel, tc)
+		})
+	}
 }
 
 // setupBrokerTracing is the general setup for TestBrokerTracing. It creates the following:
@@ -40,15 +69,20 @@ func BrokerTracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestR
 // 4. Sender Pod which sends a 'foo' event.
 // It returns a string that is expected to be sent by the SendEvents Pod and should be present in
 // the LogEvents Pod logs.
-func setupBrokerTracing(t *testing.T, channel string, client *common.Client, loggerPodName string, incomingTraceId bool) (tracinghelper.TestSpanTree, string) {
-	// Create the Broker.
+func setupBrokerTracing(
+	t *testing.T,
+	channel *metav1.TypeMeta,
+	client *common.Client,
+	loggerPodName string,
+	tc TracingTestCase,
+) (tracinghelper.TestSpanTree, string) {
 	const (
 		etTransformer = "transformer"
 		etLogger      = "logger"
 	)
+	// Create the Broker.
 	client.CreateRBACResourcesForBrokers()
-	channelTypeMeta := common.GetChannelTypeMeta(channel)
-	broker := client.CreateBrokerOrFail("br", channelTypeMeta)
+	broker := client.CreateBrokerOrFail("br", channel)
 
 	// TODO Remove this wait once https://github.com/knative/eventing/issues/1998 is fixed.
 	if err := client.WaitForResourceReady(broker.Name, common.BrokerTypeMeta); err != nil {
@@ -101,7 +135,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	sendEvent := client.SendFakeEventToAddressable
-	if incomingTraceId {
+	if tc.IncomingTraceId {
 		sendEvent = client.SendFakeEventWithTracingToAddressable
 	}
 	if err := sendEvent(senderName, broker.Name, common.BrokerTypeMeta, event); err != nil {
@@ -422,7 +456,7 @@ func setupBrokerTracing(t *testing.T, channel string, client *common.Client, log
 		},
 	}
 
-	if incomingTraceId {
+	if tc.IncomingTraceId {
 		expected.Children = []tracinghelper.TestSpanTree{
 			{
 				Note:                     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",

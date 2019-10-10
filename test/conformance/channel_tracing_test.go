@@ -25,5 +25,5 @@ import (
 )
 
 func TestChannelTracingWithReply(t *testing.T) {
-	helpers.ChannelTracingTestHelperWithReply(t, channelTestRunner)
+	helpers.ChannelTracingTestHelperWithChannelTestRunner(t, channelTestRunner, helpers.SetupClientFuncNoop)
 }
