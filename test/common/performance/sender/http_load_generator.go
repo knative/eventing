@@ -19,16 +19,16 @@ package sender
 import (
 	"context"
 	"fmt"
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"github.com/golang/protobuf/ptypes"
-	"knative.dev/eventing/test/common/performance/common"
 	"math/rand"
 	"net/http"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	vegeta "github.com/tsenart/vegeta/lib"
+	"knative.dev/eventing/test/common/performance/common"
 )
 
 func init() {

@@ -17,16 +17,15 @@ limitations under the License.
 package sender
 
 import (
-	"fmt"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"knative.dev/eventing/test/common/performance/common"
-	"log"
-	"time"
-
 	"context"
+	"fmt"
+	"log"
 	"os"
 	"runtime"
+	"time"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
 	pkgtest "knative.dev/pkg/test"
 )
@@ -73,8 +72,8 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 		return nil, fmt.Errorf("Failed to parse pace spec: %v", err)
 	}
 
-	// wait until all pods are ready (channel, consumers) to ensure events aren't dropped by the broker
-	// during the test and the GRPC client can connect to the aggregator
+	// wait until all pods are ready (channel, consumers) to ensure we don’t start sending events too early
+	// and the GRPC client can connect to the aggregator
 	ns := testNamespace()
 	log.Printf("Waiting for all Pods to be ready in namespace %s", ns)
 	if err := waitForPods(ns); err != nil {

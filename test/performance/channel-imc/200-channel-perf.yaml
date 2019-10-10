@@ -74,7 +74,7 @@ spec:
       image: knative.dev/eventing/test/test_images/performance
       args:
         - "--roles=aggregator"
-        # set to the number of sender-receiver
+        # set to the number of sender + receiver (same image that does both counts 2)
         - "--expect-records=2"
       ports:
         - name: grpc

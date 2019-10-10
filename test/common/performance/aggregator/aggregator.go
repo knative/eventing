@@ -136,7 +136,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 
 	go func() {
 		if err := ag.server.Serve(ag.listener); err != nil {
-			log.Printf("Failed to serve: %v", err)
+			fatalf("Failed to serve: %v", err)
 		}
 	}()
 	go func() {

@@ -132,12 +132,12 @@ func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
 // processReceiveEvent processes the event received by the CloudEvents receiver.
 func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 	t := r.typeExtractor(event)
-	switch {
-	case t == common.MeasureEventType:
+	switch t {
+	case common.MeasureEventType:
 		r.receivedCh <- common.EventTimestamp{EventId: r.idExtractor(event), At: ptypes.TimestampNow()}
-	case t == common.GCEventType:
+	case common.GCEventType:
 		runtime.GC()
-	case t == common.EndEventType:
+	case common.EndEventType:
 		// Wait a bit so all messages on wire are processed
 		time.AfterFunc(shutdownWaitTime, func() {
 			close(r.endCh)
