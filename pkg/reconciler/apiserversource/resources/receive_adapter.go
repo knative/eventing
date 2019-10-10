@@ -139,7 +139,7 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiSer
 		Name:  "SELECTOR",
 		Value: selectors,
 	}, {
-		Name: "SYSTEM_NAMESPACE",
+		Name: "NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{
 			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "metadata.namespace",
