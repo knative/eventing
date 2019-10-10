@@ -311,7 +311,7 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 		"subject":         event.Subject(),
 		"id":              event.ID(),
 		"time":            event.Time().String(),
-		"dataschema":      event.DataSchema(),
+		"schemaurl":       event.DataSchema(),
 		"datacontenttype": event.DataContentType(),
 		"datamediatype":   event.DataMediaType(),
 		// TODO: use data_base64 when SDK supports it.
