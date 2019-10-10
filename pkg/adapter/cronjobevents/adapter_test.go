@@ -195,11 +195,11 @@ func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
 }
 
 func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, wantData string) {
-	if got := len(ce.Sent); got != 1 {
+	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
 
-	if got := ce.Sent[0].Data; string(got.([]byte)) != wantData {
+	if got := ce.Sent()[0].Data; string(got.([]byte)) != wantData {
 		t.Errorf("Expected %q event to be sent, got %q", wantData, string(got.([]byte)))
 	}
 }
