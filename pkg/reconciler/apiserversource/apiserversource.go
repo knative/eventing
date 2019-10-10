@@ -19,7 +19,6 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/tracker"
 	"os"
 	"reflect"
 	"sync"
@@ -43,7 +42,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
-	"knative.dev/eventing/pkg/utils"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 )
@@ -87,8 +85,6 @@ type Reconciler struct {
 	apiserversourceLister listers.ApiServerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
 	eventTypeLister       eventinglisters.EventTypeLister
-
-	tracker tracker.Interface
 
 	source         string
 	sinkReconciler *duck.SinkReconciler
@@ -166,9 +162,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	}
 	// Update source status
 	source.Status.PropagateDeploymentAvailability(ra)
-	if err = r.tracker.Track(utils.ObjectRef(ra, deploymentGVK), source); err != nil {
-		return fmt.Errorf("unable to track receive adapter: %v", err)
-	}
 
 	err = r.reconcileEventTypes(ctx, source)
 	if err != nil {

@@ -141,7 +141,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
-	// Tell resourceTracker to reconcile this Trigger whenever the Broker changes.
+	// Tell tracker to reconcile this Trigger whenever the Broker changes.
 	brokerObjRef := corev1.ObjectReference{
 		Kind:       brokerGVK.Kind,
 		APIVersion: brokerGVK.GroupVersion().String(),

@@ -18,7 +18,6 @@ package apiserversource
 
 import (
 	"context"
-	"knative.dev/pkg/tracker"
 
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -63,7 +62,6 @@ func NewController(
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")

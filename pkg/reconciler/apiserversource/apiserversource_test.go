@@ -19,7 +19,6 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/tracker"
 	"os"
 	"testing"
 
@@ -561,7 +560,6 @@ func TestReconcile(t *testing.T) {
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
-			tracker:               tracker.New(func(types.NamespacedName) {}, 0),
 		}
 		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r

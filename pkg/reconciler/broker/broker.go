@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -72,7 +71,7 @@ type Reconciler struct {
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister messaginglisters.SubscriptionLister
 
-	resourceTracker duck.ListableTracker
+	channelableTracker duck.ListableTracker
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -156,28 +155,31 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 
 	if b.Spec.ChannelTemplate == nil {
-		r.Logger.Error("Broker.Spec..ChannelTemplate is nil",
+		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
 			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
 		return nil
 	}
 
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
+	track := r.channelableTracker.TrackInNamespace(b)
 
 	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
-	logging.FromContext(ctx).Info("Reconciling the trigger channel CRD")
-	triggerChan, err := r.reconcileTriggerChannel(ctx, triggerChannelName, channelResourceInterface, b)
-	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
-		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
+	triggerChannelObjRef := corev1.ObjectReference{
+		Kind:       b.Spec.ChannelTemplate.Kind,
+		APIVersion: b.Spec.ChannelTemplate.APIVersion,
+		Name:       triggerChannelName,
+		Namespace:  b.Namespace,
+	}
+	// Start tracking trigger channel...
+	if err := track(triggerChannelObjRef); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
 		return err
 	}
 
-	// Tell tracker to reconcile this Broker whenever my channels change.
-	track := r.resourceTracker.TrackInNamespace(b)
-
-	// Start tracking trigger channel...
-	if err = track(utils.ObjectRef(triggerChan, triggerChan.GroupVersionKind())); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
+	logging.FromContext(ctx).Info("Reconciling the trigger channel")
+	triggerChan, err := r.reconcileTriggerChannel(ctx, triggerChannelObjRef, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
+		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
 		return err
 	}
 
@@ -187,18 +189,12 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return nil
 	}
 	if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
-		// We check the trigger Channel's address here because it is needed to create the Ingress
-		// Deployment.
+		// We check the trigger Channel's address here because it is needed to create the Ingress Deployment.
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
 		return nil
 	}
-	b.Status.TriggerChannel = &corev1.ObjectReference{
-		Kind:       triggerChan.Kind,
-		APIVersion: triggerChan.APIVersion,
-		Name:       triggerChan.Name,
-		Namespace:  triggerChan.Namespace,
-	}
+	b.Status.TriggerChannel = &triggerChannelObjRef
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
 	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
@@ -235,18 +231,26 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	})
 
 	ingressChannelName := resources.BrokerChannelName(b.Name, "ingress")
-	ingressChan, err := r.reconcileIngressChannel(ctx, ingressChannelName, channelResourceInterface, b)
+	ingressChannelObjRef := corev1.ObjectReference{
+		Kind:       b.Spec.ChannelTemplate.Kind,
+		APIVersion: b.Spec.ChannelTemplate.APIVersion,
+		Name:       ingressChannelName,
+		Namespace:  b.Namespace,
+	}
+
+	// Start tracking ingress channel...
+	if err = track(ingressChannelObjRef); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
+		return err
+	}
+
+	ingressChan, err := r.reconcileIngressChannel(ctx, ingressChannelObjRef, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
 		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
 		return err
 	}
-	b.Status.IngressChannel = &corev1.ObjectReference{
-		Kind:       ingressChan.Kind,
-		APIVersion: ingressChan.APIVersion,
-		Name:       ingressChan.Name,
-		Namespace:  ingressChan.Namespace,
-	}
+	b.Status.IngressChannel = &ingressChannelObjRef
 	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
 
 	// Start tracking ingress channel...
@@ -320,55 +324,59 @@ func newIngressChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
 	return resources.NewChannel("ingress", b, IngressChannelLabels(b.Name))
 }
 
-func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	c, err := newTriggerChannel(b)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel CRD object: %s/%s", b.Namespace, channelName), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	return r.reconcileChannel(ctx, channelName, channelResourceInterface, c, b)
+	return r.reconcileChannel(ctx, channelObjRef, c, b)
 }
 
-func (r *Reconciler) reconcileIngressChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileIngressChannel(ctx context.Context, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	c, err := newIngressChannel(b)
 	if err != nil {
 		return nil, err
 	}
-	return r.reconcileChannel(ctx, channelName, channelResourceInterface, c, b)
+	return r.reconcileChannel(ctx, channelObjRef, c, b)
 }
 
-// reconcileChannelCRD reconciles Broker's 'b' underlying channel for CRD based Channels
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
-	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
+// reconcileChannelreconciles Broker's 'b' underlying channel.
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+	lister, err := r.channelableTracker.ListerFor(channelObjRef)
+	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		return nil, err
+	}
+	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel CRD Object: %+v", newChannel))
+			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
+			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
 			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", b.Namespace, channelName), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", newChannel))
+			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
 			channelable := &duckv1alpha1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", b.Namespace, channelName), zap.Any("createdChannel", created), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("createdChannel", created), zap.Error(err))
 				return nil, err
 
 			}
 			return channelable, nil
 		}
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", b.Namespace, channelName), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", b.Namespace, channelName), zap.Any("NewChannel", c))
-	channelable := &duckv1alpha1.Channelable{}
-	err = duckapis.FromUnstructured(c, channelable)
-	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", b.Namespace, channelName), zap.Error(err))
+	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", c))
+	channelable, ok := c.(*duckv1alpha1.Channelable)
+	if !ok {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
-
 	}
 	return channelable, nil
 }
