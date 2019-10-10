@@ -60,7 +60,7 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// trackers used to notify us when the resources Subscription depends on change, so that the
+	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
 	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.channelableTracker = duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
