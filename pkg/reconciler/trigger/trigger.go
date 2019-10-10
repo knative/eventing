@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"knative.dev/pkg/tracker"
 	"net/url"
 	"reflect"
 	"time"
@@ -45,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
 )
 
 const (
