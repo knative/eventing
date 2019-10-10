@@ -72,7 +72,7 @@ type DeliverySpec struct {
 	// More information on Duration format: https://www.ietf.org/rfc/rfc3339.txt
 	//
 	// For linear policy, backoff delay is the time interval between retries.
-	// For exponential policy , backoff delay is backoffDelay*10^<numberOfRetries>
+	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>
 	// +optional
 	BackoffDelay *string
 }
@@ -97,8 +97,8 @@ Channel implementation supporting dead letter channel should advertise it in the
 
 ```go
 
-// DeliverStatus contains the Status of an object supporting delivery options.
-type DeliverStatus struct {
+// DeliveryStatus contains the Status of an object supporting delivery options.
+type DeliveryStatus struct {
 	// DeadLetterChannel is the reference to the native, platform specific channel where failed events are sent to.
 	// +optional
 	DeadLetterChannel *corev1.ObjectReference `json:"deadLetterChannel,omitempty"`
