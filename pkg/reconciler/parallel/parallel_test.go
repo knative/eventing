@@ -61,11 +61,11 @@ func init() {
 func TestAllBranches(t *testing.T) {
 	pKey := testNS + "/" + parallelName
 	imc := &eventingduck.ChannelTemplateSpec{
-		metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 		},
-		&runtime.RawExtension{Raw: []byte("{}")},
+		Spec: &runtime.RawExtension{Raw: []byte("{}")},
 	}
 
 	table := TableTest{
