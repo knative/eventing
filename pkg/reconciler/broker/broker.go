@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -161,6 +162,13 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return nil
 	}
 
+	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
+	if channelResourceInterface == nil {
+		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
+		logging.FromContext(ctx).Error(msg)
+		return errors.New(msg)
+	}
+
 	track := r.channelableTracker.TrackInNamespace(b)
 
 	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
@@ -177,7 +185,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 
 	logging.FromContext(ctx).Info("Reconciling the trigger channel")
-	triggerChan, err := r.reconcileTriggerChannel(ctx, triggerChannelObjRef, b)
+	triggerChan, err := r.reconcileTriggerChannel(ctx, channelResourceInterface, triggerChannelObjRef, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
@@ -245,7 +253,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return err
 	}
 
-	ingressChan, err := r.reconcileIngressChannel(ctx, ingressChannelObjRef, b)
+	ingressChan, err := r.reconcileIngressChannel(ctx, channelResourceInterface, ingressChannelObjRef, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the ingress channel", zap.Error(err))
 		b.Status.MarkIngressChannelFailed("ChannelFailure", "%v", err)
@@ -325,25 +333,25 @@ func newIngressChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
 	return resources.NewChannel("ingress", b, IngressChannelLabels(b.Name))
 }
 
-func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	c, err := newTriggerChannel(b)
 	if err != nil {
 		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	return r.reconcileChannel(ctx, channelObjRef, c, b)
+	return r.reconcileChannel(ctx, channelResourceInterface, channelObjRef, c, b)
 }
 
-func (r *Reconciler) reconcileIngressChannel(ctx context.Context, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileIngressChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	c, err := newIngressChannel(b)
 	if err != nil {
 		return nil, err
 	}
-	return r.reconcileChannel(ctx, channelObjRef, c, b)
+	return r.reconcileChannel(ctx, channelResourceInterface, channelObjRef, c, b)
 }
 
 // reconcileChannel reconciles Broker's 'b' underlying channel.
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, newChannel *unstructured.Unstructured, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(channelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
@@ -353,12 +361,6 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelObjRef corev1.
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
-			if channelResourceInterface == nil {
-				msg := fmt.Sprintf("Unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
-				logging.FromContext(ctx).Error(msg)
-				return nil, errors.New(msg)
-			}
 			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
 			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {

@@ -25,10 +25,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/channel/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis/duck"
 	duckapis "knative.dev/pkg/apis/duck"
 
@@ -123,6 +123,13 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		return nil
 	}
 
+	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
+	if channelResourceInterface == nil {
+		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
+		logging.FromContext(ctx).Error(msg)
+		return errors.New(msg)
+	}
+
 	track := r.channelableTracker.TrackInNamespace(c)
 
 	backingChannelObjRef := corev1.ObjectReference{
@@ -137,23 +144,18 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		return err
 	}
 
-	backingChannel, err := r.reconcileBackingChannel(ctx, c, backingChannelObjRef)
+	backingChannel, err := r.reconcileBackingChannel(ctx, channelResourceInterface, c, backingChannelObjRef)
 	if err != nil {
 		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
 		return fmt.Errorf("problem reconciling the backing channel: %v", err)
 	}
 
-	// Start tracking the backing Channel CRD...
-	if err = track(utils.ObjectRef(backingChannel, backingChannel.GroupVersionKind())); err != nil {
+	// Start tracking the backing Channel...
+	if err = track(backingChannelObjRef); err != nil {
 		return fmt.Errorf("unable to track changes to the backing channel: %v", err)
 	}
 
-	c.Status.Channel = &corev1.ObjectReference{
-		Kind:       backingChannel.Kind,
-		APIVersion: backingChannel.APIVersion,
-		Name:       backingChannel.Name,
-		Namespace:  backingChannel.Namespace,
-	}
+	c.Status.Channel = &backingChannelObjRef
 
 	err = r.patchBackingChannelSubscriptions(ctx, c, backingChannel)
 	if err != nil {
@@ -197,7 +199,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, c *v1alpha1.Channel, backingChannelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, c *v1alpha1.Channel, backingChannelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(backingChannelObjRef)
 	if err != nil {
 		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Error(err))
@@ -207,12 +209,6 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, c *v1alpha1.Ch
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
-			if channelResourceInterface == nil {
-				msg := fmt.Sprintf("Unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
-				logging.FromContext(ctx).Error(msg)
-				return nil, errors.New(msg)
-			}
 			newBackingChannel, err := resources.NewChannel(c)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
