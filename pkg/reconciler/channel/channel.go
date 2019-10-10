@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -123,7 +124,8 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		return nil
 	}
 
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
+	gvr, _ := meta.UnsafeGuessKindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
+	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(c.Namespace)
 	if channelResourceInterface == nil {
 		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
 		logging.FromContext(ctx).Error(msg)

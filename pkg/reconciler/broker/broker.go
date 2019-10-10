@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,7 +38,6 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
-	duckroot "knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
 
@@ -162,7 +162,8 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return nil
 	}
 
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(b.Namespace)
+	gvr, _ := meta.UnsafeGuessKindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
+	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
 	if channelResourceInterface == nil {
 		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
 		logging.FromContext(ctx).Error(msg)
