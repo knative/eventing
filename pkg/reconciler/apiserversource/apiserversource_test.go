@@ -19,7 +19,6 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -78,8 +77,6 @@ func init() {
 	_ = appsv1.AddToScheme(scheme.Scheme)
 	_ = corev1.AddToScheme(scheme.Scheme)
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
-
-	_ = os.Setenv("APISERVER_RA_IMAGE", image)
 }
 
 func TestReconcile(t *testing.T) {
@@ -184,7 +181,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -237,7 +234,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -290,7 +287,7 @@ func TestReconcile(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment updated"),
+				Eventf(corev1.EventTypeNormal, "ApiServerSourceDeploymentUpdated", "Deployment \"apiserversource-test-apiserver-source-1234\" updated"),
 				Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -559,7 +556,9 @@ func TestReconcile(t *testing.T) {
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
+			eventTypeLister:       listers.GetEventTypeLister(),
 			source:                source,
+			receiveAdapterImage:   image,
 		}
 		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r
