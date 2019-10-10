@@ -18,8 +18,12 @@ package receiver
 
 import cloudevents "github.com/cloudevents/sdk-go"
 
+// IdExtractor is used by the receiver to establish the id of the received event
 type IdExtractor func(event cloudevents.Event) string
 
+// EventIdExtractor uses
+//  event.ID()
+// to extract the event id
 func EventIdExtractor(event cloudevents.Event) string {
 	return event.ID()
 }

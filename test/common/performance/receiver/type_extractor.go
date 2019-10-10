@@ -18,8 +18,12 @@ package receiver
 
 import cloudevents "github.com/cloudevents/sdk-go"
 
+// TypeExtractor is used by the receiver to establish the type of the received event
 type TypeExtractor func(event cloudevents.Event) string
 
+// EventTypeExtractor uses
+//  event.Type()
+// to extract the event type
 func EventTypeExtractor(event cloudevents.Event) string {
 	return event.Type()
 }
