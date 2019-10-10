@@ -34,6 +34,9 @@ import (
 
 const shutdownWaitTime = time.Second * 5
 
+// Receiver records the received events and sends to the aggregator.
+// Since sender implementations can put id and type of event inside the event payload,
+// then the Receiver uses IdExtractor and TypeExtractor to extract them
 type Receiver struct {
 	typeExtractor TypeExtractor
 	idExtractor   IdExtractor
