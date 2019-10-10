@@ -156,7 +156,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
+	b, err := r.getBroker(ctx, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		if apierrs.IsNotFound(err) {
@@ -301,6 +301,27 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	}
 
 	return trig, err
+}
+
+// getBroker returns trigger's coupled broker. If the trigger is coupled with default broker, and default broker is not existed,
+// it will create the default broker first by labeling namespace with kantive-eventing-injection=enabled
+func (r *Reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Broker, error) {
+	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
+	if t.Spec.Broker == "default" && apierrs.IsNotFound(err) {
+		current, _ := r.KubeClientSet.CoreV1().Namespaces().Get(t.Namespace, metav1.GetOptions{})
+		if current.Labels == nil {
+			current.Labels = map[string]string{}
+		}
+		current.Labels["knative-eventing-injection"] = "enabled"
+		_, e := r.KubeClientSet.CoreV1().Namespaces().Update(current)
+		if e != nil {
+			return b, err
+		}
+		// Wait for default broker to set up
+		time.Sleep(10 * time.Second)
+		b, err = r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
+	}
+	return b, err
 }
 
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
