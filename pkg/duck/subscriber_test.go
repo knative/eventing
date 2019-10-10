@@ -44,9 +44,6 @@ var (
 
 	channelAddress = "test-channel.hostname"
 	channelURL     = fmt.Sprintf("http://%s", channelAddress)
-
-	subscriptionNamespace = "test-subscription-namespace"
-	subscriptionName      = "test-subscription-name"
 )
 
 func init() {
@@ -147,6 +144,7 @@ func TestSubscriberSpec(t *testing.T) {
 					APIVersion: "eventing.knative.dev/v1alpha1",
 					Kind:       "Channel",
 					Name:       "does-exist",
+					Namespace:  testNS,
 				},
 			},
 			Objects: []runtime.Object{
@@ -171,20 +169,20 @@ func TestSubscriberSpec(t *testing.T) {
 
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.Objects...)
+			ctx, dc := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.Objects...)
 			addressableTracker := NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0)
 			// Not using the testing package due to a cyclic dependency.
 			sub := &v1alpha1.Subscription{
 				ObjectMeta: v1.ObjectMeta{
-					Name:      subscriptionName,
-					Namespace: subscriptionNamespace,
+					Name:      "subname",
+					Namespace: testNS,
 				},
 				Spec: v1alpha1.SubscriptionSpec{
 					Subscriber: tc.Sub,
 				},
 			}
 			track := addressableTracker.TrackInNamespace(sub)
-			actual, err := SubscriberSpec(ctx, subscriptionNamespace, tc.Sub, addressableTracker, track)
+			actual, err := SubscriberSpec(ctx, dc, testNS, tc.Sub, addressableTracker, track)
 			if err != nil {
 				if tc.ExpectedErr == "" || tc.ExpectedErr != err.Error() {
 					t.Fatalf("Unexpected error. Expected '%s'. Actual '%s'.", tc.ExpectedErr, err.Error())

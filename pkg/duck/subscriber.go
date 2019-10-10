@@ -71,7 +71,7 @@ func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, names
 
 // SubscriberSpec resolves the SubscriberSpec object. If it's an ObjectReference, it will resolve the
 // object and treat it as an Addressable. If it's a DNSName, then it's used as is.
-func SubscriberSpec(ctx context.Context, namespace string, s *v1alpha1.SubscriberSpec, addressableTracker ListableTracker, track Track) (string, error) {
+func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec, addressableTracker ListableTracker, track Track) (string, error) {
 	if isNilOrEmptySubscriber(s) {
 		return "", nil
 	}
@@ -90,16 +90,23 @@ func SubscriberSpec(ctx context.Context, namespace string, s *v1alpha1.Subscribe
 	// Addressable interface. Note that it is important to return here as we wouldn't be able to marshall it to an
 	// Addressable, thus the type assertion below would fail.
 	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
+		// Check that the service exists by querying the API server. This is a special case, as we cannot use the
+		// addressable lister.
+		_, err := ObjectReference(ctx, dynamicClient, namespace, s.Ref)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target service", zap.Any("subscriberSpec.Ref", s.Ref), zap.Error(err))
+			return "", err
+		}
 		// This Service must exist because ObjectReference did not return an error.
 		return DomainToURL(names.ServiceHostName(s.Ref.Name, namespace)), nil
 	}
 
 	lister, err := addressableTracker.ListerFor(*s.Ref)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for ObjecRef: %s/%s", s.Ref.Namespace, s.Ref.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for ObjecRef: %s/%s", namespace, s.Ref.Name), zap.Error(err))
 	}
 
-	a, err := lister.ByNamespace(s.Ref.Namespace).Get(s.Ref.Name)
+	a, err := lister.ByNamespace(namespace).Get(s.Ref.Name)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target", zap.Any("subscriberSpec.Ref", s.Ref), zap.Error(err))
 		return "", err
@@ -107,7 +114,7 @@ func SubscriberSpec(ctx context.Context, namespace string, s *v1alpha1.Subscribe
 
 	addressable, ok := a.(*duckv1alpha1.AddressableType)
 	if !ok {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", s.Ref.Namespace, s.Ref.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", namespace, s.Ref.Name), zap.Error(err))
 		return "", errors.New("object is not addressable")
 	}
 	if addressable.Status.Address != nil {
