@@ -17,6 +17,7 @@ limitations under the License.
 package alerter
 
 import (
+	"fmt"
 	"log"
 
 	qpb "github.com/google/mako/proto/quickstore/quickstore_go_proto"
@@ -55,7 +56,7 @@ func (alerter *Alerter) HandleBenchmarkResult(testName string, output qpb.Quicks
 	if err != nil {
 		if output.GetStatus() == qpb.QuickstoreOutput_ANALYSIS_FAIL {
 			var errs []error
-			summary := output.GetSummaryOutput()
+			summary := fmt.Sprintf("%s\n\nSee run chart at: %s", output.GetSummaryOutput(), output.GetRunChartLink())
 			if alerter.githubIssueHandler != nil {
 				if err := alerter.githubIssueHandler.CreateIssueForTest(testName, summary); err != nil {
 					errs = append(errs, err)

@@ -82,7 +82,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -97,7 +97,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-time":        {"ignored-value-header"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"destination"`,
 			},
@@ -113,7 +113,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -128,7 +128,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-time":        {"ignored-value-header"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"destination"`,
 			},
@@ -149,7 +149,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "reply",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -164,7 +164,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-time":        {"ignored-value-header"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"reply"`,
 			},
@@ -180,7 +180,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "reply",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -195,7 +195,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-time":        {"ignored-value-header"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"reply"`,
 			},
@@ -217,7 +217,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -232,7 +232,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-time":        {"ignored-value-header"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"destination"`,
 			},
@@ -254,7 +254,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -269,7 +269,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-time":        {"ignored-value-header"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"destination"`,
 			},
@@ -296,7 +296,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -308,10 +308,10 @@ func TestDispatchMessage(t *testing.T) {
 					"x-b3-traceid":   {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
-					"ce-time":        {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: `"destination"`,
 			},
@@ -323,10 +323,10 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":          {"new-knative-1-value"},
 					"ce-abc":             {`"new-ce-abc-value"`},
 					"ce-id":              {"ignored-value-header"},
-					"ce-time":            {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
 					"ce-source":          {testCeSource},
 					"ce-type":            {testCeType},
-					"ce-specversion":     {cloudevents.VersionV03},
+					"ce-specversion":     {cloudevents.VersionV1},
 				},
 				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
 			},
@@ -339,10 +339,10 @@ func TestDispatchMessage(t *testing.T) {
 					"x-b3-traceid":   {"ignored-value-header"},
 					"ce-abc":         {`"new-ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
-					"ce-time":        {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
-					"ce-specversion": {cloudevents.VersionV03},
+					"ce-specversion": {cloudevents.VersionV1},
 				},
 				Body: "destination-response",
 			},
@@ -365,7 +365,7 @@ func TestDispatchMessage(t *testing.T) {
 			replyServer := httptest.NewServer(replyHandler)
 			defer replyServer.Close()
 
-			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			event.SetType("testtype")
 			event.SetSource("testsource")
 			for n, v := range tc.eventExtensions {
@@ -383,7 +383,7 @@ func TestDispatchMessage(t *testing.T) {
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
 			err := md.DispatchEvent(ctx, event, destination, reply)
 			if tc.expectedErr != (err != nil) {
-				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
+				t.Errorf("Unexpected error from DispatchEvent. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)
@@ -460,6 +460,10 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *fakeHandler) popRequest(t *testing.T) requestValidation {
 	if len(f.requests) == 0 {
 		t.Error("Unable to pop request")
+		return requestValidation{
+			Host: "MADE UP, no such request",
+			Body: "MADE UP, no such request",
+		}
 	}
 	rv := f.requests[0]
 	f.requests = f.requests[1:]
