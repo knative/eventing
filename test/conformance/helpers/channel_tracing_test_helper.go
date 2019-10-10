@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/openzipkin/zipkin-go/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -30,48 +31,100 @@ import (
 	"knative.dev/pkg/test/zipkin"
 )
 
-type setupFunc func(t *testing.T, channel string, client *common.Client, loggerPodName string, incomingTraceId bool) (tracinghelper.TestSpanTree, string)
+// SetupClientFunc sets up the client for running tracing tests. It does the equivalent of
+// client.Setup().
+type SetupClientFunc func(*common.Client) error
 
-func tracingTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner, setup setupFunc) {
-	testCases := map[string]struct {
-		incomingTraceId bool
-		istio           bool
-	}{
+// SetupClientFuncNoop is a SetupClientFunc that does nothing.
+var SetupClientFuncNoop SetupClientFunc = func(*common.Client) error {
+	return nil
+}
+
+// SetupInfrastructureFunc sets up the infrastructure for running tracing tests. It returns the
+// expected trace as well as a string that is expected to be in the logger Pod's logs.
+type SetupInfrastructureFunc func(
+	t *testing.T,
+	channel *metav1.TypeMeta,
+	client *common.Client,
+	loggerPodName string,
+	tc TracingTestCase,
+) (tracinghelper.TestSpanTree, string)
+
+// TracingTestCase is the test case information for tracing tests.
+type TracingTestCase struct {
+	// IncomingTraceId controls whether the original request is sent to the Broker/Channel already
+	// has a trace ID associated with it by the sender.
+	IncomingTraceId bool
+	// Istio controls whether the Pods being created for the test (sender, transformer, logger,
+	// etc.) have Istio sidecars. It does not affect the Channel Pods.
+	Istio bool
+}
+
+// ChannelTracingTestHelperWithChannelTestRunner runs the Channel tracing tests for all Channels in
+// the ChannelTestRunner.
+func ChannelTracingTestHelperWithChannelTestRunner(
+	t *testing.T,
+	channelTestRunner common.ChannelTestRunner,
+	setupClient SetupClientFunc,
+) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
+		t := struct{}{}
+		_ = fmt.Sprintf("%s", t)
+
+		channelTypeMeta := common.GetChannelTypeMeta(channel)
+		ChannelTracingTestHelper(st, *channelTypeMeta, setupClient)
+	})
+}
+
+// ChannelTracingTestHelper runs the Channel tracing test using the given TypeMeta.
+func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient SetupClientFunc) {
+	testCases := map[string]TracingTestCase{
 		"includes incoming trace id": {
-			incomingTraceId: true,
+			IncomingTraceId: true,
 		},
 	}
 
 	for n, tc := range testCases {
-		loggerPodName := "logger"
 		t.Run(n, func(t *testing.T) {
-			channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
-				// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless
-				// type.
-				t := struct{}{}
-				_ = fmt.Sprintf("%s", t)
-
-				client := common.Setup(st, true)
-				defer common.TearDown(client)
-
-				// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
-				// TestMain.
-				tracinghelper.Setup(st, client)
-
-				expected, mustContain := setup(st, channel, client, loggerPodName, tc.incomingTraceId)
-				assertLogContents(st, client, loggerPodName, mustContain)
-				traceID := getTraceID(st, client, loggerPodName)
-				trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
-				if err != nil {
-					st.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
-				}
-
-				tree := tracinghelper.GetTraceTree(st, trace)
-				if err := expected.Matches(tree); err != nil {
-					st.Fatalf("Trace Tree did not match expected: %v", err)
-				}
-			})
+			tracingTest(t, setupClient, setupChannelTracingWithReply, channel, tc)
 		})
+	}
+}
+
+func tracingTest(
+	t *testing.T,
+	setupClient SetupClientFunc,
+	setupInfrastructure SetupInfrastructureFunc,
+	channel metav1.TypeMeta,
+	tc TracingTestCase,
+) {
+	const (
+		loggerPodName = "logger"
+	)
+
+	client := common.Setup(t, true)
+	defer common.TearDown(client)
+	if err := setupClient(client); err != nil {
+		t.Fatalf("SetupClient function failed: %v", err)
+	}
+
+	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
+	// TestMain.
+	tracinghelper.Setup(t, client)
+
+	expected, mustContain := setupInfrastructure(t, &channel, client, loggerPodName, tc)
+	assertLogContents(t, client, loggerPodName, mustContain)
+
+	traceID := getTraceID(t, client, loggerPodName)
+	trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
+	if err != nil {
+		t.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
+	}
+
+	tree := tracinghelper.GetTraceTree(t, trace)
+	if err := expected.Matches(tree); err != nil {
+		t.Fatalf("Trace Tree did not match expected: %v", err)
 	}
 }
 
@@ -99,24 +152,25 @@ func getTraceID(t *testing.T, client *common.Client, loggerPodName string) strin
 	return traceID
 }
 
-func ChannelTracingTestHelperWithReply(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	tracingTestHelper(t, channelTestRunner, setupChannelTracingWithReply)
-}
-
 // setupChannelTracing is the general setup for TestChannelTracing. It creates the following:
 // SendEvents (Pod) -> Channel -> Subscription -> K8s Service -> Mutate (Pod)
 //                                                                   v
 // LogEvents (Pod) <- K8s Service <- Subscription  <- Channel <- (Reply) Subscription
 // It returns the expected trace tree and a string that is expected to be sent by the SendEvents Pod
 // and should be present in the LogEvents Pod logs.
-func setupChannelTracingWithReply(t *testing.T, channel string, client *common.Client, loggerPodName string, incomingTraceId bool) (tracinghelper.TestSpanTree, string) {
+func setupChannelTracingWithReply(
+	t *testing.T,
+	channel *metav1.TypeMeta,
+	client *common.Client,
+	loggerPodName string,
+	tc TracingTestCase,
+) (tracinghelper.TestSpanTree, string) {
 	// Create the Channels.
 	channelName := "ch"
-	channelTypeMeta := common.GetChannelTypeMeta(channel)
-	client.CreateChannelOrFail(channelName, channelTypeMeta)
+	client.CreateChannelOrFail(channelName, channel)
 
 	replyChannelName := "reply-ch"
-	client.CreateChannelOrFail(replyChannelName, channelTypeMeta)
+	client.CreateChannelOrFail(replyChannelName, channel)
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
 	loggerPod := resources.EventDetailsPod(loggerPodName)
@@ -132,15 +186,15 @@ func setupChannelTracingWithReply(t *testing.T, channel string, client *common.C
 	client.CreateSubscriptionOrFail(
 		"sub",
 		channelName,
-		channelTypeMeta,
+		channel,
 		resources.WithSubscriberForSubscription(transformerPod.Name),
-		resources.WithReplyForSubscription(replyChannelName, channelTypeMeta))
+		resources.WithReplyForSubscription(replyChannelName, channel))
 
 	// Create the Subscription linking the reply Channel to the LogEvents K8s Service.
 	client.CreateSubscriptionOrFail(
 		"reply-sub",
 		replyChannelName,
-		channelTypeMeta,
+		channel,
 		resources.WithSubscriberForSubscription(loggerPodName),
 	)
 
@@ -163,10 +217,10 @@ func setupChannelTracingWithReply(t *testing.T, channel string, client *common.C
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	sendEvent := client.SendFakeEventToAddressable
-	if incomingTraceId {
+	if tc.IncomingTraceId {
 		sendEvent = client.SendFakeEventWithTracingToAddressable
 	}
-	if err := sendEvent(senderName, channelName, channelTypeMeta, event); err != nil {
+	if err := sendEvent(senderName, channelName, channel, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 	}
 
@@ -267,7 +321,7 @@ func setupChannelTracingWithReply(t *testing.T, channel string, client *common.C
 		},
 	}
 
-	if incomingTraceId {
+	if tc.IncomingTraceId {
 		expected.Children = []tracinghelper.TestSpanTree{
 			{
 				// 1. Sending pod sends event to Channel (only if the sending pod generates a span).

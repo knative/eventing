@@ -172,7 +172,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	})
 
 	// Check if the subscriber was added to both the fields of SubscribableTypeStatus
-	if len(subscribableTypeStatus.DeprecatedSubscribableStatus.Subscribers) != 3 &&
+	if len(subscribableTypeStatus.SubscribableStatus.Subscribers) != 3 &&
 		len(subscribableTypeStatus.DeprecatedSubscribableStatus.Subscribers) != 3 {
 		t.Error("AddSubscriberToSubscribableStatus didn't add subscriberstatus to both the fields of SubscribableTypeStatus")
 	}
