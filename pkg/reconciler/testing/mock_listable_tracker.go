@@ -35,7 +35,7 @@ type MockListableTracker struct {
 var _ duck.ListableTracker = (*MockListableTracker)(nil)
 
 // TrackInNamespace implements the ListableTracker interface.
-func (t *MockListableTracker) TrackInNamespace(metav1.Object) func(corev1.ObjectReference) error {
+func (t *MockListableTracker) TrackInNamespace(metav1.Object) duck.Track {
 	return func(corev1.ObjectReference) error {
 		return t.err
 	}

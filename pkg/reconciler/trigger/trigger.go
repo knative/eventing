@@ -231,7 +231,6 @@ func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1alpha1.
 		}
 		if err := r.propagateDependencyReadiness(ctx, t, dependencyObjRef); err != nil {
 			return fmt.Errorf("propagating dependency readiness: %v", err)
-
 		}
 	} else {
 		t.Status.MarkDependencySucceeded()

@@ -39,12 +39,14 @@ import (
 type ListableTracker interface {
 	// TrackInNamespace returns a function that can be used to watch arbitrary apis.Listable resources in the same
 	// namespace as obj. Any change will cause a callback for obj.
-	TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error
+	TrackInNamespace(obj metav1.Object) Track
 	// ListerFor returns the lister for the object reference. It returns an error if the lister does not exist.
 	ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error)
 	// InformerFor returns the informer for the object reference. It returns an error if the informer does not exist.
 	InformerFor(ref corev1.ObjectReference) (cache.SharedIndexInformer, error)
 }
+
+type Track func(corev1.ObjectReference) error
 
 // NewListableTracker creates a new ListableTracker, backed by a TypedInformerFactory.
 func NewListableTracker(ctx context.Context, listable apis.Listable, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
@@ -111,7 +113,7 @@ func (t *listableTracker) ensureTracking(ref corev1.ObjectReference) error {
 }
 
 // TrackInNamespace satisfies the ListableTracker interface.
-func (t *listableTracker) TrackInNamespace(obj metav1.Object) func(corev1.ObjectReference) error {
+func (t *listableTracker) TrackInNamespace(obj metav1.Object) Track {
 	return func(ref corev1.ObjectReference) error {
 		// This is often used by Trigger and Subscription, both of which pass in refs that do not
 		// specify the namespace.
