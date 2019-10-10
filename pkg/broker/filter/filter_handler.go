@@ -305,18 +305,16 @@ func (r *Handler) filterEventByAttributes(ctx context.Context, attrs map[string]
 	// exactly the same as the attributes defined in the current version of the
 	// CloudEvents spec.
 	ce := map[string]interface{}{
-		"specversion": event.SpecVersion(),
-		"type":        event.Type(),
-		"source":      event.Source(),
-		"subject":     event.Subject(),
-		"id":          event.ID(),
-		"time":        event.Time().String(),
-		// TODO: Update this once SDK supports it.
-		//		"schemaurl":           event.DataSchema(),
-		"datacontenttype": event.DataContentType(),
-		"datamediatype":   event.DataMediaType(),
-		// TODO: Update this once SDK supports it.
-		//		"datacontentencoding": event.DataContentEncoding(),
+		"specversion":         event.SpecVersion(),
+		"type":                event.Type(),
+		"source":              event.Source(),
+		"subject":             event.Subject(),
+		"id":                  event.ID(),
+		"time":                event.Time().String(),
+		"dataschema":          event.DataSchema(),
+		"datacontenttype":     event.DataContentType(),
+		"datamediatype":       event.DataMediaType(),
+		"datacontentencoding": event.DeprecatedDataContentEncoding(),
 	}
 	ext := event.Extensions()
 	if ext != nil {
