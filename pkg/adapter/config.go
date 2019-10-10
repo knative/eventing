@@ -16,7 +16,7 @@ limitations under the License.
 package adapter
 
 // EnvConfig is the minimal set of configuration parameters
-// source adapters must support
+// source adapters should support
 type EnvConfig struct {
 	// SinkURI is the URI messages will be forwarded to.
 	SinkURI string `envconfig:"SINK_URI" required:"true"`

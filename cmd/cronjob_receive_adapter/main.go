@@ -59,9 +59,8 @@ func main() {
 	ctx := signals.NewContext()
 
 	var env envConfig
-	err := envconfig.Process("", &env)
-	if err != nil {
-		panic(fmt.Sprintf("Error processing env var: %s", err))
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatalf("Error processing env var: %s", err)
 	}
 
 	// Report stats on Go memory usage every 30 seconds.

@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -81,9 +82,8 @@ func main() {
 	ctx := signals.NewContext()
 
 	var env envConfig
-	err := envconfig.Process("", &env)
-	if err != nil {
-		panic(fmt.Sprintf("Error processing env var: %s", err))
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatalf("Error processing env var: %s", err)
 	}
 
 	// Convert json logging.Config to logging.Config.
