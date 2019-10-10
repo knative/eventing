@@ -70,7 +70,7 @@ type Reconciler struct {
 	serviceLister      corev1listers.ServiceLister
 	tracker            tracker.Interface
 	kresourceTracker   duck.ListableTracker
-	resourceTracker    duck.ListableTracker
+	addressableTracker duck.ListableTracker
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -193,9 +193,15 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	trackResource := r.resourceTracker.TrackInNamespace(t)
+	trackAddressable := r.addressableTracker.TrackInNamespace(t)
+	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
+		if err := trackAddressable(*t.Spec.Subscriber.Ref); err != nil {
+			logging.FromContext(ctx).Error("Unable to track changes to Subscriber.Ref", zap.Error(err))
+			return err
+		}
+	}
 
-	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, trackResource)
+	subscriberURI, err := duck.SubscriberSpec(ctx, t.Namespace, t.Spec.Subscriber, r.addressableTracker, trackAddressable)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err

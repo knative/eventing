@@ -23,7 +23,6 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
@@ -88,8 +87,8 @@ func NewController(
 
 	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
 	r.kresourceTracker = duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	// Dynamic tracker to track Resources. In particular, it tracks Trigger subscribers.
-	r.resourceTracker = duck.NewListableTracker(ctx, &eventingduckv1alpha1.Resource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
+	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }

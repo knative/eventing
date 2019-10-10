@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
@@ -648,7 +647,7 @@ func TestAllCases(t *testing.T) {
 			brokerLister:       listers.GetBrokerLister(),
 			serviceLister:      listers.GetK8sServiceLister(),
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
-			resourceTracker:    duck.NewListableTracker(ctx, &eventingduckv1alpha1.Resource{}, func(types.NamespacedName) {}, 0),
+			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
 			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
 		}
 	},
