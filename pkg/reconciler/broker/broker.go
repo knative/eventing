@@ -169,7 +169,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Name:       triggerChannelName,
 		Namespace:  b.Namespace,
 	}
-	// Start tracking trigger channel...
+	// Start tracking the trigger channel.
 	if err := track(triggerChannelObjRef); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
 		return err
@@ -238,7 +238,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Namespace:  b.Namespace,
 	}
 
-	// Start tracking ingress channel...
+	// Start tracking the ingress channel.
 	if err = track(ingressChannelObjRef); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
 		return err

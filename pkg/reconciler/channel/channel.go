@@ -24,7 +24,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler/channel/resources"
@@ -57,8 +56,8 @@ type Reconciler struct {
 	*reconciler.Base
 
 	// listers index properties about resources
-	channelLister   listers.ChannelLister
-	resourceTracker eventingduck.ListableTracker
+	channelLister      listers.ChannelLister
+	channelableTracker eventingduck.ListableTracker
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -123,12 +122,21 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		return nil
 	}
 
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
+	track := r.channelableTracker.TrackInNamespace(c)
 
-	// Tell tracker to reconcile this Channel whenever the backing Channel CRD changes.
-	track := r.resourceTracker.TrackInNamespace(c)
+	backingChannelObjRef := corev1.ObjectReference{
+		Kind:       c.Spec.ChannelTemplate.Kind,
+		APIVersion: c.Spec.ChannelTemplate.APIVersion,
+		Name:       c.Name,
+		Namespace:  c.Namespace,
+	}
+	// Tell the channelTracker to reconcile this Channel whenever the backing Channel changes.
+	if err := track(backingChannelObjRef); err != nil {
+		logging.FromContext(ctx).Error("Unable to track changes to the backing channel", zap.Error(err))
+		return err
+	}
 
-	backingChannel, err := r.reconcileBackingChannel(ctx, channelResourceInterface, c)
+	backingChannel, err := r.reconcileBackingChannel(ctx, c, backingChannelObjRef)
 	if err != nil {
 		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
 		return fmt.Errorf("problem reconciling the backing channel: %v", err)
@@ -146,7 +154,7 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		Namespace:  backingChannel.Namespace,
 	}
 
-	err = r.patchBackingChannelSubscriptions(ctx, channelResourceInterface, c, backingChannel)
+	err = r.patchBackingChannelSubscriptions(ctx, c, backingChannel)
 	if err != nil {
 		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
 		return fmt.Errorf("problem patching subscriptions in the backing channel: %v", err)
@@ -188,10 +196,13 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, resourceClient dynamic.ResourceInterface, c *v1alpha1.Channel) (*duckv1alpha1.Channelable, error) {
-	channel, err := resourceClient.Get(c.Name, metav1.GetOptions{})
-	channelable := &duckv1alpha1.Channelable{}
-
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, c *v1alpha1.Channel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
+	lister, err := r.channelableTracker.ListerFor(channelObjRef)
+	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		return nil, err
+	}
+	channel, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -200,27 +211,36 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, resourceClient
 				logging.FromContext(ctx).Error("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
 				return nil, err
 			}
-			channel, err = resourceClient.Create(newChannel, metav1.CreateOptions{})
+			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
+			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
+			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error("Failed to create Channel", zap.Any("channel", newChannel), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info("Created Channel", zap.Any("channel", newChannel))
-		} else {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", c.Namespace, c.Name), zap.Error(err))
-			return nil, err
+			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
+			channelable := &duckv1alpha1.Channelable{}
+			err = duckapis.FromUnstructured(created, channelable)
+			if err != nil {
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("createdChannel", created), zap.Error(err))
+				return nil, err
+
+			}
+			return channelable, nil
 		}
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		return nil, err
 	}
-	logging.FromContext(ctx).Debug("Found Channel", zap.Any("channel", c))
-	err = duckapis.FromUnstructured(channel, channelable)
-	if err != nil {
-		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Error(err), zap.Any("channel", channel))
+	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", channel))
+	channelable, ok := channel.(*duckv1alpha1.Channelable)
+	if !ok {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
 	return channelable, nil
 }
 
-func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, resourceClient dynamic.ResourceInterface, channel *v1alpha1.Channel, backingChannel *duckv1alpha1.Channelable) error {
+func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, channel *v1alpha1.Channel, backingChannel *duckv1alpha1.Channelable) error {
 	if equality.Semantic.DeepEqual(channel.Spec.Subscribable, backingChannel.Spec.Subscribable) {
 		logging.FromContext(ctx).Debug("Subscribable in sync, no need to patch")
 		return nil
@@ -235,8 +255,8 @@ func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, resou
 		logging.FromContext(ctx).Warn("Failed to create mergePatch", zap.Error(err))
 		return err
 	}
-
-	patched, err := resourceClient.Patch(backingChannel.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(channel.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(channel.Namespace)
+	patched, err := channelResourceInterface.Patch(backingChannel.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
 		return err
