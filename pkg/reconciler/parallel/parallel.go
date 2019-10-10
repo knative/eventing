@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 	duckroot "knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
@@ -42,7 +40,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
-	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -57,7 +54,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
 	tracker            tracker.Interface
-	resourceTracker    duck.ListableTracker
+	channelableTracker duck.ListableTracker
 	subscriptionLister listers.SubscriptionLister
 }
 
@@ -125,16 +122,8 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 		return nil
 	}
 
-	channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
-
-	if channelResourceInterface == nil {
-		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
-		logging.FromContext(ctx).Error(msg)
-		return errors.New(msg)
-	}
-
 	// Tell tracker to reconcile this Parallel whenever my channels change.
-	track := r.resourceTracker.TrackInNamespace(p)
+	track := r.channelableTracker.TrackInNamespace(p)
 
 	var ingressChannel *duckv1alpha1.Channelable
 	channels := make([]*duckv1alpha1.Channelable, 0, len(p.Spec.Branches))
@@ -146,26 +135,25 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 			channelName = resources.ParallelBranchChannelName(p.Name, i)
 		}
 
-		c, err := r.reconcileChannel(ctx, channelName, channelResourceInterface, p)
-		if err != nil {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, channelName), zap.Error(err))
-			return err
-
+		channelObjRef := corev1.ObjectReference{
+			Kind:       p.Spec.ChannelTemplate.Kind,
+			APIVersion: p.Spec.ChannelTemplate.APIVersion,
+			Name:       channelName,
+			Namespace:  p.Namespace,
 		}
-		// Convert to Channel duck so that we can treat all Channels the same.
-		channelable := &duckv1alpha1.Channelable{}
-		err = duckapis.FromUnstructured(c, channelable)
-		if err != nil {
-			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", p.Namespace, channelName), zap.Error(err))
-			return err
 
-		}
 		// Track channels and enqueue parallel when they change.
-		if err = track(utils.ObjectRef(channelable, channelable.GroupVersionKind())); err != nil {
+		if err := track(channelObjRef); err != nil {
 			logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
 			return err
 		}
-		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, channelName, c))
+
+		channelable, err := r.reconcileChannel(ctx, p, channelObjRef)
+		if err != nil {
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to reconcile Channel Object: %s/%s", p.Namespace, channelName), zap.Error(err))
+			return err
+		}
+		logging.FromContext(ctx).Info(fmt.Sprintf("Reconciled Channel Object: %s/%s %+v", p.Namespace, channelName, channelable))
 
 		if i == -1 {
 			ingressChannel = channelable
@@ -180,7 +168,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	for i := 0; i < len(p.Spec.Branches); i++ {
 		filterSub, sub, err := r.reconcileBranch(ctx, i, p)
 		if err != nil {
-			return fmt.Errorf("Failed to reconcile Subscription Objects for branch: %d : %s", i, err)
+			return fmt.Errorf("failed to reconcile Subscription Objects for branch: %d : %s", i, err)
 		}
 		subs = append(subs, sub)
 		filterSubs = append(filterSubs, filterSub)
@@ -209,30 +197,52 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Paralle
 	return r.EventingClientSet.MessagingV1alpha1().Parallels(desired.Namespace).UpdateStatus(existing)
 }
 
-func (r *Reconciler) reconcileChannel(ctx context.Context, channelName string, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Parallel) (*unstructured.Unstructured, error) {
-	c, err := channelResourceInterface.Get(channelName, metav1.GetOptions{})
+func (r *Reconciler) reconcileChannel(ctx context.Context, p *v1alpha1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
+	lister, err := r.channelableTracker.ListerFor(channelObjRef)
+	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		return nil, err
+	}
+	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newChannel, err := resources.NewChannel(channelName, p)
+			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(p.Namespace)
+			if channelResourceInterface == nil {
+				msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
+				logging.FromContext(ctx).Error(msg)
+				return nil, errors.New(msg)
+			}
+			newChannel, err := resources.NewChannel(channelObjRef.Name, p)
 			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", p.Namespace, channelName), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 				return nil, err
 			}
 			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", newChannel))
-			return created, nil
+			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
+			// Convert to Channel duck so that we can treat all Channels the same.
+			channelable := &duckv1alpha1.Channelable{}
+			err = duckapis.FromUnstructured(created, channelable)
+			if err != nil {
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+				return nil, err
+			}
+			return channelable, nil
 		}
-
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", p.Namespace, channelName), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", p.Namespace, channelName), zap.Any("NewChannel", c))
-	return c, nil
+	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name))
+	channelable, ok := c.(*duckv1alpha1.Channelable)
+	if !ok {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		return nil, err
+	}
+	return channelable, nil
 }
 
 func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v1alpha1.Parallel) (*v1alpha1.Subscription, *v1alpha1.Subscription, error) {

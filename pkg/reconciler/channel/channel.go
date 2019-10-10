@@ -18,6 +18,7 @@ package channel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -196,45 +197,50 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.
-func (r *Reconciler) reconcileBackingChannel(ctx context.Context, c *v1alpha1.Channel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
-	lister, err := r.channelableTracker.ListerFor(channelObjRef)
+func (r *Reconciler) reconcileBackingChannel(ctx context.Context, c *v1alpha1.Channel, backingChannelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
+	lister, err := r.channelableTracker.ListerFor(backingChannelObjRef)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	channel, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
+	backingChannel, err := lister.ByNamespace(backingChannelObjRef.Namespace).Get(backingChannelObjRef.Name)
 	// If the resource doesn't exist, we'll create it
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			newChannel, err := resources.NewChannel(c)
+			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
+			if channelResourceInterface == nil {
+				msg := fmt.Sprintf("Unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
+				logging.FromContext(ctx).Error(msg)
+				return nil, errors.New(msg)
+			}
+			newBackingChannel, err := resources.NewChannel(c)
 			if err != nil {
 				logging.FromContext(ctx).Error("Failed to create Channel from ChannelTemplate", zap.Any("channelTemplate", c.Spec.ChannelTemplate), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
-			channelResourceInterface := r.DynamicClientSet.Resource(duckroot.KindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())).Namespace(c.Namespace)
-			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
+			logging.FromContext(ctx).Debug(fmt.Sprintf("Creating Channel Object: %+v", newBackingChannel))
+			created, err := channelResourceInterface.Create(newBackingChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
+			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Any("NewChannel", newBackingChannel))
 			channelable := &duckv1alpha1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("createdChannel", created), zap.Error(err))
+				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Any("createdChannel", created), zap.Error(err))
 				return nil, err
 
 			}
 			return channelable, nil
 		}
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
-	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", channel))
-	channelable, ok := channel.(*duckv1alpha1.Channelable)
+	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name))
+	channelable, ok := backingChannel.(*duckv1alpha1.Channelable)
 	if !ok {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", backingChannelObjRef.Namespace, backingChannelObjRef.Name), zap.Error(err))
 		return nil, err
 	}
 	return channelable, nil
