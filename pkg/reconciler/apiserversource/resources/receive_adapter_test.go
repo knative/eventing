@@ -169,7 +169,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Name:  "SELECTOR",
 									Value: ";;test-key1=test-value1;akey,!anotherkey;akey,!anotherkey,test-key2=test-value2",
 								}, {
-									Name: "SYSTEM_NAMESPACE",
+									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
 											FieldPath: "metadata.namespace",

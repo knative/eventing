@@ -24,12 +24,9 @@ import (
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 )
-
-// TODO: this should be a k8s cron.
 
 // Adapter implements the Cron Job adapter to trigger a Sink.
 type Adapter struct {
@@ -39,9 +36,6 @@ type Adapter struct {
 	// Data is the data to be posted to the target.
 	Data string
 
-	// SinkURI is the URI messages will be forwarded on to.
-	SinkURI string
-
 	// Name is the name of the Cron Job.
 	Name string
 
@@ -49,7 +43,7 @@ type Adapter struct {
 	Namespace string
 
 	// client sends cloudevents.
-	client cloudevents.Client
+	Client cloudevents.Client
 
 	Reporter source.StatsReporter
 }
@@ -58,28 +52,12 @@ const (
 	resourceGroup = "cronjobsources.sources.eventing.knative.dev"
 )
 
-// Initialize cloudevent client
-func (a *Adapter) initClient() error {
-	if a.client == nil {
-		var err error
-		if a.client, err = kncloudevents.NewDefaultClient(a.SinkURI); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (a *Adapter) Start(ctx context.Context, stopCh <-chan struct{}) error {
 	logger := logging.FromContext(ctx)
 
 	sched, err := cron.ParseStandard(a.Schedule)
 	if err != nil {
 		logger.Error("Unparseable schedule: ", a.Schedule, zap.Error(err))
-		return err
-	}
-
-	if err = a.initClient(); err != nil {
-		logger.Error("Failed to create cloudevent client", zap.Error(err))
 		return err
 	}
 
@@ -107,7 +85,7 @@ func (a *Adapter) cronTick() {
 		ResourceGroup: resourceGroup,
 	}
 
-	rctx, _, err := a.client.Send(context.TODO(), event)
+	rctx, _, err := a.Client.Send(context.TODO(), event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
 	if err != nil {
 		logger.Error("failed to send cloudevent", zap.Error(err))
