@@ -42,7 +42,13 @@ var SetupClientFuncNoop SetupClientFunc = func(*common.Client) error {
 
 // SetupInfrastructureFunc sets up the infrastructure for running tracing tests. It returns the
 // expected trace as well as a string that is expected to be in the logger Pod's logs.
-type SetupInfrastructureFunc func(t *testing.T, channel *metav1.TypeMeta, client *common.Client, loggerPodName string, tc TracingTestCase) (tracinghelper.TestSpanTree, string)
+type SetupInfrastructureFunc func(
+	t *testing.T,
+	channel *metav1.TypeMeta,
+	client *common.Client,
+	loggerPodName string,
+	tc TracingTestCase,
+) (tracinghelper.TestSpanTree, string)
 
 // TracingTestCase is the test case information for tracing tests.
 type TracingTestCase struct {
@@ -56,7 +62,11 @@ type TracingTestCase struct {
 
 // ChannelTracingTestHelperWithChannelTestRunner runs the Channel tracing tests for all Channels in
 // the ChannelTestRunner.
-func ChannelTracingTestHelperWithChannelTestRunner(t *testing.T, channelTestRunner common.ChannelTestRunner, setupClient SetupClientFunc) {
+func ChannelTracingTestHelperWithChannelTestRunner(
+	t *testing.T,
+	channelTestRunner common.ChannelTestRunner,
+	setupClient SetupClientFunc,
+) {
 	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
 		t := struct{}{}
@@ -82,7 +92,13 @@ func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient
 	}
 }
 
-func tracingTest(t *testing.T, setupClient SetupClientFunc, setupInfrastructure SetupInfrastructureFunc, channel metav1.TypeMeta, tc TracingTestCase) {
+func tracingTest(
+	t *testing.T,
+	setupClient SetupClientFunc,
+	setupInfrastructure SetupInfrastructureFunc,
+	channel metav1.TypeMeta,
+	tc TracingTestCase,
+) {
 	const (
 		loggerPodName = "logger"
 	)
@@ -142,7 +158,13 @@ func getTraceID(t *testing.T, client *common.Client, loggerPodName string) strin
 // LogEvents (Pod) <- K8s Service <- Subscription  <- Channel <- (Reply) Subscription
 // It returns the expected trace tree and a string that is expected to be sent by the SendEvents Pod
 // and should be present in the LogEvents Pod logs.
-func setupChannelTracingWithReply(t *testing.T, channel *metav1.TypeMeta, client *common.Client, loggerPodName string, tc TracingTestCase) (tracinghelper.TestSpanTree, string) {
+func setupChannelTracingWithReply(
+	t *testing.T,
+	channel *metav1.TypeMeta,
+	client *common.Client,
+	loggerPodName string,
+	tc TracingTestCase,
+) (tracinghelper.TestSpanTree, string) {
 	// Create the Channels.
 	channelName := "ch"
 	client.CreateChannelOrFail(channelName, channel)

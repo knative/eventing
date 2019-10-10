@@ -32,7 +32,11 @@ import (
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
 // the ChannelTestRunner.
-func BrokerTracingTestHelperWithChannelTestRunner(t *testing.T, channelTestRunner common.ChannelTestRunner, setupClient SetupClientFunc) {
+func BrokerTracingTestHelperWithChannelTestRunner(
+	t *testing.T,
+	channelTestRunner common.ChannelTestRunner,
+	setupClient SetupClientFunc,
+) {
 	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
 		t := struct{}{}
@@ -65,12 +69,18 @@ func BrokerTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient 
 // 4. Sender Pod which sends a 'foo' event.
 // It returns a string that is expected to be sent by the SendEvents Pod and should be present in
 // the LogEvents Pod logs.
-func setupBrokerTracing(t *testing.T, channel *metav1.TypeMeta, client *common.Client, loggerPodName string, tc TracingTestCase) (tracinghelper.TestSpanTree, string) {
-	// Create the Broker.
+func setupBrokerTracing(
+	t *testing.T,
+	channel *metav1.TypeMeta,
+	client *common.Client,
+	loggerPodName string,
+	tc TracingTestCase,
+) (tracinghelper.TestSpanTree, string) {
 	const (
 		etTransformer = "transformer"
 		etLogger      = "logger"
 	)
+	// Create the Broker.
 	client.CreateRBACResourcesForBrokers()
 	broker := client.CreateBrokerOrFail("br", channel)
 
