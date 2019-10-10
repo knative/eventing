@@ -290,13 +290,13 @@ func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription,
 func (r *Reconciler) getChannelable(ctx context.Context, namespace string, chanReference *corev1.ObjectReference) (*eventingduckv1alpha1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(*chanReference)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", chanReference.Namespace, chanReference.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", namespace, chanReference.Name), zap.Error(err))
 		return nil, err
 	}
-	c, err := lister.ByNamespace(chanReference.Namespace).Get(chanReference.Name)
+	c, err := lister.ByNamespace(namespace).Get(chanReference.Name)
 	channelable, ok := c.(*eventingduckv1alpha1.Channelable)
 	if !ok {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", chanReference.Namespace, chanReference.Name), zap.Error(err))
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", namespace, chanReference.Name), zap.Error(err))
 		return nil, err
 	}
 	return channelable, nil
