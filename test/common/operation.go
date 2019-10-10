@@ -73,10 +73,14 @@ func (client *Client) SendFakeEventWithTracingToAddressable(
 
 // GetAddressableURI returns the URI of the addressable resource.
 // To use this function, the given resource must have implemented the Addressable duck-type.
-func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1.TypeMeta) (string, error) {
+func (client *Client) GetAddressableURI(addressableName string, typeMeta *metav1.TypeMeta) (string, error) {
 	namespace := client.Namespace
-	metaAddressable := resources.NewMetaResource(addressableName, namespace, typemeta)
-	return base.GetAddressableURI(client.Dynamic, metaAddressable)
+	metaAddressable := resources.NewMetaResource(addressableName, namespace, typeMeta)
+	u, err := base.GetAddressableURI(client.Dynamic, metaAddressable)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
 }
 
 // sendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
