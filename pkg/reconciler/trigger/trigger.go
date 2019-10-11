@@ -303,23 +303,25 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	return trig, err
 }
 
-// getBroker returns trigger's coupled broker. If the trigger is coupled with default broker, and default broker is not existed,
-// it will create the default broker first by labeling namespace with kantive-eventing-injection=enabled
+// getBroker returns trigger's coupled broker. If the trigger is coupled with default broker, and default broker does not exist,
+// it will create the default broker first by labeling namespace with knative-eventing-injection=enabled
 func (r *Reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Broker, error) {
 	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if t.Spec.Broker == "default" && apierrs.IsNotFound(err) {
-		current, _ := r.KubeClientSet.CoreV1().Namespaces().Get(t.Namespace, metav1.GetOptions{})
+		current, e := r.KubeClientSet.CoreV1().Namespaces().Get(t.Namespace, metav1.GetOptions{})
+		if e != nil {
+			logging.FromContext(ctx).Error("Unable to get namespace resource to enable knative-eventing-injection", zap.Error(e))
+			return b, err
+		}
 		if current.Labels == nil {
 			current.Labels = map[string]string{}
 		}
 		current.Labels["knative-eventing-injection"] = "enabled"
-		_, e := r.KubeClientSet.CoreV1().Namespaces().Update(current)
+		_, e = r.KubeClientSet.CoreV1().Namespaces().Update(current)
 		if e != nil {
+			logging.FromContext(ctx).Error("Unable to label the namespace resource with knative-eventing-injection", zap.Error(e))
 			return b, err
 		}
-		// Wait for default broker to set up
-		time.Sleep(10 * time.Second)
-		b, err = r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	}
 	return b, err
 }
