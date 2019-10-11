@@ -165,7 +165,7 @@ func TestNewAdaptor(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			r := &mockReporter{}
 			ctx, _ := pkkrectesting.SetupFakeContext(t)
-			a := NewAdaptor(ctx, &tc.opt, ce, r)
+			a := NewAdapter(ctx, &tc.opt, ce, r)
 
 			got, ok := a.(*apiserverAdapter)
 			if !ok {
@@ -207,7 +207,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	}
 	r := &mockReporter{}
 	ctx, _ := pkkrectesting.SetupFakeContext(t)
-	a := NewAdaptor(ctx, &opt, ce, r)
+	a := NewAdapter(ctx, &opt, ce, r)
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -245,7 +245,7 @@ func TestAdapter_StartResource(t *testing.T) {
 
 	r := &mockReporter{}
 	ctx, _ := pkkrectesting.SetupFakeContext(t)
-	a := NewAdaptor(ctx, &opt, ce, r)
+	a := NewAdapter(ctx, &opt, ce, r)
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})

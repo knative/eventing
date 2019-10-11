@@ -103,7 +103,7 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 	return &envConfig{}
 }
 
-func NewAdaptor(ctx context.Context, processed adapter.EnvConfigAccessor, ceClient cloudevents.Client, reporter source.StatsReporter) adapter.Adapter {
+func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClient cloudevents.Client, reporter source.StatsReporter) adapter.Adapter {
 	logger := logging.FromContext(ctx)
 	env := processed.(*envConfig)
 

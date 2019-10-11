@@ -38,11 +38,12 @@ type EnvConfig struct {
 	LoggingConfigJson string `envconfig:"K_LOGGING_CONFIG" required:"true"`
 }
 
-// EnvConfigAccessor defines accesors for the minimal
+// EnvConfigAccessor defines accessors for the minimal
 // set of source adapter configuration parameters
 type EnvConfigAccessor interface {
 	// Get the URI where messages will be forwarded to.
 	GetSinkURI() string
+
 	// Get the namespace of the adapter
 	GetNamespace() string
 

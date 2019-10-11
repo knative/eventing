@@ -22,5 +22,5 @@ import (
 )
 
 func main() {
-	adapter.Main("cronjobsource", cronjobevents.NewEnvConfig, cronjobevents.NewAdaptor)
+	adapter.Main("cronjobsource", cronjobevents.NewEnvConfig, cronjobevents.NewAdapter)
 }

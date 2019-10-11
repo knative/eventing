@@ -22,5 +22,5 @@ import (
 )
 
 func main() {
-	adapter.Main("apiserversource", apiserver.NewEnvConfig, apiserver.NewAdaptor)
+	adapter.Main("apiserversource", apiserver.NewEnvConfig, apiserver.NewAdapter)
 }
