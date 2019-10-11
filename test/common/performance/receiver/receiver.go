@@ -33,6 +33,7 @@ import (
 )
 
 const shutdownWaitTime = time.Second * 5
+const timeoutAdditionalTime = time.Second * 60
 
 // Receiver records the received events and sends to the aggregator.
 // Since sender implementations can put id and type of event inside the event payload,
@@ -40,6 +41,7 @@ const shutdownWaitTime = time.Second * 5
 type Receiver struct {
 	typeExtractor TypeExtractor
 	idExtractor   IdExtractor
+	timeout       time.Duration
 
 	receivedCh     chan common.EventTimestamp
 	endCh          chan bool
@@ -63,9 +65,17 @@ func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor
 
 	channelSize, totalMessages := common.CalculateMemoryConstraintsForPaceSpecs(pace)
 
+	// Calculate timeout for receiver
+	var timeout time.Duration
+	for _, p := range pace {
+		timeout += p.Duration + common.WaitForFlush + common.WaitForReceiverGC
+	}
+	timeout += timeoutAdditionalTime
+
 	return &Receiver{
 		typeExtractor: typeExtractor,
 		idExtractor:   idExtractor,
+		timeout:       timeout,
 		receivedCh:    make(chan common.EventTimestamp, channelSize),
 		endCh:         make(chan bool, 1),
 		receivedEvents: &pb.EventsRecord{
@@ -88,7 +98,17 @@ func (r *Receiver) Run(ctx context.Context) {
 		}
 	}()
 
+	// When the testing service is degradated, there is a chance that the end message is not received
+	// This timer sends to endCh a signal to stop processing events and start tear down of receiver
+	timeoutTimer := time.AfterFunc(r.timeout, func() {
+		log.Printf("Receiver timeout")
+		r.endCh <- true
+	})
+
 	r.processEvents()
+
+	// Stop the timeoutTimer in case the tear down was triggered by end message
+	timeoutTimer.Stop()
 
 	closeReceiver()
 
@@ -115,10 +135,9 @@ func (r *Receiver) processEvents() {
 				return
 			}
 			r.receivedEvents.Events[e.EventId] = e.At
-		case _, ok := <-r.endCh:
-			if !ok {
-				return
-			}
+		case _, _ = <-r.endCh:
+			return
+		default:
 		}
 	}
 }
@@ -141,9 +160,10 @@ func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 	case common.GCEventType:
 		runtime.GC()
 	case common.EndEventType:
+		log.Printf("End message received correctly")
 		// Wait a bit so all messages on wire are processed
 		time.AfterFunc(shutdownWaitTime, func() {
-			close(r.endCh)
+			r.endCh <- true
 		})
 	}
 }

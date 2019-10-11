@@ -39,9 +39,8 @@ const (
 
 	// Those two depends on the maximum tolerated latency. If latency is higher than 1 sec, increase these.
 	// But if latency is higher than 1 sec, something else is wrong
-	waitForFlush      = 1 * time.Second
-	waitForReceiverGC = 1 * time.Second
-	waitAfterWarmup   = 5 * time.Second
+
+	waitAfterWarmup = 5 * time.Second
 )
 
 type Sender struct {
@@ -158,7 +157,7 @@ func (s *Sender) Run(ctx context.Context) {
 		s.loadGenerator.RunPace(i, pace, s.msgSize)
 
 		// Wait for flush
-		time.Sleep(waitForFlush)
+		time.Sleep(common.WaitForFlush)
 
 		// Trigger GC
 		log.Println("Triggering GC")
@@ -166,7 +165,7 @@ func (s *Sender) Run(ctx context.Context) {
 		runtime.GC()
 
 		// Wait for receivers GC
-		time.Sleep(waitForReceiverGC)
+		time.Sleep(common.WaitForReceiverGC)
 	}
 
 	s.loadGenerator.SendEndEvent()

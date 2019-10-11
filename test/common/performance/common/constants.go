@@ -16,10 +16,14 @@ limitations under the License.
 
 package common
 
+import "time"
+
 const (
-	WarmupEventType  = "warmup.perf-test"
-	MeasureEventType = "measure.perf-test"
-	GCEventType      = "gc.perf-test"
-	EndEventType     = "end.perf-test"
-	CEReceiverPort   = "8080"
+	WarmupEventType   = "warmup.perf-test"
+	MeasureEventType  = "measure.perf-test"
+	GCEventType       = "gc.perf-test"
+	EndEventType      = "end.perf-test"
+	CEReceiverPort    = "8080"
+	WaitForFlush      = 1 * time.Second
+	WaitForReceiverGC = 1 * time.Second
 )
