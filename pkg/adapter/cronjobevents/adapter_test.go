@@ -17,7 +17,6 @@ limitations under the License.
 package cronjobevents
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -61,7 +60,7 @@ func TestStart_ServeHTTP(t *testing.T) {
 			ce := kncetesting.NewTestClient()
 
 			r := &mockReporter{}
-			a := &Adapter{
+			a := &cronJobAdapter{
 				Schedule: tc.schedule,
 				Data:     "data",
 				Reporter: r,
@@ -70,7 +69,7 @@ func TestStart_ServeHTTP(t *testing.T) {
 
 			stop := make(chan struct{})
 			go func() {
-				if err := a.Start(context.TODO(), stop); err != nil {
+				if err := a.Start(stop); err != nil {
 					if tc.error {
 						// skip
 					} else {
@@ -92,13 +91,13 @@ func TestStartBadCron(t *testing.T) {
 	schedule := "bad"
 
 	r := &mockReporter{}
-	a := &Adapter{
+	a := &cronJobAdapter{
 		Schedule: schedule,
 		Reporter: r,
 	}
 
 	stop := make(chan struct{})
-	if err := a.Start(context.TODO(), stop); err == nil {
+	if err := a.Start(stop); err == nil {
 
 		t.Errorf("failed to fail, %v", err)
 
@@ -129,7 +128,7 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 			ce := kncetesting.NewTestClient()
 
 			r := &mockReporter{}
-			a := &Adapter{
+			a := &cronJobAdapter{
 				Data:     "data",
 				Reporter: r,
 				Client:   ce,
