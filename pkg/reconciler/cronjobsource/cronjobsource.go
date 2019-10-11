@@ -40,7 +40,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -70,8 +69,6 @@ type Reconciler struct {
 	deploymentLister appsv1listers.DeploymentLister
 	eventTypeLister  eventinglisters.EventTypeLister
 
-	resourceTracker duck.ResourceTracker
-
 	loggingContext context.Context
 	sinkReconciler *duck.SinkReconciler
 	loggingConfig  *pkgLogging.Config
@@ -88,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key", zap.Any("key", key))
 		return nil
 	}
 
@@ -159,15 +156,10 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 
 	ra, err := r.createReceiveAdapter(ctx, cronjob, sinkURI)
 	if err != nil {
-		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
 		return fmt.Errorf("creating receive adapter: %v", err)
 	}
 	cronjob.Status.PropagateDeploymentAvailability(ra)
-
-	track := r.resourceTracker.TrackInNamespace(cronjob)
-	if err = track(utils.ObjectRef(ra, deploymentGVK)); err != nil {
-		return fmt.Errorf("unable to track receive adapter: %v", err)
-	}
 
 	_, err = r.reconcileEventType(ctx, cronjob)
 	if err != nil {
@@ -278,7 +270,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 	expected := resources.MakeEventType(src)
 	current, err := r.eventTypeLister.EventTypes(src.Namespace).Get(expected.Name)
 	if err != nil && !apierrors.IsNotFound(err) {
-		r.Logger.Error("Unable to get an existing event type", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
 		return nil, fmt.Errorf("getting event types: %v", err)
 	}
 

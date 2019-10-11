@@ -96,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key", zap.Any("key", key))
 		return nil
 	}
 
@@ -160,7 +160,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
-		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
 	source.Status.PropagateDeploymentAvailability(ra)
@@ -274,7 +274,6 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiS
 }
 
 func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
-	fmt.Println(r.eventTypeLister)
 	etl, err := r.eventTypeLister.EventTypes(src.Namespace).List(r.getLabelSelector(src))
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
@@ -375,7 +374,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServ
 	cj, err := r.EventingClientSet.SourcesV1alpha1().ApiServerSources(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("ApiServerSource %q became ready after %v", apiserversource.Name, duration)
+		logging.FromContext(ctx).Info("ApiServerSource became ready after", zap.Duration("duration", duration))
 		r.Recorder.Event(apiserversource, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", apiserversource.Name))
 		if err := r.StatsReporter.ReportReady("ApiServerSource", apiserversource.Namespace, apiserversource.Name, duration); err != nil {
 			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)

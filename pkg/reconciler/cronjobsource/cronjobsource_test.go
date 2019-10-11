@@ -476,7 +476,6 @@ func TestAllCases(t *testing.T) {
 			deploymentLister:    listers.GetDeploymentLister(),
 			eventTypeLister:     listers.GetEventTypeLister(),
 			receiveAdapterImage: image,
-			resourceTracker:     &MockResourceTracker{},
 		}
 		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r
