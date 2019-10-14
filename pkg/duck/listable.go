@@ -22,7 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -75,9 +77,12 @@ type informerListerPair struct {
 	lister   cache.GenericLister
 }
 
-// ensureInformer ensures that there is an informer watching and sending events to tracker for the
+// ensureTracking ensures that there is an informer watching and sending events to tracker for the
 // concrete GVK. It also ensures that there is the corresponding lister for that informer.
 func (t *listableTracker) ensureTracking(ref corev1.ObjectReference) error {
+	if equality.Semantic.DeepEqual(ref, &corev1.ObjectReference{}) {
+		return errors.New("cannot track empty object ref")
+	}
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
