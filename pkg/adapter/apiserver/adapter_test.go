@@ -52,7 +52,6 @@ func TestNewAdaptor(t *testing.T) {
 	ce := kncetesting.NewTestClient()
 
 	masterURL = &fakeMasterURL
-	//logger := zap.NewExample().Sugar()
 
 	testCases := map[string]struct {
 		opt    envConfig
@@ -189,8 +188,6 @@ func TestNewAdaptor(t *testing.T) {
 
 func TestAdapter_StartRef(t *testing.T) {
 	ce := kncetesting.NewTestClient()
-	// logger := zap.NewExample().Sugar()
-	//source := "test-source"
 
 	opt := envConfig{
 		EnvConfig: adapter.EnvConfig{
@@ -227,8 +224,7 @@ func TestAdapter_StartRef(t *testing.T) {
 
 func TestAdapter_StartResource(t *testing.T) {
 	ce := kncetesting.NewTestClient()
-	//logger := zap.NewExample().Sugar()
-	//source := "test-source"
+
 	opt := envConfig{
 		EnvConfig: adapter.EnvConfig{
 			Namespace: "default",

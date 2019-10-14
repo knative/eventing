@@ -66,10 +66,9 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 		}
 	}
 
-	loggerSugared, _ := logging.NewLoggerFromConfig(loggingConfig, component)
-	logger := loggerSugared.Desugar()
-	defer flush(loggerSugared)
-	ctx = logging.WithLogger(ctx, loggerSugared)
+	logger, _ := logging.NewLoggerFromConfig(loggingConfig, component)
+	defer flush(logger)
+	ctx = logging.WithLogger(ctx, logger)
 
 	// Report stats on Go memory usage every 30 seconds.
 	msp := metrics.NewMemStatsAll()
@@ -83,7 +82,7 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 	if err != nil {
 		logger.Error("failed to process metrics options", zap.Error(err))
 	} else {
-		if err := metrics.UpdateExporter(*metricsConfig, loggerSugared); err != nil {
+		if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
 			logger.Error("failed to create the metrics exporter", zap.Error(err))
 		}
 	}
@@ -93,7 +92,7 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
-	if err = tracing.SetupStaticPublishing(loggerSugared, "", tracing.OnePercentSampling); err != nil {
+	if err = tracing.SetupStaticPublishing(logger, "", tracing.OnePercentSampling); err != nil {
 		// If tracing doesn't work, we will log an error, but allow the adapter
 		// to continue to start.
 		logger.Error("Error setting up trace publishing", zap.Error(err))
