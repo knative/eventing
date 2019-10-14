@@ -132,6 +132,9 @@ func (t *listableTracker) TrackInNamespace(obj metav1.Object) Track {
 
 // ListerFor satisfies the ListableTracker interface.
 func (t *listableTracker) ListerFor(ref corev1.ObjectReference) (cache.GenericLister, error) {
+	if equality.Semantic.DeepEqual(ref, &corev1.ObjectReference{}) {
+		return nil, errors.New("cannot get lister for empty object ref")
+	}
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
@@ -146,6 +149,9 @@ func (t *listableTracker) ListerFor(ref corev1.ObjectReference) (cache.GenericLi
 
 // InformerFor satisfies the ListableTracker interface.
 func (t *listableTracker) InformerFor(ref corev1.ObjectReference) (cache.SharedIndexInformer, error) {
+	if equality.Semantic.DeepEqual(ref, &corev1.ObjectReference{}) {
+		return nil, errors.New("cannot get informer for empty object ref")
+	}
 	gvk := ref.GroupVersionKind()
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
