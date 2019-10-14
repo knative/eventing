@@ -82,6 +82,10 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 		return *s.DeprecatedDNSName, nil
 	}
 
+	if s.Ref == nil {
+		return "", nil
+	}
+
 	if err := track(*s.Ref); err != nil {
 		return "", fmt.Errorf("unable to track the reference: %v", err)
 	}
@@ -89,7 +93,7 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 	// K8s services are special cased. They can be called, even though they do not satisfy the
 	// Addressable interface. Note that it is important to return here as we wouldn't be able to marshall it to an
 	// Addressable, thus the type assertion below would fail.
-	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
+	if s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
 		// Check that the service exists by querying the API server. This is a special case, as we cannot use the
 		// addressable lister.
 		_, err := ObjectReference(ctx, dynamicClient, namespace, s.Ref)
