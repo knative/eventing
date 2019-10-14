@@ -4,8 +4,7 @@ Package types implements the CloudEvents type system.
 CloudEvents defines a set of abstract types for event context attributes. Each
 type has a corresponding native Go type and a canonical string encoding.  The
 native Go types used to represent the CloudEvents types are:
-
-    bool, int32, string, []byte, *url.URL, time.Time
+bool, int32, string, []byte, *url.URL, time.Time
 
  +----------------+----------------+-----------------------------------+
  |CloudEvents Type|Native Type     |Convertible From                   |

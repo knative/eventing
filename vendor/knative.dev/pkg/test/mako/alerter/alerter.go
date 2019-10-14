@@ -63,7 +63,7 @@ func (alerter *Alerter) HandleBenchmarkResult(testName string, output qpb.Quicks
 				}
 			}
 			if alerter.slackMessageHandler != nil {
-				if err := alerter.slackMessageHandler.SendAlert(summary); err != nil {
+				if err := alerter.slackMessageHandler.SendAlert(testName, summary); err != nil {
 					errs = append(errs, err)
 				}
 			}

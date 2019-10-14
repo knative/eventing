@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:66a3319182e38d7f8b6bc3c441757f9cca113406f1a5e009758f193eb9293f90"
+  digest = "1:a501eb169ba4c15a8ec4fd5ee799d8d257b29a14972348f5b5369afe98290096"
   name = "cloud.google.com/go"
   packages = [
     "compute/metadata",
@@ -12,8 +12,8 @@
     "trace/apiv2",
   ]
   pruneopts = "NUT"
-  revision = "264def2dd949cdb8a803bb9f50fa29a67b798a6a"
-  version = "v0.46.3"
+  revision = "cfe8f6d1fe6976d03af790d7a8b9bf6aa73287bd"
+  version = "v0.47.0"
 
 [[projects]]
   digest = "1:642cf8e80572f9dc0677b0f241c8ab2e715c9dccc215270ea873c86ddca0062c"
@@ -43,7 +43,7 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:0bcbc7eba2f13cdd07b3515e98fa0a47a4b047283550e5752c63a9d02259eb79"
+  digest = "1:19a4c891857a1752f61c3be080474674a656c45815a9bf442da996802bfa19e5"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -80,8 +80,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "NUT"
-  revision = "707486d15fdffccd2b7fc759e3f997bf3e0882cd"
-  version = "v1.25.7"
+  revision = "e42fa244c725b2a423a8e9cf1c86828c0bf9400a"
+  version = "v1.25.12"
 
 [[projects]]
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
@@ -105,7 +105,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:64e79d810dfbb710d1616252b0ca2f7d20e632a224bcb408f9974914d24eda5d"
+  digest = "1:de0016e87636a076499c2c4840563d7e54c4acbc2fc5dca303390501a4d85b12"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     ".",
@@ -114,6 +114,7 @@
     "pkg/cloudevents/context",
     "pkg/cloudevents/datacodec",
     "pkg/cloudevents/datacodec/json",
+    "pkg/cloudevents/datacodec/text",
     "pkg/cloudevents/datacodec/xml",
     "pkg/cloudevents/observability",
     "pkg/cloudevents/transport",
@@ -121,7 +122,7 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "a966cefa037d303241da3d86ab07e49e5b2519e2"
+  revision = "8dc7a6994d99f07031904838c4e91101d5fd218a"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -156,15 +157,15 @@
   version = "v1.7.1"
 
 [[projects]]
-  digest = "1:633dde05baa7afd3544cfe4ac16fe3c5450b868cfc6b1558621ee39ebf2273ea"
+  digest = "1:2b0e6c0bea11257c646616ebd6a62be0ef2b6a0fd8210ac3caeaf57ee136123b"
   name = "github.com/gogo/protobuf"
   packages = [
     "proto",
     "sortkeys",
   ]
   pruneopts = "NUT"
-  revision = "0ca988a254f991240804bf9821f3450d87ccbb1b"
-  version = "v1.3.0"
+  revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
@@ -358,7 +359,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:927762c6729b4e72957ba3310e485ed09cf8451c5a637a52fd016a9fe09e7936"
+  digest = "1:7bbccd3dd7998f2a180264ec1d12e362ed8e02f55ea7b82ac0d0f48ffa2d8888"
   name = "github.com/mailru/easyjson"
   packages = [
     "buffer",
@@ -366,7 +367,7 @@
     "jwriter",
   ]
   pruneopts = "NUT"
-  revision = "efd84ab4db439838cce1b8a5f7dba45ce24cfe47"
+  revision = "6c0755d89d1e153c9986ad90e886a626bd66aad0"
 
 [[projects]]
   digest = "1:56dbf15e091bf7926cb33a57cb6bdfc658fc6d3498d2f76f10a97ce7856f1fde"
@@ -594,11 +595,11 @@
     "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "34f69633bfdcf9db92f698f8487115767eebef81"
+  revision = "87dc89f01550277dc22b74ffcf4cd89fa2f40f4c"
 
 [[projects]]
   branch = "master"
-  digest = "1:a678b152ef62d69dfb98d8f4910eb7cbf35496fd1341735d96860e3f5b90fefd"
+  digest = "1:7405a77c7be3920c156c13d9088d062a26123cf82ef31c87a84bb4446d53f4c8"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -611,7 +612,7 @@
     "trace",
   ]
   pruneopts = "NUT"
-  revision = "72f939374954d0a1b2a1e27dcda950e2724dd5c1"
+  revision = "491137f692577e390404f177a0515c9f86f79754"
 
 [[projects]]
   branch = "master"
@@ -640,14 +641,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:45eb41f860d30c1937deb5ec6e5f3c7e03e982211e8192672836026827a33231"
+  digest = "1:af1a8a60d9ed69646d3c0a614c4673d1b0a621ee4718c947c712d2b931b673a2"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "543471e840be449c53d44b32c7adf1261ad67e37"
+  revision = "b09406accb4736d857a32bf9444cd7edae2ffa79"
 
 [[projects]]
   digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
@@ -701,7 +702,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "6536af71d98a5bb8f2cbd2f5e62afc2f6cc93dbb"
+  revision = "539cdc44f86437a5d06fd0cae3173ac81bd7c8aa"
 
 [[projects]]
   branch = "master"
@@ -719,7 +720,7 @@
     "transport/http/internal/propagation",
   ]
   pruneopts = "NUT"
-  revision = "d7272b84207dfaf3e6436bd41179c2bd4691316d"
+  revision = "5e0e3f4a3bb8f1c7d2bf1465670c5c0b3c45c277"
 
 [[projects]]
   digest = "1:be5054b1c190011dca4e1c3c051025294e97f14fdfd354093fc233b4d05dcd98"
@@ -960,7 +961,7 @@
   name = "k8s.io/apiserver"
   packages = ["pkg/storage/names"]
   pruneopts = "NUT"
-  revision = "c29386a6051d0cc905faa078747da7d109a36faa"
+  revision = "0d1aa698ce4beb2bc5876e00f7531ba689426161"
 
 [[projects]]
   digest = "1:bccc3b3d1c8f6116a7c7fe3e004757425f7293d2ae6ab765838f27cadf2f61c2"
@@ -1195,7 +1196,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:572984b077226ccb4756018e9d2599dd91d5f202cab58a0d09bea0e0bf9dd9fe"
+  digest = "1:fff4db55db9c2b5414fa5ed6a34183700eb92eee9e28c22c094acee38415f5a1"
   name = "k8s.io/gengo"
   packages = [
     "args",
@@ -1208,7 +1209,7 @@
     "types",
   ]
   pruneopts = "NUT"
-  revision = "ebc107f98eab922ef99d645781b87caca01f4f48"
+  revision = "7fa3014cb28f99ce2d9e803bcd3efa7edd4effa9"
 
 [[projects]]
   digest = "1:c0693cb981f43d82a767a3217b7640a4bdb341731d3814b38602f4e5dc4f01b3"
@@ -1237,11 +1238,11 @@
     "trace",
   ]
   pruneopts = "NUT"
-  revision = "69764acb6e8e900b7c05296c5d3c9c19545475f9"
+  revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
   branch = "master"
-  digest = "1:40cd1bd5d85f1b150441e05e9e89a5666b3e05effd1c2d3c4910da274628a0cd"
+  digest = "1:eff1820d1e919aabae9c6c6dba7861c62aba8841bcd4921714b8723c85d46356"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1331,7 +1332,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "cd902689ab6d05cc0804f81cfe993a79907dd648"
+  revision = "4b3befdaaae1d32f50fbdc42ca9de6fd1cfc0967"
 
 [[projects]]
   branch = "master"
@@ -1342,7 +1343,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "af4ff6e3247df5373cad1f5399e2119a77a1927b"
+  revision = "24dea9baf5167a596d3a98522463f574d3282697"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"

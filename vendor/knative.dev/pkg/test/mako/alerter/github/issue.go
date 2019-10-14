@@ -29,8 +29,14 @@ import (
 
 const (
 	// perfLabel is the Github issue label used for querying all auto-generated performance issues.
-	perfLabel         = "auto:perf"
-	daysConsideredOld = 10 // arbitrary number of days for an issue to be considered old
+	perfLabel = "auto:perf"
+	// number of days for an issue to be considered old
+	daysConsideredOld = 30
+
+	// number of days for an issue to be considered active
+	// To avoid frequent open/close actions, only automatically close an issue if there is no activity
+	// (update, comment, etc.) on it for a specified time
+	daysConsideredActive = 3
 
 	// issueTitleTemplate is a template for issue title
 	issueTitleTemplate = "[performance] %s"
@@ -172,6 +178,10 @@ func (gih *IssueHandler) CloseIssueForTest(testName string) error {
 	if issue == nil || err != nil || *issue.State == string(ghutil.IssueCloseState) {
 		return nil
 	}
+	// If the issue is still active, do not close it.
+	if time.Now().Sub(issue.GetUpdatedAt()) < daysConsideredActive*24*time.Hour {
+		return nil
+	}
 
 	issueNumber := *issue.Number
 	if err := gih.addComment(issueNumber, closeIssueComment); err != nil {
@@ -219,6 +229,7 @@ func (gih *IssueHandler) findIssue(title string) (*github.Issue, error) {
 	); err != nil {
 		return nil, err
 	}
+
 	var existingIssue *github.Issue
 	for _, issue := range issues {
 		if *issue.Title == title {
@@ -228,8 +239,10 @@ func (gih *IssueHandler) findIssue(title string) (*github.Issue, error) {
 				continue
 			}
 
-			existingIssue = issue
-			break
+			// If there are multiple issues, return the one that was created most recently.
+			if existingIssue == nil || issue.CreatedAt.After(*existingIssue.CreatedAt) {
+				existingIssue = issue
+			}
 		}
 	}
 

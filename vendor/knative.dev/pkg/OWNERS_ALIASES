@@ -46,6 +46,11 @@ aliases:
   - mdemirhan
   - yanweiguo
 
+  network-approvers:
+  - markusthoemmes
+  - tcnghia
+  - vagababov
+
   productivity-approvers:
   - adrcunha
   - chaodaiG
