@@ -392,7 +392,8 @@ func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyS
 
 	lister, err := r.addressableTracker.ListerFor(*replyStrategy.Channel)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for ObjecRef: %s/%s", namespace, replyStrategy.Channel.Name), zap.Error(err))
+		logging.FromContext(ctx).Error("Error getting lister for ReplyStrategy Channel", zap.Any("replyStrategy.Channel", replyStrategy), zap.Error(err))
+		return "", err
 	}
 
 	a, err := lister.ByNamespace(namespace).Get(replyStrategy.Channel.Name)
