@@ -53,9 +53,13 @@ type Broker struct {
 
 var (
 	// Check that Broker can be validated, can be defaulted, and has immutable fields.
-	_ apis.Validatable   = (*Broker)(nil)
-	_ apis.Defaultable   = (*Broker)(nil)
-	_ apis.Immutable     = (*Broker)(nil)
+	_ apis.Validatable = (*Broker)(nil)
+	_ apis.Defaultable = (*Broker)(nil)
+	_ apis.Immutable   = (*Broker)(nil)
+
+	// Check that Broker can return its spec untyped.
+	_ apis.HasSpec = (*Broker)(nil)
+
 	_ runtime.Object     = (*Broker)(nil)
 	_ webhook.GenericCRD = (*Broker)(nil)
 

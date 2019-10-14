@@ -16,21 +16,15 @@ limitations under the License.
 
 package v1alpha1
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestCronJobSource_GetGroupVersionKind(t *testing.T) {
-	src := CronJobSource{}
+func TestEventType_GetGroupVersionKind(t *testing.T) {
+	src := EventType{}
 	gvk := src.GetGroupVersionKind()
 
-	if gvk.Kind != "CronJobSource" {
-		t.Errorf("Should be CronJobSource.")
-	}
-}
-
-func TestCronJobSource_CronJobEventSource(t *testing.T) {
-	ceCronJobSource := CronJobEventSource("ns1", "job1")
-
-	if ceCronJobSource != "/apis/v1/namespaces/ns1/cronjobsources/job1" {
-		t.Errorf("Should be '/apis/v1/namespaces/ns1/cronjobsources/job1'")
+	if gvk.Kind != "EventType" {
+		t.Errorf("Should be EventType.")
 	}
 }
