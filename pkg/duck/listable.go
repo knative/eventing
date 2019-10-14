@@ -139,8 +139,8 @@ func (t *listableTracker) ListerFor(ref corev1.ObjectReference) (cache.GenericLi
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
 	t.concreteLock.RLock()
+	defer t.concreteLock.RUnlock()
 	informerListerPair, present := t.concrete[gvr]
-	t.concreteLock.RUnlock()
 	if !present {
 		return nil, fmt.Errorf("no lister available for GVR %s", gvr.String())
 	}
@@ -156,8 +156,8 @@ func (t *listableTracker) InformerFor(ref corev1.ObjectReference) (cache.SharedI
 	gvr, _ := meta.UnsafeGuessKindToResource(gvk)
 
 	t.concreteLock.RLock()
+	defer t.concreteLock.RUnlock()
 	informerListerPair, present := t.concrete[gvr]
-	t.concreteLock.RUnlock()
 	if !present {
 		return nil, fmt.Errorf("no informer available for GVR %s", gvr.String())
 	}

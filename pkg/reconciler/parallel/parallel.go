@@ -18,7 +18,6 @@ package parallel
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -126,9 +125,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(p.Namespace)
 	if channelResourceInterface == nil {
-		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
-		logging.FromContext(ctx).Error(msg)
-		return errors.New(msg)
+		return fmt.Errorf("unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
 	}
 
 	// Tell tracker to reconcile this Parallel whenever my channels change.
@@ -153,8 +150,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 
 		// Track channels and enqueue parallel when they change.
 		if err := track(channelObjRef); err != nil {
-			logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
-			return err
+			return fmt.Errorf("unable to track changes to Channel: %v", err)
 		}
 
 		channelable, err := r.reconcileChannel(ctx, channelResourceInterface, p, channelObjRef)
@@ -209,7 +205,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Paralle
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
 	lister, err := r.channelableTracker.ListerFor(channelObjRef)
 	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", channelObjRef), zap.Error(err))
 		return nil, err
 	}
 	c, err := lister.ByNamespace(channelObjRef.Namespace).Get(channelObjRef.Name)
@@ -218,31 +214,31 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 			newChannel, err := resources.NewChannel(channelObjRef.Name, p)
 			logging.FromContext(ctx).Error(fmt.Sprintf("Creating Channel Object: %+v", newChannel))
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel resource object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+				logging.FromContext(ctx).Error("Failed to create Channel resource object", zap.Any("channel", channelObjRef), zap.Error(err))
 				return nil, err
 			}
 			created, err := channelResourceInterface.Create(newChannel, metav1.CreateOptions{})
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+				logging.FromContext(ctx).Error("Failed to create Channel", zap.Any("channel", channelObjRef), zap.Error(err))
 				return nil, err
 			}
-			logging.FromContext(ctx).Info(fmt.Sprintf("Created Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Any("NewChannel", newChannel))
+			logging.FromContext(ctx).Debug("Created Channel", zap.Any("channel", newChannel))
 			// Convert to Channel duck so that we can treat all Channels the same.
 			channelable := &duckv1alpha1.Channelable{}
 			err = duckapis.FromUnstructured(created, channelable)
 			if err != nil {
-				logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+				logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
 				return nil, err
 			}
 			return channelable, nil
 		}
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to get Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		logging.FromContext(ctx).Error("Failed to get Channel", zap.Any("channel", channelObjRef), zap.Error(err))
 		return nil, err
 	}
-	logging.FromContext(ctx).Debug(fmt.Sprintf("Found Channel: %s/%s", channelObjRef.Namespace, channelObjRef.Name))
+	logging.FromContext(ctx).Debug("Found Channel", zap.Any("channel", channelObjRef))
 	channelable, ok := c.(*duckv1alpha1.Channelable)
 	if !ok {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Channelable Object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
+		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", channelObjRef), zap.Error(err))
 		return nil, err
 	}
 	return channelable, nil
@@ -279,14 +275,14 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallel's subscription failed: %v", err)
-			return nil, fmt.Errorf("Failed to create Subscription Object for branch: %d : %s", branchNumber, err)
+			return nil, fmt.Errorf("failed to create Subscription Object for branch: %d : %s", branchNumber, err)
 		}
 		return newSub, nil
 	} else if err != nil {
 		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
 		// TODO: Send events here, or elsewhere?
 		//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallels's subscription failed: %v", err)
-		return nil, fmt.Errorf("Failed to get subscription: %s", err)
+		return nil, fmt.Errorf("failed to get subscription: %s", err)
 	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.

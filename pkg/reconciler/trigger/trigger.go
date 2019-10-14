@@ -68,8 +68,11 @@ type Reconciler struct {
 	subscriptionLister messaginglisters.SubscriptionLister
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister
-	tracker            tracker.Interface
-	kresourceTracker   duck.ListableTracker
+	// Regular tracker to track static resources. In particular, it tracks Broker's changes.
+	tracker tracker.Interface
+	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
+	kresourceTracker duck.ListableTracker
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
 }
 
@@ -196,8 +199,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	trackAddressable := r.addressableTracker.TrackInNamespace(t)
 	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
 		if err := trackAddressable(*t.Spec.Subscriber.Ref); err != nil {
-			logging.FromContext(ctx).Error("Unable to track changes to Subscriber.Ref", zap.Error(err))
-			return err
+			return fmt.Errorf("unable to track changes to Subscriber.Ref: %v", err)
 		}
 	}
 

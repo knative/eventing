@@ -67,7 +67,6 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Regular tracker to track static resources. In particular, it tracks Broker's changes.
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
@@ -85,9 +84,7 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
 	r.kresourceTracker = duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl

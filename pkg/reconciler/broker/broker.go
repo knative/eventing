@@ -18,13 +18,12 @@ package broker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
 	"go.uber.org/zap"
-	v1 "k8s.io/api/apps/v1"
+	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
@@ -51,7 +50,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -165,9 +163,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	gvr, _ := meta.UnsafeGuessKindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
 	if channelResourceInterface == nil {
-		msg := fmt.Sprintf("Unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
-		logging.FromContext(ctx).Error(msg)
-		return errors.New(msg)
+		return fmt.Errorf("unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
 	}
 
 	track := r.channelableTracker.TrackInNamespace(b)
@@ -181,8 +177,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 	// Start tracking the trigger channel.
 	if err := track(triggerChannelObjRef); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
-		return err
+		return fmt.Errorf("unable to track changes to the trigger Channel: %v", err)
 	}
 
 	logging.FromContext(ctx).Info("Reconciling the trigger channel")
@@ -250,8 +245,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 
 	// Start tracking the ingress channel.
 	if err = track(ingressChannelObjRef); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
-		return err
+		return fmt.Errorf("unable to track changes to the ingress Channel: %v", err)
 	}
 
 	ingressChan, err := r.reconcileIngressChannel(ctx, channelResourceInterface, ingressChannelObjRef, b)
@@ -262,12 +256,6 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 	b.Status.IngressChannel = &ingressChannelObjRef
 	b.Status.PropagateIngressChannelReadiness(&ingressChan.Status)
-
-	// Start tracking ingress channel...
-	if err = track(utils.ObjectRef(ingressChan, ingressChan.GroupVersionKind())); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to Channel", zap.Error(err))
-		return err
-	}
 
 	ingressSub, err := r.reconcileIngressSubscription(ctx, b, ingressChan, svc)
 	if err != nil {
