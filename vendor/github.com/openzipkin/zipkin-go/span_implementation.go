@@ -85,6 +85,15 @@ func (s *spanImpl) Finish() {
 	}
 }
 
+func (s *spanImpl) FinishedWithDuration(d time.Duration) {
+	if atomic.CompareAndSwapInt32(&s.mustCollect, 1, 0) {
+		s.Duration = d
+		if s.flushOnFinish {
+			s.tracer.reporter.Send(s.SpanModel)
+		}
+	}
+}
+
 func (s *spanImpl) Flush() {
 	if s.SpanModel.Debug || (s.SpanModel.Sampled != nil && *s.SpanModel.Sampled) {
 		s.tracer.reporter.Send(s.SpanModel)

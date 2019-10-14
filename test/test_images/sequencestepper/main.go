@@ -52,6 +52,8 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 		Data:    data,
 	}
 
+	r.SetDataContentType("application/json")
+
 	log.Println("Transform the event to: ")
 	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
 
