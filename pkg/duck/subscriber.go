@@ -29,13 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"knative.dev/eventing/pkg/reconciler/names"
 	duckapis "knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler/names"
 )
 
 // DomainToURL converts a domain into an HTTP URL.
@@ -69,12 +69,9 @@ func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, names
 	return resourceClient.Get(ref.Name, metav1.GetOptions{})
 }
 
-type Track func(corev1.ObjectReference) error
-
-// SubscriberSpec resolves the Spec.Call object. If it's an ObjectReference, it will resolve the
+// SubscriberSpec resolves the SubscriberSpec object. If it's an ObjectReference, it will resolve the
 // object and treat it as an Addressable. If it's a DNSName, then it's used as is.
-// TODO: Once Service Routes, etc. support Callable, use that.
-func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec, track Track) (string, error) {
+func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namespace string, s *v1alpha1.SubscriberSpec, addressableTracker ListableTracker, track Track) (string, error) {
 	if isNilOrEmptySubscriber(s) {
 		return "", nil
 	}
@@ -85,40 +82,49 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 		return *s.DeprecatedDNSName, nil
 	}
 
-	obj, err := ObjectReference(ctx, dynamicClient, namespace, s.Ref)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target",
-			zap.Error(err),
-			zap.Any("subscriberSpec.Ref", s.Ref))
-		return "", err
+	if s.Ref == nil {
+		return "", nil
 	}
 
-	if err = track(*s.Ref); err != nil {
+	if err := track(*s.Ref); err != nil {
 		return "", fmt.Errorf("unable to track the reference: %v", err)
 	}
 
 	// K8s services are special cased. They can be called, even though they do not satisfy the
-	// Callable interface.
-	if s.Ref != nil && s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
+	// Addressable interface. Note that it is important to return here as we wouldn't be able to marshall it to an
+	// Addressable, thus the type assertion below would fail.
+	if s.Ref.APIVersion == "v1" && s.Ref.Kind == "Service" {
+		// Check that the service exists by querying the API server. This is a special case, as we cannot use the
+		// addressable lister.
+		_, err := ObjectReference(ctx, dynamicClient, namespace, s.Ref)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target service", zap.Any("subscriberSpec.Ref", s.Ref), zap.Error(err))
+			return "", err
+		}
 		// This Service must exist because ObjectReference did not return an error.
 		return DomainToURL(names.ServiceHostName(s.Ref.Name, namespace)), nil
 	}
 
-	t := duckv1alpha1.AddressableType{}
-	if err = duck.FromUnstructured(obj, &t); err == nil {
-		if t.Status.Address != nil {
-			url := t.Status.Address.GetURL()
-			return url.String(), nil
-		}
+	lister, err := addressableTracker.ListerFor(*s.Ref)
+	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Error getting lister for ObjecRef: %s/%s", namespace, s.Ref.Name), zap.Error(err))
 	}
 
-	legacy := duckv1alpha1.LegacyTarget{}
-	if err = duck.FromUnstructured(obj, &legacy); err == nil {
-		if legacy.Status.DomainInternal != "" {
-			return DomainToURL(legacy.Status.DomainInternal), nil
-		}
+	a, err := lister.ByNamespace(namespace).Get(s.Ref.Name)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to fetch SubscriberSpec target", zap.Any("subscriberSpec.Ref", s.Ref), zap.Error(err))
+		return "", err
 	}
 
+	addressable, ok := a.(*duckv1alpha1.AddressableType)
+	if !ok {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", namespace, s.Ref.Name), zap.Error(err))
+		return "", errors.New("object is not addressable")
+	}
+	if addressable.Status.Address != nil {
+		url := addressable.Status.Address.GetURL()
+		return url.String(), nil
+	}
 	return "", errors.New("status does not contain address")
 }
 

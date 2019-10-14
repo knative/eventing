@@ -26,12 +26,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -42,9 +45,8 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
 
-	. "knative.dev/pkg/reconciler/testing"
-
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 var (
@@ -639,13 +641,14 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
-			triggerLister:            listers.GetTriggerLister(),
-			subscriptionLister:       listers.GetSubscriptionLister(),
-			brokerLister:             listers.GetBrokerLister(),
-			serviceLister:            listers.GetK8sServiceLister(),
-			resourceTracker:          &MockResourceTracker{},
-			kresourceInformerFactory: KResourceTypedInformerFactory(ctx),
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			triggerLister:      listers.GetTriggerLister(),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			brokerLister:       listers.GetBrokerLister(),
+			serviceLister:      listers.GetK8sServiceLister(),
+			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
+			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
+			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
 		}
 	},
 		false,

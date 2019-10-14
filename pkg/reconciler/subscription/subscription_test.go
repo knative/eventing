@@ -26,12 +26,15 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -789,7 +792,8 @@ func TestAllCases(t *testing.T) {
 		return &Reconciler{
 			Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:             listers.GetSubscriptionLister(),
-			resourceTracker:                &MockResourceTracker{},
+			channelableTracker:             duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, func(types.NamespacedName) {}, 0),
+			addressableTracker:             duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
 			customResourceDefinitionLister: listers.GetCustomResourceDefinitionLister(),
 		}
 	}, false, logger))
