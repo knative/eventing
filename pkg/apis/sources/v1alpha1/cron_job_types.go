@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"knative.dev/pkg/apis"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,8 +47,11 @@ var (
 	// Check that it is a runtime object.
 	_ runtime.Object = (*CronJobSource)(nil)
 
-	// Check that we can create OwnerReferences to a Configuration.
+	// Check that we can create OwnerReferences to a CronJobSource.
 	_ kmeta.OwnerRefable = (*CronJobSource)(nil)
+
+	// Check that CronJobSource can return its spec untyped.
+	_ apis.HasSpec = (*CronJobSource)(nil)
 )
 
 const (
@@ -120,4 +124,9 @@ type CronJobSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CronJobSource `json:"items"`
+}
+
+// GetUntypedSpec returns the spec of the CronJobSource.
+func (c *CronJobSource) GetUntypedSpec() interface{} {
+	return c.Spec
 }

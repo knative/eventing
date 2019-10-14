@@ -24,6 +24,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
 
@@ -45,11 +46,20 @@ type InMemoryChannel struct {
 	Status InMemoryChannelStatus `json:"status,omitempty"`
 }
 
-// Check that Channel can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*InMemoryChannel)(nil)
-var _ apis.Defaultable = (*InMemoryChannel)(nil)
-var _ runtime.Object = (*InMemoryChannel)(nil)
-var _ webhook.GenericCRD = (*InMemoryChannel)(nil)
+var (
+	// Check that InMemoryChannel can be validated and defaulted.
+	_ apis.Validatable = (*InMemoryChannel)(nil)
+	_ apis.Defaultable = (*InMemoryChannel)(nil)
+
+	// Check that InMemoryChannel can return its spec untyped.
+	_ apis.HasSpec = (*InMemoryChannel)(nil)
+
+	_ runtime.Object     = (*InMemoryChannel)(nil)
+	_ webhook.GenericCRD = (*InMemoryChannel)(nil)
+
+	// Check that we can create OwnerReferences to an InMemoryChannel.
+	_ kmeta.OwnerRefable = (*InMemoryChannel)(nil)
+)
 
 // InMemoryChannelSpec defines which subscribers have expressed interest in
 // receiving events from this InMemoryChannel.
@@ -90,4 +100,9 @@ type InMemoryChannelList struct {
 // GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
 func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("InMemoryChannel")
+}
+
+// GetUntypedSpec returns the spec of the InMemoryChannel.
+func (i *InMemoryChannel) GetUntypedSpec() interface{} {
+	return i.Spec
 }

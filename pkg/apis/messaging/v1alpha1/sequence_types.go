@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
 
@@ -46,14 +47,23 @@ type Sequence struct {
 	Status SequenceStatus `json:"status,omitempty"`
 }
 
-// Check that Sequence can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Sequence)(nil)
-var _ apis.Defaultable = (*Sequence)(nil)
+var (
+	// Check that Sequence can be validated and defaulted.
+	_ apis.Validatable = (*Sequence)(nil)
+	_ apis.Defaultable = (*Sequence)(nil)
 
-// TODO: make appropriate fields immutable.
-//var _ apis.Immutable = (*Sequence)(nil)
-var _ runtime.Object = (*Sequence)(nil)
-var _ webhook.GenericCRD = (*Sequence)(nil)
+	// Check that Sequence can return its spec untyped.
+	_ apis.HasSpec = (*Sequence)(nil)
+
+	// TODO: make appropriate fields immutable.
+	//_ apis.Immutable = (*Sequence)(nil)
+
+	_ runtime.Object     = (*Sequence)(nil)
+	_ webhook.GenericCRD = (*Sequence)(nil)
+
+	// Check that we can create OwnerReferences to a Sequence.
+	_ kmeta.OwnerRefable = (*Sequence)(nil)
+)
 
 type SequenceSpec struct {
 	// Steps is the list of Subscribers (processors / functions) that will be called in the order
@@ -129,4 +139,9 @@ type SequenceList struct {
 // GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
 func (p *Sequence) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("Sequence")
+}
+
+// GetUntypedSpec returns the spec of the Sequence.
+func (s *Sequence) GetUntypedSpec() interface{} {
+	return s.Spec
 }
