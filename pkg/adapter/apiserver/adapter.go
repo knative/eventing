@@ -17,11 +17,15 @@ limitations under the License.
 package apiserver
 
 import (
+	"context"
+	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,11 +33,38 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
+	"knative.dev/eventing/pkg/adapter"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 )
 
-type Adapter interface {
-	Start(stopCh <-chan struct{}) error
+var (
+	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+)
+
+type StringList []string
+
+// Decode splits list of strings separated by '|',
+// overriding the default comma separator which is
+// a valid label selector character.
+func (s *StringList) Decode(value string) error {
+	*s = strings.Split(value, ";")
+	return nil
+}
+
+type envConfig struct {
+	adapter.EnvConfig
+
+	Mode            string     `envconfig:"MODE"`
+	ApiVersion      StringList `split_words:"true" required:"true"`
+	Kind            StringList `required:"true"`
+	Controller      []bool     `required:"true"`
+	LabelSelector   StringList `envconfig:"SELECTOR" required:"true"`
+	OwnerApiVersion StringList `envconfig:"OWNER_API_VERSION" required:"true"`
+	OwnerKind       StringList `envconfig:"OWNER_KIND" required:"true"`
+	Name            string     `envconfig:"NAME" required:"true"`
 }
 
 const (
@@ -45,13 +76,6 @@ const (
 	resourceGroup = "apiserversources.sources.eventing.knative.dev"
 )
 
-// Options hold the options for the Adapter.
-type Options struct {
-	Mode      string
-	Namespace string
-	GVRCs     []GVRC
-}
-
 // GVRC is a combination of GroupVersionResource, Controller flag, LabelSelector and OwnerRef
 type GVRC struct {
 	GVR             schema.GroupVersionResource
@@ -61,25 +85,64 @@ type GVRC struct {
 	OwnerKind       string
 }
 
-type adapter struct {
-	gvrcs     []GVRC
-	k8s       dynamic.Interface
-	ce        cloudevents.Client
-	source    string
+type apiServerAdapter struct {
 	namespace string
+	ce        cloudevents.Client
+	reporter  source.StatsReporter
 	logger    *zap.SugaredLogger
 
+	gvrcs    []GVRC
+	k8s      dynamic.Interface
+	source   string
 	mode     string
 	delegate eventDelegate
-	reporter source.StatsReporter
 	name     string
 }
 
-func NewAdaptor(source string, k8sClient dynamic.Interface,
-	ceClient cloudevents.Client, logger *zap.SugaredLogger,
-	opt Options, reporter source.StatsReporter, name string) Adapter {
-	mode := opt.Mode
-	switch mode {
+func NewEnvConfig() adapter.EnvConfigAccessor {
+	return &envConfig{}
+}
+
+func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClient cloudevents.Client, reporter source.StatsReporter) adapter.Adapter {
+	logger := logging.FromContext(ctx)
+	env := processed.(*envConfig)
+
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
+	if err != nil {
+		logger.Fatal("error building kubeconfig", zap.Error(err))
+	}
+
+	client, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		logger.Fatal("error building dynamic client", zap.Error(err))
+	}
+
+	gvrcs := []GVRC(nil)
+
+	for i, apiVersion := range env.ApiVersion {
+		kind := env.Kind[i]
+		controlled := env.Controller[i]
+		selector := env.LabelSelector[i]
+		ownerApiVersion := env.OwnerApiVersion[i]
+		ownerKind := env.OwnerKind[i]
+
+		gv, err := schema.ParseGroupVersion(apiVersion)
+		if err != nil {
+			logger.Fatal("error parsing APIVersion", zap.Error(err))
+		}
+		// TODO: pass down the resource and the kind so we do not have to guess.
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: kind, Group: gv.Group, Version: gv.Version})
+		gvrcs = append(gvrcs, GVRC{
+			GVR:             gvr,
+			Controller:      controlled,
+			LabelSelector:   selector,
+			OwnerApiVersion: ownerApiVersion,
+			OwnerKind:       ownerKind,
+		})
+	}
+
+	mode := env.Mode
+	switch env.Mode {
 	case ResourceMode, RefMode:
 		// ok
 	default:
@@ -88,16 +151,16 @@ func NewAdaptor(source string, k8sClient dynamic.Interface,
 		logger.Warn("defaulting mode to ", mode)
 	}
 
-	a := &adapter{
-		k8s:       k8sClient,
+	a := &apiServerAdapter{
+		k8s:       client,
 		ce:        ceClient,
-		source:    source,
+		source:    cfg.Host,
 		logger:    logger,
-		gvrcs:     opt.GVRCs,
-		namespace: opt.Namespace,
+		gvrcs:     gvrcs,
+		namespace: env.Namespace,
 		mode:      mode,
 		reporter:  reporter,
-		name:      name,
+		name:      env.Name,
 	}
 	return a
 }
@@ -107,7 +170,7 @@ type eventDelegate interface {
 	addControllerWatch(gvr schema.GroupVersionResource)
 }
 
-func (a *adapter) Start(stopCh <-chan struct{}) error {
+func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 

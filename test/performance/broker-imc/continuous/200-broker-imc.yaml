@@ -42,11 +42,10 @@ spec:
           - name: sender-receiver
             image: knative.dev/eventing/test/test_images/performance
             args:
-            - "--role=sender-receiver"
+            - "--roles=sender,receiver"
             - "--sink=http://imc-broker"
             - "--aggregator=broker-imc-aggregator:10000"
             - "--pace=100:10,400:20,800:30,1000:60,2000:60,3000:60"
-            - "--verbose"
             env:
             - name: POD_NAME
               valueFrom:
@@ -96,11 +95,10 @@ spec:
           - name: aggregator
             image: knative.dev/eventing/test/test_images/performance
             args:
-            - "--role=aggregator"
-              # set to the number of sender-receiver
-            - "--expect-records=1"
+            - "--roles=aggregator"
+              # set to the number of sender + receiver (same image that does both counts 2)
+            - "--expect-records=2"
             - "--mako-tags=channel=imc"
-            - "--verbose"
               # benchmark key and benchmark name come from dev.config
             - "--benchmark-key=5903682180743168"
             - "--benchmark-name=Development - Broker Latency & Throughput"

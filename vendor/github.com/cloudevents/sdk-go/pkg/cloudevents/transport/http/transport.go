@@ -576,18 +576,20 @@ func (t *Transport) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if len(resp.Message.Header) > 0 {
 			copyHeaders(resp.Message.Header, w.Header())
 		}
+
+		status := http.StatusAccepted
+		if resp.StatusCode >= 200 && resp.StatusCode < 600 {
+			status = resp.StatusCode
+		}
 		w.Header().Add("Content-Length", strconv.Itoa(len(resp.Message.Body)))
+		w.WriteHeader(status)
+
 		if len(resp.Message.Body) > 0 {
 			if _, err := w.Write(resp.Message.Body); err != nil {
 				r.Error()
 				return
 			}
 		}
-		status := http.StatusAccepted
-		if resp.StatusCode >= 200 && resp.StatusCode < 600 {
-			status = resp.StatusCode
-		}
-		w.WriteHeader(status)
 
 		r.OK()
 		return
@@ -621,6 +623,9 @@ func (t *Transport) listen() (net.Addr, error) {
 		port := 8080
 		if t.Port != nil {
 			port = *t.Port
+			if port < 0 || port > 65535 {
+				return nil, fmt.Errorf("invalid port %d", port)
+			}
 		}
 		var err error
 		if t.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", port)); err != nil {

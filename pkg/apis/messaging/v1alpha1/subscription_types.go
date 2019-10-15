@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
 
@@ -39,12 +40,21 @@ type Subscription struct {
 	Status            SubscriptionStatus `json:"status,omitempty"`
 }
 
-// Check that Subscription can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*Subscription)(nil)
-var _ apis.Defaultable = (*Subscription)(nil)
-var _ apis.Immutable = (*Subscription)(nil)
-var _ runtime.Object = (*Subscription)(nil)
-var _ webhook.GenericCRD = (*Subscription)(nil)
+var (
+	// Check that Subscription can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable = (*Subscription)(nil)
+	_ apis.Defaultable = (*Subscription)(nil)
+	_ apis.Immutable   = (*Subscription)(nil)
+
+	// Check that Subscription can return its spec untyped.
+	_ apis.HasSpec = (*Subscription)(nil)
+
+	_ runtime.Object     = (*Subscription)(nil)
+	_ webhook.GenericCRD = (*Subscription)(nil)
+
+	// Check that we can create OwnerReferences to a Subscription.
+	_ kmeta.OwnerRefable = (*Subscription)(nil)
+)
 
 // SubscriptionSpec specifies the Channel for incoming events, a Subscriber target
 // for processing those events and where to put the result of the processing. Only

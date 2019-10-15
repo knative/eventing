@@ -560,7 +560,6 @@ func TestReconcile(t *testing.T) {
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
 			source:                source,
-			resourceTracker:       &MockResourceTracker{},
 		}
 		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r

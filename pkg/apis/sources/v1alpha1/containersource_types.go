@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
@@ -39,11 +40,13 @@ type ContainerSource struct {
 }
 
 var (
-	// Check that ContainerSource can be validated and can be defaulted.
 	_ runtime.Object = (*ContainerSource)(nil)
 
 	// Check that we can create OwnerReferences to a ContainerSource.
 	_ kmeta.OwnerRefable = (*ContainerSource)(nil)
+
+	// Check that ContainerSource can return its spec untyped.
+	_ apis.HasSpec = (*ContainerSource)(nil)
 )
 
 // ContainerSourceSpec defines the desired state of ContainerSource
@@ -108,4 +111,9 @@ type ContainerSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ContainerSource `json:"items"`
+}
+
+// GetUntypedSpec returns the spec of the ContainerSource.
+func (c *ContainerSource) GetUntypedSpec() interface{} {
+	return c.Spec
 }

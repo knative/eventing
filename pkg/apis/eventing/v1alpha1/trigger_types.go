@@ -54,9 +54,13 @@ type Trigger struct {
 
 var (
 	// Check that Trigger can be validated, can be defaulted, and has immutable fields.
-	_ apis.Validatable   = (*Trigger)(nil)
-	_ apis.Defaultable   = (*Trigger)(nil)
-	_ apis.Immutable     = (*Trigger)(nil)
+	_ apis.Validatable = (*Trigger)(nil)
+	_ apis.Defaultable = (*Trigger)(nil)
+	_ apis.Immutable   = (*Trigger)(nil)
+
+	// Check that Trigger can return its spec untyped.
+	_ apis.HasSpec = (*Trigger)(nil)
+
 	_ runtime.Object     = (*Trigger)(nil)
 	_ webhook.GenericCRD = (*Trigger)(nil)
 

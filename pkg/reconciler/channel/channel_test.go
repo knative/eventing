@@ -26,10 +26,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
@@ -247,9 +249,9 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-			channelLister:   listers.GetMessagingChannelLister(),
-			resourceTracker: &MockResourceTracker{},
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			channelLister:      listers.GetMessagingChannelLister(),
+			channelableTracker: duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, func(types.NamespacedName) {}, 0),
 		}
 	},
 		false,

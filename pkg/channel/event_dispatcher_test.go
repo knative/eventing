@@ -82,7 +82,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -113,7 +113,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -149,7 +149,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "reply",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -180,7 +180,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "reply",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedReplyRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -217,7 +217,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -254,7 +254,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -296,7 +296,7 @@ func TestDispatchMessage(t *testing.T) {
 			},
 			body: "destination",
 			eventExtensions: map[string]string{
-				"abc": "ce-abc-value",
+				"abc": `"ce-abc-value"`,
 			},
 			expectedDestRequest: &requestValidation{
 				Headers: map[string][]string{
@@ -308,7 +308,7 @@ func TestDispatchMessage(t *testing.T) {
 					"x-b3-traceid":   {"ignored-value-header"},
 					"ce-abc":         {`"ce-abc-value"`},
 					"ce-id":          {"ignored-value-header"},
-					"ce-time":        {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV03},
@@ -323,7 +323,7 @@ func TestDispatchMessage(t *testing.T) {
 					"knative-1":          {"new-knative-1-value"},
 					"ce-abc":             {`"new-ce-abc-value"`},
 					"ce-id":              {"ignored-value-header"},
-					"ce-time":            {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
 					"ce-source":          {testCeSource},
 					"ce-type":            {testCeType},
 					"ce-specversion":     {cloudevents.VersionV03},
@@ -337,9 +337,9 @@ func TestDispatchMessage(t *testing.T) {
 					"x-b3-sampled":   {"0"},
 					"x-b3-spanid":    {"ignored-value-header"},
 					"x-b3-traceid":   {"ignored-value-header"},
-					"ce-abc":         {`"new-ce-abc-value"`},
+					"ce-abc":         {"new-ce-abc-value"},
 					"ce-id":          {"ignored-value-header"},
-					"ce-time":        {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV03},
@@ -383,7 +383,7 @@ func TestDispatchMessage(t *testing.T) {
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
 			err := md.DispatchEvent(ctx, event, destination, reply)
 			if tc.expectedErr != (err != nil) {
-				t.Errorf("Unexpected error from DispatchRequest. Expected %v. Actual: %v", tc.expectedErr, err)
+				t.Errorf("Unexpected error from DispatchEvent. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)
@@ -460,6 +460,10 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (f *fakeHandler) popRequest(t *testing.T) requestValidation {
 	if len(f.requests) == 0 {
 		t.Error("Unable to pop request")
+		return requestValidation{
+			Host: "MADE UP, no such request",
+			Body: "MADE UP, no such request",
+		}
 	}
 	rv := f.requests[0]
 	f.requests = f.requests[1:]

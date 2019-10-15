@@ -80,7 +80,6 @@ metadata:
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
 - apiGroups:
-  - eventing.knative.dev
   - messaging.knative.dev
   resources:
   - channels

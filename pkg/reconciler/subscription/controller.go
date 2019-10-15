@@ -22,8 +22,10 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
 	crd "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
 
@@ -47,7 +49,6 @@ func NewController(
 
 	subscriptionInformer := subscription.Get(ctx)
 	customResourceDefinitionInformer := crd.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -59,9 +60,10 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// AddressableTracker is used to notify us when the resources Subscription depends on change, so that the
+	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	return impl
 }

@@ -19,8 +19,10 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
 
@@ -41,12 +43,21 @@ type EventType struct {
 	Status EventTypeStatus `json:"status,omitempty"`
 }
 
-// Check that EventType can be validated, can be defaulted, and has immutable fields.
-var _ apis.Validatable = (*EventType)(nil)
-var _ apis.Defaultable = (*EventType)(nil)
-var _ apis.Immutable = (*EventType)(nil)
-var _ runtime.Object = (*EventType)(nil)
-var _ webhook.GenericCRD = (*EventType)(nil)
+var (
+	// Check that EventType can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable = (*EventType)(nil)
+	_ apis.Defaultable = (*EventType)(nil)
+	_ apis.Immutable   = (*EventType)(nil)
+
+	// Check that EventType can return its spec untyped.
+	_ apis.HasSpec = (*EventType)(nil)
+
+	_ runtime.Object     = (*EventType)(nil)
+	_ webhook.GenericCRD = (*EventType)(nil)
+
+	// Check that we can create OwnerReferences to an EventType.
+	_ kmeta.OwnerRefable = (*EventType)(nil)
+)
 
 type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
@@ -80,4 +91,14 @@ type EventTypeList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EventType `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for EventType
+func (p *EventType) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("EventType")
+}
+
+// GetUntypedSpec returns the spec of the EventType.
+func (e *EventType) GetUntypedSpec() interface{} {
+	return e.Spec
 }

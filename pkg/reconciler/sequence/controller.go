@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
@@ -47,7 +48,6 @@ func NewController(
 
 	sequenceInformer := sequence.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
-	resourceInformer := duck.NewResourceInformer(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -58,7 +58,7 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 
-	r.resourceTracker = resourceInformer.NewTracker(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.Channelable{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Register handler for Subscriptions that are owned by Sequence, so that
