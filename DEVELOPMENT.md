@@ -1,9 +1,12 @@
 # Development
 
 This doc explains how to setup a development environment so you can get started
-[contributing](./CONTRIBUTING.md) to Knative Eventing. Also take a look at
-[the development workflow](./CONTRIBUTING.md#workflow) and
-[the test docs](./test/README.md).
+[contributing](https://www.knative.dev/contributing/) to `Knative Eventing`. Also
+take a look at:
+
+- [The pull request workflow](https://www.knative.dev/contributing/contributing/#pull-requests)
+- [How to add and run tests](./test/README.md)
+- [Iterating](#iterating)
 
 ## Getting started
 
@@ -22,6 +25,31 @@ You must have the core of [Knative](http://github.com/knative/serving) running
 on your cluster.
 
 You must have [`ko`](https://github.com/google/ko) installed.
+
+### Setup your environment
+
+To start your environment you'll need to set these environment variables (we
+recommend adding them to your `.bashrc`):
+
+1. `GOPATH`: If you don't have one, simply pick a directory and add
+   `export GOPATH=...`
+1. `$GOPATH/bin` on `PATH`: This is so that tooling installed via `go get` will
+   work properly.
+1. `KO_DOCKER_REPO`: The docker repository to which developer images should be
+   pushed (e.g. `gcr.io/[gcloud-project]`).
+
+- **Note**: if you are using docker hub to store your images your
+  `KO_DOCKER_REPO` variable should be `docker.io/<username>`.
+- **Note**: Currently Docker Hub doesn't let you create subdirs under your
+  username.
+
+`.bashrc` example:
+
+```shell
+export GOPATH="$HOME/go"
+export PATH="${PATH}:${GOPATH}/bin"
+export KO_DOCKER_REPO='gcr.io/my-gcloud-project-id'
+```
 
 ### Checkout your fork
 
