@@ -18,12 +18,12 @@ package adapter
 type EnvConfigConstructor func() EnvConfigAccessor
 
 // EnvConfig is the minimal set of configuration parameters
-// source adapters should support
+// source adapters should support.
 type EnvConfig struct {
 	// SinkURI is the URI messages will be forwarded to.
 	SinkURI string `envconfig:"SINK_URI" required:"true"`
 
-	// Environment variable containing the namespace of the adapter
+	// Environment variable containing the namespace of the adapter.
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 
 	// MetricsConfigJson is a json string of metrics.ExporterOptions.
@@ -39,12 +39,12 @@ type EnvConfig struct {
 }
 
 // EnvConfigAccessor defines accessors for the minimal
-// set of source adapter configuration parameters
+// set of source adapter configuration parameters.
 type EnvConfigAccessor interface {
 	// Get the URI where messages will be forwarded to.
 	GetSinkURI() string
 
-	// Get the namespace of the adapter
+	// Get the namespace of the adapter.
 	GetNamespace() string
 
 	// Get the json string of metrics.ExporterOptions.

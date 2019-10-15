@@ -85,7 +85,7 @@ type GVRC struct {
 	OwnerKind       string
 }
 
-type apiserverAdapter struct {
+type apiServerAdapter struct {
 	namespace string
 	ce        cloudevents.Client
 	reporter  source.StatsReporter
@@ -151,7 +151,7 @@ func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClie
 		logger.Warn("defaulting mode to ", mode)
 	}
 
-	a := &apiserverAdapter{
+	a := &apiServerAdapter{
 		k8s:       client,
 		ce:        ceClient,
 		source:    cfg.Host,
@@ -170,7 +170,7 @@ type eventDelegate interface {
 	addControllerWatch(gvr schema.GroupVersionResource)
 }
 
-func (a *apiserverAdapter) Start(stopCh <-chan struct{}) error {
+func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 	// Local stop channel.
 	stop := make(chan struct{})
 

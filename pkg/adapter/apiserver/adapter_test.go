@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/pkg/adapter"
 	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
-	pkkrectesting "knative.dev/pkg/reconciler/testing"
+	pkgtesting "knative.dev/pkg/reconciler/testing"
 	"knative.dev/pkg/source"
 )
 
@@ -159,14 +159,42 @@ func TestNewAdaptor(t *testing.T) {
 				OwnerKind:       "Pod",
 			}},
 		},
+		"with multiple resources": {
+			source: "test-source",
+			opt: envConfig{
+				ApiVersion:      StringList{"apps/v1", "v1"},
+				Kind:            StringList{"ReplicaSet", "Service"},
+				Controller:      []bool{false, true},
+				OwnerApiVersion: StringList{"v1", ""},
+				OwnerKind:       StringList{"Pod", ""},
+				LabelSelector:   StringList{"", ""},
+			},
+			wantMode: RefMode,
+			wantGVRCs: []GVRC{{
+				GVR: schema.GroupVersionResource{
+					Group:    "apps",
+					Version:  "v1",
+					Resource: "replicasets",
+				},
+				OwnerApiVersion: "v1",
+				OwnerKind:       "Pod",
+			}, {
+				GVR: schema.GroupVersionResource{
+					Group:    "",
+					Version:  "v1",
+					Resource: "services",
+				},
+				Controller: true,
+			}},
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			r := &mockReporter{}
-			ctx, _ := pkkrectesting.SetupFakeContext(t)
+			ctx, _ := pkgtesting.SetupFakeContext(t)
 			a := NewAdapter(ctx, &tc.opt, ce, r)
 
-			got, ok := a.(*apiserverAdapter)
+			got, ok := a.(*apiServerAdapter)
 			if !ok {
 				t.Errorf("expected NewAdapter to return a *adapter, but did not")
 			}
@@ -203,7 +231,7 @@ func TestAdapter_StartRef(t *testing.T) {
 		LabelSelector:   StringList{""},
 	}
 	r := &mockReporter{}
-	ctx, _ := pkkrectesting.SetupFakeContext(t)
+	ctx, _ := pkgtesting.SetupFakeContext(t)
 	a := NewAdapter(ctx, &opt, ce, r)
 
 	err := errors.New("test never ran")
@@ -240,7 +268,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	}
 
 	r := &mockReporter{}
-	ctx, _ := pkkrectesting.SetupFakeContext(t)
+	ctx, _ := pkgtesting.SetupFakeContext(t)
 	a := NewAdapter(ctx, &opt, ce, r)
 
 	err := errors.New("test never ran")
