@@ -34,11 +34,10 @@ spec:
         - name: sender-receiver
           image: knative.dev/eventing/test/test_images/performance
           args:
-            - "--role=sender-receiver"
+            - "--roles=sender,receiver"
             - "--sink=http://direct-perf-consumer.perf-eventing.svc.cluster.local"
             - "--aggregator=direct-perf-aggregator:10000"
-            - "--pace=1000:30"
-            - "--verbose"
+            - "--pace=500:30,600:30,700:30,800:30,900:30,1000:30"
           env:
             - name: GOGC
               value: "off"
@@ -74,10 +73,9 @@ spec:
     - name: aggregator
       image: knative.dev/eventing/test/test_images/performance
       args:
-        - "--role=aggregator"
-        # set to the number of sender-receiver
-        - "--expect-records=1"
-        - "--verbose"
+        - "--roles=aggregator"
+        # set to the number of sender + receiver (same image that does both counts 2)
+        - "--expect-records=2"
       ports:
         - name: grpc
           containerPort: 10000

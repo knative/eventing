@@ -14,137 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate protoc -I ./event_state --go_out=plugins=grpc:./event_state ./event_state/event_state.proto
-
 package main
 
 import (
-	"context"
 	"flag"
-	"log"
-	"net"
-	"strings"
-
-	"google.golang.org/grpc"
-
-	pb "knative.dev/eventing/test/test_images/performance/event_state"
-	"knative.dev/pkg/signals"
+	"knative.dev/eventing/test/common/performance"
+	"knative.dev/eventing/test/common/performance/receiver"
+	"knative.dev/eventing/test/common/performance/sender"
 )
 
-var (
-	role    string
-	verbose bool
-
-	// role=sender-receiver
-	sinkURL       string
-	aggregAddr    string
-	msgSize       int
-	workers       uint64
-	paceFlag      string
-	warmupSeconds uint
-
-	// role=aggregator
-	expectRecords uint
-	listenAddr    string
-	makoTags      string
-	benchmarkKey  string
-	benchmarkName string
-)
+var minWorkers uint64
+var sinkURL string
 
 func init() {
-	flag.StringVar(&role, "role", "", `Role of this instance. One of ("sender-receiver", "aggregator")`)
-	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
+	performance.DeclareFlags()
 
-	// role=sender-receiver
+	// Specific to http load generator
+	flag.Uint64Var(&minWorkers, "min-workers", 10, "Number of vegeta workers")
 	flag.StringVar(&sinkURL, "sink", "", "The sink URL for the event destination.")
-	flag.StringVar(&aggregAddr, "aggregator", "", "The aggregator address for sending events records.")
-	flag.IntVar(&msgSize, "msg-size", 100, "The size in bytes of each message we want to send. Generate random strings to avoid caching.")
-	flag.UintVar(&warmupSeconds, "warmup", 10, "Duration in seconds of warmup phase. During warmup latencies are not recorded. 0 means no warmup")
-	flag.StringVar(&paceFlag, "pace", "", "Pace array comma separated. Format rps[:duration=10s]. Example 100,200:4,100:1,500:60")
-	flag.Uint64Var(&workers, "workers", 1, "Number of vegeta workers")
-
-	// role=aggregator
-	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
-	flag.UintVar(&expectRecords, "expect-records", 1, "Number of expected events records before aggregating data.")
-	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark"+
-		" specific Mako tags.")
-	flag.StringVar(&benchmarkKey, "benchmark-key", "", "Benchmark key")
-	flag.StringVar(&benchmarkName, "benchmark-name", "", "Benchmark name")
-}
-
-type testExecutor interface {
-	Run(context.Context)
 }
 
 func main() {
 	flag.Parse()
 
-	var exec testExecutor
-
-	switch role {
-
-	case "sender-receiver":
-		if paceFlag == "" {
-			fatalf("pace not set!")
-		}
-		if sinkURL == "" {
-			fatalf("sink not set!")
-		}
-		if aggregAddr == "" {
-			fatalf("aggregator not set!")
-		}
-
-		pacerSpecs, err := parsePaceSpec(paceFlag)
-		if err != nil {
-			fatalf("Failed to parse pace spec: %v", err)
-		}
-
-		// wait until all pods are ready (channel, consumers) to ensure events aren't dropped by the broker
-		// during the test and the GRPC client can connect to the aggregator
-		ns := testNamespace()
-		printf("Waiting for all Pods to be ready in namespace %s", ns)
-		if err := waitForPods(ns); err != nil {
-			fatalf("Timeout waiting for Pods readiness in namespace %s: %v", ns, err)
-		}
-
-		// create a connection to the aggregator
-		conn, err := grpc.Dial(aggregAddr, grpc.WithInsecure())
-		if err != nil {
-			fatalf("Failed to connect to the aggregator: %v", err)
-		}
-		defer conn.Close()
-
-		aggCli := pb.NewEventsRecorderClient(conn)
-
-		exec = newSenderReceiverExecutor(pacerSpecs, aggCli)
-
-	case "aggregator":
-		var tags []string
-		if makoTags != "" {
-			tags = strings.Split(makoTags, ",")
-		}
-
-		l, err := net.Listen("tcp", listenAddr)
-		if err != nil {
-			fatalf("Failed to create listener: %v", err)
-		}
-
-		exec = newAggregatorExecutor(l, tags)
-
-	default:
-		fatalf("Invalid role %q", role)
-	}
-
-	// We want this for properly handling Kubernetes container lifecycle events.
-	ctx := signals.NewContext()
-
-	exec.Run(ctx)
+	performance.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers), receiver.EventTypeExtractor, receiver.EventIdExtractor)
 }
-
-func printf(f string, args ...interface{}) {
-	if verbose {
-		log.Printf(f, args...)
-	}
-}
-
-var fatalf = log.Fatalf
