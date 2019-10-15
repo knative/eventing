@@ -70,6 +70,7 @@ type Reconciler struct {
 	subscriptionLister       messaginglisters.SubscriptionLister
 	brokerLister             listers.BrokerLister
 	serviceLister            corev1listers.ServiceLister
+	namespaceLister          corev1listers.NamespaceLister
 	resourceTracker          duck.ResourceTracker
 	kresourceInformerFactory apisduck.InformerFactory
 }
@@ -156,11 +157,16 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	b, err := r.getBroker(ctx, t)
+	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		if apierrs.IsNotFound(err) {
 			t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
+			if t.Spec.Broker == "default" {
+				if e := r.labelNamespace(ctx, t); e != nil {
+					logging.FromContext(ctx).Error("Unable to label the namespace", zap.Error(e))
+				}
+			}
 		} else {
 			t.Status.MarkBrokerFailed("BrokerGetFailed", "Failed to get broker")
 		}
@@ -303,27 +309,23 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	return trig, err
 }
 
-// getBroker returns trigger's coupled broker. If the trigger is coupled with default broker, and default broker does not exist,
-// it will create the default broker first by labeling namespace with knative-eventing-injection=enabled
-func (r *Reconciler) getBroker(ctx context.Context, t *v1alpha1.Trigger) (*v1alpha1.Broker, error) {
-	b, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
-	if t.Spec.Broker == "default" && apierrs.IsNotFound(err) {
-		current, e := r.KubeClientSet.CoreV1().Namespaces().Get(t.Namespace, metav1.GetOptions{})
-		if e != nil {
-			logging.FromContext(ctx).Error("Unable to get namespace resource to enable knative-eventing-injection", zap.Error(e))
-			return b, err
-		}
-		if current.Labels == nil {
-			current.Labels = map[string]string{}
-		}
-		current.Labels["knative-eventing-injection"] = "enabled"
-		_, e = r.KubeClientSet.CoreV1().Namespaces().Update(current)
-		if e != nil {
-			logging.FromContext(ctx).Error("Unable to label the namespace resource with knative-eventing-injection", zap.Error(e))
-			return b, err
-		}
+// labelNamespace will label namespace with knative-eventing-injection=enabled
+func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) error {
+	current, err := r.namespaceLister.Get(t.Namespace)
+	if err != nil {
+		t.Status.MarkBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection")
+		return err
 	}
-	return b, err
+	if current.Labels == nil {
+		current.Labels = map[string]string{}
+	}
+	current.Labels["knative-eventing-injection"] = "enabled"
+	_, err = r.KubeClientSet.CoreV1().Namespaces().Update(current)
+	if err != nil {
+		t.Status.MarkBrokerFailed("NamespaceUpdateFailed", "Failed to label the namespace resource with knative-eventing-injection")
+		return err
+	}
+	return nil
 }
 
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,

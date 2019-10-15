@@ -644,6 +644,7 @@ func TestAllCases(t *testing.T) {
 			subscriptionLister:       listers.GetSubscriptionLister(),
 			brokerLister:             listers.GetBrokerLister(),
 			serviceLister:            listers.GetK8sServiceLister(),
+			namespaceLister:          listers.GetNamespaceLister(),
 			resourceTracker:          &MockResourceTracker{},
 			kresourceInformerFactory: KResourceTypedInformerFactory(ctx),
 		}
