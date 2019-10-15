@@ -62,6 +62,10 @@ aliases:
   - steuhs
   - yt3liu
 
+  source-approvers:
+  - n3wscott
+  - vaikas-google
+
   webhook-approvers:
   - mattmoor
   - grantr
