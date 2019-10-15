@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,22 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package receiver
 
-import "net/http"
+import cloudevents "github.com/cloudevents/sdk-go"
 
-type requestInterceptor struct {
-	before func(*http.Request)
-	after  func(*http.Request, *http.Response, error)
-}
+// TypeExtractor is used by the receiver to establish the type of the received event
+type TypeExtractor func(event cloudevents.Event) string
 
-func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, error) {
-	if r.before != nil {
-		r.before(request)
-	}
-	res, err := http.DefaultTransport.RoundTrip(request)
-	if r.after != nil {
-		r.after(request, res, err)
-	}
-	return res, err
+// EventTypeExtractor uses
+//  event.Type()
+// to extract the event type
+func EventTypeExtractor(event cloudevents.Event) string {
+	return event.Type()
 }

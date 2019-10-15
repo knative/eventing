@@ -27,6 +27,7 @@ cd ${ROOT_DIR}
 dep ensure
 
 rm -rf $(find vendor/ -name 'OWNERS')
+rm -rf $(find vendor/ -name 'OWNERS_ALIASES')
 rm -rf $(find vendor/ -name 'BUILD')
 rm -rf $(find vendor/ -name 'BUILD.bazel')
 
