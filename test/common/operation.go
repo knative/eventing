@@ -17,8 +17,6 @@ limitations under the License.
 package common
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
@@ -146,8 +144,6 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
 		return err
 	}
-	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness.
-	// Will delete it after we find the root cause and fix.
-	time.Sleep(10 * time.Second)
+
 	return nil
 }
