@@ -31,6 +31,11 @@ import (
 	"knative.dev/eventing/test/common/performance/common"
 )
 
+const (
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
+)
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -144,6 +149,8 @@ func newCloudEventsClient(sinkUrl string) (client.Client, error) {
 	t, err := cloudevents.NewHTTPTransport(
 		cloudevents.WithBinaryEncoding(),
 		cloudevents.WithTarget(sinkUrl),
+		cloudevents.WithMaxIdleConns(defaultMaxIdleConnections),
+		cloudevents.WithMaxIdleConnsPerHost(defaultMaxIdleConnectionsPerHost),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transport: %v", err)
