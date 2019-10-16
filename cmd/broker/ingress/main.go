@@ -27,7 +27,6 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
@@ -50,6 +49,12 @@ import (
 var (
 	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+)
+
+// TODO set them as env variables or a config map.
+const (
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
 )
 
 type envConfig struct {
@@ -113,7 +118,12 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware),
+		cloudevents.WithMaxIdleConns(defaultMaxIdleConnections),
+		cloudevents.WithMaxIdleConnsPerHost(defaultMaxIdleConnectionsPerHost),
+	)
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}

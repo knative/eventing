@@ -26,7 +26,6 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -48,6 +47,10 @@ const (
 
 	// readyz is the HTTP path that will be used for readiness checks.
 	readyz = "/readyz"
+
+	// TODO set them as env variables or a config map.
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -65,7 +68,11 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)),
+		cloudevents.WithMaxIdleConns(defaultMaxIdleConnections),
+		cloudevents.WithMaxIdleConnsPerHost(defaultMaxIdleConnectionsPerHost))
 	if err != nil {
 		return nil, err
 	}
