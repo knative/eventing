@@ -2,19 +2,23 @@ package testing
 
 import (
 	"context"
+	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
 type TestCloudEventsClient struct {
-	Sent []cloudevents.Event
+	lock sync.Mutex
+	sent []cloudevents.Event
 }
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
 
 func (c *TestCloudEventsClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	// TODO: improve later.
-	c.Sent = append(c.Sent, event)
+	c.sent = append(c.sent, event)
 	return ctx, nil, nil
 }
 
@@ -25,13 +29,24 @@ func (c *TestCloudEventsClient) StartReceiver(ctx context.Context, fn interface{
 }
 
 func (c *TestCloudEventsClient) Reset() {
-	c.Sent = make([]cloudevents.Event, 0)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.sent = make([]cloudevents.Event, 0)
+}
+
+func (c *TestCloudEventsClient) Sent() []cloudevents.Event {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	r := make([]cloudevents.Event, len(c.sent))
+	for i := range c.sent {
+		r[i] = c.sent[i]
+	}
+	return r
 }
 
 func NewTestClient() *TestCloudEventsClient {
-
 	c := &TestCloudEventsClient{
-		Sent: make([]cloudevents.Event, 0),
+		sent: make([]cloudevents.Event, 0),
 	}
 
 	return c

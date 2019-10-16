@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
@@ -37,8 +38,13 @@ type ApiServerSource struct {
 	Status ApiServerSourceStatus `json:"status,omitempty"`
 }
 
-// Check that we can create OwnerReferences to a Configuration.
-var _ kmeta.OwnerRefable = (*ApiServerSource)(nil)
+var (
+	// Check that we can create OwnerReferences to an ApiServerSource.
+	_ kmeta.OwnerRefable = (*ApiServerSource)(nil)
+
+	// Check that ApiServerSource can return its spec untyped.
+	_ apis.HasSpec = (*ApiServerSource)(nil)
+)
 
 const (
 	// ApiServerSourceAddEventType is the ApiServerSource CloudEvent type for adds.
@@ -121,4 +127,9 @@ type ApiServerResource struct {
 
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
+}
+
+// GetUntypedSpec returns the spec of the ApiServerSource.
+func (a *ApiServerSource) GetUntypedSpec() interface{} {
+	return a.Spec
 }

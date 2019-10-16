@@ -47,6 +47,7 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 		log.Println("Filter event")
 		resp.Status = 200
 	} else {
+		event.SetDataContentType("application/json")
 		log.Println("Reply with event")
 		resp.RespondWith(200, &event)
 	}

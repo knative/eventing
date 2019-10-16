@@ -2,6 +2,12 @@
 
 This image is designed to benchmark Knative Eventing channel/brokers.
 
+The image contains three different functionality, configurable with `--roles` flag:
+
+- `sender`: Act as sender
+- `receiver`: Act as receiver
+- `aggregator`: Act as aggregator of timestamps
+
 The image does both the sender and receiver role, allowing the clock to be
 synchronized to correctly calculate latencies (only valid with a single
 sender-receiver).
@@ -44,7 +50,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: latency-test
-      image: knative.dev/eventing/test/test_images/latencymako
+      image: knative.dev/eventing/test/test_images/performance
       resources:
         requests:
           cpu: 1000m
@@ -53,12 +59,11 @@ spec:
         - name: cloudevents
           containerPort: 8080
       args:
-        - "--role=sender-receiver"
+        - "--roles=sender,receiver"
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
         - "--aggregator=localhost:10000"
         - "--pace=100:10,200:20,400:60"
         - "--warmup=10"
-        - "--verbose"
       env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -69,13 +74,13 @@ spec:
           mountPath: /etc/config-mako
       terminationMessagePolicy: FallbackToLogsOnError
     - name: aggregator
-      image: knative.dev/eventing/test/test_images/latencymako
+      image: knative.dev/eventing/test/test_images/performance
       ports:
         - name: grpc
           containerPort: 10000
       args:
-        - "--role=aggregator"
-        - "--verbose"
+        - "--roles=aggregator"
+        - "--expect-records=2"
       terminationMessagePolicy: FallbackToLogsOnError
     - name: mako-stub
       image: knative.dev/pkg/test/mako/stub-sidecar
@@ -85,8 +90,6 @@ spec:
       configMap:
         name: config-mako
 ```
-
-There are two required flags: the `sink` and `pace`.
 
 ### Pace configuration
 
@@ -114,3 +117,7 @@ If you don't want a warmup phase, use `--warmup=0`.
 
 You can specify the number of initial vegeta workers that perform requests with
 flag `workers`.
+
+### Aggregator configuration
+
+`--expect-records` must be equal to number sender + number receivers. If a same instance does both the sender and receiver, it counts twice

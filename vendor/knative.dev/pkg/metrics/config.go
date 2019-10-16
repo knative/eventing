@@ -63,6 +63,12 @@ const (
 // ExporterOptions contains options for configuring the exporter.
 type ExporterOptions struct {
 	// Domain is the metrics domain. e.g. "knative.dev". Must be present.
+	//
+	// Stackdriver uses the following format to construct full metric name:
+	//    <domain>/<component>/<metric name from View>
+	// Prometheus uses the following format to construct full metric name:
+	//    <component>_<metric name from View>
+	// Domain is actually not used if metrics backend is Prometheus.
 	Domain string
 
 	// Component is the name of the component that emits the metrics. e.g.

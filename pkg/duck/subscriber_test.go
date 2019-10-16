@@ -21,19 +21,22 @@ import (
 	"fmt"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
 
 var (
@@ -41,9 +44,6 @@ var (
 
 	channelAddress = "test-channel.hostname"
 	channelURL     = fmt.Sprintf("http://%s", channelAddress)
-
-	legacyCallableAddress = "legacy-callable.domain-internal"
-	legacyCallableURL     = fmt.Sprintf("http://%s/", legacyCallableAddress)
 )
 
 func init() {
@@ -144,25 +144,13 @@ func TestSubscriberSpec(t *testing.T) {
 					APIVersion: "eventing.knative.dev/v1alpha1",
 					Kind:       "Channel",
 					Name:       "does-exist",
+					Namespace:  testNS,
 				},
 			},
 			Objects: []runtime.Object{
 				channel("does-exist"),
 			},
 			Expected: channelURL,
-		},
-		"Legacy Callable": {
-			Sub: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "eventing.knative.dev/v1alpha1",
-					Kind:       "LegacyCallable",
-					Name:       "does-exist",
-				},
-			},
-			Objects: []runtime.Object{
-				legacyCallable("does-exist"),
-			},
-			Expected: legacyCallableURL,
 		},
 		"Non-Addressable": {
 			Sub: &v1alpha1.SubscriberSpec{
@@ -181,9 +169,20 @@ func TestSubscriberSpec(t *testing.T) {
 
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			dc := fake.NewSimpleDynamicClient(scheme.Scheme, tc.Objects...)
-
-			actual, err := SubscriberSpec(context.TODO(), dc, testNS, tc.Sub, func(corev1.ObjectReference) error { return nil })
+			ctx, dc := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.Objects...)
+			addressableTracker := NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0)
+			// Not using the testing package due to a cyclic dependency.
+			sub := &v1alpha1.Subscription{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "subname",
+					Namespace: testNS,
+				},
+				Spec: v1alpha1.SubscriptionSpec{
+					Subscriber: tc.Sub,
+				},
+			}
+			track := addressableTracker.TrackInNamespace(sub)
+			actual, err := SubscriberSpec(ctx, dc, testNS, tc.Sub, addressableTracker, track)
 			if err != nil {
 				if tc.ExpectedErr == "" || tc.ExpectedErr != err.Error() {
 					t.Fatalf("Unexpected error. Expected '%s'. Actual '%s'.", tc.ExpectedErr, err.Error())
@@ -222,22 +221,6 @@ func channel(name string) *unstructured.Unstructured {
 				"address": map[string]interface{}{
 					"hostname": channelAddress,
 				},
-			},
-		},
-	}
-}
-
-func legacyCallable(name string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "eventing.knative.dev/v1alpha1",
-			"kind":       "LegacyCallable",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      name,
-			},
-			"status": map[string]interface{}{
-				"domainInternal": legacyCallableAddress,
 			},
 		},
 	}

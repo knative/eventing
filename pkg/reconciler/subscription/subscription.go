@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionslisters "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -71,7 +71,8 @@ type Reconciler struct {
 	// listers index properties about resources
 	subscriptionLister             listers.SubscriptionLister
 	customResourceDefinitionLister apiextensionslisters.CustomResourceDefinitionLister
-	resourceTracker                eventingduck.ResourceTracker
+	addressableTracker             eventingduck.ListableTracker
+	channelableTracker             eventingduck.ListableTracker
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -90,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Get the Subscription resource with this namespace/name
 	original, err := r.subscriptionLister.Subscriptions(namespace).Get(name)
-	if errors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Error("subscription key in work queue no longer exists")
 		return nil
@@ -129,19 +130,28 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	// Track the channel using the resourceTracker.
+	// Track the channel using the channelableTracker.
 	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
 	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
-	track := r.resourceTracker.TrackInNamespace(subscription)
-	if err := track(subscription.Spec.Channel); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to spec.channel", zap.Error(err))
+	trackChannelable := r.channelableTracker.TrackInNamespace(subscription)
+	if err := trackChannelable(subscription.Spec.Channel); err != nil {
+		return fmt.Errorf("unable to track changes to spec.channel: %v", err)
 	}
+
+	// Track the subscriber using the addressableTracker.
+	trackAddressable := r.addressableTracker.TrackInNamespace(subscription)
+	if subscription.Spec.Subscriber != nil && subscription.Spec.Subscriber.Ref != nil {
+		if err := trackAddressable(*subscription.Spec.Subscriber.Ref); err != nil {
+			return fmt.Errorf("unable to track changes to spec.subscriber: %v", err)
+		}
+	}
+
 	if subscription.DeletionTimestamp != nil {
 
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
-		if channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel); !errors.IsNotFound(err) && subscription.Status.IsAddedToChannel() {
+		if channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel); !apierrors.IsNotFound(err) && subscription.Status.IsAddedToChannel() {
 			if err != nil {
 				logging.FromContext(ctx).Warn("Failed to get Spec.Channel as Channelable duck type",
 					zap.Error(err),
@@ -179,7 +189,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber, track)
+	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber, r.addressableTracker, trackAddressable)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 			zap.Error(err),
@@ -192,7 +202,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
 	logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
 
-	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply, track)
+	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply, trackAddressable)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to resolve reply",
 			zap.Error(err),
@@ -277,18 +287,19 @@ func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription,
 	return false
 }
 
-// Todo: this needs to be changed to use cache rather than a API call each time
 func (r *Reconciler) getChannelable(ctx context.Context, namespace string, chanReference *corev1.ObjectReference) (*eventingduckv1alpha1.Channelable, error) {
-	s, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, chanReference)
+	lister, err := r.channelableTracker.ListerFor(*chanReference)
 	if err != nil {
+		logging.FromContext(ctx).Error("Error getting lister for Channel", zap.Any("channel", chanReference), zap.Error(err))
 		return nil, err
 	}
-	channel := eventingduckv1alpha1.Channelable{}
-	err = duck.FromUnstructured(s, &channel)
-	if err != nil {
+	c, err := lister.ByNamespace(namespace).Get(chanReference.Name)
+	channelable, ok := c.(*eventingduckv1alpha1.Channelable)
+	if !ok {
+		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", chanReference), zap.Error(err))
 		return nil, err
 	}
-	return &channel, nil
+	return channelable, nil
 }
 
 func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv1alpha1.Channelable) error {
@@ -301,12 +312,6 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 			zap.Any("channel", channel), zap.String("crd", crdName), zap.Error(err))
 		return err
 	}
-
-	// TODO uncomment this once we have a cluster-level tracker. As of now, it needs a namespace.
-	// Tell tracker to reconcile this Subscription whenever its Channel CRD changes.
-	//if err := r.tracker.Track(utils.ObjectRef(crd, customResourceDefinitionGVK), subscription); err != nil {
-	//	return fmt.Errorf("error tracking channel crd '%s': %v", crd.Name, err)
-	//}
 
 	if val, ok := crd.Labels[channelLabelKey]; !ok {
 		return fmt.Errorf("crd %q does not contain mandatory label %q", crdName, channelLabelKey)
@@ -373,32 +378,37 @@ func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 }
 
 // resolveResult resolves the Spec.Result object.
-func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy, track eventingduck.Track) (string, error) {
+func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy, trackAddressable eventingduck.Track) (string, error) {
 	if isNilOrEmptyReply(replyStrategy) {
 		return "", nil
 	}
 
-	// Tell tracker to reconcile this Subscription whenever the Channel changes.
-	if err := track(*replyStrategy.Channel); err != nil {
+	// Tell tracker to reconcile this Subscription whenever the reply Channel changes. Note that it does not need to be
+	// a Channel, it needs to be an Addressable. As Channels are Addressable, we are fine.
+	if err := trackAddressable(*replyStrategy.Channel); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to spec.reply.channel", zap.Error(err))
 		return "", err
 	}
 
-	obj, err := eventingduck.ObjectReference(ctx, r.DynamicClientSet, namespace, replyStrategy.Channel)
+	lister, err := r.addressableTracker.ListerFor(*replyStrategy.Channel)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel",
-			zap.Error(err),
-			zap.Any("replyStrategy", replyStrategy))
+		logging.FromContext(ctx).Error("Error getting lister for ReplyStrategy Channel", zap.Any("replyStrategy.Channel", replyStrategy.Channel), zap.Error(err))
 		return "", err
 	}
-	s := duckv1alpha1.AddressableType{}
-	err = duck.FromUnstructured(obj, &s)
+
+	a, err := lister.ByNamespace(namespace).Get(replyStrategy.Channel.Name)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to deserialize Addressable target", zap.Error(err))
+		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel", zap.Any("replyStrategy.Channel", replyStrategy.Channel), zap.Error(err))
 		return "", err
 	}
-	if s.Status.Address != nil {
-		if url := s.Status.Address.GetURL(); url.Host != "" {
+
+	addressable, ok := a.(*duckv1alpha1.AddressableType)
+	if !ok {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", namespace, replyStrategy.Channel.Name), zap.Error(err))
+		return "", fmt.Errorf("object is not addressable: %s/%s", namespace, replyStrategy.Channel.Name)
+	}
+	if addressable.Status.Address != nil {
+		if url := addressable.Status.Address.GetURL(); url.Host != "" {
 			return url.String(), nil
 		}
 	}
@@ -423,7 +433,7 @@ func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subs
 	subscribable := r.createSubscribable(subs)
 
 	if patchErr := r.patchPhysicalFrom(ctx, sub.Namespace, channel, subscribable); patchErr != nil {
-		if isDeleted && errors.IsNotFound(patchErr) {
+		if isDeleted && apierrors.IsNotFound(patchErr) {
 			logging.FromContext(ctx).Warn("Could not find Channel", zap.Any("channel", sub.Spec.Channel))
 			return nil
 		}

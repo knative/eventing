@@ -17,6 +17,8 @@ limitations under the License.
 package common
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
@@ -70,10 +72,14 @@ func (client *Client) SendFakeEventWithTracingToAddressable(
 
 // GetAddressableURI returns the URI of the addressable resource.
 // To use this function, the given resource must have implemented the Addressable duck-type.
-func (client *Client) GetAddressableURI(addressableName string, typemeta *metav1.TypeMeta) (string, error) {
+func (client *Client) GetAddressableURI(addressableName string, typeMeta *metav1.TypeMeta) (string, error) {
 	namespace := client.Namespace
-	metaAddressable := resources.NewMetaResource(addressableName, namespace, typemeta)
-	return base.GetAddressableURI(client.Dynamic, metaAddressable)
+	metaAddressable := resources.NewMetaResource(addressableName, namespace, typeMeta)
+	u, err := base.GetAddressableURI(client.Dynamic, metaAddressable)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
 }
 
 // sendFakeEventToAddress will create a sender pod, which will send the given event to the given url.
@@ -140,9 +146,11 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 	if err := client.Tracker.WaitForKResourcesReady(); err != nil {
 		return err
 	}
-	// explicitly wait for all pods to become ready.
-	if err := pkgTest.WaitForAllPodsRunning(client.Kube, client.Namespace); err != nil {
-		return err
+	// Explicitly wait for all pods that were created directly by this test to become ready.
+	for _, n := range client.podsCreated {
+		if err := pkgTest.WaitForPodRunning(client.Kube, n, client.Namespace); err != nil {
+			return fmt.Errorf("created Pod %q did not become ready: %v", n, err)
+		}
 	}
 
 	return nil
