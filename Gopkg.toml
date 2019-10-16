@@ -87,7 +87,8 @@ required = [
 
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
-  branch = "master"
+  source = "github.com/nachocano/sdk-go"
+  branch = "http_client"
 
 # needed because pkg upgraded
 [[override]]

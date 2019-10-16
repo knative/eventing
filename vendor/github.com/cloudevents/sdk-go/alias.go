@@ -141,6 +141,9 @@ var (
 	WithMiddleware           = http.WithMiddleware
 	WithLongPollTarget       = http.WithLongPollTarget
 	WithListener             = http.WithListener
+	WithMaxIdleConns         = http.WithMaxIdleConns
+	WithMaxIdleConnsPerHost  = http.WithMaxIdleConnsPerHost
+	WithIdleConnTimeout      = http.WithIdleConnTimeout
 
 	// HTTP Context
 
