@@ -268,16 +268,9 @@ func WithLongPollTarget(targetUrl string) Option {
 // WithMaxIdleConns sets the maximum idle connections to the underlying HTTP transport.
 func WithMaxIdleConns(maxIdleConns int) Option {
 	return func(t *Transport) error {
-		if t == nil {
-			return fmt.Errorf("http max idle conns option can not be set to nil transport")
-		}
-		if t.Client == nil {
-			t.Client = &nethttp.Client{}
-			t.Client.Transport = nethttp.DefaultTransport
-		}
-		transport, ok := t.Client.Transport.(*nethttp.Transport)
-		if !ok {
-			return fmt.Errorf("http max idle conns option can not be set to non http.Transport")
+		transport, err := httpTransportFor(t)
+		if err != nil {
+			return fmt.Errorf("http max idle conn option can not be set: %v", err)
 		}
 		transport.MaxIdleConns = maxIdleConns
 		return nil
@@ -287,16 +280,9 @@ func WithMaxIdleConns(maxIdleConns int) Option {
 // WithMaxIdleConnsPerHost sets the maximum idle connections per host to the underlying HTTP transport.
 func WithMaxIdleConnsPerHost(maxIdleConnsPerHost int) Option {
 	return func(t *Transport) error {
-		if t == nil {
-			return fmt.Errorf("http max idle conns per host option can not be set to nil transport")
-		}
-		if t.Client == nil {
-			t.Client = &nethttp.Client{}
-			t.Client.Transport = nethttp.DefaultTransport
-		}
-		transport, ok := t.Client.Transport.(*nethttp.Transport)
-		if !ok {
-			return fmt.Errorf("http max idle conns per host option can not be set to non http.Transport")
+		transport, err := httpTransportFor(t)
+		if err != nil {
+			return fmt.Errorf("http max idle conn per host option can not be set: %v", err)
 		}
 		transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
 		return nil
@@ -306,18 +292,26 @@ func WithMaxIdleConnsPerHost(maxIdleConnsPerHost int) Option {
 // WithIdleConnTimeout sets the idle connection timeout to the underlying HTTP transport.
 func WithIdleConnTimeout(idleConnTimeout time.Duration) Option {
 	return func(t *Transport) error {
-		if t == nil {
-			return fmt.Errorf("http max idle conn timeout option can not be set to nil transport")
-		}
-		if t.Client == nil {
-			t.Client = &nethttp.Client{}
-			t.Client.Transport = nethttp.DefaultTransport
-		}
-		transport, ok := t.Client.Transport.(*nethttp.Transport)
-		if !ok {
-			return fmt.Errorf("http max idle conn timeout option can not be set to non http.Transport")
+		transport, err := httpTransportFor(t)
+		if err != nil {
+			return fmt.Errorf("http max idle conn timeout option can not be set: %v", err)
 		}
 		transport.IdleConnTimeout = idleConnTimeout
 		return nil
 	}
+}
+
+func httpTransportFor(t *Transport) (*nethttp.Transport, error) {
+	if t == nil {
+		return nil, fmt.Errorf("nil transport")
+	}
+	if t.Client == nil {
+		t.Client = &nethttp.Client{}
+		t.Client.Transport = nethttp.DefaultTransport
+	}
+	transport, ok := t.Client.Transport.(*nethttp.Transport)
+	if !ok {
+		return nil, fmt.Errorf("non http.Transport")
+	}
+	return transport, nil
 }
