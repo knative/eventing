@@ -55,9 +55,13 @@ var (
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
+	// Dependency annotation
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
+	// Create default broker annotation
+	validCreateDefaultBrokerAnnotation   = "true"
+	invalidCreateDefaultBrokerAnnotation = "yes"
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -195,6 +199,24 @@ func TestTriggerValidation(t *testing.T) {
 					dependencyAnnotationPath + "." + "name",
 					dependencyAnnotationPath + "." + "apiVersion"},
 				Message: "missing field(s)",
+			},
+		},
+		{
+			name: "invalid create default broker annotation value",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						CreateDefaultBrokerAnnotation: invalidCreateDefaultBrokerAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "test_broker",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{""},
+				Message: "The provided create default broker annotation value (\"yes\") was not true/false",
 			},
 		},
 	}

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
@@ -163,8 +164,11 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		if apierrs.IsNotFound(err) {
 			t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
-			if t.Spec.Broker == "default" {
-				if e := r.labelNamespace(ctx, t); e != nil {
+			needDefaultBroker, e := r.checkCreateDefaultBrokerAnnotation(ctx, t)
+			if e != nil {
+				logging.FromContext(ctx).Error("Unable to get create default broker annotation", zap.Error(e))
+			} else if t.Spec.Broker == "default" && needDefaultBroker {
+				if e = r.labelNamespace(ctx, t); e != nil {
 					logging.FromContext(ctx).Error("Unable to label the namespace", zap.Error(e))
 				}
 			}
@@ -309,6 +313,14 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	}
 
 	return trig, err
+}
+
+func (r *Reconciler) checkCreateDefaultBrokerAnnotation(ctx context.Context, t *v1alpha1.Trigger) (bool, error) {
+	if createDefaultBrokerAnnotation, ok := t.GetAnnotations()[v1alpha1.CreateDefaultBrokerAnnotation]; ok {
+		return strconv.ParseBool(createDefaultBrokerAnnotation)
+	} else {
+		return false, nil
+	}
 }
 
 // labelNamespace will label namespace with knative-eventing-injection=enabled

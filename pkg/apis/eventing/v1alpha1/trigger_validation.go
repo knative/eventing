@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -41,6 +42,10 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	if ok {
 		dependencyAnnotationPrefix := fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 		errs = errs.Also(t.validateDependencyAnnotation(dependencyAnnotation).ViaField(dependencyAnnotationPrefix))
+	}
+	createDefaultBrokerAnnotation, ok := t.GetAnnotations()[CreateDefaultBrokerAnnotation]
+	if ok {
+		errs = errs.Also(t.validateCreateDefaultBrokerAnnotation(createDefaultBrokerAnnotation))
 	}
 	return errs
 }
@@ -168,4 +173,15 @@ func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *api
 		errs = errs.Also(fe)
 	}
 	return errs
+}
+
+func (t *Trigger) validateCreateDefaultBrokerAnnotation(createDefaultBrokerAnnotation string) *apis.FieldError {
+	_, err := strconv.ParseBool(createDefaultBrokerAnnotation)
+	if err != nil {
+		return &apis.FieldError{
+			Message: fmt.Sprintf("The provided create default broker annotation value (%q) was not true/false", createDefaultBrokerAnnotation),
+			Paths:   []string{""},
+		}
+	}
+	return nil
 }
