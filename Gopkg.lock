@@ -105,7 +105,7 @@
 
 [[projects]]
   branch = "http_client"
-  digest = "1:3b6089d6468e947d6f429408b9f85f7759584f38ab7ad6198ad5254bac4117e2"
+  digest = "1:b46f9586b34a357ce9bbdee195342f4064abbe556a949b2505735b9f740b537e"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     ".",
@@ -122,7 +122,7 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "facf0cdd9695eb65293dfd2326e82a78cd473d48"
+  revision = "0114248a9b44eade5de2d674f1f4a9ce09023160"
   source = "github.com/nachocano/sdk-go"
 
 [[projects]]
