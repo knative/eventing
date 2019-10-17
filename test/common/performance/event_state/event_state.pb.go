@@ -20,9 +20,13 @@ limitations under the License.
 package event_state
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -233,4 +237,84 @@ var fileDescriptor_de3fba9d879b76ae = []byte{
 	0x06, 0x1d, 0xd5, 0xcb, 0x53, 0x1c, 0x41, 0x5b, 0xbe, 0xab, 0x43, 0x9f, 0x9f, 0x0c, 0x2a, 0xbe,
 	0xe5, 0xd8, 0xbf, 0xc6, 0x4a, 0xa0, 0x5b, 0x5b, 0x34, 0xca, 0xbb, 0xdd, 0xfe, 0x04, 0x00, 0x00,
 	0xff, 0xff, 0xff, 0x12, 0x67, 0x3d, 0x3d, 0x02, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// EventsRecorderClient is the client API for EventsRecorder service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type EventsRecorderClient interface {
+	RecordEvents(ctx context.Context, in *EventsRecordList, opts ...grpc.CallOption) (*RecordReply, error)
+}
+
+type eventsRecorderClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewEventsRecorderClient(cc *grpc.ClientConn) EventsRecorderClient {
+	return &eventsRecorderClient{cc}
+}
+
+func (c *eventsRecorderClient) RecordEvents(ctx context.Context, in *EventsRecordList, opts ...grpc.CallOption) (*RecordReply, error) {
+	out := new(RecordReply)
+	err := c.cc.Invoke(ctx, "/event_state.EventsRecorder/RecordEvents", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// EventsRecorderServer is the server API for EventsRecorder service.
+type EventsRecorderServer interface {
+	RecordEvents(context.Context, *EventsRecordList) (*RecordReply, error)
+}
+
+// UnimplementedEventsRecorderServer can be embedded to have forward compatible implementations.
+type UnimplementedEventsRecorderServer struct {
+}
+
+func (*UnimplementedEventsRecorderServer) RecordEvents(ctx context.Context, req *EventsRecordList) (*RecordReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordEvents not implemented")
+}
+
+func RegisterEventsRecorderServer(s *grpc.Server, srv EventsRecorderServer) {
+	s.RegisterService(&_EventsRecorder_serviceDesc, srv)
+}
+
+func _EventsRecorder_RecordEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EventsRecordList)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventsRecorderServer).RecordEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/event_state.EventsRecorder/RecordEvents",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventsRecorderServer).RecordEvents(ctx, req.(*EventsRecordList))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _EventsRecorder_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "event_state.EventsRecorder",
+	HandlerType: (*EventsRecorderServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RecordEvents",
+			Handler:    _EventsRecorder_RecordEvents_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "event_state.proto",
 }
