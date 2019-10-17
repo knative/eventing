@@ -121,8 +121,6 @@ func main() {
 	httpTransport, err := cloudevents.NewHTTPTransport(
 		cloudevents.WithBinaryEncoding(),
 		cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware),
-		cloudevents.WithMaxIdleConns(defaultMaxIdleConnections),
-		cloudevents.WithMaxIdleConnsPerHost(defaultMaxIdleConnectionsPerHost),
 	)
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
@@ -134,7 +132,11 @@ func main() {
 		writer.WriteHeader(http.StatusOK)
 	})
 
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, connectionArgs)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}

@@ -1,14 +1,19 @@
 package kncloudevents
 
 import (
-	gohttp "net/http"
+	nethttp "net/http"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"knative.dev/pkg/tracing"
 )
+
+type ConnectionArgs struct {
+	MaxIdleConns        int
+	MaxIdleConnsPerHost int
+}
 
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	tOpts := []http.Option{
@@ -28,12 +33,21 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	return NewDefaultClientGivenHttpTransport(t)
 }
 
-// NewDefaultClientGivenHttpTransport creates a new CloudEvents client using the provided HTTP
-// transport. Note that it does modify the provided HTTP Transport by adding tracing to its Client.
-func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport) (cloudevents.Client, error) {
+// NewDefaultClientGivenHttpTransport creates a new CloudEvents client using the provided cloudevents HTTP
+// transport. Note that it does modify the provided cloudevents HTTP Transport by adding tracing to its Client
+// and different connection options, in case they are specified.
+func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connectionArgs ...ConnectionArgs) (cloudevents.Client, error) {
+	// Add connection options to the default transport.
+	var base = nethttp.DefaultTransport
+	if len(connectionArgs) > 0 {
+		baseTransport := base.(*nethttp.Transport)
+		baseTransport.MaxIdleConns = connectionArgs[0].MaxIdleConns
+		baseTransport.MaxIdleConnsPerHost = connectionArgs[0].MaxIdleConnsPerHost
+	}
 	// Add output tracing.
-	t.Client = &gohttp.Client{
+	t.Client = &nethttp.Client{
 		Transport: &ochttp.Transport{
+			Base:        base,
 			Propagation: &b3.HTTPFormat{},
 		},
 	}

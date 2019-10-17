@@ -71,13 +71,16 @@ func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespa
 	httpTransport, err := cloudevents.NewHTTPTransport(
 		cloudevents.WithBinaryEncoding(),
 		cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)),
-		cloudevents.WithMaxIdleConns(defaultMaxIdleConnections),
-		cloudevents.WithMaxIdleConnsPerHost(defaultMaxIdleConnectionsPerHost))
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, connectionArgs)
 	if err != nil {
 		return nil, err
 	}
