@@ -50,7 +50,7 @@ const (
 
 	// TODO set them as env variables or a config map.
 	defaultMaxIdleConnections        = 1000
-	defaultMaxIdleConnectionsPerHost = 100
+	defaultMaxIdleConnectionsPerHost = 1000
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
