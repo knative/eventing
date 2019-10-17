@@ -54,7 +54,7 @@ var (
 // TODO set them as env variables or a config map.
 const (
 	defaultMaxIdleConnections        = 1000
-	defaultMaxIdleConnectionsPerHost = 100
+	defaultMaxIdleConnectionsPerHost = 1000
 )
 
 type envConfig struct {

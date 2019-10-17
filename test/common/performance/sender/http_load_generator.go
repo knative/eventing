@@ -33,7 +33,7 @@ import (
 
 const (
 	defaultMaxIdleConnections        = 1000
-	defaultMaxIdleConnectionsPerHost = 100
+	defaultMaxIdleConnectionsPerHost = 1000
 )
 
 func init() {
