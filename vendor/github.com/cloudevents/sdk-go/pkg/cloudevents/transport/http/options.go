@@ -268,6 +268,9 @@ func WithLongPollTarget(targetUrl string) Option {
 // WithMaxIdleConns sets the maximum idle connections to the underlying HTTP transport.
 func WithMaxIdleConns(maxIdleConns int) Option {
 	return func(t *Transport) error {
+		if maxIdleConns < 0 {
+			return fmt.Errorf("http max idle conn option can not be negative: %d", maxIdleConns)
+		}
 		transport, err := httpTransportFor(t)
 		if err != nil {
 			return fmt.Errorf("http max idle conn option can not be set: %v", err)
@@ -280,6 +283,9 @@ func WithMaxIdleConns(maxIdleConns int) Option {
 // WithMaxIdleConnsPerHost sets the maximum idle connections per host to the underlying HTTP transport.
 func WithMaxIdleConnsPerHost(maxIdleConnsPerHost int) Option {
 	return func(t *Transport) error {
+		if maxIdleConnsPerHost < 0 {
+			return fmt.Errorf("http max idle conn per host option can not be negative: %d", maxIdleConnsPerHost)
+		}
 		transport, err := httpTransportFor(t)
 		if err != nil {
 			return fmt.Errorf("http max idle conn per host option can not be set: %v", err)
@@ -292,9 +298,12 @@ func WithMaxIdleConnsPerHost(maxIdleConnsPerHost int) Option {
 // WithIdleConnTimeout sets the idle connection timeout to the underlying HTTP transport.
 func WithIdleConnTimeout(idleConnTimeout time.Duration) Option {
 	return func(t *Transport) error {
+		if idleConnTimeout < 0 {
+			return fmt.Errorf("http idle conn timeout option can not be negative: %s", idleConnTimeout)
+		}
 		transport, err := httpTransportFor(t)
 		if err != nil {
-			return fmt.Errorf("http max idle conn timeout option can not be set: %v", err)
+			return fmt.Errorf("http idle conn timeout option can not be set: %v", err)
 		}
 		transport.IdleConnTimeout = idleConnTimeout
 		return nil

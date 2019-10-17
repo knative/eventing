@@ -105,7 +105,7 @@
 
 [[projects]]
   branch = "http_client"
-  digest = "1:565200803f3cf54203521d3bd2b1ad9404d384f2137ac2802eb17feae5d62fda"
+  digest = "1:c2ae5d9147e63ca196ae08d0e8281b2abec79fc4dfa849309502518f75bfe1d8"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     ".",
@@ -122,7 +122,7 @@
     "pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "73aca3525a875b2f079d7aeefffdef9d7122744d"
+  revision = "d20146c92d1dc65126e2a392a797d2b0c7017f73"
   source = "github.com/nachocano/sdk-go"
 
 [[projects]]
@@ -1385,6 +1385,8 @@
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "google.golang.org/grpc",
+    "google.golang.org/grpc/codes",
+    "google.golang.org/grpc/status",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
