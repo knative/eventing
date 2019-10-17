@@ -29,7 +29,6 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ApiServerSource is the Schema for the apiserversources API
-// +k8s:openapi-gen=true
 type ApiServerSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
