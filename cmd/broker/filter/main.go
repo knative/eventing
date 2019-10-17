@@ -26,7 +26,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/metrics"
@@ -55,7 +54,6 @@ type envConfig struct {
 
 func main() {
 	logConfig := channel.NewLoggingConfig()
-	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
 	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
 	flag.Parse()
 
