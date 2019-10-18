@@ -159,7 +159,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	// Remove the TTL attribute that is used by the Broker.
-	originalV3 := event.Context.AsV03()
+	originalV1 := event.Context.AsV1()
 	ttl, ttlKey := broker.GetTTL(event.Context)
 	if ttl == nil {
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
@@ -170,8 +170,8 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
 		return nil
 	}
-	delete(originalV3.Extensions, ttlKey)
-	event.Context = originalV3
+	delete(originalV1.Extensions, ttlKey)
+	event.Context = originalV1
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 

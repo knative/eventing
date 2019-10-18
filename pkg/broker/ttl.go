@@ -33,7 +33,7 @@ const (
 // for the key. The second return param, is the case preserved key that matched.
 // Depending on the encoding/transport, the extension case could be changed.
 func GetTTL(ctx cloudevents.EventContext) (interface{}, string) {
-	for k, v := range ctx.AsV03().Extensions {
+	for k, v := range ctx.AsV1().Extensions {
 		if lower := strings.ToLower(k); lower == V03TTLAttribute {
 			return v, k
 		}
