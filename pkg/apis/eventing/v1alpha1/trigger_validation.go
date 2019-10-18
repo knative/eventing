@@ -37,13 +37,11 @@ var (
 // Validate the Trigger.
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	errs := t.Spec.Validate(ctx).ViaField("spec")
-	dependencyAnnotation, ok := t.GetAnnotations()[DependencyAnnotation]
-	if ok {
+	if dependencyAnnotation, ok := t.GetAnnotations()[DependencyAnnotation]; ok {
 		dependencyAnnotationPrefix := fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 		errs = errs.Also(t.validateDependencyAnnotation(dependencyAnnotation).ViaField(dependencyAnnotationPrefix))
 	}
-	injectionAnnotation, ok := t.GetAnnotations()[InjectionAnnotation]
-	if ok {
+	if injectionAnnotation, ok := t.GetAnnotations()[InjectionAnnotation]; ok {
 		errs = errs.Also(t.validateInjectionAnnotation(injectionAnnotation))
 	}
 	return errs
