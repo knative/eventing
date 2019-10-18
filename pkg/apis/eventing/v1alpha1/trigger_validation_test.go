@@ -60,8 +60,8 @@ var (
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 	// Create default broker annotation
-	validCreateDefaultBrokerAnnotation   = "true"
-	invalidCreateDefaultBrokerAnnotation = "yes"
+	validInjectionAnnotation   = "enabled"
+	invalidInjectionAnnotation = "disabled"
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -202,21 +202,39 @@ func TestTriggerValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid create default broker annotation value",
+			name: "invalid injection annotation value",
 			t: &Trigger{
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						CreateDefaultBrokerAnnotation: invalidCreateDefaultBrokerAnnotation,
+						InjectionAnnotation: invalidInjectionAnnotation,
 					}},
 				Spec: TriggerSpec{
-					Broker:     "test_broker",
+					Broker:     "default",
 					Filter:     validEmptyFilter,
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
 				Paths:   []string{""},
-				Message: "The provided create default broker annotation value (\"yes\") was not true/false",
+				Message: "The provided injection annotation value can only be \"enabled\", not \"disabled\"",
+			},
+		},
+		{
+			name: "valid injection annotation value, non-default broker specified",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						InjectionAnnotation: validInjectionAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "test-broker",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{""},
+				Message: "The provided injection annotation is only used for default borker, but non-default broker specified here: \"test-broker\"",
 			},
 		},
 	}

@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -43,9 +42,9 @@ func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 		dependencyAnnotationPrefix := fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 		errs = errs.Also(t.validateDependencyAnnotation(dependencyAnnotation).ViaField(dependencyAnnotationPrefix))
 	}
-	createDefaultBrokerAnnotation, ok := t.GetAnnotations()[CreateDefaultBrokerAnnotation]
+	injectionAnnotation, ok := t.GetAnnotations()[InjectionAnnotation]
 	if ok {
-		errs = errs.Also(t.validateCreateDefaultBrokerAnnotation(createDefaultBrokerAnnotation))
+		errs = errs.Also(t.validateInjectionAnnotation(injectionAnnotation))
 	}
 	return errs
 }
@@ -175,11 +174,16 @@ func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *api
 	return errs
 }
 
-func (t *Trigger) validateCreateDefaultBrokerAnnotation(createDefaultBrokerAnnotation string) *apis.FieldError {
-	_, err := strconv.ParseBool(createDefaultBrokerAnnotation)
-	if err != nil {
+func (t *Trigger) validateInjectionAnnotation(injectionAnnotation string) *apis.FieldError {
+	if injectionAnnotation != "enabled" {
 		return &apis.FieldError{
-			Message: fmt.Sprintf("The provided create default broker annotation value (%q) was not true/false", createDefaultBrokerAnnotation),
+			Message: fmt.Sprintf("The provided injection annotation value can only be \"enabled\", not %q", injectionAnnotation),
+			Paths:   []string{""},
+		}
+	}
+	if t.Spec.Broker != "default" {
+		return &apis.FieldError{
+			Message: fmt.Sprintf("The provided injection annotation is only used for default borker, but non-default broker specified here: %q", t.Spec.Broker),
 			Paths:   []string{""},
 		}
 	}

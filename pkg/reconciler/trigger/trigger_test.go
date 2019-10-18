@@ -82,6 +82,8 @@ const (
 	testData                = "data"
 	sinkName                = "testsink"
 
+	injectionAnnotation = "enabled"
+
 	currentGeneration  = 1
 	outdatedGeneration = 0
 )
@@ -121,7 +123,7 @@ func TestAllCases(t *testing.T) {
 			//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
 			//			},
 		}, {
-			Name: "Broker not found",
+			Name: "Non-default broker not found",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -139,6 +141,31 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+				),
+			}},
+		}, {
+			Name: "Default broker not found, with injection annotation enabled",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyDefaultBroker(),
+				reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation)),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerServiceFailed", "Broker's Filter service not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: failed to find Broker's Filter service"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
 				),
 			}},
 		}, {
@@ -719,6 +746,12 @@ func makeReadyBroker() *v1alpha1.Broker {
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.TriggerChannel = makeTriggerChannelRef()
 	b.Status.IngressChannel = makeIngressChannelRef()
+	return b
+}
+
+func makeReadyDefaultBroker() *v1alpha1.Broker {
+	b := makeReadyBroker()
+	b.Name = "default"
 	return b
 }
 
