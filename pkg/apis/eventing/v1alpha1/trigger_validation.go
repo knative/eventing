@@ -175,7 +175,7 @@ func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *api
 func (t *Trigger) validateInjectionAnnotation(injectionAnnotation string) *apis.FieldError {
 	if injectionAnnotation != "enabled" {
 		return &apis.FieldError{
-			Message: fmt.Sprintf("The provided injection annotation value can only be \"enabled\", not %q", injectionAnnotation),
+			Message: fmt.Sprintf(`The provided injection annotation value can only be "enabled", not %q`, injectionAnnotation),
 			Paths:   []string{""},
 		}
 	}
