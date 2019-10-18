@@ -52,9 +52,12 @@ var (
 )
 
 // TODO make these constants configurable (either as env variables, config map, or part of broker spec).
+//  Issue: https://github.com/knative/eventing/issues/1777
 const (
 	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
 	// Purposely set them to be equal, as the ingress only connects to its channel.
+	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 1000
 )
