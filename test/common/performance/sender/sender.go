@@ -52,13 +52,11 @@ type Sender struct {
 	sentCh     chan common.EventTimestamp
 	acceptedCh chan common.EventTimestamp
 	failedCh   chan common.EventTimestamp
-	errorCh    chan common.EventTimestamp
 
 	// events recording maps
 	sentEvents     *pb.EventsRecord
 	acceptedEvents *pb.EventsRecord
 	failedEvents   *pb.EventsRecord
-	errorEvents    *pb.EventsRecord
 
 	// load generator
 	loadGenerator LoadGenerator
@@ -104,7 +102,6 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 		sentCh:     make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 		acceptedCh: make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 		failedCh:   make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
-		errorCh:    make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 
 		sentEvents: &pb.EventsRecord{
 			Type:   pb.EventsRecord_SENT,
@@ -118,15 +115,11 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 			Type:   pb.EventsRecord_FAILED,
 			Events: make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages),
 		},
-		errorEvents: &pb.EventsRecord{
-			Type:   pb.EventsRecord_ERROR,
-			Events: make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages),
-		},
 
 		aggregatorClient: aggregatorClient,
 	}
 
-	executor.loadGenerator, err = loadGeneratorFactory(eventsSource(), executor.sentCh, executor.acceptedCh, executor.failedCh, executor.errorCh)
+	executor.loadGenerator, err = loadGeneratorFactory(eventsSource(), executor.sentCh, executor.acceptedCh, executor.failedCh)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +181,6 @@ func (s *Sender) Run(ctx context.Context) {
 	log.Printf("%-15s: %d", "Sent count", len(s.sentEvents.Events))
 	log.Printf("%-15s: %d", "Accepted count", len(s.acceptedEvents.Events))
 	log.Printf("%-15s: %d", "Failed count", len(s.failedEvents.Events))
-	log.Printf("%-15s: %d", "Error count", len(s.errorEvents.Events))
 
 	err := s.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		s.sentEvents,
@@ -217,7 +209,6 @@ func (s *Sender) closeChannels() {
 	close(s.sentCh)
 	close(s.acceptedCh)
 	close(s.failedCh)
-	close(s.errorCh)
 
 	log.Printf("All channels closed")
 }
@@ -243,12 +234,6 @@ func (s *Sender) processEvents() {
 				continue
 			}
 			s.failedEvents.Events[e.EventId] = e.At
-
-		case e, ok := <-s.errorCh:
-			if !ok {
-				continue
-			}
-			s.errorEvents.Events[e.EventId] = e.At
 		}
 	}
 }

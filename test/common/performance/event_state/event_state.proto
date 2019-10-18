@@ -26,7 +26,6 @@ message EventsRecord {
 		ACCEPTED = 2;
 		FAILED = 3;
 		RECEIVED = 4;
-		ERROR = 5;
 	}
 	Type type = 2;
 }

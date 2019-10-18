@@ -10,8 +10,12 @@ import (
 	"knative.dev/pkg/tracing"
 )
 
+// ConnectionArgs allow to configure connection parameters to the underlying
+// HTTP Client transport.
 type ConnectionArgs struct {
-	MaxIdleConns        int
+	// MaxIdleConns refers to the max idle connections, as in net/http/transport.
+	MaxIdleConns int
+	// MaxIdleConnsPerHost refers to the max idle connections per host, as in net/http/transport.
 	MaxIdleConnsPerHost int
 }
 

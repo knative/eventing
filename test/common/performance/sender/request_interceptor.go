@@ -18,42 +18,16 @@ package sender
 
 import "net/http"
 
-const (
-	defaultMaxIdleConnections        = 1000
-	defaultMaxIdleConnectionsPerHost = 1000
-)
-
 type requestInterceptor struct {
-	before       func(*http.Request)
-	after        func(*http.Request, *http.Response, error)
-	roundTripper http.RoundTripper
-}
-
-func NewRequestInterceptor(before func(*http.Request), after func(*http.Request, *http.Response, error)) *requestInterceptor {
-	transport := http.DefaultTransport
-	t := transport.(*http.Transport)
-	t.MaxIdleConns = defaultMaxIdleConnections
-	t.MaxIdleConnsPerHost = defaultMaxIdleConnectionsPerHost
-	return &requestInterceptor{
-		before:       before,
-		after:        after,
-		roundTripper: t,
-	}
+	before func(*http.Request)
+	after  func(*http.Request, *http.Response, error)
 }
 
 func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, error) {
 	if r.before != nil {
 		r.before(request)
 	}
-
-	var res *http.Response
-	var err error
-	if r.roundTripper == nil {
-		res, err = http.DefaultTransport.RoundTrip(request)
-	} else {
-		res, err = r.roundTripper.RoundTrip(request)
-	}
-
+	res, err := http.DefaultTransport.RoundTrip(request)
 	if r.after != nil {
 		r.after(request, res, err)
 	}

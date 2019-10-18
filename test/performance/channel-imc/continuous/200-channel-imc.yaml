@@ -134,4 +134,4 @@ spec:
                 name: config-mako
             - name: service-account
               secret:
-                secretName: mako
+                secretName: service-account

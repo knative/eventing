@@ -89,7 +89,6 @@ type HttpLoadGenerator struct {
 	sentCh     chan common.EventTimestamp
 	acceptedCh chan common.EventTimestamp
 	failedCh   chan common.EventTimestamp
-	errorCh    chan common.EventTimestamp
 
 	warmupAttacker *vegeta.Attacker
 	paceAttacker   *vegeta.Attacker
@@ -97,7 +96,7 @@ type HttpLoadGenerator struct {
 }
 
 func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
-	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp, failedCh chan common.EventTimestamp, errorCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
+	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp, failedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
 		if sinkUrl == "" {
 			panic("Missing --sink flag")
 		}
@@ -109,28 +108,25 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 			sentCh:     sentCh,
 			acceptedCh: acceptedCh,
 			failedCh:   failedCh,
-			errorCh:    errorCh,
 		}
 
 		loadGen.warmupAttacker = vegeta.NewAttacker(vegeta.Workers(minWorkers))
 		loadGen.paceAttacker = vegeta.NewAttacker(
-			vegeta.Client(&http.Client{Transport: NewRequestInterceptor(
-				func(request *http.Request) {
+			vegeta.Client(&http.Client{Transport: requestInterceptor{
+				before: func(request *http.Request) {
 					id := request.Header.Get("Ce-Id")
 					loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
 				},
-				func(request *http.Request, response *http.Response, e error) {
+				after: func(request *http.Request, response *http.Response, e error) {
 					id := request.Header.Get("Ce-Id")
 					t := ptypes.TimestampNow()
-					if e != nil {
-						loadGen.errorCh <- common.EventTimestamp{EventId: id, At: t}
-					} else if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+					if e != nil || response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 						loadGen.failedCh <- common.EventTimestamp{EventId: id, At: t}
 					} else {
 						loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
 					}
-				}),
-			}),
+				},
+			}}),
 			vegeta.Workers(minWorkers),
 		)
 

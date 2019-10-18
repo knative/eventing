@@ -48,7 +48,9 @@ const (
 	// readyz is the HTTP path that will be used for readiness checks.
 	readyz = "/readyz"
 
-	// TODO set them as env variables or a config map.
+	// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
+	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
+	// Set them on a 10:1 ratio, but this would actually depend on the Triggers' subscribers and the workload itself.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 100
 )
@@ -68,10 +70,7 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithBinaryEncoding(),
-		cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)),
-	)
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
 	if err != nil {
 		return nil, err
 	}
