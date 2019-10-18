@@ -96,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key", zap.Any("key", key))
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.apiserversourceLister.ApiServerSources(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("ApiServerSource key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("ApiServerSource key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
