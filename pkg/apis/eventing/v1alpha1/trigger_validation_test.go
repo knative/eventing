@@ -456,32 +456,3 @@ func TestTriggerImmutableFields(t *testing.T) {
 		})
 	}
 }
-
-
-func TestTriggerSpecValidationTest(t *testing.T) {
-	tests := []struct {
-		name string
-		ts   *TriggerSpec
-		want *apis.FieldError
-	}{{
-		name: "missing subscriber.ref.name",
-		ts: &TriggerSpec{
-			Broker:     "test_broker",
-			Filter:     validSourceAndTypeFilter,
-			Subscriber: invalidSubscriber,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("subscriber.ref.name")
-			return fe
-		}(),
-	},}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.ts.Validate(context.TODO())
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: Validate TriggerSpec (-want, +got) = %v", test.name, diff)
-			}
-		})
-	}
-}

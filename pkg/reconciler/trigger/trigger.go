@@ -198,8 +198,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	logging.FromContext(ctx).Info("Finished broker reconcile")
-
 	trackAddressable := r.addressableTracker.TrackInNamespace(t)
 	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
 		if err := trackAddressable(*t.Spec.Subscriber.Ref); err != nil {
