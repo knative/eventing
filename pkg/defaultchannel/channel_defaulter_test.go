@@ -99,7 +99,7 @@ func TestChannelDefaulter_GetDefault(t *testing.T) {
 			}
 			channelTemplate := cd.GetDefault(tc.channel.Namespace)
 			if diff := cmp.Diff(tc.expectedChannelTemplate, channelTemplate); diff != "" {
-				t.Fatalf("Unexpected provisioner (-want, +got): %s", diff)
+				t.Fatalf("Unexpected channelTemplate (-want, +got): %s", diff)
 			}
 		})
 	}

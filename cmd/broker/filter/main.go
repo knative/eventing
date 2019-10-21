@@ -18,14 +18,16 @@ package main
 
 import (
 	"flag"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/logging"
 	"log"
 	"time"
-
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/metrics"
@@ -33,7 +35,6 @@ import (
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/broker/filter"
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/tracing"
 
 	"knative.dev/pkg/injection/sharedmain"
@@ -53,20 +54,9 @@ type envConfig struct {
 }
 
 func main() {
-	logConfig := channel.NewLoggingConfig()
-	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
 	flag.Parse()
 
-	defer flush(logger)
-
 	ctx := signals.NewContext()
-
-	logger.Info("Starting...")
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logger.Fatal("Failed to process env var", zap.Error(err))
-	}
 
 	// Report stats on Go memory usage every 30 seconds.
 	msp := metrics.NewMemStatsAll()
@@ -80,7 +70,22 @@ func main() {
 		log.Fatal("Error building kubeconfig", err)
 	}
 
-	kubeClient := kubernetes.NewForConfigOrDie(cfg)
+	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
+	kubeClient := kubeclient.Get(ctx)
+
+	config, err := sharedmain.GetLoggingConfig(ctx)
+	if err != nil {
+		log.Fatal("Error loading/parsing logging configuration:", err)
+	}
+	logger, _ := logging.NewLoggerFromConfig(config, "broker_filter")
+	defer flush(logger)
+
+	logger.Infow("Starting the Broker Filter")
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
 
 	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
 	eventingFactory := eventinginformers.NewSharedInformerFactoryWithOptions(eventingClient,
@@ -88,13 +93,13 @@ func main() {
 		eventinginformers.WithNamespace(env.Namespace))
 	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
 
-	cmw := configmap.NewInformedWatcher(kubeClient, system.Namespace())
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(logger.Sugar(), cmw, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(logger, configMapWatcher, bin); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -102,7 +107,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister().Triggers(env.Namespace), reporter)
+	handler, err := filter.NewHandler(logger.Desugar(), triggerInformer.Lister().Triggers(env.Namespace), reporter)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
@@ -111,10 +116,10 @@ func main() {
 
 	// TODO change the component name to trigger once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update metrics exporter.
-	cmw.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger.Sugar()))
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger))
 
 	// configMapWatcher does not block, so start it first.
-	if err = cmw.Start(ctx.Done()); err != nil {
+	if err = configMapWatcher.Start(ctx.Done()); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
 
@@ -134,7 +139,7 @@ func main() {
 	logger.Info("Exiting...")
 }
 
-func flush(logger *zap.Logger) {
-	logger.Sync()
+func flush(logger *zap.SugaredLogger) {
+	_ = logger.Sync()
 	metrics.FlushExporter()
 }
