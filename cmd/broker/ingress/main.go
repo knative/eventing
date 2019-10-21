@@ -95,10 +95,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	logger, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_ingress")
-	defer flush(logger)
+	sl, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_ingress")
+	logger := sl.Desugar()
+	defer flush(sl)
 
-	logger.Infow("Starting the Broker Ingress")
+	logger.Info("Starting the Broker Ingress")
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -117,13 +118,13 @@ func main() {
 
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_ingress", logger))
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_ingress", sl))
 
 	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(logger, configMapWatcher, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -150,7 +151,7 @@ func main() {
 	reporter := ingress.NewStatsReporter()
 
 	h := &ingress.Handler{
-		Logger:     logger.Desugar(),
+		Logger:     logger,
 		CeClient:   ceClient,
 		ChannelURI: channelURI,
 		BrokerName: env.Broker,

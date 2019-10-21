@@ -77,10 +77,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	logger, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_filter")
-	defer flush(logger)
+	sl, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_filter")
+	logger := sl.Desugar()
+	defer flush(sl)
 
-	logger.Infow("Starting the Broker Filter")
+	logger.Info("Starting the Broker Filter")
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -99,7 +100,7 @@ func main() {
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(logger, configMapWatcher, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -107,7 +108,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger.Desugar(), triggerInformer.Lister().Triggers(env.Namespace), reporter)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister().Triggers(env.Namespace), reporter)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
@@ -116,7 +117,7 @@ func main() {
 
 	// TODO change the component name to trigger once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger))
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", sl))
 
 	// configMapWatcher does not block, so start it first.
 	if err = configMapWatcher.Start(ctx.Done()); err != nil {
