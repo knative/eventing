@@ -18,8 +18,6 @@ package main
 
 import (
 	"flag"
-	"knative.dev/pkg/injection"
-	"knative.dev/pkg/logging"
 	"log"
 	"time"
 
@@ -30,6 +28,8 @@ import (
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
@@ -73,18 +73,18 @@ func main() {
 	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
-	config, err := sharedmain.GetLoggingConfig(ctx)
+	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	logger, _ := logging.NewLoggerFromConfig(config, "broker_filter")
+	logger, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_filter")
 	defer flush(logger)
 
 	logger.Infow("Starting the Broker Filter")
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
+		logger.Fatal("Failed to process env var", zap.Error(err))
 	}
 
 	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)

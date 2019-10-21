@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"knative.dev/pkg/logging"
 	"log"
 	"net/http"
 	"net/url"
@@ -40,6 +39,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
@@ -91,18 +91,18 @@ func main() {
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 
-	config, err := sharedmain.GetLoggingConfig(ctx)
+	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	logger, _ := logging.NewLoggerFromConfig(config, "broker_ingress")
+	logger, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_ingress")
 	defer flush(logger)
 
 	logger.Infow("Starting the Broker Ingress")
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
+		logger.Fatal("Failed to process env var", zap.Error(err))
 	}
 
 	channelURI := &url.URL{
