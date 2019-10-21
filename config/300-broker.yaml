@@ -66,3 +66,5 @@ spec:
                 kind:
                   type: string
                   minLength: 1
+                spec:
+                  type: object
