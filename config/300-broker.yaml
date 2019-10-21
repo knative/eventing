@@ -54,26 +54,17 @@ spec:
       properties:
         spec:
           properties:
-            channelTemplate:
+            channelTemplateSpec:
               type: object
               required:
-                - provisioner
+                - apiVersion
+                - kind
               properties:
-                provisioner:
-                  type: object
-                  required:
-                    - apiVersion
-                    - kind
-                    - name
-                  properties:
-                    apiVersion:
-                      type: string
-                      minLength: 1
-                    kind:
-                      type: string
-                      minLength: 1
-                    name:
-                      type: string
-                      minLength: 1
-                arguments:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                  minLength: 1
+                spec:
                   type: object
