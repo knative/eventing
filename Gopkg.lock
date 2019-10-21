@@ -1242,7 +1242,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:65171358e818b1a970f43f886342ef0db6f8cfb2cd4c33b5c5381d846fa64013"
+  digest = "1:f8462f28983e9941551382ce0a9594e9aea5c890e57a47718083133eaf77a179"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1304,8 +1304,10 @@
     "metrics/metricskey",
     "metrics/metricstest",
     "metrics/testing",
+    "network",
     "profiling",
     "reconciler/testing",
+    "resolver",
     "signals",
     "source",
     "system",
@@ -1331,7 +1333,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "e76e90e464c7caa87abdf840d599911ad1fb7b3e"
+  revision = "5dcae770a925a79bfab303bc9f98aad5e0f4879b"
 
 [[projects]]
   branch = "master"
@@ -1442,6 +1444,7 @@
     "knative.dev/pkg/apis/duck",
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
+    "knative.dev/pkg/apis/v1alpha1",
     "knative.dev/pkg/client/clientset/versioned/fake",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
@@ -1476,6 +1479,7 @@
     "knative.dev/pkg/metrics/metricstest",
     "knative.dev/pkg/metrics/testing",
     "knative.dev/pkg/reconciler/testing",
+    "knative.dev/pkg/resolver",
     "knative.dev/pkg/signals",
     "knative.dev/pkg/source",
     "knative.dev/pkg/system",

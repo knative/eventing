@@ -23,10 +23,10 @@ import (
 	"regexp"
 
 	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmp"
 
 	corev1 "k8s.io/api/core/v1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 var (
@@ -93,10 +93,10 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if messagingv1alpha1.IsSubscriberSpecNilOrEmpty(ts.Subscriber) {
+	if ts.Subscriber == nil {
 		fe := apis.ErrMissingField("subscriber")
 		errs = errs.Also(fe)
-	} else if fe := messagingv1alpha1.IsValidSubscriberSpec(*ts.Subscriber); fe != nil {
+	} else if fe := apisv1alpha1.ValidateDestination(*ts.Subscriber); fe != nil {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 

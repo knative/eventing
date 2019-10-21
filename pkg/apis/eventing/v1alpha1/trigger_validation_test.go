@@ -24,8 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 var (
@@ -42,14 +42,14 @@ var (
 			"source": "other_source",
 		},
 	}
-	validSubscriber = &messagingv1alpha1.SubscriberSpec{
+	validSubscriber = &apisv1alpha1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	invalidSubscriber = &messagingv1alpha1.SubscriberSpec{
+	invalidSubscriber = &apisv1alpha1.Destination{
 		Ref: &corev1.ObjectReference{
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
@@ -452,6 +452,35 @@ func TestTriggerImmutableFields(t *testing.T) {
 			got := test.current.CheckImmutableFields(context.TODO(), test.original)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
+
+func TestTriggerSpecValidationTest(t *testing.T) {
+	tests := []struct {
+		name string
+		ts   *TriggerSpec
+		want *apis.FieldError
+	}{{
+		name: "missing subscriber.ref.name",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validSourceAndTypeFilter,
+			Subscriber: invalidSubscriber,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("subscriber.ref.name")
+			return fe
+		}(),
+	},}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.ts.Validate(context.TODO())
+			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+				t.Errorf("%s: Validate TriggerSpec (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}
