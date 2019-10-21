@@ -130,7 +130,7 @@ func CleanupZipkinTracingSetup(logf logging.FormatLogger) {
 // JSONTrace returns a trace for the given traceID. It will continually try to get the trace. If the
 // trace it gets has the expected number of spans, then it will be returned. If not, it will try
 // again. If it reaches timeout, then it returns everything it has so far with an error.
-func JSONTrace(traceID string, expected int, timeout time.Duration) (trace []model.SpanModel, err error) {
+func JSONTrace(traceID string, expected int, timeout time.Duration, logf logging.FormatLogger) (trace []model.SpanModel, err error) {
 	t := time.After(timeout)
 	for len(trace) != expected {
 		select {
@@ -139,7 +139,7 @@ func JSONTrace(traceID string, expected int, timeout time.Duration) (trace []mod
 				lastErr: err,
 			}
 		default:
-			trace, err = jsonTrace(traceID)
+			trace, err = jsonTrace(traceID, logf)
 		}
 	}
 	return trace, err
@@ -147,7 +147,7 @@ func JSONTrace(traceID string, expected int, timeout time.Duration) (trace []mod
 
 // TimeoutError is an error returned by JSONTrace if it times out before getting the expected number
 // of traces.
-type TimeoutError struct{
+type TimeoutError struct {
 	lastErr error
 }
 
@@ -158,7 +158,7 @@ func (t *TimeoutError) Error() string {
 // jsonTrace gets a trace from Zipkin and returns it. Errors returned from this function should be
 // retried, as they are likely caused by random problems communicating with Zipkin, or Zipkin
 // communicating with its data store.
-func jsonTrace(traceID string) ([]model.SpanModel, error) {
+func jsonTrace(traceID string, logf logging.FormatLogger) ([]model.SpanModel, error) {
 	var empty []model.SpanModel
 
 	resp, err := http.Get(ZipkinTraceEndpoint + traceID)
@@ -176,6 +176,10 @@ func jsonTrace(traceID string) ([]model.SpanModel, error) {
 	err = json.Unmarshal(body, &models)
 	if err != nil {
 		return empty, fmt.Errorf("got an error in unmarshalling JSON %q: %v", body, err)
+	}
+	if logf != nil {
+		logf("########Got trace %q body for %q", body, traceID)
+		logf("@@@@@@@@Got trace %v", models)
 	}
 	return models, nil
 }

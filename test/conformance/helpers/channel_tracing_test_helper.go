@@ -117,7 +117,7 @@ func tracingTest(
 	assertLogContents(t, client, loggerPodName, mustContain)
 
 	traceID := getTraceID(t, client, loggerPodName)
-	trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
+	trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute, t.Logf)
 	if err != nil {
 		t.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
 	}

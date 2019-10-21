@@ -256,7 +256,7 @@ func (sc *SpoofingClient) logZipkinTrace(spoofResp *Response) {
 	traceID := spoofResp.Header.Get(zipkin.ZipkinTraceIDHeader)
 	sc.Logf("Logging Zipkin Trace for: %s", traceID)
 
-	json, err := zipkin.JSONTrace(traceID /* We don't know the expected number of spans */, -1, 5*time.Second)
+	json, err := zipkin.JSONTrace(traceID /* We don't know the expected number of spans */, -1, 5*time.Second, nil)
 	if err != nil {
 		if _, ok := err.(*zipkin.TimeoutError); !ok {
 			sc.Logf("Error getting zipkin trace: %v", err)
