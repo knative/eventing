@@ -19,6 +19,7 @@ package apiserversource
 import (
 	"context"
 
+	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
@@ -42,6 +43,13 @@ const (
 	controllerAgentName = "apiserver-source-controller"
 )
 
+// envConfig will be used to extract the required environment variables using
+// github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
+// NewController will panic.
+type envConfig struct {
+	Image string `envconfig:"APISERVER_RA_IMAGE" required:"true"`
+}
+
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
@@ -57,9 +65,17 @@ func NewController(
 		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
+		eventTypeLister:       eventTypeInformer.Lister(),
 		source:                GetCfgHost(ctx),
 		loggingContext:        ctx,
 	}
+
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		r.Logger.Panicf("unable to process APIServerSource's required environment variables: %v", err)
+	}
+	r.receiveAdapterImage = env.Image
+
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)

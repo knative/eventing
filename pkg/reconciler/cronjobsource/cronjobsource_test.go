@@ -111,6 +111,10 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
 				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
 			},
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
@@ -131,6 +135,7 @@ func TestAllCases(t *testing.T) {
 					WithInitCronJobSourceConditions,
 					WithCronJobSourceStatusObservedGeneration(generation),
 					WithInvalidCronJobSourceSchedule,
+					WithCronJobSourceSink(sinkURI),
 				),
 			}},
 		}, {
@@ -160,7 +165,6 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitCronJobSourceConditions,
 					WithCronJobSourceStatusObservedGeneration(generation),
-					WithValidCronJobSourceSchedule,
 					WithCronJobSourceSinkNotFound,
 				),
 			}},
@@ -467,13 +471,11 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
-			cronjobLister:    listers.GetCronJobSourceLister(),
-			deploymentLister: listers.GetDeploymentLister(),
-			eventTypeLister:  listers.GetEventTypeLister(),
-			env: envConfig{
-				Image: image,
-			},
+			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
+			cronjobLister:       listers.GetCronJobSourceLister(),
+			deploymentLister:    listers.GetDeploymentLister(),
+			eventTypeLister:     listers.GetEventTypeLister(),
+			receiveAdapterImage: image,
 		}
 		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r
