@@ -40,7 +40,7 @@ required = [
 # TODO why is this overridden?
 [[override]]
   name = "gopkg.in/yaml.v2"
-  version = "v2.2.1"
+  version = "v2.2.4"
 
 # Overridden to ensure compatibility with GKE
 # GKE version as of 2019-09-19 is 1.14

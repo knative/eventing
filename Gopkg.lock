@@ -321,11 +321,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:aa0434674a14402891f31f393b4dd53792bc67eee05158748d999096a8826ed3"
+  digest = "1:d8f052be24b60c0c3fe6c86642d05c355845e14797fc02e5545db2140c0e1400"
   name = "github.com/influxdata/tdigest"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "bf2b5ad3c0a925c44a0d2842c5d8182113cd248e"
+  revision = "19f6ca8c804bc7aa198e88e389da36ddb71ed143"
 
 [[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
@@ -599,7 +599,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7405a77c7be3920c156c13d9088d062a26123cf82ef31c87a84bb4446d53f4c8"
+  digest = "1:7bc0ed37a334f09ac730f187074f9b9404e33386d881c74014d84a5817776090"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -612,7 +612,7 @@
     "trace",
   ]
   pruneopts = "NUT"
-  revision = "491137f692577e390404f177a0515c9f86f79754"
+  revision = "da9a3fd4c5820e74b24a6cb7fb438dc9b0dd377c"
 
 [[projects]]
   branch = "master"
@@ -702,7 +702,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "539cdc44f86437a5d06fd0cae3173ac81bd7c8aa"
+  revision = "f936694f27bff40964345764535d9ccfdf3eb98c"
 
 [[projects]]
   branch = "master"
@@ -1242,7 +1242,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:65171358e818b1a970f43f886342ef0db6f8cfb2cd4c33b5c5381d846fa64013"
+  digest = "1:6d6cfc144da38183062c82a07b606e9c07190bdc57e79ffa8025cf9e2c46cb71"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1331,7 +1331,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "e76e90e464c7caa87abdf840d599911ad1fb7b3e"
+  revision = "2668bdb81a069b8fad27bf3a237b97eb34e4f3ba"
 
 [[projects]]
   branch = "master"
@@ -1342,7 +1342,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "24dea9baf5167a596d3a98522463f574d3282697"
+  revision = "64541cdd0584e6a3c852e40d488b883b758bea24"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
