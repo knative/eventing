@@ -94,11 +94,11 @@ func main() {
 	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
-	config, err := sharedmain.GetLoggingConfig(ctx)
+	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	logger, atomicLevel := logging.NewLoggerFromConfig(config, logconfig.WebhookName())
+	logger, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, logconfig.WebhookName())
 	defer logger.Sync()
 	logger = logger.With(zap.String(logkey.ControllerType, logconfig.WebhookName()))
 
