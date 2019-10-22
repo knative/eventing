@@ -5,5 +5,5 @@ metadata:
 spec:
   containers:
     - name: helloworld
-      image: knative.dev/eventing/test/test_images/helloworld
+      image: knative.dev/eventing/test/test_images/print
 

@@ -149,7 +149,7 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 
 // HelloWorldPod creates a Pod that logs "Hello, World!".
 func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
-	const imageName = "helloworld"
+	const imageName = "print"
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
