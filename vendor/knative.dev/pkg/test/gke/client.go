@@ -27,13 +27,13 @@ import (
 
 // SDKOperations wraps GKE SDK related functions
 type SDKOperations interface {
-	CreateCluster(string, string, string, *container.CreateClusterRequest) error
-	CreateClusterAsync(string, string, string, *container.CreateClusterRequest) (*container.Operation, error)
-	DeleteCluster(string, string, string, string) error
-	DeleteClusterAsync(string, string, string, string) (*container.Operation, error)
-	GetCluster(string, string, string, string) (*container.Cluster, error)
-	GetOperation(string, string, string, string) (*container.Operation, error)
-	ListClustersInProject(string) ([]*container.Cluster, error)
+	CreateCluster(project, region, zone string, req *container.CreateClusterRequest) error
+	CreateClusterAsync(project, region, zone string, req *container.CreateClusterRequest) (*container.Operation, error)
+	DeleteCluster(project, region, zone, clusterName string) error
+	DeleteClusterAsync(project, region, zone, clusterName string) (*container.Operation, error)
+	GetCluster(project, region, zone, clusterName string) (*container.Cluster, error)
+	GetOperation(project, region, zone, opName string) (*container.Operation, error)
+	ListClustersInProject(project string) ([]*container.Cluster, error)
 }
 
 // sdkClient Implement SDKOperations
