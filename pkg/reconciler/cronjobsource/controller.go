@@ -18,7 +18,6 @@ package cronjobsource
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
@@ -60,20 +59,22 @@ func NewController(
 	cronJobSourceInformer := cronjobsourceinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
-	env := &envConfig{}
-	if err := envconfig.Process("", env); err != nil {
-		panic(fmt.Errorf("unable to process CronJobSource's required environment variables: %v", err))
-	}
-
 	r := &Reconciler{
 		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 		cronjobLister:    cronJobSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
-		env:              *env,
 		loggingContext:   ctx,
 	}
+
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		r.Logger.Panicf("unable to process CronJobSource's required environment variables: %v", err)
+	}
+	r.receiveAdapterImage = env.Image
+
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+
 	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")

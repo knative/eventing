@@ -27,13 +27,11 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
 	"go.opencensus.io/stats/view"
 	"knative.dev/eventing/pkg/broker/ingress"
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
@@ -41,6 +39,7 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
@@ -52,6 +51,17 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
+//  Issue: https://github.com/knative/eventing/issues/1777
+const (
+	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
+	// Purposely set them to be equal, as the ingress only connects to its channel.
+	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 1000
+)
+
 type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Channel   string `envconfig:"CHANNEL" required:"true"`
@@ -59,15 +69,7 @@ type envConfig struct {
 }
 
 func main() {
-	logConfig := channel.NewLoggingConfig()
-	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
-	defer flush(logger)
 	flag.Parse()
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logger.Fatal("Failed to process env var", zap.Error(err))
-	}
 
 	ctx := signals.NewContext()
 
@@ -78,18 +80,31 @@ func main() {
 		log.Fatalf("Error exporting go memstats view: %v", err)
 	}
 
-	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
-	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
-	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
-
-	logger.Info("Starting...")
-
 	cfg, err := sharedmain.GetConfig(*masterURL, *kubeconfig)
 	if err != nil {
 		log.Fatal("Error building kubeconfig", err)
 	}
 
+	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
+	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
+	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
+
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
+
+	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
+	if err != nil {
+		log.Fatal("Error loading/parsing logging configuration:", err)
+	}
+	sl, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_ingress")
+	logger := sl.Desugar()
+	defer flush(sl)
+
+	logger.Info("Starting the Broker Ingress")
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
 
 	channelURI := &url.URL{
 		Scheme: "http",
@@ -97,23 +112,23 @@ func main() {
 		Path:   "/",
 	}
 
-	cmw := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
+	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 
 	// TODO watch logging config map.
 
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update metrics exporter.
-	cmw.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_ingress", logger.Sugar()))
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_ingress", sl))
 
 	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(logger.Sugar(), cmw, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
@@ -124,7 +139,11 @@ func main() {
 		writer.WriteHeader(http.StatusOK)
 	})
 
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, connectionArgs)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
@@ -141,7 +160,7 @@ func main() {
 	}
 
 	// configMapWatcher does not block, so start it first.
-	if err = cmw.Start(ctx.Done()); err != nil {
+	if err = configMapWatcher.Start(ctx.Done()); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
 
@@ -158,7 +177,7 @@ func main() {
 	logger.Info("Exiting...")
 }
 
-func flush(logger *zap.Logger) {
-	logger.Sync()
+func flush(logger *zap.SugaredLogger) {
+	_ = logger.Sync()
 	metrics.FlushExporter()
 }
