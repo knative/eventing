@@ -43,7 +43,7 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:19a4c891857a1752f61c3be080474674a656c45815a9bf442da996802bfa19e5"
+  digest = "1:64e15177e36192b83cde366235d3916cc2349a1f6198ed2b63c7c158c213c072"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -80,8 +80,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "NUT"
-  revision = "e42fa244c725b2a423a8e9cf1c86828c0bf9400a"
-  version = "v1.25.12"
+  revision = "ee35eb7f829b84db98fd3c404bf9b5407e3cb653"
+  version = "v1.25.17"
 
 [[projects]]
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
@@ -612,7 +612,7 @@
     "trace",
   ]
   pruneopts = "NUT"
-  revision = "da9a3fd4c5820e74b24a6cb7fb438dc9b0dd377c"
+  revision = "ec77196f6094c3492a8b61f2c11cf937f78992ae"
 
 [[projects]]
   branch = "master"
@@ -641,14 +641,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:af1a8a60d9ed69646d3c0a614c4673d1b0a621ee4718c947c712d2b931b673a2"
+  digest = "1:ec076e615e3beb6f46317c6d0ae192b43a506e31c0767040e975c79309bca926"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "b09406accb4736d857a32bf9444cd7edae2ffa79"
+  revision = "742c48ecaeb7c624c475e02f3eb0827ebb4970d4"
 
 [[projects]]
   digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
@@ -685,7 +685,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:152df7c267702dc7962e411e0fff6fa114d3be611b3571a0a8c8162b0bf79a05"
+  digest = "1:ee51a446aab4758ef62b4eccc1e90e76c4749bb42383d4e34ec1c9980f460ddc"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -700,13 +700,14 @@
     "internal/imports",
     "internal/module",
     "internal/semver",
+    "internal/span",
   ]
   pruneopts = "NUT"
-  revision = "f936694f27bff40964345764535d9ccfdf3eb98c"
+  revision = "0bbdf54effa2d03a4c877d09c98ecf9f5bcfb964"
 
 [[projects]]
   branch = "master"
-  digest = "1:9b9245bd124d95af7072487cd1e5861174b859ebc31cbe9fbab3b88456701485"
+  digest = "1:6007fb32a016354215901898704ff23ae1291609887695f37d6f8fd66430998d"
   name = "google.golang.org/api"
   packages = [
     "googleapi/transport",
@@ -720,7 +721,7 @@
     "transport/http/internal/propagation",
   ]
   pruneopts = "NUT"
-  revision = "5e0e3f4a3bb8f1c7d2bf1465670c5c0b3c45c277"
+  revision = "d63bd5fbc004a083dc85ef622366115e8088da62"
 
 [[projects]]
   digest = "1:be5054b1c190011dca4e1c3c051025294e97f14fdfd354093fc233b4d05dcd98"
@@ -961,7 +962,7 @@
   name = "k8s.io/apiserver"
   packages = ["pkg/storage/names"]
   pruneopts = "NUT"
-  revision = "0d1aa698ce4beb2bc5876e00f7531ba689426161"
+  revision = "0efdb495b41ec58d5a5c673b1078bd733e9582dc"
 
 [[projects]]
   digest = "1:bccc3b3d1c8f6116a7c7fe3e004757425f7293d2ae6ab765838f27cadf2f61c2"
@@ -1242,7 +1243,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6d6cfc144da38183062c82a07b606e9c07190bdc57e79ffa8025cf9e2c46cb71"
+  digest = "1:2f0bfe47d6d494dfc206af0e4f4e7000db3fef052ed46026c4c6a2ba4c7cac32"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1331,18 +1332,18 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "2668bdb81a069b8fad27bf3a237b97eb34e4f3ba"
+  revision = "0b19b4ad91391699170edab6b36f7545c5ca6ead"
 
 [[projects]]
   branch = "master"
-  digest = "1:8009d9ea7464198279c5c1b1a760365c1f731aa88239632c08929df5b7f323f6"
+  digest = "1:0041ff0e6be31ac2cd85ffd4cf0b6ccb576b408d4f3c1c7e48c79cbf32a1319c"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "64541cdd0584e6a3c852e40d488b883b758bea24"
+  revision = "e9c240a0a1c460184daea05d4bf32ab1fedd52d0"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
