@@ -60,6 +60,7 @@ const (
 	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
 	defaultMaxIdleConnections        = 1000
 	defaultMaxIdleConnectionsPerHost = 1000
+	component = "broker_ingress"
 )
 
 type envConfig struct {
@@ -95,7 +96,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	sl, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_ingress")
+	sl, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, component)
 	logger := sl.Desugar()
 	defer flush(sl)
 
@@ -112,13 +113,13 @@ func main() {
 		Path:   "/",
 	}
 
+	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
-
-	// TODO watch logging config map.
-
-	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_ingress", sl))
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	// TODO change the component name to broker once Stackdriver metrics are approved.
+	// Watch the observability config map and dynamically update request logs.
+	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,
