@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -49,10 +50,10 @@ type ChannelableSpec struct {
 
 // ChannelableStatus contains the Status of a Channelable object.
 type ChannelableStatus struct {
-	// inherits duck/v1beta1 Status, which currently provides:
+	// inherits duck/v1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1beta1.Status `json:",inline"`
+	duckv1.Status `json:",inline"`
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
 	v1alpha1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.

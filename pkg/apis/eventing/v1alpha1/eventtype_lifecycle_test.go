@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -56,7 +56,7 @@ func TestEventTypeGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		ets: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					eventTypeConditionReady,
 				},
@@ -67,7 +67,7 @@ func TestEventTypeGetCondition(t *testing.T) {
 	}, {
 		name: "broker exists condition",
 		ets: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					eventTypeConditionBrokerExists,
 				},
@@ -78,7 +78,7 @@ func TestEventTypeGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition true",
 		ets: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					eventTypeConditionBrokerExists,
 					eventTypeConditionBrokerReady,
@@ -90,7 +90,7 @@ func TestEventTypeGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ets: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					eventTypeConditionBrokerReady,
 					eventTypeConditionReady,
@@ -120,7 +120,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 		name: "empty",
 		ets:  &EventTypeStatus{},
 		want: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   EventTypeConditionBrokerExists,
 					Status: corev1.ConditionUnknown,
@@ -137,7 +137,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ets: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   EventTypeConditionBrokerExists,
 					Status: corev1.ConditionFalse,
@@ -145,7 +145,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   EventTypeConditionBrokerExists,
 					Status: corev1.ConditionFalse,
@@ -161,7 +161,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ets: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   EventTypeConditionBrokerReady,
 					Status: corev1.ConditionTrue,
@@ -169,7 +169,7 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &EventTypeStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   EventTypeConditionBrokerExists,
 					Status: corev1.ConditionUnknown,

@@ -20,10 +20,11 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 type testHelper struct{}
@@ -33,7 +34,7 @@ var TestHelper = testHelper{}
 
 func (testHelper) ReadyChannelStatus() *duckv1alpha1.ChannelableStatus {
 	cs := &duckv1alpha1.ChannelableStatus{
-		Status: duckv1beta1.Status{},
+		Status: duckv1.Status{},
 		AddressStatus: pkgduckv1alpha1.AddressStatus{
 			Address: &pkgduckv1alpha1.Addressable{
 				Addressable: duckv1beta1.Addressable{
