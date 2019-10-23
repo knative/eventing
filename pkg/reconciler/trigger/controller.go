@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
