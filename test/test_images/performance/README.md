@@ -2,7 +2,8 @@
 
 This image is designed to benchmark Knative Eventing channel/brokers.
 
-The image contains three different functionality, configurable with `--roles` flag:
+The image contains three different functionality, configurable with `--roles`
+flag:
 
 - `sender`: Act as sender
 - `receiver`: Act as receiver
@@ -120,4 +121,5 @@ flag `workers`.
 
 ### Aggregator configuration
 
-`--expect-records` must be equal to number sender + number receivers. If a same instance does both the sender and receiver, it counts twice
+`--expect-records` must be equal to number sender + number receivers. If a same
+instance does both the sender and receiver, it counts twice
