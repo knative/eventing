@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -53,7 +54,7 @@ func TestParallelGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		ss: &ParallelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					parallelConditionReady,
 				},
@@ -82,7 +83,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 		name: "empty",
 		ts:   &ParallelStatus{},
 		want: &ParallelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ParallelConditionAddressable,
 					Status: corev1.ConditionUnknown,
@@ -101,7 +102,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ts: &ParallelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ParallelConditionChannelsReady,
 					Status: corev1.ConditionFalse,
@@ -109,7 +110,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &ParallelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ParallelConditionAddressable,
 					Status: corev1.ConditionUnknown,
@@ -128,7 +129,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ts: &ParallelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ParallelConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
@@ -136,7 +137,7 @@ func TestParallelInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &ParallelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ParallelConditionAddressable,
 					Status: corev1.ConditionUnknown,
