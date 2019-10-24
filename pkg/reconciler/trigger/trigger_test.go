@@ -147,6 +147,29 @@ func TestAllCases(t *testing.T) {
 			Name: "Default broker not found, with injection annotation enabled",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation)),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"default\" not found"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithTriggerBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection"),
+				),
+			}},
+		}, {
+			Name: "Default broker found, with injection annotation enabled",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
 				makeReadyDefaultBroker(),
 				reconciletesting.NewTrigger(triggerName, testNS, "default",
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -156,6 +179,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantErr: true,
 			WantEvents: []string{
+				// Only check if default broker is ready (not check other resources), so failed at the next step, check for filter service
 				Eventf(corev1.EventTypeWarning, "TriggerServiceFailed", "Broker's Filter service not found"),
 				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: failed to find Broker's Filter service"),
 			},

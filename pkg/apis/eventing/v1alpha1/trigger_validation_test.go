@@ -62,6 +62,7 @@ var (
 	// Create default broker annotation
 	validInjectionAnnotation   = "enabled"
 	invalidInjectionAnnotation = "disabled"
+	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -215,7 +216,7 @@ func TestTriggerValidation(t *testing.T) {
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
-				Paths:   []string{""},
+				Paths:   []string{injectionAnnotationPath},
 				Message: "The provided injection annotation value can only be \"enabled\", not \"disabled\"",
 			},
 		},
@@ -233,8 +234,8 @@ func TestTriggerValidation(t *testing.T) {
 					Subscriber: validSubscriber,
 				}},
 			want: &apis.FieldError{
-				Paths:   []string{""},
-				Message: "The provided injection annotation is only used for default borker, but non-default broker specified here: \"test-broker\"",
+				Paths:   []string{injectionAnnotationPath},
+				Message: "The provided injection annotation is only used for default broker, but non-default broker specified here: \"test-broker\"",
 			},
 		},
 	}
