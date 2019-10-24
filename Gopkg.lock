@@ -1242,8 +1242,7 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:4b01e458faa9d8f4c398ec559bdbe8b1e9b51021f400c19007d7f0d687b83b32"
+  digest = "1:47746fed1f11306b8957e1ab48ed806a982417d85b7ed2ce3dc80170fc0f2f69"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1332,7 +1331,8 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "a9458a30c0bbbed59420c5ea0e08187e697f4267"
+  revision = "1a253c57b5f004ef0a2441eaa8dbadfc16ae5203"
+  source = "https://github.com/anniefu/pkg"
 
 [[projects]]
   branch = "master"

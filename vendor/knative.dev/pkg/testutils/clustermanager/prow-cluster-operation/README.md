@@ -1,6 +1,7 @@
 ## prow-cluster-operation
 
-prow-cluster-operation is a tool for creating, deleting, getting a GKE cluster
+prow-cluster-operation is a tool for creating, deleting, getting a GKE
+cluster
 
 ## Prerequisite
 
@@ -27,12 +28,10 @@ This tool can be invoked from command line with following parameters:
 
 1. Acquiring cluster if kubeconfig already points to it
 1. Get GCP project name if not provided as a parameter:
+    - [In Prow] Acquire from Boskos
+    - [Not in Prow] Read from gcloud config
 
-   - [In Prow] Acquire from Boskos
-   - [Not in Prow] Read from gcloud config
-
-   Failed obtaining project name will fail the tool
-
+    Failed obtaining project name will fail the tool
 1. Get default cluster name if not provided as a parameter
 1. Delete cluster if cluster with same name and location already exists in GKE
 1. Create cluster
@@ -44,8 +43,8 @@ This tool can be invoked from command line with following parameters:
 1. If cluster name is defined then getting cluster by its name
 1. If no cluster is found from previous step then it fails
 1. Delete:
-   - [In Prow] Release Boskos project
-   - [Not in Prow] Delete cluster
+    - [In Prow] Release Boskos project
+    - [Not in Prow] Delete cluster
 
 ### Get
 
