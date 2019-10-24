@@ -32,13 +32,14 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -46,15 +47,19 @@ import (
 )
 
 var (
-	sinkRef = corev1.ObjectReference{
-		Name:       sinkName,
-		Kind:       "Channel",
-		APIVersion: "messaging.knative.dev/v1alpha1",
+	sinkDest = apisv1alpha1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1alpha1",
+		},
 	}
-	brokerRef = corev1.ObjectReference{
-		Name:       sinkName,
-		Kind:       "Broker",
-		APIVersion: "eventing.knative.dev/v1alpha1",
+	brokerDest = apisv1alpha1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS
@@ -86,7 +91,7 @@ func TestReconcile(t *testing.T) {
 			Objects: []runtime.Object{
 				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -97,7 +102,7 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -119,7 +124,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -144,7 +149,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -168,7 +173,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -193,7 +198,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -220,7 +225,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink:               &sinkRef,
+						Sink:               &sinkDest,
 						ServiceAccountName: "malin",
 					}),
 					WithApiServerSourceUID(sourceUID),
@@ -246,7 +251,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink:               &sinkRef,
+						Sink:               &sinkDest,
 						ServiceAccountName: "malin",
 					}),
 					WithApiServerSourceUID(sourceUID),
@@ -274,7 +279,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -299,7 +304,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -326,7 +331,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -352,7 +357,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &sinkRef,
+						Sink: &sinkDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -379,7 +384,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &brokerRef,
+						Sink: &brokerDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -404,7 +409,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &brokerRef,
+						Sink: &brokerDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -436,7 +441,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &brokerRef,
+						Sink: &brokerDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -464,7 +469,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &brokerRef,
+						Sink: &brokerDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -493,7 +498,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &brokerRef,
+						Sink: &brokerDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -524,7 +529,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &brokerRef,
+						Sink: &brokerDest,
 					}),
 					WithApiServerSourceUID(sourceUID),
 					WithApiServerSourceObjectMetaGeneration(generation),
@@ -559,8 +564,8 @@ func TestReconcile(t *testing.T) {
 			eventTypeLister:       listers.GetEventTypeLister(),
 			source:                source,
 			receiveAdapterImage:   image,
+			sinkResolver:          resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
 		return r
 	},
 		true,
@@ -577,7 +582,7 @@ func makeReceiveAdapter() *appsv1.Deployment {
 					Kind:       "Namespace",
 				},
 			},
-			Sink: &sinkRef,
+			Sink: &sinkDest,
 		}),
 		WithApiServerSourceUID(sourceUID),
 		// Status Update:
@@ -659,7 +664,7 @@ func makeApiServerSource() *sourcesv1alpha1.ApiServerSource {
 					Kind:       "Namespace",
 				},
 			},
-			Sink: &brokerRef,
+			Sink: &brokerDest,
 		}),
 		WithApiServerSourceUID(sourceUID),
 	)

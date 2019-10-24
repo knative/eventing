@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 const (
@@ -50,7 +49,7 @@ func (cs *ApiServerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.Sink == nil {
 		fe := apis.ErrMissingField("sink")
 		errs = errs.Also(fe)
-	} else if fe := apisv1alpha1.ValidateDestination(*cs.Sink); fe != nil {
+	} else if fe := cs.Sink.Validate(ctx); fe != nil {
 		errs = errs.Also(fe.ViaField("sink"))
 	}
 	return errs

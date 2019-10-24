@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
@@ -53,16 +54,21 @@ func (current *Destination) Validate(ctx context.Context) *apis.FieldError {
 	}
 }
 
+func (d *Destination) GetRef() corev1.ObjectReference {
+	//TODO
+	return *d.Ref
+}
+
 func ValidateDestination(dest Destination) *apis.FieldError {
 	var deprecatedObjectReference *corev1.ObjectReference
 	if dest.DeprecatedAPIVersion == "" && dest.DeprecatedKind == "" && dest.DeprecatedName == "" && dest.DeprecatedNamespace == "" {
 		deprecatedObjectReference = nil
 	} else {
 		deprecatedObjectReference = &corev1.ObjectReference{
-			Kind:            dest.DeprecatedKind,
-			APIVersion:       dest.DeprecatedAPIVersion,
-			Name:            dest.DeprecatedName,
-			Namespace:       dest.DeprecatedNamespace,
+			Kind:       dest.DeprecatedKind,
+			APIVersion: dest.DeprecatedAPIVersion,
+			Name:       dest.DeprecatedName,
+			Namespace:  dest.DeprecatedNamespace,
 		}
 	}
 	if dest.Ref != nil && deprecatedObjectReference != nil {
@@ -84,9 +90,9 @@ func ValidateDestination(dest Destination) *apis.FieldError {
 	}
 	// IsAbs() check whether the URL has a non-empty scheme. Besides the non-empty scheme, we also require dest.URI has a non-empty host
 	if ref == nil && dest.URI != nil && (!dest.URI.URL().IsAbs() || dest.URI.Host == "") {
-			return apis.ErrInvalidValue("Relative URI is not allowed when Ref and [apiVersion, kind, name] is absent",  "uri")
-		}
-	if ref != nil && dest.URI == nil{
+		return apis.ErrInvalidValue("Relative URI is not allowed when Ref and [apiVersion, kind, name] is absent", "uri")
+	}
+	if ref != nil && dest.URI == nil {
 		if dest.Ref != nil {
 			return validateDestinationRef(*ref).ViaField("ref")
 		} else {
@@ -95,7 +101,6 @@ func ValidateDestination(dest Destination) *apis.FieldError {
 	}
 	return nil
 }
-
 
 func validateDestinationRef(ref corev1.ObjectReference) *apis.FieldError {
 	// Check the object.
