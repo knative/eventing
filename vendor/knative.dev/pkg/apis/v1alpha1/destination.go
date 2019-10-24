@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
@@ -50,14 +51,13 @@ func ValidateDestination(dest Destination) *apis.FieldError {
 	}
 	// IsAbs() check whether the URL has a non-empty scheme. Besides the non-empty scheme, we also require dest.URI has a non-empty host
 	if dest.Ref == nil && dest.URI != nil && (!dest.URI.URL().IsAbs() || dest.URI.Host == "") {
-			return apis.ErrInvalidValue("Relative URI is not allowed when Ref is absent",  "uri")
-		}
-	if dest.Ref != nil && dest.URI == nil{
+		return apis.ErrInvalidValue("Relative URI is not allowed when Ref is absent", "uri")
+	}
+	if dest.Ref != nil && dest.URI == nil {
 		return validateDestinationRef(*dest.Ref).ViaField("ref")
 	}
 	return nil
 }
-
 
 func validateDestinationRef(ref corev1.ObjectReference) *apis.FieldError {
 	// Check the object.
