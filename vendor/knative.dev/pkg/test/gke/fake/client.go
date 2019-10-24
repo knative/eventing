@@ -20,11 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 	"strings"
+	"sync"
+	"time"
 
 	container "google.golang.org/api/container/v1beta1"
-	"knative.dev/pkg/testutils/gke"
+	"knative.dev/pkg/test/gke"
 )
 
 // Timeout for fake client.
@@ -45,6 +46,8 @@ type GKESDKClient struct {
 	opNumber int
 	// A lookup table for determining ops statuses
 	OpStatus map[string]string
+
+	mutex sync.Mutex
 }
 
 // NewGKESDKClient returns a new fake gkeSDKClient that can be used in unit tests.
@@ -90,6 +93,8 @@ func (fgsc *GKESDKClient) CreateClusterAsync(
 	project, region, zone string,
 	rb *container.CreateClusterRequest,
 ) (*container.Operation, error) {
+	fgsc.mutex.Lock()
+	defer fgsc.mutex.Unlock()
 	location := gke.GetClusterLocation(region, zone)
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	name := rb.Cluster.Name
@@ -137,6 +142,8 @@ func (fgsc *GKESDKClient) DeleteCluster(
 func (fgsc *GKESDKClient) DeleteClusterAsync(
 	project, region, zone, clusterName string,
 ) (*container.Operation, error) {
+	fgsc.mutex.Lock()
+	defer fgsc.mutex.Unlock()
 	location := gke.GetClusterLocation(region, zone)
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	found := -1
@@ -157,6 +164,8 @@ func (fgsc *GKESDKClient) DeleteClusterAsync(
 
 // GetCluster gets the cluster with the given settings.
 func (fgsc *GKESDKClient) GetCluster(project, region, zone, cluster string) (*container.Cluster, error) {
+	fgsc.mutex.Lock()
+	defer fgsc.mutex.Unlock()
 	location := gke.GetClusterLocation(region, zone)
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	if cls, ok := fgsc.clusters[parent]; ok {
@@ -171,6 +180,8 @@ func (fgsc *GKESDKClient) GetCluster(project, region, zone, cluster string) (*co
 
 // ListClustersInProject lists all the GKE clusters created in the given project.
 func (fgsc *GKESDKClient) ListClustersInProject(project string) ([]*container.Cluster, error) {
+	fgsc.mutex.Lock()
+	defer fgsc.mutex.Unlock()
 	allClusters := make([]*container.Cluster, 0)
 	projectPath := fmt.Sprintf("projects/%s", project)
 	for location, cls := range fgsc.clusters {
@@ -184,8 +195,11 @@ func (fgsc *GKESDKClient) ListClustersInProject(project string) ([]*container.Cl
 
 // GetOperation gets the operation with the given settings.
 func (fgsc *GKESDKClient) GetOperation(project, region, zone, opName string) (*container.Operation, error) {
-	if op, ok := fgsc.ops[opName]; ok {
+	fgsc.mutex.Lock()
+	op, ok := fgsc.ops[opName]
+	fgsc.mutex.Unlock()
+	if ok {
 		return op, nil
 	}
-	return nil, fmt.Errorf("op not found")
+	return nil, errors.New(opName + " operation not found")
 }

@@ -48,6 +48,10 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+const (
+	component = "broker_filter"
+)
+
 type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
@@ -77,7 +81,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
-	sl, _ := logging.NewLoggerFromConfig(loggingConfig, "broker_filter")
+	sl, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, component)
 	logger := sl.Desugar()
 	defer flush(sl)
 
@@ -94,7 +98,13 @@ func main() {
 		eventinginformers.WithNamespace(env.Namespace))
 	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
 
+	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
+	// Watch the observability config map and dynamically update metrics exporter.
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	// TODO change the component name to broker once Stackdriver metrics are approved.
+	// Watch the observability config map and dynamically update request logs.
+	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
@@ -112,12 +122,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
-
-	// TODO watch logging config map.
-
-	// TODO change the component name to trigger once Stackdriver metrics are approved.
-	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", sl))
 
 	// configMapWatcher does not block, so start it first.
 	if err = configMapWatcher.Start(ctx.Done()); err != nil {
