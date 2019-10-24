@@ -203,7 +203,7 @@ metadata:
       ]
 ```
 
-If specified, the annotation SHOULD be a valid JSON array so that it can be easily unmarshalled by tooling 
+If specified, the annotation SHOULD be a valid JSON array so that it can be easily unmarshalled by tooling
 (e.g., a CLI). In particular, each object in the array SHOULD contain the following fields:
 
 - type: Refers to the [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type) attribute. Mandatory.
