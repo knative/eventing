@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
@@ -104,7 +105,7 @@ type SubscriptionSpec struct {
 	// Events from the Channel will be delivered here and replies are
 	// sent to a channel as specified by the Reply.
 	// +optional
-	Subscriber *SubscriberSpec `json:"subscriber,omitempty"`
+	Subscriber *pkgv1alpha1.Destination `json:"subscriber,omitempty"`
 
 	// Reply specifies (optionally) how to handle events returned from
 	// the Subscriber target.
@@ -112,26 +113,9 @@ type SubscriptionSpec struct {
 	Reply *ReplyStrategy `json:"reply,omitempty"`
 }
 
-// SubscriberSpec specifies the reference to an object that's expected to
-// provide the resolved target of the action.
-// Currently we inspect the objects Status and see if there's a predefined
-// Status field that we will then use to dispatch events to be processed by
-// the target. Currently must resolve to a k8s service.
-// Note that in the future we should try to utilize subresources (/resolve ?) to
-// make this cleaner, but CRDs do not support subresources yet, so we need
-// to rely on a specified Status field today. By relying on this behaviour
-// we can utilize a dynamic client instead of having to understand all
-// kinds of different types of objects. As long as they adhere to this
-// particular contract, they can be used as a Target.
-//
-// This ensures that we can support external targets and for ease of use
-// we also allow for an URI to be specified.
-// There of course is also a requirement for the resolved SubscriberSpec to
-// behave properly at the data plane level.
-// TODO: Add a pointer to a real spec for this.
-// For now, this means: Receive an event payload, and respond with one of:
-// success and an optional response event, or failure.
-// Delivery failures may be retried by the channel
+// **DO NOT USE**
+// Use https://github.com/knative/pkg/blob/master/apis/v1alpha1/destination.go instead.
+// Left only here until everything has been moved to Destination.
 type SubscriberSpec struct {
 	// Only one of these can be specified
 
