@@ -25,21 +25,21 @@ broker._
 
 #### Spec
 
-| Field        | Type                    | Description                                                                                                                                                                | Constraints |
-| ------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| broker       | String                  | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
-| filter       | TriggerFilter           | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
-| subscriber\* | eventing.SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
+| Field        | Type          | Description                                                                                                                                                                | Constraints |
+| ------------ | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| broker       | String        | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
+| filter       | TriggerFilter | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
+| subscriber\* | Destination   | Subscriber is the object resolved into a uri that receives events from the Broker that pass the Filter.                                                                    |             |
 
 \*: Required
 
 #### Status
 
-| Field              | Type        | Description                                                                                              | Constraints |
-| ------------------ | ----------- | -------------------------------------------------------------------------------------------------------- | ----------- |
-| observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                                |             |
-| subscriberURI      | Addressable | Address of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions         | Conditions  | Trigger conditions.                                                                                      |             |
+| Field              | Type       | Description                                                               | Constraints |
+| ------------------ | ---------- | ------------------------------------------------------------------------- | ----------- |
+| observedGeneration | int64      | The 'Generation' of the Broker that was last processed by the controller. |             |
+| subscriberURI      | apis.URL   | Address of the subscribing endpoint.                                      |             |
+| conditions         | Conditions | Trigger conditions.                                                       |             |
 
 ##### Conditions
 
@@ -155,11 +155,11 @@ channel._
 
 #### Spec
 
-| Field                  | Type                    | Description                                                                       | Constraints        |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------------------- | ------------------ |
-| channel\*              | ObjectRef               | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
-| subscriber<sup>1</sup> | eventing.SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
-| reply<sup>1</sup>      | ReplyStrategy           | The continuation for the link.                                                    |                    |
+| Field                  | Type        | Description                                                                       | Constraints        |
+| ---------------------- | ----------- | --------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef   | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
+| subscriber<sup>1</sup> | Destination | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
+| reply<sup>1</sup>      | Destination | The continuation for the link.                                                    |                    |
 
 \*: Required
 
@@ -204,22 +204,22 @@ channel._
 | apiVersion | String       | API version of backing channel CRD                  |             |
 | spec       | RawExtension | Spec to be passed to backing channel implementation |             |
 
-### eventing.SubscriberSpec
+### Destination
 
-| Field               | Type            | Description | Constraints              |
-| ------------------- | --------------- | ----------- | ------------------------ |
-| ref<sup>1</sup>     | ObjectReference |             | Must adhere to Callable. |
-| dnsName<sup>1</sup> | String          |             |                          |
+| Field           | Type            | Description | Constraints                   |
+| --------------- | --------------- | ----------- | ----------------------------- |
+| ref<sup>1</sup> | ObjectReference |             | Must adhere to _Addressable_. |
+| uri<sup>1</sup> | apis.URL        |             |                               |
 
-1: One of (ref, dnsName), Required.
+1: At least one (ref, uri).
 
 ### duck.SubscriberSpec
 
-| Field         | Type   | Description                                                 | Constraints    |
-| ------------- | ------ | ----------------------------------------------------------- | -------------- |
-| uid           | String | The Subscription UID this SubscriberSpec was resolved from. |                |
-| subscriberURI | String | The URI name of the endpoint for the subscriber.            | Must be a URL. |
-| replyURI      | String | The URI name of the endpoint for the reply.                 | Must be a URL. |
+| Field         | Type     | Description                                                 | Constraints    |
+| ------------- | -------- | ----------------------------------------------------------- | -------------- |
+| uid           | String   | The Subscription UID this SubscriberSpec was resolved from. |                |
+| subscriberURI | apis.URL | The URI name of the endpoint for the subscriber.            | Must be a URL. |
+| replyURI      | apis.URL | The URI name of the endpoint for the reply.                 | Must be a URL. |
 
 ### ReplyStrategy
 
