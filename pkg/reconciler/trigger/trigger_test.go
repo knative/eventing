@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/resolver"
 	"net/url"
 	"testing"
 
@@ -650,6 +651,7 @@ func TestAllCases(t *testing.T) {
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
 			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
+			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName){}),
 		}
 	},
 		false,

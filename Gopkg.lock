@@ -214,7 +214,6 @@
   ]
   pruneopts = "NUT"
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
-  version = "v0.3.0"
 
 [[projects]]
   digest = "1:91099c6f78b1e7bdf9ed06eb4cb7f017174293a3689d76b995a06f4c8d64a7f0"
@@ -1242,7 +1241,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f8462f28983e9941551382ce0a9594e9aea5c890e57a47718083133eaf77a179"
+  digest = "1:60eb83b6db703546cbddab378c2e8675237726dba71f883feeaec6ad45ba0659"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1333,7 +1332,7 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "5dcae770a925a79bfab303bc9f98aad5e0f4879b"
+  revision = "2a3fc371d3266d59a0ae7e29a724ccc9a0550793"
 
 [[projects]]
   branch = "master"

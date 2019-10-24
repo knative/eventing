@@ -55,6 +55,12 @@ var (
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
+	deprecatedSubscriber = &apisv1alpha1.Destination{
+			DeprecatedKind:       "Service",
+			DeprecatedAPIVersion: "serving.knative.dev/v1alpha1",
+			DeprecatedName:  "subscriber_test",
+			DeprecatedNamespace:  "test_ns",
+	}
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
@@ -326,6 +332,22 @@ func TestTriggerSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
+		name: "deprecated subscriber",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validSourceAndTypeFilter,
+			Subscriber: deprecatedSubscriber,
+		},
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			errs = errs.Also(apis.ErrInvalidValue("apiVersion is not allowed here, it's a deprecated value", "apiVersion"))
+			errs = errs.Also(apis.ErrInvalidValue("kind is not allowed here, it's a deprecated value", "kind"))
+			errs = errs.Also(apis.ErrInvalidValue("name is not allowed here, it's a deprecated value", "name"))
+			errs = errs.Also(apis.ErrInvalidValue("namespace is not allowed here, it's a deprecated value", "namespace"))
+			return errs.ViaField("subscriber")
+		}(),
+	},
+	{
 		name: "missing broker",
 		ts: &TriggerSpec{
 			Broker:     "",
