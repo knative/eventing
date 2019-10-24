@@ -209,7 +209,6 @@ If specified, the annotation SHOULD be a valid JSON array so that it can be easi
 - type: Refers to the [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type) attribute. Mandatory.
 - schema: Refers to the [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema) attribute. Optional.
 - description: String describing the event. Optional.
- 
 ### Source RBAC
 
 Sources are expected to be extensions onto Kubernetes. To prevent cluster
