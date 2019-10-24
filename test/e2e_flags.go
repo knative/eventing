@@ -79,9 +79,6 @@ func InitializeEventingFlags() {
 	}
 
 	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)
-	if pkgTest.Flags.EmitMetrics {
-		testLogging.InitializeMetricExporter("eventing")
-	}
 
 	EventingFlags = &f
 }

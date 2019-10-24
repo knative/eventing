@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -38,7 +39,7 @@ func TestChannelGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					condReady,
 				},
@@ -49,7 +50,7 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					condReady,
 				},
@@ -77,7 +78,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &ChannelStatus{},
 		want: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
@@ -93,7 +94,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		cs: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionFalse,
@@ -101,7 +102,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionFalse,
@@ -117,7 +118,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		cs: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ChannelConditionBackingChannelReady,
 					Status: corev1.ConditionTrue,
@@ -125,7 +126,7 @@ func TestChannelInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   ChannelConditionAddressable,
 					Status: corev1.ConditionUnknown,
@@ -209,7 +210,7 @@ func TestChannelSetAddressable(t *testing.T) {
 	}{
 		"nil url": {
 			want: &ChannelStatus{
-				Status: duckv1beta1.Status{
+				Status: duckv1.Status{
 					Conditions: []apis.Condition{
 						{
 							Type:   ChannelConditionAddressable,
@@ -248,7 +249,7 @@ func TestChannelSetAddressable(t *testing.T) {
 						Hostname: "test-domain",
 					},
 				},
-				Status: duckv1beta1.Status{
+				Status: duckv1.Status{
 					Conditions: []apis.Condition{
 						{
 							Type:   ChannelConditionAddressable,
@@ -325,7 +326,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 						Hostname: "test-domain",
 					},
 				},
-				Status: duckv1beta1.Status{
+				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   apis.ConditionReady,
 						Status: corev1.ConditionTrue,
@@ -347,7 +348,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 						Hostname: "test-domain",
 					},
 				},
-				Status: duckv1beta1.Status{
+				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   apis.ConditionReady,
 						Status: corev1.ConditionUnknown,
@@ -369,7 +370,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 						Hostname: "test-domain",
 					},
 				},
-				Status: duckv1beta1.Status{
+				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
 						Type:   apis.ConditionSucceeded,
 						Status: corev1.ConditionTrue,

@@ -23,7 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var subscriptionConditionReady = apis.Condition{
@@ -50,7 +50,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		ss: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 				},
@@ -61,7 +61,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions",
 		ss: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 					subscriptionConditionReferencesResolved,
@@ -73,7 +73,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition true",
 		ss: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 					subscriptionConditionChannelReady,
@@ -85,7 +85,7 @@ func TestSubscriptionGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ss: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					subscriptionConditionReady,
 					subscriptionConditionReferencesResolved,
@@ -115,7 +115,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 		name: "empty",
 		ss:   &SubscriptionStatus{},
 		want: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionAddedToChannel,
 					Status: corev1.ConditionUnknown,
@@ -134,7 +134,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ss: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionChannelReady,
 					Status: corev1.ConditionFalse,
@@ -142,7 +142,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionAddedToChannel,
 					Status: corev1.ConditionUnknown,
@@ -161,7 +161,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ss: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionReferencesResolved,
 					Status: corev1.ConditionTrue,
@@ -169,7 +169,7 @@ func TestSubscriptionInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &SubscriptionStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SubscriptionConditionAddedToChannel,
 					Status: corev1.ConditionUnknown,

@@ -18,12 +18,9 @@ package cronjobsource
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
-
-	"knative.dev/pkg/metrics"
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
@@ -45,6 +42,11 @@ import (
 	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
+)
+
+var (
+	deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 )
 
 const (
@@ -60,7 +62,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	env envConfig
+	receiveAdapterImage string
 
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
@@ -83,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -91,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.cronjobLister.CronJobSources(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("CronJobSource key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("CronJobSource key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -132,18 +134,6 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 
 	cronjob.Status.InitializeConditions()
 
-	_, err := cron.ParseStandard(cronjob.Spec.Schedule)
-	if err != nil {
-		cronjob.Status.MarkInvalidSchedule("Invalid", "")
-		return fmt.Errorf("invalid schedule: %v", err)
-	}
-	cronjob.Status.MarkSchedule()
-
-	if cronjob.Spec.Sink == nil {
-		cronjob.Status.MarkNoSink("Missing", "Sink missing from spec")
-		return errors.New("spec.sink missing")
-	}
-
 	sinkObjRef := cronjob.Spec.Sink
 	if sinkObjRef.Namespace == "" {
 		sinkObjRef.Namespace = cronjob.Namespace
@@ -156,6 +146,13 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
 	cronjob.Status.MarkSink(sinkURI)
+
+	_, err = cron.ParseStandard(cronjob.Spec.Schedule)
+	if err != nil {
+		cronjob.Status.MarkInvalidSchedule("Invalid", "")
+		return fmt.Errorf("invalid schedule: %v", err)
+	}
+	cronjob.Status.MarkSchedule()
 
 	ra, err := r.createReceiveAdapter(ctx, cronjob, sinkURI)
 	if err != nil {
@@ -171,36 +168,6 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	}
 	cronjob.Status.MarkEventType()
 
-	return nil
-}
-
-func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
-
-	for _, rsrc := range []struct {
-		key   string
-		field string
-	}{{
-		key:   "Request.CPU",
-		field: src.Spec.Resources.Requests.ResourceCPU,
-	}, {
-		key:   "Request.Memory",
-		field: src.Spec.Resources.Requests.ResourceMemory,
-	}, {
-		key:   "Limit.CPU",
-		field: src.Spec.Resources.Limits.ResourceCPU,
-	}, {
-		key:   "Limit.Memory",
-		field: src.Spec.Resources.Limits.ResourceMemory,
-	}} {
-		// In the event the field isn't specified, we assign a default in the receive_adapter
-		if rsrc.field != "" {
-			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
-				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %q, Error: %s", rsrc.key, rsrc.field, err)
-				return fmt.Errorf("incorrect resource specification, %s: %q: %v", rsrc.key, rsrc.field, err)
-			}
-		}
-	}
-	src.Status.MarkResourcesCorrect()
 	return nil
 }
 
@@ -220,7 +187,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	}
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.env.Image,
+		Image:         r.receiveAdapterImage,
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
 		SinkURI:       sinkURI,
@@ -253,6 +220,35 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
+}
+
+func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
+	for _, rsrc := range []struct {
+		key   string
+		field string
+	}{{
+		key:   "Request.CPU",
+		field: src.Spec.Resources.Requests.ResourceCPU,
+	}, {
+		key:   "Request.Memory",
+		field: src.Spec.Resources.Requests.ResourceMemory,
+	}, {
+		key:   "Limit.CPU",
+		field: src.Spec.Resources.Limits.ResourceCPU,
+	}, {
+		key:   "Limit.Memory",
+		field: src.Spec.Resources.Limits.ResourceMemory,
+	}} {
+		// In the event the field isn't specified, we assign a default in the receive_adapter
+		if rsrc.field != "" {
+			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
+				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %q, Error: %s", rsrc.key, rsrc.field, err)
+				return fmt.Errorf("incorrect resource specification, %s: %q: %v", rsrc.key, rsrc.field, err)
+			}
+		}
+	}
+	src.Status.MarkResourcesCorrect()
+	return nil
 }
 
 func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {

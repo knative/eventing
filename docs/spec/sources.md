@@ -35,7 +35,7 @@ For operators of a Kubernetes cluster, there are two states to sources:
    find and discover what is possible to source events from. This topic is
    expanded upon in the [Source CRDs](#source-crds) section.
 
-1. A Source custom object has been created in the cluster.
+1. A Source Custom Object (CO) has been created in the cluster.
 
    Once a developer creates an instance of a source and provides the necessary
    parameters, the source controller will realize this into whatever is required
@@ -185,9 +185,32 @@ validation:
                   on the event as an extension attribute independently."
 ```
 
-<!-- TOOD(#1550): Follow-up with a registry implementation. -->
+### Source Registry
 
-## Source RBAC
+Source CRDs SHOULD use a standard annotation to expose the types of events they can
+emit in order to ease discoverability.
+
+```yaml
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    registry.knative.dev/eventTypes: |  # <-- optional but encouraged.
+      [
+        { "type": "foo", "schema": "foo-schema", "description" : "Foo event description" },
+        { "type": "bar", "schema": "bar-schema", "description" : "Bar event description" },
+        ...
+      ]
+```
+
+If specified, the annotation MUST be a valid JSON array so that it can be easily unmarshalled by tooling
+(e.g., a CLI). In particular, each object in the array MUST contain the following fields:
+
+- type: String. Refers to the [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type) attribute. Mandatory.
+- schema: String. Refers to the [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema) attribute. Optional.
+- description: String describing the event. Optional.
+
+### Source RBAC
 
 Sources are expected to be extensions onto Kubernetes. To prevent cluster
 operators from duplicating RBAC for all accounts that will interact with
@@ -237,7 +260,7 @@ rules:
 
 ## Source Custom Objects
 
-All Source custom objects MUST implement the
+All Source Custom Objects MUST implement the
 [Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
 Additional data in spec and status is explicitly permitted.
 
@@ -286,3 +309,12 @@ type SourceStatus struct {
 For a full definition of `Status` and `SinkURI`, please see
 [Status](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Status), and
 [URL](https://godoc.org/knative.dev/pkg/apis#URL).
+
+### EventType Registry
+
+Upon instantiation of a Source Custom Object, a controller (potentially the source
+controller) SHOULD realize
+the [EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
+this instantiation brings onto the eventing mesh.
+For a more detailed description, please refer to the
+[Event Registry](https://knative.dev/docs/eventing/event-registry/) documentation.

@@ -19,11 +19,10 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
-	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -32,8 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
-
-	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -79,7 +76,6 @@ type Reconciler struct {
 	*reconciler.Base
 
 	receiveAdapterImage string
-	once                sync.Once
 
 	// listers index properties about resources
 	apiserversourceLister listers.ApiServerSourceLister
@@ -100,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -108,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.apiserversourceLister.ApiServerSources(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("ApiServerSource key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("ApiServerSource key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -138,6 +134,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
+	// This Source attempts to reconcile three things.
+	// 1. Determine the sink's URI.
+	//     - Nothing to delete.
+	// 2. Create a receive adapter in the form of a Deployment.
+	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
+	// 3. Create the EventType that it can emit.
+	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
 	source.Status.ObservedGeneration = source.Generation
 
 	source.Status.InitializeConditions()
@@ -147,56 +150,49 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		sinkObjRef.Namespace = source.Namespace
 	}
 
-	sourceDesc := source.Namespace + "/" + source.Name + ", " + source.GroupVersionKind().String()
+	sourceDesc := fmt.Sprintf("%s/%s,%s", source.Namespace, source.Name, source.GroupVersionKind().String())
 	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, source, sourceDesc)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
-		return err
+		return fmt.Errorf("getting sink URI: %v", err)
 	}
 	source.Status.MarkSink(sinkURI)
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
-		r.Logger.Error("Unable to create the receive adapter", zap.Error(err))
+		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
 		return err
 	}
-	// Update source status
 	source.Status.PropagateDeploymentAvailability(ra)
 
 	err = r.reconcileEventTypes(ctx, source)
 	if err != nil {
 		source.Status.MarkNoEventTypes("EventTypesReconcileFailed", "")
-		return err
+		return fmt.Errorf("reconciling event types: %v", err)
 	}
 	source.Status.MarkEventTypes()
 
 	return nil
 }
 
-func (r *Reconciler) getReceiveAdapterImage() string {
-	if r.receiveAdapterImage == "" {
-		r.once.Do(func() {
-			raImage, defined := os.LookupEnv(raImageEnvVar)
-			if !defined {
-				panic(fmt.Errorf("required environment variable %q not defined", raImageEnvVar))
-			}
-			r.receiveAdapterImage = raImage
-		})
-	}
-	return r.receiveAdapterImage
-}
-
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
+	// TODO: missing.
+	// if err := checkResourcesStatus(src); err != nil {
+	// 	return nil, err
+	// }
+
 	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting logging config to json", zap.Any("receiveAdapter", err))
 	}
+
 	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
 	if err != nil {
 		logging.FromContext(ctx).Error("error while converting metrics config to json", zap.Any("receiveAdapter", err))
 	}
+
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.getReceiveAdapterImage(),
+		Image:         r.receiveAdapterImage,
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
 		SinkURI:       sinkURI,
@@ -208,7 +204,11 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 	ra, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
-		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentCreated, "Deployment created, error: %v", err)
+		msg := "Deployment created"
+		if err != nil {
+			msg = fmt.Sprintf("Deployment created, error: %v", err)
+		}
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentCreated, "%s", msg)
 		return ra, err
 	} else if err != nil {
 		return nil, fmt.Errorf("error getting receive adapter: %v", err)
@@ -219,12 +219,27 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
 			return ra, err
 		}
-		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentUpdated, "Deployment updated")
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, apiserversourceDeploymentUpdated, "Deployment %q updated", ra.Name)
 		return ra, nil
 	} else {
 		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
+}
+
+func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
+	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
+		return true
+	}
+	if len(oldPodSpec.Containers) != len(newPodSpec.Containers) {
+		return true
+	}
+	for i := range newPodSpec.Containers {
+		if !equality.Semantic.DeepEqual(newPodSpec.Containers[i].Env, oldPodSpec.Containers[i].Env) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) error {
@@ -259,17 +274,15 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *v1alpha1.ApiS
 }
 
 func (r *Reconciler) getEventTypes(ctx context.Context, src *v1alpha1.ApiServerSource) ([]eventingv1alpha1.EventType, error) {
-	etl, err := r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).List(metav1.ListOptions{
-		LabelSelector: r.getLabelSelector(src).String(),
-	})
+	etl, err := r.eventTypeLister.EventTypes(src.Namespace).List(r.getLabelSelector(src))
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to list event types: %v", zap.Error(err))
 		return nil, err
 	}
 	eventTypes := make([]eventingv1alpha1.EventType, 0)
-	for _, et := range etl.Items {
-		if metav1.IsControlledBy(&et, src) {
-			eventTypes = append(eventTypes, et)
+	for _, et := range etl {
+		if metav1.IsControlledBy(et, src) {
+			eventTypes = append(eventTypes, *et)
 		}
 	}
 	return eventTypes, nil
@@ -337,21 +350,6 @@ func keyFromEventType(eventType *eventingv1alpha1.EventType) string {
 	return fmt.Sprintf("%s_%s_%s_%s", eventType.Spec.Type, eventType.Spec.Source, eventType.Spec.Schema, eventType.Spec.Broker)
 }
 
-func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
-	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
-		return true
-	}
-	if len(oldPodSpec.Containers) != len(newPodSpec.Containers) {
-		return true
-	}
-	for i := range newPodSpec.Containers {
-		if !equality.Semantic.DeepEqual(newPodSpec.Containers[i].Env, oldPodSpec.Containers[i].Env) {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *Reconciler) getLabelSelector(src *v1alpha1.ApiServerSource) labels.Selector {
 	return labels.SelectorFromSet(resources.Labels(src.Name))
 }
@@ -376,7 +374,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServ
 	cj, err := r.EventingClientSet.SourcesV1alpha1().ApiServerSources(desired.Namespace).UpdateStatus(existing)
 	if err == nil && becomesReady {
 		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("ApiServerSource %q became ready after %v", apiserversource.Name, duration)
+		logging.FromContext(ctx).Info("ApiServerSource became ready after", zap.Duration("duration", duration))
 		r.Recorder.Event(apiserversource, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", apiserversource.Name))
 		if err := r.StatsReporter.ReportReady("ApiServerSource", apiserversource.Namespace, apiserversource.Name, duration); err != nil {
 			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)
@@ -386,6 +384,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServ
 	return cj, err
 }
 
+// TODO determine how to push the updated logging config to existing data plane Pods.
 func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
 	if cfg != nil {
 		delete(cfg.Data, "_example")
@@ -400,6 +399,7 @@ func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
 	logging.FromContext(r.loggingContext).Info("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
 }
 
+// TODO determine how to push the updated metrics config to existing data plane Pods.
 func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 	if cfg != nil {
 		delete(cfg.Data, "_example")

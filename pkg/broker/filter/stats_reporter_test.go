@@ -45,7 +45,10 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelFilterSource:  "testeventsource",
 	}
 
-	wantAllTags := map[string]string(wantTags)
+	wantAllTags := map[string]string{}
+	for k, v := range wantTags {
+		wantAllTags[k] = v
+	}
 	wantAllTags[metricskey.LabelResponseCode] = "202"
 	wantAllTags[metricskey.LabelResponseCodeClass] = "2xx"
 
