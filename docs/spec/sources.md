@@ -203,12 +203,13 @@ metadata:
       ]
 ```
 
-If specified, the annotation SHOULD be a valid JSON array so that it can be easily unmarshalled by tooling
-(e.g., a CLI). In particular, each object in the array SHOULD contain the following fields:
+If specified, the annotation MUST be a valid JSON array so that it can be easily unmarshalled by tooling
+(e.g., a CLI). In particular, each object in the array MUST contain the following fields:
 
-- type: Refers to the [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type) attribute. Mandatory.
-- schema: Refers to the [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema) attribute. Optional.
+- type: String. Refers to the [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type) attribute. Mandatory.
+- schema: String. Refers to the [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema) attribute. Optional.
 - description: String describing the event. Optional.
+
 ### Source RBAC
 
 Sources are expected to be extensions onto Kubernetes. To prevent cluster
