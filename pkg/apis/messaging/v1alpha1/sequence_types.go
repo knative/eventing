@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
@@ -76,17 +77,8 @@ type SequenceSpec struct {
 	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate,omitempty"`
 
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
-	//
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	//
-	//  The resource pointed by this ObjectReference must meet the Addressable contract
-	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
 	// +optional
-	Reply *corev1.ObjectReference `json:"reply,omitempty"`
+	Reply *v1alpha1.Destination `json:"reply,omitempty"`
 }
 
 type SequenceChannelStatus struct {
