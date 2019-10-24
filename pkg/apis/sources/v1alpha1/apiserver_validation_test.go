@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 func TestAPIServerValidation(t *testing.T) {
@@ -37,10 +38,12 @@ func TestAPIServerValidation(t *testing.T) {
 			Resources: []ApiServerResource{
 				{},
 			},
-			Sink: &corev1.ObjectReference{
-				APIVersion: "v1alpha1",
-				Kind:       "broker",
-				Name:       "default",
+			Sink: &apisv1alpha1.Destination{
+				Ref: &corev1.ObjectReference{
+					APIVersion: "v1alpha1",
+					Kind:       "broker",
+					Name:       "default",
+				},
 			},
 		},
 		want: nil,
@@ -65,10 +68,12 @@ func TestAPIServerValidation(t *testing.T) {
 			Resources: []ApiServerResource{
 				{},
 			},
-			Sink: &corev1.ObjectReference{
-				APIVersion: "v1alpha1",
-				Kind:       "broker",
-				Name:       "default",
+			Sink: &apisv1alpha1.Destination{
+				Ref: &corev1.ObjectReference{
+					APIVersion: "v1alpha1",
+					Kind:       "broker",
+					Name:       "default",
+				},
 			},
 		},
 		want: func() *apis.FieldError {
