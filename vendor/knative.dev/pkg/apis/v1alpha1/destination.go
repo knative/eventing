@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
@@ -28,6 +27,18 @@ type Destination struct {
 	// Ref points to an Addressable.
 	// +optional
 	Ref *corev1.ObjectReference `json:"ref,omitempty"`
+
+	// +optional
+	DeprecatedAPIVersion string `json:"apiVersion,omitempty"`
+
+	// +optional
+	DeprecatedKind string `json:"kind,omitempty"`
+
+	// +optional
+	DeprecatedName string `json:"name,omitempty"`
+
+	// +optional
+	DeprecatedNamespace string `json:"namespace,omitempty"`
 
 	// URI can be an absolute URL(non-empty scheme and non-empty host) pointing to the target or a relative URI. Relative URIs will be resolved using the base URI retrieved from Ref.
 	// +optional
@@ -43,21 +54,48 @@ func (current *Destination) Validate(ctx context.Context) *apis.FieldError {
 }
 
 func ValidateDestination(dest Destination) *apis.FieldError {
-	if dest.Ref == nil && dest.URI == nil {
-		return apis.ErrGeneric("expected at least one, got neither", "ref", "uri")
+	var deprecatedObjectReference *corev1.ObjectReference
+	if dest.DeprecatedAPIVersion == "" && dest.DeprecatedKind == "" && dest.DeprecatedName == "" && dest.DeprecatedNamespace == "" {
+		deprecatedObjectReference = nil
+	} else {
+		deprecatedObjectReference = &corev1.ObjectReference{
+			Kind:            dest.DeprecatedKind,
+			APIVersion:       dest.DeprecatedAPIVersion,
+			Name:            dest.DeprecatedName,
+			Namespace:       dest.DeprecatedNamespace,
+		}
 	}
-	if dest.Ref != nil && dest.URI != nil && dest.URI.URL().IsAbs() {
-		return apis.ErrGeneric("Absolute URI is not allowed when Ref is present", "ref", "uri")
+	if dest.Ref != nil && deprecatedObjectReference != nil {
+		return apis.ErrGeneric("Ref and [apiVersion, kind, name] can't be both present", "[apiVersion, kind, name]", "ref")
+	}
+
+	var ref *corev1.ObjectReference
+	if dest.Ref != nil {
+		ref = dest.Ref
+	} else {
+		ref = deprecatedObjectReference
+	}
+	if ref == nil && dest.URI == nil {
+		return apis.ErrGeneric("expected at least one, got none", "[apiVersion, kind, name]", "ref", "uri")
+	}
+
+	if ref != nil && dest.URI != nil && dest.URI.URL().IsAbs() {
+		return apis.ErrGeneric("Absolute URI is not allowed when Ref or [apiVersion, kind, name] is present", "[apiVersion, kind, name]", "ref", "uri")
 	}
 	// IsAbs() check whether the URL has a non-empty scheme. Besides the non-empty scheme, we also require dest.URI has a non-empty host
-	if dest.Ref == nil && dest.URI != nil && (!dest.URI.URL().IsAbs() || dest.URI.Host == "") {
-		return apis.ErrInvalidValue("Relative URI is not allowed when Ref is absent", "uri")
-	}
-	if dest.Ref != nil && dest.URI == nil {
-		return validateDestinationRef(*dest.Ref).ViaField("ref")
+	if ref == nil && dest.URI != nil && (!dest.URI.URL().IsAbs() || dest.URI.Host == "") {
+			return apis.ErrInvalidValue("Relative URI is not allowed when Ref and [apiVersion, kind, name] is absent",  "uri")
+		}
+	if ref != nil && dest.URI == nil{
+		if dest.Ref != nil {
+			return validateDestinationRef(*ref).ViaField("ref")
+		} else {
+			return validateDestinationRef(*ref)
+		}
 	}
 	return nil
 }
+
 
 func validateDestinationRef(ref corev1.ObjectReference) *apis.FieldError {
 	// Check the object.
