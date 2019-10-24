@@ -316,4 +316,4 @@ controller) SHOULD realize
 the [EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
 this instantiation brings onto the eventing mesh.
 For a more detailed description, please refer to the
-[Event Registry](https://knative.dev/docs/eventing/event-registry/) documentation. 
+[Event Registry](https://knative.dev/docs/eventing/event-registry/) documentation.
