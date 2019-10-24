@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
@@ -105,7 +105,7 @@ type SubscriptionSpec struct {
 	// Events from the Channel will be delivered here and replies are
 	// sent to a channel as specified by the Reply.
 	// +optional
-	Subscriber *pkgv1alpha1.Destination `json:"subscriber,omitempty"`
+	Subscriber *apisv1alpha1.Destination `json:"subscriber,omitempty"`
 
 	// Reply specifies (optionally) how to handle events returned from
 	// the Subscriber target.
