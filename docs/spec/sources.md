@@ -312,7 +312,8 @@ For a full definition of `Status` and `SinkURI`, please see
 
 ### EventType Registry
 
-Upon instantiation of a Source Custom Object, the source controller SHOULD realize 
+Upon instantiation of a Source Custom Object, a controller (potentially the source 
+controller) SHOULD realize 
 the [EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
 this instantiation brings onto the eventing mesh. 
 For a more detailed description, please refer to the 
