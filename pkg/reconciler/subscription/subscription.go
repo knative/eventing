@@ -188,6 +188,8 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.PhysicalSubscription.SubscriberURI = nil
 	if !isNilOrEmptySubscriber(subscriber) {
 		// Populate the namespace for the subscriber since it is in the namespace
+		// Note that we don't allow Deprecated fields here (like for Reply below, so
+		// we don't set the deprecation condition warning).
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
@@ -220,7 +222,9 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		// Populate the namespace for the subscriber since it is in the namespace
 		if reply.Channel.Ref != nil {
 			reply.Channel.Ref.Namespace = subscription.Namespace
-		} else {
+		} else if reply.Channel.DeprecatedName != "" {
+			// Add the check for DeprecatedName, since without that it wouldn't
+			// have passed validation.
 			reply.Channel.DeprecatedNamespace = subscription.Namespace
 			// Add a condition warning that the fields are deprecated.
 			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using depreated fields when specifying subscription.spec.reply. These will be removed in 0.11")
