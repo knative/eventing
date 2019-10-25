@@ -198,11 +198,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	trackAddressable := r.addressableTracker.TrackInNamespace(t)
 	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
-		if err := trackAddressable(*t.Spec.Subscriber.Ref); err != nil {
-			return fmt.Errorf("unable to track changes to Subscriber.Ref: %v", err)
-		}
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// If there is no Namespace defined in dest.Ref, we will use the Namespace of Trigger as the Namespace of dest.Ref
 		if t.Spec.Subscriber.Ref.Namespace == "" {
