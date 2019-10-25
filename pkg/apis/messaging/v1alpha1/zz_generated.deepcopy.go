@@ -547,7 +547,7 @@ func (in *SequenceSpec) DeepCopyInto(out *SequenceSpec) {
 	*out = *in
 	if in.Steps != nil {
 		in, out := &in.Steps, &out.Steps
-		*out = make([]SubscriberSpec, len(*in))
+		*out = make([]apisv1alpha1.Destination, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
