@@ -147,7 +147,7 @@ func TestApiServerSource(t *testing.T) {
 
 		// create event logger pod and service
 		loggerPodName := fmt.Sprintf("%s-%s", baseLoggerPodName, tc.name)
-		tc.spec.Sink = apisv1alpha1.Destination{Ref: resources.ServiceRef(loggerPodName)}
+		tc.spec.Sink = &apisv1alpha1.Destination{Ref: resources.ServiceRef(loggerPodName)}
 
 		loggerPod := resources.EventLoggerPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
