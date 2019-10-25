@@ -19,6 +19,7 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
+    duck.knative.dev/addressable: "true"
 spec:
   group: eventing.knative.dev
   versions:
