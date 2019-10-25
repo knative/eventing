@@ -272,14 +272,14 @@ func (in *ParallelBranch) DeepCopyInto(out *ParallelBranch) {
 	*out = *in
 	if in.Filter != nil {
 		in, out := &in.Filter, &out.Filter
-		*out = new(SubscriberSpec)
+		*out = new(apisv1alpha1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	in.Subscriber.DeepCopyInto(&out.Subscriber)
 	if in.Reply != nil {
 		in, out := &in.Reply, &out.Reply
-		*out = new(v1.ObjectReference)
-		**out = **in
+		*out = new(apisv1alpha1.Destination)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -381,8 +381,8 @@ func (in *ParallelSpec) DeepCopyInto(out *ParallelSpec) {
 	}
 	if in.Reply != nil {
 		in, out := &in.Reply, &out.Reply
-		*out = new(v1.ObjectReference)
-		**out = **in
+		*out = new(apisv1alpha1.Destination)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
