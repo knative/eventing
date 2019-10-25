@@ -9,6 +9,7 @@ required = [
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
   "knative.dev/pkg/codegen/cmd/injection-gen",
+  "knative.dev/pkg/testutils/clustermanager/perf-tests",
   "knative.dev/test-infra/scripts",
   "knative.dev/test-infra/tools/dep-collector",
 ]
@@ -35,7 +36,7 @@ required = [
 # Our master branch tracks knative/pkg master or a release.
 [[override]]
   name = "knative.dev/pkg"
-  branch = "master"
+  branch = "release-0.10"
 
 # TODO why is this overridden?
 [[override]]

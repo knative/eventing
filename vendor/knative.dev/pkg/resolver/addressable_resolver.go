@@ -65,14 +65,14 @@ func NewURIResolver(ctx context.Context, callback func(types.NamespacedName)) *U
 // URIFromDestination resolves a Destination into a URI string.
 func (r *URIResolver) URIFromDestination(dest apisv1alpha1.Destination, parent interface{}) (string, error) {
 	var deprecatedObjectReference *corev1.ObjectReference
-	if dest.DeprecatedAPIVersion == "" && dest.DeprecatedKind == "" && dest.DeprecatedName == "" && dest.DeprecatedNamespace == ""{
+	if dest.DeprecatedAPIVersion == "" && dest.DeprecatedKind == "" && dest.DeprecatedName == "" && dest.DeprecatedNamespace == "" {
 		deprecatedObjectReference = nil
 	} else {
 		deprecatedObjectReference = &corev1.ObjectReference{
-			Kind:            dest.DeprecatedKind,
-			APIVersion:       dest.DeprecatedAPIVersion,
-			Name:            dest.DeprecatedName,
-			Namespace:       dest.DeprecatedNamespace,
+			Kind:       dest.DeprecatedKind,
+			APIVersion: dest.DeprecatedAPIVersion,
+			Name:       dest.DeprecatedName,
+			Namespace:  dest.DeprecatedNamespace,
 		}
 	}
 	if dest.Ref != nil && deprecatedObjectReference != nil {

@@ -187,15 +187,15 @@ validation:
 
 ### Source Registry
 
-Source CRDs SHOULD use a standard annotation to expose the types of events they can
-emit in order to ease discoverability.
+Source CRDs SHOULD use a standard annotation to expose the types of events they
+can emit in order to ease discoverability.
 
 ```yaml
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    registry.knative.dev/eventTypes: |  # <-- optional but encouraged.
+    registry.knative.dev/eventTypes: | # <-- optional but encouraged.
       [
         { "type": "foo", "schema": "foo-schema", "description" : "Foo event description" },
         { "type": "bar", "schema": "bar-schema", "description" : "Bar event description" },
@@ -203,11 +203,16 @@ metadata:
       ]
 ```
 
-If specified, the annotation MUST be a valid JSON array so that it can be easily unmarshalled by tooling
-(e.g., a CLI). In particular, each object in the array MUST contain the following fields:
+If specified, the annotation MUST be a valid JSON array so that it can be easily
+unmarshalled by tooling (e.g., a CLI). In particular, each object in the array
+MUST contain the following fields:
 
-- type: String. Refers to the [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type) attribute. Mandatory.
-- schema: String. Refers to the [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema) attribute. Optional.
+- type: String. Refers to the
+  [CloudEvents type](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#type)
+  attribute. Mandatory.
+- schema: String. Refers to the
+  [CloudEvents dataschema](https://github.com/cloudevents/spec/blob/v1.0-rc1/spec.md#dataschema)
+  attribute. Optional.
 - description: String describing the event. Optional.
 
 ### Source RBAC
@@ -312,9 +317,10 @@ For a full definition of `Status` and `SinkURI`, please see
 
 ### EventType Registry
 
-Upon instantiation of a Source Custom Object, a controller (potentially the source
-controller) SHOULD realize
-the [EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
-this instantiation brings onto the eventing mesh.
-For a more detailed description, please refer to the
-[Event Registry](https://knative.dev/docs/eventing/event-registry/) documentation.
+Upon instantiation of a Source Custom Object, a controller (potentially the
+source controller) SHOULD realize the
+[EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
+this instantiation brings onto the eventing mesh. For a more detailed
+description, please refer to the
+[Event Registry](https://knative.dev/docs/eventing/event-registry/)
+documentation.

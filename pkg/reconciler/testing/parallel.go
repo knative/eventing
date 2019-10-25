@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 // ParallelOption enables further configuration of a Parallel.
@@ -68,7 +69,9 @@ func WithParallelBranches(branches []v1alpha1.ParallelBranch) ParallelOption {
 
 func WithParallelReply(reply *corev1.ObjectReference) ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Spec.Reply = reply
+		p.Spec.Reply = &pkgv1alpha1.Destination{
+			Ref: reply,
+		}
 	}
 }
 

@@ -707,11 +707,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6007fb32a016354215901898704ff23ae1291609887695f37d6f8fd66430998d"
+  digest = "1:07ef8b9fbdee428c0f61d206eb3a7523db77b680529d17651e2a8faba03ad0ca"
   name = "google.golang.org/api"
   packages = [
+    "container/v1beta1",
+    "googleapi",
+    "googleapi/internal/uritemplates",
     "googleapi/transport",
     "internal",
+    "internal/gensupport",
     "iterator",
     "option",
     "support/bundler",
@@ -1242,8 +1246,8 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:60eb83b6db703546cbddab378c2e8675237726dba71f883feeaec6ad45ba0659"
+  branch = "release-0.10"
+  digest = "1:d91a27f79bca7f71b57bdc3581542d646c90dca75862c38d21ad7b1aca6c22aa"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1307,6 +1311,7 @@
     "metrics/testing",
     "network",
     "profiling",
+    "ptr",
     "reconciler/testing",
     "resolver",
     "signals",
@@ -1315,6 +1320,7 @@
     "system/testing",
     "test",
     "test/ghutil",
+    "test/gke",
     "test/helpers",
     "test/ingress",
     "test/logging",
@@ -1327,6 +1333,8 @@
     "test/slackutil",
     "test/spoof",
     "test/zipkin",
+    "testutils/clustermanager/perf-tests",
+    "testutils/clustermanager/perf-tests/pkg",
     "tracing",
     "tracing/config",
     "tracker",
@@ -1334,18 +1342,18 @@
     "webhook",
   ]
   pruneopts = "T"
-  revision = "2a3fc371d3266d59a0ae7e29a724ccc9a0550793"
+  revision = "cad41c40ccb5a40de7a3b65097649703c8d96e0b"
 
 [[projects]]
   branch = "master"
-  digest = "1:988757b6c3d2df3248703c76ae0c63654319672fe368321a191cbbee88b12e69"
+  digest = "1:15b833e870afd578a79069324b74c9cc2ac07b5547f34d54516d90f781c37461"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "8bb6b944a01d70d93613a9ca855b4d9301f8f3d3"
+  revision = "75f9d5135b8f823b6a663fe49f00dbc498b6ad33"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
@@ -1490,6 +1498,7 @@
     "knative.dev/pkg/test/logging",
     "knative.dev/pkg/test/mako",
     "knative.dev/pkg/test/zipkin",
+    "knative.dev/pkg/testutils/clustermanager/perf-tests",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
