@@ -20,6 +20,8 @@ package resources
 
 import (
 	"fmt"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -149,7 +151,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+			t.Spec.Subscriber = &v1alpha1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -158,9 +160,10 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
+	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
-			URI: &uri,
+		t.Spec.Subscriber = &v1alpha1.Destination{
+			URI: apisURI,
 		}
 	}
 }

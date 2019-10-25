@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"knative.dev/pkg/apis"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 const (
@@ -57,15 +58,16 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1alpha1.T
 	return t
 }
 
-func WithTriggerSubscriberURI(uri string) TriggerOption {
+func WithTriggerSubscriberURI(rawurl string) TriggerOption {
+	uri, _ := apis.ParseURL(rawurl)
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{URI: &uri}
+		t.Spec.Subscriber = &apisv1alpha1.Destination{URI: uri}
 	}
 }
 
 func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+		t.Spec.Subscriber = &apisv1alpha1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
