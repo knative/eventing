@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"context"
 
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 )
 
@@ -50,7 +49,7 @@ func (cs *ApiServerSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.Sink == nil {
 		fe := apis.ErrMissingField("sink")
 		errs = errs.Also(fe)
-	} else if fe := messagingv1alpha1.IsValidObjectReference(*cs.Sink); fe != nil {
+	} else if fe := cs.Sink.Validate(ctx); fe != nil {
 		errs = errs.Also(fe.ViaField("sink"))
 	}
 	return errs
