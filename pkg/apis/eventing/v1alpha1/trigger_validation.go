@@ -23,7 +23,6 @@ import (
 	"regexp"
 
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmp"
 
 	corev1 "k8s.io/api/core/v1"
@@ -96,7 +95,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 	if ts.Subscriber == nil {
 		fe := apis.ErrMissingField("subscriber")
 		errs = errs.Also(fe)
-	} else if fe := apisv1alpha1.ValidateDestination(*ts.Subscriber, false); fe != nil {
+	} else if fe := ts.Subscriber.ValidateDisallowDeprecated(ctx); fe != nil {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 
