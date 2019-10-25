@@ -707,11 +707,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6007fb32a016354215901898704ff23ae1291609887695f37d6f8fd66430998d"
+  digest = "1:07ef8b9fbdee428c0f61d206eb3a7523db77b680529d17651e2a8faba03ad0ca"
   name = "google.golang.org/api"
   packages = [
+    "container/v1beta1",
+    "googleapi",
+    "googleapi/internal/uritemplates",
     "googleapi/transport",
     "internal",
+    "internal/gensupport",
     "iterator",
     "option",
     "support/bundler",
@@ -1314,6 +1318,7 @@
     "system/testing",
     "test",
     "test/ghutil",
+    "test/gke",
     "test/helpers",
     "test/ingress",
     "test/logging",
@@ -1326,6 +1331,8 @@
     "test/slackutil",
     "test/spoof",
     "test/zipkin",
+    "testutils/clustermanager/perf-tests",
+    "testutils/clustermanager/perf-tests/pkg",
     "tracing",
     "tracing/config",
     "tracker",
@@ -1487,6 +1494,7 @@
     "knative.dev/pkg/test/logging",
     "knative.dev/pkg/test/mako",
     "knative.dev/pkg/test/zipkin",
+    "knative.dev/pkg/testutils/clustermanager/perf-tests",
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
