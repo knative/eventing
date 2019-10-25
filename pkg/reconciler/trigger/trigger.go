@@ -199,7 +199,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 
 	if t.Spec.Subscriber == nil {
-		return fmt.Errorf("Subscriber cannot be nil")
+		return errors.New("subscriber cannot be nil")
 	}
 
 	if t.Spec.Subscriber.Ref != nil {
@@ -208,6 +208,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		if t.Spec.Subscriber.Ref.Namespace == "" {
 			t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
 		}
+		// Since Trigger never allowed ref fields at the subscriber level and
+		// validates that they are absent, we can ignore them here.
 	}
 
 	subscriberURI, err := r.uriResolver.URIFromDestination(*t.Spec.Subscriber, t)
