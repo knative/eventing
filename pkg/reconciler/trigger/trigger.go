@@ -75,7 +75,7 @@ type Reconciler struct {
 	kresourceTracker duck.ListableTracker
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
-	uriResolver *resolver.URIResolver
+	uriResolver        *resolver.URIResolver
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -198,7 +198,11 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
+	if t.Spec.Subscriber == nil {
+		return fmt.Errorf("Subscriber cannot be nil")
+	}
+
+	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// If there is no Namespace defined in dest.Ref, we will use the Namespace of Trigger as the Namespace of dest.Ref
 		if t.Spec.Subscriber.Ref.Namespace == "" {
