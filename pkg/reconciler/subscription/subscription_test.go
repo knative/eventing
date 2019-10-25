@@ -343,6 +343,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReplyDeprecated(),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: channels.messaging.knative.dev %q not found", replyName)),
 				),
@@ -381,6 +382,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(nonAddressableGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReplyDeprecated(),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: address not set for &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:reply,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}"),
 				),
 			}},
@@ -460,6 +462,50 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReplyDeprecated(),
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, ReplyURI: replyURI, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+reply - not deprecated",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionReplyNotDeprecated(channelGVK, replyName),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+					WithChannelReadySubscriber(subscriptionUID),
+				),
+				NewChannel(replyName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(replyDNS),
+				),
+				NewCustomResourceDefinition("channels.messaging.knative.dev",
+					WithCustomResourceDefinitionLabels(map[string]string{channelLabelKey: channelLabelValue})),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriptionReadinessChanged", "Subscription %q became ready", subscriptionName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionReplyNotDeprecated(channelGVK, replyName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
@@ -508,6 +554,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
+					WithSubscriptionReplyDeprecated(),
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
@@ -609,6 +656,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
+					WithSubscriptionReplyDeprecated(),
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
 			}},

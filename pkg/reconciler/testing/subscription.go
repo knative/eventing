@@ -180,3 +180,23 @@ func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) Subscriptio
 		}
 	}
 }
+
+func WithSubscriptionReplyNotDeprecated(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Spec.Reply = &v1alpha1.ReplyStrategy{
+			Channel: &apisv1alpha1.Destination{
+				Ref: &corev1.ObjectReference{
+					APIVersion: apiVersion(gvk),
+					Kind:       gvk.Kind,
+					Name:       name,
+				},
+			},
+		}
+	}
+}
+
+func WithSubscriptionReplyDeprecated() SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.MarkReplyDeprecatedRef("ReplyFieldsDeprecated", "Using depreated fields when specifying subscription.spec.reply. These will be removed in 0.11")
+	}
+}

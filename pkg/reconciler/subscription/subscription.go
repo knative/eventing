@@ -61,6 +61,7 @@ const (
 	channelReferenceFailed              = "ChannelReferenceFailed"
 	subscriberResolveFailed             = "SubscriberResolveFailed"
 	replyResolveFailed                  = "ReplyResolveFailed"
+	replyFieldsDeprecated               = "ReplyFieldsDeprecated"
 
 	// Label to specify valid subscribable channel CRDs.
 	channelLabelKey   = "messaging.knative.dev/subscribable"
@@ -189,8 +190,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		// Populate the namespace for the subscriber since it is in the namespace
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
-		} else {
-			subscriber.DeprecatedNamespace = subscription.Namespace
 		}
 		subscriberURIStr, err := r.destinationResolver.URIFromDestination(*subscriber, subscription)
 		if err != nil {
@@ -216,12 +215,15 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 
 	reply := subscription.Spec.Reply
 	subscription.Status.PhysicalSubscription.ReplyURI = nil
+	subscription.Status.ClearDeprecated()
 	if !isNilOrEmptyReply(reply) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if reply.Channel.Ref != nil {
 			reply.Channel.Ref.Namespace = subscription.Namespace
 		} else {
 			reply.Channel.DeprecatedNamespace = subscription.Namespace
+			// Add a condition warning that the fields are deprecated.
+			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using depreated fields when specifying subscription.spec.reply. These will be removed in 0.11")
 		}
 		replyURIStr, err := r.destinationResolver.URIFromDestination(*reply.Channel, subscription)
 		if err != nil {
