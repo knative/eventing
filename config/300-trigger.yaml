@@ -77,29 +77,26 @@ spec:
                   additionalProperties:
                     type: string
             subscriber:
-              anyOf:
-                - uri:
+              type: object
+              description: "the destination that should receive events."
+              properties:
+                ref:
                   type: object
+                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                  required:
+                  - apiVersion
+                  - kind
+                  - name
                   properties:
-                    uri:
+                    apiVersion:
                       type: string
                       minLength: 1
-                - ref:
-                  type: object
-                  properties:
-                    ref:
-                      type: object
-                      required:
-                        - apiVersion
-                        - kind
-                        - name
-                      properties:
-                        apiVersion:
-                          type: string
-                          minLength: 1
-                        kind:
-                          type: string
-                          minLength: 1
-                        name:
-                          type: string
-                          minLength: 1
+                    kind:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                uri:
+                  type: string
+                  description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
