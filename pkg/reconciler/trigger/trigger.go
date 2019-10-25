@@ -204,10 +204,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 
 	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
-		// If there is no Namespace defined in dest.Ref, we will use the Namespace of Trigger as the Namespace of dest.Ref
-		if t.Spec.Subscriber.Ref.Namespace == "" {
-			t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
-		}
+		// We will use the Namespace of Trigger as the Namespace of dest.Ref
+		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
 		// Since Trigger never allowed ref fields at the subscriber level and
 		// validates that they are absent, we can ignore them here.
 	}
