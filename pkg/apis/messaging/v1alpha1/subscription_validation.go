@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmp"
 )
 
@@ -52,7 +53,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingSubscriber {
-		if fe := IsValidSubscriberSpec(*ss.Subscriber); fe != nil {
+		if fe := ss.Subscriber.ValidateDisallowDeprecated(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
@@ -66,18 +67,11 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func IsSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
-	if s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) {
-		return true
-	}
-	if equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) &&
-		s.DeprecatedDNSName == nil &&
-		s.URI == nil {
-		return true
-	}
-	return false
+func IsSubscriberSpecNilOrEmpty(d *apisv1alpha1.Destination) bool {
+	return d == nil || equality.Semantic.DeepEqual(d, &apisv1alpha1.Destination{})
 }
 
+// TODO: Remove this once SubscriberSpec gets removed.
 func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 	var errs *apis.FieldError
 
