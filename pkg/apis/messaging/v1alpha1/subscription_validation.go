@@ -44,7 +44,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingSubscriber := IsSubscriberSpecNilOrEmpty(ss.Subscriber)
+	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
 	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
 	if missingSubscriber && missingReply {
 		fe := apis.ErrMissingField("reply", "subscriber")
@@ -59,15 +59,15 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingReply {
-		if fe := isValidReply(*ss.Reply); fe != nil {
-			errs = errs.Also(fe.ViaField("reply"))
+		if fe := ss.Reply.Channel.Validate(ctx); fe != nil {
+			errs = errs.Also(fe.ViaField("reply.channel"))
 		}
 	}
 
 	return errs
 }
 
-func IsSubscriberSpecNilOrEmpty(d *apisv1alpha1.Destination) bool {
+func isDestinationNilOrEmpty(d *apisv1alpha1.Destination) bool {
 	return d == nil || equality.Semantic.DeepEqual(d, &apisv1alpha1.Destination{})
 }
 
@@ -102,14 +102,7 @@ func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
 }
 
 func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &corev1.ObjectReference{})
-}
-
-func isValidReply(r ReplyStrategy) *apis.FieldError {
-	if fe := IsValidObjectReference(*r.Channel); fe != nil {
-		return fe.ViaField("channel")
-	}
-	return nil
+	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &apisv1alpha1.Destination{})
 }
 
 func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {

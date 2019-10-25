@@ -78,9 +78,6 @@ func SubscriberSpec(ctx context.Context, dynamicClient dynamic.Interface, namesp
 	if s.URI != nil && *s.URI != "" {
 		return *s.URI, nil
 	}
-	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
-		return *s.DeprecatedDNSName, nil
-	}
 
 	if s.Ref == nil {
 		return "", nil

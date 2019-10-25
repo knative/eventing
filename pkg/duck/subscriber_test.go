@@ -35,15 +35,22 @@ import (
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/pkg/apis"
 
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/resolver"
 )
 
 var (
-	uri = "http://example.com"
+	uri = apis.URL{Scheme: "http", Host: "example.com"}
+
+	k8sSvcURI = apis.URL{Scheme: "http", Host: fmt.Sprintf("does-exist.%s.svc.cluster.local/", testNS)}
 
 	channelAddress = "test-channel.hostname"
-	channelURL     = fmt.Sprintf("http://%s", channelAddress)
+	channelURL     = apis.URL{Scheme: "http", Host: channelAddress}
+
+//	channelURL     = fmt.Sprintf("http://%s", channelAddress)
 )
 
 func init() {
@@ -90,33 +97,27 @@ func TestObjectReference_BadDynamicInterface(t *testing.T) {
 
 func TestSubscriberSpec(t *testing.T) {
 	testCases := map[string]struct {
-		Sub         *v1alpha1.SubscriberSpec
+		Sub         *apisv1alpha1.Destination
 		Objects     []runtime.Object
-		Expected    string
+		Expected    *apis.URL
 		ExpectedErr string
 	}{
 		"nil": {
 			Sub:      nil,
-			Expected: "",
+			Expected: nil,
 		},
 		"empty": {
-			Sub:      &v1alpha1.SubscriberSpec{},
-			Expected: "",
-		},
-		"DNS Name": {
-			Sub: &v1alpha1.SubscriberSpec{
-				DeprecatedDNSName: &uri,
-			},
-			Expected: uri,
+			Sub:      &apisv1alpha1.Destination{},
+			Expected: nil,
 		},
 		"URI": {
-			Sub: &v1alpha1.SubscriberSpec{
+			Sub: &apisv1alpha1.Destination{
 				URI: &uri,
 			},
-			Expected: uri,
+			Expected: &uri,
 		},
 		"Doesn't exist": {
-			Sub: &v1alpha1.SubscriberSpec{
+			Sub: &apisv1alpha1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Service",
@@ -126,7 +127,7 @@ func TestSubscriberSpec(t *testing.T) {
 			ExpectedErr: "services \"doesnt-exist\" not found",
 		},
 		"K8s Service": {
-			Sub: &v1alpha1.SubscriberSpec{
+			Sub: &apisv1alpha1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Service",
@@ -136,10 +137,10 @@ func TestSubscriberSpec(t *testing.T) {
 			Objects: []runtime.Object{
 				k8sService("does-exist"),
 			},
-			Expected: fmt.Sprintf("http://does-exist.%s.svc.cluster.local/", testNS),
+			Expected: &k8sSvcURI,
 		},
 		"Addressable": {
-			Sub: &v1alpha1.SubscriberSpec{
+			Sub: &apisv1alpha1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "eventing.knative.dev/v1alpha1",
 					Kind:       "Channel",
@@ -150,10 +151,10 @@ func TestSubscriberSpec(t *testing.T) {
 			Objects: []runtime.Object{
 				channel("does-exist"),
 			},
-			Expected: channelURL,
+			Expected: &channelURL,
 		},
 		"Non-Addressable": {
-			Sub: &v1alpha1.SubscriberSpec{
+			Sub: &apisv1alpha1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "ConfigMap",

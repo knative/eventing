@@ -447,8 +447,8 @@ func (in *ReplyStrategy) DeepCopyInto(out *ReplyStrategy) {
 	*out = *in
 	if in.Channel != nil {
 		in, out := &in.Channel, &out.Channel
-		*out = new(v1.ObjectReference)
-		**out = **in
+		*out = new(apisv1alpha1.Destination)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

@@ -45,10 +45,10 @@ func getValidChannelRef() corev1.ObjectReference {
 
 func getValidReplyStrategy() *ReplyStrategy {
 	return &ReplyStrategy{
-		Channel: &corev1.ObjectReference{
-			Name:       replyChannelName,
-			Kind:       channelKind,
-			APIVersion: channelAPIVersion,
+		Channel: &apisv1alpha1.Destination{
+			DeprecatedName:       replyChannelName,
+			DeprecatedKind:       channelKind,
+			DeprecatedAPIVersion: channelAPIVersion,
 		},
 	}
 }
@@ -101,6 +101,14 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}, {
+		name: "valid with reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply:      getValidReplyStrategy(),
 		},
 		want: nil,
 	}, {
@@ -219,9 +227,9 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 			Reply: &ReplyStrategy{
-				Channel: &corev1.ObjectReference{
-					Kind:       channelKind,
-					APIVersion: channelAPIVersion,
+				Channel: &apisv1alpha1.Destination{
+					DeprecatedKind:       channelKind,
+					DeprecatedAPIVersion: channelAPIVersion,
 				},
 			},
 		},
@@ -249,7 +257,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newSubscriber.Ref.Name = "newSubscriber"
 
 	newReply := getValidReplyStrategy()
-	newReply.Channel.Name = "newReplyChannel"
+	newReply.Channel.DeprecatedName = "newReplyChannel"
 
 	tests := []struct {
 		name string
@@ -467,90 +475,6 @@ func TestValidChannel(t *testing.T) {
 			got := isValidChannel(test.c)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("isValidChannel (-want, +got) = %v", diff)
-			}
-		})
-	}
-}
-
-func TestValidReply(t *testing.T) {
-	tests := []struct {
-		name string
-		r    ReplyStrategy
-		want *apis.FieldError
-	}{{
-		name: "valid target",
-		r:    *getValidReplyStrategy(),
-		want: nil,
-	}, {
-		name: "missing name in target",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.name")
-			return fe
-		}(),
-	}, {
-		name: "missing apiVersion in target",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name: channelName,
-				Kind: channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.apiVersion")
-			return fe
-		}(),
-	}, {
-		name: "missing kind in target",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.kind")
-			return fe
-		}(),
-	}, {
-		name: "extra field, namespace",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-				Namespace:  "secretnamespace",
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("channel.Namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
-			return fe
-		}(),
-	}, {
-		// Make sure that if an empty field for namespace is given, it's treated as not there.
-		name: "valid extra field, namespace empty",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-				Namespace:  "",
-			},
-		},
-		want: nil,
-	}}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := isValidReply(test.r)
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: isValidReply (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}

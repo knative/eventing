@@ -149,15 +149,11 @@ type SubscriberSpec struct {
 // ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
 // If no SubscriberSpec is specified, the identity function is assumed.
 type ReplyStrategy struct {
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
 	//  The resource pointed by this ObjectReference must meet the Addressable contract
 	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
 	//  it will be reflected in the Subscription's status.
 	// +optional
-	Channel *corev1.ObjectReference `json:"channel,omitempty"`
+	Channel *apisv1alpha1.Destination `json:"channel,omitempty"`
 }
 
 // SubscriptionStatus (computed) for a subscription
