@@ -64,7 +64,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *v1alpha1.Subscriptio
 			},
 		}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply.GetRef()}
 	}
 	return r
 }
