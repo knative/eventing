@@ -182,12 +182,19 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	if subscription.Spec.Subscriber != nil {
-		subscriberURIStr, err := r.destinationResolver.URIFromDestination(*subscription.Spec.Subscriber, subscription)
+	subscriber := subscription.Spec.Subscriber
+	if subscriber != nil {
+		// Populate the namespace for the subscriber since it is in the namespace
+		if subscriber.Ref != nil {
+			subscriber.Ref.Namespace = subscription.Namespace
+		} else {
+			subscriber.DeprecatedNamespace = subscription.Namespace
+		}
+		subscriberURIStr, err := r.destinationResolver.URIFromDestination(*subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 				zap.Error(err),
-				zap.Any("subscriber", subscription.Spec.Subscriber))
+				zap.Any("subscriber", subscriber))
 			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 			return err
@@ -196,7 +203,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to parse Subscriber URL",
 				zap.Error(err),
-				zap.Any("subscriber", subscription.Spec.Subscriber))
+				zap.Any("subscriber", subscriber))
 			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to parse URL for spec.subscriber: %v", err)
 			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to parse URL for spec.subscriber: %v", err)
 			return err
@@ -205,12 +212,19 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURIStr))
 	}
 
-	if subscription.Spec.Reply != nil {
-		replyURIStr, err := r.destinationResolver.URIFromDestination(*subscription.Spec.Reply.Channel, subscription)
+	reply := subscription.Spec.Reply
+	if reply != nil && reply.Channel != nil {
+		// Populate the namespace for the subscriber since it is in the namespace
+		if reply.Channel.Ref != nil {
+			reply.Channel.Ref.Namespace = subscription.Namespace
+		} else {
+			reply.Channel.DeprecatedNamespace = subscription.Namespace
+		}
+		replyURIStr, err := r.destinationResolver.URIFromDestination(*reply.Channel, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve reply",
 				zap.Error(err),
-				zap.Any("reply", subscription.Spec.Reply))
+				zap.Any("reply", reply))
 			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %v", err)
 			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
 			return err
@@ -219,9 +233,9 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to parse URL for spec.Reply.Channel URL",
 				zap.Error(err),
-				zap.Any("reply.channel", subscription.Spec.Reply.Channel))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to parse URL for spec.reply.channel: %v", err)
-			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to parse URL for spec.reply.channel: %v", err)
+				zap.Any("reply.channel", reply.Channel))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to parse URL for spec.reply.channel: %v", err)
+			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to parse URL for spec.reply.channel: %v", err)
 			return err
 		}
 
