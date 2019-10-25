@@ -618,36 +618,38 @@ func TestAllCases(t *testing.T) {
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
-		}, {
-			Name: "subscription, channel+subscriber as service, does not exist",
-			Objects: []runtime.Object{
-				NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelGVK, channelName),
-					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
-				),
-				NewChannel(channelName, testNS,
-					WithInitChannelConditions,
-					WithChannelAddress(channelDNS),
-				),
-				NewCustomResourceDefinition("channels.messaging.knative.dev",
-					WithCustomResourceDefinitionLabels(map[string]string{channelLabelKey: channelLabelValue})),
-			},
-			Key:     testNS + "/" + subscriptionName,
-			WantErr: true,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: services %q not found", serviceName),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewSubscription(subscriptionName, testNS,
-					WithSubscriptionUID(subscriptionUID),
-					WithSubscriptionChannel(channelGVK, channelName),
-					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
-					// The first reconciliation will initialize the status conditions.
-					WithInitSubscriptionConditions,
-					WithSubscriptionReferencesNotResolved(subscriberResolveFailed, fmt.Sprintf("Failed to resolve spec.subscriber: services %q not found", serviceName)),
-				),
-			}},
+			/*
+				}, {
+					Name: "subscription, channel+subscriber as service, does not exist",
+					Objects: []runtime.Object{
+						NewSubscription(subscriptionName, testNS,
+							WithSubscriptionUID(subscriptionUID),
+							WithSubscriptionChannel(channelGVK, channelName),
+							WithSubscriptionSubscriberRef(serviceGVK, serviceName),
+						),
+						NewChannel(channelName, testNS,
+							WithInitChannelConditions,
+							WithChannelAddress(channelDNS),
+						),
+						NewCustomResourceDefinition("channels.messaging.knative.dev",
+							WithCustomResourceDefinitionLabels(map[string]string{channelLabelKey: channelLabelValue})),
+					},
+					Key:     testNS + "/" + subscriptionName,
+					WantErr: true,
+					WantEvents: []string{
+						Eventf(corev1.EventTypeWarning, "SubscriberResolveFailed", "Failed to resolve spec.subscriber: services %q not found", serviceName),
+					},
+					WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+						Object: NewSubscription(subscriptionName, testNS,
+							WithSubscriptionUID(subscriptionUID),
+							WithSubscriptionChannel(channelGVK, channelName),
+							WithSubscriptionSubscriberRef(serviceGVK, serviceName),
+							// The first reconciliation will initialize the status conditions.
+							WithInitSubscriptionConditions,
+							WithSubscriptionReferencesNotResolved(subscriberResolveFailed, fmt.Sprintf("Failed to resolve spec.subscriber: services %q not found", serviceName)),
+						),
+					}},
+			*/
 		}, {
 			Name: "subscription, valid channel+subscriber as service",
 			Objects: []runtime.Object{

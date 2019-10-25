@@ -184,6 +184,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	subscriber := subscription.Spec.Subscriber
+	subscription.Status.PhysicalSubscription.SubscriberURI = nil
 	if !isNilOrEmptySubscriber(subscriber) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if subscriber.Ref != nil {
@@ -214,6 +215,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	reply := subscription.Spec.Reply
+	subscription.Status.PhysicalSubscription.ReplyURI = nil
 	if !isNilOrEmptyReply(reply) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if reply.Channel.Ref != nil {
