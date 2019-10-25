@@ -45,6 +45,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/resolver"
 )
 
@@ -183,7 +184,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	subscriber := subscription.Spec.Subscriber
-	if subscriber != nil {
+	if !isNilOrEmptySubscriber(subscriber) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
@@ -213,7 +214,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	reply := subscription.Spec.Reply
-	if reply != nil && reply.Channel != nil {
+	if !isNilOrEmptyReply(reply) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if reply.Channel.Ref != nil {
 			reply.Channel.Ref.Namespace = subscription.Namespace
@@ -351,6 +352,10 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
+}
+
+func isNilOrEmptySubscriber(subscriber *apisv1alpha1.Destination) bool {
+	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &apisv1alpha1.Destination{})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {

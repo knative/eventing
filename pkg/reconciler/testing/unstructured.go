@@ -17,6 +17,8 @@ limitations under the License.
 package testing
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +53,7 @@ func WithUnstructuredAddressable(hostname string) UnstructuredOption {
 		if ok {
 			status["address"] = map[string]interface{}{
 				"hostname": hostname,
+				"url":      fmt.Sprintf("http://%s", hostname),
 			}
 		}
 	}

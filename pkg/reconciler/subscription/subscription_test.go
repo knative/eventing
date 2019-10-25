@@ -333,7 +333,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: channels.messaging.knative.dev %q not found", replyName),
+				Eventf(corev1.EventTypeWarning, "ReplyResolveFailed", "Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: channels.messaging.knative.dev %q not found", replyName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -344,7 +344,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: channels.messaging.knative.dev %q not found", replyName)),
+					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: channels.messaging.knative.dev %q not found", replyName)),
 				),
 			}},
 		}, {
