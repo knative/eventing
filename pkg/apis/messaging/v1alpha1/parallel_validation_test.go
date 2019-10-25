@@ -48,11 +48,11 @@ func TestParallelValidation(t *testing.T) {
 func TestParallelSpecValidation(t *testing.T) {
 	subscriberURI := "http://example.com"
 	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
-		metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
 		},
-		&runtime.RawExtension{},
+		Spec: &runtime.RawExtension{},
 	}
 	tests := []struct {
 		name string
@@ -141,7 +141,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
-			Reply:           makeInvalidReply("reply-channel").Ref,
+			Reply:           makeInvalidReply("reply-channel").GetRef(),
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrDisallowedFields("reply.Namespace")
