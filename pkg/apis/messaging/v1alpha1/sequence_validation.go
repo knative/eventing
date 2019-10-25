@@ -51,10 +51,10 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if len(ps.ChannelTemplate.Kind) == 0 {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
 	}
-	if ps.Reply != nil {
-		if err := IsValidObjectReference(*ps.Reply); err != nil {
-			errs = errs.Also(err.ViaField("reply"))
-		}
+
+	if err := ps.Reply.Validate(ctx); err != nil {
+		errs = errs.Also(err.ViaField("reply"))
 	}
+
 	return errs
 }

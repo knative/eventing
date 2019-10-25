@@ -35,6 +35,14 @@ func ParallelSubscriptionName(parallelName string, branchNumber int) string {
 }
 
 func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
+	var subscriberSpec *v1alpha1.SubscriberSpec
+	if p.Spec.Branches[branchNumber].Filter != nil {
+		subscriberSpec = &v1alpha1.SubscriberSpec{Ref: p.Spec.Branches[branchNumber].Filter.GetRef()}
+		if p.Spec.Branches[branchNumber].Filter.URI != nil {
+			uri := p.Spec.Branches[branchNumber].Filter.URI.String()
+			subscriberSpec.URI = &uri
+		}
+	}
 	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -54,7 +62,7 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelChannelName(p.Name),
 			},
-			Subscriber: p.Spec.Branches[branchNumber].Filter,
+			Subscriber: subscriberSpec,
 		},
 	}
 	r.Spec.Reply = &v1alpha1.ReplyStrategy{
@@ -67,6 +75,11 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 }
 
 func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
+	subscriberSpec := &v1alpha1.SubscriberSpec{Ref: p.Spec.Branches[branchNumber].Subscriber.GetRef()}
+	if p.Spec.Branches[branchNumber].Subscriber.URI != nil {
+		uri := p.Spec.Branches[branchNumber].Subscriber.URI.String()
+		subscriberSpec.URI = &uri
+	}
 	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -86,14 +99,14 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscript
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelBranchChannelName(p.Name, branchNumber),
 			},
-			Subscriber: &p.Spec.Branches[branchNumber].Subscriber,
+			Subscriber: subscriberSpec,
 		},
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Branches[branchNumber].Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Branches[branchNumber].Reply.GetRef()}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply.GetRef()}
 	}
 	return r
 }

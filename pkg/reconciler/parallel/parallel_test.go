@@ -32,6 +32,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -446,11 +447,11 @@ func TestAllBranches(t *testing.T) {
 	}, false, logger))
 }
 
-func createBranchReplyChannel(caseNumber int) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+func createBranchReplyChannel(caseNumber int) *pkgv1alpha1.Destination {
+	return &pkgv1alpha1.Destination{
+		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
+		DeprecatedKind:       "inmemorychannel",
+		DeprecatedName:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
 	}
 }
 
@@ -568,16 +569,16 @@ func createParallelSubscriptionStatus(parallelName string, caseNumber int, statu
 	}
 }
 
-func createSubscriber(caseNumber int) v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
-	return v1alpha1.SubscriberSpec{
-		URI: &uriString,
+func createSubscriber(caseNumber int) pkgv1alpha1.Destination {
+	uri := apis.HTTP(fmt.Sprintf("example.com/%d", caseNumber))
+	return pkgv1alpha1.Destination{
+		URI: uri,
 	}
 }
 
-func createFilter(caseNumber int) *v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/filter-%d", caseNumber)
-	return &v1alpha1.SubscriberSpec{
-		URI: &uriString,
+func createFilter(caseNumber int) *pkgv1alpha1.Destination {
+	uri := apis.HTTP(fmt.Sprintf("example.com/filter-%d", caseNumber))
+	return &pkgv1alpha1.Destination{
+		URI: uri,
 	}
 }

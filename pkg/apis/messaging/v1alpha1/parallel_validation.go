@@ -34,13 +34,11 @@ func (ps *ParallelSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	for i, s := range ps.Branches {
-		if s.Filter != nil {
-			if err := IsValidSubscriberSpec(*s.Filter); err != nil {
-				errs = errs.Also(err.ViaField("filter"))
-			}
+		if err := s.Filter.ValidateDisallowDeprecated(ctx); err != nil {
+			errs = errs.Also(err.ViaField("filter"))
 		}
 
-		if e := IsValidSubscriberSpec(s.Subscriber); e != nil {
+		if e := s.Subscriber.ValidateDisallowDeprecated(ctx); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches", i))
 		}
 	}
@@ -57,10 +55,10 @@ func (ps *ParallelSpec) Validate(ctx context.Context) *apis.FieldError {
 	if len(ps.ChannelTemplate.Kind) == 0 {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
 	}
-	if ps.Reply != nil {
-		if err := IsValidObjectReference(*ps.Reply); err != nil {
-			errs = errs.Also(err.ViaField("reply"))
-		}
+
+	if err := ps.Reply.Validate(ctx); err != nil {
+		errs = errs.Also(err.ViaField("reply"))
 	}
+
 	return errs
 }
