@@ -145,7 +145,12 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 
 	source.Status.InitializeConditions()
 
-	if source.Spec.Sink != nil && source.Spec.Sink.Ref != nil {
+	if source.Spec.Sink == nil {
+		source.Status.MarkNoSink("SinkMissing", "")
+		return fmt.Errorf("spec.sink missing")
+	}
+
+	if source.Spec.Sink.Ref != nil {
 		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is
 		// no Namespace defined in dest.Ref, we will use the Namespace of the source
 		// as the Namespace of dest.Ref.
@@ -153,6 +158,11 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 			//TODO how does this work with deprecated fields
 			source.Spec.Sink.Ref.Namespace = source.GetNamespace()
 		}
+	} else if source.Spec.Sink.DeprecatedName != "" && source.Spec.Sink.DeprecatedNamespace == "" {
+		// If Ref is nil and the deprecated ref is present, we need to check for
+		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
+		// removed.
+		source.Spec.Sink.DeprecatedNamespace = source.GetNamespace()
 	}
 
 	sinkURI, err := r.sinkResolver.URIFromDestination(*source.Spec.Sink, source)
