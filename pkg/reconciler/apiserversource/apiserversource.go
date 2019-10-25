@@ -150,22 +150,23 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		return fmt.Errorf("spec.sink missing")
 	}
 
-	if source.Spec.Sink.Ref != nil {
+	dest := source.Spec.Sink.DeepCopy()
+	if dest.Ref != nil {
 		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is
 		// no Namespace defined in dest.Ref, we will use the Namespace of the source
 		// as the Namespace of dest.Ref.
-		if source.Spec.Sink.Ref.Namespace == "" {
+		if dest.Ref.Namespace == "" {
 			//TODO how does this work with deprecated fields
-			source.Spec.Sink.Ref.Namespace = source.GetNamespace()
+			dest.Ref.Namespace = source.GetNamespace()
 		}
-	} else if source.Spec.Sink.DeprecatedName != "" && source.Spec.Sink.DeprecatedNamespace == "" {
+	} else if dest.DeprecatedName != "" && dest.DeprecatedNamespace == "" {
 		// If Ref is nil and the deprecated ref is present, we need to check for
 		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
 		// removed.
-		source.Spec.Sink.DeprecatedNamespace = source.GetNamespace()
+		dest.DeprecatedNamespace = source.GetNamespace()
 	}
 
-	sinkURI, err := r.sinkResolver.URIFromDestination(*source.Spec.Sink, source)
+	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
