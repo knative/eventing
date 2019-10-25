@@ -117,7 +117,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: SubscriberSpec{URI: &subscriberURI}}},
-			Reply:           makeValidReplyObjRef("reply-channel"),
+			Reply:           makeValidReply("reply-channel").GetRef(),
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -157,13 +157,5 @@ func TestParallelSpecValidation(t *testing.T) {
 				t.Errorf("%s: Validate ParallelSpec (-want, +got) = %v", test.name, diff)
 			}
 		})
-	}
-}
-
-func makeValidReplyObjRef(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       channelName,
 	}
 }
