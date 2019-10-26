@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,14 +36,6 @@ func ParallelSubscriptionName(parallelName string, branchNumber int) string {
 }
 
 func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
-	var subscriberSpec *v1alpha1.SubscriberSpec
-	if p.Spec.Branches[branchNumber].Filter != nil {
-		subscriberSpec = &v1alpha1.SubscriberSpec{Ref: p.Spec.Branches[branchNumber].Filter.GetRef()}
-		if p.Spec.Branches[branchNumber].Filter.URI != nil {
-			uri := p.Spec.Branches[branchNumber].Filter.URI.String()
-			subscriberSpec.URI = &uri
-		}
-	}
 	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -62,24 +55,21 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelChannelName(p.Name),
 			},
-			Subscriber: subscriberSpec,
+			Subscriber: p.Spec.Branches[branchNumber].Filter,
 		},
 	}
 	r.Spec.Reply = &v1alpha1.ReplyStrategy{
-		Channel: &corev1.ObjectReference{
-			APIVersion: p.Spec.ChannelTemplate.APIVersion,
-			Kind:       p.Spec.ChannelTemplate.Kind,
-			Name:       ParallelBranchChannelName(p.Name, branchNumber),
+		Channel: &apisv1alpha1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: p.Spec.ChannelTemplate.APIVersion,
+				Kind:       p.Spec.ChannelTemplate.Kind,
+				Name:       ParallelBranchChannelName(p.Name, branchNumber),
+			},
 		}}
 	return r
 }
 
 func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
-	subscriberSpec := &v1alpha1.SubscriberSpec{Ref: p.Spec.Branches[branchNumber].Subscriber.GetRef()}
-	if p.Spec.Branches[branchNumber].Subscriber.URI != nil {
-		uri := p.Spec.Branches[branchNumber].Subscriber.URI.String()
-		subscriberSpec.URI = &uri
-	}
 	r := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
@@ -99,14 +89,14 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscript
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelBranchChannelName(p.Name, branchNumber),
 			},
-			Subscriber: subscriberSpec,
+			Subscriber: &p.Spec.Branches[branchNumber].Subscriber,
 		},
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Branches[branchNumber].Reply.GetRef()}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Branches[branchNumber].Reply}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply.GetRef()}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
 	}
 	return r
 }

@@ -50,7 +50,7 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+			s.Spec.Subscriber = &v1alpha1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -62,7 +62,9 @@ func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) Subscripti
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
+				Channel: &v1alpha1.Destination{
+					Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
+				},
 			}
 		}
 	}

@@ -25,13 +25,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
 
+	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	pkgTest "knative.dev/pkg/test"
-
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 func TestSequence(t *testing.T) {
@@ -62,7 +61,7 @@ func TestSequence(t *testing.T) {
 	defer tearDown(client)
 
 	// construct steps for the sequence
-	steps := make([]v1alpha1.SubscriberSpec, 0)
+	steps := make([]pkgv1alpha1.Destination, 0)
 	for _, config := range stepSubscriberConfigs {
 		// create a stepper Pod with Service
 		podName := config.podName
@@ -71,7 +70,7 @@ func TestSequence(t *testing.T) {
 
 		client.CreatePodOrFail(stepperPod, common.WithService(podName))
 		// create a new step
-		step := v1alpha1.SubscriberSpec{
+		step := pkgv1alpha1.Destination{
 			Ref: resources.ServiceRef(podName),
 		}
 		// add the step into steps

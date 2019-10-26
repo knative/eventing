@@ -43,7 +43,7 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:64e15177e36192b83cde366235d3916cc2349a1f6198ed2b63c7c158c213c072"
+  digest = "1:a617a9e22960a33f9ed462bed370e54636ebea11ca8cb3fab8ce3f93e527ccce"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -80,8 +80,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "NUT"
-  revision = "ee35eb7f829b84db98fd3c404bf9b5407e3cb653"
-  version = "v1.25.17"
+  revision = "13ad2b09f6ff7e16808b4a45c32684e6c66bf86d"
+  version = "v1.25.19"
 
 [[projects]]
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
@@ -181,7 +181,7 @@
   name = "github.com/golang/groupcache"
   packages = ["lru"]
   pruneopts = "NUT"
-  revision = "404acd9df4cc9859d64fb9eed42e5c026187287a"
+  revision = "4a4ac3fbac33b83bb138f808c8945a2812023fc4"
 
 [[projects]]
   digest = "1:f5a98770ab68c1146ee5cc14ed24aafa2bb1a2b3c89cbeadc9eb913b1f9d930a"
@@ -321,11 +321,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d8f052be24b60c0c3fe6c86642d05c355845e14797fc02e5545db2140c0e1400"
+  digest = "1:5dd0e75a3c877d758b12a03d2d39a0a3fca600becdc2188ebecde6e4ae9c5991"
   name = "github.com/influxdata/tdigest"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "19f6ca8c804bc7aa198e88e389da36ddb71ed143"
+  revision = "5d87a7585faa9db89c7b44ffa9be6b89601ecd27"
 
 [[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
@@ -641,14 +641,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ec076e615e3beb6f46317c6d0ae192b43a506e31c0767040e975c79309bca926"
+  digest = "1:2af814e5671fd6f7768085c7701a67b9484bf83aedaf9d6f4b78d9faa756f210"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "742c48ecaeb7c624c475e02f3eb0827ebb4970d4"
+  revision = "53bf42e6b339f7ed00535fc6915737b3959eac89"
 
 [[projects]]
   digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
@@ -677,15 +677,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cdd088b35bbf78713a6861a44a1bbe97e581861b6b8835c7f2211bbeca3671f6"
+  digest = "1:a2f668c709f9078828e99cb1768cb02e876cb81030545046a32b54b2ac2a9ea8"
   name = "golang.org/x/time"
   packages = ["rate"]
   pruneopts = "NUT"
-  revision = "c4c64cad1fd0a1a8dab2523e04e61d35308e131e"
+  revision = "555d28b269f0569763d25dbe1a237ae74c6bcc82"
 
 [[projects]]
   branch = "master"
-  digest = "1:ee51a446aab4758ef62b4eccc1e90e76c4749bb42383d4e34ec1c9980f460ddc"
+  digest = "1:e8074db5811031e438301937752755e84de48028d254d69ed9e3bbe74f9d0c0f"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -703,7 +703,7 @@
     "internal/span",
   ]
   pruneopts = "NUT"
-  revision = "0bbdf54effa2d03a4c877d09c98ecf9f5bcfb964"
+  revision = "2b544e3f2db1e740d696ff91381987f6357e6bda"
 
 [[projects]]
   branch = "master"
@@ -966,7 +966,7 @@
   name = "k8s.io/apiserver"
   packages = ["pkg/storage/names"]
   pruneopts = "NUT"
-  revision = "0efdb495b41ec58d5a5c673b1078bd733e9582dc"
+  revision = "fd43ea72cae9a713aae01016b7a58da1bbaf547a"
 
 [[projects]]
   digest = "1:bccc3b3d1c8f6116a7c7fe3e004757425f7293d2ae6ab765838f27cadf2f61c2"

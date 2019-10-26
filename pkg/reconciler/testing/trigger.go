@@ -18,7 +18,7 @@ package testing
 
 import (
 	"context"
-	"knative.dev/pkg/apis"
+
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/pkg/apis"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 

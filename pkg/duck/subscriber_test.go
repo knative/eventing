@@ -31,10 +31,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	//	"knative.dev/pkg/apis"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
@@ -102,12 +104,6 @@ func TestSubscriberSpec(t *testing.T) {
 		"empty": {
 			Sub:      &v1alpha1.SubscriberSpec{},
 			Expected: "",
-		},
-		"DNS Name": {
-			Sub: &v1alpha1.SubscriberSpec{
-				DeprecatedDNSName: &uri,
-			},
-			Expected: uri,
 		},
 		"URI": {
 			Sub: &v1alpha1.SubscriberSpec{
@@ -177,9 +173,13 @@ func TestSubscriberSpec(t *testing.T) {
 					Name:      "subname",
 					Namespace: testNS,
 				},
-				Spec: v1alpha1.SubscriptionSpec{
-					Subscriber: tc.Sub,
-				},
+			}
+			if tc.Sub != nil && tc.Sub.Ref != nil {
+				sub.Spec = v1alpha1.SubscriptionSpec{
+					Subscriber: &apisv1alpha1.Destination{
+						Ref: tc.Sub.Ref,
+					},
+				}
 			}
 			track := addressableTracker.TrackInNamespace(sub)
 			actual, err := SubscriberSpec(ctx, dc, testNS, tc.Sub, addressableTracker, track)
