@@ -19,9 +19,10 @@ package trigger
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/resolver"
 	"net/url"
 	"testing"
+
+	"knative.dev/pkg/resolver"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,6 +58,7 @@ var (
 		Kind:       "Channel",
 		APIVersion: "messaging.knative.dev/v1alpha1",
 	}
+
 	brokerRef = corev1.ObjectReference{
 		Name:       sinkName,
 		Kind:       "Broker",
@@ -64,6 +66,19 @@ var (
 	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS
+
+	subscriberGVK = metav1.GroupVersionKind{
+		Group:   subscriberGroup,
+		Version: subscriberVersion,
+		Kind:    subscriberKind,
+	}
+	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
+
+	k8sServiceGVK = metav1.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Service",
+	}
 )
 
 const (
@@ -72,10 +87,15 @@ const (
 	triggerUID  = "test-trigger-uid"
 	brokerName  = "test-broker"
 
-	subscriberAPIVersion = "v1"
-	subscriberKind       = "Service"
-	subscriberName       = "subscriberName"
-	subscriberURI        = "http://example.com/subscriber"
+	subscriberGroup             = "serving.knative.dev"
+	subscriberVersion           = "v1"
+	subscriberKind              = "Service"
+	subscriberName              = "subscriber-name"
+	subscriberURI               = "http://example.com/subscriber/"
+	subscriberURIReference      = "foo"
+	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
+
+	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
 
 	dependencyAnnotation    = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	cronJobSourceName       = "test-cronjob-source"
@@ -454,6 +474,127 @@ func TestAllCases(t *testing.T) {
 				makeIngressSubscription(),
 			},
 		}, {
+			Name: "Trigger has subscriber ref exists",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeSubscriberAddressableAsUnstructured(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerDependencyReady(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeIngressSubscription(),
+			},
+		}, {
+			Name: "Trigger has subscriber ref exists and URI",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeSubscriberAddressableAsUnstructured(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, subscriberURIReference),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, subscriberURIReference),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
+					reconciletesting.WithTriggerDependencyReady(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeIngressSubscription(),
+			},
+		}, {
+			Name: "Trigger has subscriber ref exists kubernetes Service",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeSubscriberKubernetesServiceAsUnstructured(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRef(k8sServiceGVK, subscriberName),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRef(k8sServiceGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
+					reconciletesting.WithTriggerDependencyReady(),
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeIngressSubscription(),
+			},
+		}, {
+			Name: "Trigger has subscriber ref doesn't exist",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					reconciletesting.WithInitTriggerConditions,
+				),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", `Trigger reconciliation failed: failed to get ref &ObjectReference{Kind:Service,Namespace:test-namespace,Name:subscriber-name,UID:,APIVersion:serving.knative.dev/v1,ResourceVersion:,FieldPath:,}: services.serving.knative.dev "subscriber-name" not found`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+				),
+			}},
+		}, {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -651,7 +792,7 @@ func TestAllCases(t *testing.T) {
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
 			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
-			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName){}),
+			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
 	},
 		false,
@@ -742,7 +883,25 @@ func makeIngressChannelRef() *corev1.ObjectReference {
 	}
 }
 
-func makeSubscriberServiceAsUnstructured() *unstructured.Unstructured {
+func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": subscriberAPIVersion,
+			"kind":       subscriberKind,
+			"metadata": map[string]interface{}{
+				"namespace": testNS,
+				"name":      subscriberName,
+			},
+			"status": map[string]interface{}{
+				"address": map[string]interface{}{
+					"url": subscriberURI,
+				},
+			},
+		},
+	}
+}
+
+func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
