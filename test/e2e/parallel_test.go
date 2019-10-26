@@ -28,6 +28,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -72,10 +73,10 @@ func TestParallel(t *testing.T) {
 			client.CreatePodOrFail(subPod, common.WithService(subPodName))
 
 			parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
-				Filter: &v1alpha1.SubscriberSpec{
+				Filter: &pkgv1alpha1.Destination{
 					Ref: resources.ServiceRef(filterPodName),
 				},
-				Subscriber: v1alpha1.SubscriberSpec{
+				Subscriber: pkgv1alpha1.Destination{
 					Ref: resources.ServiceRef(subPodName),
 				},
 			}

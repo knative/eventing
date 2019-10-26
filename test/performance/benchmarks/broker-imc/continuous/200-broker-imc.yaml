@@ -119,7 +119,7 @@ spec:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /var/secret/robot.json
             volumeMounts:
-            - name: service-account
+            - name: mako-secrets
               mountPath: /var/secret
             ports:
             - name: quickstore
@@ -129,6 +129,6 @@ spec:
           - name: config-mako
             configMap:
               name: config-mako
-          - name: service-account
+          - name: mako-secrets
             secret:
-              secretName: service-account
+              secretName: mako-secrets

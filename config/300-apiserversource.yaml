@@ -55,8 +55,46 @@ spec:
               type: string
               description: "name of the ServiceAccount to use to run the receive adapter. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/."
             sink:
-              type: object
-              description: "A reference to the object that should receive events."
+              anyOf:
+              - type: object
+                description: "the destination that should receive events."
+                properties:
+                  ref:
+                    type: object
+                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    properties:
+                      apiVersion:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                  uri:
+                    type: string
+                    description: "the target URI. If ref is provided, this must be relative URI reference."
+              - type: object
+                description: "DEPRECATED: a reference to a Kubernetes object from which to retrieve the target URI."
+                required:
+                - apiVersion
+                - kind
+                - name
+                properties:
+                  apiVersion:
+                    type: string
+                    minLength: 1
+                  kind:
+                    type: string
+                    minLength: 1
+                  name:
+                    type: string
+                    minLength: 1
             mode:
               type: string
               description: "Mode controls the content of the event payload. One of: 'Ref' (only references of resources), 'Resource' (full resource)."

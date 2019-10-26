@@ -72,9 +72,6 @@ spec:
             subscriber:
               type: object
               properties:
-                dnsName:
-                  type: string
-                  minLength: 1
                 uri:
                   type: string
                   minLength: 1
@@ -96,13 +93,10 @@ spec:
                       minLength: 1
             reply:
               type: object
+              description: "the destination that (optionally) receive events."
               properties:
                 channel:
                   type: object
-                  required:
-                    - apiVersion
-                    - kind
-                    - name
                   properties:
                     apiVersion:
                       type: string

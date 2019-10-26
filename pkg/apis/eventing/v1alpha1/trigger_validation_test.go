@@ -24,8 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 var (
@@ -42,18 +42,24 @@ var (
 			"source": "other_source",
 		},
 	}
-	validSubscriber = &messagingv1alpha1.SubscriberSpec{
+	validSubscriber = &apisv1alpha1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	invalidSubscriber = &messagingv1alpha1.SubscriberSpec{
+	invalidSubscriber = &apisv1alpha1.Destination{
 		Ref: &corev1.ObjectReference{
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
+	}
+	deprecatedSubscriber = &apisv1alpha1.Destination{
+			DeprecatedKind:       "Service",
+			DeprecatedAPIVersion: "serving.knative.dev/v1alpha1",
+			DeprecatedName:  "subscriber_test",
+			DeprecatedNamespace:  "test_ns",
 	}
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
@@ -326,6 +332,22 @@ func TestTriggerSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
+		name: "deprecated subscriber",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     validSourceAndTypeFilter,
+			Subscriber: deprecatedSubscriber,
+		},
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			errs = errs.Also(apis.ErrInvalidValue("apiVersion is not allowed here, it's a deprecated value", "apiVersion"))
+			errs = errs.Also(apis.ErrInvalidValue("kind is not allowed here, it's a deprecated value", "kind"))
+			errs = errs.Also(apis.ErrInvalidValue("name is not allowed here, it's a deprecated value", "name"))
+			errs = errs.Also(apis.ErrInvalidValue("namespace is not allowed here, it's a deprecated value", "namespace"))
+			return errs.ViaField("subscriber")
+		}(),
+	},
+	{
 		name: "missing broker",
 		ts: &TriggerSpec{
 			Broker:     "",

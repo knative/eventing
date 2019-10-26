@@ -19,6 +19,7 @@ metadata:
     eventing.knative.dev/release: devel
     knative.dev/crd-install: "true"
     messaging.knative.dev/subscribable: "true"
+    duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
   versions:

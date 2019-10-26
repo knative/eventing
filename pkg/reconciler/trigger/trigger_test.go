@@ -19,6 +19,7 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/resolver"
 	"net/url"
 	"testing"
 
@@ -44,6 +45,8 @@ import (
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -649,6 +652,7 @@ func TestAllCases(t *testing.T) {
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
 			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
+			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
 	},
 		false,
@@ -675,7 +679,7 @@ func makeTrigger() *v1alpha1.Trigger {
 					Type:   "Any",
 				},
 			},
-			Subscriber: &messagingv1alpha1.SubscriberSpec{
+			Subscriber: &apisv1alpha1.Destination{
 				Ref: &corev1.ObjectReference{
 					Name:       subscriberName,
 					Kind:       subscriberKind,
@@ -776,9 +780,8 @@ func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription 
 
 // Just so we can test subscription updates
 func makeDifferentReadySubscription() *messagingv1alpha1.Subscription {
-	uri := "http://example.com/differenturi"
 	s := makeIngressSubscription()
-	s.Spec.Subscriber.URI = &uri
+	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
 	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s
 }

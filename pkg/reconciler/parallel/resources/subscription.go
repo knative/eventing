@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 
 	corev1 "k8s.io/api/core/v1"
@@ -58,10 +59,12 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 		},
 	}
 	r.Spec.Reply = &v1alpha1.ReplyStrategy{
-		Channel: &corev1.ObjectReference{
-			APIVersion: p.Spec.ChannelTemplate.APIVersion,
-			Kind:       p.Spec.ChannelTemplate.Kind,
-			Name:       ParallelBranchChannelName(p.Name, branchNumber),
+		Channel: &apisv1alpha1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: p.Spec.ChannelTemplate.APIVersion,
+				Kind:       p.Spec.ChannelTemplate.Kind,
+				Name:       ParallelBranchChannelName(p.Name, branchNumber),
+			},
 		}}
 	return r
 }

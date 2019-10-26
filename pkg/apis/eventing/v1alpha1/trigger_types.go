@@ -20,9 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
@@ -81,7 +81,7 @@ type TriggerSpec struct {
 
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
-	Subscriber *messagingv1alpha1.SubscriberSpec `json:"subscriber,omitempty"`
+	Subscriber *apisv1alpha1.Destination `json:"subscriber,omitempty"`
 }
 
 type TriggerFilter struct {

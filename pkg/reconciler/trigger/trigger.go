@@ -44,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 )
 
@@ -74,6 +75,7 @@ type Reconciler struct {
 	kresourceTracker duck.ListableTracker
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
+	uriResolver        *resolver.URIResolver
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -196,14 +198,19 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	trackAddressable := r.addressableTracker.TrackInNamespace(t)
-	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
-		if err := trackAddressable(*t.Spec.Subscriber.Ref); err != nil {
-			return fmt.Errorf("unable to track changes to Subscriber.Ref: %v", err)
-		}
+	if t.Spec.Subscriber == nil {
+		return errors.New("subscriber cannot be nil")
 	}
 
-	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, r.addressableTracker, trackAddressable)
+	if t.Spec.Subscriber.Ref != nil {
+		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
+		// We will use the Namespace of Trigger as the Namespace of dest.Ref
+		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
+		// Since Trigger never allowed ref fields at the subscriber level and
+		// validates that they are absent, we can ignore them here.
+	}
+
+	subscriberURI, err := r.uriResolver.URIFromDestination(*t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		return err

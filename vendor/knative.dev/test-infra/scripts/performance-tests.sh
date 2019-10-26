@@ -23,10 +23,11 @@ source $(dirname ${BASH_SOURCE})/library.sh
 # If not provided, they will fall back to the default values.
 readonly BENCHMARK_ROOT_PATH=${BENCHMARK_ROOT_PATH:-test/performance/benchmarks}
 readonly PROJECT_NAME=${PROJECT_NAME:-knative-performance}
-readonly SERVICE_ACCOUNT_NAME=${SERVICE_ACCOUNT_NAME:-mako-job}
+readonly SERVICE_ACCOUNT_NAME=${SERVICE_ACCOUNT_NAME:-mako-job@knative-performance.iam.gserviceaccount.com}
 
 # Setup env vars.
-readonly KO_DOCKER_REPO="gcr.io/${PROJECT_NAME}"
+export KO_DOCKER_REPO="gcr.io/${PROJECT_NAME}"
+# Constants
 readonly GOOGLE_APPLICATION_CREDENTIALS="/etc/performance-test/service-account.json"
 readonly GITHUB_TOKEN="/etc/performance-test/github-token"
 readonly SLACK_READ_TOKEN="/etc/performance-test/slack-read-token"
@@ -35,11 +36,10 @@ readonly SLACK_WRITE_TOKEN="/etc/performance-test/slack-write-token"
 # Set up the user for cluster operations.
 function setup_user() {
   echo ">> Setting up user"
+  echo "Using gcloud user ${SERVICE_ACCOUNT_NAME}"
+  gcloud config set core/account ${SERVICE_ACCOUNT_NAME}
   echo "Using gcloud project ${PROJECT_NAME}"
   gcloud config set core/project ${PROJECT_NAME}
-  local user_name="${SERVICE_ACCOUNT_NAME}@${PROJECT_NAME}.iam.gserviceaccount.com"
-  echo "Using gcloud user ${user_name}"
-  gcloud config set core/account ${user_name}
 }
 
 # Update resources installed on the cluster.

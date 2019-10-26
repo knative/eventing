@@ -35,12 +35,12 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -83,7 +83,7 @@ type Reconciler struct {
 	eventTypeLister       eventinglisters.EventTypeLister
 
 	source         string
-	sinkReconciler *duck.SinkReconciler
+	sinkResolver   *resolver.URIResolver
 	loggingContext context.Context
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
@@ -145,13 +145,28 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 
 	source.Status.InitializeConditions()
 
-	sinkObjRef := source.Spec.Sink
-	if sinkObjRef.Namespace == "" {
-		sinkObjRef.Namespace = source.Namespace
+	if source.Spec.Sink == nil {
+		source.Status.MarkNoSink("SinkMissing", "")
+		return fmt.Errorf("spec.sink missing")
 	}
 
-	sourceDesc := fmt.Sprintf("%s/%s,%s", source.Namespace, source.Name, source.GroupVersionKind().String())
-	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, source, sourceDesc)
+	dest := source.Spec.Sink.DeepCopy()
+	if dest.Ref != nil {
+		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is
+		// no Namespace defined in dest.Ref, we will use the Namespace of the source
+		// as the Namespace of dest.Ref.
+		if dest.Ref.Namespace == "" {
+			//TODO how does this work with deprecated fields
+			dest.Ref.Namespace = source.GetNamespace()
+		}
+	} else if dest.DeprecatedName != "" && dest.DeprecatedNamespace == "" {
+		// If Ref is nil and the deprecated ref is present, we need to check for
+		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
+		// removed.
+		dest.DeprecatedNamespace = source.GetNamespace()
+	}
+
+	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
@@ -294,7 +309,7 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	// Only create EventTypes for Broker sinks.
 	// We add this check here in case the APIServerSource was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
-	if src.Spec.Sink.Kind != "Broker" {
+	if src.Spec.Sink.Ref == nil || src.Spec.Sink.Ref.Kind != "Broker" {
 		return eventTypes, nil
 	}
 

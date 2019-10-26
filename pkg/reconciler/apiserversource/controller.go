@@ -22,11 +22,11 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/resolver"
 
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
@@ -78,7 +78,7 @@ func NewController(
 
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
+	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
