@@ -57,6 +57,7 @@ spec:
           properties:
             branches:
               type: array
+              description: "the list of filter/subscribers pairs."
               items:
                 type: object
                 required:
