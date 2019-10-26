@@ -140,19 +140,18 @@ func TestParallelSpecValidation(t *testing.T) {
 			fe := apis.ErrMissingField("reply.name")
 			return fe
 		}(),
-		// TODO check if destination should support DeprecatedNamespace and in its Ref.
-		//}, {
-		//	name: "valid parallel with invalid reply",
-		//	ts: &ParallelSpec{
-		//		ChannelTemplate: validChannelTemplate,
-		//		Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
-		//		Reply:           makeInvalidReply("reply-channel"),
-		//	},
-		//	want: func() *apis.FieldError {
-		//		fe := apis.ErrDisallowedFields("reply.Namespace")
-		//		fe.Details = "only name, apiVersion and kind are supported fields"
-		//		return fe
-		//	}(),
+	}, {
+		name: "valid parallel with invalid reply",
+		ts: &ParallelSpec{
+			ChannelTemplate: validChannelTemplate,
+			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Reply:           makeInvalidReply("reply-channel"),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply.apiVersion")
+			return fe
+		}(),
+		// TODO should we disallow namespace in Destination?
 	}}
 
 	for _, test := range tests {

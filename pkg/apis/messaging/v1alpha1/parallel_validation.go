@@ -41,6 +41,10 @@ func (ps *ParallelSpec) Validate(ctx context.Context) *apis.FieldError {
 		if e := s.Subscriber.ValidateDisallowDeprecated(ctx); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches", i))
 		}
+
+		if e := s.Reply.Validate(ctx); e != nil {
+			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches", i))
+		}
 	}
 
 	if ps.ChannelTemplate == nil {
