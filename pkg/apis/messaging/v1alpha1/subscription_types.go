@@ -113,41 +113,8 @@ type SubscriptionSpec struct {
 	Reply *ReplyStrategy `json:"reply,omitempty"`
 }
 
-// **DO NOT USE**
-// Use https://github.com/knative/pkg/blob/master/apis/v1alpha1/destination.go instead.
-// Left only here until everything has been moved to Destination.
-type SubscriberSpec struct {
-	// Only one of these can be specified
-
-	// Reference to an object that will be used to find the target
-	// endpoint, which should implement the Addressable duck type.
-	// For example, this could be a reference to a Route resource
-	// or a Knative Service resource.
-	// TODO: Specify the required fields the target object must
-	// have in the status.
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	// +optional
-	Ref *corev1.ObjectReference `json:"ref,omitempty"`
-
-	// Deprecated: Use URI instead.
-	// Reference to a 'known' endpoint where no resolving is done.
-	// http://k8s-service for example
-	// http://myexternalhandler.example.com/foo/bar
-	// +optional
-	DeprecatedDNSName *string `json:"dnsName,omitempty"`
-
-	// Reference to a 'known' endpoint where no resolving is done.
-	// http://k8s-service for example
-	// http://myexternalhandler.example.com/foo/bar
-	// +optional
-	URI *string `json:"uri,omitempty"`
-}
-
-// ReplyStrategy specifies the handling of the SubscriberSpec's returned replies.
-// If no SubscriberSpec is specified, the identity function is assumed.
+// ReplyStrategy specifies the handling of the Subscriber's returned replies.
+// If no Subscriber is specified, the identity function is assumed.
 type ReplyStrategy struct {
 	//  The resource pointed by this ObjectReference must meet the Addressable contract
 	//  with a reference to the Addressable duck type. If the resource does not meet this contract,

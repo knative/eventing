@@ -171,7 +171,13 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	source.Status.MarkSink(sinkURI)
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
@@ -309,7 +315,7 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	// Only create EventTypes for Broker sinks.
 	// We add this check here in case the APIServerSource was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
-	if src.Spec.Sink.Ref == nil || src.Spec.Sink.Ref.Kind != "Broker" {
+	if src.Spec.Sink.Ref == nil || (src.Spec.Sink.DeprecatedKind != "Broker" && src.Spec.Sink.Ref.Kind != "Broker") {
 		return eventTypes, nil
 	}
 
