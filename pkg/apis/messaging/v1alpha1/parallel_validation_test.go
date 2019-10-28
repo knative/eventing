@@ -54,6 +54,9 @@ func TestParallelSpecValidation(t *testing.T) {
 		},
 		Spec: &runtime.RawExtension{},
 	}
+	invalidReplyInParallel := ParallelBranch{Subscriber: v1alpha1.Destination{URI: subscriberURI},
+		Reply: makeInvalidReply("reply-channel")}
+
 	tests := []struct {
 		name string
 		ts   *ParallelSpec
@@ -127,7 +130,7 @@ func TestParallelSpecValidation(t *testing.T) {
 			return nil
 		}(),
 	}, {
-		name: "valid parallel with invalid missing name",
+		name: "parallel with invalid missing name",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
@@ -141,7 +144,7 @@ func TestParallelSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "valid parallel with invalid reply",
+		name: "parallel with invalid reply",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
@@ -151,7 +154,16 @@ func TestParallelSpecValidation(t *testing.T) {
 			fe := apis.ErrMissingField("reply.apiVersion")
 			return fe
 		}(),
-		// TODO should we disallow namespace in Destination?
+	}, {
+		name: "parallel with invalid branch reply",
+		ts: &ParallelSpec{
+			ChannelTemplate: validChannelTemplate,
+			Branches:        []ParallelBranch{invalidReplyInParallel},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrInvalidArrayValue(invalidReplyInParallel, "branches.reply", 0)
+			return fe
+		}(),
 	}}
 
 	for _, test := range tests {
