@@ -59,7 +59,46 @@ spec:
             serviceAccountName:
               type: string
             sink:
-              type: object
+              anyOf:
+                - type: object
+                  description: "the destination that should receive events."
+                  properties:
+                    ref:
+                      type: object
+                      description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                      required:
+                        - apiVersion
+                        - kind
+                        - name
+                      properties:
+                        apiVersion:
+                          type: string
+                          minLength: 1
+                        kind:
+                          type: string
+                          minLength: 1
+                        name:
+                          type: string
+                          minLength: 1
+                    uri:
+                      type: string
+                      description: "the target URI. If ref is provided, this must be relative URI reference."
+                - type: object
+                  description: "DEPRECATED: a reference to a Kubernetes object from which to retrieve the target URI."
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                    kind:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
             resources:
               properties:
                 limits:

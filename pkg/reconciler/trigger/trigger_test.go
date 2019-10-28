@@ -65,6 +65,13 @@ var (
 		Kind:       "Broker",
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
+	brokerDest = apisv1alpha1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
+	}
 	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI = "http://" + sinkDNS
 
@@ -974,7 +981,7 @@ func makeReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,
 			Data:     testData,
-			Sink:     &brokerRef,
+			Sink:     &brokerDest,
 		}),
 		WithInitCronJobSourceConditions,
 		WithValidCronJobSourceSchedule,

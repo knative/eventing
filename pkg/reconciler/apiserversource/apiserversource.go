@@ -315,7 +315,7 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	// Only create EventTypes for Broker sinks.
 	// We add this check here in case the APIServerSource was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
-	if src.Spec.Sink.Ref == nil || (src.Spec.Sink.DeprecatedKind != "Broker" && src.Spec.Sink.Ref.Kind != "Broker") {
+	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
 		return eventTypes, nil
 	}
 
