@@ -22,11 +22,12 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 func TestCronJobSource(t *testing.T) {

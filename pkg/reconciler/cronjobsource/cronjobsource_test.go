@@ -32,17 +32,19 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
-	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/controller"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
+	"knative.dev/eventing/pkg/utils"
+
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 var (
@@ -224,7 +226,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkDest,
+						Sink:     &brokerDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
