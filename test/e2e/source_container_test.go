@@ -28,6 +28,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -83,7 +84,7 @@ func TestContainerSource(t *testing.T) {
 					},
 				},
 			},
-			Sink: resources.ServiceRef(loggerPodName),
+			Sink: &apisv1alpha1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
 	client.CreateContainerSourceOrFail(containerSource)
