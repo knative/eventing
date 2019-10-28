@@ -24,12 +24,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	pkgTest "knative.dev/pkg/test"
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	pkgTest "knative.dev/pkg/test"
 )
 
 func TestContainerSource(t *testing.T) {
@@ -84,7 +85,7 @@ func TestContainerSource(t *testing.T) {
 					},
 				},
 			},
-			Sink: resources.ServiceRef(loggerPodName),
+			Sink: &apisv1alpha1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
 	client.CreateContainerSourceOrFail(containerSource)

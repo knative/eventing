@@ -35,11 +35,15 @@ func (ps *ParallelSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	for i, s := range ps.Branches {
 		if err := s.Filter.ValidateDisallowDeprecated(ctx); err != nil {
-			errs = errs.Also(err.ViaField("filter"))
+			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches.filter", i))
 		}
 
 		if e := s.Subscriber.ValidateDisallowDeprecated(ctx); e != nil {
-			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches", i))
+			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches.subscriber", i))
+		}
+
+		if e := s.Reply.Validate(ctx); e != nil {
+			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches.reply", i))
 		}
 	}
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"knative.dev/pkg/resolver"
 	"reflect"
 	"strings"
 	"time"
@@ -33,14 +34,14 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"go.uber.org/zap"
+	"knative.dev/pkg/controller"
+
 	status "knative.dev/eventing/pkg/apis/duck"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
-	"knative.dev/pkg/controller"
 )
 
 const (
@@ -57,7 +58,7 @@ type Reconciler struct {
 	containerSourceLister listers.ContainerSourceLister
 	deploymentLister      appsv1listers.DeploymentLister
 
-	sinkReconciler *duck.SinkReconciler
+	sinkResolver *resolver.URIResolver
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -167,6 +168,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 // If an error is returned from this function, the caller should also record
 // an Event containing the error string.
 func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.ContainerSource, args *resources.ContainerArguments) error {
+
 	if uri, ok := sinkArg(source); ok {
 		source.Status.MarkSink(uri)
 		return nil
@@ -177,19 +179,36 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 		return errors.New("sink missing from spec")
 	}
 
-	sinkObjRef := source.Spec.Sink
-	if sinkObjRef.Namespace == "" {
-		sinkObjRef.Namespace = source.Namespace
+	dest := source.Spec.Sink.DeepCopy()
+	if dest.Ref != nil {
+		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is
+		// no Namespace defined in dest.Ref, we will use the Namespace of the source
+		// as the Namespace of dest.Ref.
+		if dest.Ref.Namespace == "" {
+			//TODO how does this work with deprecated fields
+			dest.Ref.Namespace = source.GetNamespace()
+		}
+	} else if dest.DeprecatedName != "" && dest.DeprecatedNamespace == "" {
+		// If Ref is nil and the deprecated ref is present, we need to check for
+		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
+		// removed.
+		dest.DeprecatedNamespace = source.GetNamespace()
 	}
 
-	sourceDesc := source.Namespace + "/" + source.Name + ", " + source.GroupVersionKind().String()
-	uri, err := r.sinkReconciler.GetSinkURI(source.Spec.Sink, source, sourceDesc)
+	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
 	if err != nil {
-		source.Status.MarkNoSink("NotFound", `Couldn't get Sink URI from "%s/%s": %v"`, source.Spec.Sink.Namespace, source.Spec.Sink.Name, err)
-		return err
+		source.Status.MarkNoSink("NotFound", `Couldn't get Sink URI from "%s/%s"`, dest.Ref.Namespace, dest.Ref.Name)
+		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	source.Status.MarkSink(uri)
-	args.Sink = uri
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
+
+	args.Sink = sinkURI
 
 	return nil
 }

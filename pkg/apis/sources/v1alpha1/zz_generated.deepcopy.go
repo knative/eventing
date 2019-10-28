@@ -233,8 +233,8 @@ func (in *ContainerSourceSpec) DeepCopyInto(out *ContainerSourceSpec) {
 	}
 	if in.Sink != nil {
 		in, out := &in.Sink, &out.Sink
-		*out = new(v1.ObjectReference)
-		**out = **in
+		*out = new(apisv1alpha1.Destination)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

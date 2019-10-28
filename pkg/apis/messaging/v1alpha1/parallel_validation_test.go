@@ -54,6 +54,9 @@ func TestParallelSpecValidation(t *testing.T) {
 		},
 		Spec: &runtime.RawExtension{},
 	}
+	invalidReplyInParallel := ParallelBranch{Subscriber: v1alpha1.Destination{URI: subscriberURI},
+		Reply: makeInvalidReply("reply-channel")}
+
 	tests := []struct {
 		name string
 		ts   *ParallelSpec
@@ -127,7 +130,7 @@ func TestParallelSpecValidation(t *testing.T) {
 			return nil
 		}(),
 	}, {
-		name: "valid parallel with invalid missing name",
+		name: "parallel with invalid missing name",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
@@ -140,19 +143,27 @@ func TestParallelSpecValidation(t *testing.T) {
 			fe := apis.ErrMissingField("reply.name")
 			return fe
 		}(),
-		// TODO check if destination should support DeprecatedNamespace and in its Ref.
-		//}, {
-		//	name: "valid parallel with invalid reply",
-		//	ts: &ParallelSpec{
-		//		ChannelTemplate: validChannelTemplate,
-		//		Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
-		//		Reply:           makeInvalidReply("reply-channel"),
-		//	},
-		//	want: func() *apis.FieldError {
-		//		fe := apis.ErrDisallowedFields("reply.Namespace")
-		//		fe.Details = "only name, apiVersion and kind are supported fields"
-		//		return fe
-		//	}(),
+	}, {
+		name: "parallel with invalid reply",
+		ts: &ParallelSpec{
+			ChannelTemplate: validChannelTemplate,
+			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Reply:           makeInvalidReply("reply-channel"),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply.apiVersion")
+			return fe
+		}(),
+	}, {
+		name: "parallel with invalid branch reply",
+		ts: &ParallelSpec{
+			ChannelTemplate: validChannelTemplate,
+			Branches:        []ParallelBranch{invalidReplyInParallel},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrInvalidArrayValue(invalidReplyInParallel, "branches.reply", 0)
+			return fe
+		}(),
 	}}
 
 	for _, test := range tests {

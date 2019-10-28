@@ -58,13 +58,22 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func createReplyChannel(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       channelName,
+func createReplyChannel(channelName string) *apisv1alpha1.Destination {
+	return &apisv1alpha1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       channelName,
+		},
 	}
+}
 
+func createDeprecatedReplyChannel(channelName string) *apisv1alpha1.Destination {
+	return &apisv1alpha1.Destination{
+		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
+		DeprecatedKind:       "inmemorychannel",
+		DeprecatedName:       channelName,
+	}
 }
 
 func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructured {
@@ -219,6 +228,63 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSteps([]apisv1alpha1.Destination{createDestination(0)}),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
+							},
+						},
+					}),
+					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "eventing.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+						},
+					})),
+			}},
+		}, {
+			Name: "singlestepwithdeprecatedreply",
+			Key:  pKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createDeprecatedReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]apisv1alpha1.Destination{createDestination(0)}))},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
+			},
+			WantCreates: []runtime.Object{
+				createChannel(sequenceName, 0),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceReply(createDeprecatedReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceSteps([]apisv1alpha1.Destination{createDestination(0)}))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewSequence(sequenceName, testNS,
+					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithSequenceSteps([]apisv1alpha1.Destination{createDestination(0)}),
+					reconciletesting.WithSequenceReply(createDeprecatedReplyChannel(replyChannelName)),
+					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceDeprecatedReplyStatus(),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{

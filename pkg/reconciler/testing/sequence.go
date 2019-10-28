@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -67,17 +66,21 @@ func WithSequenceSteps(steps []pkgv1alpha1.Destination) SequenceOption {
 	}
 }
 
-func WithSequenceReply(reply *corev1.ObjectReference) SequenceOption {
+func WithSequenceReply(reply *pkgv1alpha1.Destination) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
-		p.Spec.Reply = &pkgv1alpha1.Destination{
-			Ref: reply,
-		}
+		p.Spec.Reply = reply
 	}
 }
 
 func WithSequenceSubscriptionStatuses(subscriptionStatuses []v1alpha1.SequenceSubscriptionStatus) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Status.SubscriptionStatuses = subscriptionStatuses
+	}
+}
+
+func WithSequenceDeprecatedReplyStatus() SequenceOption {
+	return func(s *v1alpha1.Sequence) {
+		s.Status.MarkDestinationDeprecatedRef("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
 	}
 }
 

@@ -105,7 +105,7 @@ func TestSequence(t *testing.T) {
 		client.Namespace,
 		eventingtesting.WithSequenceSteps(steps),
 		eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
-		eventingtesting.WithSequenceReply(replyRef),
+		eventingtesting.WithSequenceReply(&pkgv1alpha1.Destination{Ref: replyRef}),
 	)
 
 	// create Sequence or fail the test if there is an error
