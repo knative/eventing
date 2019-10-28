@@ -200,7 +200,14 @@ func (r *Reconciler) setSinkURIArg(ctx context.Context, source *v1alpha1.Contain
 		source.Status.MarkNoSink("NotFound", `Couldn't get Sink URI from "%s/%s"`, dest.Ref.Namespace, dest.Ref.Name)
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	source.Status.MarkSink(sinkURI)
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
+
 	args.Sink = sinkURI
 
 	return nil
