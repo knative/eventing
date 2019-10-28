@@ -98,7 +98,7 @@ func (s *CronJobSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
 		}
 		apiserverCondSet.Manage(s).SetCondition(c)
 	} else {
-		apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+		apiserverCondSet.Manage(s).MarkUnknown(CronJobConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
 }
 
