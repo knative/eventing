@@ -77,7 +77,7 @@ var (
 			APIVersion: "v1",
 		},
 	}
-	serviceURI = "http://service.sink.svc.cluster.local/"
+	serviceURI = fmt.Sprintf("http://%s.%s.svc.cluster.local/", sinkName, testNS)
 
 	sinkDest = apisv1alpha1.Destination{
 		Ref: &corev1.ObjectReference{
@@ -121,7 +121,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: Error fetching sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} for source "testnamespace/test-container-source, /, Kind=": channels.messaging.knative.dev "testsink" not found`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: getting sink URI: failed to get ref &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: channels.messaging.knative.dev "testsink" not found`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -133,7 +133,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": Error fetching sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} for source "testnamespace/test-container-source, /, Kind=": channels.messaging.knative.dev "testsink" not found"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink"`),
 				),
 			}},
 		}, {
@@ -151,7 +151,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: getting sink URI: address not set for &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -163,7 +163,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:testsink,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink"`),
 				),
 			}},
 		}, {
@@ -181,7 +181,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + sourceName,
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address`),
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: getting sink URI: address not set for &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewContainerSource(sourceName, testNS,
@@ -193,7 +193,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink": sink &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,} does not contain address"`),
+					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink"`),
 				),
 			}},
 		}, {
@@ -285,7 +285,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), nil, nil, nil),
+				), nil, sinkURI, nil, nil),
 			},
 		}, {
 			Name: "valid first pass without template",
@@ -328,7 +328,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), nil, nil, nil),
+				), nil, sinkURI, nil, nil),
 			},
 		}, {
 			Name: "valid, with ready deployment with template",
@@ -362,7 +362,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), &conditionTrue, nil, nil),
+				), &conditionTrue, sinkURI, nil, nil),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -417,7 +417,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), &conditionTrue, nil, nil),
+				), &conditionTrue, sinkURI, nil, nil),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -505,7 +505,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), nil, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
+				), nil, sinkURI, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
 			},
 		}, {
 			Name: "valid first pass, with annotations and labels without template",
@@ -552,7 +552,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), nil, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
+				), nil, sinkURI, map[string]string{"label": "labeled"}, map[string]string{"annotation": "annotated"}),
 			},
 		}, {
 			Name: "error for create deployment",
@@ -598,7 +598,7 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), nil, nil, nil),
+				), nil, sinkURI, nil, nil),
 			},
 		}, {
 			Name: "valid, with sink as service",
@@ -614,6 +614,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentCreated", `Created deployment "containersource-test-container-source-1234-5678-90"`),
 				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -626,7 +627,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceSink(serviceURI),
-					WithContainerSourceDeploying(`Created deployment ""`),
+					WithContainerSourceDeploying(`Created deployment "containersource-test-container-source-1234-5678-90"`),
 				),
 			}},
 			WantCreates: []runtime.Object{
@@ -635,7 +636,8 @@ func TestAllCases(t *testing.T) {
 						DeprecatedImage: image,
 					}),
 					WithContainerSourceUID(sourceUID),
-				), nil, nil, nil),
+					WithContainerSourceSink(serviceURI),
+				), nil, serviceURI, nil, nil),
 			},
 		},
 	}
@@ -655,7 +657,7 @@ func TestAllCases(t *testing.T) {
 	))
 }
 
-func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.ConditionStatus, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
+func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.ConditionStatus, sinkURI string, labels map[string]string, annotations map[string]string) *appsv1.Deployment {
 	args := append(source.Spec.DeprecatedArgs, fmt.Sprintf("--sink=%s", sinkURI))
 	env := append(source.Spec.DeprecatedEnv, corev1.EnvVar{Name: "SINK", Value: sinkURI})
 
