@@ -382,8 +382,8 @@ func (in *CronJobSourceSpec) DeepCopyInto(out *CronJobSourceSpec) {
 	*out = *in
 	if in.Sink != nil {
 		in, out := &in.Sink, &out.Sink
-		*out = new(v1.ObjectReference)
-		**out = **in
+		*out = new(apisv1alpha1.Destination)
+		(*in).DeepCopyInto(*out)
 	}
 	out.Resources = in.Resources
 	return
