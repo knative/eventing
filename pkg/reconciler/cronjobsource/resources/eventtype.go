@@ -27,14 +27,6 @@ import (
 
 // MakeEventType creates the in-memory representation of the EventType for the specified CronJobSource.
 func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
-	broker := ""
-	if src.Spec.Sink != nil {
-		if src.Spec.Sink.Ref.Name != "" {
-			broker = src.Spec.Sink.Ref.Name
-		} else if src.Spec.Sink.DeprecatedName == "" {
-			broker = src.Spec.Sink.DeprecatedName
-		}
-	}
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      utils.GenerateFixedName(src, utils.ToDNS1123Subdomain(v1alpha1.CronJobEventType)),
@@ -47,7 +39,7 @@ func MakeEventType(src *v1alpha1.CronJobSource) *eventingv1alpha1.EventType {
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   v1alpha1.CronJobEventType,
 			Source: v1alpha1.CronJobEventSource(src.Namespace, src.Name),
-			Broker: broker,
+			Broker: src.Spec.Sink.GetRef().Name,
 		},
 	}
 }
