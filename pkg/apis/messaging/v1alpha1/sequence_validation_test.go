@@ -162,7 +162,6 @@ func TestSequenceSpecValidation(t *testing.T) {
 			fe := apis.ErrMissingField("reply.apiVersion")
 			return fe
 		}(),
-		// TODO should we disallow namespace in Destination?
 	}}
 
 	for _, test := range tests {
