@@ -17,7 +17,10 @@
 package v1alpha1
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -43,24 +46,24 @@ const (
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
-func (ps *SequenceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
-	return pCondSet.Manage(ps).GetCondition(t)
+func (ss *SequenceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
+	return pCondSet.Manage(ss).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
-func (ps *SequenceStatus) IsReady() bool {
-	return pCondSet.Manage(ps).IsHappy()
+func (ss *SequenceStatus) IsReady() bool {
+	return pCondSet.Manage(ss).IsHappy()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
-func (ps *SequenceStatus) InitializeConditions() {
-	pCondSet.Manage(ps).InitializeConditions()
+func (ss *SequenceStatus) InitializeConditions() {
+	pCondSet.Manage(ss).InitializeConditions()
 }
 
 // PropagateSubscriptionStatuses sets the SubscriptionStatuses and SequenceConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*Subscription) {
-	ps.SubscriptionStatuses = make([]SequenceSubscriptionStatus, len(subscriptions))
+func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*Subscription) {
+	ss.SubscriptionStatuses = make([]SequenceSubscriptionStatus, len(subscriptions))
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
 	if len(subscriptions) == 0 {
@@ -68,7 +71,7 @@ func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*Subscri
 
 	}
 	for i, s := range subscriptions {
-		ps.SubscriptionStatuses[i] = SequenceSubscriptionStatus{
+		ss.SubscriptionStatuses[i] = SequenceSubscriptionStatus{
 			Subscription: corev1.ObjectReference{
 				APIVersion: s.APIVersion,
 				Kind:       s.Kind,
@@ -78,7 +81,7 @@ func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*Subscri
 		}
 		readyCondition := s.Status.GetCondition(SubscriptionConditionReady)
 		if readyCondition != nil {
-			ps.SubscriptionStatuses[i].ReadyCondition = *readyCondition
+			ss.SubscriptionStatuses[i].ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
 				allReady = false
 			}
@@ -88,16 +91,16 @@ func (ps *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*Subscri
 
 	}
 	if allReady {
-		pCondSet.Manage(ps).MarkTrue(SequenceConditionSubscriptionsReady)
+		pCondSet.Manage(ss).MarkTrue(SequenceConditionSubscriptionsReady)
 	} else {
-		ps.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
+		ss.MarkSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none")
 	}
 }
 
 // PropagateChannelStatuses sets the ChannelStatuses and SequenceConditionChannelsReady based on the
 // status of the incoming channels.
-func (ps *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
-	ps.ChannelStatuses = make([]SequenceChannelStatus, len(channels))
+func (ss *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
+	ss.ChannelStatuses = make([]SequenceChannelStatus, len(channels))
 	allReady := true
 	// If there are no channels, treat that as a False case. Could go either way, but this seems right.
 	if len(channels) == 0 {
@@ -105,7 +108,7 @@ func (ps *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 
 	}
 	for i, c := range channels {
-		ps.ChannelStatuses[i] = SequenceChannelStatus{
+		ss.ChannelStatuses[i] = SequenceChannelStatus{
 			Channel: corev1.ObjectReference{
 				APIVersion: c.APIVersion,
 				Kind:       c.Kind,
@@ -117,48 +120,80 @@ func (ps *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Chan
 		// addressable, because it might be addressable but not ready.
 		address := c.Status.AddressStatus.Address
 		if address != nil {
-			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
+			ss.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionTrue}
 		} else {
-			ps.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
+			ss.ChannelStatuses[i].ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 			allReady = false
 		}
 
 		// Mark the Sequence address as the Address of the first channel.
 		if i == 0 {
-			ps.setAddress(address)
+			ss.setAddress(address)
 		}
 	}
 	if allReady {
-		pCondSet.Manage(ps).MarkTrue(SequenceConditionChannelsReady)
+		pCondSet.Manage(ss).MarkTrue(SequenceConditionChannelsReady)
 	} else {
-		ps.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
+		ss.MarkChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none")
 	}
 }
 
-func (ps *SequenceStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(SequenceConditionChannelsReady, reason, messageFormat, messageA...)
+func (ss *SequenceStatus) MarkChannelsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ss).MarkFalse(SequenceConditionChannelsReady, reason, messageFormat, messageA...)
 }
 
-func (ps *SequenceStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(SequenceConditionSubscriptionsReady, reason, messageFormat, messageA...)
+func (ss *SequenceStatus) MarkSubscriptionsNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ss).MarkFalse(SequenceConditionSubscriptionsReady, reason, messageFormat, messageA...)
 }
 
-func (ps *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
-	pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, reason, messageFormat, messageA...)
+func (ss *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, messageA ...interface{}) {
+	pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, reason, messageFormat, messageA...)
 }
 
-func (ps *SequenceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
-	ps.Address = address
+func (ss *SequenceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
+	ss.Address = address
 
 	if address == nil {
-		pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
 		return
 	}
 	if address.URL != nil || address.Hostname != "" {
-		pCondSet.Manage(ps).MarkTrue(SequenceConditionAddressable)
+		pCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
 	} else {
-		ps.Address.Hostname = ""
-		ps.Address.URL = nil
-		pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
+		ss.Address.Hostname = ""
+		ss.Address.URL = nil
+		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
 	}
+}
+
+// MarkDeprecated adds a warning condition that this object's spec is using deprecated fields
+// and will stop working in the future. Note that this does not affect the Ready condition.
+func (ss *SequenceStatus) MarkDestinationDeprecatedRef(reason, msg string) {
+	dc := apis.Condition{
+		Type:               StatusConditionTypeDeprecated,
+		Reason:             reason,
+		Status:             corev1.ConditionTrue,
+		Severity:           apis.ConditionSeverityWarning,
+		Message:            msg,
+		LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
+	}
+	for i, c := range ss.Conditions {
+		if c.Type == dc.Type {
+			ss.Conditions[i] = dc
+			return
+		}
+	}
+	ss.Conditions = append(ss.Conditions, dc)
+}
+
+// ClearDeprecated removes the StatusConditionTypeDeprecated warning condition. Note that this does not
+// affect the Ready condition.
+func (ss *SequenceStatus) ClearDeprecated() {
+	conds := make([]apis.Condition, 0, len(ss.Conditions))
+	for _, c := range ss.Conditions {
+		if c.Type != StatusConditionTypeDeprecated {
+			conds = append(conds, c)
+		}
+	}
+	ss.Conditions = conds
 }

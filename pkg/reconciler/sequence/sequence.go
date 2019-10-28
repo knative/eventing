@@ -110,6 +110,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 func (r *Reconciler) reconcile(ctx context.Context, s *v1alpha1.Sequence) error {
 	s.Status.InitializeConditions()
 
+	if s.Spec.Reply != nil {
+		if reply := s.Spec.Reply; reply.DeprecatedAPIVersion != "" || reply.DeprecatedKind != "" || reply.DeprecatedName != "" || reply.DeprecatedNamespace != "" {
+			s.Status.MarkDestinationDeprecatedRef("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
+		} else {
+			s.Status.ClearDeprecated()
+		}
+	}
+
 	// Reconciling sequence is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole sequence
 	// 2. For each of the Steps, create a Subscription to the previous Channel

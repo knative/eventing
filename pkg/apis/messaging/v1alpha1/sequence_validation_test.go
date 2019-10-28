@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -56,12 +55,8 @@ func makeValidReply(channelName string) *v1alpha1.Destination {
 
 func makeInvalidReply(channelName string) *v1alpha1.Destination {
 	return &v1alpha1.Destination{
-		Ref: &corev1.ObjectReference{
-			APIVersion: "messaging.knative.dev/v1alpha1",
-			Kind:       "inmemorychannel",
-			Namespace:  "notallowed",
-			Name:       channelName,
-		},
+		DeprecatedKind: "inmemorychannel",
+		DeprecatedName: channelName,
 	}
 }
 
@@ -156,19 +151,17 @@ func TestSequenceSpecValidation(t *testing.T) {
 			fe := apis.ErrMissingField("reply.name")
 			return fe
 		}(),
-		// TODO current destination ref allows setting the namespace, thus this fails.
-		//}, {
-		//	name: "valid sequence with invalid reply",
-		//	ts: &SequenceSpec{
-		//		ChannelTemplate: validChannelTemplate,
-		//		Steps:           []Destination{{URI: subscriberURI}},
-		//		Reply:           makeInvalidReply("reply-channel"),
-		//	},
-		//	want: func() *apis.FieldError {
-		//		fe := apis.ErrDisallowedFields("reply.Namespace")
-		//		fe.Details = "only name, apiVersion and kind are supported fields"
-		//		return fe
-		//	}(),
+	}, {
+		name: "valid sequence with invalid reply",
+		ts: &SequenceSpec{
+			ChannelTemplate: validChannelTemplate,
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
+			Reply:           makeInvalidReply("reply-channel"),
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply.apiVersion")
+			return fe
+		}(),
 	}}
 
 	for _, test := range tests {
