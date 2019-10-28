@@ -156,7 +156,13 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.CronJobSour
 		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	source.Status.MarkSink(sinkURI)
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
 
 	_, err = cron.ParseStandard(source.Spec.Schedule)
 	if err != nil {
