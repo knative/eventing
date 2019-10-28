@@ -20,7 +20,6 @@
 
 # Setup env vars to override the default settings
 export PROJECT_NAME="knative-eventing-performance"
-export SERVICE_ACCOUNT_NAME="mako-job"
 export BENCHMARK_ROOT_PATH="$GOPATH/src/knative.dev/eventing/test/performance/benchmarks"
 
 source vendor/knative.dev/test-infra/scripts/performance-tests.sh

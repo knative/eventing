@@ -20,13 +20,12 @@ import (
 	"context"
 	"time"
 
-	"knative.dev/pkg/apis"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/pkg/apis"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 

@@ -61,7 +61,7 @@ func WithSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTemplateSp
 	}
 }
 
-func WithSequenceSteps(steps []v1alpha1.SubscriberSpec) SequenceOption {
+func WithSequenceSteps(steps []pkgv1alpha1.Destination) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Steps = steps
 	}
