@@ -26,6 +26,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 func TestCronJobSource(t *testing.T) {
@@ -52,7 +53,7 @@ func TestCronJobSource(t *testing.T) {
 		eventingtesting.WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: schedule,
 			Data:     data,
-			Sink:     resources.ServiceRef(loggerPodName),
+			Sink:     &apisv1alpha1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
 	client.CreateCronJobSourceOrFail(cronJobSource)
