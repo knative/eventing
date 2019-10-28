@@ -21,25 +21,16 @@ import (
 	"fmt"
 	"testing"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-
-	//	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
-
-	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
 
 var (
@@ -90,112 +81,6 @@ func TestObjectReference_BadDynamicInterface(t *testing.T) {
 		t.Fatalf("Unexpected actual. Expected nil. Actual '%v'", actual)
 	}
 }
-
-func TestSubscriberSpec(t *testing.T) {
-	testCases := map[string]struct {
-		Sub         *v1alpha1.SubscriberSpec
-		Objects     []runtime.Object
-		Expected    string
-		ExpectedErr string
-	}{
-		"nil": {
-			Sub:      nil,
-			Expected: "",
-		},
-		"empty": {
-			Sub:      &v1alpha1.SubscriberSpec{},
-			Expected: "",
-		},
-		"URI": {
-			Sub: &v1alpha1.SubscriberSpec{
-				URI: &uri,
-			},
-			Expected: uri,
-		},
-		"Doesn't exist": {
-			Sub: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       "doesnt-exist",
-				},
-			},
-			ExpectedErr: "services \"doesnt-exist\" not found",
-		},
-		"K8s Service": {
-			Sub: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "Service",
-					Name:       "does-exist",
-				},
-			},
-			Objects: []runtime.Object{
-				k8sService("does-exist"),
-			},
-			Expected: fmt.Sprintf("http://does-exist.%s.svc.cluster.local/", testNS),
-		},
-		"Addressable": {
-			Sub: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "eventing.knative.dev/v1alpha1",
-					Kind:       "Channel",
-					Name:       "does-exist",
-					Namespace:  testNS,
-				},
-			},
-			Objects: []runtime.Object{
-				channel("does-exist"),
-			},
-			Expected: channelURL,
-		},
-		"Non-Addressable": {
-			Sub: &v1alpha1.SubscriberSpec{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1",
-					Kind:       "ConfigMap",
-					Name:       "does-exist",
-				},
-			},
-			Objects: []runtime.Object{
-				configMap("does-exist"),
-			},
-			ExpectedErr: "status does not contain address",
-		},
-	}
-
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			ctx, dc := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.Objects...)
-			addressableTracker := NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0)
-			// Not using the testing package due to a cyclic dependency.
-			sub := &v1alpha1.Subscription{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "subname",
-					Namespace: testNS,
-				},
-			}
-			if tc.Sub != nil && tc.Sub.Ref != nil {
-				sub.Spec = v1alpha1.SubscriptionSpec{
-					Subscriber: &apisv1alpha1.Destination{
-						Ref: tc.Sub.Ref,
-					},
-				}
-			}
-			track := addressableTracker.TrackInNamespace(sub)
-			actual, err := SubscriberSpec(ctx, dc, testNS, tc.Sub, addressableTracker, track)
-			if err != nil {
-				if tc.ExpectedErr == "" || tc.ExpectedErr != err.Error() {
-					t.Fatalf("Unexpected error. Expected '%s'. Actual '%s'.", tc.ExpectedErr, err.Error())
-				}
-			}
-			if tc.Expected != actual {
-				t.Fatalf("Unexpected URL. Expected '%s'. Actual '%s'", tc.Expected, actual)
-			}
-		})
-	}
-}
-
 func k8sService(name string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
