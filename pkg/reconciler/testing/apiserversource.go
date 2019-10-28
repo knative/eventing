@@ -65,6 +65,12 @@ func WithApiServerSourceSink(uri string) ApiServerSourceOption {
 	}
 }
 
+func WithApiServerSourceSinkDepRef(uri string) ApiServerSourceOption {
+	return func(s *v1alpha1.ApiServerSource) {
+		s.Status.MarkSinkWarnRefDeprecated(uri)
+	}
+}
+
 func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
 	name := utils.GenerateFixedName(s, fmt.Sprintf("apiserversource-%s", s.Name))

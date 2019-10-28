@@ -18,8 +18,11 @@ package v1alpha1
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	"knative.dev/eventing/pkg/apis/duck"
+	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/duck"
 )
 
 const (
@@ -56,6 +59,22 @@ func (s *ApiServerSourceStatus) MarkSink(uri string) {
 	s.SinkURI = uri
 	if len(uri) > 0 {
 		apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
+	} else {
+		apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+	}
+}
+
+// MarkSinkWarnDeprecated sets the condition that the source has a sink configured and warns ref is deprecated.
+func (s *ApiServerSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
+	s.SinkURI = uri
+	if len(uri) > 0 {
+		c := apis.Condition{
+			Type:     ApiServerConditionSinkProvided,
+			Status:   corev1.ConditionTrue,
+			Severity: apis.ConditionSeverityError,
+			Message:  "Using deprecated object ref fields when specifying spec.sink. Update to spec.sink.ref. These will be removed in 0.11.",
+		}
+		apiserverCondSet.Manage(s).SetCondition(c)
 	} else {
 		apiserverCondSet.Manage(s).MarkUnknown(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
