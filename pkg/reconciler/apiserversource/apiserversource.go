@@ -171,7 +171,13 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	source.Status.MarkSink(sinkURI)
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
