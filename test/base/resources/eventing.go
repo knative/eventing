@@ -20,6 +20,7 @@ package resources
 
 import (
 	"fmt"
+
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/v1alpha1"
 
