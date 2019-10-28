@@ -46,7 +46,6 @@ spec:
                 - "--sink=http://channel-imc-kn-channel.default.svc.cluster.local"
                 - "--aggregator=channel-imc-aggregator:10000"
                 - "--pace=100:10,400:20,800:30,1000:60,2000:60,3000:60"
-                - "--verbose"
               env:
                 - name: GOGC
                   value: "off"
@@ -98,11 +97,10 @@ spec:
             - name: aggregator
               image: knative.dev/eventing/test/test_images/performance
               args:
-                - "--role=aggregator"
-                # set to the number of sender-receiver
+                - "--roles=aggregator"
+                # set to the number of sender + receiver (same image that does both counts 2)
                 - "--expect-records=2"
                 - "--mako-tags=channel=imc"
-                - "--verbose"
                 - "--benchmark-key=5683818216292352"
                 - "--benchmark-name=Development - Channel Latency & Throughput"
               ports:
