@@ -20,8 +20,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	"knative.dev/eventing/pkg/apis/duck"
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/duck"
 )
 
 const (
