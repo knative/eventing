@@ -112,7 +112,6 @@ spec:
                         type: string
                         description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
                   reply:
-                    type: object
                     description: "a reference to where the result of the subscriber of this branch gets sent to. If not specified, the result is sent to the Parallel reply."
                     anyOf:
                       - type: object

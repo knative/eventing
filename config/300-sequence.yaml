@@ -101,7 +101,6 @@ spec:
                 spec:
                   type: object
             reply:
-              type: object
               description: "a reference to where the result of the last subscriber gets sent to."
               anyOf:
                 - type: object
