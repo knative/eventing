@@ -56,10 +56,10 @@ var (
 		},
 	}
 	deprecatedSubscriber = &apisv1alpha1.Destination{
-			DeprecatedKind:       "Service",
-			DeprecatedAPIVersion: "serving.knative.dev/v1alpha1",
-			DeprecatedName:  "subscriber_test",
-			DeprecatedNamespace:  "test_ns",
+		DeprecatedKind:       "Service",
+		DeprecatedAPIVersion: "serving.knative.dev/v1alpha1",
+		DeprecatedName:       "subscriber_test",
+		DeprecatedNamespace:  "test_ns",
 	}
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
@@ -347,42 +347,42 @@ func TestTriggerSpecValidation(t *testing.T) {
 			return errs.ViaField("subscriber")
 		}(),
 	},
-	{
-		name: "missing broker",
-		ts: &TriggerSpec{
-			Broker:     "",
-			Filter:     validSourceAndTypeFilter,
-			Subscriber: validSubscriber,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("broker")
-			return fe
-		}(),
-	}, {
-		name: "valid empty filter",
-		ts: &TriggerSpec{
-			Broker:     "test_broker",
-			Filter:     validEmptyFilter,
-			Subscriber: validSubscriber,
-		},
-		want: &apis.FieldError{},
-	}, {
-		name: "valid SourceAndType filter",
-		ts: &TriggerSpec{
-			Broker:     "test_broker",
-			Filter:     validSourceAndTypeFilter,
-			Subscriber: validSubscriber,
-		},
-		want: &apis.FieldError{},
-	}, {
-		name: "valid Attributes filter",
-		ts: &TriggerSpec{
-			Broker:     "test_broker",
-			Filter:     validAttributesFilter,
-			Subscriber: validSubscriber,
-		},
-		want: &apis.FieldError{},
-	}}
+		{
+			name: "missing broker",
+			ts: &TriggerSpec{
+				Broker:     "",
+				Filter:     validSourceAndTypeFilter,
+				Subscriber: validSubscriber,
+			},
+			want: func() *apis.FieldError {
+				fe := apis.ErrMissingField("broker")
+				return fe
+			}(),
+		}, {
+			name: "valid empty filter",
+			ts: &TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			},
+			want: &apis.FieldError{},
+		}, {
+			name: "valid SourceAndType filter",
+			ts: &TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validSourceAndTypeFilter,
+				Subscriber: validSubscriber,
+			},
+			want: &apis.FieldError{},
+		}, {
+			name: "valid Attributes filter",
+			ts: &TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validAttributesFilter,
+				Subscriber: validSubscriber,
+			},
+			want: &apis.FieldError{},
+		}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

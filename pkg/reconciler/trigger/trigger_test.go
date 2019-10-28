@@ -19,9 +19,10 @@ package trigger
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/resolver"
 	"net/url"
 	"testing"
+
+	"knative.dev/pkg/resolver"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
