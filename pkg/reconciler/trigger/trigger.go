@@ -319,6 +319,7 @@ func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) er
 		t.Status.MarkBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection")
 		return err
 	}
+	current = current.DeepCopy()
 	if current.Labels == nil {
 		current.Labels = map[string]string{}
 	}

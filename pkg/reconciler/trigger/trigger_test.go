@@ -152,6 +152,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithInjectionAnnotation(injectionAnnotation)),
+				reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{})),
 			},
 			WantErr: true,
 			WantEvents: []string{
@@ -163,8 +165,12 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
-					reconciletesting.WithTriggerBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection"),
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
 				),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{v1alpha1.InjectionAnnotation: injectionAnnotation})),
 			}},
 		}, {
 			Name: "Default broker found, with injection annotation enabled",
