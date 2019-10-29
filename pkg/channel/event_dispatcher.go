@@ -94,9 +94,11 @@ func (d *EventDispatcher) DispatchEventWithDelivery(ctx context.Context, event c
 	// Default to replying with the original event. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
 	response := &event
+	var nonerrctx context.Context = ctx
 	if destination != "" {
 		destinationURL := d.resolveURL(destination)
-		ctx, response, err = d.executeRequest(ctx, destinationURL, event)
+
+		nonerrctx, response, err = d.executeRequest(ctx, destinationURL, event)
 		if err != nil {
 
 			if delivery != nil && delivery.DeadLetterSink != "" {
@@ -122,13 +124,13 @@ func (d *EventDispatcher) DispatchEventWithDelivery(ctx context.Context, event c
 
 	if reply != "" && response != nil {
 		replyURL := d.resolveURL(reply)
-		_, _, err = d.executeRequest(ctx, replyURL, *response)
+		_, _, err = d.executeRequest(nonerrctx, replyURL, *response)
 		if err != nil {
 			if delivery != nil && delivery.DeadLetterSink != "" {
 				deadLetterURL := d.resolveURL(delivery.DeadLetterSink)
 
 				// TODO: decorate event with deadletter attributes
-				_, _, err2 := d.executeRequest(ctx, deadLetterURL, event)
+				_, _, err2 := d.executeRequest(nonerrctx, deadLetterURL, event)
 				if err2 != nil {
 					return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", replyURL, err, deadLetterURL, err2)
 				}
