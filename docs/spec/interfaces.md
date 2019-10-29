@@ -11,7 +11,7 @@ an _Addressable_ is a _Channel_.
 
 ### Control Plane
 
-An **Addressable** resource MUST expose a `status.address.hostname` field. The
+An **Addressable** resource MUST expose a `status.address.url` field. The
 _hostname_ value is a cluster-resolvable DNS name which is capable of receiving
 event deliveries. _Addressable_ resources may be referenced in the `reply`
 section of a _Subscription_, and also by other custom resources acting as an
@@ -28,15 +28,15 @@ it previously indicated success.
 
 ## Callable
 
-A **Callable** resource represents an _Addressable_ endpoint which receives
-events and optionally returns events to forward downstream. One example of a
+A **Callable** resource represents an _Addressable_ endpoint which receives an
+event as input and optionally returns an event to forward downstream. One example of a
 _Callable_ is a function. Note that all _Callable_ resources are _Addressable_
 (they accept an event and return a status code when completed), but not all
 _Addressable_ resources are _Callable_.
 
 ### Control Plane
 
-A **Callable** resource MUST expose a `status.address.hostname` field (like
+A **Callable** resource MUST expose a `status.address.url` field (like
 _Addressable_). The _hostname_ value is a cluster-resolvable DNS name which is
 capable of receiving event deliveries and returning a resulting event in the
 reply.. _Callable_ resources may be referenced in the `subscriber` section of a
@@ -52,8 +52,8 @@ represent the return type of the _Callable_.
 
 ### Data Plane
 
-The **Callable** resource receives one event and returns zero or more events in
-response. The returned events are not required to be related to the received
+The **Callable** resource receives one event and returns no or a single event in the
+response. A returned event is not required to be related to the received
 event. The _Callable_ should return a successful response if the event was
 processed successfully.
 
