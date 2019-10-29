@@ -19,6 +19,7 @@ package tracing
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"knative.dev/eventing/test/common"
 	"knative.dev/pkg/test/zipkin"
@@ -29,7 +30,9 @@ import (
 func Setup(t *testing.T, client *common.Client) {
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.
-	zipkin.SetupZipkinTracing(client.Kube.Kube, t.Logf)
+	if !zipkin.SetupZipkinTracing(client.Kube.Kube, t.Logf) {
+		t.Fatalf("Unable to set up Zipkin for tracking")
+	}
 	setTracingConfigToZipkin(t, client)
 }
 
@@ -50,5 +53,7 @@ func setTracingConfigToZipkin(t *testing.T, client *common.Client) {
 		if err != nil {
 			t.Fatalf("Unable to set the ConfigMap: %v", err)
 		}
+		// Wait for 1 minute to let the ConfigMap be synced up.
+		time.Sleep(1 * time.Minute)
 	})
 }
