@@ -18,6 +18,7 @@ package containersource
 
 import (
 	"context"
+
 	"knative.dev/pkg/resolver"
 
 	"k8s.io/client-go/tools/cache"

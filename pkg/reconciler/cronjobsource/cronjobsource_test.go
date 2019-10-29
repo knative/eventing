@@ -19,8 +19,9 @@ package cronjobsource
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/resolver"
 	"testing"
+
+	"knative.dev/pkg/resolver"
 
 	"knative.dev/pkg/configmap"
 
