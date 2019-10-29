@@ -25,6 +25,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
+
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
 // +genclient
@@ -111,9 +113,8 @@ type SubscriptionSpec struct {
 	Reply *ReplyStrategy `json:"reply,omitempty"`
 
 	// Delivery configuration
-	// TODO: replace with duck type
 	// +optional
-	Delivery *SubscriptionDeliverySpec `json:"delivery,omitempty"`
+	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // ReplyStrategy specifies the handling of the Subscriber's returned replies.
@@ -124,12 +125,6 @@ type ReplyStrategy struct {
 	//  it will be reflected in the Subscription's status.
 	// +optional
 	Channel *apisv1alpha1.Destination `json:"channel,omitempty"`
-}
-
-// TODO: USE DUCK TYPE
-type SubscriptionDeliverySpec struct {
-	// +optional
-	DeadLetterSink *apisv1alpha1.Destination `json:"deadLetterSink,omitempty"`
 }
 
 // SubscriptionStatus (computed) for a subscription

@@ -436,6 +436,12 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 	if subscription.Spec.Delivery == nil || subscription.Spec.Delivery.DeadLetterSink == nil {
 		return "", nil
 	}
+
+	// Populate the namespace for the subscriber since it is in the namespace
+	if subscription.Spec.Delivery.DeadLetterSink.Ref != nil {
+		subscription.Spec.Delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
+	}
+
 	return r.destinationResolver.URIFromDestination(*subscription.Spec.Delivery.DeadLetterSink, subscription)
 }
 
