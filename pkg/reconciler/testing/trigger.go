@@ -18,7 +18,6 @@ package testing
 
 import (
 	"context"
-
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -74,6 +73,20 @@ func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerO
 				Kind:       gvk.Kind,
 				Name:       name,
 			},
+		}
+	}
+}
+
+func WithTriggerSubscriberRefAndURIReference(gvk metav1.GroupVersionKind, name string, rawuri string) TriggerOption {
+	uri, _ := apis.ParseURL(rawuri)
+	return func(t *v1alpha1.Trigger) {
+		t.Spec.Subscriber = &apisv1alpha1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+			},
+			URI: uri,
 		}
 	}
 }

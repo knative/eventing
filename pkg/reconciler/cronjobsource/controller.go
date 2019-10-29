@@ -18,19 +18,20 @@ package cronjobsource
 
 import (
 	"context"
+	"knative.dev/pkg/resolver"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
-	cronjobsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
+	cronjobsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
+	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -75,7 +76,7 @@ func NewController(
 
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
+	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	cronJobSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

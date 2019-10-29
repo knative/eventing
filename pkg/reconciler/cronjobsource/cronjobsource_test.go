@@ -19,6 +19,7 @@ package cronjobsource
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/resolver"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -31,33 +32,22 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	"knative.dev/pkg/controller"
+
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
 	"knative.dev/eventing/pkg/utils"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/controller"
 
-	. "knative.dev/eventing/pkg/reconciler/testing"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 var (
-	sinkRef = corev1.ObjectReference{
-		Name:       sinkName,
-		Kind:       "Channel",
-		APIVersion: "messaging.knative.dev/v1alpha1",
-	}
-	brokerRef = corev1.ObjectReference{
-		Name:       sinkName,
-		Kind:       "Broker",
-		APIVersion: "eventing.knative.dev/v1alpha1",
-	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS
-
 	trueVal  = true
 	ownerRef = metav1.OwnerReference{
 		APIVersion:         "sources.eventing.knative.dev/v1alpha1",
@@ -68,6 +58,25 @@ var (
 		BlockOwnerDeletion: &trueVal,
 	}
 	eventTypeName = fmt.Sprintf("dev.knative.cronjob.event-%s", sourceUID)
+
+	sinkDest = apisv1alpha1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1alpha1",
+		},
+	}
+	brokerDest = apisv1alpha1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
+	}
+	sinkDNS          = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI          = "http://" + sinkDNS
+	sinkURIReference = "/foo"
+	sinkTargetURI    = sinkURI + sinkURIReference
 )
 
 const (
@@ -106,7 +115,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: "invalid schedule",
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -127,7 +136,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: "invalid schedule",
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -145,7 +154,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -158,7 +167,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -175,7 +184,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -184,7 +193,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableReceiveAdapter(sinkRef),
+				makeAvailableReceiveAdapter(sinkDest),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -196,7 +205,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -217,7 +226,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &brokerRef,
+						Sink:     &brokerDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -226,7 +235,7 @@ func TestAllCases(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerAddress(sinkDNS),
 				),
-				makeAvailableReceiveAdapter(brokerRef),
+				makeAvailableReceiveAdapter(brokerDest),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -238,7 +247,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &brokerRef,
+						Sink:     &brokerDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -267,7 +276,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &brokerRef,
+						Sink:     &brokerDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -282,7 +291,7 @@ func TestAllCases(t *testing.T) {
 					WithEventTypeSource(sourcesv1alpha1.CronJobEventSource(testNS, sourceName)),
 					WithEventTypeBroker(sinkName),
 					WithEventTypeOwnerReference(ownerRef)),
-				makeAvailableReceiveAdapter(brokerRef),
+				makeAvailableReceiveAdapter(brokerDest),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -294,7 +303,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &brokerRef,
+						Sink:     &brokerDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -326,7 +335,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -335,7 +344,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableReceiveAdapter(sinkRef),
+				makeAvailableReceiveAdapter(sinkDest),
 			},
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
@@ -347,7 +356,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -368,7 +377,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -383,7 +392,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableReceiveAdapter(sinkRef),
+				makeAvailableReceiveAdapter(sinkDest),
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -391,7 +400,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -415,7 +424,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -431,7 +440,7 @@ func TestAllCases(t *testing.T) {
 					WithInitChannelConditions,
 					WithChannelAddress(sinkDNS),
 				),
-				makeAvailableReceiveAdapter(sinkRef),
+				makeAvailableReceiveAdapter(sinkDest),
 				NewEventType(eventTypeName, testNS,
 					WithEventTypeLabels(resources.Labels(sourceName)),
 					WithEventTypeType(sourcesv1alpha1.CronJobEventType),
@@ -445,7 +454,7 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
-						Sink:     &sinkRef,
+						Sink:     &sinkDest,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
@@ -477,7 +486,8 @@ func TestAllCases(t *testing.T) {
 			eventTypeLister:     listers.GetEventTypeLister(),
 			receiveAdapterImage: image,
 		}
-		r.sinkReconciler = duck.NewSinkReconciler(ctx, func(types.NamespacedName) {})
+		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
+
 		return r
 	},
 		true,
@@ -485,18 +495,18 @@ func TestAllCases(t *testing.T) {
 	))
 }
 
-func makeAvailableReceiveAdapter(ref corev1.ObjectReference) *appsv1.Deployment {
-	ra := makeReceiveAdapterWithSink(ref)
+func makeAvailableReceiveAdapter(dest apisv1alpha1.Destination) *appsv1.Deployment {
+	ra := makeReceiveAdapterWithSink(dest)
 	WithDeploymentAvailable()(ra)
 	return ra
 }
 
-func makeReceiveAdapterWithSink(ref corev1.ObjectReference) *appsv1.Deployment {
+func makeReceiveAdapterWithSink(dest apisv1alpha1.Destination) *appsv1.Deployment {
 	source := NewCronJobSource(sourceName, testNS,
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,
 			Data:     testData,
-			Sink:     &ref,
+			Sink:     &dest,
 		},
 		),
 		WithCronJobSourceUID(sourceUID),

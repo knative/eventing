@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
@@ -69,36 +68,6 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 
 func isDestinationNilOrEmpty(d *apisv1alpha1.Destination) bool {
 	return d == nil || equality.Semantic.DeepEqual(d, &apisv1alpha1.Destination{})
-}
-
-// TODO: Remove this once SubscriberSpec gets removed.
-func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
-	var errs *apis.FieldError
-
-	fieldsSet := make([]string, 0, 0)
-	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		fieldsSet = append(fieldsSet, "ref")
-	}
-	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
-		fieldsSet = append(fieldsSet, "dnsName")
-	}
-	if s.URI != nil && *s.URI != "" {
-		fieldsSet = append(fieldsSet, "uri")
-	}
-	if len(fieldsSet) == 0 {
-		errs = errs.Also(apis.ErrMissingOneOf("ref", "dnsName", "uri"))
-	} else if len(fieldsSet) > 1 {
-		errs = errs.Also(apis.ErrMultipleOneOf(fieldsSet...))
-	}
-
-	// If Ref given, check the fields.
-	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		fe := IsValidObjectReference(*s.Ref)
-		if fe != nil {
-			errs = errs.Also(fe.ViaField("ref"))
-		}
-	}
-	return errs
 }
 
 func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {

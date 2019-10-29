@@ -107,7 +107,7 @@ func TestParallel(t *testing.T) {
 		parallel := eventingtesting.NewParallel(tc.name, client.Namespace,
 			eventingtesting.WithParallelChannelTemplateSpec(channelTemplate),
 			eventingtesting.WithParallelBranches(parallelBranches),
-			eventingtesting.WithParallelReply(pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)))
+			eventingtesting.WithParallelReply(&pkgv1alpha1.Destination{Ref: pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)}))
 
 		client.CreateParallelOrFail(parallel)
 

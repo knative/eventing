@@ -227,7 +227,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			// have passed validation.
 			reply.Channel.DeprecatedNamespace = subscription.Namespace
 			// Add a condition warning that the fields are deprecated.
-			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using depreated fields when specifying subscription.spec.reply. These will be removed in 0.11")
+			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in 0.11")
 		}
 		replyURIStr, err := r.destinationResolver.URIFromDestination(*reply.Channel, subscription)
 		if err != nil {

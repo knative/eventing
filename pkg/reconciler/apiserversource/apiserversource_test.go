@@ -216,7 +216,7 @@ func TestReconcile(t *testing.T) {
 					// Status Update:
 					WithInitApiServerSourceConditions,
 					WithApiServerSourceDeployed,
-					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceSinkDepRef(sinkURI),
 					WithApiServerSourceEventTypes,
 					WithApiServerSourceStatusObservedGeneration(generation),
 				),
