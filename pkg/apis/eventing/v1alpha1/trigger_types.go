@@ -31,6 +31,9 @@ const (
 	// DependencyAnnotation is the annotation key used to mark the sources that the Trigger depends on.
 	// This will be used when the kn client creates an importer and trigger pair for the user such that the trigger only receives events produced by the paired importer.
 	DependencyAnnotation = "knative.dev/dependency"
+	// InjectionAnnotation is the annotation key used to enable knative eventing injection for a namespace and automatically create a default broker.
+	// This will be used when the client creates a trigger paired with default broker and the default broker doesn't exist in the namespace
+	InjectionAnnotation = "knative-eventing-injection"
 )
 
 // +genclient

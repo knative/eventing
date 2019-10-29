@@ -22,12 +22,12 @@ import (
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
-	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
-
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
 )
 
 func TestNew(t *testing.T) {

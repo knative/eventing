@@ -69,6 +69,7 @@ type Reconciler struct {
 	subscriptionLister messaginglisters.SubscriptionLister
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister
+	namespaceLister    corev1listers.NamespaceLister
 	// Regular tracker to track static resources. In particular, it tracks Broker's changes.
 	tracker tracker.Interface
 	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
@@ -164,6 +165,12 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		if apierrs.IsNotFound(err) {
 			t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
+			_, needDefaultBroker := t.GetAnnotations()[v1alpha1.InjectionAnnotation]
+			if t.Spec.Broker == "default" && needDefaultBroker {
+				if e := r.labelNamespace(ctx, t); e != nil {
+					logging.FromContext(ctx).Error("Unable to label the namespace", zap.Error(e))
+				}
+			}
 		} else {
 			t.Status.MarkBrokerFailed("BrokerGetFailed", "Failed to get broker")
 		}
@@ -310,6 +317,25 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	}
 
 	return trig, err
+}
+
+// labelNamespace will label namespace with knative-eventing-injection=enabled
+func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) error {
+	current, err := r.namespaceLister.Get(t.Namespace)
+	if err != nil {
+		t.Status.MarkBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection")
+		return err
+	}
+	current = current.DeepCopy()
+	if current.Labels == nil {
+		current.Labels = map[string]string{}
+	}
+	current.Labels["knative-eventing-injection"] = "enabled"
+	if _, err = r.KubeClientSet.CoreV1().Namespaces().Update(current); err != nil {
+		t.Status.MarkBrokerFailed("NamespaceUpdateFailed", "Failed to label the namespace resource with knative-eventing-injection")
+		return err
+	}
+	return nil
 }
 
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
