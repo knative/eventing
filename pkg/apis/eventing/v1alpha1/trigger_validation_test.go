@@ -61,9 +61,14 @@ var (
 		DeprecatedName:       "subscriber_test",
 		DeprecatedNamespace:  "test_ns",
 	}
+	// Dependency annotation
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
+	// Create default broker annotation
+	validInjectionAnnotation   = "enabled"
+	invalidInjectionAnnotation = "disabled"
+	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -201,6 +206,42 @@ func TestTriggerValidation(t *testing.T) {
 					dependencyAnnotationPath + "." + "name",
 					dependencyAnnotationPath + "." + "apiVersion"},
 				Message: "missing field(s)",
+			},
+		},
+		{
+			name: "invalid injection annotation value",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						InjectionAnnotation: invalidInjectionAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "default",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{injectionAnnotationPath},
+				Message: "The provided injection annotation value can only be \"enabled\", not \"disabled\"",
+			},
+		},
+		{
+			name: "valid injection annotation value, non-default broker specified",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						InjectionAnnotation: validInjectionAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "test-broker",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{injectionAnnotationPath},
+				Message: "The provided injection annotation is only used for default broker, but non-default broker specified here: \"test-broker\"",
 			},
 		},
 	}
