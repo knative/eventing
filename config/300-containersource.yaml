@@ -61,7 +61,7 @@ spec:
             template:
               type: object
             sink:
-              anyOf:
+              oneOf:
                 - type: object
                   description: "the destination that should receive events."
                   properties:

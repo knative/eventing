@@ -62,7 +62,7 @@ spec:
               type: string
               description: "name of the ServiceAccount to use to run the receive adapter. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/."
             sink:
-              anyOf:
+              oneOf:
               - type: object
                 description: "the destination that should receive events."
                 properties:
