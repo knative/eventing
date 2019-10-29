@@ -18,6 +18,7 @@ package cronjobsource
 
 import (
 	"context"
+
 	"knative.dev/pkg/resolver"
 
 	"github.com/kelseyhightower/envconfig"

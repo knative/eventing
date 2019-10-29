@@ -19,9 +19,10 @@ package cronjobsource
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/resolver"
 	"reflect"
 	"time"
+
+	"knative.dev/pkg/resolver"
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
