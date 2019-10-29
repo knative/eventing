@@ -18,12 +18,11 @@ package cronjobsource
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
-	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/resolver"
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
@@ -35,16 +34,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/controller"
+	pkgLogging "knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
+
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/cronjobsource/resources"
-	"knative.dev/pkg/controller"
-	pkgLogging "knative.dev/pkg/logging"
+)
+
+var (
+	deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 )
 
 const (
@@ -60,7 +64,7 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
-	env envConfig
+	receiveAdapterImage string
 
 	// listers index properties about resources
 	cronjobLister    listers.CronJobSourceLister
@@ -68,7 +72,7 @@ type Reconciler struct {
 	eventTypeLister  eventinglisters.EventTypeLister
 
 	loggingContext context.Context
-	sinkReconciler *duck.SinkReconciler
+	sinkResolver   *resolver.URIResolver
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
 }
@@ -83,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
+		logging.FromContext(ctx).Error("invalid resource key")
 		return nil
 	}
 
@@ -91,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	original, err := r.cronjobLister.CronJobSources(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("CronJobSource key in work queue no longer exists", zap.Any("key", key))
+		logging.FromContext(ctx).Error("CronJobSource key in work queue no longer exists")
 		return nil
 	} else if err != nil {
 		return err
@@ -120,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return err
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSource) error {
+func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.CronJobSource) error {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -128,79 +132,60 @@ func (r *Reconciler) reconcile(ctx context.Context, cronjob *v1alpha1.CronJobSou
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
 	// 3. Create the EventType that it can emit.
 	//     - Will be garbage collected by K8s when this CronJobSource is deleted.
-	cronjob.Status.ObservedGeneration = cronjob.Generation
+	source.Status.ObservedGeneration = source.Generation
 
-	cronjob.Status.InitializeConditions()
+	source.Status.InitializeConditions()
 
-	_, err := cron.ParseStandard(cronjob.Spec.Schedule)
+	dest := source.Spec.Sink.DeepCopy()
+	if dest.Ref != nil {
+		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is
+		// no Namespace defined in dest.Ref, we will use the Namespace of the source
+		// as the Namespace of dest.Ref.
+		if dest.Ref.Namespace == "" {
+			//TODO how does this work with deprecated fields
+			dest.Ref.Namespace = source.GetNamespace()
+		}
+	} else if dest.DeprecatedName != "" && dest.DeprecatedNamespace == "" {
+		// If Ref is nil and the deprecated ref is present, we need to check for
+		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
+		// removed.
+		dest.DeprecatedNamespace = source.GetNamespace()
+	}
+
+	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
 	if err != nil {
-		cronjob.Status.MarkInvalidSchedule("Invalid", "")
-		return fmt.Errorf("invalid schedule: %v", err)
-	}
-	cronjob.Status.MarkSchedule()
-
-	if cronjob.Spec.Sink == nil {
-		cronjob.Status.MarkNoSink("Missing", "Sink missing from spec")
-		return errors.New("spec.sink missing")
-	}
-
-	sinkObjRef := cronjob.Spec.Sink
-	if sinkObjRef.Namespace == "" {
-		sinkObjRef.Namespace = cronjob.Namespace
-	}
-
-	cronjobDesc := fmt.Sprintf("%s/%s,%s", cronjob.Namespace, cronjob.Name, cronjob.GroupVersionKind().String())
-	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, cronjob, cronjobDesc)
-	if err != nil {
-		cronjob.Status.MarkNoSink("NotFound", "")
+		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	cronjob.Status.MarkSink(sinkURI)
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
 
-	ra, err := r.createReceiveAdapter(ctx, cronjob, sinkURI)
+	_, err = cron.ParseStandard(source.Spec.Schedule)
+	if err != nil {
+		source.Status.MarkInvalidSchedule("Invalid", "")
+		return fmt.Errorf("invalid schedule: %v", err)
+	}
+	source.Status.MarkSchedule()
+
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
 		return fmt.Errorf("creating receive adapter: %v", err)
 	}
-	cronjob.Status.PropagateDeploymentAvailability(ra)
+	source.Status.PropagateDeploymentAvailability(ra)
 
-	_, err = r.reconcileEventType(ctx, cronjob)
+	_, err = r.reconcileEventType(ctx, source)
 	if err != nil {
-		cronjob.Status.MarkNoEventType("EventTypeReconcileFailed", "")
+		source.Status.MarkNoEventType("EventTypeReconcileFailed", "")
 		return fmt.Errorf("reconciling event types: %v", err)
 	}
-	cronjob.Status.MarkEventType()
+	source.Status.MarkEventType()
 
-	return nil
-}
-
-func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
-
-	for _, rsrc := range []struct {
-		key   string
-		field string
-	}{{
-		key:   "Request.CPU",
-		field: src.Spec.Resources.Requests.ResourceCPU,
-	}, {
-		key:   "Request.Memory",
-		field: src.Spec.Resources.Requests.ResourceMemory,
-	}, {
-		key:   "Limit.CPU",
-		field: src.Spec.Resources.Limits.ResourceCPU,
-	}, {
-		key:   "Limit.Memory",
-		field: src.Spec.Resources.Limits.ResourceMemory,
-	}} {
-		// In the event the field isn't specified, we assign a default in the receive_adapter
-		if rsrc.field != "" {
-			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
-				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %q, Error: %s", rsrc.key, rsrc.field, err)
-				return fmt.Errorf("incorrect resource specification, %s: %q: %v", rsrc.key, rsrc.field, err)
-			}
-		}
-	}
-	src.Status.MarkResourcesCorrect()
 	return nil
 }
 
@@ -220,7 +205,7 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	}
 
 	adapterArgs := resources.ReceiveAdapterArgs{
-		Image:         r.env.Image,
+		Image:         r.receiveAdapterImage,
 		Source:        src,
 		Labels:        resources.Labels(src.Name),
 		SinkURI:       sinkURI,
@@ -255,6 +240,35 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Cro
 	return ra, nil
 }
 
+func checkResourcesStatus(src *v1alpha1.CronJobSource) error {
+	for _, rsrc := range []struct {
+		key   string
+		field string
+	}{{
+		key:   "Request.CPU",
+		field: src.Spec.Resources.Requests.ResourceCPU,
+	}, {
+		key:   "Request.Memory",
+		field: src.Spec.Resources.Requests.ResourceMemory,
+	}, {
+		key:   "Limit.CPU",
+		field: src.Spec.Resources.Limits.ResourceCPU,
+	}, {
+		key:   "Limit.Memory",
+		field: src.Spec.Resources.Limits.ResourceMemory,
+	}} {
+		// In the event the field isn't specified, we assign a default in the receive_adapter
+		if rsrc.field != "" {
+			if _, err := resource.ParseQuantity(rsrc.field); err != nil {
+				src.Status.MarkResourcesIncorrect("Incorrect Resource", "%s: %q, Error: %s", rsrc.key, rsrc.field, err)
+				return fmt.Errorf("incorrect resource specification, %s: %q: %v", rsrc.key, rsrc.field, err)
+			}
+		}
+	}
+	src.Status.MarkResourcesCorrect()
+	return nil
+}
+
 func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	if !equality.Semantic.DeepDerivative(newPodSpec, oldPodSpec) {
 		return true
@@ -280,7 +294,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 
 	// Only create EventTypes for Broker sinks. But if there is an EventType and the src has a non-Broker sink
 	// (possibly because it was updated), then we need to delete it.
-	if src.Spec.Sink.Kind != "Broker" {
+	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
 		if current != nil {
 			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
 				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))

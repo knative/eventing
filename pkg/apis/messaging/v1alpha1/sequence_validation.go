@@ -34,7 +34,7 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	for i, s := range ps.Steps {
-		if e := IsValidSubscriberSpec(s); e != nil {
+		if e := s.ValidateDisallowDeprecated(ctx); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "steps", i))
 		}
 	}
@@ -51,10 +51,10 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 	if len(ps.ChannelTemplate.Kind) == 0 {
 		errs = errs.Also(apis.ErrMissingField("channelTemplate.kind"))
 	}
-	if ps.Reply != nil {
-		if err := IsValidObjectReference(*ps.Reply); err != nil {
-			errs = errs.Also(err.ViaField("reply"))
-		}
+
+	if err := ps.Reply.Validate(ctx); err != nil {
+		errs = errs.Also(err.ViaField("reply"))
 	}
+
 	return errs
 }

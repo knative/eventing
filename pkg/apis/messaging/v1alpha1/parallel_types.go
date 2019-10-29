@@ -23,8 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/webhook"
 )
@@ -76,47 +77,29 @@ type ParallelSpec struct {
 
 	// Reply is a Reference to where the result of a case Subscriber gets sent to
 	// when the case does not have a Reply
-	//
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	//
-	//  The resource pointed by this ObjectReference must meet the Addressable contract
-	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
 	// +optional
-	Reply *corev1.ObjectReference `json:"reply,omitempty"`
+	Reply *v1alpha1.Destination `json:"reply,omitempty"`
 }
 
 type ParallelBranch struct {
 	// Filter is the expression guarding the branch
-	Filter *SubscriberSpec `json:"filter,omitempty"`
+	Filter *v1alpha1.Destination `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
-	Subscriber SubscriberSpec `json:"subscriber"`
+	Subscriber v1alpha1.Destination `json:"subscriber"`
 
 	// Reply is a Reference to where the result of Subscriber of this case gets sent to.
 	// If not specified, sent the result to the Parallel Reply
-	//
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	//
-	//  The resource pointed by this ObjectReference must meet the Addressable contract
-	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
 	// +optional
-	Reply *corev1.ObjectReference `json:"reply,omitempty"`
+	Reply *v1alpha1.Destination `json:"reply,omitempty"`
 }
 
 // ParallelStatus represents the current state of a Parallel.
 type ParallelStatus struct {
-	// inherits duck/v1alpha1 Status, which currently provides:
+	// inherits duck/v1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1beta1.Status `json:",inline"`
+	duckv1.Status `json:",inline"`
 
 	// IngressChannelStatus corresponds to the ingress channel status.
 	IngressChannelStatus ParallelChannelStatus `json:"ingressChannelStatus"`

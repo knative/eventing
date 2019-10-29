@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
@@ -96,7 +97,7 @@ func TestSequenceGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		ss: &SequenceStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					sequenceConditionReady,
 				},
@@ -125,7 +126,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 		name: "empty",
 		ts:   &SequenceStatus{},
 		want: &SequenceStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SequenceConditionAddressable,
 					Status: corev1.ConditionUnknown,
@@ -144,7 +145,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ts: &SequenceStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SequenceConditionChannelsReady,
 					Status: corev1.ConditionFalse,
@@ -152,7 +153,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &SequenceStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SequenceConditionAddressable,
 					Status: corev1.ConditionUnknown,
@@ -171,7 +172,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ts: &SequenceStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SequenceConditionSubscriptionsReady,
 					Status: corev1.ConditionTrue,
@@ -179,7 +180,7 @@ func TestSequenceInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &SequenceStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   SequenceConditionAddressable,
 					Status: corev1.ConditionUnknown,

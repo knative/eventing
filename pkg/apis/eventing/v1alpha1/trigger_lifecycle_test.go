@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -58,7 +58,7 @@ func TestTriggerGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		ts: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					triggerConditionReady,
 				},
@@ -69,7 +69,7 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions",
 		ts: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					triggerConditionBroker,
 					triggerConditionSubscribed,
@@ -82,7 +82,7 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "multiple conditions, condition false",
 		ts: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					triggerConditionBroker,
 					triggerConditionSubscribed,
@@ -95,7 +95,7 @@ func TestTriggerGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		ts: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					triggerConditionSubscribed,
 				},
@@ -124,7 +124,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 		name: "empty",
 		ts:   &TriggerStatus{},
 		want: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,
@@ -144,7 +144,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one false",
 		ts: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
@@ -152,7 +152,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionFalse,
@@ -173,7 +173,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}, {
 		name: "one true",
 		ts: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionTrue,
@@ -181,7 +181,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 			},
 		},
 		want: &TriggerStatus{
-			Status: duckv1beta1.Status{
+			Status: duckv1.Status{
 				Conditions: []apis.Condition{{
 					Type:   TriggerConditionBroker,
 					Status: corev1.ConditionUnknown,

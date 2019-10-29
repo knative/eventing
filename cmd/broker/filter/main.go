@@ -21,20 +21,20 @@ import (
 	"log"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/broker/filter"
-	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/tracing"
 
 	"knative.dev/pkg/injection/sharedmain"
@@ -48,27 +48,19 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
+const (
+	component = "broker_filter"
+)
+
 type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 }
 
 func main() {
-	logConfig := channel.NewLoggingConfig()
-	logConfig.LoggingLevel["provisioner"] = zapcore.DebugLevel
-	logger := channel.NewProvisionerLoggerFromConfig(logConfig).Desugar()
 	flag.Parse()
 
-	defer flush(logger)
-
 	ctx := signals.NewContext()
-
-	logger.Info("Starting...")
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logger.Fatal("Failed to process env var", zap.Error(err))
-	}
 
 	// Report stats on Go memory usage every 30 seconds.
 	msp := metrics.NewMemStatsAll()
@@ -82,7 +74,23 @@ func main() {
 		log.Fatal("Error building kubeconfig", err)
 	}
 
-	kubeClient := kubernetes.NewForConfigOrDie(cfg)
+	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
+	kubeClient := kubeclient.Get(ctx)
+
+	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
+	if err != nil {
+		log.Fatal("Error loading/parsing logging configuration:", err)
+	}
+	sl, atomicLevel := logging.NewLoggerFromConfig(loggingConfig, component)
+	logger := sl.Desugar()
+	defer flush(sl)
+
+	logger.Info("Starting the Broker Filter")
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		logger.Fatal("Failed to process env var", zap.Error(err))
+	}
 
 	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
 	eventingFactory := eventinginformers.NewSharedInformerFactoryWithOptions(eventingClient,
@@ -90,13 +98,19 @@ func main() {
 		eventinginformers.WithNamespace(env.Namespace))
 	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
 
-	cmw := configmap.NewInformedWatcher(kubeClient, system.Namespace())
+	// Watch the logging config map and dynamically update logging levels.
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
+	// Watch the observability config map and dynamically update metrics exporter.
+	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	// TODO change the component name to broker once Stackdriver metrics are approved.
+	// Watch the observability config map and dynamically update request logs.
+	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(logger.Sugar(), cmw, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
@@ -109,14 +123,8 @@ func main() {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}
 
-	// TODO watch logging config map.
-
-	// TODO change the component name to trigger once Stackdriver metrics are approved.
-	// Watch the observability config map and dynamically update metrics exporter.
-	cmw.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap("broker_filter", logger.Sugar()))
-
 	// configMapWatcher does not block, so start it first.
-	if err = cmw.Start(ctx.Done()); err != nil {
+	if err = configMapWatcher.Start(ctx.Done()); err != nil {
 		logger.Warn("Failed to start ConfigMap watcher", zap.Error(err))
 	}
 
@@ -136,7 +144,7 @@ func main() {
 	logger.Info("Exiting...")
 }
 
-func flush(logger *zap.Logger) {
-	logger.Sync()
+func flush(logger *zap.SugaredLogger) {
+	_ = logger.Sync()
 	metrics.FlushExporter()
 }

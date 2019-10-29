@@ -18,8 +18,11 @@ package v1alpha1
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	"knative.dev/eventing/pkg/apis/duck"
+	corev1 "k8s.io/api/core/v1"
+
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/duck"
 )
 
 const (
@@ -84,6 +87,22 @@ func (s *CronJobSourceStatus) MarkSink(uri string) {
 	}
 }
 
+// MarkSinkWarnDeprecated sets the condition that the source has a sink configured and warns ref is deprecated.
+func (s *CronJobSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
+	s.SinkURI = uri
+	if len(uri) > 0 {
+		c := apis.Condition{
+			Type:     CronJobConditionSinkProvided,
+			Status:   corev1.ConditionTrue,
+			Severity: apis.ConditionSeverityError,
+			Message:  "Using deprecated object ref fields when specifying spec.sink. Update to spec.sink.ref. These will be removed in 0.11.",
+		}
+		apiserverCondSet.Manage(s).SetCondition(c)
+	} else {
+		apiserverCondSet.Manage(s).MarkUnknown(CronJobConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+	}
+}
+
 // MarkNoSink sets the condition that the source does not have a sink configured.
 func (s *CronJobSourceStatus) MarkNoSink(reason, messageFormat string, messageA ...interface{}) {
 	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionSinkProvided, reason, messageFormat, messageA...)
@@ -111,12 +130,12 @@ func (s *CronJobSourceStatus) MarkNoEventType(reason, messageFormat string, mess
 	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionEventTypeProvided, reason, messageFormat, messageA...)
 }
 
-// MarkResourcesCorrect sets the condtion that the source resources are properly parsable quantities
+// MarkResourcesCorrect sets the condition that the source resources are properly parsable quantities
 func (s *CronJobSourceStatus) MarkResourcesCorrect() {
 	cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionResources)
 }
 
-// MarkResourcesInorrect sets the condtion that the source resources are not properly parsable quantities
+// MarkResourcesIncorrect sets the condition that the source resources are not properly parsable quantities
 func (s *CronJobSourceStatus) MarkResourcesIncorrect(reason, messageFormat string, messageA ...interface{}) {
 	cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionResources, reason, messageFormat, messageA...)
 }

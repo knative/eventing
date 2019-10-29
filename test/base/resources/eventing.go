@@ -21,6 +21,9 @@ package resources
 import (
 	"fmt"
 
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
@@ -48,7 +51,7 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+			s.Spec.Subscriber = &v1alpha1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -60,7 +63,9 @@ func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) Subscripti
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
+				Channel: &v1alpha1.Destination{
+					Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
+				},
 			}
 		}
 	}
@@ -149,7 +154,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+			t.Spec.Subscriber = &v1alpha1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -158,9 +163,10 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
+	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
-			URI: &uri,
+		t.Spec.Subscriber = &v1alpha1.Destination{
+			URI: apisURI,
 		}
 	}
 }

@@ -22,8 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 // +genclient
@@ -45,18 +47,25 @@ type Channelable struct {
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableSpec struct {
 	SubscribableTypeSpec `json:",inline"`
+
+	// DeliverySpec contains options controlling the event delivery
+	// +optional
+	Delivery *DeliverySpec `json:"delivery,omitempty"`
 }
 
 // ChannelableStatus contains the Status of a Channelable object.
 type ChannelableStatus struct {
-	// inherits duck/v1beta1 Status, which currently provides:
+	// inherits duck/v1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1beta1.Status `json:",inline"`
+	duckv1.Status `json:",inline"`
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
 	v1alpha1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	SubscribableTypeStatus `json:",inline"`
+	// ErrorChannel is set by the channel when it supports native error handling via a channel
+	// +optional
+	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
 }
 
 var (
@@ -80,6 +89,23 @@ func (c *Channelable) Populate() {
 			SubscriberURI: "call2",
 			ReplyURI:      "sink2",
 		}},
+	}
+	retry := int32(5)
+	linear := BackoffPolicyLinear
+	delay := "5s"
+	c.Spec.Delivery = &DeliverySpec{
+		DeadLetterSink: &apisv1alpha1.Destination{
+			Ref: &corev1.ObjectReference{
+				Name: "aname",
+			},
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   "test-error-domain",
+			},
+		},
+		Retry:         &retry,
+		BackoffPolicy: &linear,
+		BackoffDelay:  &delay,
 	}
 	c.Status = ChannelableStatus{
 		AddressStatus: v1alpha1.AddressStatus{

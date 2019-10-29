@@ -1,8 +1,8 @@
 # Development
 
 This doc explains how to setup a development environment so you can get started
-[contributing](https://www.knative.dev/contributing/) to `Knative Eventing`. Also
-take a look at:
+[contributing](https://www.knative.dev/contributing/) to `Knative Eventing`.
+Also take a look at:
 
 - [The pull request workflow](https://www.knative.dev/contributing/contributing/#pull-requests)
 - [How to add and run tests](./test/README.md)
@@ -25,6 +25,24 @@ You must have the core of [Knative](http://github.com/knative/serving) running
 on your cluster.
 
 You must have [`ko`](https://github.com/google/ko) installed.
+
+### Create a cluster and a repo
+
+1. [Set up a kubernetes cluster](https://www.knative.dev/docs/install/)
+   - Follow an install guide up through "Creating a Kubernetes Cluster"
+   - You do _not_ need to install Istio or Knative using the instructions in the
+     guide. Simply create the cluster and come back here.
+   - If you _did_ install Istio/Knative following those instructions, that's
+     fine too, you'll just redeploy over them, below.
+1. Set up a Linux Container repository for pushing images. You can use any
+   container image registry by adjusting the authentication methods and
+   repository paths mentioned in the sections below.
+   - [Google Container Registry quickstart](https://cloud.google.com/container-registry/docs/pushing-and-pulling)
+   - [Docker Hub quickstart](https://docs.docker.com/docker-hub/)
+
+**Note**: You'll need to be authenticated with your `KO_DOCKER_REPO` before
+pushing images. Run `gcloud auth configure-docker` if you are using Google
+Container Registry or `docker login` if you are using Docker Hub.
 
 ### Setup your environment
 

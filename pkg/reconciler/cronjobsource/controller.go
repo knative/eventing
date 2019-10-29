@@ -18,20 +18,21 @@ package cronjobsource
 
 import (
 	"context"
-	"fmt"
+
+	"knative.dev/pkg/resolver"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
-	cronjobsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
+	cronjobsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/cronjobsource"
+	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -60,21 +61,23 @@ func NewController(
 	cronJobSourceInformer := cronjobsourceinformer.Get(ctx)
 	eventTypeInformer := eventtypeinformer.Get(ctx)
 
-	env := &envConfig{}
-	if err := envconfig.Process("", env); err != nil {
-		panic(fmt.Errorf("unable to process CronJobSource's required environment variables: %v", err))
-	}
-
 	r := &Reconciler{
 		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 		cronjobLister:    cronJobSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
-		env:              *env,
 		loggingContext:   ctx,
 	}
+
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		r.Logger.Panicf("unable to process CronJobSource's required environment variables: %v", err)
+	}
+	r.receiveAdapterImage = env.Image
+
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-	r.sinkReconciler = duck.NewSinkReconciler(ctx, impl.EnqueueKey)
+
+	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	r.Logger.Info("Setting up event handlers")
 	cronJobSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

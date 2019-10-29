@@ -22,7 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -83,8 +84,7 @@ type ContainerSourceSpec struct {
 	DeprecatedServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
-	// +optional
-	Sink *corev1.ObjectReference `json:"sink,omitempty"`
+	Sink *apisv1alpha1.Destination `json:"sink,omitempty"`
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.
@@ -94,10 +94,10 @@ func (s *ContainerSource) GetGroupVersionKind() schema.GroupVersionKind {
 
 // ContainerSourceStatus defines the observed state of ContainerSource
 type ContainerSourceStatus struct {
-	// inherits duck/v1beta1 Status, which currently provides:
+	// inherits duck/v1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1beta1.Status `json:",inline"`
+	duckv1.Status `json:",inline"`
 
 	// SinkURI is the current active sink URI that has been configured for the ContainerSource.
 	// +optional

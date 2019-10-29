@@ -21,11 +21,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/apis/v1alpha1"
 )
 
 func TestSequenceValidation(t *testing.T) {
@@ -45,25 +45,23 @@ func TestSequenceValidation(t *testing.T) {
 	})
 }
 
-func makeValidReply(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       channelName,
+func makeValidReply(channelName string) *v1alpha1.Destination {
+	return &v1alpha1.Destination{
+		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
+		DeprecatedKind:       "inmemorychannel",
+		DeprecatedName:       channelName,
 	}
 }
 
-func makeInvalidReply(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Namespace:  "notallowed",
-		Name:       channelName,
+func makeInvalidReply(channelName string) *v1alpha1.Destination {
+	return &v1alpha1.Destination{
+		DeprecatedKind: "inmemorychannel",
+		DeprecatedName: channelName,
 	}
 }
 
 func TestSequenceSpecValidation(t *testing.T) {
-	subscriberURI := "http://example.com"
+	subscriberURI := apis.HTTP("example.com")
 	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",
@@ -94,7 +92,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "missing channeltemplatespec",
 		ts: &SequenceSpec{
-			Steps: []SubscriberSpec{{URI: &subscriberURI}},
+			Steps: []v1alpha1.Destination{{URI: subscriberURI}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -104,7 +102,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &SequenceSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
-			Steps:           []SubscriberSpec{{URI: &subscriberURI}},
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -114,7 +112,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &SequenceSpec{
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
-			Steps:           []SubscriberSpec{{URI: &subscriberURI}},
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
@@ -124,7 +122,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SubscriberSpec{{URI: &subscriberURI}},
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -133,7 +131,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with valid reply",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SubscriberSpec{{URI: &subscriberURI}},
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -143,10 +141,10 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with invalid missing name",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SubscriberSpec{{URI: &subscriberURI}},
-			Reply: &corev1.ObjectReference{
-				APIVersion: "messaging.knative.dev/v1alpha1",
-				Kind:       "inmemorychannel",
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
+			Reply: &v1alpha1.Destination{
+				DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
+				DeprecatedKind:       "inmemorychannel",
 			},
 		},
 		want: func() *apis.FieldError {
@@ -157,12 +155,11 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with invalid reply",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SubscriberSpec{{URI: &subscriberURI}},
+			Steps:           []v1alpha1.Destination{{URI: subscriberURI}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("reply.Namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
+			fe := apis.ErrMissingField("reply.apiVersion")
 			return fe
 		}(),
 	}}

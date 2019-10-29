@@ -26,7 +26,6 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -48,6 +47,15 @@ const (
 
 	// readyz is the HTTP path that will be used for readiness checks.
 	readyz = "/readyz"
+
+	// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
+	//  Issue: https://github.com/knative/eventing/issues/1777
+	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
+	// Set them on a 10:1 ratio, but this would actually depend on the Triggers' subscribers and the workload itself.
+	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
 )
 
 // Handler parses Cloud Events, determines if they pass a filter, and sends them to a subscriber.
@@ -65,12 +73,16 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cehttp.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
 	if err != nil {
 		return nil, err
 	}
 
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport)
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, connectionArgs)
 	if err != nil {
 		return nil, err
 	}

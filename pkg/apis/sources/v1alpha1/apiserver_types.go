@@ -17,11 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -29,7 +29,6 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ApiServerSource is the Schema for the apiserversources API
-// +k8s:openapi-gen=true
 type ApiServerSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -88,7 +87,7 @@ type ApiServerSourceSpec struct {
 
 	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
 	// +optional
-	Sink *corev1.ObjectReference `json:"sink,omitempty"`
+	Sink *apisv1alpha1.Destination `json:"sink,omitempty"`
 
 	// Mode is the mode the receive adapter controller runs under: Ref or Resource.
 	// `Ref` sends only the reference to the resource.
@@ -98,10 +97,10 @@ type ApiServerSourceSpec struct {
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource
 type ApiServerSourceStatus struct {
-	// inherits duck/v1beta1 Status, which currently provides:
+	// inherits duck/v1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
-	duckv1beta1.Status `json:",inline"`
+	duckv1.Status `json:",inline"`
 
 	// SinkURI is the current active sink URI that has been configured for the ApiServerSource.
 	// +optional

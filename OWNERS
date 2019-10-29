@@ -5,6 +5,7 @@ approvers:
 - vaikas-google
 - n3wscott
 - matzew
+- nachocano
 
 # Reviewers are suggested from the reviewers list first, then the approvers
 # list. To add reviewers while spreading the load among existing approvers,
@@ -16,5 +17,6 @@ reviewers:
 - vaikas-google
 - n3wscott
 - matzew
+- nachocano
 # Add reviewers below
 - lionelvillard
