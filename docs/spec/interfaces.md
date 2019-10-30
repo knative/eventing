@@ -29,10 +29,10 @@ it previously indicated success.
 ## Callable
 
 A **Callable** resource represents an _Addressable_ endpoint which receives an
-event as input and optionally returns an event to forward downstream. One example of a
-_Callable_ is a function. Note that all _Callable_ resources are _Addressable_
-(they accept an event and return a status code when completed), but not all
-_Addressable_ resources are _Callable_.
+event as input and optionally returns an event to forward downstream. One
+example of a _Callable_ is a function. Note that all _Callable_ resources are
+_Addressable_ (they accept an event and return a status code when completed),
+but not all _Addressable_ resources are _Callable_.
 
 ### Control Plane
 
@@ -52,8 +52,8 @@ represent the return type of the _Callable_.
 
 ### Data Plane
 
-The **Callable** resource receives one event and returns no or a single event in the
-response. A returned event is not required to be related to the received
+The **Callable** resource receives one event and returns no or a single event in
+the response. A returned event is not required to be related to the received
 event. The _Callable_ should return a successful response if the event was
 processed successfully.
 
