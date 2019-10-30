@@ -1,8 +1,10 @@
+# Approvers in this repo should also be added to the eventing-contrib
+# approvers list.
 approvers:
 - evankanderson
 - grantr
 - Harwayne
-- vaikas-google
+- vaikas
 - n3wscott
 - matzew
 - nachocano
@@ -14,7 +16,7 @@ reviewers:
 - evankanderson
 - grantr
 - Harwayne
-- vaikas-google
+- vaikas
 - n3wscott
 - matzew
 - nachocano
