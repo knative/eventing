@@ -24,7 +24,7 @@ message EventsRecord {
 		UNKNOWN = 0;
 		SENT = 1;
 		ACCEPTED = 2;
-		RECEIVED = 4;
+		RECEIVED = 3;
 	}
 	Type type = 2;
 }
