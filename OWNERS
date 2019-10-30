@@ -1,3 +1,5 @@
+# Approvers in this repo should also be added to the eventing-contrib
+# approvers list.
 approvers:
 - evankanderson
 - grantr
