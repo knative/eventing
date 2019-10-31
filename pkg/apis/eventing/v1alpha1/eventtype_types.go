@@ -23,7 +23,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -52,8 +51,7 @@ var (
 	// Check that EventType can return its spec untyped.
 	_ apis.HasSpec = (*EventType)(nil)
 
-	_ runtime.Object     = (*EventType)(nil)
-	_ webhook.GenericCRD = (*EventType)(nil)
+	_ runtime.Object = (*EventType)(nil)
 
 	// Check that we can create OwnerReferences to an EventType.
 	_ kmeta.OwnerRefable = (*EventType)(nil)

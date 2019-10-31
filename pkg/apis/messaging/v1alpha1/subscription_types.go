@@ -25,7 +25,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -50,8 +49,7 @@ var (
 	// Check that Subscription can return its spec untyped.
 	_ apis.HasSpec = (*Subscription)(nil)
 
-	_ runtime.Object     = (*Subscription)(nil)
-	_ webhook.GenericCRD = (*Subscription)(nil)
+	_ runtime.Object = (*Subscription)(nil)
 
 	// Check that we can create OwnerReferences to a Subscription.
 	_ kmeta.OwnerRefable = (*Subscription)(nil)

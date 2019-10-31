@@ -25,7 +25,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -54,8 +53,7 @@ var (
 	// Check that InMemoryChannel can return its spec untyped.
 	_ apis.HasSpec = (*InMemoryChannel)(nil)
 
-	_ runtime.Object     = (*InMemoryChannel)(nil)
-	_ webhook.GenericCRD = (*InMemoryChannel)(nil)
+	_ runtime.Object = (*InMemoryChannel)(nil)
 
 	// Check that we can create OwnerReferences to an InMemoryChannel.
 	_ kmeta.OwnerRefable = (*InMemoryChannel)(nil)

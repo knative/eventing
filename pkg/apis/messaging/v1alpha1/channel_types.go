@@ -26,7 +26,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -55,8 +54,7 @@ var (
 	// Check that Channel can return its spec untyped.
 	_ apis.HasSpec = (*Channel)(nil)
 
-	_ runtime.Object     = (*Channel)(nil)
-	_ webhook.GenericCRD = (*Channel)(nil)
+	_ runtime.Object = (*Channel)(nil)
 
 	// Check that we can create OwnerReferences to a Channel.
 	_ kmeta.OwnerRefable = (*Channel)(nil)
