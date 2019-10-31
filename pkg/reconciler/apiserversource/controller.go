@@ -31,6 +31,7 @@ import (
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+
 	"knative.dev/pkg/logging"
 )
 
@@ -66,8 +67,9 @@ func NewController(
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 		eventTypeLister:       eventTypeInformer.Lister(),
-		source:                GetCfgHost(ctx),
-		loggingContext:        ctx,
+
+		source:         GetCfgHost(ctx),
+		loggingContext: ctx,
 	}
 
 	env := &envConfig{}

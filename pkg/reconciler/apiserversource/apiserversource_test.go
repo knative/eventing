@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -660,6 +661,9 @@ func TestReconcile(t *testing.T) {
 				{Name: "name-1"},
 			},
 			WantCreates: []runtime.Object{
+				makeSubjectAccessReview("test-apiserver-source-Namespace-get", "namespaces", "get"),
+				makeSubjectAccessReview("test-apiserver-source-Namespace-list", "namespaces", "list"),
+				makeSubjectAccessReview("test-apiserver-source-Namespace-watch", "namespaces", "watch"),
 				makeEventType(sourcesv1alpha1.ApiServerSourceAddEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceDeleteEventType),
 				makeEventType(sourcesv1alpha1.ApiServerSourceUpdateEventType),
@@ -795,6 +799,23 @@ func makeEventType(eventType string) *v1alpha1.EventType {
 			Type:   eventType,
 			Source: source,
 			Broker: sinkName,
+		},
+	}
+}
+
+func makeSubjectAccessReview(name, resource, verb string) *authorizationv1.SubjectAccessReview {
+	return &authorizationv1.SubjectAccessReview{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: authorizationv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &authorizationv1.ResourceAttributes{
+				Namespace: testNS,
+				Verb:      verb,
+				Group:     "",
+				Resource:  resource,
+			},
+			User: "system:serviceaccount:" + testNS + ":default",
 		},
 	}
 }
