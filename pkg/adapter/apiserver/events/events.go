@@ -110,6 +110,7 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 	event.SetType(eventType)
 	event.SetSource(source)
 	event.SetSubject(subject)
+	event.SetDataContentType("application/json")
 
 	if err := event.SetData(data); err != nil {
 		return nil, err

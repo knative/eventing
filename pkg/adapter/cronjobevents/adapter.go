@@ -105,6 +105,7 @@ func (a *cronJobAdapter) cronTick() {
 	event.SetType(sourcesv1alpha1.CronJobEventType)
 	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
+	event.SetDataContentType("application/json")
 	reportArgs := &source.ReportArgs{
 		Namespace:     a.Namespace,
 		EventSource:   event.Source(),
