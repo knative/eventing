@@ -253,17 +253,36 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURIStr))
 	}
 
-	deadLetterSinkURI, err := r.resolveDeadLetterSink(ctx, subscription)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to resolve spec.delivery.deadLetterSink",
-			zap.Error(err),
-			zap.Any("", subscription.Spec.Delivery))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
-		subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
-		return err
+	if !isNilOrEmptyDeliveryDeadLetterSink(subscription.Spec.Delivery) {
+		// Populate the namespace for the dead letter sink since it is in the namespace
+		if subscription.Spec.Delivery.DeadLetterSink.Ref != nil {
+			subscription.Spec.Delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
+		}
+
+		deadLetterSinkStr, err := r.destinationResolver.URIFromDestination(*subscription.Spec.Delivery.DeadLetterSink, subscription)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to resolve spec.delivery.deadLetterSink",
+				zap.Error(err),
+				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			return err
+		}
+
+		deadLetterSinkURI, err := apis.ParseURL(deadLetterSinkStr)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to parse URL for spec.delivery.deadLetterSink URL",
+				zap.Error(err),
+				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to parse URL for spec.delivery.deadLetterSink: %v", err)
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to parse URL for spec.delivery.deadLetterSink: %v", err)
+			return err
+		}
+
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
+		logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkStr))
+
 	}
-	subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
-	logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkURI))
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
@@ -375,6 +394,10 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
 }
+func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
+	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||
+		delivery.DeadLetterSink == nil
+}
 
 func isNilOrEmptySubscriber(subscriber *apisv1alpha1.Destination) bool {
 	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &apisv1alpha1.Destination{})
@@ -430,19 +453,6 @@ func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 
 	_, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
 	return err
-}
-
-func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1alpha1.Subscription) (string, error) {
-	if subscription.Spec.Delivery == nil || subscription.Spec.Delivery.DeadLetterSink == nil {
-		return "", nil
-	}
-
-	// Populate the namespace for the subscriber since it is in the namespace
-	if subscription.Spec.Delivery.DeadLetterSink.Ref != nil {
-		subscription.Spec.Delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
-	}
-
-	return r.destinationResolver.URIFromDestination(*subscription.Spec.Delivery.DeadLetterSink, subscription)
 }
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable, isDeleted bool) error {
@@ -511,7 +521,7 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 				Generation:        sub.Generation,
 				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI.String(),
 				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI.String(),
-				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
+				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI.String(),
 			})
 		}
 	}

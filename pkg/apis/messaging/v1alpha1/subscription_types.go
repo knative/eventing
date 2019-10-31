@@ -148,7 +148,7 @@ type SubscriptionStatusPhysicalSubscription struct {
 	ReplyURI *apis.URL `json:"replyURI,omitempty"`
 
 	// ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.
-	DeadLetterSinkURI string `json:"deadLetterSinkURI,omitempty"`
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkURI,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
