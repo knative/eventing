@@ -24,7 +24,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 const (
@@ -64,8 +63,7 @@ var (
 	// Check that Trigger can return its spec untyped.
 	_ apis.HasSpec = (*Trigger)(nil)
 
-	_ runtime.Object     = (*Trigger)(nil)
-	_ webhook.GenericCRD = (*Trigger)(nil)
+	_ runtime.Object = (*Trigger)(nil)
 
 	// Check that we can create OwnerReferences to a Trigger.
 	_ kmeta.OwnerRefable = (*Trigger)(nil)

@@ -27,3 +27,12 @@ webhooks:
       namespace: knative-eventing
   failurePolicy: Fail
   name: webhook.eventing.knative.dev
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eventing-webhook-certs
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+# The data is populated at install time.

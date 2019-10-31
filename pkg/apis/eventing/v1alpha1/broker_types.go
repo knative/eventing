@@ -26,7 +26,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -60,8 +59,7 @@ var (
 	// Check that Broker can return its spec untyped.
 	_ apis.HasSpec = (*Broker)(nil)
 
-	_ runtime.Object     = (*Broker)(nil)
-	_ webhook.GenericCRD = (*Broker)(nil)
+	_ runtime.Object = (*Broker)(nil)
 
 	// Check that we can create OwnerReferences to a Broker.
 	_ kmeta.OwnerRefable = (*Broker)(nil)
