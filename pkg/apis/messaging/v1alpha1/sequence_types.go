@@ -27,7 +27,6 @@ import (
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -59,8 +58,7 @@ var (
 	// TODO: make appropriate fields immutable.
 	//_ apis.Immutable = (*Sequence)(nil)
 
-	_ runtime.Object     = (*Sequence)(nil)
-	_ webhook.GenericCRD = (*Sequence)(nil)
+	_ runtime.Object = (*Sequence)(nil)
 
 	// Check that we can create OwnerReferences to a Sequence.
 	_ kmeta.OwnerRefable = (*Sequence)(nil)

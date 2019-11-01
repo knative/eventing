@@ -1246,8 +1246,8 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  branch = "release-0.10"
-  digest = "1:d91a27f79bca7f71b57bdc3581542d646c90dca75862c38d21ad7b1aca6c22aa"
+  branch = "master"
+  digest = "1:c8e0ec560560e16616821b3999e905e6b9085c832b5b57216905711e63679d19"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1277,12 +1277,14 @@
     "client/injection/apiextensions/informers/factory/fake",
     "client/injection/kube/client",
     "client/injection/kube/client/fake",
+    "client/injection/kube/informers/admissionregistration/v1beta1/mutatingwebhookconfiguration",
     "client/injection/kube/informers/apps/v1/deployment",
     "client/injection/kube/informers/apps/v1/deployment/fake",
     "client/injection/kube/informers/core/v1/endpoints",
     "client/injection/kube/informers/core/v1/endpoints/fake",
     "client/injection/kube/informers/core/v1/namespace",
     "client/injection/kube/informers/core/v1/namespace/fake",
+    "client/injection/kube/informers/core/v1/secret",
     "client/injection/kube/informers/core/v1/service",
     "client/injection/kube/informers/core/v1/service/fake",
     "client/injection/kube/informers/core/v1/serviceaccount",
@@ -1340,20 +1342,23 @@
     "tracker",
     "version",
     "webhook",
+    "webhook/certificates",
+    "webhook/certificates/resources",
+    "webhook/resourcesemantics",
   ]
   pruneopts = "T"
-  revision = "cad41c40ccb5a40de7a3b65097649703c8d96e0b"
+  revision = "d4ce00139499bd3ea11cdb18ef20a41bdb248245"
 
 [[projects]]
   branch = "master"
-  digest = "1:d98cbeb7a88cc866d8353ffec3116baf6397669bde5ceb4caccf540e8cacc496"
+  digest = "1:5299d75a2b08a91c54ffb8b76afe21eb5f1ecf7bc4d67b859fc081f9415452bc"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "027b4ff36fdb3a671f12e4fb1d386a742ee12183"
+  revision = "6c8da588aaa3d2bff76a9c37fd6ac5c9a6c02c09"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
@@ -1502,8 +1507,9 @@
     "knative.dev/pkg/tracing",
     "knative.dev/pkg/tracing/config",
     "knative.dev/pkg/tracker",
-    "knative.dev/pkg/version",
     "knative.dev/pkg/webhook",
+    "knative.dev/pkg/webhook/certificates",
+    "knative.dev/pkg/webhook/resourcesemantics",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",
   ]
