@@ -29,19 +29,17 @@ func TestStatsReporter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		ns:          "testns",
-		broker:      "testbroker",
-		eventType:   "testeventtype",
-		eventSource: "testeventsource",
+		ns:        "testns",
+		broker:    "testbroker",
+		eventType: "testeventtype",
 	}
 
 	r := NewStatsReporter()
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelName:              "testbroker",
+		metricskey.LabelBrokerName:        "testbroker",
 		metricskey.LabelEventType:         "testeventtype",
-		metricskey.LabelEventSource:       "testeventsource",
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
 	}

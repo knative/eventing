@@ -72,7 +72,6 @@ func (a *resource) Delete(obj interface{}) error {
 func (a *resource) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 	reportArgs := &source.ReportArgs{
 		Namespace:     a.namespace,
-		EventSource:   event.Source(),
 		EventType:     event.Type(),
 		Name:          a.name,
 		ResourceGroup: resourceGroup,

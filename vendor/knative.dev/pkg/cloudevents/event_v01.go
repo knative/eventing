@@ -28,11 +28,6 @@ const (
 	// V01CloudEventsVersion is the version of the CloudEvents spec targeted
 	// by this library.
 	V01CloudEventsVersion = "0.1"
-
-	// v0.1 field names
-	fieldCloudEventsVersion = "CloudEventsVersion"
-	fieldEventID            = "EventID"
-	fieldEventType          = "EventType"
 )
 
 // V01EventContext holds standard metadata about an event. See

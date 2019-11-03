@@ -74,10 +74,9 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	reporterArgs := &ReportArgs{
-		ns:          h.Namespace,
-		broker:      h.BrokerName,
-		eventType:   event.Type(),
-		eventSource: event.Source(),
+		ns:        h.Namespace,
+		broker:    h.BrokerName,
+		eventType: event.Type(),
 	}
 
 	send := h.decrementTTL(&event)
