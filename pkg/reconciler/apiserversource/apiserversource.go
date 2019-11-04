@@ -482,7 +482,7 @@ func (r *Reconciler) runAccessCheck(src *v1alpha1.ApiServerSource) error {
 		sep1 := ""
 		for _, verb := range verbs {
 			sar := &authorizationv1.SubjectAccessReview{
-				// Name is not strictly needed but adding it to be able to run tests
+				// Name is not strictly needed but adding it to be able to track test objects
 				ObjectMeta: metav1.ObjectMeta{
 					Name: fmt.Sprintf("%s-%s-%s", src.Name, res.Kind, verb),
 				},
