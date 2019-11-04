@@ -116,6 +116,57 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceSinkNotFound,
 				),
 			}},
+		}, {
+			Name: "not enough permissions",
+			Objects: []runtime.Object{
+				NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkDest,
+					}),
+					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeAvailableReceiveAdapter(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkDest,
+					}),
+					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceStatusObservedGeneration(generation),
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceNoSufficientPermissions,
+				),
+			}},
+			WantCreates: []runtime.Object{
+				makeSubjectAccessReview("namespaces", "get", "default"),
+				makeSubjectAccessReview("namespaces", "list", "default"),
+				makeSubjectAccessReview("namespaces", "watch", "default"),
+			},
+			WantErr:                 true,
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(false)},
+			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
 			Name: "valid",
@@ -171,7 +222,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -236,7 +287,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -299,7 +350,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -359,7 +410,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -421,7 +472,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "malin"),
 				makeSubjectAccessReview("namespaces", "watch", "malin"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -481,7 +532,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -542,7 +593,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -605,7 +656,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -668,7 +719,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
@@ -740,7 +791,7 @@ func TestReconcile(t *testing.T) {
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor()},
+			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 	}
@@ -903,11 +954,11 @@ func makeApiServerSource() *sourcesv1alpha1.ApiServerSource {
 	)
 }
 
-func subjectAccessReviewCreateReactor() clientgotesting.ReactionFunc {
+func subjectAccessReviewCreateReactor(allowed bool) clientgotesting.ReactionFunc {
 	return func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
 		if action.GetVerb() == "create" && action.GetResource().Resource == "subjectaccessreviews" {
 			ret := action.(clientgotesting.CreateAction).GetObject().DeepCopyObject().(*authorizationv1.SubjectAccessReview)
-			ret.Status.Allowed = true
+			ret.Status.Allowed = allowed
 			return true, ret, nil
 		}
 		return false, nil, nil
