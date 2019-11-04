@@ -59,7 +59,7 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 		},
 	}
 	r.Spec.Reply = &v1alpha1.ReplyStrategy{
-		Channel: &duckv1beta1.Destination{
+		Destination: &duckv1beta1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -94,9 +94,9 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscript
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Branches[branchNumber].Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Destination: p.Spec.Branches[branchNumber].Reply}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Destination: p.Spec.Reply}
 	}
 	return r
 }

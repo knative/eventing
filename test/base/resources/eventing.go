@@ -63,7 +63,7 @@ func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) Subscripti
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-				Channel: &duckv1beta1.Destination{
+				Destination: &duckv1beta1.Destination{
 					Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 				},
 			}

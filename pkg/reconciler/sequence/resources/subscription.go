@@ -58,7 +58,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *v1alpha1.Subscriptio
 	// last one, we'll use the (optional) reply from the Sequence Spec.
 	if stepNumber < len(p.Spec.Steps)-1 {
 		r.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &duckv1beta1.Destination{
+			Destination: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: p.Spec.ChannelTemplate.APIVersion,
 					Kind:       p.Spec.ChannelTemplate.Kind,
@@ -67,7 +67,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *v1alpha1.Subscriptio
 			},
 		}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Channel: p.Spec.Reply}
+		r.Spec.Reply = &v1alpha1.ReplyStrategy{Destination: p.Spec.Reply}
 	}
 	return r
 }

@@ -45,7 +45,7 @@ func getValidChannelRef() corev1.ObjectReference {
 
 func getValidReplyStrategy() *ReplyStrategy {
 	return &ReplyStrategy{
-		Channel: &duckv1beta1.Destination{
+		Destination: &duckv1beta1.Destination{
 			DeprecatedName:       replyChannelName,
 			DeprecatedKind:       channelKind,
 			DeprecatedAPIVersion: channelAPIVersion,
@@ -223,11 +223,11 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing name in Reply.Ref",
+		name: "missing name in Reply.DeprecatedChannel.Ref",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 			Reply: &ReplyStrategy{
-				Channel: &duckv1beta1.Destination{
+				DeprecatedChannel: &duckv1beta1.Destination{
 					DeprecatedKind:       channelKind,
 					DeprecatedAPIVersion: channelAPIVersion,
 				},
@@ -235,6 +235,21 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("reply.channel.name")
+			return fe
+		}(),
+	}, {
+		name: "missing name in Reply.Ref",
+		c: &SubscriptionSpec{
+			Channel: getValidChannelRef(),
+			Reply: &ReplyStrategy{
+				Destination: &duckv1beta1.Destination{
+					DeprecatedKind:       channelKind,
+					DeprecatedAPIVersion: channelAPIVersion,
+				},
+			},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMissingField("reply.name")
 			return fe
 		}(),
 	}}
@@ -257,7 +272,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newSubscriber.Ref.Name = "newSubscriber"
 
 	newReply := getValidReplyStrategy()
-	newReply.Channel.DeprecatedName = "newReplyChannel"
+	newReply.Destination.DeprecatedName = "newReplyChannel"
 
 	tests := []struct {
 		name string
