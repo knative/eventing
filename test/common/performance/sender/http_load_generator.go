@@ -88,7 +88,6 @@ type HttpLoadGenerator struct {
 
 	sentCh     chan common.EventTimestamp
 	acceptedCh chan common.EventTimestamp
-	failedCh   chan common.EventTimestamp
 
 	warmupAttacker *vegeta.Attacker
 	paceAttacker   *vegeta.Attacker
@@ -96,7 +95,7 @@ type HttpLoadGenerator struct {
 }
 
 func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
-	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp, failedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
+	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
 		if sinkUrl == "" {
 			panic("Missing --sink flag")
 		}
@@ -107,7 +106,6 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 
 			sentCh:     sentCh,
 			acceptedCh: acceptedCh,
-			failedCh:   failedCh,
 		}
 
 		loadGen.warmupAttacker = vegeta.NewAttacker(vegeta.Workers(minWorkers))
@@ -120,9 +118,7 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 				after: func(request *http.Request, response *http.Response, e error) {
 					id := request.Header.Get("Ce-Id")
 					t := ptypes.TimestampNow()
-					if e != nil || response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-						loadGen.failedCh <- common.EventTimestamp{EventId: id, At: t}
-					} else {
+					if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 						loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
 					}
 				},

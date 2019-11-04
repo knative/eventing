@@ -31,5 +31,4 @@ type LoadGenerator interface {
 }
 
 type LoadGeneratorFactory func(eventSource string, sentCh chan common.EventTimestamp,
-	acceptedCh chan common.EventTimestamp,
-	failedCh chan common.EventTimestamp) (LoadGenerator, error)
+	acceptedCh chan common.EventTimestamp) (LoadGenerator, error)

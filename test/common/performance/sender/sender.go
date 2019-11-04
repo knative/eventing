@@ -51,12 +51,10 @@ type Sender struct {
 	// EventTimestamp channels
 	sentCh     chan common.EventTimestamp
 	acceptedCh chan common.EventTimestamp
-	failedCh   chan common.EventTimestamp
 
 	// events recording maps
 	sentEvents     *pb.EventsRecord
 	acceptedEvents *pb.EventsRecord
-	failedEvents   *pb.EventsRecord
 
 	// load generator
 	loadGenerator LoadGenerator
@@ -101,7 +99,6 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 
 		sentCh:     make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 		acceptedCh: make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
-		failedCh:   make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 
 		sentEvents: &pb.EventsRecord{
 			Type:   pb.EventsRecord_SENT,
@@ -111,15 +108,11 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 			Type:   pb.EventsRecord_ACCEPTED,
 			Events: make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages),
 		},
-		failedEvents: &pb.EventsRecord{
-			Type:   pb.EventsRecord_FAILED,
-			Events: make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages),
-		},
 
 		aggregatorClient: aggregatorClient,
 	}
 
-	executor.loadGenerator, err = loadGeneratorFactory(eventsSource(), executor.sentCh, executor.acceptedCh, executor.failedCh)
+	executor.loadGenerator, err = loadGeneratorFactory(eventsSource(), executor.sentCh, executor.acceptedCh)
 	if err != nil {
 		return nil, err
 	}
@@ -180,12 +173,10 @@ func (s *Sender) Run(ctx context.Context) {
 
 	log.Printf("%-15s: %d", "Sent count", len(s.sentEvents.Events))
 	log.Printf("%-15s: %d", "Accepted count", len(s.acceptedEvents.Events))
-	log.Printf("%-15s: %d", "Failed count", len(s.failedEvents.Events))
 
 	err := s.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		s.sentEvents,
 		s.acceptedEvents,
-		s.failedEvents,
 	}})
 	if err != nil {
 		log.Fatalf("Failed to send events record: %v\n", err)
@@ -208,7 +199,6 @@ func (s *Sender) closeChannels() {
 
 	close(s.sentCh)
 	close(s.acceptedCh)
-	close(s.failedCh)
 
 	log.Printf("All channels closed")
 }
@@ -228,12 +218,6 @@ func (s *Sender) processEvents() {
 				continue
 			}
 			s.acceptedEvents.Events[e.EventId] = e.At
-
-		case e, ok := <-s.failedCh:
-			if !ok {
-				continue
-			}
-			s.failedEvents.Events[e.EventId] = e.At
 		}
 	}
 }
