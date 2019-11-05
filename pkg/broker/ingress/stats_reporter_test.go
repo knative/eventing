@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
@@ -34,7 +35,7 @@ func TestStatsReporter(t *testing.T) {
 		eventType: "testeventtype",
 	}
 
-	r := NewStatsReporter()
+	r := NewStatsReporter("pod", "container")
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
@@ -42,6 +43,8 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelEventType:         "testeventtype",
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
+		broker.LabelPodName:               "pod",
+		broker.LabelContainerName:         "container",
 	}
 
 	// test ReportEventCount
