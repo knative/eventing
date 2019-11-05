@@ -35,7 +35,7 @@ func TestStatsReporter(t *testing.T) {
 		eventType: "testeventtype",
 	}
 
-	r := NewStatsReporter("pod", "container")
+	r := NewStatsReporter("testpod", "testcontainer")
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
@@ -43,8 +43,8 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelEventType:         "testeventtype",
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
-		broker.LabelPodName:               "pod",
-		broker.LabelContainerName:         "container",
+		broker.LabelPodName:               "testpod",
+		broker.LabelContainerName:         "testcontainer",
 	}
 
 	// test ReportEventCount
