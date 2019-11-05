@@ -67,6 +67,7 @@ type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Channel   string `envconfig:"CHANNEL" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
+	PodName   string `split_words:"true" required:"true"`
 }
 
 func main() {
@@ -149,7 +150,7 @@ func main() {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
 
-	reporter := ingress.NewStatsReporter()
+	reporter := ingress.NewStatsReporter(env.PodName, "broker_ingress")
 
 	h := &ingress.Handler{
 		Logger:     logger,

@@ -96,6 +96,14 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 									},
 								},
 								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
+								{
 									Name:  "BROKER",
 									Value: args.Broker.Name,
 								},

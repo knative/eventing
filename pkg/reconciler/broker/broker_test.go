@@ -880,6 +880,14 @@ func envVars(containerName string) []corev1.EnvVar {
 				},
 			},
 			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
 				Name:  "BROKER",
 				Value: brokerName,
 			},
@@ -899,6 +907,14 @@ func envVars(containerName string) []corev1.EnvVar {
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
 						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
 					},
 				},
 			},
