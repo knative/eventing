@@ -37,7 +37,11 @@ import (
 	"knative.dev/pkg/test/mako"
 )
 
-const maxRcvMsgSize = 1024 * 1024 * 100
+const (
+	maxRcvMsgSize         = 1024 * 1024 * 100
+	publishFailureMessage = "Publish failure"
+	deliverFailureMessage = "Delivery failure"
+)
 
 // thread-safe events recording map
 type eventsRecord struct {
@@ -51,7 +55,6 @@ type Aggregator struct {
 	// thread-safe events recording maps
 	sentEvents     *eventsRecord
 	acceptedEvents *eventsRecord
-	failedEvents   *eventsRecord
 	receivedEvents *eventsRecord
 
 	// channel to notify the main goroutine that an events record has been received
@@ -97,10 +100,6 @@ func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords
 	}}
 	executor.acceptedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
 		Type:   pb.EventsRecord_ACCEPTED,
-		Events: make(map[string]*timestamp.Timestamp),
-	}}
-	executor.failedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
-		Type:   pb.EventsRecord_FAILED,
 		Events: make(map[string]*timestamp.Timestamp),
 	}}
 	executor.receivedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
@@ -155,14 +154,13 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	// --- Publish latencies
 	log.Printf("%-15s: %d", "Sent count", len(ag.sentEvents.Events))
 	log.Printf("%-15s: %d", "Accepted count", len(ag.acceptedEvents.Events))
-	log.Printf("%-15s: %d", "Failed count", len(ag.failedEvents.Events))
 	log.Printf("%-15s: %d", "Received count", len(ag.receivedEvents.Events))
 
 	log.Printf("Publishing latencies")
 
 	// count errors
-	var publishErrorCount int
-	var deliverErrorCount int
+	publishErrorTimestamps := make([]time.Time, 0)
+	deliverErrorTimestamps := make([]time.Time, 0)
 
 	for sentID := range ag.sentEvents.Events {
 		timestampSentProto := ag.sentEvents.Events[sentID]
@@ -175,14 +173,9 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		timestampReceived, _ := ptypes.Timestamp(timestampReceivedProto)
 
 		if !accepted {
-			errMsg := "Failed on broker"
-			if _, failed := ag.failedEvents.Events[sentID]; !failed {
-				errMsg = "Event not accepted but missing from failed map"
-			}
+			publishErrorTimestamps = append(publishErrorTimestamps, timestampSent)
 
-			deliverErrorCount++
-
-			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), errMsg); qerr != nil {
+			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), publishFailureMessage); qerr != nil {
 				log.Printf("ERROR AddError: %v", qerr)
 			}
 			continue
@@ -197,9 +190,9 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		}
 
 		if !received {
-			publishErrorCount++
+			deliverErrorTimestamps = append(deliverErrorTimestamps, timestampSent)
 
-			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), "Event not delivered"); qerr != nil {
+			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), deliverFailureMessage); qerr != nil {
 				log.Printf("ERROR AddError: %v", qerr)
 			}
 			continue
@@ -213,6 +206,9 @@ func (ag *Aggregator) Run(ctx context.Context) {
 			log.Printf("ERROR AddSamplePoint: %v", qerr)
 		}
 	}
+
+	log.Printf("%-15s: %d", "Publish failure count", len(publishErrorTimestamps))
+	log.Printf("%-15s: %d", "Delivery/Lost failure count", len(deliverErrorTimestamps))
 
 	// --- Publish throughput
 
@@ -230,9 +226,15 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		log.Printf("ERROR AddSamplePoint: %v", err)
 	}
 
-	failureTimestamps := eventsToTimestampsArray(&ag.failedEvents.Events)
-	if len(failureTimestamps) > 2 {
-		err = publishThpt(failureTimestamps, client.Quickstore, "ft")
+	if len(publishErrorTimestamps) > 2 {
+		err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint: %v", err)
+		}
+	}
+
+	if len(deliverErrorTimestamps) > 2 {
+		err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
 		if err != nil {
 			log.Printf("ERROR AddSamplePoint: %v", err)
 		}
@@ -242,8 +244,8 @@ func (ag *Aggregator) Run(ctx context.Context) {
 
 	log.Printf("Publishing aggregates")
 
-	client.Quickstore.AddRunAggregate("pe", float64(publishErrorCount))
-	client.Quickstore.AddRunAggregate("de", float64(deliverErrorCount))
+	client.Quickstore.AddRunAggregate("pe", float64(len(publishErrorTimestamps)))
+	client.Quickstore.AddRunAggregate("de", float64(len(deliverErrorTimestamps)))
 
 	log.Printf("Store to mako")
 
@@ -302,8 +304,6 @@ func (ag *Aggregator) RecordEvents(_ context.Context, in *pb.EventsRecordList) (
 			rec = ag.sentEvents
 		case pb.EventsRecord_ACCEPTED:
 			rec = ag.acceptedEvents
-		case pb.EventsRecord_FAILED:
-			rec = ag.failedEvents
 		case pb.EventsRecord_RECEIVED:
 			rec = ag.receivedEvents
 		default:
