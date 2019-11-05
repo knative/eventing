@@ -30,6 +30,9 @@ const (
 	// ResourceTypeKnativeSource is the Stackdriver resource type for Knative Sources.
 	ResourceTypeKnativeSource = "knative_source"
 
+	// LabelName is the label for the name of the resource.
+	LabelName = "name"
+
 	// LabelResourceGroup is the name of the resource CRD.
 	LabelResourceGroup = "resource_group"
 
