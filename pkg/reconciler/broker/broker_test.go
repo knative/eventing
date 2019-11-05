@@ -893,7 +893,7 @@ func envVars(containerName string) []corev1.EnvVar {
 			},
 			{
 				Name:  "METRICS_DOMAIN",
-				Value: "knative.dev/eventing",
+				Value: "knative.dev/internal/eventing",
 			},
 		}
 	case ingressContainerName:
@@ -932,7 +932,7 @@ func envVars(containerName string) []corev1.EnvVar {
 			},
 			{
 				Name:  "METRICS_DOMAIN",
-				Value: "knative.dev/eventing",
+				Value: "knative.dev/internal/eventing",
 			},
 		}
 	}

@@ -107,9 +107,10 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 									Name:  "BROKER",
 									Value: args.Broker.Name,
 								},
+								// Used for StackDriver only.
 								{
 									Name:  "METRICS_DOMAIN",
-									Value: "knative.dev/eventing",
+									Value: "knative.dev/internal/eventing",
 								},
 							},
 							Ports: []corev1.ContainerPort{
