@@ -33,6 +33,6 @@ const (
 )
 
 var (
-	PodTagKey       = tag.MustNewKey("pod_name")
-	ContainerTagKey = tag.MustNewKey("container_name")
+	PodTagKey       = tag.MustNewKey(LabelPodName)
+	ContainerTagKey = tag.MustNewKey(LabelContainerName)
 )
