@@ -115,7 +115,7 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	reporter := filter.NewStatsReporter(env.PodName, "broker_filter")
+	reporter := filter.NewStatsReporter(env.PodName, "filter")
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.

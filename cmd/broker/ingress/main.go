@@ -150,7 +150,7 @@ func main() {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
 
-	reporter := ingress.NewStatsReporter(env.PodName, "broker_ingress")
+	reporter := ingress.NewStatsReporter(env.PodName, "ingress")
 
 	h := &ingress.Handler{
 		Logger:     logger,
