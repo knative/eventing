@@ -888,6 +888,10 @@ func envVars(containerName string) []corev1.EnvVar {
 				},
 			},
 			{
+				Name:  "CONTAINER_NAME",
+				Value: filterContainerName,
+			},
+			{
 				Name:  "BROKER",
 				Value: brokerName,
 			},
@@ -917,6 +921,10 @@ func envVars(containerName string) []corev1.EnvVar {
 						FieldPath: "metadata.name",
 					},
 				},
+			},
+			{
+				Name:  "CONTAINER_NAME",
+				Value: ingressContainerName,
 			},
 			{
 				Name:  "FILTER",

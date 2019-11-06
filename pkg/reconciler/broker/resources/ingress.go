@@ -30,6 +30,10 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
+const (
+	ingressContainerName = "ingress"
+)
+
 // IngressArgs are the arguments to create a Broker's ingress Deployment.
 type IngressArgs struct {
 	Broker             *eventingv1alpha1.Broker
@@ -62,7 +66,7 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Image: args.Image,
-							Name:  "ingress",
+							Name:  ingressContainerName,
 							LivenessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -93,6 +97,10 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 											FieldPath: "metadata.name",
 										},
 									},
+								},
+								{
+									Name:  "CONTAINER_NAME",
+									Value: ingressContainerName,
 								},
 								{
 									Name:  "FILTER",
