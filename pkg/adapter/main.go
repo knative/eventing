@@ -94,6 +94,7 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 		if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err != nil {
 			if enabled {
 				// Start a goroutine to server profiling metrics
+				logger.Info("Profiling enabled")
 				go func() {
 					server := profiling.NewServer(profiling.NewHandler(logger, true))
 					// Don't forward ErrServerClosed as that indicates we're already shutting down.
