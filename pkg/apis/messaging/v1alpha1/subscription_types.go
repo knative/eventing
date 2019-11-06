@@ -25,6 +25,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 	"knative.dev/pkg/kmeta"
+
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 
 // +genclient
@@ -109,6 +111,10 @@ type SubscriptionSpec struct {
 	// the Subscriber target.
 	// +optional
 	Reply *ReplyStrategy `json:"reply,omitempty"`
+
+	// Delivery configuration
+	// +optional
+	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // ReplyStrategy specifies the handling of the Subscriber's returned replies.
@@ -140,6 +146,9 @@ type SubscriptionStatusPhysicalSubscription struct {
 
 	// ReplyURI is the fully resolved URI for the spec.reply.
 	ReplyURI *apis.URL `json:"replyURI,omitempty"`
+
+	// ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkURI,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

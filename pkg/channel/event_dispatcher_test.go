@@ -61,15 +61,19 @@ const (
 
 func TestDispatchMessage(t *testing.T) {
 	testCases := map[string]struct {
-		sendToDestination    bool
-		sendToReply          bool
-		eventExtensions      map[string]string
-		header               http.Header
-		body                 string
-		fakeResponse         *http.Response
-		expectedErr          bool
-		expectedDestRequest  *requestValidation
-		expectedReplyRequest *requestValidation
+		sendToDestination         bool
+		sendToReply               bool
+		hasDeliveryOptions        bool
+		eventExtensions           map[string]string
+		header                    http.Header
+		body                      string
+		fakeResponse              *http.Response
+		fakeReplyResponse         *http.Response
+		fakeDeadLetterResponse    *http.Response
+		expectedErr               bool
+		expectedDestRequest       *requestValidation
+		expectedReplyRequest      *requestValidation
+		expectedDeadLetterRequest *requestValidation
 	}{
 		"destination - only": {
 			sendToDestination: true,
@@ -347,6 +351,173 @@ func TestDispatchMessage(t *testing.T) {
 				Body: "destination-response",
 			},
 		},
+		"invalid destination and delivery option": {
+			sendToDestination:  true,
+			hasDeliveryOptions: true,
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
+				},
+				Body: `"destination"`,
+			},
+			expectedDeadLetterRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
+				},
+				Body: `"destination"`,
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			fakeDeadLetterResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {`"new-ce-abc-value"`},
+					"ce-id":              {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
+					"ce-source":          {testCeSource},
+					"ce-type":            {testCeType},
+					"ce-specversion":     {cloudevents.VersionV03},
+				},
+				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+			},
+		},
+		"destination and invalid reply and delivery option": {
+			sendToDestination:  true,
+			sendToReply:        true,
+			hasDeliveryOptions: true,
+			header: map[string][]string{
+				// do-not-forward should not get forwarded.
+				"do-not-forward": {"header"},
+				"x-request-id":   {"id123"},
+				"knative-1":      {"knative-1-value"},
+				"knative-2":      {"knative-2-value"},
+			},
+			body: "destination",
+			eventExtensions: map[string]string{
+				"abc": `"ce-abc-value"`,
+			},
+			expectedDestRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"id123"},
+					"knative-1":      {"knative-1-value"},
+					"knative-2":      {"knative-2-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
+				},
+				Body: `"destination"`,
+			},
+			expectedReplyRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"altered-id"},
+					"knative-1":      {"new-knative-1-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {"new-ce-abc-value"},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
+				},
+				Body: "destination-response",
+			},
+			expectedDeadLetterRequest: &requestValidation{
+				Headers: map[string][]string{
+					"x-request-id":   {"altered-id"},
+					"knative-1":      {"new-knative-1-value"},
+					"x-b3-sampled":   {"0"},
+					"x-b3-spanid":    {"ignored-value-header"},
+					"x-b3-traceid":   {"ignored-value-header"},
+					"ce-abc":         {`"ce-abc-value"`},
+					"ce-id":          {"ignored-value-header"},
+					"ce-time":        {"2002-10-02T15:00:00Z"},
+					"ce-source":      {testCeSource},
+					"ce-type":        {testCeType},
+					"ce-specversion": {cloudevents.VersionV03},
+				},
+				Body: `"destination"`,
+			},
+			fakeResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {`"new-ce-abc-value"`},
+					"ce-id":              {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
+					"ce-source":          {testCeSource},
+					"ce-type":            {testCeType},
+					"ce-specversion":     {cloudevents.VersionV03},
+				},
+				Body: ioutil.NopCloser(bytes.NewBufferString("destination-response")),
+			},
+			fakeReplyResponse: &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("reply-response")),
+			},
+			fakeDeadLetterResponse: &http.Response{
+				StatusCode: http.StatusAccepted,
+				Header: map[string][]string{
+					"do-not-passthrough": {"no"},
+					"x-request-id":       {"altered-id"},
+					"knative-1":          {"new-knative-1-value"},
+					"ce-abc":             {`"new-ce-abc-value"`},
+					"ce-id":              {"ignored-value-header"},
+					"ce-time":            {"2002-10-02T15:00:00Z"},
+					"ce-source":          {testCeSource},
+					"ce-type":            {testCeType},
+					"ce-specversion":     {cloudevents.VersionV03},
+				},
+				Body: ioutil.NopCloser(bytes.NewBufferString("deadlettersink-response")),
+			},
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -357,6 +528,7 @@ func TestDispatchMessage(t *testing.T) {
 			}
 			destServer := httptest.NewServer(destHandler)
 			defer destServer.Close()
+
 			replyHandler := &fakeHandler{
 				t:        t,
 				response: tc.fakeResponse,
@@ -364,6 +536,25 @@ func TestDispatchMessage(t *testing.T) {
 			}
 			replyServer := httptest.NewServer(replyHandler)
 			defer replyServer.Close()
+			if tc.fakeReplyResponse != nil {
+				replyHandler.response = tc.fakeReplyResponse
+			}
+
+			var deadLetterSinkHandler *fakeHandler
+			var deadLetterSinkServer *httptest.Server
+			var deliveryOptions *DeliveryOptions
+			if tc.hasDeliveryOptions {
+				deadLetterSinkHandler = &fakeHandler{
+					t:        t,
+					response: tc.fakeDeadLetterResponse,
+					requests: make([]requestValidation, 0),
+				}
+				deadLetterSinkServer = httptest.NewServer(deadLetterSinkHandler)
+				defer deadLetterSinkServer.Close()
+
+				dls := getDomain(t, true, deadLetterSinkServer.URL)
+				deliveryOptions = &DeliveryOptions{DeadLetterSink: dls}
+			}
 
 			event := cloudevents.NewEvent(cloudevents.VersionV03)
 			event.SetType("testtype")
@@ -381,7 +572,14 @@ func TestDispatchMessage(t *testing.T) {
 			md := NewEventDispatcher(zap.NewNop())
 			destination := getDomain(t, tc.sendToDestination, destServer.URL)
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
-			err := md.DispatchEvent(ctx, event, destination, reply)
+
+			var err error
+			if tc.hasDeliveryOptions {
+				err = md.DispatchEventWithDelivery(ctx, event, destination, reply, deliveryOptions)
+			} else {
+				err = md.DispatchEvent(ctx, event, destination, reply)
+			}
+
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchEvent. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
@@ -393,11 +591,18 @@ func TestDispatchMessage(t *testing.T) {
 				rv := replyHandler.popRequest(t)
 				assertEquality(t, replyServer.URL, *tc.expectedReplyRequest, rv)
 			}
+			if tc.expectedDeadLetterRequest != nil {
+				rv := deadLetterSinkHandler.popRequest(t)
+				assertEquality(t, deadLetterSinkServer.URL, *tc.expectedDeadLetterRequest, rv)
+			}
 			if len(destHandler.requests) != 0 {
 				t.Errorf("Unexpected destination requests: %+v", destHandler.requests)
 			}
 			if len(replyHandler.requests) != 0 {
 				t.Errorf("Unexpected reply requests: %+v", replyHandler.requests)
+			}
+			if deadLetterSinkHandler != nil && len(deadLetterSinkHandler.requests) != 0 {
+				t.Errorf("Unexpected dead letter sink requests: %+v", deadLetterSinkHandler.requests)
 			}
 		})
 	}

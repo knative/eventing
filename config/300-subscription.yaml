@@ -106,3 +106,5 @@ spec:
                     name:
                       type: string
                       minLength: 1
+            delivery:
+              type: object
