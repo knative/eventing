@@ -700,6 +700,11 @@ func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 		*out = new(ReplyStrategy)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Delivery != nil {
+		in, out := &in.Delivery, &out.Delivery
+		*out = new(duckv1alpha1.DeliverySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
@@ -741,6 +746,11 @@ func (in *SubscriptionStatusPhysicalSubscription) DeepCopyInto(out *Subscription
 	}
 	if in.ReplyURI != nil {
 		in, out := &in.ReplyURI, &out.ReplyURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DeadLetterSinkURI != nil {
+		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
 		*out = new(apis.URL)
 		(*in).DeepCopyInto(*out)
 	}

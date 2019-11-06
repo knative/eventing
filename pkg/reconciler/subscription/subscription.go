@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -46,7 +47,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis"
 	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
-	"knative.dev/pkg/resolver"
 )
 
 const (
@@ -62,6 +62,7 @@ const (
 	subscriberResolveFailed             = "SubscriberResolveFailed"
 	replyResolveFailed                  = "ReplyResolveFailed"
 	replyFieldsDeprecated               = "ReplyFieldsDeprecated"
+	deadLetterSinkResolveFailed         = "DeadLetterSinkResolveFailed"
 
 	// Label to specify valid subscribable channel CRDs.
 	channelLabelKey   = "messaging.knative.dev/subscribable"
@@ -252,6 +253,37 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURIStr))
 	}
 
+	if !isNilOrEmptyDeliveryDeadLetterSink(subscription.Spec.Delivery) {
+		// Populate the namespace for the dead letter sink since it is in the namespace
+		if subscription.Spec.Delivery.DeadLetterSink.Ref != nil {
+			subscription.Spec.Delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
+		}
+
+		deadLetterSinkStr, err := r.destinationResolver.URIFromDestination(*subscription.Spec.Delivery.DeadLetterSink, subscription)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to resolve spec.delivery.deadLetterSink",
+				zap.Error(err),
+				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			return err
+		}
+
+		deadLetterSinkURI, err := apis.ParseURL(deadLetterSinkStr)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to parse URL for spec.delivery.deadLetterSink URL",
+				zap.Error(err),
+				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to parse URL for spec.delivery.deadLetterSink: %v", err)
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to parse URL for spec.delivery.deadLetterSink: %v", err)
+			return err
+		}
+
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
+		logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkStr))
+
+	}
+
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
 
@@ -312,6 +344,7 @@ func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription,
 	}
 	return fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
+
 func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) bool {
 	if channel.Spec.Subscribable == nil {
 		return false
@@ -360,6 +393,10 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 
 func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
 	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
+}
+func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
+	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||
+		delivery.DeadLetterSink == nil
 }
 
 func isNilOrEmptySubscriber(subscriber *apisv1alpha1.Destination) bool {
@@ -480,10 +517,11 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 					Name:       sub.Name,
 					UID:        sub.UID,
 				},
-				UID:           sub.UID,
-				Generation:    sub.Generation,
-				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI.String(),
-				ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI.String(),
+				UID:               sub.UID,
+				Generation:        sub.Generation,
+				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI.String(),
+				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI.String(),
+				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI.String(),
 			})
 		}
 	}

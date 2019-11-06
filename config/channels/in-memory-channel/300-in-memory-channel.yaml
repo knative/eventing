@@ -96,3 +96,6 @@ spec:
                       replyURI:
                         type: string
                         minLength: 1
+                      deliveryURI:
+                        type: string
+
