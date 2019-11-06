@@ -34,7 +34,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/controller"
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
@@ -60,14 +60,14 @@ var (
 	}
 	eventTypeName = fmt.Sprintf("dev.knative.cronjob.event-%s", sourceUID)
 
-	sinkDest = apisv1alpha1.Destination{
+	sinkDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Channel",
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 	}
-	brokerDest = apisv1alpha1.Destination{
+	brokerDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Broker",
@@ -496,13 +496,13 @@ func TestAllCases(t *testing.T) {
 	))
 }
 
-func makeAvailableReceiveAdapter(dest apisv1alpha1.Destination) *appsv1.Deployment {
+func makeAvailableReceiveAdapter(dest duckv1beta1.Destination) *appsv1.Deployment {
 	ra := makeReceiveAdapterWithSink(dest)
 	WithDeploymentAvailable()(ra)
 	return ra
 }
 
-func makeReceiveAdapterWithSink(dest apisv1alpha1.Destination) *appsv1.Deployment {
+func makeReceiveAdapterWithSink(dest duckv1beta1.Destination) *appsv1.Deployment {
 	source := NewCronJobSource(sourceName, testNS,
 		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: testSchedule,

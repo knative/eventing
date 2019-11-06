@@ -47,7 +47,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -65,7 +65,7 @@ var (
 		Kind:       "Broker",
 		APIVersion: "eventing.knative.dev/v1alpha1",
 	}
-	brokerDest = apisv1alpha1.Destination{
+	brokerDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Broker",
@@ -885,7 +885,7 @@ func makeTrigger() *v1alpha1.Trigger {
 					Type:   "Any",
 				},
 			},
-			Subscriber: &apisv1alpha1.Destination{
+			Subscriber: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					Name:       subscriberName,
 					Kind:       subscriberKind,

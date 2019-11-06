@@ -28,7 +28,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
-	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -73,10 +73,10 @@ func TestParallel(t *testing.T) {
 			client.CreatePodOrFail(subPod, common.WithService(subPodName))
 
 			parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
-				Filter: &pkgv1alpha1.Destination{
+				Filter: &duckv1beta1.Destination{
 					Ref: resources.ServiceRef(filterPodName),
 				},
-				Subscriber: pkgv1alpha1.Destination{
+				Subscriber: duckv1beta1.Destination{
 					Ref: resources.ServiceRef(subPodName),
 				},
 			}
@@ -107,7 +107,7 @@ func TestParallel(t *testing.T) {
 		parallel := eventingtesting.NewParallel(tc.name, client.Namespace,
 			eventingtesting.WithParallelChannelTemplateSpec(channelTemplate),
 			eventingtesting.WithParallelBranches(parallelBranches),
-			eventingtesting.WithParallelReply(&pkgv1alpha1.Destination{Ref: pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)}))
+			eventingtesting.WithParallelReply(&duckv1beta1.Destination{Ref: pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)}))
 
 		client.CreateParallelOrFail(parallel)
 

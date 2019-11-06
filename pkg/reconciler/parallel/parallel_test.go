@@ -32,7 +32,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -491,16 +491,16 @@ func TestAllBranches(t *testing.T) {
 	}, false, logger))
 }
 
-func createBranchReplyChannel(caseNumber int) *pkgv1alpha1.Destination {
-	return &pkgv1alpha1.Destination{
+func createBranchReplyChannel(caseNumber int) *duckv1beta1.Destination {
+	return &duckv1beta1.Destination{
 		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
 		DeprecatedKind:       "inmemorychannel",
 		DeprecatedName:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
 	}
 }
 
-func createReplyChannel(channelName string) *pkgv1alpha1.Destination {
-	return &pkgv1alpha1.Destination{
+func createReplyChannel(channelName string) *duckv1beta1.Destination {
+	return &duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
@@ -509,8 +509,8 @@ func createReplyChannel(channelName string) *pkgv1alpha1.Destination {
 	}
 }
 
-func createDeprecatedReplyChannel(channelName string) *pkgv1alpha1.Destination {
-	return &pkgv1alpha1.Destination{
+func createDeprecatedReplyChannel(channelName string) *duckv1beta1.Destination {
+	return &duckv1beta1.Destination{
 		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
 		DeprecatedKind:       "inmemorychannel",
 		DeprecatedName:       channelName,
@@ -623,16 +623,16 @@ func createParallelSubscriptionStatus(parallelName string, caseNumber int, statu
 	}
 }
 
-func createSubscriber(caseNumber int) pkgv1alpha1.Destination {
+func createSubscriber(caseNumber int) duckv1beta1.Destination {
 	uri := apis.HTTP(fmt.Sprintf("example.com/%d", caseNumber))
-	return pkgv1alpha1.Destination{
+	return duckv1beta1.Destination{
 		URI: uri,
 	}
 }
 
-func createFilter(caseNumber int) *pkgv1alpha1.Destination {
+func createFilter(caseNumber int) *duckv1beta1.Destination {
 	uri := apis.HTTP(fmt.Sprintf("example.com/filter-%d", caseNumber))
-	return &pkgv1alpha1.Destination{
+	return &duckv1beta1.Destination{
 		URI: uri,
 	}
 }

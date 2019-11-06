@@ -1247,7 +1247,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ec9257da097103f203d4f131aaee2dc20d992525208478ee26c557e8c6bc0b38"
+  digest = "1:b761b328ade5f0662ece979777f327f7cc58e2a58812b96fd0f170fe6b9f391f"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1260,7 +1260,6 @@
     "apis/istio/authentication/v1alpha1",
     "apis/istio/common/v1alpha1",
     "apis/istio/v1alpha3",
-    "apis/v1alpha1",
     "changeset",
     "client/clientset/versioned",
     "client/clientset/versioned/fake",
@@ -1347,7 +1346,7 @@
     "webhook/resourcesemantics",
   ]
   pruneopts = "T"
-  revision = "93838817ef49ee231f659ec606fde604c4135eed"
+  revision = "285df36be4328b7849911c8bc18694559147b6cb"
 
 [[projects]]
   branch = "master"
@@ -1458,7 +1457,6 @@
     "knative.dev/pkg/apis/duck/v1",
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
-    "knative.dev/pkg/apis/v1alpha1",
     "knative.dev/pkg/client/clientset/versioned/fake",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",

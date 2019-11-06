@@ -37,7 +37,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/resolver"
@@ -48,14 +48,14 @@ import (
 )
 
 var (
-	sinkDest = apisv1alpha1.Destination{
+	sinkDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Channel",
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 	}
-	brokerDest = apisv1alpha1.Destination{
+	brokerDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Broker",
@@ -176,7 +176,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &apisv1alpha1.Destination{
+						Sink: &duckv1beta1.Destination{
 							DeprecatedAPIVersion: sinkDest.Ref.APIVersion,
 							DeprecatedKind:       sinkDest.Ref.Kind,
 							DeprecatedName:       sinkDest.Ref.Name,
@@ -205,7 +205,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &apisv1alpha1.Destination{
+						Sink: &duckv1beta1.Destination{
 							DeprecatedAPIVersion: sinkDest.Ref.APIVersion,
 							DeprecatedKind:       sinkDest.Ref.Kind,
 							DeprecatedName:       sinkDest.Ref.Name,
@@ -233,7 +233,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &apisv1alpha1.Destination{
+						Sink: &duckv1beta1.Destination{
 							Ref: sinkDest.Ref,
 							URI: &apis.URL{Path: sinkURIReference},
 						},
@@ -261,7 +261,7 @@ func TestReconcile(t *testing.T) {
 								Kind:       "Namespace",
 							},
 						},
-						Sink: &apisv1alpha1.Destination{
+						Sink: &duckv1beta1.Destination{
 							Ref: sinkDest.Ref,
 							URI: &apis.URL{Path: sinkURIReference},
 						},

@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func SequenceSubscriptionName(sequenceName string, step int) string {
@@ -58,7 +58,7 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *v1alpha1.Subscriptio
 	// last one, we'll use the (optional) reply from the Sequence Spec.
 	if stepNumber < len(p.Spec.Steps)-1 {
 		r.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &apisv1alpha1.Destination{
+			Channel: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: p.Spec.ChannelTemplate.APIVersion,
 					Kind:       p.Spec.ChannelTemplate.Kind,

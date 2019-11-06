@@ -25,7 +25,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 )
 
 // +genclient
@@ -94,7 +93,7 @@ func (c *Channelable) Populate() {
 	linear := BackoffPolicyLinear
 	delay := "5s"
 	c.Spec.Delivery = &DeliverySpec{
-		DeadLetterSink: &apisv1alpha1.Destination{
+		DeadLetterSink: &duckv1beta1.Destination{
 			Ref: &corev1.ObjectReference{
 				Name: "aname",
 			},

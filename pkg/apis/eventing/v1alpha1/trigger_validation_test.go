@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 var (
@@ -42,20 +42,20 @@ var (
 			"source": "other_source",
 		},
 	}
-	validSubscriber = &apisv1alpha1.Destination{
+	validSubscriber = &duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	invalidSubscriber = &apisv1alpha1.Destination{
+	invalidSubscriber = &duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	deprecatedSubscriber = &apisv1alpha1.Destination{
+	deprecatedSubscriber = &duckv1beta1.Destination{
 		DeprecatedKind:       "Service",
 		DeprecatedAPIVersion: "serving.knative.dev/v1alpha1",
 		DeprecatedName:       "subscriber_test",

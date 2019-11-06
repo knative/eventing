@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmp"
 )
 
@@ -66,12 +66,12 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func isDestinationNilOrEmpty(d *apisv1alpha1.Destination) bool {
-	return d == nil || equality.Semantic.DeepEqual(d, &apisv1alpha1.Destination{})
+func isDestinationNilOrEmpty(d *duckv1beta1.Destination) bool {
+	return d == nil || equality.Semantic.DeepEqual(d, &duckv1beta1.Destination{})
 }
 
 func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &apisv1alpha1.Destination{})
+	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &duckv1beta1.Destination{})
 }
 
 func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {

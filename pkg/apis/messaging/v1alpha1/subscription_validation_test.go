@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 const (
@@ -45,7 +45,7 @@ func getValidChannelRef() corev1.ObjectReference {
 
 func getValidReplyStrategy() *ReplyStrategy {
 	return &ReplyStrategy{
-		Channel: &apisv1alpha1.Destination{
+		Channel: &duckv1beta1.Destination{
 			DeprecatedName:       replyChannelName,
 			DeprecatedKind:       channelKind,
 			DeprecatedAPIVersion: channelAPIVersion,
@@ -53,8 +53,8 @@ func getValidReplyStrategy() *ReplyStrategy {
 	}
 }
 
-func getValidDestination() *apisv1alpha1.Destination {
-	return &apisv1alpha1.Destination{
+func getValidDestination() *duckv1beta1.Destination {
+	return &duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       subscriberName,
 			Kind:       routeKind,
@@ -148,7 +148,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "empty Subscriber and Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: &apisv1alpha1.Destination{},
+			Subscriber: &duckv1beta1.Destination{},
 			Reply:      &ReplyStrategy{},
 		},
 		want: func() *apis.FieldError {
@@ -182,7 +182,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "empty Subscriber",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: &apisv1alpha1.Destination{},
+			Subscriber: &duckv1beta1.Destination{},
 			Reply:      getValidReplyStrategy(),
 		},
 		want: nil,
@@ -211,7 +211,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "missing name in Subscriber.Ref",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			Subscriber: &apisv1alpha1.Destination{
+			Subscriber: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					Kind:       channelKind,
 					APIVersion: channelAPIVersion,
@@ -227,7 +227,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 			Reply: &ReplyStrategy{
-				Channel: &apisv1alpha1.Destination{
+				Channel: &duckv1beta1.Destination{
 					DeprecatedKind:       channelKind,
 					DeprecatedAPIVersion: channelAPIVersion,
 				},

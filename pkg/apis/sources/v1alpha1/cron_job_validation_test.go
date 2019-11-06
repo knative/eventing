@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestCronJobSourceValidation(t *testing.T) {
@@ -35,7 +35,7 @@ func TestCronJobSourceValidation(t *testing.T) {
 		name: "valid spec",
 		spec: CronJobSourceSpec{
 			Schedule: "*/2 * * * *",
-			Sink: &apisv1alpha1.Destination{
+			Sink: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
@@ -59,7 +59,7 @@ func TestCronJobSourceValidation(t *testing.T) {
 		name: "invalid schedule",
 		spec: CronJobSourceSpec{
 			Schedule: "2",
-			Sink: &apisv1alpha1.Destination{
+			Sink: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",

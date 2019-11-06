@@ -46,7 +46,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 const (
@@ -399,8 +399,8 @@ func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliveryS
 		delivery.DeadLetterSink == nil
 }
 
-func isNilOrEmptySubscriber(subscriber *apisv1alpha1.Destination) bool {
-	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &apisv1alpha1.Destination{})
+func isNilOrEmptySubscriber(subscriber *duckv1beta1.Destination) bool {
+	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &duckv1beta1.Destination{})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {

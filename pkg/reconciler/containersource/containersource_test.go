@@ -32,7 +32,7 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
@@ -58,7 +58,7 @@ const (
 var (
 	trueVal = true
 
-	nonsinkDest = apisv1alpha1.Destination{
+	nonsinkDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Trigger",
@@ -71,7 +71,7 @@ var (
 	// We cannot take the address of constants, so copy it into a var.
 	conditionTrue = corev1.ConditionTrue
 
-	serviceDest = apisv1alpha1.Destination{
+	serviceDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Service",
@@ -80,7 +80,7 @@ var (
 	}
 	serviceURI = fmt.Sprintf("http://%s.%s.svc.cluster.local/", sinkName, testNS)
 
-	sinkDest = apisv1alpha1.Destination{
+	sinkDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
 			Kind:       "Channel",
