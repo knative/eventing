@@ -9,7 +9,7 @@ In-memory channels are a best effort channel. They have the following characteri
     same time may go to subscribers in any order.
   - Different downstream subscribers may see different orders.
 - **No Redelivery Attempts**.
-  - When a subscriber rejects a message, there is no attempts to retry sending it
+  - When a subscriber rejects a message, there is no attempts to retry sending it.
 - **Dead Letter Sink**.
   - When a subscriber rejects a message, this message is sent to the dead letter sink, if present, otherwise it is dropped.
 
