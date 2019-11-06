@@ -159,8 +159,8 @@ func TestChannelValidation(t *testing.T) {
 func TestChannelImmutableFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		current  apis.Immutable
-		original apis.Immutable
+		current  *Channel
+		original *Channel
 		want     *apis.FieldError
 	}{{
 		name: "good (no change)",

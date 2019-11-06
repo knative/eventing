@@ -67,14 +67,9 @@ func isValidChannelTemplate(ct *eventingduck.ChannelTemplateSpec) *apis.FieldErr
 	return errs
 }
 
-func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	if og == nil {
+func (c *Channel) CheckImmutableFields(ctx context.Context, original *Channel) *apis.FieldError {
+	if original == nil {
 		return nil
-	}
-
-	original, ok := og.(*Channel)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Channel"}
 	}
 
 	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Subscribable")

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,10 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +k8s:deepcopy-gen=package
+package resourcesemantics
 
-// Package tracker defines a utility to enable Reconcilers to trigger
-// reconciliations when objects that are cross-referenced change, so
-// that the level-based reconciliation can react to the change.  The
-// prototypical cross-reference in Kubernetes is corev1.ObjectReference.
-package tracker
+import (
+	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
+)
+
+// GenericCRD is the interface definition that allows us to perform the generic
+// CRD actions like deciding whether to increment generation and so forth.
+type GenericCRD interface {
+	apis.Defaultable
+	apis.Validatable
+	runtime.Object
+}

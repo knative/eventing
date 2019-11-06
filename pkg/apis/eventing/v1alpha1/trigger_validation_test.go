@@ -419,8 +419,8 @@ func TestTriggerSpecValidation(t *testing.T) {
 func TestTriggerImmutableFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		current  apis.Immutable
-		original apis.Immutable
+		current  *Trigger
+		original *Trigger
 		want     *apis.FieldError
 	}{{
 		name: "good (no change)",
@@ -444,17 +444,6 @@ func TestTriggerImmutableFields(t *testing.T) {
 		},
 		original: nil,
 		want:     nil,
-	}, {
-		name: "invalid type",
-		current: &Trigger{
-			Spec: TriggerSpec{
-				Broker: "broker",
-			},
-		},
-		original: &Broker{},
-		want: &apis.FieldError{
-			Message: "The provided original was not a Trigger",
-		},
 	}, {
 		name: "good (filter change)",
 		current: &Trigger{

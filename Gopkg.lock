@@ -214,7 +214,6 @@
   ]
   pruneopts = "NUT"
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
-  version = "v0.3.0"
 
 [[projects]]
   digest = "1:91099c6f78b1e7bdf9ed06eb4cb7f017174293a3689d76b995a06f4c8d64a7f0"
@@ -1247,7 +1246,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1bdfa75253d5b458503b348061b839f5cab0772088021f997bf06e5b2a862b18"
+  digest = "1:b1b3870d2746e5277761a3c2811d2b486db20a09763a1d98476cf82f2afbc0fc"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1346,9 +1345,11 @@
     "webhook/certificates/resources",
     "webhook/configmaps",
     "webhook/resourcesemantics",
+    "webhook/resourcesemantics/defaulting",
+    "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "f0da42d38790cc08b4b70ac065a7cee44b8cf659"
+  revision = "4836f680bbe5dc615e9c822f21c6685d97c6d553"
 
 [[projects]]
   branch = "master"
@@ -1513,6 +1514,8 @@
     "knative.dev/pkg/webhook/certificates",
     "knative.dev/pkg/webhook/configmaps",
     "knative.dev/pkg/webhook/resourcesemantics",
+    "knative.dev/pkg/webhook/resourcesemantics/defaulting",
+    "knative.dev/pkg/webhook/resourcesemantics/validation",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",
   ]

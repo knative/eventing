@@ -54,13 +54,9 @@ func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis
 	return errs
 }
 
-func (b *Broker) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	if og == nil {
+func (b *Broker) CheckImmutableFields(ctx context.Context, original *Broker) *apis.FieldError {
+	if original == nil {
 		return nil
-	}
-	original, ok := og.(*Broker)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Broker"}
 	}
 
 	if diff, err := kmp.ShortDiff(original.Spec.ChannelTemplate, b.Spec.ChannelTemplate); err != nil {

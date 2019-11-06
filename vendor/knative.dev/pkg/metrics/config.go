@@ -27,14 +27,13 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
 	"go.opencensus.io/stats"
+	"go.uber.org/zap"
 	"knative.dev/pkg/metrics/metricskey"
 )
 
 const (
-	DomainEnv        = "METRICS_DOMAIN"
-	ConfigMapNameEnv = "CONFIG_OBSERVABILITY_NAME"
+	DomainEnv = "METRICS_DOMAIN"
 )
 
 // metricsBackend specifies the backend to use for metrics
@@ -214,7 +213,7 @@ func createMetricsConfig(ops ExporterOptions, logger *zap.SugaredLogger) (*metri
 		if !allowCustomMetrics {
 			servingOrEventing := metricskey.KnativeRevisionMetrics.Union(
 				metricskey.KnativeTriggerMetrics)
-			mc.recorder = func(ctx context.Context, ms stats.Measurement, ros... stats.Options) error {
+			mc.recorder = func(ctx context.Context, ms stats.Measurement, ros ...stats.Options) error {
 				metricType := path.Join(mc.stackdriverMetricTypePrefix, ms.Measure().Name())
 
 				if servingOrEventing.Has(metricType) {
@@ -246,15 +245,6 @@ func createMetricsConfig(ops ExporterOptions, logger *zap.SugaredLogger) (*metri
 	}
 
 	return &mc, nil
-}
-
-// ConfigMapName gets the name of the metrics ConfigMap
-func ConfigMapName() string {
-	cm := os.Getenv(ConfigMapNameEnv)
-	if cm == "" {
-		return "config-observability"
-	}
-	return cm
 }
 
 // Domain holds the metrics domain to use for surfacing metrics.
