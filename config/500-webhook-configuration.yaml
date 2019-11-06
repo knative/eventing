@@ -39,7 +39,7 @@ webhooks:
   - v1beta1
   clientConfig:
     service:
-      name: webhook
+      name: eventing-webhook
       namespace: knative-eventing
   failurePolicy: Fail
   name: config.webhook.eventing.knative.dev
