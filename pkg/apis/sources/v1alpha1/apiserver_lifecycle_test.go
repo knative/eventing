@@ -75,7 +75,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
-		name: "mark sufficient persimissions",
+		name: "mark sufficient permissions",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()

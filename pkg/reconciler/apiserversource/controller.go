@@ -67,9 +67,8 @@ func NewController(
 		apiserversourceLister: apiServerSourceInformer.Lister(),
 		deploymentLister:      deploymentInformer.Lister(),
 		eventTypeLister:       eventTypeInformer.Lister(),
-
-		source:         GetCfgHost(ctx),
-		loggingContext: ctx,
+		source:                GetCfgHost(ctx),
+		loggingContext:        ctx,
 	}
 
 	env := &envConfig{}
