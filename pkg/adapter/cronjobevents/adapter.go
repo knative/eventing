@@ -108,6 +108,7 @@ func (a *cronJobAdapter) cronTick() {
 	event.SetDataContentType(cloudevents.ApplicationJSON)
 	reportArgs := &source.ReportArgs{
 		Namespace:     a.Namespace,
+		EventSource:   event.Source(),
 		EventType:     event.Type(),
 		Name:          a.Name,
 		ResourceGroup: resourceGroup,

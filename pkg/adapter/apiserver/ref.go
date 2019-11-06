@@ -107,6 +107,7 @@ func (a *ref) addControllerWatch(gvr schema.GroupVersionResource) {
 func (a *ref) sendEvent(ctx context.Context, event *cloudevents.Event) error {
 	reportArgs := &source.ReportArgs{
 		Namespace:     a.namespace,
+		EventSource:   event.Source(),
 		EventType:     event.Type(),
 		Name:          a.name,
 		ResourceGroup: resourceGroup,
