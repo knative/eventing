@@ -42,11 +42,11 @@ const (
 	// LabelBrokerName is the label for the name of the Broker.
 	LabelBrokerName = "broker_name"
 
-	// LabelSourceName is the label for the name of the Source.
-	LabelSourceName = "source_name"
-
 	// LabelEventType is the label for the name of the event type.
 	LabelEventType = "event_type"
+
+	// LabelEventSource is the label for the name of the event source.
+	LabelEventSource = "event_source"
 
 	// LabelFilterType is the label for the Trigger filter attribute "type".
 	LabelFilterType = "filter_type"
@@ -91,14 +91,14 @@ var (
 		LabelProject,
 		LabelLocation,
 		LabelClusterName,
-		LabelResourceGroup,
 		LabelNamespaceName,
-		LabelSourceName,
+		LabelName,
+		LabelResourceGroup,
 	)
 
 	// KnativeSourceMetrics stores a set of metric types which are supported
 	// by resource type knative_source.
 	KnativeSourceMetrics = sets.NewString(
-		"knative.dev/internal/eventing/source/event_count",
+		"knative.dev/eventing/source/event_count",
 	)
 )

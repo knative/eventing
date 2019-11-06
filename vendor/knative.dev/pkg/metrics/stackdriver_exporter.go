@@ -49,6 +49,19 @@ const (
 )
 
 var (
+	// gcpMetadataFunc is the function used to fetch GCP metadata.
+	// In product usage, this is always set to function retrieveGCPMetadata.
+	// In unit tests this is set to a fake one to avoid calling GCP metadata
+	// service.
+	gcpMetadataFunc func() *gcpMetadata
+
+	// newStackdriverExporterFunc is the function used to create new stackdriver
+	// exporter.
+	// In product usage, this is always set to function newOpencensusSDExporter.
+	// In unit tests this is set to a fake one to avoid calling actual Google API
+	// service.
+	newStackdriverExporterFunc func(stackdriver.Options) (view.Exporter, error)
+
 	// kubeclient is the in-cluster Kubernetes kubeclient, which is lazy-initialized on first use.
 	kubeclient *kubernetes.Clientset
 	// initClientOnce is the lazy initializer for kubeclient.
@@ -80,6 +93,10 @@ func SetStackdriverSecretLocation(name string, namespace string) {
 }
 
 func init() {
+	// Set gcpMetadataFunc to call GCP metadata service.
+	gcpMetadataFunc = retrieveGCPMetadata
+	newStackdriverExporterFunc = newOpencensusSDExporter
+
 	kubeclientInitErr = nil
 }
 
@@ -97,7 +114,7 @@ func newStackdriverExporter(config *metricsConfig, logger *zap.SugaredLogger) (v
 		logger.Warnw("Issue configuring Stackdriver exporter client options, no additional client options will be used: ", zap.Error(err))
 	}
 	// Automatically fall back on Google application default credentials
-	e, err := newOpencensusSDExporter(stackdriver.Options{
+	e, err := newStackdriverExporterFunc(stackdriver.Options{
 		ProjectID:               gm.project,
 		Location:                gm.location,
 		MonitoringClientOptions: co,
@@ -139,7 +156,7 @@ func getStackdriverExporterClientOptions(sdconfig *StackdriverClientConfig) ([]o
 // to Stackdriver. Values can come from the GCE metadata server or the config.
 //  Values explicitly set in the config take the highest precedent.
 func getMergedGCPMetadata(config *metricsConfig) *gcpMetadata {
-	gm := retrieveGCPMetadata()
+	gm := gcpMetadataFunc()
 	if config.stackdriverClientConfig.ProjectID != "" {
 		gm.project = config.stackdriverClientConfig.ProjectID
 	}

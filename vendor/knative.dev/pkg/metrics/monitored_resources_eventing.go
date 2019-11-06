@@ -82,7 +82,7 @@ func (ki *KnativeSource) MonitoredResource() (resType string, labels map[string]
 		metricskey.LabelLocation:      ki.Location,
 		metricskey.LabelClusterName:   ki.ClusterName,
 		metricskey.LabelNamespaceName: ki.NamespaceName,
-		metricskey.LabelSourceName:    ki.SourceName,
+		metricskey.LabelName:          ki.SourceName,
 		metricskey.LabelResourceGroup: ki.SourceResourceGroup,
 	}
 	return metricskey.ResourceTypeKnativeSource, labels
@@ -146,9 +146,9 @@ func GetKnativeSourceMonitoredResource(
 		Location:    gm.location,
 		ClusterName: gm.cluster,
 		// The rest resource labels are from metrics labels.
-		SourceResourceGroup: valueOrUnknown(metricskey.LabelResourceGroup, tagsMap),
 		NamespaceName:       valueOrUnknown(metricskey.LabelNamespaceName, tagsMap),
-		SourceName:          valueOrUnknown(metricskey.LabelSourceName, tagsMap),
+		SourceName:          valueOrUnknown(metricskey.LabelName, tagsMap),
+		SourceResourceGroup: valueOrUnknown(metricskey.LabelResourceGroup, tagsMap),
 	}
 
 	var newTags []tag.Tag

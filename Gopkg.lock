@@ -1246,8 +1246,8 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  branch = "internal_metrics"
-  digest = "1:e4c98ede70822cf537cb3fbf4795b4c9ada0bfbb3a1df1d1bbb2700b62de9714"
+  branch = "master"
+  digest = "1:ec9257da097103f203d4f131aaee2dc20d992525208478ee26c557e8c6bc0b38"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1347,8 +1347,7 @@
     "webhook/resourcesemantics",
   ]
   pruneopts = "T"
-  revision = "9fdd7548d3de84433b7d8c26e566153cc2c335e4"
-  source = "github.com/nachocano/pkg"
+  revision = "93838817ef49ee231f659ec606fde604c4135eed"
 
 [[projects]]
   branch = "master"
