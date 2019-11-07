@@ -163,7 +163,7 @@ func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint) {
 }
 
 func (h HttpLoadGenerator) SendGCEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
 	event.SetType(common.GCEventType)
 	event.SetSource(h.eventSource)
@@ -172,7 +172,7 @@ func (h HttpLoadGenerator) SendGCEvent() {
 }
 
 func (h HttpLoadGenerator) SendEndEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
 	event.SetType(common.EndEventType)
 	event.SetSource(h.eventSource)
