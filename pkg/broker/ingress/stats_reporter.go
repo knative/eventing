@@ -24,6 +24,7 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/metrics/metricskey"
 )
@@ -51,18 +52,16 @@ var (
 	// - length between 1 and 255 inclusive
 	// - characters are printable US-ASCII
 	namespaceKey         = tag.MustNewKey(metricskey.LabelNamespaceName)
-	brokerKey            = tag.MustNewKey(metricskey.LabelName)
-	eventSourceKey       = tag.MustNewKey(metricskey.LabelEventSource)
+	brokerKey            = tag.MustNewKey(metricskey.LabelBrokerName)
 	eventTypeKey         = tag.MustNewKey(metricskey.LabelEventType)
 	responseCodeKey      = tag.MustNewKey(metricskey.LabelResponseCode)
 	responseCodeClassKey = tag.MustNewKey(metricskey.LabelResponseCodeClass)
 )
 
 type ReportArgs struct {
-	ns          string
-	broker      string
-	eventType   string
-	eventSource string
+	ns        string
+	broker    string
+	eventType string
 }
 
 func init() {
@@ -79,21 +78,28 @@ var _ StatsReporter = (*reporter)(nil)
 var emptyContext = context.Background()
 
 // Reporter holds cached metric objects to report ingress metrics.
-type reporter struct{}
+type reporter struct {
+	pod       string
+	container string
+}
 
 // NewStatsReporter creates a reporter that collects and reports ingress metrics.
-func NewStatsReporter() StatsReporter {
-	return &reporter{}
+func NewStatsReporter(pod, container string) StatsReporter {
+	return &reporter{
+		pod:       pod,
+		container: container,
+	}
 }
 
 func register() {
 	tagKeys := []tag.Key{
 		namespaceKey,
 		brokerKey,
-		eventSourceKey,
 		eventTypeKey,
 		responseCodeKey,
-		responseCodeClassKey}
+		responseCodeClassKey,
+		broker.PodTagKey,
+		broker.ContainerTagKey}
 
 	// Create view to see our measurements.
 	err := view.Register(
@@ -139,10 +145,11 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
 		emptyContext,
+		tag.Insert(broker.PodTagKey, r.pod),
+		tag.Insert(broker.ContainerTagKey, r.container),
 		tag.Insert(namespaceKey, args.ns),
 		tag.Insert(brokerKey, args.broker),
 		tag.Insert(eventTypeKey, args.eventType),
-		tag.Insert(eventSourceKey, args.eventSource),
 		tag.Insert(responseCodeKey, strconv.Itoa(responseCode)),
 		tag.Insert(responseCodeClassKey, metrics.ResponseCodeClass(responseCode)))
 }

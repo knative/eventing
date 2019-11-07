@@ -30,6 +30,10 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
+const (
+	filterContainerName = "filter"
+)
+
 // FilterArgs are the arguments to create a Broker's filter Deployment.
 type FilterArgs struct {
 	Broker             *eventingv1alpha1.Broker
@@ -60,7 +64,7 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 					ServiceAccountName: args.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
-							Name:  "filter",
+							Name:  filterContainerName,
 							Image: args.Image,
 							LivenessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
@@ -96,12 +100,25 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 									},
 								},
 								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
+								{
+									Name:  "CONTAINER_NAME",
+									Value: filterContainerName,
+								},
+								{
 									Name:  "BROKER",
 									Value: args.Broker.Name,
 								},
+								// Used for StackDriver only.
 								{
 									Name:  "METRICS_DOMAIN",
-									Value: "knative.dev/eventing",
+									Value: "knative.dev/internal/eventing",
 								},
 							},
 							Ports: []corev1.ContainerPort{

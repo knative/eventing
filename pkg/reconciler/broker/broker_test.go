@@ -880,12 +880,24 @@ func envVars(containerName string) []corev1.EnvVar {
 				},
 			},
 			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name:  "CONTAINER_NAME",
+				Value: filterContainerName,
+			},
+			{
 				Name:  "BROKER",
 				Value: brokerName,
 			},
 			{
 				Name:  "METRICS_DOMAIN",
-				Value: "knative.dev/eventing",
+				Value: "knative.dev/internal/eventing",
 			},
 		}
 	case ingressContainerName:
@@ -903,6 +915,18 @@ func envVars(containerName string) []corev1.EnvVar {
 				},
 			},
 			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name:  "CONTAINER_NAME",
+				Value: ingressContainerName,
+			},
+			{
 				Name:  "FILTER",
 				Value: "",
 			},
@@ -916,7 +940,7 @@ func envVars(containerName string) []corev1.EnvVar {
 			},
 			{
 				Name:  "METRICS_DOMAIN",
-				Value: "knative.dev/eventing",
+				Value: "knative.dev/internal/eventing",
 			},
 		}
 	}
