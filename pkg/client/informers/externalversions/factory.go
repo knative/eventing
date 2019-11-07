@@ -29,6 +29,7 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 	versioned "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventing "knative.dev/eventing/pkg/client/informers/externalversions/eventing"
+	flows "knative.dev/eventing/pkg/client/informers/externalversions/flows"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	messaging "knative.dev/eventing/pkg/client/informers/externalversions/messaging"
 	sources "knative.dev/eventing/pkg/client/informers/externalversions/sources"
@@ -175,12 +176,17 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Eventing() eventing.Interface
+	Flows() flows.Interface
 	Messaging() messaging.Interface
 	Sources() sources.Interface
 }
 
 func (f *sharedInformerFactory) Eventing() eventing.Interface {
 	return eventing.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Flows() flows.Interface {
+	return flows.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Messaging() messaging.Interface {
