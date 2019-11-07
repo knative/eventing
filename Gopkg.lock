@@ -1491,6 +1491,7 @@
     "knative.dev/pkg/metrics/metricskey",
     "knative.dev/pkg/metrics/metricstest",
     "knative.dev/pkg/metrics/testing",
+    "knative.dev/pkg/profiling",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/resolver",
     "knative.dev/pkg/signals",
