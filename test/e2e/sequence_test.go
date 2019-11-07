@@ -29,7 +29,7 @@ import (
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
 
-	pkgv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	pkgTest "knative.dev/pkg/test"
 )
 
@@ -61,7 +61,7 @@ func TestSequence(t *testing.T) {
 	defer tearDown(client)
 
 	// construct steps for the sequence
-	steps := make([]pkgv1alpha1.Destination, 0)
+	steps := make([]duckv1beta1.Destination, 0)
 	for _, config := range stepSubscriberConfigs {
 		// create a stepper Pod with Service
 		podName := config.podName
@@ -70,7 +70,7 @@ func TestSequence(t *testing.T) {
 
 		client.CreatePodOrFail(stepperPod, common.WithService(podName))
 		// create a new step
-		step := pkgv1alpha1.Destination{
+		step := duckv1beta1.Destination{
 			Ref: resources.ServiceRef(podName),
 		}
 		// add the step into steps
@@ -105,7 +105,7 @@ func TestSequence(t *testing.T) {
 		client.Namespace,
 		eventingtesting.WithSequenceSteps(steps),
 		eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
-		eventingtesting.WithSequenceReply(&pkgv1alpha1.Destination{Ref: replyRef}),
+		eventingtesting.WithSequenceReply(&duckv1beta1.Destination{Ref: replyRef}),
 	)
 
 	// create Sequence or fail the test if there is an error

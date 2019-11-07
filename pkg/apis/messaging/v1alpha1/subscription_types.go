@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -105,7 +105,7 @@ type SubscriptionSpec struct {
 	// Events from the Channel will be delivered here and replies are
 	// sent to a channel as specified by the Reply.
 	// +optional
-	Subscriber *apisv1alpha1.Destination `json:"subscriber,omitempty"`
+	Subscriber *duckv1beta1.Destination `json:"subscriber,omitempty"`
 
 	// Reply specifies (optionally) how to handle events returned from
 	// the Subscriber target.
@@ -124,7 +124,7 @@ type ReplyStrategy struct {
 	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
 	//  it will be reflected in the Subscription's status.
 	// +optional
-	Channel *apisv1alpha1.Destination `json:"channel,omitempty"`
+	Channel *duckv1beta1.Destination `json:"channel,omitempty"`
 }
 
 // SubscriptionStatus (computed) for a subscription

@@ -25,7 +25,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -76,20 +76,20 @@ type ParallelSpec struct {
 	// Reply is a Reference to where the result of a case Subscriber gets sent to
 	// when the case does not have a Reply
 	// +optional
-	Reply *v1alpha1.Destination `json:"reply,omitempty"`
+	Reply *duckv1beta1.Destination `json:"reply,omitempty"`
 }
 
 type ParallelBranch struct {
 	// Filter is the expression guarding the branch
-	Filter *v1alpha1.Destination `json:"filter,omitempty"`
+	Filter *duckv1beta1.Destination `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
-	Subscriber v1alpha1.Destination `json:"subscriber"`
+	Subscriber duckv1beta1.Destination `json:"subscriber"`
 
 	// Reply is a Reference to where the result of Subscriber of this case gets sent to.
 	// If not specified, sent the result to the Parallel Reply
 	// +optional
-	Reply *v1alpha1.Destination `json:"reply,omitempty"`
+	Reply *duckv1beta1.Destination `json:"reply,omitempty"`
 }
 
 // ParallelStatus represents the current state of a Parallel.

@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -54,7 +54,7 @@ func TestCronJobSource(t *testing.T) {
 		eventingtesting.WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
 			Schedule: schedule,
 			Data:     data,
-			Sink:     &apisv1alpha1.Destination{Ref: resources.ServiceRef(loggerPodName)},
+			Sink:     &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
 	client.CreateCronJobSourceOrFail(cronJobSource)

@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestParallelValidation(t *testing.T) {
@@ -54,7 +54,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		},
 		Spec: &runtime.RawExtension{},
 	}
-	invalidReplyInParallel := ParallelBranch{Subscriber: v1alpha1.Destination{URI: subscriberURI},
+	invalidReplyInParallel := ParallelBranch{Subscriber: duckv1beta1.Destination{URI: subscriberURI},
 		Reply: makeInvalidReply("reply-channel")}
 
 	tests := []struct {
@@ -80,7 +80,7 @@ func TestParallelSpecValidation(t *testing.T) {
 	}, {
 		name: "missing channeltemplatespec",
 		ts: &ParallelSpec{
-			Branches: []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Branches: []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -92,7 +92,7 @@ func TestParallelSpecValidation(t *testing.T) {
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{Kind: "mykind"},
 				Spec:     &runtime.RawExtension{}},
-			Branches: []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Branches: []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -104,7 +104,7 @@ func TestParallelSpecValidation(t *testing.T) {
 			ChannelTemplate: &eventingduck.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"},
 				Spec:     &runtime.RawExtension{}},
-			Branches: []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Branches: []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
@@ -114,7 +114,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "valid parallel",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -123,7 +123,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "valid parallel with valid reply",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -133,8 +133,8 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "parallel with invalid missing name",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
-			Reply: &v1alpha1.Destination{
+			Branches:        []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
+			Reply: &duckv1beta1.Destination{
 				DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
 				DeprecatedKind:       "inmemorychannel",
 			},
@@ -147,7 +147,7 @@ func TestParallelSpecValidation(t *testing.T) {
 		name: "parallel with invalid reply",
 		ts: &ParallelSpec{
 			ChannelTemplate: validChannelTemplate,
-			Branches:        []ParallelBranch{{Subscriber: v1alpha1.Destination{URI: subscriberURI}}},
+			Branches:        []ParallelBranch{{Subscriber: duckv1beta1.Destination{URI: subscriberURI}}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {

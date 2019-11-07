@@ -22,10 +22,10 @@ import (
 	"fmt"
 
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	pkgTest "knative.dev/pkg/test"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -51,7 +51,7 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Subscriber = &v1alpha1.Destination{
+			s.Spec.Subscriber = &duckv1beta1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -63,7 +63,7 @@ func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) Subscripti
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-				Channel: &v1alpha1.Destination{
+				Channel: &duckv1beta1.Destination{
 					Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 				},
 			}
@@ -154,7 +154,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &v1alpha1.Destination{
+			t.Spec.Subscriber = &duckv1beta1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -165,7 +165,7 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &v1alpha1.Destination{
+		t.Spec.Subscriber = &duckv1beta1.Destination{
 			URI: apisURI,
 		}
 	}

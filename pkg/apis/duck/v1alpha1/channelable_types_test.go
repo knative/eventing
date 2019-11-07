@@ -23,7 +23,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -62,7 +61,7 @@ func TestChannelablePopulate(t *testing.T) {
 				},
 			},
 			Delivery: &DeliverySpec{
-				DeadLetterSink: &apisv1alpha1.Destination{
+				DeadLetterSink: &duckv1beta1.Destination{
 					Ref: &corev1.ObjectReference{
 						Name: "aname",
 					},

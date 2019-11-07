@@ -29,7 +29,7 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
-	apisv1alpha1 "knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 // SubscriptionOption enables further configuration of a Subscription.
@@ -121,7 +121,7 @@ func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) Subscript
 
 func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Subscriber = &apisv1alpha1.Destination{
+		s.Spec.Subscriber = &duckv1beta1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
@@ -172,7 +172,7 @@ func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOptio
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &apisv1alpha1.Destination{
+			Channel: &duckv1beta1.Destination{
 				DeprecatedAPIVersion: apiVersion(gvk),
 				DeprecatedKind:       gvk.Kind,
 				DeprecatedName:       name,
@@ -184,7 +184,7 @@ func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) Subscriptio
 func WithSubscriptionReplyNotDeprecated(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &apisv1alpha1.Destination{
+			Channel: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: apiVersion(gvk),
 					Kind:       gvk.Kind,
