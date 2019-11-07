@@ -41,10 +41,6 @@ import (
 	certresources "knative.dev/pkg/webhook/certificates/resources"
 )
 
-var (
-	errMissingNewObject = errors.New("the new object may not be nil")
-)
-
 // Options contains the configuration for the webhook
 type Options struct {
 	// ServiceName is the service name of the webhook.

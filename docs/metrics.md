@@ -8,8 +8,8 @@ These are exported by `broker-ingress` pods.
 
 | Name                       | Type      | Description                                       | Tags                                                                                                  |
 | -------------------------- | --------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `event_count`              | count     | Number of events received by a Broker.            | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
-| `event_dispatch_latencies` | histogram | The time spent dispatching an event to a Channel. | `namespace_name`, `broker_name`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+| `event_count`              | count     | Number of events received by a Broker.            | `namespace_name`, `broker_name`, `event_type`, `response_code`, `response_code_class` |
+| `event_dispatch_latencies` | histogram | The time spent dispatching an event to a Channel. | `namespace_name`, `broker_name`, `event_type`, `response_code`, `response_code_class` |
 
 ## Trigger
 
@@ -17,9 +17,9 @@ These are exported by `broker-filter` pods.
 
 | Name                         | Type      | Description                                                                        | Tags                                                                                                                    |
 | ---------------------------- | --------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `event_count`                | count     | Number of events received by a Trigger                                             | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
-| `event_dispatch_latencies`   | histogram | The time spent dispatching an event to a Trigger subscriber                        | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`, `response_code`, `response_code_class` |
-| `event_processing_latencies` | histogram | The time spent processing an event before it is dispatched to a Trigger subscriber | `namespace_name`, `trigger_name`, `broker_name`, `filter_source`, `filter_type`                                         |
+| `event_count`                | count     | Number of events received by a Trigger                                             | `namespace_name`, `trigger_name`, `broker_name`, `filter_type`, `response_code`, `response_code_class` |
+| `event_dispatch_latencies`   | histogram | The time spent dispatching an event to a Trigger subscriber                        | `namespace_name`, `trigger_name`, `broker_name`, `filter_type`, `response_code`, `response_code_class` |
+| `event_processing_latencies` | histogram | The time spent processing an event before it is dispatched to a Trigger subscriber | `namespace_name`, `trigger_name`, `broker_name`, `filter_type`                                         |
 
 ## Sources
 
@@ -29,13 +29,13 @@ These are exported by core sources.
 
 | Name          | Type  | Description           | Tags                                                                                                                           |
 | ------------- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `event_count` | count | Number of events sent | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+| `event_count` | count | Number of events sent | `namespace_name`, `name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 ### CronJobSource
 
 | Name          | Type  | Description           | Tags                                                                                                                           |
 | ------------- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `event_count` | count | Number of events sent | `namespace_name`, `source_name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
+| `event_count` | count | Number of events sent | `namespace_name`, `name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 # Access metrics
 
@@ -154,7 +154,7 @@ then you will access the metrics at
     Add `metrics.backend-destination: stackdriver` and
     `metrics.allow-stackdriver-custom-metrics: "true"` to the `data` field. You
     can find detailed information in `data._example` field in the `ConfigMap`
-    you are editing.
+    you are editing. Note that custom metrics incur charges.
 
 1.  Open the StackDriver UI and see your resource metrics in the StackDriver
     Metrics Explorer. You should be able to see metrics with the prefix
