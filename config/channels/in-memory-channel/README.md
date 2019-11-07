@@ -1,19 +1,17 @@
 # In-Memory Channels
 
-In-memory channels are a best effort Channel. They should **NOT** be used in
-Production. They are useful for development.
+In-memory channels are a best effort channel. They have the following characterics:
 
-They differ from most Channels in that they have:
-
-- No persistence.
-  - If a Pod goes down, messages go with it.
-- No ordering guarantee.
+- **No Persistence**.
+  - When a Pod goes down, messages go with it.
+- **No Ordering Guarantee**.
   - There is nothing enforcing an ordering, so two messages that arrive at the
-    same time may go downstream in any order.
+    same time may go to subscribers in any order.
   - Different downstream subscribers may see different orders.
-- No redelivery attempts.
-  - If downstream rejects a request, a log message is written, but that request
-    is never sent again.
+- **No Redelivery Attempts**.
+  - When a subscriber rejects a message, there is no attempts to retry sending it.
+- **Dead Letter Sink**.
+  - When a subscriber rejects a message, this message is sent to the dead letter sink, if present, otherwise it is dropped.
 
 ### Deployment steps:
 
