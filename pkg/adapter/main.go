@@ -20,7 +20,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"knative.dev/pkg/profiling"
 	"log"
+	"net/http"
 	"time"
 
 	// Uncomment the following line to load the gcp plugin
@@ -84,6 +86,25 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 	} else {
 		if err := metrics.UpdateExporter(*metricsConfig, logger); err != nil {
 			logger.Error("failed to create the metrics exporter", zap.Error(err))
+		}
+	}
+
+	// Check if metrics config contains profiling flag
+	if metricsConfig != nil && metricsConfig.ConfigMap != nil {
+		if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err != nil {
+			if enabled {
+				// Start a goroutine to server profiling metrics
+				logger.Info("Profiling enabled")
+				go func() {
+					server := profiling.NewServer(profiling.NewHandler(logger, true))
+					// Don't forward ErrServerClosed as that indicates we're already shutting down.
+					if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+						logger.Error("profiling server failed", zap.Error(err))
+					}
+				}()
+			}
+		} else {
+			logger.Error("error while reading profiling flag", zap.Error(err))
 		}
 	}
 
