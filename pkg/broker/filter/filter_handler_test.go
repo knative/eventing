@@ -379,7 +379,7 @@ func TestReceiver(t *testing.T) {
 
 			// The TTL will be added again.
 			expectedResponseEvent := addTTLToEvent(*tc.returnedEvent)
-			if diff := cmp.Diff(expectedResponseEvent.Context.AsV03(), resp.Event.Context.AsV03()); diff != "" {
+			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), resp.Event.Context.AsV1()); diff != "" {
 				t.Errorf("Incorrect response event context (-want +got): %s", diff)
 			}
 			if diff := cmp.Diff(expectedResponseEvent.Data, resp.Event.Data); diff != "" {
@@ -422,7 +422,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	h.requestReceived = true
 
 	for n, v := range h.headers {
-		if strings.Contains(strings.ToLower(n), strings.ToLower(broker.V03TTLAttribute)) {
+		if strings.Contains(strings.ToLower(n), strings.ToLower(broker.V1TTLAttribute)) {
 			h.t.Errorf("Broker TTL should not be seen by the subscriber: %s", n)
 		}
 		if diff := cmp.Diff(v, req.Header[n]); diff != "" {
@@ -439,7 +439,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	c := &cehttp.CodecV03{}
+	c := &cehttp.CodecV1{}
 	m, err := c.Encode(context.Background(), *h.returnedEvent)
 	if err != nil {
 		h.t.Fatalf("Could not encode message: %v", err)
@@ -555,7 +555,7 @@ func makeEventWithoutTTL() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV03(),
+		}.AsV1(),
 	}
 }
 
@@ -580,7 +580,7 @@ func makeDifferentEvent() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV03(),
+		}.AsV1(),
 	}
 }
 
@@ -597,7 +597,7 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 			Extensions: map[string]interface{}{
 				extName: extValue,
 			},
-		}.AsV03(),
+		}.AsV1(),
 	}
 	e := addTTLToEvent(*noTTL)
 	return &e

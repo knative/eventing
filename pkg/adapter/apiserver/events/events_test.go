@@ -91,7 +91,7 @@ func TestMakeAddEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/unit",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
 		},
@@ -129,7 +129,7 @@ func TestMakeUpdateEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/unit",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
 		},
@@ -167,7 +167,7 @@ func TestMakeDeleteEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/unit",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"unit","namespace":"test"}}`,
 		},
@@ -206,7 +206,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/unit",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
 		},
@@ -222,7 +222,7 @@ func TestMakeAddRefEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/owned",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
 		},
@@ -261,7 +261,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/unit",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
 		},
@@ -277,7 +277,7 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/owned",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
 		},
@@ -316,7 +316,7 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/unit",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
 		},
@@ -332,7 +332,7 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 					Extensions: map[string]interface{}{
 						"subject": "/apis/v1/namespaces/test/pods/owned",
 					},
-				}.AsV03(),
+				}.AsV1(),
 			},
 			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
 		},
