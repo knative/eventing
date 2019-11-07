@@ -447,12 +447,12 @@ func (in *ReplyStrategy) DeepCopyInto(out *ReplyStrategy) {
 	*out = *in
 	if in.Destination != nil {
 		in, out := &in.Destination, &out.Destination
-		*out = new(apisv1alpha1.Destination)
+		*out = new(v1beta1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.DeprecatedChannel != nil {
 		in, out := &in.DeprecatedChannel, &out.DeprecatedChannel
-		*out = new(apisv1alpha1.Destination)
+		*out = new(v1beta1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	return

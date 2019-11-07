@@ -221,7 +221,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.ClearDeprecated()
 	if !isNilOrEmptyReply(reply) {
 		hasDeprecatedReplyStatus := false
-		var destination *apisv1alpha1.Destination
+		var destination *duckv1beta1.Destination
 		if reply.DeprecatedChannel != nil && !equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{}) {
 			destination = reply.DeprecatedChannel
 			// Add a condition warning that the fields are deprecated.
@@ -406,7 +406,7 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 
 func isNilOrEmptyReply(r *v1alpha1.ReplyStrategy) bool {
 	return r == nil || equality.Semantic.DeepEqual(r, &v1alpha1.ReplyStrategy{}) ||
-		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &apisv1alpha1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &apisv1alpha1.Destination{})))
+		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &duckv1beta1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &duckv1beta1.Destination{})))
 }
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
 	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||

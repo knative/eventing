@@ -124,7 +124,7 @@ type ReplyStrategy struct {
 	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
 	//  it will be reflected in the Subscription's status.
 	// +optional
-	Destination *duckv1beta1.Destination `json:",inline"`
+	*duckv1beta1.Destination `json:",inline"`
 
 	//  The resource pointed by this ObjectReference must meet the Addressable contract
 	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
