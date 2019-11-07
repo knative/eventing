@@ -30,14 +30,12 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	tracingconfig "knative.dev/pkg/tracing/config"
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/configmaps"
 	"knative.dev/pkg/webhook/resourcesemantics"
-	metricsconfig "knative.dev/serving/pkg/metrics"
 )
 
 func NewResourceAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
@@ -108,8 +106,8 @@ func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *
 		// The configmaps to validate.
 		configmap.Constructors{
 			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
-			metrics.ConfigMapName():  metricsconfig.NewObservabilityConfigFromConfigMap,
-			logging.ConfigMapName():  logging.NewConfigFromConfigMap,
+			// metrics.ConfigMapName():   metricsconfig.NewObservabilityConfigFromConfigMap,
+			logging.ConfigMapName(): logging.NewConfigFromConfigMap,
 		},
 	)
 }

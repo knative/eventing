@@ -1352,14 +1352,6 @@
   revision = "d4ce00139499bd3ea11cdb18ef20a41bdb248245"
 
 [[projects]]
-  digest = "1:172828cd335504d35becff53fdf82e059704eb79533c7ce5b1dae6a6c5931dda"
-  name = "knative.dev/serving"
-  packages = ["pkg/metrics"]
-  pruneopts = "NUT"
-  revision = "a1a35b117afe15ca2c5bd4aec5bb3574a44e802d"
-  version = "v0.10.0"
-
-[[projects]]
   branch = "master"
   digest = "1:5299d75a2b08a91c54ffb8b76afe21eb5f1ecf7bc4d67b859fc081f9415452bc"
   name = "knative.dev/test-infra"
@@ -1521,7 +1513,6 @@
     "knative.dev/pkg/webhook/certificates",
     "knative.dev/pkg/webhook/configmaps",
     "knative.dev/pkg/webhook/resourcesemantics",
-    "knative.dev/serving/pkg/metrics",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",
   ]
