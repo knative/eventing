@@ -25,7 +25,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/apis/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -67,7 +67,7 @@ var (
 type SequenceSpec struct {
 	// Steps is the list of Destinations (processors / functions) that will be called in the order
 	// provided.
-	Steps []v1alpha1.Destination `json:"steps"`
+	Steps []duckv1beta1.Destination `json:"steps"`
 
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
@@ -76,7 +76,7 @@ type SequenceSpec struct {
 
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
 	// +optional
-	Reply *v1alpha1.Destination `json:"reply,omitempty"`
+	Reply *duckv1beta1.Destination `json:"reply,omitempty"`
 }
 
 type SequenceChannelStatus struct {
