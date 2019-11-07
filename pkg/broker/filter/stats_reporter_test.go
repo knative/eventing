@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/pkg/metrics/metricskey"
 	"knative.dev/pkg/metrics/metricstest"
 )
@@ -28,21 +29,21 @@ import (
 func TestStatsReporter(t *testing.T) {
 	setup()
 	args := &ReportArgs{
-		ns:           "testns",
-		trigger:      "testtrigger",
-		broker:       "testbroker",
-		filterType:   "testeventtype",
-		filterSource: "testeventsource",
+		ns:         "testns",
+		trigger:    "testtrigger",
+		broker:     "testbroker",
+		filterType: "testeventtype",
 	}
 
-	r := NewStatsReporter()
+	r := NewStatsReporter("testpod", "testcontainer")
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName: "testns",
-		metricskey.LabelName:          "testtrigger",
+		metricskey.LabelTriggerName:   "testtrigger",
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelFilterType:    "testeventtype",
-		metricskey.LabelFilterSource:  "testeventsource",
+		broker.LabelContainerName:     "testcontainer",
+		broker.LabelPodName:           "testpod",
 	}
 
 	wantAllTags := map[string]string{}
@@ -84,23 +85,23 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		ns:           "testns",
-		trigger:      "testtrigger",
-		broker:       "testbroker",
-		filterType:   "",
-		filterSource: "",
+		ns:         "testns",
+		trigger:    "testtrigger",
+		broker:     "testbroker",
+		filterType: "",
 	}
 
-	r := NewStatsReporter()
+	r := NewStatsReporter("testpod", "testcontainer")
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
-		metricskey.LabelName:              "testtrigger",
+		metricskey.LabelTriggerName:       "testtrigger",
 		metricskey.LabelBrokerName:        "testbroker",
 		metricskey.LabelFilterType:        anyValue,
-		metricskey.LabelFilterSource:      anyValue,
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
+		broker.LabelContainerName:         "testcontainer",
+		broker.LabelPodName:               "testpod",
 	}
 
 	// test ReportEventCount
