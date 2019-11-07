@@ -76,3 +76,11 @@ rules:
     resources:
       - events
     verbs: *everything
+
+  # Authorization checker
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create

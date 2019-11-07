@@ -35,6 +35,9 @@ const (
 	// ApiServerConditionDeployed has status True when the ApiServerSource has had it's deployment created.
 	ApiServerConditionDeployed apis.ConditionType = "Deployed"
 
+	// ApiServerConditionSufficientPermissions has status True when the ApiServerSource has sufficient permissions to access resources.
+	ApiServerConditionSufficientPermissions apis.ConditionType = "SufficientPermissions"
+
 	// ApiServerConditionEventTypeProvided has status True when the ApiServerSource has been configured with its event types.
 	ApiServerConditionEventTypeProvided apis.ConditionType = "EventTypesProvided"
 )
@@ -42,6 +45,7 @@ const (
 var apiserverCondSet = apis.NewLivingConditionSet(
 	ApiServerConditionSinkProvided,
 	ApiServerConditionDeployed,
+	ApiServerConditionSufficientPermissions,
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -105,6 +109,16 @@ func (s *ApiServerSourceStatus) MarkEventTypes() {
 // MarkNoEventTypes sets the condition that the source does not its event type configured.
 func (s *ApiServerSourceStatus) MarkNoEventTypes(reason, messageFormat string, messageA ...interface{}) {
 	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionEventTypeProvided, reason, messageFormat, messageA...)
+}
+
+// MarkSufficientPermissions sets the condition that the source has enough permissions to access the resources.
+func (s *ApiServerSourceStatus) MarkSufficientPermissions() {
+	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSufficientPermissions)
+}
+
+// MarkNoSufficientPermissions sets the condition that the source does not have enough permissions to access the resources
+func (s *ApiServerSourceStatus) MarkNoSufficientPermissions(reason, messageFormat string, messageA ...interface{}) {
+	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSufficientPermissions, reason, messageFormat, messageA...)
 }
 
 // IsReady returns true if the resource is ready overall.

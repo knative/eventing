@@ -85,6 +85,14 @@ func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkEventTypes()
 }
 
+func WithApiServerSourceSufficientPermissions(s *v1alpha1.ApiServerSource) {
+	s.Status.MarkSufficientPermissions()
+}
+
+func WithApiServerSourceNoSufficientPermissions(s *v1alpha1.ApiServerSource) {
+	s.Status.MarkNoSufficientPermissions("", `User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`)
+}
+
 func WithApiServerSourceDeleted(c *v1alpha1.ApiServerSource) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
