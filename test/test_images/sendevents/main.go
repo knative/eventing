@@ -158,12 +158,13 @@ func main() {
 		sequence++
 		untyped["sequence"] = fmt.Sprintf("%d", sequence)
 
-		event := cloudevents.NewEvent()
+		event := cloudevents.NewEvent(cloudevents.VersionV1)
 		if eventID != "" {
 			event.SetID(eventID)
 		}
 		event.SetType(eventType)
 		event.SetSource(eventSource)
+		event.SetDataContentType(cloudevents.ApplicationJSON)
 
 		if eventExtensions != "" {
 			var extensions map[string]interface{}

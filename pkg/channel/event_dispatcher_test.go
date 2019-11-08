@@ -563,6 +563,7 @@ func TestDispatchMessage(t *testing.T) {
 				event.SetExtension(n, v)
 			}
 			event.SetData(tc.body)
+			event.SetDataContentType(cloudevents.ApplicationJSON)
 
 			ctx := context.Background()
 			tctx := cloudevents.HTTPTransportContextFrom(ctx)

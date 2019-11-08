@@ -46,6 +46,7 @@ func makeCloudEvent() cloudevents.Event {
 	event.SetID("A234-1234-1234")
 	event.SetExtension("comexampleextension", "value")
 	event.SetData("<much wow=\"xml\"/>")
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	return event
 }
 
