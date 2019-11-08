@@ -173,21 +173,21 @@ func WithTriggerDependencyUnknown(reason, message string) TriggerOption {
 	}
 }
 
-func WithTriggerSubscriberReadySucceeded() TriggerOption {
+func WithTriggerSubscriberResolvedSucceeded() TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Status.MarkSubscriberReadySucceeded()
+		t.Status.MarkSubscriberResolvedSucceeded()
 	}
 }
 
-func WithTriggerSubscriberReadyFailed(reason, message string) TriggerOption {
+func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Status.MarkSubscriberReadyFailed(reason, message)
+		t.Status.MarkSubscriberResolvedFailed(reason, message)
 	}
 }
 
-func WithTriggerSubscriberReadyUnknown(reason, message string) TriggerOption {
+func WithTriggerSubscriberResolvedUnknown(reason, message string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Status.MarkSubscriberReadyUnknown(reason, message)
+		t.Status.MarkSubscriberResolvedUnknown(reason, message)
 	}
 }
 

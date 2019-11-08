@@ -22,7 +22,7 @@ import (
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberReady)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
@@ -34,7 +34,7 @@ const (
 
 	TriggerConditionDependency apis.ConditionType = "Dependency"
 
-	TriggerConditionSubscriberReady apis.ConditionType = "SubscriberReady"
+	TriggerConditionSubscriberResolved apis.ConditionType = "SubscriberResolved"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
@@ -91,16 +91,16 @@ func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscri
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
 }
 
-func (ts *TriggerStatus) MarkSubscriberReadySucceeded() {
-	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscriberReady)
+func (ts *TriggerStatus) MarkSubscriberResolvedSucceeded() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscriberResolved)
 }
 
-func (ts *TriggerStatus) MarkSubscriberReadyFailed(reason, messageFormat string, messageA ...interface{}) {
-	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscriberReady, reason, messageFormat, messageA...)
+func (ts *TriggerStatus) MarkSubscriberResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscriberResolved, reason, messageFormat, messageA...)
 }
 
-func (ts *TriggerStatus) MarkSubscriberReadyUnknown(reason, messageFormat string, messageA ...interface{}) {
-	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscriberReady, reason, messageFormat, messageA...)
+func (ts *TriggerStatus) MarkSubscriberResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscriberResolved, reason, messageFormat, messageA...)
 }
 
 func (ts *TriggerStatus) MarkDependencySucceeded() {
