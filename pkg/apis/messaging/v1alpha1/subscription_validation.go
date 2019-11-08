@@ -58,8 +58,16 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingReply {
-		if fe := ss.Reply.Channel.Validate(ctx); fe != nil {
-			errs = errs.Also(fe.ViaField("reply.channel"))
+		if !isDestinationNilOrEmpty(ss.Reply.DeprecatedChannel) && !isDestinationNilOrEmpty(ss.Reply.Destination) {
+			errs = errs.Also(apis.ErrGeneric("channel and [ref, uri] can't be both present", "reply.channel", "reply.ref", "reply.uri"))
+		} else if !isDestinationNilOrEmpty(ss.Reply.DeprecatedChannel) {
+			if fe := ss.Reply.DeprecatedChannel.Validate(ctx); fe != nil {
+				errs = errs.Also(fe.ViaField("reply.channel"))
+			}
+		} else {
+			if fe := ss.Reply.Destination.Validate(ctx); fe != nil {
+				errs = errs.Also(fe.ViaField("reply"))
+			}
 		}
 	}
 
@@ -71,7 +79,8 @@ func isDestinationNilOrEmpty(d *duckv1beta1.Destination) bool {
 }
 
 func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &duckv1beta1.Destination{})
+	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) ||
+		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &duckv1beta1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &duckv1beta1.Destination{})))
 }
 
 func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {

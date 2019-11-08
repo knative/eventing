@@ -172,7 +172,7 @@ func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOptio
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &duckv1beta1.Destination{
+			Destination: &duckv1beta1.Destination{
 				DeprecatedAPIVersion: apiVersion(gvk),
 				DeprecatedKind:       gvk.Kind,
 				DeprecatedName:       name,
@@ -184,7 +184,7 @@ func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) Subscriptio
 func WithSubscriptionReplyNotDeprecated(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &duckv1beta1.Destination{
+			Destination: &duckv1beta1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: apiVersion(gvk),
 					Kind:       gvk.Kind,

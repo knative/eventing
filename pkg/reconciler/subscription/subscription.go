@@ -220,17 +220,30 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.PhysicalSubscription.ReplyURI = nil
 	subscription.Status.ClearDeprecated()
 	if !isNilOrEmptyReply(reply) {
+		hasDeprecatedReplyStatus := false
+		var destination *duckv1beta1.Destination
+		if reply.DeprecatedChannel != nil && !equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{}) {
+			destination = reply.DeprecatedChannel
+			// Add a condition warning that the fields are deprecated.
+			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using deprecated channel field when specifying spec.reply. Update to spec.reply.ref or spec.reply.uri. These will be removed in future release")
+			hasDeprecatedReplyStatus = true
+		} else {
+			destination = reply.Destination
+		}
+
 		// Populate the namespace for the subscriber since it is in the namespace
-		if reply.Channel.Ref != nil {
-			reply.Channel.Ref.Namespace = subscription.Namespace
-		} else if reply.Channel.DeprecatedName != "" {
+		if destination.Ref != nil {
+			destination.Ref.Namespace = subscription.Namespace
+		} else if destination.DeprecatedName != "" {
 			// Add the check for DeprecatedName, since without that it wouldn't
 			// have passed validation.
-			reply.Channel.DeprecatedNamespace = subscription.Namespace
-			// Add a condition warning that the fields are deprecated.
-			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in 0.11")
+			destination.DeprecatedNamespace = subscription.Namespace
+			if !hasDeprecatedReplyStatus {
+				// Add a condition warning that the fields are deprecated.
+				subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in 0.11")
+			}
 		}
-		replyURIStr, err := r.destinationResolver.URIFromDestination(*reply.Channel, subscription)
+		replyURIStr, err := r.destinationResolver.URIFromDestination(*destination, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve reply",
 				zap.Error(err),
@@ -241,11 +254,11 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		}
 		replyURI, err := apis.ParseURL(replyURIStr)
 		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to parse URL for spec.Reply.Channel URL",
+			logging.FromContext(ctx).Warn("Failed to parse URL for spec.reply URL",
 				zap.Error(err),
-				zap.Any("reply.channel", reply.Channel))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to parse URL for spec.reply.channel: %v", err)
-			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to parse URL for spec.reply.channel: %v", err)
+				zap.Any("reply", destination))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to parse URL for spec.reply: %v", err)
+			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to parse URL for spec.reply: %v", err)
 			return err
 		}
 
@@ -391,8 +404,9 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 	return nil
 }
 
-func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
-	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
+func isNilOrEmptyReply(r *v1alpha1.ReplyStrategy) bool {
+	return r == nil || equality.Semantic.DeepEqual(r, &v1alpha1.ReplyStrategy{}) ||
+		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &duckv1beta1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &duckv1beta1.Destination{})))
 }
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
 	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||
