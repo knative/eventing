@@ -172,6 +172,9 @@ func setClusterDefaultChannel(config *defaultchannel.Config, channel string) {
 
 // setNamespaceDefaultChannel will set the default channel for namespace-wide
 func setNamespaceDefaultChannel(config *defaultchannel.Config, namespace, channel string) {
+	if config.NamespaceDefaults == nil {
+		config.NamespaceDefaults = make(map[string]*eventingduck.ChannelTemplateSpec, 1)
+	}
 	namespaceDefaults := config.NamespaceDefaults
 	if spec, exists := namespaceDefaults[namespace]; exists {
 		spec.TypeMeta = *common.GetChannelTypeMeta(channel)
