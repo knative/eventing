@@ -167,6 +167,9 @@ func updateDefaultChannelCM(client *common.Client, updateConfig func(config *def
 
 // setClusterDefaultChannel will set the default channel for cluster-wide
 func setClusterDefaultChannel(config *defaultchannel.Config, channel string) {
+	if config.ClusterDefault == nil {
+		config.ClusterDefault = &eventingduck.ChannelTemplateSpec{}
+	}
 	config.ClusterDefault.TypeMeta = *common.GetChannelTypeMeta(channel)
 }
 
