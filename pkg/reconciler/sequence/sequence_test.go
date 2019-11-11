@@ -193,7 +193,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -249,7 +249,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -306,7 +306,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -395,7 +395,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -403,7 +403,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 								Namespace:  testNS,
@@ -411,7 +411,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 								Namespace:  testNS,
@@ -511,7 +511,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -519,7 +519,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 								Namespace:  testNS,
@@ -527,7 +527,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 								Namespace:  testNS,
@@ -588,7 +588,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
