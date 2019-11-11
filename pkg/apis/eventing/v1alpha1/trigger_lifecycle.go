@@ -22,7 +22,7 @@ import (
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency)
+var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved)
 
 const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
@@ -33,6 +33,8 @@ const (
 	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
 
 	TriggerConditionDependency apis.ConditionType = "Dependency"
+
+	TriggerConditionSubscriberResolved apis.ConditionType = "SubscriberResolved"
 
 	// TriggerAnyFilter Constant to represent that we should allow anything.
 	TriggerAnyFilter = ""
@@ -87,6 +89,18 @@ func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, message
 
 func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
+}
+
+func (ts *TriggerStatus) MarkSubscriberResolvedSucceeded() {
+	triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscriberResolved)
+}
+
+func (ts *TriggerStatus) MarkSubscriberResolvedFailed(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscriberResolved, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkSubscriberResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscriberResolved, reason, messageFormat, messageA...)
 }
 
 func (ts *TriggerStatus) MarkDependencySucceeded() {

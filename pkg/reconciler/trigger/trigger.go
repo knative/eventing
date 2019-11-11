@@ -220,9 +220,12 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	subscriberURI, err := r.uriResolver.URIFromDestination(*t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
+		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
+		t.Status.SubscriberURI = ""
 		return err
 	}
 	t.Status.SubscriberURI = subscriberURI
+	t.Status.MarkSubscriberResolvedSucceeded()
 
 	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
 	if err != nil {
