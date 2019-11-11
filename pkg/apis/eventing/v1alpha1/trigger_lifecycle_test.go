@@ -43,7 +43,7 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
-	triggerConditionSubscriberReady = apis.Condition{
+	triggerConditionSubscriberResolved = apis.Condition{
 		Type:   TriggerConditionSubscriberResolved,
 		Status: corev1.ConditionTrue,
 	}
@@ -79,7 +79,7 @@ func TestTriggerGetCondition(t *testing.T) {
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 					triggerConditionDependency,
-					triggerConditionSubscriberReady,
+					triggerConditionSubscriberResolved,
 				},
 			},
 		},
@@ -93,7 +93,7 @@ func TestTriggerGetCondition(t *testing.T) {
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 					triggerConditionDependency,
-					triggerConditionSubscriberReady,
+					triggerConditionSubscriberResolved,
 				},
 			},
 		},
@@ -210,7 +210,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 				}, {
 					Type:   TriggerConditionSubscriberResolved,
 					Status: corev1.ConditionUnknown,
-					},
+				},
 				},
 			},
 		},
@@ -278,7 +278,7 @@ func TestTriggerIsReady(t *testing.T) {
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantReady:                   false,
-	},  {
+	}, {
 		name:                        "failed to resolve subscriber",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
