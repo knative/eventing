@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,7 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
@@ -148,7 +150,6 @@ func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.
 		ps.IngressChannelStatus.ReadyCondition = apis.Condition{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Reason: "NotAddressable", Message: "Channel is not addressable"}
 		allReady = false
 	}
-	// Propagate ingress channel address to Parallel
 	ps.setAddress(address)
 
 	for i, c := range channels {
@@ -190,18 +191,26 @@ func (ps *ParallelStatus) MarkAddressableNotReady(reason, messageFormat string, 
 }
 
 func (ps *ParallelStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
-	ps.Address = address
-
 	if address == nil {
-		pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyAddress", "addressable is nil")
+		ps.Address = nil
 		return
 	}
 	if address.URL != nil || address.Hostname != "" {
+		// But, first, convert it to V1, since Channel Status
+		// is using v1alpha1 Address. Note that ConvertUp does
+		// not do anything with the passed in Context, so
+		// just make one up here.
+		v1Address := pkgduckv1.Addressable{}
+		if err := address.ConvertUp(context.TODO(), &v1Address); err != nil {
+			pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyAddress", "unable to convert channel address up to v1")
+			return
+		}
+		ps.Address = &v1Address
 		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
 	} else {
-		ps.Address.Hostname = ""
-		ps.Address.URL = nil
-		pParallelCondSet.Manage(ps).MarkFalse(ParallelConditionAddressable, "emptyHostname", "hostname is the empty string")
+		ps.Address = nil
+		pCondSet.Manage(ps).MarkFalse(SequenceConditionAddressable, "emptyHostname", "channel addressable is nil and/or no hostname")
 	}
 }
 
