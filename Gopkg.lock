@@ -1277,6 +1277,7 @@
     "client/injection/kube/client",
     "client/injection/kube/client/fake",
     "client/injection/kube/informers/admissionregistration/v1beta1/mutatingwebhookconfiguration",
+    "client/injection/kube/informers/admissionregistration/v1beta1/validatingwebhookconfiguration",
     "client/injection/kube/informers/apps/v1/deployment",
     "client/injection/kube/informers/apps/v1/deployment/fake",
     "client/injection/kube/informers/core/v1/endpoints",
@@ -1343,6 +1344,7 @@
     "webhook",
     "webhook/certificates",
     "webhook/certificates/resources",
+    "webhook/configmaps",
     "webhook/resourcesemantics",
   ]
   pruneopts = "T"
@@ -1509,6 +1511,7 @@
     "knative.dev/pkg/tracker",
     "knative.dev/pkg/webhook",
     "knative.dev/pkg/webhook/certificates",
+    "knative.dev/pkg/webhook/configmaps",
     "knative.dev/pkg/webhook/resourcesemantics",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",

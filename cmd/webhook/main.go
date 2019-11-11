@@ -31,8 +31,10 @@ import (
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
+	tracingconfig "knative.dev/pkg/tracing/config"
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
+	"knative.dev/pkg/webhook/configmaps"
 	"knative.dev/pkg/webhook/resourcesemantics"
 )
 
@@ -92,6 +94,24 @@ func NewResourceAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 	)
 }
 
+func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	return configmaps.NewAdmissionController(ctx,
+
+		// Name of the configmap webhook.
+		"config.webhook.eventing.knative.dev",
+
+		// The path on which to serve the webhook.
+		"/config-validation",
+
+		// The configmaps to validate.
+		configmap.Constructors{
+			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
+			// metrics.ConfigMapName():   metricsconfig.NewObservabilityConfigFromConfigMap,
+			logging.ConfigMapName(): logging.NewConfigFromConfigMap,
+		},
+	)
+}
+
 func main() {
 	// Set up a signal context with our webhook options
 	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
@@ -103,6 +123,6 @@ func main() {
 	sharedmain.MainWithContext(ctx, logconfig.WebhookName(),
 		certificates.NewController,
 		NewResourceAdmissionController,
-		// TODO(mattmoor): Support config validation in eventing.
+		NewConfigValidationController,
 	)
 }
