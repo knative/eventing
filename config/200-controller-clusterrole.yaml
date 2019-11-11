@@ -86,6 +86,16 @@ rules:
       - "subscriptions/status"
     verbs: *everything
 
+  # Flow resources and statuses we care about.
+  - apiGroups:
+      - "flows.knative.dev"
+    resources:
+      - "sequences"
+      - "sequences/status"
+      - "parallels"
+      - "parallels/status"
+    verbs: *everything
+
   # Messaging resources and finalizers we care about.
   - apiGroups:
       - "messaging.knative.dev"
