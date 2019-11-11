@@ -17,13 +17,13 @@
 package v1alpha1
 
 import (
-	"time"
+	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
@@ -152,49 +152,26 @@ func (ss *SequenceStatus) MarkAddressableNotReady(reason, messageFormat string, 
 }
 
 func (ss *SequenceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
-	ss.Address = address
-
 	if address == nil {
-		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
+		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyAddress", "addressable is nil")
+		ss.Address = nil
 		return
 	}
-	if address.URL != nil || address.Hostname != "" {
-		pCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
-	} else {
-		ss.Address.Hostname = ""
-		ss.Address.URL = nil
-		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyHostname", "hostname is the empty string")
-	}
-}
 
-// MarkDeprecated adds a warning condition that this object's spec is using deprecated fields
-// and will stop working in the future. Note that this does not affect the Ready condition.
-func (ss *SequenceStatus) MarkDestinationDeprecatedRef(reason, msg string) {
-	dc := apis.Condition{
-		Type:               StatusConditionTypeDeprecated,
-		Reason:             reason,
-		Status:             corev1.ConditionTrue,
-		Severity:           apis.ConditionSeverityWarning,
-		Message:            msg,
-		LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
-	}
-	for i, c := range ss.Conditions {
-		if c.Type == dc.Type {
-			ss.Conditions[i] = dc
+	if address.URL != nil || address.Hostname != "" {
+		// But, first, convert it to V1, since Channel Status
+		// is using v1alpha1 Address. Note that ConvertUp does
+		// not do anything with the passed in Context, so
+		// just make one up here.
+		v1Address := pkgduckv1.Addressable{}
+		if err := address.ConvertUp(context.TODO(), &v1Address); err != nil {
+			pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyAddress", "unable to convert channel address up to v1")
 			return
 		}
+		pCondSet.Manage(ss).MarkTrue(SequenceConditionAddressable)
+		ss.Address = &v1Address
+	} else {
+		ss.Address = nil
+		pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyAddress", "channel addressable is nil and/or no hostname")
 	}
-	ss.Conditions = append(ss.Conditions, dc)
-}
-
-// ClearDeprecated removes the StatusConditionTypeDeprecated warning condition. Note that this does not
-// affect the Ready condition.
-func (ss *SequenceStatus) ClearDeprecated() {
-	conds := make([]apis.Condition, 0, len(ss.Conditions))
-	for _, c := range ss.Conditions {
-		if c.Type != StatusConditionTypeDeprecated {
-			conds = append(conds, c)
-		}
-	}
-	ss.Conditions = conds
 }

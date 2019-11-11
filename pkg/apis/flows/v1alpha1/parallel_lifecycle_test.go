@@ -27,6 +27,7 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
@@ -393,10 +394,11 @@ func TestParallelReady(t *testing.T) {
 
 func TestParallelPropagateSetAddress(t *testing.T) {
 	URL, _ := apis.ParseURL("http://example.com")
+	hostnameURL, _ := apis.ParseURL("http://myhostname")
 	tests := []struct {
 		name       string
 		address    *pkgduckv1alpha1.Addressable
-		want       *pkgduckv1alpha1.Addressable
+		want       *pkgduckv1.Addressable
 		wantStatus corev1.ConditionStatus
 	}{{
 		name:       "nil",
@@ -406,22 +408,22 @@ func TestParallelPropagateSetAddress(t *testing.T) {
 	}, {
 		name:       "empty",
 		address:    &pkgduckv1alpha1.Addressable{},
-		want:       &pkgduckv1alpha1.Addressable{},
+		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}, {
 		name:       "URL",
 		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
-		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
+		want:       &pkgduckv1.Addressable{URL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "hostname",
 		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, "myhostname"},
-		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, "myhostname"},
+		want:       &pkgduckv1.Addressable{hostnameURL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "nil",
 		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{nil}, ""},
-		want:       &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, ""},
+		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}}
 

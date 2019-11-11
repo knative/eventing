@@ -24,8 +24,6 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -76,20 +74,20 @@ type ParallelSpec struct {
 	// Reply is a Reference to where the result of a case Subscriber gets sent to
 	// when the case does not have a Reply
 	// +optional
-	Reply *duckv1beta1.Destination `json:"reply,omitempty"`
+	Reply *duckv1.Destination `json:"reply,omitempty"`
 }
 
 type ParallelBranch struct {
 	// Filter is the expression guarding the branch
-	Filter *duckv1beta1.Destination `json:"filter,omitempty"`
+	Filter *duckv1.Destination `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
-	Subscriber duckv1beta1.Destination `json:"subscriber"`
+	Subscriber duckv1.Destination `json:"subscriber"`
 
 	// Reply is a Reference to where the result of Subscriber of this case gets sent to.
 	// If not specified, sent the result to the Parallel Reply
 	// +optional
-	Reply *duckv1beta1.Destination `json:"reply,omitempty"`
+	Reply *duckv1.Destination `json:"reply,omitempty"`
 }
 
 // ParallelStatus represents the current state of a Parallel.
@@ -109,7 +107,7 @@ type ParallelStatus struct {
 	// AddressStatus is the starting point to this Parallel. Sending to this
 	// will target the first subscriber.
 	// It generally has the form {channel}.{namespace}.svc.{cluster domain name}
-	duckv1alpha1.AddressStatus `json:",inline"`
+	duckv1.AddressStatus `json:",inline"`
 }
 
 // ParallelBranchStatus represents the current state of a Parallel branch
