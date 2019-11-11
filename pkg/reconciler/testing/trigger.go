@@ -173,6 +173,24 @@ func WithTriggerDependencyUnknown(reason, message string) TriggerOption {
 	}
 }
 
+func WithTriggerSubscriberResolvedSucceeded() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriberResolvedSucceeded()
+	}
+}
+
+func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriberResolvedFailed(reason, message)
+	}
+}
+
+func WithTriggerSubscriberResolvedUnknown(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriberResolvedUnknown(reason, message)
+	}
+}
+
 // TODO: this can be a runtime object
 func WithTriggerDeleted(t *v1alpha1.Trigger) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))

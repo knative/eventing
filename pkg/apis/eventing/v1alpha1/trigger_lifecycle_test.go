@@ -43,6 +43,11 @@ var (
 		Status: corev1.ConditionTrue,
 	}
 
+	triggerConditionSubscriberReady = apis.Condition{
+		Type:   TriggerConditionSubscriberResolved,
+		Status: corev1.ConditionTrue,
+	}
+
 	triggerConditionSubscribed = apis.Condition{
 		Type:   TriggerConditionSubscribed,
 		Status: corev1.ConditionFalse,
@@ -74,6 +79,7 @@ func TestTriggerGetCondition(t *testing.T) {
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 					triggerConditionDependency,
+					triggerConditionSubscriberReady,
 				},
 			},
 		},
@@ -87,6 +93,7 @@ func TestTriggerGetCondition(t *testing.T) {
 					triggerConditionBroker,
 					triggerConditionSubscribed,
 					triggerConditionDependency,
+					triggerConditionSubscriberReady,
 				},
 			},
 		},
@@ -137,6 +144,9 @@ func TestTriggerInitializeConditions(t *testing.T) {
 				}, {
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionUnknown,
+				}, {
+					Type:   TriggerConditionSubscriberResolved,
+					Status: corev1.ConditionUnknown,
 				},
 				},
 			},
@@ -166,6 +176,9 @@ func TestTriggerInitializeConditions(t *testing.T) {
 					}, {
 						Type:   TriggerConditionSubscribed,
 						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   TriggerConditionSubscriberResolved,
+						Status: corev1.ConditionUnknown,
 					},
 				},
 			},
@@ -194,7 +207,10 @@ func TestTriggerInitializeConditions(t *testing.T) {
 				}, {
 					Type:   TriggerConditionSubscribed,
 					Status: corev1.ConditionTrue,
-				},
+				}, {
+					Type:   TriggerConditionSubscriberResolved,
+					Status: corev1.ConditionUnknown,
+					},
 				},
 			},
 		},
@@ -218,6 +234,7 @@ func TestTriggerIsReady(t *testing.T) {
 		markVirtualServiceExists    bool
 		subscriptionOwned           bool
 		subscriptionStatus          *messagingv1alpha1.SubscriptionStatus
+		subscriberResolvedStatus    bool
 		dependencyAnnotationExists  bool
 		dependencyStatusReady       bool
 		wantReady                   bool
@@ -228,6 +245,7 @@ func TestTriggerIsReady(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantReady:                   true,
 	}, {
@@ -237,6 +255,7 @@ func TestTriggerIsReady(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantReady:                   false,
 	}, {
@@ -246,6 +265,7 @@ func TestTriggerIsReady(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantReady:                   false,
 	}, {
@@ -255,7 +275,19 @@ func TestTriggerIsReady(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           false,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
+		wantReady:                   false,
+	},  {
+		name:                        "failed to resolve subscriber",
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
+		markKubernetesServiceExists: true,
+		markVirtualServiceExists:    true,
+		subscriptionOwned:           true,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    false,
+		dependencyAnnotationExists:  true,
+		dependencyStatusReady:       true,
 		wantReady:                   false,
 	}, {
 		name:                        "dependency not ready",
@@ -264,6 +296,7 @@ func TestTriggerIsReady(t *testing.T) {
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  true,
 		dependencyStatusReady:       false,
 		wantReady:                   false,
@@ -275,6 +308,7 @@ func TestTriggerIsReady(t *testing.T) {
 			markVirtualServiceExists:    false,
 			subscriptionOwned:           false,
 			subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
+			subscriberResolvedStatus:    false,
 			dependencyAnnotationExists:  true,
 			dependencyStatusReady:       false,
 			wantReady:                   false,
@@ -289,6 +323,11 @@ func TestTriggerIsReady(t *testing.T) {
 				ts.MarkSubscriptionNotOwned(&messagingv1alpha1.Subscription{})
 			} else if test.subscriptionStatus != nil {
 				ts.PropagateSubscriptionStatus(test.subscriptionStatus)
+			}
+			if test.subscriberResolvedStatus {
+				ts.MarkSubscriberResolvedSucceeded()
+			} else {
+				ts.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "subscriber not found")
 			}
 			if test.dependencyAnnotationExists && !test.dependencyStatusReady {
 				ts.MarkDependencyFailed("Dependency is not ready", "Dependency is not ready")
