@@ -25,6 +25,7 @@ const (
 	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
 	SourcesAPIVersion   = "sources.eventing.knative.dev/v1alpha1"
 	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
+	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
 )
 
 // Kind for core Kubernetes resources.
@@ -47,6 +48,12 @@ const (
 	ChannelKind  string = "Channel"
 	SequenceKind string = "Sequence"
 	ParallelKind string = "Parallel"
+)
+
+// Kind for flows resources.
+const (
+	FlowsSequenceKind string = "Sequence"
+	FlowsParallelKind string = "Parallel"
 )
 
 // Kind for sources resources.
