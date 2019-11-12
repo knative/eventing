@@ -604,7 +604,7 @@ func createParallelChannelStatus(parallelName string, status corev1.ConditionSta
 func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelSubscriptionStatus {
 	return v1alpha1.ParallelSubscriptionStatus{
 		Subscription: corev1.ObjectReference{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "Subscription",
 			Name:       resources.ParallelFilterSubscriptionName(parallelName, caseNumber),
 			Namespace:  testNS,
@@ -615,7 +615,7 @@ func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int,
 func createParallelSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelSubscriptionStatus {
 	return v1alpha1.ParallelSubscriptionStatus{
 		Subscription: corev1.ObjectReference{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "Subscription",
 			Name:       resources.ParallelSubscriptionName(parallelName, caseNumber),
 			Namespace:  testNS,
