@@ -206,7 +206,7 @@ func (ps *ParallelStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
 
 // MarkDeprecated adds a warning condition that this object's spec is using deprecated fields
 // and will stop working in the future. Note that this does not affect the Ready condition.
-func (ps *ParallelStatus) MarkDestinationDeprecatedRef(reason, msg string) {
+func (ps *ParallelStatus) MarkDeprecated(reason, msg string) {
 	dc := apis.Condition{
 		Type:               StatusConditionTypeDeprecated,
 		Reason:             reason,
