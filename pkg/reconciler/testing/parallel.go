@@ -80,13 +80,19 @@ func WithParallelBranchStatuses(branchStatuses []v1alpha1.ParallelBranchStatus) 
 
 func WithParallelDeprecatedReplyStatus() ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDestinationDeprecatedRef("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
+		p.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
+	}
+}
+
+func WithParallelDeprecatedStatus() ParallelOption {
+	return func(p *v1alpha1.Parallel) {
+		p.Status.MarkDeprecated("parallelMessagingDeprecated", "parallels.messaging.knative.dev are deprecated and will be removed in the future. Use parallels.flows.knative.dev instead.")
 	}
 }
 
 func WithParallelDeprecatedBranchReplyStatus() ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDestinationDeprecatedRef("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.branches[*].reply.ref instead.")
+		p.Status.MarkDeprecated("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.branches[*].reply.ref instead.")
 	}
 }
 
