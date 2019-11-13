@@ -76,7 +76,7 @@ func (s *ApiServerSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
 			Type:     ApiServerConditionSinkProvided,
 			Status:   corev1.ConditionTrue,
 			Severity: apis.ConditionSeverityError,
-			Message:  "Using deprecated object ref fields when specifying spec.sink. Update to spec.sink.ref. These will be removed in 0.11.",
+			Message:  "Using deprecated object ref fields when specifying spec.sink. Update to spec.sink.ref. These will be removed in the future.",
 		}
 		apiserverCondSet.Manage(s).SetCondition(c)
 	} else {

@@ -197,6 +197,6 @@ func WithSubscriptionReplyNotDeprecated(gvk metav1.GroupVersionKind, name string
 
 func WithSubscriptionReplyDeprecated() SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Status.MarkReplyDeprecatedRef("ReplyFieldsDeprecated", "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in 0.11")
+		s.Status.MarkReplyDeprecatedRef("ReplyFieldsDeprecated", "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in the future.")
 	}
 }

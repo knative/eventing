@@ -80,7 +80,7 @@ func WithParallelBranchStatuses(branchStatuses []v1alpha1.ParallelBranchStatus) 
 
 func WithParallelDeprecatedReplyStatus() ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
+		p.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
 	}
 }
 
@@ -92,7 +92,7 @@ func WithParallelDeprecatedStatus() ParallelOption {
 
 func WithParallelDeprecatedBranchReplyStatus() ParallelOption {
 	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDeprecated("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.branches[*].reply.ref instead.")
+		p.Status.MarkDeprecated("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.branches[*].reply.ref instead.")
 	}
 }
 
