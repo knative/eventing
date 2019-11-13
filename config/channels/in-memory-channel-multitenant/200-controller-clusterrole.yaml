@@ -35,13 +35,24 @@ rules:
       - inmemorychannels/finalizers
     verbs:
       - update
-  # For watching the health of the service
+  # For watching the health and creating services and serviceaccounts
   - apiGroups:
       - "" # Core API group.
     resources:
       - services
-#    resourceNames:
-#      - imc-dispatcher
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+  # For watching the health and creating rolebinding
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
     verbs:
       - get
       - list
@@ -54,25 +65,24 @@ rules:
       - "" # Core API group.
     resources:
       - endpoints
-#    resourceNames:
-#      - imc-dispatcher
     verbs:
       - get
       - list
       - watch
-  # For watching the health of the dispatcher deployment
+  # For watching the health and creating the dispatcher deployment
   - apiGroups:
       - apps
     resources:
       - deployments
       - deployments/status
-#    resourceNames:
-#      - imc-dispatcher
     verbs:
       - get
       - list
       - watch
-  # For getting the logging config
+      - create
+      - update
+      - patch
+  # For getting and creating the logging and observability config
   - apiGroups:
       - ""
     resources:
@@ -81,6 +91,7 @@ rules:
       - get
       - list
       - watch
+      - create
   - apiGroups:
       - ""
     resources:
@@ -88,17 +99,3 @@ rules:
     verbs:
       - create
       - patch
-  - apiGroups:
-      - rbac.authorization.k8s.io
-    resources:
-      - rolebindings
-    verbs:
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - serviceaccounts
-    verbs:
-      - list
-      - watch

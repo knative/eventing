@@ -15,7 +15,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: imc-dispatcher
+  name: imc-controller
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
@@ -24,37 +24,37 @@ spec:
   selector:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
-      messaging.knative.dev/role: dispatcher
+      messaging.knative.dev/role: controller
   template:
     metadata:
       labels: *labels
     spec:
-      serviceAccountName: imc-dispatcher
+      serviceAccountName: imc-controller
       containers:
-      - name: dispatcher
-        image: knative.dev/eventing/cmd/in_memory/channel_dispatcher
+      - name: controller
+        image: knative.dev/eventing/cmd/in_memory/channel_controller
         env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
           - name: CONFIG_OBSERVABILITY_NAME
             value: config-observability
           - name: METRICS_DOMAIN
-            value: knative.dev/inmemorychannel-dispatcher
+            value: knative.dev/inmemorychannel-controller
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: SCOPE
-            value: cluster
+          - name: DISPATCHER_SCOPE
+            value: namespace
+          - name: DISPATCHER_IMAGE
+            value: knative.dev/eventing/cmd/in_memory/channel_dispatcher
         ports:
           - containerPort: 9090
             name: metrics
-        resources:
-          # Set resource requests and limits based on the benchmarking results in
-          # https://github.com/knative/eventing/issues/2311#issuecomment-565311345
-          requests:
-            cpu: 1000m
-            memory: 256Mi
-          limits:
-            cpu: 2200m
-            memory: 2048Mi
+        volumeMounts:
+          - name: config-logging
+            mountPath: /etc/config-logging
+      volumes:
+        - name: config-logging
+          configMap:
+            name: config-logging

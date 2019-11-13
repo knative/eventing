@@ -19,6 +19,9 @@ package controller
 import (
 	"context"
 
+	"github.com/kelseyhightower/envconfig"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
@@ -29,6 +32,8 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
+	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
 
 const (
@@ -39,10 +44,19 @@ const (
 	// itself when creating events.
 	controllerAgentName = "in-memory-channel-controller"
 
-	// TODO: these should be passed in on the env.
-	dispatcherDeploymentName = "imc-dispatcher"
-	dispatcherServiceName    = "imc-dispatcher"
+	// TODO: this should be passed in on the env.
+	dispatcherName = "imc-dispatcher"
 )
+
+var (
+	serviceAccountGVK = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
+	roleBindingGVK    = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
+)
+
+type envConfig struct {
+	Scope string `envconfig:"DISPATCHER_SCOPE" required:"true"`
+	Image string `envconfig:"DISPATCHER_IMAGE" required:"false"` // only needed by scope is namespace
+}
 
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
@@ -55,20 +69,38 @@ func NewController(
 	deploymentInformer := deployment.Get(ctx)
 	serviceInformer := service.Get(ctx)
 	endpointsInformer := endpoints.Get(ctx)
-
-	systemNS := system.Namespace()
+	serviceAccountInformer := serviceaccount.Get(ctx)
+	roleBindingInformer := rolebinding.Get(ctx)
 
 	r := &Reconciler{
-		Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
-		dispatcherNamespace:      systemNS,
-		dispatcherDeploymentName: dispatcherDeploymentName,
-		dispatcherServiceName:    dispatcherServiceName,
-		inmemorychannelLister:    inmemorychannelInformer.Lister(),
-		inmemorychannelInformer:  inmemorychannelInformer.Informer(),
-		deploymentLister:         deploymentInformer.Lister(),
-		serviceLister:            serviceInformer.Lister(),
-		endpointsLister:          endpointsInformer.Lister(),
+		Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
+
+		inmemorychannelLister:   inmemorychannelInformer.Lister(),
+		inmemorychannelInformer: inmemorychannelInformer.Informer(),
+		deploymentLister:        deploymentInformer.Lister(),
+		serviceLister:           serviceInformer.Lister(),
+		endpointsLister:         endpointsInformer.Lister(),
 	}
+
+	env := &envConfig{}
+	if err := envconfig.Process("", env); err != nil {
+		r.Logger.Panicf("unable to process in-memory channel's required environment variables: %v", err)
+	}
+
+	r.scope = scope(env.Scope)
+	if env.Scope == "cluster" {
+		r.dispatcherNamespace = system.Namespace()
+	} else {
+		r.dispatcherImage = env.Image
+		if r.dispatcherImage == "" {
+			r.Logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
+		}
+		r.dispatcherImage = env.Image
+
+		r.serviceAccountLister = serviceAccountInformer.Lister()
+		r.roleBindingLister = roleBindingInformer.Lister()
+	}
+
 	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
@@ -77,17 +109,25 @@ func NewController(
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
-	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(systemNS, dispatcherDeploymentName),
-		Handler:    r,
-	})
-	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(systemNS, dispatcherServiceName),
-		Handler:    r,
-	})
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterWithNameAndNamespace(systemNS, dispatcherServiceName),
-		Handler:    r,
-	})
+	if env.Scope == "namespace" {
+		deploymentInformer.Informer().AddEventHandler(r)
+		serviceInformer.Informer().AddEventHandler(r)
+		endpointsInformer.Informer().AddEventHandler(r)
+		serviceAccountInformer.Informer().AddEventHandler(r)
+		roleBindingInformer.Informer().AddEventHandler(r)
+	} else {
+		deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.FilterWithNameAndNamespace(r.dispatcherNamespace, dispatcherName),
+			Handler:    r,
+		})
+		serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.FilterWithNameAndNamespace(r.dispatcherNamespace, dispatcherName),
+			Handler:    r,
+		})
+		endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.FilterWithNameAndNamespace(r.dispatcherNamespace, dispatcherName),
+			Handler:    r,
+		})
+	}
 	return r.impl
 }

@@ -35,11 +35,19 @@ import (
 	"knative.dev/pkg/controller"
 )
 
+type scope string
+
+const (
+	scopeNamespace = scope("namespace")
+	scopeCluster   = scope("cluster")
+)
+
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	*reconciler.Base
 
 	configStore             *channel.EventDispatcherConfigStore
+	scope                   scope
 	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
@@ -86,11 +94,20 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// 1. Lists the inmemory channels.
 	// 2. Creates a multi-channel-fanout-config.
 	// 3. Calls the inmemory channel dispatcher's updateConfig func with the new multi-channel-fanout-config.
-
-	channels, err := r.inmemorychannelLister.List(labels.Everything())
-	if err != nil {
-		logging.FromContext(ctx).Error("Error listing InMemory channels")
-		return err
+	var channels []*v1alpha1.InMemoryChannel
+	var err error
+	if r.scope == "cluster" {
+		channels, err = r.inmemorychannelLister.List(labels.Everything())
+		if err != nil {
+			logging.FromContext(ctx).Error("Error listing InMemory channels")
+			return err
+		}
+	} else {
+		channels, err = r.inmemorychannelLister.InMemoryChannels(imc.Namespace).List(labels.Everything())
+		if err != nil {
+			logging.FromContext(ctx).Error("Error listing InMemory channels")
+			return err
+		}
 	}
 
 	inmemoryChannels := make([]*v1alpha1.InMemoryChannel, 0)
