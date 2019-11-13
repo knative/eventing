@@ -58,8 +58,12 @@ func (tr *ChannelTestRunner) RunTests(
 ) {
 	t.Parallel()
 	for _, channel := range tr.ChannelsToTest {
-		features := tr.ChannelFeatureMap[channel]
-		if contains(features, feature) {
+		// If a Channel is not present in the map, then assume it has all properties. This is so an
+		// unknown Channel can be specified via the --channel flag and have tests run.
+		// TODO Use a flag to specify the features of the flag based Channel, rather than assuming
+		// it supports all features.
+		features, present := tr.ChannelFeatureMap[channel]
+		if !present || contains(features, feature) {
 			t.Run(fmt.Sprintf("%s-%s", t.Name(), channel), func(st *testing.T) {
 				testFunc(st, channel)
 			})
