@@ -125,7 +125,7 @@ func (r *Reconciler) reconcile(ctx context.Context, s *v1alpha1.Sequence) error 
 
 	if s.Spec.Reply != nil {
 		if reply := s.Spec.Reply; reply.DeprecatedAPIVersion != "" || reply.DeprecatedKind != "" || reply.DeprecatedName != "" || reply.DeprecatedNamespace != "" {
-			s.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
+			s.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
 		} else {
 			s.Status.ClearDeprecated()
 		}

@@ -80,7 +80,7 @@ func WithSequenceSubscriptionStatuses(subscriptionStatuses []v1alpha1.SequenceSu
 
 func WithSequenceDeprecatedReplyStatus() SequenceOption {
 	return func(s *v1alpha1.Sequence) {
-		s.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in 0.11. Use spec.reply.ref instead.")
+		s.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
 	}
 }
 
