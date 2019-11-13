@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
@@ -45,16 +46,15 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 		loggerPodName         = "logger-pod"
 	)
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := common.Setup(st, true)
 		defer common.TearDown(client)
-		channelTypeMeta := common.GetChannelTypeMeta(channel)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 		client.CreateRBACResourcesForBrokers()
 
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName, channelTypeMeta)
+		client.CreateBrokerOrFail(brokerName, &channel)
 		client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 		// create the event we want to transform to

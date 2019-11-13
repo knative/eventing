@@ -17,16 +17,23 @@ limitations under the License.
 package common
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/base/resources"
 )
 
 // DefaultChannel is the default channel we will run tests against.
-const DefaultChannel = resources.InMemoryChannelKind
+var DefaultChannel = InMemoryChannelTypeMeta
+
+// InMemoryChannelTypeMeta is the metav1.TypeMeta for InMemoryChannel.
+var InMemoryChannelTypeMeta = metav1.TypeMeta{
+	APIVersion: resources.MessagingAPIVersion,
+	Kind:       resources.InMemoryChannelKind,
+}
 
 // ChannelFeatureMap saves the channel-features mapping.
 // Each pair means the channel support the list of features.
-var ChannelFeatureMap = map[string][]Feature{
-	resources.InMemoryChannelKind: {FeatureBasic},
+var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
+	InMemoryChannelTypeMeta: {FeatureBasic},
 }
 
 // Feature is the feature supported by the channel.

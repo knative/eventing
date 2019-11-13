@@ -45,8 +45,8 @@ const TestPullSecretName = "kn-eventing-test-pull-secret"
 
 // ChannelTestRunner is used to run tests against channels.
 type ChannelTestRunner struct {
-	ChannelFeatureMap map[string][]Feature
-	ChannelsToTest    []string
+	ChannelFeatureMap map[metav1.TypeMeta][]Feature
+	ChannelsToTest    []metav1.TypeMeta
 }
 
 // RunTests will use all channels that support the given feature, to run
@@ -54,7 +54,7 @@ type ChannelTestRunner struct {
 func (tr *ChannelTestRunner) RunTests(
 	t *testing.T,
 	feature Feature,
-	testFunc func(st *testing.T, channel string),
+	testFunc func(st *testing.T, channel metav1.TypeMeta),
 ) {
 	t.Parallel()
 	for _, channel := range tr.ChannelsToTest {
