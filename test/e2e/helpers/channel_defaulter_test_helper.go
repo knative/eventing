@@ -44,7 +44,7 @@ const (
 
 // ChannelClusterDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// these tests cannot be run in parallel as they have cluster-wide impact
 		client := common.Setup(st, false)
 		defer common.TearDown(client)
@@ -61,7 +61,7 @@ func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner common.Ch
 
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
 func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// we cannot run these tests in parallel as the updateDefaultChannelCM function is not thread-safe
 		// TODO(Fredy-Z): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
 		client := common.Setup(st, false)
@@ -77,7 +77,7 @@ func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner common.
 	})
 }
 
-func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChannelKind string) {
+func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChannel metav1.TypeMeta) {
 	channelName := "e2e-defaulter-channel"
 	senderName := "e2e-defaulter-sender"
 	subscriptionName := "e2e-defaulter-subscription"
@@ -104,7 +104,7 @@ func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChann
 	}
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
-	metaResourceList := resources.NewMetaResourceList(client.Namespace, common.GetChannelTypeMeta(expectedChannelKind))
+	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
 	objs, err := base.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduck.SubscribableType{})
 	if err != nil {
 		t.Fatalf("Failed to list the underlying channels: %v", err)
@@ -166,24 +166,24 @@ func updateDefaultChannelCM(client *common.Client, updateConfig func(config *def
 }
 
 // setClusterDefaultChannel will set the default channel for cluster-wide
-func setClusterDefaultChannel(config *defaultchannel.Config, channel string) {
+func setClusterDefaultChannel(config *defaultchannel.Config, channel metav1.TypeMeta) {
 	if config.ClusterDefault == nil {
 		config.ClusterDefault = &eventingduck.ChannelTemplateSpec{}
 	}
-	config.ClusterDefault.TypeMeta = *common.GetChannelTypeMeta(channel)
+	config.ClusterDefault.TypeMeta = channel
 }
 
 // setNamespaceDefaultChannel will set the default channel for namespace-wide
-func setNamespaceDefaultChannel(config *defaultchannel.Config, namespace, channel string) {
+func setNamespaceDefaultChannel(config *defaultchannel.Config, namespace string, channel metav1.TypeMeta) {
 	if config.NamespaceDefaults == nil {
 		config.NamespaceDefaults = make(map[string]*eventingduck.ChannelTemplateSpec, 1)
 	}
 	namespaceDefaults := config.NamespaceDefaults
 	if spec, exists := namespaceDefaults[namespace]; exists {
-		spec.TypeMeta = *common.GetChannelTypeMeta(channel)
+		spec.TypeMeta = channel
 	} else {
 		spec = &eventingduck.ChannelTemplateSpec{
-			TypeMeta: *common.GetChannelTypeMeta(channel),
+			TypeMeta: channel,
 		}
 		namespaceDefaults[namespace] = spec
 	}

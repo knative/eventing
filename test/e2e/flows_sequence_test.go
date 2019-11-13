@@ -55,7 +55,7 @@ func TestFlowsSequence(t *testing.T) {
 		podName:     "e2e-stepper3",
 		msgAppender: "-step3",
 	}}
-	channelTypeMeta := getChannelTypeMeta(common.DefaultChannel)
+	channelTypeMeta := &common.DefaultChannel
 
 	client := setup(t, true)
 	defer tearDown(client)

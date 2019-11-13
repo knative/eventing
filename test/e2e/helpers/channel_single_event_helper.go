@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -32,14 +33,13 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestR
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
 	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Run test with channel %q", channel)
 		client := common.Setup(st, true)
 		defer common.TearDown(client)
 
 		// create channel
-		channelTypeMeta := common.GetChannelTypeMeta(channel)
-		client.CreateChannelOrFail(channelName, channelTypeMeta)
+		client.CreateChannelOrFail(channelName, &channel)
 
 		// create logger service as the subscriber
 		pod := resources.EventLoggerPod(loggerPodName)
@@ -49,7 +49,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestR
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
-			channelTypeMeta,
+			&channel,
 			resources.WithSubscriberForSubscription(loggerPodName),
 		)
 
@@ -67,7 +67,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestR
 			Encoding: encoding,
 		}
 
-		if err := client.SendFakeEventToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, channelName, &channel, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 

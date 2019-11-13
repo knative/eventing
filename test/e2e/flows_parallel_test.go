@@ -50,7 +50,7 @@ func TestFlowsParallel(t *testing.T) {
 			expected: "parallel-two-branches-pass-first-branch-only-branch-0-sub",
 		},
 	}
-	channelTypeMeta := getChannelTypeMeta(common.DefaultChannel)
+	channelTypeMeta := &common.DefaultChannel
 
 	client := setup(t, true)
 	defer tearDown(client)
