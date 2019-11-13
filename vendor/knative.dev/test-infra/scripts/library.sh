@@ -353,7 +353,7 @@ function create_junit_xml() {
     # Also escape `<` and `>` as here: https://github.com/golang/go/blob/50bd1c4d4eb4fac8ddeb5f063c099daccfb71b26/src/encoding/json/encode.go#L48, 
     # this is temporary solution for fixing https://github.com/knative/test-infra/issues/1204,
     # which should be obsolete once Test-infra 2.0 is in place
-    local msg="$(echo -n "$3" | sed 's/$/\&#xA;/g' | sed 's/</\\u003c/' | sed 's/>/\\u003e/' | tr -d '\n')"
+    local msg="$(echo -n "$3" | sed 's/$/\&#xA;/g' | sed 's/</\\u003c/' | sed 's/>/\\u003e/' | sed 's/&/\\u0026/' | tr -d '\n')"
     failure="<failure message=\"Failed\" type=\"\">${msg}</failure>"
   fi
   cat << EOF > "${xml}"
@@ -415,6 +415,23 @@ function start_knative_serving() {
   echo "Installing the rest of serving components from $1"
   kubectl apply -f "$1"
   wait_until_pods_running knative-serving || return 1
+}
+
+# Install Knative Monitoring in the current cluster.
+# Parameters: $1 - Knative Monitoring manifest.
+function start_knative_monitoring() {
+  header "Starting Knative Monitoring"
+  subheader "Installing Knative Monitoring"
+  # namespace istio-system needs to be created first, due to the comment
+  # mentioned in
+  # https://github.com/knative/serving/blob/4202efc0dc12052edc0630515b101cbf8068a609/config/monitoring/tracing/zipkin/100-zipkin.yaml#L21
+  kubectl create namespace istio-system 2>/dev/null
+  echo "Installing Monitoring CRDs from $1"
+  kubectl apply --selector knative.dev/crd-install=true -f "$1" || return 1
+  echo "Installing the rest of monitoring components from $1"
+  kubectl apply -f "$1" || return 1
+  wait_until_pods_running knative-monitoring || return 1
+  wait_until_pods_running istio-system || return 1
 }
 
 # Install the stable release Knative/serving in the current cluster.
