@@ -1,0 +1,69 @@
+aliases:
+  pkg-approvers:
+  - evankanderson
+  - mattmoor
+  - vaikas
+
+  apis-approvers:
+  - mattmoor
+  - vaikas
+  - n3wscott
+
+  apis-istio-approvers:
+  - tcnghia
+
+  apis-duck-approvers:
+  - mattmoor
+  - vaikas
+
+  configmap-approvers:
+  - mattmoor
+  - mdemirhan
+  - dprotaso
+
+  controller-approvers:
+  - dgerd
+  - grantr
+  - mattmoor
+  - tcnghia
+  - vagababov
+
+  kmeta-approvers:
+  - mattmoor
+  - dgerd
+  - vagababov
+
+  logging-approvers:
+  - mdemirhan
+  - n3wscott
+  - yanweiguo
+
+  metrics-approvers:
+  - mdemirhan
+  - yanweiguo
+
+  network-approvers:
+  - markusthoemmes
+  - tcnghia
+  - vagababov
+
+  productivity-approvers:
+  - adrcunha
+  - chaodaiG
+  productivity-reviewers:
+  - adrcunha
+  - chaodaiG
+  - coryrc
+  - chizhg
+  - steuhs
+  - yt3liu
+
+  source-approvers:
+  - n3wscott
+  - vaikas
+
+  webhook-approvers:
+  - mattmoor
+  - grantr
+  - tcnghia
+
