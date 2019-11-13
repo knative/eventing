@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -39,15 +40,14 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 	subscriptionName := "conformance-headers-subscription-" + encoding
 	loggerPodName := "conformance-headers-logger-pod-" + encoding
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Running header conformance test with channel %q", channel)
 		client := common.Setup(st, true)
 		defer common.TearDown(client)
 
 		// create channel
 		st.Logf("Creating channel")
-		channelTypeMeta := common.GetChannelTypeMeta(channel)
-		client.CreateChannelOrFail(channelName, channelTypeMeta)
+		client.CreateChannelOrFail(channelName, &channel)
 
 		// create logger service as the subscriber
 		pod := resources.EventDetailsPod(loggerPodName)
@@ -57,7 +57,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
-			channelTypeMeta,
+			&channel,
 			resources.WithSubscriberForSubscription(loggerPodName),
 		)
 
@@ -78,7 +78,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 		}
 
 		st.Logf("Sending event with tracing headers to %s", senderName)
-		if err := client.SendFakeEventWithTracingToAddressable(senderName, channelName, channelTypeMeta, event); err != nil {
+		if err := client.SendFakeEventWithTracingToAddressable(senderName, channelName, &channel, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 

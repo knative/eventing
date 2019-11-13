@@ -55,11 +55,6 @@ func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	}
 }
 
-// GetChannelTypeMeta gets the actual typemeta of the typed channel.
-func GetChannelTypeMeta(channelKind string) *metav1.TypeMeta {
-	return MessagingTypeMeta(channelKind)
-}
-
 // ChannelTypeMeta is the TypeMeta ref for Channel.
 var ChannelTypeMeta = MessagingTypeMeta(resources.ChannelKind)
 
