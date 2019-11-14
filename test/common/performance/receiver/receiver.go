@@ -33,7 +33,6 @@ import (
 )
 
 const shutdownWaitTime = time.Second * 5
-const timeoutAdditionalTime = time.Second * 60
 
 // Receiver records the received events and sends to the aggregator.
 // Since sender implementations can put id and type of event inside the event payload,
@@ -51,7 +50,7 @@ type Receiver struct {
 	aggregatorClient *pb.AggregatorClient
 }
 
-func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor, idExtractor IdExtractor) (common.Executor, error) {
+func NewReceiver(paceFlag string, aggregAddr string, warmupSeconds uint, typeExtractor TypeExtractor, idExtractor IdExtractor) (common.Executor, error) {
 	pace, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
 		return nil, err
@@ -67,10 +66,14 @@ func NewReceiver(paceFlag string, aggregAddr string, typeExtractor TypeExtractor
 
 	// Calculate timeout for receiver
 	var timeout time.Duration
+	timeout = time.Second * time.Duration(warmupSeconds)
+	if timeout != 0 {
+		timeout += common.WaitAfterWarmup
+	}
 	for _, p := range pace {
 		timeout += p.Duration + common.WaitForFlush + common.WaitForReceiverGC
 	}
-	timeout += timeoutAdditionalTime
+	timeout *= 2 // Let's double it
 
 	return &Receiver{
 		typeExtractor: typeExtractor,
@@ -104,6 +107,8 @@ func (r *Receiver) Run(ctx context.Context) {
 		log.Printf("Receiver timeout")
 		r.endCh <- true
 	})
+
+	log.Printf("Started receiver timeout timer of duration %v", r.timeout)
 
 	r.processEvents()
 
@@ -148,6 +153,7 @@ func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
 		return fmt.Errorf("failed to create CloudEvents client: %v", err)
 	}
 
+	log.Printf("CloudEvents receiver started")
 	return cli.StartReceiver(ctx, r.processReceiveEvent)
 }
 
