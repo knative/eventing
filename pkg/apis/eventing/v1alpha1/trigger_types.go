@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -82,7 +81,7 @@ type TriggerSpec struct {
 
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
-	Subscriber *duckv1beta1.Destination `json:"subscriber,omitempty"`
+	Subscriber *duckv1.Destination `json:"subscriber,omitempty"`
 }
 
 type TriggerFilter struct {
