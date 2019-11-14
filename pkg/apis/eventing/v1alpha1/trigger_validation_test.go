@@ -42,6 +42,16 @@ var (
 			"source": "other_source",
 		},
 	}
+	invalidFilterHasBoth = &TriggerFilter{
+		DeprecatedSourceAndType: &TriggerFilterSourceAndType{
+			Type:   "other_type",
+			Source: "other_source",
+		},
+		Attributes: &TriggerFilterAttributes{
+			"type":   "other_type",
+			"source": "other_source",
+		},
+	}
 	validSubscriber = &duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
@@ -326,6 +336,17 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Message: "Invalid attribute name: \"invALID\"",
 			Paths:   []string{"filter.attributes"},
 		},
+	}, {
+		name: "Both attributes and deprecated source,type",
+		ts: &TriggerSpec{
+			Broker:     "test_broker",
+			Filter:     invalidFilterHasBoth,
+			Subscriber: validSubscriber,
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrMultipleOneOf("filter.attributes, filter.sourceAndType")
+			return fe
+		}(),
 	}, {
 		name: "missing subscriber",
 		ts: &TriggerSpec{
