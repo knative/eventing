@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -42,24 +42,28 @@ var (
 			"source": "other_source",
 		},
 	}
-	validSubscriber = &duckv1beta1.Destination{
+	invalidFilterHasBoth = &TriggerFilter{
+		DeprecatedSourceAndType: &TriggerFilterSourceAndType{
+			Type:   "other_type",
+			Source: "other_source",
+		},
+		Attributes: &TriggerFilterAttributes{
+			"type":   "other_type",
+			"source": "other_source",
+		},
+	}
+	validSubscriber = &duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	invalidSubscriber = &duckv1beta1.Destination{
+	invalidSubscriber = &duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
-	}
-	deprecatedSubscriber = &duckv1beta1.Destination{
-		DeprecatedKind:       "Service",
-		DeprecatedAPIVersion: "serving.knative.dev/v1alpha1",
-		DeprecatedName:       "subscriber_test",
-		DeprecatedNamespace:  "test_ns",
 	}
 	// Dependency annotation
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
@@ -333,22 +337,14 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
-		name: "multiple oneof sourceAndType and attributes",
+		name: "Both attributes and deprecated source,type",
 		ts: &TriggerSpec{
-			Broker: "test_broker",
-			Filter: &TriggerFilter{
-				DeprecatedSourceAndType: &TriggerFilterSourceAndType{
-					Type:   "other_type",
-					Source: "other_source",
-				},
-				Attributes: &TriggerFilterAttributes{
-					"type": "other_type",
-				},
-			},
+			Broker:     "test_broker",
+			Filter:     invalidFilterHasBoth,
 			Subscriber: validSubscriber,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("filter.sourceAndType", "filter.attributes")
+			fe := apis.ErrMultipleOneOf("filter.attributes, filter.sourceAndType")
 			return fe
 		}(),
 	}, {
@@ -371,21 +367,6 @@ func TestTriggerSpecValidation(t *testing.T) {
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("subscriber.ref.name")
 			return fe
-		}(),
-	}, {
-		name: "deprecated subscriber",
-		ts: &TriggerSpec{
-			Broker:     "test_broker",
-			Filter:     validSourceAndTypeFilter,
-			Subscriber: deprecatedSubscriber,
-		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			errs = errs.Also(apis.ErrInvalidValue("apiVersion is not allowed here, it's a deprecated value", "apiVersion"))
-			errs = errs.Also(apis.ErrInvalidValue("kind is not allowed here, it's a deprecated value", "kind"))
-			errs = errs.Also(apis.ErrInvalidValue("name is not allowed here, it's a deprecated value", "name"))
-			errs = errs.Also(apis.ErrInvalidValue("namespace is not allowed here, it's a deprecated value", "namespace"))
-			return errs.ViaField("subscriber")
 		}(),
 	},
 		{

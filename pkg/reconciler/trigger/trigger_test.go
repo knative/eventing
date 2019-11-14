@@ -47,6 +47,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -874,7 +875,7 @@ func TestAllCases(t *testing.T) {
 			namespaceLister:    listers.GetNamespaceLister(),
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
-			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
+			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1.KResource{}, func(types.NamespacedName) {}, 0),
 			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
 	},
@@ -902,7 +903,7 @@ func makeTrigger() *v1alpha1.Trigger {
 					Type:   "Any",
 				},
 			},
-			Subscriber: &duckv1beta1.Destination{
+			Subscriber: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					Name:       subscriberName,
 					Kind:       subscriberKind,

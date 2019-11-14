@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var triggerCondSet = apis.NewLivingConditionSet(TriggerConditionBroker, TriggerConditionSubscribed, TriggerConditionDependency, TriggerConditionSubscriberResolved)
@@ -115,8 +115,8 @@ func (ts *TriggerStatus) MarkDependencyUnknown(reason, messageFormat string, mes
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionDependency, reason, messageFormat, messageA...)
 }
 
-func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1alpha1.KResource) {
-	kc := ks.Status.GetCondition(duckv1alpha1.ConditionReady)
+func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.KResource) {
+	kc := ks.Status.GetCondition(apis.ConditionReady)
 	if kc != nil && kc.IsTrue() {
 		ts.MarkDependencySucceeded()
 	} else {

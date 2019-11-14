@@ -25,6 +25,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	pkgTest "knative.dev/pkg/test"
 
@@ -154,7 +155,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &duckv1beta1.Destination{
+			t.Spec.Subscriber = &duckv1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -165,7 +166,7 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &duckv1beta1.Destination{
+		t.Spec.Subscriber = &duckv1.Destination{
 			URI: apisURI,
 		}
 	}

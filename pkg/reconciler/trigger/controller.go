@@ -29,6 +29,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
@@ -89,7 +90,7 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	r.kresourceTracker = duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.kresourceTracker = duck.NewListableTracker(ctx, &duckv1.KResource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
