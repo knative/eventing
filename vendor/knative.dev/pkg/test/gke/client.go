@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	container "google.golang.org/api/container/v1beta1"
+	option "google.golang.org/api/option"
 
 	"golang.org/x/net/context"
 )
@@ -41,8 +42,8 @@ type sdkClient struct {
 }
 
 // NewSDKClient returns an SDKClient that implements SDKOperations
-func NewSDKClient() (SDKOperations, error) {
-	containerService, err := container.NewService(context.Background())
+func NewSDKClient(opts ...option.ClientOption) (SDKOperations, error) {
+	containerService, err := container.NewService(context.Background(), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container service: '%v'", err)
 	}

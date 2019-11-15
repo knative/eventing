@@ -46,7 +46,6 @@ var (
 	// Check that Subscription can be validated, can be defaulted, and has immutable fields.
 	_ apis.Validatable = (*Subscription)(nil)
 	_ apis.Defaultable = (*Subscription)(nil)
-	_ apis.Immutable   = (*Subscription)(nil)
 
 	// Check that Subscription can return its spec untyped.
 	_ apis.HasSpec = (*Subscription)(nil)

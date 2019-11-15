@@ -55,9 +55,6 @@ var (
 	// Check that Sequence can return its spec untyped.
 	_ apis.HasSpec = (*Sequence)(nil)
 
-	// TODO: make appropriate fields immutable.
-	//_ apis.Immutable = (*Sequence)(nil)
-
 	_ runtime.Object = (*Sequence)(nil)
 
 	// Check that we can create OwnerReferences to a Sequence.

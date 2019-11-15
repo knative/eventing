@@ -105,7 +105,7 @@ func newLoggerFromConfig(configJSON string, levelOverride string, opts []zap.Opt
 		return nil, zap.AtomicLevel{}, err
 	}
 
-	logger.Info("Successfully created the logger.", zap.String(logkey.JSONConfig, configJSON))
+	logger.Info("Successfully created the logger.")
 	logger.Sugar().Infof("Logging level set to %v", loggingCfg.Level)
 	return logger, loggingCfg.Level, nil
 }

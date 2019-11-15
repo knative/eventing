@@ -63,12 +63,6 @@ func getValidDestination() *duckv1beta1.Destination {
 	}
 }
 
-type DummyImmutableType struct{}
-
-func (d *DummyImmutableType) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	return nil
-}
-
 func TestSubscriptionValidation(t *testing.T) {
 	name := "empty channel"
 	c := &Subscription{
@@ -392,26 +386,6 @@ func TestSubscriptionImmutable(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestInvalidImmutableType(t *testing.T) {
-	name := "invalid type"
-	c := &Subscription{
-		Spec: SubscriptionSpec{
-			Channel:    getValidChannelRef(),
-			Subscriber: getValidDestination(),
-		},
-	}
-	og := &DummyImmutableType{}
-	want := &apis.FieldError{
-		Message: "The provided original was not a Subscription",
-	}
-	t.Run(name, func(t *testing.T) {
-		got := c.CheckImmutableFields(context.TODO(), og)
-		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
-		}
-	})
 }
 
 func TestValidChannel(t *testing.T) {

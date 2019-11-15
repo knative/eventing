@@ -100,14 +100,9 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 }
 
 // CheckImmutableFields checks that any immutable fields were not changed.
-func (t *Trigger) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	if og == nil {
+func (t *Trigger) CheckImmutableFields(ctx context.Context, original *Trigger) *apis.FieldError {
+	if original == nil {
 		return nil
-	}
-
-	original, ok := og.(*Trigger)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Trigger"}
 	}
 
 	if diff, err := kmp.ShortDiff(original.Spec.Broker, t.Spec.Broker); err != nil {

@@ -99,8 +99,8 @@ func TestEventTypeSpecValidation(t *testing.T) {
 func TestEventTypeImmutableFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		current  apis.Immutable
-		original apis.Immutable
+		current  *EventType
+		original *EventType
 		want     *apis.FieldError
 	}{{
 		name: "good (no change)",
@@ -133,19 +133,6 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		},
 		original: nil,
 		want:     nil,
-	}, {
-		name: "invalid type",
-		current: &EventType{
-			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: "test-source",
-				Broker: "test-broker",
-			},
-		},
-		original: &Trigger{},
-		want: &apis.FieldError{
-			Message: "The provided original was not an EventType",
-		},
 	}, {
 		name: "bad (broker change)",
 		current: &EventType{

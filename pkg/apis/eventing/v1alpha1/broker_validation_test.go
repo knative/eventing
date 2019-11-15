@@ -38,12 +38,6 @@ func TestBrokerSpecValidation(t *testing.T) {
 	_ = bs.Validate(context.Background())
 }
 
-type noBroker struct{}
-
-func (nb noBroker) CheckImmutableFields(_ context.Context, _ apis.Immutable) *apis.FieldError {
-	return nil
-}
-
 func TestBrokerImmutableFields(t *testing.T) {
 	original := &Broker{
 		Spec: BrokerSpec{
@@ -57,13 +51,9 @@ func TestBrokerImmutableFields(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		og      apis.Immutable
+		og      *Broker
 		wantErr *apis.FieldError
 	}{
-		"invalid original": {
-			og:      &noBroker{},
-			wantErr: &apis.FieldError{Message: "The provided original was not a Broker"},
-		},
 		"nil original": {
 			wantErr: nil,
 		},
