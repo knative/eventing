@@ -20,10 +20,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"knative.dev/pkg/profiling"
 	"log"
 	"net/http"
 	"time"
+
+	"knative.dev/pkg/profiling"
 
 	// Uncomment the following line to load the gcp plugin
 	// (only required to authenticate against GKE clusters).
