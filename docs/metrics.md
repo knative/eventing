@@ -6,8 +6,8 @@ This is a list of data-plane metrics exported by Knative Eventing components.
 
 These are exported by `broker-ingress` pods.
 
-| Name                       | Type      | Description                                       | Tags                                                                                                  |
-| -------------------------- | --------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Name                       | Type      | Description                                       | Tags                                                                                  |
+| -------------------------- | --------- | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `event_count`              | count     | Number of events received by a Broker.            | `namespace_name`, `broker_name`, `event_type`, `response_code`, `response_code_class` |
 | `event_dispatch_latencies` | histogram | The time spent dispatching an event to a Channel. | `namespace_name`, `broker_name`, `event_type`, `response_code`, `response_code_class` |
 
@@ -15,8 +15,8 @@ These are exported by `broker-ingress` pods.
 
 These are exported by `broker-filter` pods.
 
-| Name                         | Type      | Description                                                                        | Tags                                                                                                                    |
-| ---------------------------- | --------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Name                         | Type      | Description                                                                        | Tags                                                                                                   |
+| ---------------------------- | --------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `event_count`                | count     | Number of events received by a Trigger                                             | `namespace_name`, `trigger_name`, `broker_name`, `filter_type`, `response_code`, `response_code_class` |
 | `event_dispatch_latencies`   | histogram | The time spent dispatching an event to a Trigger subscriber                        | `namespace_name`, `trigger_name`, `broker_name`, `filter_type`, `response_code`, `response_code_class` |
 | `event_processing_latencies` | histogram | The time spent processing an event before it is dispatched to a Trigger subscriber | `namespace_name`, `trigger_name`, `broker_name`, `filter_type`                                         |
@@ -27,14 +27,14 @@ These are exported by core sources.
 
 ### ApiServerSource
 
-| Name          | Type  | Description           | Tags                                                                                                                           |
-| ------------- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Name          | Type  | Description           | Tags                                                                                                                    |
+| ------------- | ----- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `event_count` | count | Number of events sent | `namespace_name`, `name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 ### CronJobSource
 
-| Name          | Type  | Description           | Tags                                                                                                                           |
-| ------------- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Name          | Type  | Description           | Tags                                                                                                                    |
+| ------------- | ----- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `event_count` | count | Number of events sent | `namespace_name`, `name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
 # Access metrics

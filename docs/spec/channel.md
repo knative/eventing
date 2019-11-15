@@ -205,8 +205,8 @@ CloudEvent, then it MUST respond with `400 Bad Request`.
 Channels MUST output CloudEvents. The output MUST be via a binding specified in
 the
 [CloudEvents specification](https://github.com/cloudevents/spec/tree/v0.3#cloudevents-documents).
-Every Channel MUST support sending events via Binary Content Mode HTTP
-Transport Binding.
+Every Channel MUST support sending events via Binary Content Mode HTTP Transport
+Binding.
 
 Channels MUST NOT alter an event that goes through them. All CloudEvent
 attributes, including the data attribute, MUST be received at the subscriber
