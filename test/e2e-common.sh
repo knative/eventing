@@ -42,7 +42,7 @@ function knative_setup() {
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing Knative Monitoring"
-  start_knative_monitoring || fail_test "Knative Monitoring did not come up"
+  start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
 }
 
 # Teardown the Knative environment after tests finish.
