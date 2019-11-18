@@ -181,7 +181,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
 		return nil
 	}
-	delete(event.Context.Extensions, ttlKey)
+	event.SetExtension(ttlKey, nil)
 
 	r.logger.Debug("Received message", zap.Any("triggerRef", triggerRef))
 
