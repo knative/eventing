@@ -68,10 +68,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	logger := logging.FromContext(ctx)
 
 	// Decorate contexts with the current state of the config.
-	// store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
-	// store.WatchConfigs(cmw)
 	ctxFunc := func(ctx context.Context) context.Context {
-		// return v1.WithUpgradeViaDefaulting(store.ToContext(ctx))
 		return ctx
 	}
 
@@ -149,7 +146,8 @@ func main() {
 	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
 		ServiceName: logconfig.WebhookName(),
 		Port:        8443,
-		SecretName:  "eventing-webhook-certs",
+		// SecretName must match the name of the Secret created in the configuration.
+		SecretName: "eventing-webhook-certs",
 	})
 
 	sharedmain.MainWithContext(ctx, logconfig.WebhookName(),
