@@ -63,20 +63,6 @@ func TestSubscribablePopulate(t *testing.T) {
 			},
 		},
 		Status: SubscribableTypeStatus{
-			DeprecatedSubscribableStatus: &SubscribableStatus{
-				// Populate ALL fields
-				Subscribers: []SubscriberStatus{{
-					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 1,
-					Ready:              corev1.ConditionTrue,
-					Message:            "Some message",
-				}, {
-					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 2,
-					Ready:              corev1.ConditionFalse,
-					Message:            "Some message",
-				}},
-			},
 			SubscribableStatus: &SubscribableStatus{
 				// Populate ALL fields
 				Subscribers: []SubscriberStatus{{
@@ -103,21 +89,6 @@ func TestSubscribablePopulate(t *testing.T) {
 }
 
 func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
-	d := &SubscribableStatus{
-		// Populate ALL fields
-		Subscribers: []SubscriberStatus{{
-			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-			ObservedGeneration: 1,
-			Ready:              corev1.ConditionTrue,
-			Message:            "This is Deprecated Field",
-		}, {
-			UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-			ObservedGeneration: 2,
-			Ready:              corev1.ConditionFalse,
-			Message:            "This is Deprecated Field",
-		}},
-	}
-
 	s := &SubscribableStatus{
 		// Populate ALL fields
 		Subscribers: []SubscriberStatus{{
@@ -134,8 +105,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	}
 
 	subscribableTypeStatus := SubscribableTypeStatus{
-		DeprecatedSubscribableStatus: d,
-		SubscribableStatus:           s,
+		SubscribableStatus: s,
 	}
 
 	/* Test GetSubscribableTypeStatus */
@@ -146,20 +116,11 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 		t.Error("Testing of GetSubscribableTypeStatus failed as the function returned something unexpected")
 	}
 
-	subscribableTypeStatus.SubscribableStatus = nil
-	// Should return SubscribableTypeStatus#DeprecatedSubscribableStatus
-	subscribableStatus = subscribableTypeStatus.GetSubscribableTypeStatus()
-	if subscribableStatus.Subscribers[0].Message == "This is new field" &&
-		subscribableStatus.Subscribers[0].Message != "This is Deprecated Field" {
-		t.Error("Testing of GetSubscribableTypeStatus failed as the function returned something unexpected")
-	}
-
 	/* Test SetSubscribableTypeStatus */
 
 	// This should set both the fields to same value
 	subscribableTypeStatus.SetSubscribableTypeStatus(*s)
-	if subscribableTypeStatus.DeprecatedSubscribableStatus.Subscribers[0].Message != "This is new field" &&
-		subscribableTypeStatus.SubscribableStatus.Subscribers[0].Message != "This is new field" {
+	if subscribableTypeStatus.SubscribableStatus.Subscribers[0].Message != "This is new field" {
 		t.Error("SetSubscribableTypeStatus didn't work as expected")
 	}
 
@@ -172,8 +133,7 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 	})
 
 	// Check if the subscriber was added to both the fields of SubscribableTypeStatus
-	if len(subscribableTypeStatus.SubscribableStatus.Subscribers) != 3 &&
-		len(subscribableTypeStatus.DeprecatedSubscribableStatus.Subscribers) != 3 {
+	if len(subscribableTypeStatus.SubscribableStatus.Subscribers) != 3 {
 		t.Error("AddSubscriberToSubscribableStatus didn't add subscriberstatus to both the fields of SubscribableTypeStatus")
 	}
 }
