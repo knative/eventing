@@ -71,7 +71,7 @@ type Aggregator struct {
 	benchmarkName string
 }
 
-func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords uint, makoTags []string) (common.Executor, error) {
+func NewAggregator(listenAddr string, expectRecords uint, makoTags []string) (common.Executor, error) {
 	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener: %v", err)
@@ -82,8 +82,6 @@ func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords
 		notifyEventsReceived: make(chan struct{}),
 		makoTags:             makoTags,
 		expectRecords:        expectRecords,
-		benchmarkKey:         benchmarkKey,
-		benchmarkName:        benchmarkName,
 	}
 
 	// --- Create GRPC server
@@ -115,7 +113,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 
 	// Use the benchmark key created
 	// TODO support to check benchmark key for dev or prod
-	client, err := mako.SetupWithBenchmarkConfig(ctx, &ag.benchmarkKey, &ag.benchmarkName, ag.makoTags...)
+	client, err := mako.Setup(ctx, ag.makoTags...)
 	if err != nil {
 		fatalf("Failed to setup mako: %v", err)
 	}
