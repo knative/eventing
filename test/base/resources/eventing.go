@@ -72,6 +72,24 @@ func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) Subscripti
 	}
 }
 
+// WithDeadLetterSinkForSubscription returns an options that adds a DeadLetterSink for the given Subscription.
+func WithDeadLetterSinkForSubscription(name string) SubscriptionOption {
+	return func(s *messagingv1alpha1.Subscription) {
+		if name != "" {
+			delivery := s.Spec.Delivery
+			if delivery == nil {
+				delivery = &eventingduckv1alpha1.DeliverySpec{}
+				s.Spec.Delivery = delivery
+			}
+
+			delivery.DeadLetterSink = &duckv1beta1.Destination{
+				Ref: ServiceRef(name),
+			}
+
+		}
+	}
+}
+
 // Subscription returns a Subscription.
 func Subscription(
 	name, channelName string,
