@@ -73,7 +73,10 @@ func NewReceiver(paceFlag string, aggregAddr string, warmupSeconds uint, typeExt
 	for _, p := range pace {
 		timeout += p.Duration + common.WaitForFlush + common.WaitForReceiverGC
 	}
-	timeout *= 2 // Let's double it
+	// The timeout is doubled because the sender is slowed down by the SUT when the load is too high and test requires more than needed.
+	// Coefficient of 2 is based on experimental evidence.
+	// More: https://github.com/knative/eventing/pull/2195#discussion_r348368914
+	timeout *= 2
 
 	return &Receiver{
 		typeExtractor: typeExtractor,
