@@ -2,8 +2,8 @@
 
 ## Getting Started
 
-1. Install Knative eventing by following the steps in 
-https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31 
+1. Install Knative eventing by following the steps in
+https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31
 
 ## Running a benchmark
 
@@ -12,7 +12,7 @@ To run a benchmark continuously, and make the result available on [Mako](https:/
 1. Create a ConfigMap called `config-mako`, as described in
 https://github.com/knative/eventing/blob/master/test/performance/config/config-mako.yaml.
 
-    > Before `kubectl apply` the ConfigMap, the value of `dev.config` needs to by replaced with 
+    > Before `kubectl apply` the ConfigMap, the value of `dev.config` needs to by replaced with
     > dev.config of the benchmark you want to run.
 
 1.  Use `ko` to apply yaml files in the benchmark directory.

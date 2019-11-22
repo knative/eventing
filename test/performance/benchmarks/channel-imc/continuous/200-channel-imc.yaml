@@ -101,8 +101,6 @@ spec:
                 # set to the number of sender + receiver (same image that does both counts 2)
                 - "--expect-records=2"
                 - "--mako-tags=channel=imc"
-                - "--benchmark-key=5683818216292352"
-                - "--benchmark-name=Development - Channel Latency & Throughput"
               ports:
                 - name: grpc
                   containerPort: 10000
