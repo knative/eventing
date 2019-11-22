@@ -29,8 +29,8 @@ import (
 
 const (
 	invalidInputErrorPrefix = "invalid input: "
-	defaultErrCode = 1
-	separator = "\n"
+	defaultErrCode          = 1
+	separator               = "\n"
 )
 
 // RunCommand will run the command and return the standard output, plus error if there is one.
@@ -38,9 +38,9 @@ func RunCommand(cmdLine string) (string, error) {
 	cmdSplit, err := shell.Split(cmdLine)
 	if len(cmdSplit) == 0 || err != nil {
 		return "", &CommandLineError{
-			Command: cmdLine,
+			Command:     cmdLine,
 			ErrorOutput: []byte(invalidInputErrorPrefix + cmdLine),
-			ErrorCode: defaultErrCode,
+			ErrorCode:   defaultErrCode,
 		}
 	}
 
@@ -53,9 +53,9 @@ func RunCommand(cmdLine string) (string, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		return string(out), &CommandLineError{
-			Command: cmdLine,
+			Command:     cmdLine,
 			ErrorOutput: eb.Bytes(),
-			ErrorCode: getErrorCode(err),
+			ErrorCode:   getErrorCode(err),
 		}
 	}
 
