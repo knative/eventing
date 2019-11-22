@@ -18,6 +18,7 @@ package apiserver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
@@ -242,6 +243,11 @@ func TestAdapter_StartRef(t *testing.T) {
 		done <- struct{}{}
 	}()
 
+	// Wait for the reflector to be fully initialized.
+	// Ideally we want to check LastSyncResourceVersion is not empty but we
+	// don't have access to it.
+	time.Sleep(5 * time.Second)
+
 	stopCh <- struct{}{}
 	<-done
 
@@ -278,6 +284,11 @@ func TestAdapter_StartResource(t *testing.T) {
 		err = a.Start(stopCh)
 		done <- struct{}{}
 	}()
+
+	// Wait for the reflector to be fully initialized.
+	// Ideally we want to check LastSyncResourceVersion is not empty but we
+	// don't have access to it.
+	time.Sleep(5 * time.Second)
 
 	stopCh <- struct{}{}
 	<-done
