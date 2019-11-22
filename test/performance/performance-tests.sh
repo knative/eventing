@@ -48,6 +48,8 @@ function update_benchmark() {
   echo ">> Updating benchmark $1"
   ko delete -f ${BENCHMARK_ROOT_PATH}/$1/${TEST_CONFIG_VARIANT}
   ko apply -f ${BENCHMARK_ROOT_PATH}/$1/${TEST_CONFIG_VARIANT} || abort "failed to apply benchmark $1"
+  kubectl create configmap -n "${TEST_NAMESPACE}" config-mako --from-file=${BENCHMARK_ROOT_PATH}/$1/${TEST_CONFIG_VARIANT}/prod.config || abort "failed to create config-mako configmap"
+  kubectl patch configmap -n "${TEST_NAMESPACE}" config-mako -p '{"data":{"env":"prod"}}' || abort "failed to create config-mako configmap"
 }
 
 main $@
