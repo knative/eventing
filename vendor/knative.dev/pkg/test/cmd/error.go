@@ -14,29 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package cmd
 
-import (
-	"context"
-	"sync"
-)
-
-type Executor interface {
-	Run(ctx context.Context)
+// CommandLineError is a custom error we use for errors got from running commands
+type CommandLineError struct {
+	Command     string
+	ErrorCode   int
+	ErrorOutput []byte
 }
 
-type Executors []Executor
-
-func (e Executors) Run(ctx context.Context) {
-	waitingExecutors := sync.WaitGroup{}
-
-	for _, exec := range e {
-		waitingExecutors.Add(1)
-		go func(executor Executor) {
-			defer waitingExecutors.Done()
-			executor.Run(ctx)
-		}(exec)
-	}
-
-	waitingExecutors.Wait()
+func (c CommandLineError) Error() string {
+	return string(c.ErrorOutput)
 }

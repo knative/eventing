@@ -24,6 +24,7 @@ const (
 	GCEventType       = "gc.perf-test"
 	EndEventType      = "end.perf-test"
 	CEReceiverPort    = "8080"
-	WaitForFlush      = 1 * time.Second
-	WaitForReceiverGC = 1 * time.Second
+	WaitForFlush      = 5 * time.Second
+	WaitForReceiverGC = 3 * time.Second
+	WaitAfterWarmup   = 5 * time.Second
 )

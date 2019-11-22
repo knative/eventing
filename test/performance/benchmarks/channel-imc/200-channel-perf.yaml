@@ -38,6 +38,7 @@ spec:
             - "--sink=http://in-memory-test-channel-kn-channel.perf-eventing.svc.cluster.local"
             - "--aggregator=channel-perf-aggregator:10000"
             - "--pace=1000:30"
+            - "--warmup=0"
           env:
             - name: GOGC
               value: "off"
@@ -79,6 +80,11 @@ spec:
       ports:
         - name: grpc
           containerPort: 10000
+      env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       resources:
         requests:
           cpu: 1000m
@@ -89,9 +95,16 @@ spec:
       terminationMessagePolicy: FallbackToLogsOnError
     - name: mako-stub
       image: knative.dev/pkg/test/mako/stub-sidecar
+      args:
+        - "-p=10001"
       ports:
         - name: quickstore
           containerPort: 9813
+        - name: results
+          containerPort: 10001
+      volumeMounts:
+        - name: config-mako
+          mountPath: /etc/config-mako
       terminationMessagePolicy: FallbackToLogsOnError
   volumes:
     - name: config-mako

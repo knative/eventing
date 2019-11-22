@@ -1,3 +1,5 @@
+// +build e2e
+
 /*
 Copyright 2019 The Knative Authors
 
@@ -14,29 +16,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package e2e
 
 import (
-	"context"
-	"sync"
+	"testing"
+
+	"knative.dev/eventing/test/e2e/helpers"
 )
 
-type Executor interface {
-	Run(ctx context.Context)
-}
-
-type Executors []Executor
-
-func (e Executors) Run(ctx context.Context) {
-	waitingExecutors := sync.WaitGroup{}
-
-	for _, exec := range e {
-		waitingExecutors.Add(1)
-		go func(executor Executor) {
-			defer waitingExecutors.Done()
-			executor.Run(ctx)
-		}(exec)
-	}
-
-	waitingExecutors.Wait()
+// TestChannelDeadLetterSink tests DeadLetterSink
+func TestChannelDeadLetterSink(t *testing.T) {
+	helpers.ChannelDeadLetterSinkTestHelper(t, channelTestRunner)
 }
