@@ -45,9 +45,19 @@ function update_knative() {
 }
 
 function update_benchmark() {
+  local benchmark_path="${BENCHMARK_ROOT_PATH}/$1"
+  # TODO(chizhg): add update_environment function in test-infra/scripts/performance-tests.sh and move the below code there
+  echo ">> Updating configmap"
+  local prod_config=$(cat "${benchmark_path}/prod.config")
+  local dev_config=$(cat "${benchmark_path}/dev.config")
+  kubectl patch configmap/config-mako \
+    -n ${TEST_NAMESPACE} \
+    --type merge \
+    -p '{"data":{"prod.config":"${prod_config}", "dev.config":"${dev_config}"}}'
+
   echo ">> Updating benchmark $1"
-  ko delete -f ${BENCHMARK_ROOT_PATH}/$1/${TEST_CONFIG_VARIANT}
-  ko apply -f ${BENCHMARK_ROOT_PATH}/$1/${TEST_CONFIG_VARIANT} || abort "failed to apply benchmark $1"
+  ko delete -f "${benchmark_path}"/${TEST_CONFIG_VARIANT}
+  ko apply -f "${benchmark_path}"/${TEST_CONFIG_VARIANT} || abort "failed to apply benchmark $1"
 }
 
 main $@
