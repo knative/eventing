@@ -25,22 +25,15 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+
 	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
-	pkgtest "knative.dev/pkg/test"
 )
 
 const (
-	defaultEventSource   = "perf-test-event-source"
-	warmupRps            = 100
-	defaultTestNamespace = "default"
-	podNameEnvVar        = "POD_NAME"
-	podNamespaceEnvVar   = "POD_NAMESPACE"
-
-	// Those two depends on the maximum tolerated latency. If latency is higher than 1 sec, increase these.
-	// But if latency is higher than 1 sec, something else is wrong
-
-	waitAfterWarmup = 5 * time.Second
+	defaultEventSource = "perf-test-event-source"
+	warmupRps          = 100
+	podNameEnvVar      = "POD_NAME"
 )
 
 type Sender struct {
@@ -67,14 +60,6 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 	pacerSpecs, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse pace spec: %v", err)
-	}
-
-	// wait until all pods are ready (channel, consumers) to ensure we don’t start sending events too early
-	// and the GRPC client can connect to the aggregator
-	ns := testNamespace()
-	log.Printf("Waiting for all Pods to be ready in namespace %s", ns)
-	if err := waitForPods(ns); err != nil {
-		return nil, fmt.Errorf("Timeout waiting for Pods readiness in namespace %s: %v", ns, err)
 	}
 
 	// create a connection to the aggregator
@@ -189,7 +174,7 @@ func (s *Sender) warmup(ctx context.Context, warmupSeconds uint) error {
 	s.loadGenerator.Warmup(common.PaceSpec{Rps: warmupRps, Duration: time.Duration(warmupSeconds) * time.Second}, s.msgSize)
 
 	// give the channel some time to drain the events it may still have enqueued
-	time.Sleep(waitAfterWarmup)
+	time.Sleep(common.WaitAfterWarmup)
 
 	return nil
 }
@@ -227,19 +212,4 @@ func eventsSource() string {
 		return pn
 	}
 	return defaultEventSource
-}
-
-func testNamespace() string {
-	if pn := os.Getenv(podNamespaceEnvVar); pn != "" {
-		return pn
-	}
-	return defaultTestNamespace
-}
-
-func waitForPods(namespace string) error {
-	c, err := pkgtest.NewKubeClient("", "")
-	if err != nil {
-		return err
-	}
-	return pkgtest.WaitForAllPodsRunning(c, namespace)
 }

@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	maxRcvMsgSize         = 1024 * 1024 * 100
+	maxRcvMsgSize         = 1024 * 1024 * 1024
 	publishFailureMessage = "Publish failure"
 	deliverFailureMessage = "Delivery failure"
 )
@@ -113,9 +113,11 @@ func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords
 func (ag *Aggregator) Run(ctx context.Context) {
 	log.Printf("Configuring Mako")
 
+	makoClientCtx, _ := context.WithTimeout(ctx, time.Minute*10)
+
 	// Use the benchmark key created
 	// TODO support to check benchmark key for dev or prod
-	client, err := mako.SetupWithBenchmarkConfig(ctx, &ag.benchmarkKey, &ag.benchmarkName, ag.makoTags...)
+	client, err := mako.SetupWithBenchmarkConfig(makoClientCtx, &ag.benchmarkKey, &ag.benchmarkName, ag.makoTags...)
 	if err != nil {
 		fatalf("Failed to setup mako: %v", err)
 	}
@@ -227,6 +229,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	}
 
 	if len(publishErrorTimestamps) > 2 {
+		sort.Slice(publishErrorTimestamps, func(x, y int) bool { return publishErrorTimestamps[x].Before(publishErrorTimestamps[y]) })
 		err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
 		if err != nil {
 			log.Printf("ERROR AddSamplePoint: %v", err)
@@ -234,6 +237,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	}
 
 	if len(deliverErrorTimestamps) > 2 {
+		sort.Slice(deliverErrorTimestamps, func(x, y int) bool { return deliverErrorTimestamps[x].Before(deliverErrorTimestamps[y]) })
 		err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
 		if err != nil {
 			log.Printf("ERROR AddSamplePoint: %v", err)

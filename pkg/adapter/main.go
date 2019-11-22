@@ -92,7 +92,7 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 
 	// Check if metrics config contains profiling flag
 	if metricsConfig != nil && metricsConfig.ConfigMap != nil {
-		if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err != nil {
+		if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err == nil {
 			if enabled {
 				// Start a goroutine to server profiling metrics
 				logger.Info("Profiling enabled")

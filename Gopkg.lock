@@ -484,6 +484,14 @@
   version = "v3.0.0"
 
 [[projects]]
+  digest = "1:7842cc48c908d9d765c23193906a22f10f5b44ea048c2c2749443e6ccd7eacf4"
+  name = "github.com/rogpeppe/fastuuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "10c3923834d38e951ae8f627bfec2dc632c5b6cb"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:e09ada96a5a41deda4748b1659cc8953961799e798aea557257b56baee4ecaf3"
   name = "github.com/rogpeppe/go-internal"
   packages = [
@@ -1391,6 +1399,7 @@
     "github.com/openzipkin/zipkin-go/model",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
+    "github.com/rogpeppe/fastuuid",
     "github.com/tsenart/vegeta/lib",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
