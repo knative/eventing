@@ -50,7 +50,7 @@ function update_benchmark() {
   echo ">> Updating configmap"
   kubectl delete configmap config-mako -n "${TEST_NAMESPACE}" --ignore-not-found=true
   kubectl create configmap config-mako -n "${TEST_NAMESPACE}" --from-file="${benchmark_path}/prod.config" || abort "failed to create config-mako configmap"
-  kubectl patch configmap config-mako -n "${TEST_NAMESPACE}" -p '{"data":{"env":"prod"}}' || abort "failed to patch config-mako configmap"
+  kubectl patch configmap config-mako -n "${TEST_NAMESPACE}" -p '{"data":{"environment":"prod"}}' || abort "failed to patch config-mako configmap"
 
   echo ">> Updating benchmark $1"
   ko delete -f "${benchmark_path}"/${TEST_CONFIG_VARIANT} --ignore-not-found=true
