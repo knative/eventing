@@ -64,7 +64,7 @@ $(echo "${dev_config}")"
 
   kubectl patch configmap/config-mako \
     --type merge \
-    -p "${patch}"
+    -p $"${patch}"
 
   echo ">> Updating benchmark $1"
   ko delete -f "${benchmark_path}"/${TEST_CONFIG_VARIANT}
