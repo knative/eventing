@@ -27,6 +27,7 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
+	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"knative.dev/eventing/test/common/performance/common"
 )
@@ -42,15 +43,19 @@ type CloudEventsTargeter struct {
 	eventSource string
 }
 
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var letterBytes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+const markLetter = byte('"')
 
 // generateRandString returns a random string with the given length.
-func generateRandString(length uint) string {
-	b := make([]rune, length)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+func generateRandStringPayload(length uint) []byte {
+	b := make([]byte, length)
+	b[0] = markLetter
+	for i := uint(1); i < length-1; i++ {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
-	return string(b)
+	b[length-1] = markLetter
+	return b
 }
 
 func NewCloudEventsTargeter(sinkUrl string, msgSize uint, eventType string, eventSource string) CloudEventsTargeter {
@@ -63,20 +68,26 @@ func NewCloudEventsTargeter(sinkUrl string, msgSize uint, eventType string, even
 }
 
 func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
+	uuidGen := fastuuid.MustNewGenerator()
+
+	ceType := []string{cet.eventType}
+	ceSource := []string{cet.eventSource}
+	ceSpecVersion := []string{"0.2"}
+	ceContentType := []string{"application/json"}
+
 	return func(t *vegeta.Target) error {
 		t.Method = http.MethodPost
 		t.URL = cet.sinkUrl
 
-		t.Header = make(http.Header)
+		t.Header = make(http.Header, 5)
 
-		t.Header.Set("Ce-Id", uuid.New().String())
-		t.Header.Set("Ce-Type", cet.eventType)
-		t.Header.Set("Ce-Source", cet.eventSource)
-		t.Header.Set("Ce-Specversion", "0.2")
+		t.Header["Ce-Id"] = []string{uuidGen.Hex128()}
 
-		t.Header.Set("Content-Type", "application/json")
-
-		t.Body = []byte("\"" + generateRandString(cet.msgSize) + "\"")
+		t.Header["Ce-Type"] = ceType
+		t.Header["Ce-Source"] = ceSource
+		t.Header["Ce-Specversion"] = ceSpecVersion
+		t.Header["Content-Type"] = ceContentType
+		t.Body = generateRandStringPayload(cet.msgSize)
 
 		return nil
 	}
@@ -124,6 +135,7 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 				},
 			}}),
 			vegeta.Workers(minWorkers),
+			vegeta.MaxBody(0),
 		)
 
 		var err error

@@ -16,8 +16,27 @@ limitations under the License.
 
 package common
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type Executor interface {
 	Run(ctx context.Context)
+}
+
+type Executors []Executor
+
+func (e Executors) Run(ctx context.Context) {
+	waitingExecutors := sync.WaitGroup{}
+
+	for _, exec := range e {
+		waitingExecutors.Add(1)
+		go func(executor Executor) {
+			defer waitingExecutors.Done()
+			executor.Run(ctx)
+		}(exec)
+	}
+
+	waitingExecutors.Wait()
 }

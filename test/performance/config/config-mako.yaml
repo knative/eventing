@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,17 +13,10 @@
 # limitations under the License.
 
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: perf-eventing
-
----
-
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: config-mako
-  namespace: perf-eventing
+
 data:
   _example: |
     ################################
@@ -52,23 +45,35 @@ data:
     # to the list that the binary itself publishes (Kubernetes version, etc).
     # It is a comma separated list of tags.
     additionalTags: "key=value,absolute"
+
+  # Replace the value with config of the benchmark you want to run
   dev.config: |
     ### Creating this benchmark:
-    # mako create_benchmark test/performance/broker-latency/prod.config
+    # mako create_benchmark test/performance/channel-imc/dev.config
     ### Updating this benchmark:
-    # mako update_benchmark test/performance/broker-latency/prod.config
+    # mako update_benchmark test/performance/channel-imc/dev.config
 
     project_name: "Knative"
-    benchmark_name: "Broker Latency & Throughput"
-    description: "Measure latency and throughput of the broker using various channels."
-    benchmark_key: '5036156928393216'
+    benchmark_name: "Development - IMC Channel Latency & Throughput"
+    description: "Measure latency and throughput of channels."
+    benchmark_key: '4926580618952704'
 
     # Human owners for manual benchmark adjustments.
     owner_list: "grantrodgers@google.com"
     owner_list: "chizhg@google.com"
+    owner_list: "xiyue@google.com"
+    owner_list: "gracegao@google.com"
+    owner_list: "nachocano@google.com"
+    owner_list: "cshou@google.com"
 
-    # Only this robot should publish data to Mako for this key!
-    owner_list: "mako-job@knative-eventing-performance.iam.gserviceaccount.com"
+    # Anyone can add their IAM robot here to publish to this benchmark.
+    owner_list: "mako-job@knative-performance.iam.gserviceaccount.com"
+    # This is grantrodgers' robot:
+    owner_list: "mako-upload@grantrodgers-crd.iam.gserviceaccount.com"
+    owner_list: "mako-upload@xiyue-knative-project.iam.gserviceaccount.com"
+    owner_list: "mako-upload@gracegao-knative-gcp-testing.iam.gserviceaccount.com"
+    owner_list: "mako-upload@knative-project-228222.iam.gserviceaccount.com"
+    owner_list: "mako-upload@cshou-playground.iam.gserviceaccount.com"
 
     # Define the name and type for x-axis of run charts
     input_value_info: {
@@ -103,100 +108,6 @@ data:
       label: "deliver-throughput"
     }
     metric_info_list: {
-      value_key: "pet"
-      label: "publish-failure-throughput"
+      value_key: "ft"
+      label: "failure-throughput"
     }
-    metric_info_list: {
-      value_key: "det"
-      label: "deliver-failure-throughput"
-    }
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: channel-perf-consumer
-  namespace: perf-eventing
-spec:
-  selector:
-    role: channel-perf-consumer
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: cloudevents
-    name: http
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: channel-perf-aggregator
-  namespace: perf-eventing
-spec:
-  selector:
-    role: channel-perf-aggregator
-  ports:
-    - name: grpc
-      port: 10000
-      targetPort: grpc
-      protocol: TCP
-
----
-
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: perf-eventing
-  namespace: perf-eventing
-
----
-
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: perf-eventing
-rules:
-  - apiGroups: [""]
-    resources: ["nodes", "pods"]
-    verbs: ["list"]
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: perf-eventing
-subjects:
-  - kind: ServiceAccount
-    name: perf-eventing
-    namespace: perf-eventing
-roleRef:
-  kind: ClusterRole
-  name: perf-eventing
-  apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: messaging.knative.dev/v1alpha1
-kind: InMemoryChannel
-metadata:
-  name: in-memory-test-channel
-  namespace: perf-eventing
-
----
-
-
-apiVersion: messaging.knative.dev/v1alpha1
-kind: Subscription
-metadata:
-  name: in-memory-test-channel-sub
-  namespace: perf-eventing
-spec:
-  channel:
-    apiVersion: messaging.knative.dev/v1alpha1
-    kind: InMemoryChannel
-    name: in-memory-test-channel
-  subscriber:
-    uri: "http://channel-perf-consumer.perf-eventing.svc.cluster.local"

@@ -18,14 +18,18 @@ package performance
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"strings"
-	"sync"
+
+	"knative.dev/pkg/signals"
+	pkgtest "knative.dev/pkg/test"
 
 	"knative.dev/eventing/test/common/performance/aggregator"
+	"knative.dev/eventing/test/common/performance/common"
 	"knative.dev/eventing/test/common/performance/receiver"
 	"knative.dev/eventing/test/common/performance/sender"
-	"knative.dev/pkg/signals"
 )
 
 //go:generate protoc -I ./event_state --go_out=plugins=grpc:./event_state ./event_state/event_state.proto
@@ -43,8 +47,11 @@ var (
 	expectRecords uint
 	listenAddr    string
 	makoTags      string
-	benchmarkKey  string
-	benchmarkName string
+)
+
+const (
+	defaultTestNamespace = "default"
+	podNamespaceEnvVar   = "POD_NAMESPACE"
 )
 
 func DeclareFlags() {
@@ -62,8 +69,6 @@ func DeclareFlags() {
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 2, "Number of expected events records before aggregating data.")
 	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark specific Mako tags.")
-	flag.StringVar(&benchmarkKey, "benchmark-key", "TODO", "Benchmark key")
-	flag.StringVar(&benchmarkName, "benchmark-name", "TODO", "Benchmark name")
 }
 
 func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor receiver.TypeExtractor, idExtractor receiver.IdExtractor) {
@@ -74,7 +79,7 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 		panic("--roles not set!")
 	}
 
-	waitingExecutors := sync.WaitGroup{}
+	var execs []common.Executor
 
 	if strings.Contains(roles, "receiver") {
 		if paceFlag == "" {
@@ -86,16 +91,12 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 
 		log.Println("Creating a receiver")
 
-		receiver, err := receiver.NewReceiver(paceFlag, aggregAddr, typeExtractor, idExtractor)
+		receiver, err := receiver.NewReceiver(paceFlag, aggregAddr, warmupSeconds, typeExtractor, idExtractor)
 		if err != nil {
 			panic(err)
 		}
 
-		waitingExecutors.Add(1)
-		go func() {
-			receiver.Run(ctx)
-			waitingExecutors.Done()
-		}()
+		execs = append(execs, receiver)
 	}
 
 	if strings.Contains(roles, "sender") {
@@ -113,29 +114,46 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 			panic(err)
 		}
 
-		waitingExecutors.Add(1)
-		go func() {
-			sender.Run(ctx)
-			waitingExecutors.Done()
-		}()
+		execs = append(execs, sender)
 	}
 
 	if strings.Contains(roles, "aggregator") {
 		log.Println("Creating an aggregator")
 
-		aggr, err := aggregator.NewAggregator(benchmarkKey, benchmarkName, listenAddr, expectRecords, strings.Split(makoTags, ","))
+		aggr, err := aggregator.NewAggregator(listenAddr, expectRecords, strings.Split(makoTags, ","))
 		if err != nil {
 			panic(err)
 		}
 
-		waitingExecutors.Add(1)
-		go func() {
-			aggr.Run(ctx)
-			waitingExecutors.Done()
-		}()
+		execs = append(execs, aggr)
 	}
 
-	waitingExecutors.Wait()
+	// wait until all pods are ready
+	ns := testNamespace()
+	log.Printf("Waiting for all Pods to be ready in namespace %s", ns)
+	if err := waitForPods(ns); err != nil {
+		panic(fmt.Errorf("timeout waiting for Pods readiness in namespace %s: %v", ns, err))
+	}
+
+	log.Printf("Starting %d executors", len(execs))
+
+	common.Executors(execs).Run(ctx)
 
 	log.Println("Performance image completed")
+}
+
+func testNamespace() string {
+	if pn := os.Getenv(podNamespaceEnvVar); pn != "" {
+		return pn
+	}
+	return defaultTestNamespace
+}
+
+func waitForPods(namespace string) error {
+	c, err := pkgtest.NewKubeClient("", "")
+	if err != nil {
+		return err
+	}
+
+	return pkgtest.WaitForAllPodsRunning(c, namespace)
 }
