@@ -4,7 +4,7 @@
 
 1. Create a namespace or use an existing namespace. Each namespace can be
    configured with a single benchmark.
-   
+
 1. Install Knative eventing by following the steps in
 https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31
 
@@ -12,7 +12,7 @@ https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8ed
    the Mako config file.
 
   ```
-  kubectl apply configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
+  kubectl create configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
   ```
 
 1. Optionally edit the ConfigMap to set additional keys.
