@@ -99,9 +99,6 @@ spec:
               # set to the number of sender + receiver (same image that does both counts 2)
             - "--expect-records=2"
             - "--mako-tags=channel=imc"
-              # benchmark key and benchmark name come from dev.config
-            - "--benchmark-key=5903682180743168"
-            - "--benchmark-name=Development - Broker Latency & Throughput"
             ports:
             - name: grpc
               containerPort: 10000

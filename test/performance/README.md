@@ -2,35 +2,38 @@
 
 ## Getting Started
 
-1.  Create a namespace or use an existing namespace.
-
-Create a ConfigMap called `config-mako` in your chosen namespace.
-
-```
-cat <<EOF | kubectl apply -n <namespace> -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: config-mako
-data:
-  environment: dev
-EOF
-```
-
-[`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
-determines the valid keys in this ConfigMap. Current keys are:
-
-- `environment`: Selects a Mako config file in kodata. E.g. `environment: dev`
-  corresponds to `kodata/dev.config`.
-- `additionalTags`: Comma-separated list of tags to apply to the Mako run.
+1. Install Knative eventing by following the steps in
+https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31
 
 ## Running a benchmark
 
+To run a benchmark continuously, and make the result available on [Mako](https://mako.dev/project?name=Knative):
+
+1. Create a ConfigMap called `config-mako`, as described in
+https://github.com/knative/eventing/blob/master/test/performance/config/config-mako.yaml.
+
+    > Before `kubectl apply` the ConfigMap, the value of `dev.config` needs to by replaced with
+    > dev.config of the benchmark you want to run.
+
 1.  Use `ko` to apply yaml files in the benchmark directory.
 
-```
-ko apply -f test/performance/broker-imc
-```
+    ```
+    ko apply -f test/performance/benchmarks/broker-imc/continuous
+    ```
+
+To run a benchmark once, and use the result from `mako-stub` for plotting:
+
+1. Install the eventing resources for attacking:
+
+    ```
+    ko apply -f test/performance/benchmarks/broker-imc/100-broker-perf-setup.yaml
+    ```
+
+1. Start the benchmarking job:
+
+    ```
+    ko apply -f test/performance/benchmarks/broker-imc/200-broker-perf.yaml
+    ```
 
 ## Available benchmarks
 
