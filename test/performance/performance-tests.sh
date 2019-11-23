@@ -69,6 +69,9 @@ $(echo "${dev_config}")"
   echo ">> Updating benchmark $1"
   ko delete -f "${benchmark_path}"/${TEST_CONFIG_VARIANT}
   ko apply -f "${benchmark_path}"/${TEST_CONFIG_VARIANT} || abort "failed to apply benchmark $1"
+  kubectl delete configmap config-mako -n "${TEST_NAMESPACE}" --ignore-not-found=true
+  kubectl create configmap config-mako -n "${TEST_NAMESPACE}" --from-file="${benchmark_path}/prod.config" || abort "failed to create config-mako configmap"
+  kubectl patch configmap config-mako -n "${TEST_NAMESPACE}" -p '{"data":{"env":"prod"}}' || abort "failed to patch config-mako configmap"
 }
 
 main $@

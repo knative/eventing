@@ -1,19 +1,33 @@
 # Knative Eventing Performance Tests
 
-## Getting Started
+## Configuring your cluster to run a benchmark
+
+1. Create a namespace or use an existing namespace. Each namespace can be
+   configured with a single benchmark.
 
 1. Install Knative eventing by following the steps in
 https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31
 
-## Running a benchmark
+1. Create a ConfigMap called `config-mako` in your chosen namespace containing
+   the Mako config file.
+
+  ```
+  kubectl create configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
+  ```
+
+1. Optionally edit the ConfigMap to set additional keys.
+
+   ```
+   kubectl edit configmap -n <namespace> config-mako
+
+  [`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
+  determines the valid keys in this ConfigMap. Current keys are:
+
+  - `environment`: Select a Mako config file in the ConfigMap. E.g.
+    `environment: dev` corresponds to `dev.config`.
+  - `additionalTags`: Comma-separated list of tags to apply to the Mako run.
 
 To run a benchmark continuously, and make the result available on [Mako](https://mako.dev/project?name=Knative):
-
-1. Create a ConfigMap called `config-mako`, as described in
-https://github.com/knative/eventing/blob/master/test/performance/config/config-mako.yaml.
-
-    > Before `kubectl apply` the ConfigMap, the value of `dev.config` needs to by replaced with
-    > dev.config of the benchmark you want to run.
 
 1.  Use `ko` to apply yaml files in the benchmark directory.
 
@@ -38,8 +52,8 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 ## Available benchmarks
 
 - `direct`: Source -> Sink (baseline test)
-- `broker-imc`: Source -> Broker IMC -> Sink
-- `channel-imc`: Source -> Channel IMC -> Sink
+- `broker-imc`: Source -> Broker with IMC -> Sink
+- `channel-imc`: Source -> IMC -> Sink
 
 ## Plotting results from mako-stub
 
