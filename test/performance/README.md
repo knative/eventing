@@ -12,7 +12,7 @@ https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8ed
    the Mako config file.
 
   ```
-  kubectl create configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
+  kubectl apply configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
   ```
 
 1. Optionally edit the ConfigMap to set additional keys.
@@ -23,7 +23,7 @@ https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8ed
   [`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
   determines the valid keys in this ConfigMap. Current keys are:
 
-  - `environment`: Selects a Mako config file in the ConfigMap. E.g.
+  - `environment`: Select a Mako config file in the ConfigMap. E.g.
     `environment: dev` corresponds to `dev.config`.
   - `additionalTags`: Comma-separated list of tags to apply to the Mako run.
 
