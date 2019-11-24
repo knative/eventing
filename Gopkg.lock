@@ -1254,7 +1254,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c2a4335822f3689f4322e6b814a280932b3064079e9792ff3da51987313602de"
+  digest = "1:19e1361ee0bb4c48287a04c5f0d4c01bbc365532da6cd9da9152be28405d9ce9"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1281,6 +1281,12 @@
     "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "client/injection/apiextensions/informers/factory",
     "client/injection/apiextensions/informers/factory/fake",
+    "client/injection/ducks/duck/v1/conditions",
+    "client/injection/ducks/duck/v1/conditions/fake",
+    "client/injection/ducks/duck/v1alpha1/addressable",
+    "client/injection/ducks/duck/v1alpha1/addressable/fake",
+    "client/injection/ducks/duck/v1beta1/addressable",
+    "client/injection/ducks/duck/v1beta1/addressable/fake",
     "client/injection/kube/client",
     "client/injection/kube/client/fake",
     "client/injection/kube/informers/admissionregistration/v1beta1/mutatingwebhookconfiguration",
@@ -1357,7 +1363,7 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "2ec0f8da50578dcc3d830571d0de24de834579c8"
+  revision = "43ca049cdbdad4892b0c926e7c6536d064efde72"
 
 [[projects]]
   branch = "master"
@@ -1473,6 +1479,12 @@
     "knative.dev/pkg/client/clientset/versioned/fake",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake",
     "knative.dev/pkg/client/injection/kube/client",
     "knative.dev/pkg/client/injection/kube/client/fake",
     "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment",
