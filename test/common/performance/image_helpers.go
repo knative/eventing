@@ -47,6 +47,7 @@ var (
 	expectRecords uint
 	listenAddr    string
 	makoTags      string
+	publish       bool
 )
 
 const (
@@ -69,6 +70,7 @@ func DeclareFlags() {
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
 	flag.UintVar(&expectRecords, "expect-records", 2, "Number of expected events records before aggregating data.")
 	flag.StringVar(&makoTags, "mako-tags", "", "Comma separated list of benchmark specific Mako tags.")
+	flag.BoolVar(&publish, "publish", true, "Publish the results to mako-stub (default true)")
 }
 
 func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor receiver.TypeExtractor, idExtractor receiver.IdExtractor) {
@@ -120,7 +122,7 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 	if strings.Contains(roles, "aggregator") {
 		log.Println("Creating an aggregator")
 
-		aggr, err := aggregator.NewAggregator(listenAddr, expectRecords, strings.Split(makoTags, ","))
+		aggr, err := aggregator.NewAggregator(listenAddr, expectRecords, strings.Split(makoTags, ","), publish)
 		if err != nil {
 			panic(err)
 		}
