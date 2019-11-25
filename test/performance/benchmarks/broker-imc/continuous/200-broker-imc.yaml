@@ -45,7 +45,7 @@ spec:
             - "--roles=sender,receiver"
             - "--sink=http://imc-broker"
             - "--aggregator=broker-imc-aggregator:10000"
-            - "--pace=100:10,400:20,800:30,1000:60,1100:60,1200:60"
+            - "--pace=100:10,400:20,800:30,900:60,1000:60,1100:60,1200:60"
             env:
             - name: POD_NAME
               valueFrom:
