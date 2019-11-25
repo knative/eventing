@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
+
 	"knative.dev/eventing/test/common/performance/common"
 )
 
