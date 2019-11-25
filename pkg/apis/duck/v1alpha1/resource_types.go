@@ -22,7 +22,6 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Resource is a skeleton type wrapping all Kubernetes resources. It is typically used to watch

@@ -25,6 +25,8 @@ import (
 	"knative.dev/pkg/apis/duck"
 )
 
+// +genduck
+
 // Subscribable is the schema for the subscribable portion of the spec
 // section of the resource.
 type Subscribable struct {
@@ -85,7 +87,6 @@ type SubscriberStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SubscribableType is a skeleton type wrapping Subscribable in the manner we expect resource writers

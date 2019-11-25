@@ -33,6 +33,8 @@ import (
 
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	"knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
@@ -645,6 +647,7 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			containerSourceLister: listers.GetContainerSourceLister(),

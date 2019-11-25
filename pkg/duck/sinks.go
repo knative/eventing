@@ -27,10 +27,9 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	pkgapisduck "knative.dev/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
-
-	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // SinkReconciler is a helper for Sources. It triggers
@@ -47,12 +46,7 @@ func NewSinkReconciler(ctx context.Context, callback func(types.NamespacedName))
 	ret.tracker = tracker.New(callback, controller.GetTrackerLease(ctx))
 	ret.sinkInformerFactory = &pkgapisduck.CachedInformerFactory{
 		Delegate: &pkgapisduck.EnqueueInformerFactory{
-			Delegate: &pkgapisduck.TypedInformerFactory{
-				Client:       dynamicclient.Get(ctx),
-				Type:         &duckv1alpha1.AddressableType{},
-				ResyncPeriod: controller.GetResyncPeriod(ctx),
-				StopChannel:  ctx.Done(),
-			},
+			Delegate:     addressable.Get(ctx),
 			EventHandler: controller.HandleAll(ret.tracker.OnChanged),
 		},
 	}
