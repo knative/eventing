@@ -40,7 +40,6 @@ import (
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
 	"knative.dev/pkg/reconciler/testing"
 )
 
@@ -51,7 +50,6 @@ var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
 
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
-	fakesharedclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
@@ -107,10 +105,6 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	all = append(all, l.GetEventingObjects()...)
 	all = append(all, l.GetKubeObjects()...)
 	return all
-}
-
-func (l *Listers) GetSharedObjects() []runtime.Object {
-	return l.sorter.ObjectsForSchemeFunc(fakesharedclientset.AddToScheme)
 }
 
 func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
