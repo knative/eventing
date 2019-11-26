@@ -215,7 +215,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	}
 
 	receivedTimestamps := eventsToTimestampsArray(&ag.receivedEvents.Events)
-	err = publishThpt(client.Quickstore, receivedTimestamps, deliverErrorTimestamps,"dt", "det")
+	err = publishThpt(client.Quickstore, receivedTimestamps, deliverErrorTimestamps, "dt", "det")
 	if err != nil {
 		log.Printf("ERROR AddSamplePoint for deliver-throughput: %v", err)
 	}
