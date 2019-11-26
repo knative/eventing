@@ -61,6 +61,34 @@ func TestSinkBindingValidation(t *testing.T) {
 		},
 		want: apis.ErrMissingField("spec.subject.namespace"),
 	}, {
+		name: "invalid subject namespace",
+		in: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "matt",
+				Namespace: "moore",
+			},
+			Spec: SinkBindingSpec{
+				BindingSpec: duckv1alpha1.BindingSpec{
+					Subject: tracker.Reference{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+						Name:       "jeanne",
+						Namespace:  "lorefice",
+					},
+				},
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &corev1.ObjectReference{
+							APIVersion: "serving.knative.dev/v1",
+							Kind:       "Service",
+							Name:       "gemma",
+						},
+					},
+				},
+			},
+		},
+		want: apis.ErrInvalidValue("lorefice", "spec.subject.namespace"),
+	}, {
 		name: "missing sink information",
 		in: &SinkBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -82,6 +110,35 @@ func TestSinkBindingValidation(t *testing.T) {
 			},
 		},
 		want: apis.ErrGeneric("expected at least one, got none", "spec.sink.ref", "spec.sink.uri"),
+	}, {
+		name: "bad sink namespace",
+		in: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "matt",
+				Namespace: "moore",
+			},
+			Spec: SinkBindingSpec{
+				BindingSpec: duckv1alpha1.BindingSpec{
+					Subject: tracker.Reference{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+						Name:       "jeanne",
+						Namespace:  "moore",
+					},
+				},
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &corev1.ObjectReference{
+							APIVersion: "serving.knative.dev/v1",
+							Kind:       "Service",
+							Name:       "gemma",
+							Namespace:  "lorefice",
+						},
+					},
+				},
+			},
+		},
+		want: apis.ErrInvalidValue("lorefice", "spec.sink.ref.namespace"),
 	}}
 
 	for _, test := range tests {

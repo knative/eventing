@@ -24,7 +24,14 @@ import (
 
 // Validate implements apis.Validatable
 func (fb *SinkBinding) Validate(ctx context.Context) *apis.FieldError {
-	return fb.Spec.Validate(ctx).ViaField("spec")
+	err := fb.Spec.Validate(ctx).ViaField("spec")
+	if fb.Spec.Subject.Namespace != "" && fb.Namespace != fb.Spec.Subject.Namespace {
+		err = err.Also(apis.ErrInvalidValue(fb.Spec.Subject.Namespace, "spec.subject.namespace"))
+	}
+	if fb.Spec.Sink.Ref != nil && fb.Spec.Sink.Ref.Namespace != "" && fb.Namespace != fb.Spec.Sink.Ref.Namespace {
+		err = err.Also(apis.ErrInvalidValue(fb.Spec.Sink.Ref.Namespace, "spec.sink.ref.namespace"))
+	}
+	return err
 }
 
 // Validate implements apis.Validatable
