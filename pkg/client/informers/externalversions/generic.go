@@ -88,6 +88,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().ContainerSources().Informer()}, nil
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("cronjobsources"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().CronJobSources().Informer()}, nil
+	case sourcesv1alpha1.SchemeGroupVersion.WithResource("sinkbindings"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().SinkBindings().Informer()}, nil
 
 	}
 

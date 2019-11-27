@@ -29,6 +29,7 @@ type SourcesV1alpha1Interface interface {
 	ApiServerSourcesGetter
 	ContainerSourcesGetter
 	CronJobSourcesGetter
+	SinkBindingsGetter
 }
 
 // SourcesV1alpha1Client is used to interact with features provided by the sources.eventing.knative.dev group.
@@ -46,6 +47,10 @@ func (c *SourcesV1alpha1Client) ContainerSources(namespace string) ContainerSour
 
 func (c *SourcesV1alpha1Client) CronJobSources(namespace string) CronJobSourceInterface {
 	return newCronJobSources(c, namespace)
+}
+
+func (c *SourcesV1alpha1Client) SinkBindings(namespace string) SinkBindingInterface {
+	return newSinkBindings(c, namespace)
 }
 
 // NewForConfig creates a new SourcesV1alpha1Client for the given config.
