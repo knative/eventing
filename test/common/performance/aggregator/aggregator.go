@@ -21,19 +21,20 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/google/mako/go/quickstore"
+
 	"google.golang.org/grpc"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	"knative.dev/pkg/test/mako"
-
 	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
+	"knative.dev/pkg/test/mako"
 )
 
 const (
@@ -170,34 +171,34 @@ func (ag *Aggregator) Run(ctx context.Context) {
 			publishErrorTimestamps = append(publishErrorTimestamps, timestampSent)
 
 			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), publishFailureMessage); qerr != nil {
-				log.Printf("ERROR AddError for publish-failure: %v", qerr)
+				log.Printf("ERROR AddError: %v", qerr)
 			}
 			continue
 		}
 
 		sendLatency := timestampAccepted.Sub(timestampSent)
 		// Uncomment to get CSV directly from this container log
-		// fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
+		//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
 		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
-			log.Printf("ERROR AddSamplePoint for publish-latency: %v", qerr)
+			log.Printf("ERROR AddSamplePoint: %v", qerr)
 		}
 
 		if !received {
 			deliverErrorTimestamps = append(deliverErrorTimestamps, timestampSent)
 
 			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), deliverFailureMessage); qerr != nil {
-				log.Printf("ERROR AddError for deliver-failure: %v", qerr)
+				log.Printf("ERROR AddError: %v", qerr)
 			}
 			continue
 		}
 
 		e2eLatency := timestampReceived.Sub(timestampSent)
 		// Uncomment to get CSV directly from this container log
-		// fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
+		//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
 		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
-			log.Printf("ERROR AddSamplePoint for deliver-latency: %v", qerr)
+			log.Printf("ERROR AddSamplePoint: %v", qerr)
 		}
 	}
 
@@ -209,15 +210,31 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	log.Printf("Publishing throughputs")
 
 	sentTimestamps := eventsToTimestampsArray(&ag.sentEvents.Events)
-	err = publishThpt(client.Quickstore, sentTimestamps, publishErrorTimestamps, "st", "pet")
+	err = publishThpt(sentTimestamps, client.Quickstore, "st")
 	if err != nil {
-		log.Printf("ERROR AddSamplePoint for send-throughput: %v", err)
+		log.Printf("ERROR AddSamplePoint: %v", err)
 	}
 
 	receivedTimestamps := eventsToTimestampsArray(&ag.receivedEvents.Events)
-	err = publishThpt(client.Quickstore, receivedTimestamps, deliverErrorTimestamps, "dt", "det")
+	err = publishThpt(receivedTimestamps, client.Quickstore, "dt")
 	if err != nil {
-		log.Printf("ERROR AddSamplePoint for deliver-throughput: %v", err)
+		log.Printf("ERROR AddSamplePoint: %v", err)
+	}
+
+	if len(publishErrorTimestamps) > 2 {
+		sort.Slice(publishErrorTimestamps, func(x, y int) bool { return publishErrorTimestamps[x].Before(publishErrorTimestamps[y]) })
+		err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint: %v", err)
+		}
+	}
+
+	if len(deliverErrorTimestamps) > 2 {
+		sort.Slice(deliverErrorTimestamps, func(x, y int) bool { return deliverErrorTimestamps[x].Before(deliverErrorTimestamps[y]) })
+		err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint: %v", err)
+		}
 	}
 
 	// --- Publish error counts as aggregate metrics
@@ -242,46 +259,22 @@ func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Tim
 		t, _ := ptypes.Timestamp(v)
 		values = append(values, t)
 	}
+	sort.Slice(values, func(x, y int) bool { return values[x].Before(values[y]) })
 	return values
 }
 
-func publishThpt(q *quickstore.Quickstore,
-	successTimestamps, errorTimestamps []time.Time,
-	successMetricName, errorMetricName string,
-) error {
-	successRateMap := make(map[int64]int64)
-	errorRateMap := make(map[int64]int64)
-	// Aggregate and calculate the success throughput per second.
-	for _, t := range successTimestamps {
-		successRateMap[t.Unix()]++
-		// By adding the key to errorRateMap in this way, we always report the error throughput per second,
-		// even if it's zero.
-		if _, ok := errorRateMap[t.Unix()]; !ok {
-			errorRateMap[t.Unix()] = 0
+func publishThpt(timestamps []time.Time, q *quickstore.Quickstore, metricName string) error {
+	for i, t := range timestamps[1:] {
+		var thpt uint
+		j := i - 1
+		for j >= 0 && t.Sub(timestamps[j]) <= time.Second {
+			thpt++
+			j--
 		}
-	}
-	// Aggregate and calculate the error throughput per second.
-	for _, t := range errorTimestamps {
-		errorRateMap[t.Unix()]++
-	}
-
-	// Save the success throughput metric to Mako.
-	for ts, cnt := range successRateMap {
-		if qerr := q.AddSamplePoint(mako.XTime(time.Unix(ts, 0)), map[string]float64{
-			successMetricName: float64(cnt),
-		}); qerr != nil {
+		if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
 			return qerr
 		}
 	}
-	// Save the error throughput metric to Mako.
-	for ts, cnt := range errorRateMap {
-		if qerr := q.AddSamplePoint(mako.XTime(time.Unix(ts, 0)), map[string]float64{
-			errorMetricName: float64(cnt),
-		}); qerr != nil {
-			return qerr
-		}
-	}
-
 	return nil
 }
 
