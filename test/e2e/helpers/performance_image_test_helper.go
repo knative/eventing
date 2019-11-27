@@ -34,7 +34,7 @@ import (
 )
 
 func SetupPerformanceImageRBAC(client *common.Client) {
-	client.CreateServiceAccountOrFail("perf-eventing")
+	client.CreateServiceAccountOrFail(resources.PerfServiceAccount)
 	client.CreateClusterRoleOrFail(&rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "perf-eventing-list-pods",
@@ -45,7 +45,7 @@ func SetupPerformanceImageRBAC(client *common.Client) {
 			Resources: []string{"nodes", "pods"},
 		}},
 	})
-	client.CreateClusterRoleBindingOrFail("perf-eventing", "perf-eventing-list-pods", "perf-eventing-list-pods")
+	client.CreateClusterRoleBindingOrFail(resources.PerfServiceAccount, "perf-eventing-list-pods", "perf-eventing-list-pods")
 }
 
 var sentEventsRegex = regexp.MustCompile("Sent count: ([0-9.,]+)")

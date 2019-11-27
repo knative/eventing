@@ -223,9 +223,15 @@ func EventFilteringPod(name string, filter bool) *corev1.Pod {
 	return pod
 }
 
+const (
+	PerfConsumerService   = "perf-consumer"
+	PerfAggregatorService = "perf-aggregator"
+	PerfServiceAccount    = "perf-eventing"
+)
+
 func PerformanceConsumerService() *corev1.Service {
 	return Service(
-		"perf-consumer",
+		PerfConsumerService,
 		map[string]string{"role": "perf-consumer"},
 		[]corev1.ServicePort{{
 			Protocol:   corev1.ProtocolTCP,
@@ -238,7 +244,7 @@ func PerformanceConsumerService() *corev1.Service {
 
 func PerformanceAggregatorService() *corev1.Service {
 	return Service(
-		"perf-aggregator",
+		PerfAggregatorService,
 		map[string]string{"role": "perf-aggregator"},
 		[]corev1.ServicePort{{
 			Protocol:   corev1.ProtocolTCP,
@@ -267,7 +273,7 @@ func PerformanceImageReceiverPod(imageName string, pace string, warmup string, a
 			},
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: "perf-eventing",
+			ServiceAccountName: PerfServiceAccount,
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{{
 				Name:  "receiver",
@@ -315,7 +321,7 @@ func PerformanceImageAggregatorPod(expectedRecords int, publish bool, additional
 			},
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName: "perf-eventing",
+			ServiceAccountName: PerfServiceAccount,
 			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{{
 				Name:  "aggregator",
