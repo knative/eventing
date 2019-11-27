@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
@@ -366,7 +367,11 @@ func TestReceiver(t *testing.T) {
 			if tc.expectedEventProcessingTime != reporter.eventProcessingTimeReported {
 				t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
 			}
-
+			if tc.returnedEvent != nil {
+				if tc.returnedEvent.SpecVersion() != cepkg.CloudEventsVersionV1 {
+					t.Errorf("Incorrect event processing time reported metric. Expected %v, Actual %v", tc.expectedEventProcessingTime, reporter.eventProcessingTimeReported)
+				}
+			}
 			// Compare the returned event.
 			if tc.returnedEvent == nil {
 				if resp.Event != nil {
@@ -580,7 +585,7 @@ func makeDifferentEvent() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV03(),
+		}.AsV1(),
 	}
 }
 
@@ -597,7 +602,7 @@ func makeEventWithExtension(extName, extValue string) *cloudevents.Event {
 			Extensions: map[string]interface{}{
 				extName: extValue,
 			},
-		}.AsV03(),
+		}.AsV1(),
 	}
 	e := addTTLToEvent(*noTTL)
 	return &e
