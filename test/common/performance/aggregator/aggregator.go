@@ -171,34 +171,34 @@ func (ag *Aggregator) Run(ctx context.Context) {
 			publishErrorTimestamps = append(publishErrorTimestamps, timestampSent)
 
 			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), publishFailureMessage); qerr != nil {
-				log.Printf("ERROR AddError: %v", qerr)
+				log.Printf("ERROR AddError for publish-failure: %v", qerr)
 			}
 			continue
 		}
 
 		sendLatency := timestampAccepted.Sub(timestampSent)
 		// Uncomment to get CSV directly from this container log
-		//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
+		// fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
 		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
-			log.Printf("ERROR AddSamplePoint: %v", qerr)
+			log.Printf("ERROR AddSamplePoint for publish-latency: %v", qerr)
 		}
 
 		if !received {
 			deliverErrorTimestamps = append(deliverErrorTimestamps, timestampSent)
 
 			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), deliverFailureMessage); qerr != nil {
-				log.Printf("ERROR AddError: %v", qerr)
+				log.Printf("ERROR AddError for deliver-failure: %v", qerr)
 			}
 			continue
 		}
 
 		e2eLatency := timestampReceived.Sub(timestampSent)
 		// Uncomment to get CSV directly from this container log
-		//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
+		// fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
 		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
-			log.Printf("ERROR AddSamplePoint: %v", qerr)
+			log.Printf("ERROR AddSamplePoint for deliver-latency: %v", qerr)
 		}
 	}
 
@@ -212,20 +212,20 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	sentTimestamps := eventsToTimestampsArray(&ag.sentEvents.Events)
 	err = publishThpt(sentTimestamps, client.Quickstore, "st")
 	if err != nil {
-		log.Printf("ERROR AddSamplePoint: %v", err)
+		log.Printf("ERROR AddSamplePoint for send-throughput: %v", err)
 	}
 
 	receivedTimestamps := eventsToTimestampsArray(&ag.receivedEvents.Events)
 	err = publishThpt(receivedTimestamps, client.Quickstore, "dt")
 	if err != nil {
-		log.Printf("ERROR AddSamplePoint: %v", err)
+		log.Printf("ERROR AddSamplePoint for deliver-throughput: %v", err)
 	}
 
 	if len(publishErrorTimestamps) > 2 {
 		sort.Slice(publishErrorTimestamps, func(x, y int) bool { return publishErrorTimestamps[x].Before(publishErrorTimestamps[y]) })
 		err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
 		if err != nil {
-			log.Printf("ERROR AddSamplePoint: %v", err)
+			log.Printf("ERROR AddSamplePoint for publish-failure-throughput: %v", err)
 		}
 	}
 
@@ -233,7 +233,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		sort.Slice(deliverErrorTimestamps, func(x, y int) bool { return deliverErrorTimestamps[x].Before(deliverErrorTimestamps[y]) })
 		err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
 		if err != nil {
-			log.Printf("ERROR AddSamplePoint: %v", err)
+			log.Printf("ERROR AddSamplePoint for deliver-failure-throughput: %v", err)
 		}
 	}
 

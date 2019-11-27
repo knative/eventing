@@ -59,13 +59,13 @@ type Sender struct {
 func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msgSize uint, warmupSeconds uint, paceFlag string) (common.Executor, error) {
 	pacerSpecs, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse pace spec: %v", err)
+		return nil, fmt.Errorf("failed to parse pace spec: %v", err)
 	}
 
 	// create a connection to the aggregator
 	aggregatorClient, err := pb.NewAggregatorClient(aggregAddr)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to the aggregator: %v", err)
+		return nil, fmt.Errorf("failed to connect to the aggregator: %v", err)
 	}
 
 	// We need those estimates to allocate memory before benchmark starts
