@@ -38,7 +38,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"

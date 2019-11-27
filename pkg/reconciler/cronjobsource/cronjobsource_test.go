@@ -35,7 +35,7 @@ import (
 
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-	"knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
 	"knative.dev/pkg/controller"
 

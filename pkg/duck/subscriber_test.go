@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -81,6 +81,7 @@ func TestObjectReference_BadDynamicInterface(t *testing.T) {
 		t.Fatalf("Unexpected actual. Expected nil. Actual '%v'", actual)
 	}
 }
+
 func k8sService(name string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{

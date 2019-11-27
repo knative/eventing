@@ -43,7 +43,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
@@ -218,12 +217,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		// validates that they are absent, we can ignore them here.
 	}
 
-	// TODO: Remove this once pkg supports resolving v1.Destination natively.
-	v1beta1Destination := duckv1beta1.Destination{
-		Ref: t.Spec.Subscriber.Ref,
-		URI: t.Spec.Subscriber.URI,
-	}
-	subscriberURI, err := r.uriResolver.URIFromDestination(v1beta1Destination, t)
+	subscriberURI, err := r.uriResolver.URIFromDestinationV1(*t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
