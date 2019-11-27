@@ -1254,7 +1254,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4835d8c504bc12fd7e44d97f9e6ab5e84e0384be0ffba1f264efc61043c733c5"
+  digest = "1:02bb033254628cebfbb92810a742f7a60e51ec685c7e2987c04ff4b97e1de058"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1269,6 +1269,8 @@
     "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "client/injection/apiextensions/informers/factory",
     "client/injection/apiextensions/informers/factory/fake",
+    "client/injection/ducks/duck/v1/addressable",
+    "client/injection/ducks/duck/v1/addressable/fake",
     "client/injection/ducks/duck/v1/conditions",
     "client/injection/ducks/duck/v1/conditions/fake",
     "client/injection/ducks/duck/v1alpha1/addressable",
@@ -1351,7 +1353,7 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "6305a6322febad96fdb4f0d879d0e2b34c8a79b1"
+  revision = "06d6b25dd6e10d1c02f31ecb7d953d98481715cf"
 
 [[projects]]
   branch = "master"
@@ -1466,6 +1468,8 @@
     "knative.dev/pkg/apis/duck/v1beta1",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/addressable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable",

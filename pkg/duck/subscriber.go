@@ -18,19 +18,17 @@ package duck
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	duckapis "knative.dev/pkg/apis"
-	"knative.dev/pkg/apis/duck"
-
 	"knative.dev/eventing/pkg/logging"
+	duckapis "knative.dev/pkg/apis"
 )
 
 // DomainToURL converts a domain into an HTTP URL.
@@ -54,7 +52,7 @@ func ResourceInterface(dynamicClient dynamic.Interface, namespace string, gvk sc
 }
 
 // ObjectReference resolves an object based on an ObjectReference.
-func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (duck.Marshalable, error) {
+func ObjectReference(ctx context.Context, dynamicClient dynamic.Interface, namespace string, ref *corev1.ObjectReference) (json.Marshaler, error) {
 	resourceClient, err := ResourceInterface(dynamicClient, namespace, ref.GroupVersionKind())
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
