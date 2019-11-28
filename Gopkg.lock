@@ -1254,7 +1254,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:09a00f21eaeeae387d973fd3f82cf06a8627f88566b4e6811ba97003dd207eac"
+  digest = "1:bcb478b77fb59d3544df5006027f725d7c081cf4b47bf064d70cb7e5baf3b934"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1273,6 +1273,7 @@
     "client/injection/ducks/duck/v1/addressable/fake",
     "client/injection/ducks/duck/v1/conditions",
     "client/injection/ducks/duck/v1/conditions/fake",
+    "client/injection/ducks/duck/v1/podspecable",
     "client/injection/ducks/duck/v1alpha1/addressable",
     "client/injection/ducks/duck/v1alpha1/addressable/fake",
     "client/injection/ducks/duck/v1beta1/addressable",
@@ -1348,12 +1349,13 @@
     "webhook/certificates",
     "webhook/certificates/resources",
     "webhook/configmaps",
+    "webhook/psbinding",
     "webhook/resourcesemantics",
     "webhook/resourcesemantics/defaulting",
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "944655d6cc17ceb861b0764046c56a465fe5bb75"
+  revision = "891c2876dd3de4c88a1126e49c2ad920eedf0212"
 
 [[projects]]
   branch = "master"
@@ -1410,6 +1412,8 @@
     "google.golang.org/grpc/status",
     "k8s.io/api/apps/v1",
     "k8s.io/api/authorization/v1",
+    "k8s.io/api/batch/v1",
+    "k8s.io/api/batch/v1beta1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
@@ -1472,6 +1476,7 @@
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/podspecable",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable",
@@ -1525,6 +1530,7 @@
     "knative.dev/pkg/webhook",
     "knative.dev/pkg/webhook/certificates",
     "knative.dev/pkg/webhook/configmaps",
+    "knative.dev/pkg/webhook/psbinding",
     "knative.dev/pkg/webhook/resourcesemantics",
     "knative.dev/pkg/webhook/resourcesemantics/defaulting",
     "knative.dev/pkg/webhook/resourcesemantics/validation",

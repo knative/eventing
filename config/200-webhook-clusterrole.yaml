@@ -62,7 +62,7 @@ rules:
     resources:
       - "mutatingwebhookconfigurations"
       - "validatingwebhookconfigurations"
-    verbs:
+    verbs: &everything
       - "get"
       - "list"
       - "create"
@@ -70,3 +70,12 @@ rules:
       - "delete"
       - "patch"
       - "watch"
+
+  # For running the SinkBinding reconciler.
+  - apiGroups:
+      - "sources.eventing.knative.dev"
+    resources:
+      - "sinkbindings"
+      - "sinkbindings/status"
+      - "sinkbindings/finalizers"
+    verbs: *everything

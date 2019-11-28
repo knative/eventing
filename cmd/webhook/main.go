@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
@@ -27,6 +28,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
+	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/sharedmain"
@@ -36,12 +38,13 @@ import (
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/configmaps"
+	"knative.dev/pkg/webhook/psbinding"
 	"knative.dev/pkg/webhook/resourcesemantics"
 	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 )
 
-var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group eventing.knative.dev.
 	eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
 	eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
@@ -57,6 +60,7 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group sources.eventing.knative.dev.
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha1.ContainerSource{},
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &sourcesv1alpha1.CronJobSource{},
 
 	// For group flows.knative.dev
@@ -90,7 +94,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 		"/defaulting",
 
 		// The resources to validate and default.
-		types,
+		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		ctxFunc,
@@ -110,7 +114,7 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 		"/validation",
 
 		// The resources to validate and default.
-		types,
+		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
@@ -141,6 +145,25 @@ func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *
 	)
 }
 
+func NewSinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+
+	return psbinding.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"sinkbindings.webhook.sources.knative.dev",
+
+		// The path on which to serve the webhook.
+		"/sinkbindings",
+
+		// How to get all the Bindables for configuring the mutating webhook.
+		sinkbinding.ListAll,
+
+		// How to setup the context prior to invoking Do/Undo.
+		sbresolver,
+	)
+}
+
 func main() {
 	// Set up a signal context with our webhook options
 	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
@@ -155,5 +178,8 @@ func main() {
 		NewConfigValidationController,
 		NewValidationAdmissionController,
 		NewDefaultingAdmissionController,
+
+		// For each binding we have a controller and a binding webhook.
+		sinkbinding.NewController, NewSinkBindingWebhook,
 	)
 }
