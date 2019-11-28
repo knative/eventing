@@ -124,7 +124,8 @@ func WithTriggerSubscribed() TriggerOption {
 
 func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Status.SubscriberURI = uri
+		u, _ := apis.ParseURL(uri)
+		t.Status.SubscriberURI = u
 	}
 }
 
