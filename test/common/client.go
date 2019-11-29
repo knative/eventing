@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/pkg/test"
 )
@@ -32,6 +33,7 @@ type Client struct {
 	Kube     *test.KubeClient
 	Eventing *eventing.Clientset
 	Dynamic  dynamic.Interface
+	Config   *rest.Config
 
 	Namespace string
 	T         *testing.T
@@ -43,8 +45,10 @@ type Client struct {
 // NewClient instantiates and returns several clientsets required for making request to the
 // cluster specified by the combination of clusterName and configPath.
 func NewClient(configPath string, clusterName string, namespace string, t *testing.T) (*Client, error) {
+	var err error
+
 	client := &Client{}
-	cfg, err := test.BuildClientConfig(configPath, clusterName)
+	client.Config, err = test.BuildClientConfig(configPath, clusterName)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +57,12 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 		return nil, err
 	}
 
-	client.Eventing, err = eventing.NewForConfig(cfg)
+	client.Eventing, err = eventing.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	client.Dynamic, err = dynamic.NewForConfig(cfg)
+	client.Dynamic, err = dynamic.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}

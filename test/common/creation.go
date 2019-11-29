@@ -206,11 +206,22 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
+func (client *Client) CreateServiceOrFail(svc *corev1.Service) *corev1.Service {
+	namespace := client.Namespace
+	if newSvc, err := client.Kube.Kube.CoreV1().Services(namespace).Create(svc); err != nil {
+		client.T.Fatalf("Failed to create service %q: %v", svc.Name, err)
+		return nil
+	} else {
+		client.Tracker.Add(coreAPIGroup, coreAPIVersion, "services", namespace, svc.Name)
+		return newSvc
+	}
+}
+
 // WithService returns an option that creates a Service binded with the given pod.
 func WithService(name string) func(*corev1.Pod, *Client) error {
 	return func(pod *corev1.Pod, client *Client) error {
 		namespace := pod.Namespace
-		svc := resources.Service(name, pod.Labels)
+		svc := resources.ServiceDefaultHTTP(name, pod.Labels)
 
 		svcs := client.Kube.Kube.CoreV1().Services(namespace)
 		if _, err := svcs.Create(svc); err != nil {

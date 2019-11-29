@@ -21,7 +21,6 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -224,48 +223,150 @@ func EventFilteringPod(name string, filter bool) *corev1.Pod {
 	return pod
 }
 
-// EventLatencyPod creates a Pod that measures events transfer latency.
-func EventLatencyPod(name, sink string, eventCount int) *corev1.Pod {
-	const imageName = "latency"
+const (
+	PerfConsumerService   = "perf-consumer"
+	PerfAggregatorService = "perf-aggregator"
+	PerfServiceAccount    = "perf-eventing"
+)
+
+func PerformanceConsumerService() *corev1.Service {
+	return Service(
+		PerfConsumerService,
+		map[string]string{"role": "perf-consumer"},
+		[]corev1.ServicePort{{
+			Protocol:   corev1.ProtocolTCP,
+			Port:       80,
+			TargetPort: intstr.FromString("cloudevents"),
+			Name:       "http",
+		}},
+	)
+}
+
+func PerformanceAggregatorService() *corev1.Service {
+	return Service(
+		PerfAggregatorService,
+		map[string]string{"role": "perf-aggregator"},
+		[]corev1.ServicePort{{
+			Protocol:   corev1.ProtocolTCP,
+			Port:       10000,
+			TargetPort: intstr.FromString("grpc"),
+			Name:       "grpc",
+		}},
+	)
+}
+
+func PerformanceImageReceiverPod(imageName string, pace string, warmup string, aggregatorHostname string, additionalArgs ...string) *corev1.Pod {
+	const podName = "perf-receiver"
+
+	args := append([]string{
+		"--roles=receiver",
+		fmt.Sprintf("--pace=%s", pace),
+		fmt.Sprintf("--warmup=%s", warmup),
+		fmt.Sprintf("--aggregator=%s:10000", aggregatorHostname),
+	}, additionalArgs...)
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{"perftest": string(uuid.NewUUID())},
+			Name: podName,
+			Labels: map[string]string{
+				"role": "perf-consumer",
+			},
 		},
 		Spec: corev1.PodSpec{
+			ServiceAccountName: PerfServiceAccount,
+			RestartPolicy:      corev1.RestartPolicyNever,
 			Containers: []corev1.Container{{
-				Name:            imageName,
-				Image:           pkgTest.ImagePath(imageName),
-				ImagePullPolicy: corev1.PullAlways,
-				Args: []string{
-					"-sink",
-					sink,
-					"-event-count",
-					strconv.Itoa(eventCount),
-				},
+				Name:  "receiver",
+				Image: pkgTest.ImagePath(imageName),
+				Args:  args,
+				Env: []corev1.EnvVar{{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
+						},
+					},
+				}, {
+					Name: "POD_NAMESPACE",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.namespace",
+						},
+					},
+				}},
+				Ports: []corev1.ContainerPort{{
+					Name:          "cloudevents",
+					ContainerPort: 8080,
+				}},
 			}},
-			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}
 }
 
-// Service creates a Kubernetes Service with the given name, namespace, and
-// selector. Port 8080 is set as the target port.
-func Service(name string, selector map[string]string) *corev1.Service {
+func PerformanceImageAggregatorPod(expectedRecords int, publish bool, additionalArgs ...string) *corev1.Pod {
+	const podName = "perf-aggregator"
+	const imageName = "performance"
+
+	args := append([]string{
+		"--roles=aggregator",
+		fmt.Sprintf("--publish=%v", publish),
+		fmt.Sprintf("--expect-records=%d", expectedRecords),
+	}, additionalArgs...)
+
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: podName,
+			Labels: map[string]string{
+				"role": "perf-aggregator",
+			},
+		},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: PerfServiceAccount,
+			RestartPolicy:      corev1.RestartPolicyNever,
+			Containers: []corev1.Container{{
+				Name:  "aggregator",
+				Image: pkgTest.ImagePath(imageName),
+				Args:  args,
+				Env: []corev1.EnvVar{{
+					Name: "POD_NAMESPACE",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.namespace",
+						},
+					},
+				}},
+				TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+				Ports: []corev1.ContainerPort{{
+					Name:          "grpc",
+					ContainerPort: 10000,
+				}},
+			}},
+		},
+	}
+}
+
+// Service creates a Kubernetes Service with the given name, selector and ports
+func Service(name string, selector map[string]string, ports []corev1.ServicePort) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selector,
-			Ports: []corev1.ServicePort{{
-				Name:       "http",
-				Port:       80,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8080),
-			}},
+			Ports:    ports,
 		},
 	}
+}
+
+// Service creates a Kubernetes Service with the given name, namespace, and
+// selector. Port 8080 is set as the target port.
+func ServiceDefaultHTTP(name string, selector map[string]string) *corev1.Service {
+	return Service(name, selector, []corev1.ServicePort{{
+		Name:       "http",
+		Port:       80,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(8080),
+	}})
 }
 
 // ServiceRef returns a Service ObjectReference for a given Service name.
