@@ -224,7 +224,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		t.Status.SubscriberURI = ""
 		return err
 	}
-	t.Status.SubscriberURI = subscriberURI
+	// TODO(mattmoor): This should use *apis.URL too.
+	t.Status.SubscriberURI = subscriberURI.String()
 	t.Status.MarkSubscriberResolvedSucceeded()
 
 	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
