@@ -20,8 +20,12 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+
+	"knative.dev/eventing/test/base/resources"
 )
 
 var (
@@ -63,6 +67,19 @@ func main() {
 		log.Fatalf("failed to create client, %v", err)
 	}
 
-	log.Printf("listening on 8080")
-	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), gotEvent))
+	go func() {
+		log.Printf("start receiver")
+		if err := c.StartReceiver(context.Background(), gotEvent); err != nil {
+			log.Fatalf("failed to start receiver: %v", err)
+		}
+	}()
+
+	time.Sleep(10 * time.Second)
+	log.Printf("start health check")
+	http.HandleFunc(resources.HealthCheckEndpoint, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	})
+	if err := http.ListenAndServe(resources.HealthCheckAddr, nil); err != nil {
+		log.Fatalf("failed to start health check endpoint: %v", err)
+	}
 }

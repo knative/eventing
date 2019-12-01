@@ -153,13 +153,7 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 			return fmt.Errorf("created Pod %q did not become ready: %v", n, err)
 		}
 	}
-	for _, n := range client.podsCreated {
-		client.WaitForServiceEndpointsOrFail(n, 1)
-	}
 
-	// FIXME(Fredy-Z): This hacky sleep is added to try mitigating the test flakiness.
-	// Will delete it after we find the root cause and fix.
-	// time.Sleep(10 * time.Second)
 	return nil
 }
 

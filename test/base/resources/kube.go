@@ -30,6 +30,14 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
+// Constants for health check.
+// Any container that needs to be exposed as a Service will need to implement this health check.
+const (
+	HealthCheckEndpoint = "/healthz"
+	HealthCheckAddr     = ":8081"
+	HealthCheckPort     = 8081
+)
+
 // PodOption enables further configuration of a Pod.
 type PodOption func(*corev1.Pod)
 
@@ -86,7 +94,6 @@ func eventSenderPodImage(imageName string, name string, sink string, event *Clou
 				ImagePullPolicy: corev1.PullAlways,
 				Args:            args,
 			}},
-			//TODO restart on failure?
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}, nil
@@ -113,6 +120,17 @@ func eventLoggerPod(imageName string, name string) *corev1.Pod {
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
+				ReadinessProbe: &corev1.Probe{
+					Handler:             corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:        HealthCheckEndpoint,
+							Port:        intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: HealthCheckPort,
+							},
+						},
+					},
+				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
@@ -139,6 +157,17 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 					event.Source,
 					"-event-data",
 					event.Data,
+				},
+				ReadinessProbe: &corev1.Probe{
+					Handler:             corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:        HealthCheckEndpoint,
+							Port:        intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: HealthCheckPort,
+							},
+						},
+					},
 				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
@@ -194,6 +223,17 @@ func SequenceStepperPod(name, eventMsgAppender string) *corev1.Pod {
 					"-msg-appender",
 					eventMsgAppender,
 				},
+				ReadinessProbe: &corev1.Probe{
+					Handler:             corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:        HealthCheckEndpoint,
+							Port:        intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: HealthCheckPort,
+							},
+						},
+					},
+				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
@@ -213,6 +253,17 @@ func EventFilteringPod(name string, filter bool) *corev1.Pod {
 				Name:            imageName,
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
+				ReadinessProbe: &corev1.Probe{
+					Handler:             corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path:        HealthCheckEndpoint,
+							Port:        intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: HealthCheckPort,
+							},
+						},
+					},
+				},
 			}},
 			RestartPolicy: corev1.RestartPolicyAlways,
 		},
