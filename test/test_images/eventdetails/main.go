@@ -71,7 +71,7 @@ func main() {
 	time.Sleep(10 * time.Second)
 	log.Printf("start health check")
 	http.HandleFunc(resources.HealthCheckEndpoint, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok"))
+		w.WriteHeader(http.StatusOK)
 	})
 	if err := http.ListenAndServe(resources.HealthCheckAddr, nil); err != nil {
 		log.Fatalf("failed to start health check endpoint: %v", err)
