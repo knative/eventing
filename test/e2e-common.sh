@@ -47,6 +47,10 @@ function knative_setup() {
 
 # Teardown the Knative environment after tests finish.
 function knative_teardown() {
+  local imc_dispatcher_pod=$(kubectl get pods -n knative-eventing -o custom-columns=NAME:.metadata.name --no-headers=true  | grep imc-dispatcher)
+  echo ">>>>>>>>>>>>>>>>>>>>>>> dispatcher logs"
+  kubectl logs ${imc_dispatcher_pod} -n knative-eventing
+
   echo ">> Stopping Knative Eventing"
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
