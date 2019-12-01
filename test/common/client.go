@@ -39,7 +39,8 @@ type Client struct {
 	T         *testing.T
 	Tracker   *Tracker
 
-	podsCreated []string
+	podsCreated     []string
+	servicesCreated []string
 }
 
 // NewClient instantiates and returns several clientsets required for making request to the

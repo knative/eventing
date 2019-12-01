@@ -228,6 +228,7 @@ func WithService(name string) func(*corev1.Pod, *Client) error {
 			return err
 		}
 		client.Tracker.Add(coreAPIGroup, coreAPIVersion, "services", namespace, name)
+		client.servicesCreated = append(client.servicesCreated, name)
 		return nil
 	}
 }

@@ -153,6 +153,12 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 			return fmt.Errorf("created Pod %q did not become ready: %v", n, err)
 		}
 	}
+	// Explicitly wait for all services that were created directly by this test to have one endpoint.
+	for _, n := range client.servicesCreated {
+		if err := pkgTest.WaitForServiceEndpoints(client.Kube, n, client.Namespace, 1); err != nil {
+			return fmt.Errorf("created Service %q did not have 1 endpoint: %v", n, err)
+		}
+	}
 
 	return nil
 }
