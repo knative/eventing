@@ -49,14 +49,12 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("start receiver")
 		if err := c.StartReceiver(context.Background(), handler); err != nil {
 			log.Fatalf("failed to start receiver: %v", err)
 		}
 	}()
 
 	time.Sleep(10 * time.Second)
-	log.Printf("start health check")
 	http.HandleFunc(resources.HealthCheckEndpoint, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
