@@ -94,6 +94,10 @@ function dump_cluster_state() {
   echo "***    Start of information dump    ***"
   echo "***************************************"
 
+  local imc_dispatcher_pod=$(kubectl get pods -n knative-eventing -o custom-columns=NAME:.metadata.name --no-headers=true  | grep imc-dispatcher)
+  echo ">>>>>>>>>>>>>>>>>>>>>>> dispatcher logs"
+  kubectl logs ${imc_dispatcher_pod} -n knative-eventing
+
   local output="${ARTIFACTS}/k8s.dump.txt"
   echo ">>> The dump is located at ${output}"
 
