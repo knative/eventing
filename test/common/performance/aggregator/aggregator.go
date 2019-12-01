@@ -80,6 +80,7 @@ func NewAggregator(listenAddr string, expectRecords uint, makoTags []string, pub
 		notifyEventsReceived: make(chan struct{}),
 		makoTags:             makoTags,
 		expectRecords:        expectRecords,
+		publishResults:       publishResults,
 	}
 
 	// --- Create GRPC server
