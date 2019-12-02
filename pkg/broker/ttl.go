@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	// TTLAttribute is the name of the CloudEvents 0.3 extension attribute used to store the
+	// TTLAttribute is the name of the CloudEvents extension attribute used to store the
 	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
 	TTLAttribute = "knativebrokerttl"
