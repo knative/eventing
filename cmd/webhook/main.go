@@ -88,10 +88,12 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	return defaulting.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
-		"defaulting.webhook.eventing.knative.dev",
+		"webhook.eventing.knative.dev",
 
 		// The path on which to serve the webhook.
-		"/defaulting",
+		// TODO(mattmoor): This can be changed after 0.11 once
+		// we have release reconciliation-based webhooks.
+		"/",
 
 		// The resources to validate and default.
 		ourTypes,
@@ -111,7 +113,9 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 		"validation.webhook.eventing.knative.dev",
 
 		// The path on which to serve the webhook.
-		"/validation",
+		// TODO(mattmoor): This can be changed after 0.11 once
+		// we have release reconciliation-based webhooks.
+		"/",
 
 		// The resources to validate and default.
 		ourTypes,
