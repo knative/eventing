@@ -40,9 +40,8 @@ func GetTTL(ctx cloudevents.EventContext) (int32, error) {
 }
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
-func SetTTL(ctx cloudevents.EventContext, ttl int32) (cloudevents.EventContext, error) {
-	err := ctx.SetExtension(TTLAttribute, ttl)
-	return ctx, err
+func SetTTL(ctx cloudevents.EventContext, ttl int32) error {
+	return ctx.SetExtension(TTLAttribute, ttl)
 }
 
 // DeleteTTL removes the TTL CE extension attribute

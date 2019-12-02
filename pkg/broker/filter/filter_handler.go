@@ -198,8 +198,8 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	}
 
 	// Reattach the TTL (with the same value) to the response event before sending it to the Broker.
-	responseEvent.Context, err = broker.SetTTL(responseEvent.Context, ttl)
-	if err != nil {
+
+	if err := broker.SetTTL(responseEvent.Context, ttl); err != nil {
 		return err
 	}
 	resp.Event = responseEvent

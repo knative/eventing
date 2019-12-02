@@ -563,7 +563,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context, _ = broker.SetTTL(e.Context, 1)
+	broker.SetTTL(e.Context, 1)
 	return e
 }
 
