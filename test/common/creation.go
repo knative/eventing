@@ -19,6 +19,8 @@ package common
 import (
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -196,6 +198,16 @@ func (client *Client) CreateContainerSourceOrFail(containerSource *sourcesv1alph
 	client.Tracker.AddObj(containerSource)
 }
 
+// CreateSinkBindingOrFail will create a SinkBinding or fail the test if there is an error.
+func (client *Client) CreateSinkBindingOrFail(containerSource *sourcesv1alpha1.SinkBinding) {
+	containerSourceInterface := client.Eventing.SourcesV1alpha1().SinkBindings(client.Namespace)
+	_, err := containerSourceInterface.Create(containerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
+	}
+	client.Tracker.AddObj(containerSource)
+}
+
 // CreateApiServerSourceOrFail will create an ApiServerSource
 func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha1.ApiServerSource) {
 	apiServerInterface := client.Eventing.SourcesV1alpha1().ApiServerSources(client.Namespace)
@@ -248,6 +260,40 @@ func (client *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.P
 	}
 	client.Tracker.Add(coreAPIGroup, coreAPIVersion, "pods", namespace, pod.Name)
 	client.podsCreated = append(client.podsCreated, pod.Name)
+}
+
+// CreateDeploymentOrFail will create a Deployment or fail the test if there is an error.
+func (client *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...func(*appsv1.Deployment, *Client) error) {
+	// set namespace for the deploy in case it's empty
+	namespace := client.Namespace
+	deploy.Namespace = namespace
+	// apply options on the deploy before creation
+	for _, option := range options {
+		if err := option(deploy, client); err != nil {
+			client.T.Fatalf("Failed to configure deploy %q: %v", deploy.Name, err)
+		}
+	}
+	if _, err := client.Kube.Kube.AppsV1().Deployments(deploy.Namespace).Create(deploy); err != nil {
+		client.T.Fatalf("Failed to create deploy %q: %v", deploy.Name, err)
+	}
+	client.Tracker.Add("apps", "v1", "deployments", namespace, deploy.Name)
+}
+
+// CreateCronJobOrFail will create a CronJob or fail the test if there is an error.
+func (client *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...func(*batchv1beta1.CronJob, *Client) error) {
+	// set namespace for the cronjob in case it's empty
+	namespace := client.Namespace
+	cronjob.Namespace = namespace
+	// apply options on the cronjob before creation
+	for _, option := range options {
+		if err := option(cronjob, client); err != nil {
+			client.T.Fatalf("Failed to configure cronjob %q: %v", cronjob.Name, err)
+		}
+	}
+	if _, err := client.Kube.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(cronjob); err != nil {
+		client.T.Fatalf("Failed to create cronjob %q: %v", cronjob.Name, err)
+	}
+	client.Tracker.Add("batch", "v1beta1", "cronjobs", namespace, cronjob.Name)
 }
 
 // CreateServiceAccountOrFail will create a ServiceAccount or fail the test if there is an error.

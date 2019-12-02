@@ -64,6 +64,22 @@ webhooks:
     - key: eventing.knative.dev/release
       operator: Exists
 ---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: sinkbindings.webhook.sources.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: eventing-webhook
+      namespace: knative-eventing
+  failurePolicy: Fail
+  name: sinkbindings.webhook.sources.knative.dev
+---
 apiVersion: v1
 kind: Secret
 metadata:

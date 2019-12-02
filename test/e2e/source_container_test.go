@@ -55,16 +55,13 @@ func TestContainerSource(t *testing.T) {
 	// args are the arguments passing to the container, msg is used in the heartbeats image
 	args := []string{"--msg=" + data}
 	// envVars are the environment variables of the container
-	envVars := []corev1.EnvVar{
-		{
-			Name:  "POD_NAME",
-			Value: templateName,
-		},
-		{
-			Name:  "POD_NAMESPACE",
-			Value: client.Namespace,
-		},
-	}
+	envVars := []corev1.EnvVar{{
+		Name:  "POD_NAME",
+		Value: templateName,
+	}, {
+		Name:  "POD_NAMESPACE",
+		Value: client.Namespace,
+	}}
 	containerSource := eventingtesting.NewContainerSource(
 		containerSourceName,
 		client.Namespace,
@@ -74,15 +71,13 @@ func TestContainerSource(t *testing.T) {
 					Name: templateName,
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:            imageName,
-							Image:           pkgTest.ImagePath(imageName),
-							ImagePullPolicy: corev1.PullAlways,
-							Args:            args,
-							Env:             envVars,
-						},
-					},
+					Containers: []corev1.Container{{
+						Name:            imageName,
+						Image:           pkgTest.ImagePath(imageName),
+						ImagePullPolicy: corev1.PullAlways,
+						Args:            args,
+						Env:             envVars,
+					}},
 				},
 			},
 			Sink: &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)},
