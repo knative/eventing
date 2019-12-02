@@ -45,7 +45,6 @@ func SetTTL(ctx cloudevents.EventContext, ttl int32) error {
 }
 
 // DeleteTTL removes the TTL CE extension attribute
-func DeleteTTL(ctx cloudevents.EventContext) (cloudevents.EventContext, error) {
-	err := ctx.SetExtension(TTLAttribute, nil)
-	return ctx, err
+func DeleteTTL(ctx cloudevents.EventContext) error {
+	return ctx.SetExtension(TTLAttribute, nil)
 }

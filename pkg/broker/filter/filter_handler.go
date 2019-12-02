@@ -180,7 +180,7 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
 		return nil
 	}
-	if _, err := broker.DeleteTTL(event.Context); err != nil {
+	if err := broker.DeleteTTL(event.Context); err != nil {
 		r.logger.Warn("Failed to delete TTL.", zap.Error(err))
 	}
 
