@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	apis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -392,6 +393,11 @@ func (in *TriggerSpec) DeepCopy() *TriggerSpec {
 func (in *TriggerStatus) DeepCopyInto(out *TriggerStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
+	if in.SubscriberURI != nil {
+		in, out := &in.SubscriberURI, &out.SubscriberURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

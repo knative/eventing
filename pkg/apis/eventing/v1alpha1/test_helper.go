@@ -86,7 +86,7 @@ func (t testHelper) NotReadyBrokerStatus() *BrokerStatus {
 func (t testHelper) ReadyTriggerStatus() *TriggerStatus {
 	ts := &TriggerStatus{}
 	ts.InitializeConditions()
-	ts.SubscriberURI = "http://foo/"
+	ts.SubscriberURI = &apis.URL{Scheme: "http", Host: "foo"}
 	ts.PropagateBrokerStatus(t.ReadyBrokerStatus())
 	ts.PropagateSubscriptionStatus(t.ReadySubscriptionStatus())
 	return ts

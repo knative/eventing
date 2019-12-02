@@ -42,6 +42,7 @@ import (
 	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -53,7 +54,8 @@ const (
 	extensionName  = `my-extension`
 	extensionValue = `my-extension-value`
 
-	toBeReplaced = "toBeReplaced"
+	// Because it's a URL we're comparing to, without protocol it looks like this.
+	toBeReplaced = "//toBeReplaced"
 )
 
 var (
@@ -129,13 +131,6 @@ func TestReceiver(t *testing.T) {
 		"Trigger doesn't have SubscriberURI": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTriggerWithoutSubscriberURI(),
-			},
-			expectedErr:        true,
-			expectedEventCount: true,
-		},
-		"Trigger with bad SubscriberURI": {
-			triggers: []*eventingv1alpha1.Trigger{
-				makeTriggerWithBadSubscriberURI(),
 			},
 			expectedErr:        true,
 			expectedEventCount: true,
@@ -311,8 +306,13 @@ func TestReceiver(t *testing.T) {
 			// Replace the SubscriberURI to point at our fake server.
 			correctURI := make([]runtime.Object, 0, len(tc.triggers))
 			for _, trig := range tc.triggers {
-				if trig.Status.SubscriberURI == toBeReplaced {
-					trig.Status.SubscriberURI = s.URL
+				if trig.Status.SubscriberURI != nil && trig.Status.SubscriberURI.String() == toBeReplaced {
+
+					url, err := apis.ParseURL(s.URL)
+					if err != nil {
+						t.Fatalf("Failed to parse URL %q : %s", s.URL, err)
+					}
+					trig.Status.SubscriberURI = url
 				}
 				correctURI = append(correctURI, trig)
 			}
@@ -525,7 +525,7 @@ func makeTrigger(filter *eventingv1alpha1.TriggerFilter) *eventingv1alpha1.Trigg
 			Filter: filter,
 		},
 		Status: eventingv1alpha1.TriggerStatus{
-			SubscriberURI: "toBeReplaced",
+			SubscriberURI: &apis.URL{Host: "toBeReplaced"},
 		},
 	}
 }
@@ -539,14 +539,6 @@ func makeTriggerWithoutFilter() *eventingv1alpha1.Trigger {
 func makeTriggerWithoutSubscriberURI() *eventingv1alpha1.Trigger {
 	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
 	t.Status = eventingv1alpha1.TriggerStatus{}
-	return t
-}
-
-func makeTriggerWithBadSubscriberURI() *eventingv1alpha1.Trigger {
-	t := makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", ""))
-	// This should fail url.Parse(). It was taken from the unit tests for url.Parse(), it violates
-	// rfc3986 3.2.3, namely that the port must be digits.
-	t.Status.SubscriberURI = "http://[::1]:namedport"
 	return t
 }
 
