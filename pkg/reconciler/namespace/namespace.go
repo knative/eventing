@@ -263,12 +263,12 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 }
 
 func CopySecret(r *Reconciler, srcNS string, srcSecretName string, tgtNS string, svcAccount string) (*corev1.Secret, error) {
-	tgtNSSvcAccI := r.KubeClientSet.CoreV1().ServiceAccounts(tgtNS)
-	srcSecI := r.KubeClientSet.CoreV1().Secrets(srcNS)
-	tgtNSSecI := r.KubeClientSet.CoreV1().Secrets(tgtNS)
+	tgtNamespaceSvcAcct := r.KubeClientSet.CoreV1().ServiceAccounts(tgtNS)
+	srcSecrets := r.KubeClientSet.CoreV1().Secrets(srcNS)
+	tgtNamespaceSecrets := r.KubeClientSet.CoreV1().Secrets(tgtNS)
 
 	// First try to find the secret we're supposed to copy
-	srcSecret, err := srcSecI.Get(srcSecretName, metav1.GetOptions{})
+	srcSecret, err := srcSecrets.Get(srcSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func CopySecret(r *Reconciler, srcNS string, srcSecretName string, tgtNS string,
 	}
 
 	// Found the secret, so now make a copy in our new namespace
-	newSecret, err := tgtNSSecI.Create(
+	newSecret, err := tgtNamespaceSecrets.Create(
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: srcSecretName,
@@ -293,7 +293,7 @@ func CopySecret(r *Reconciler, srcNS string, srcSecretName string, tgtNS string,
 		return nil, fmt.Errorf("error copying the Secret: %s", err)
 	}
 
-	_, err = tgtNSSvcAccI.Patch(svcAccount, types.StrategicMergePatchType,
+	_, err = tgtNamespaceSvcAcct.Patch(svcAccount, types.StrategicMergePatchType,
 		[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
 	if err != nil {
 		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
