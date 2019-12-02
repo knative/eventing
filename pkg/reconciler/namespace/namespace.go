@@ -18,8 +18,10 @@ package namespace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/utils"
@@ -36,11 +38,16 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
 )
+
+type envConfig struct {
+	BrokerPullSecretName string `envconfig:"BROKER_IMAGE_PULL_SECRET_NAME" required:"false"`
+}
 
 const (
 	namespaceReconciled       = "NamespaceReconciled"
@@ -50,6 +57,8 @@ const (
 	brokerCreated             = "BrokerCreated"
 	serviceAccountCreated     = "BrokerServiceAccountCreated"
 	serviceAccountRBACCreated = "BrokerServiceAccountRBACCreated"
+	envConfigProcessed        = "EnvConfigProcessed"
+	secretCopied              = "SecretCopied"
 )
 
 var (
@@ -141,6 +150,13 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 // reconcileServiceAccountAndRoleBinding reconciles the service account and role binding for
 // Namespace 'ns'.
 func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName, configClusterRoleName string) error {
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		r.Recorder.Event(ns, corev1.EventTypeNormal, envConfigProcessed,
+			fmt.Sprintf("Failed to process env var %s", err))
+	}
+
 	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
 	if err != nil {
 		return fmt.Errorf("service account '%s': %v", saName, err)
@@ -172,6 +188,14 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
 	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
 		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
+	}
+
+	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
+		_, err := CopySecret(r, "default", env.BrokerPullSecretName, ns.Name, sa.Name)
+		if err != nil {
+			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+				fmt.Sprintf("Error copying secret: %s", err))
+		}
 	}
 
 	return nil
@@ -236,4 +260,44 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 	}
 	// Don't update anything that is already present.
 	return current, nil
+}
+
+func CopySecret(r *Reconciler, srcNS string, srcSecretName string, tgtNS string, svcAccount string) (*corev1.Secret, error) {
+	tgtNSSvcAccI := r.KubeClientSet.CoreV1().ServiceAccounts(tgtNS)
+	srcSecI := r.KubeClientSet.CoreV1().Secrets(srcNS)
+	tgtNSSecI := r.KubeClientSet.CoreV1().Secrets(tgtNS)
+
+	// First try to find the secret we're supposed to copy
+	srcSecret, err := srcSecI.Get(srcSecretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// check for nil source secret
+	if srcSecret == nil {
+		return nil, errors.New("error copying secret")
+	}
+
+	// Found the secret, so now make a copy in our new namespace
+	newSecret, err := tgtNSSecI.Create(
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: srcSecretName,
+			},
+			Data: srcSecret.Data,
+			Type: srcSecret.Type,
+		})
+
+	// If the secret already exists then that's ok - may have already been created
+	if err != nil && !apierrs.IsAlreadyExists(err) {
+		return nil, fmt.Errorf("error copying the Secret: %s", err)
+	}
+
+	_, err = tgtNSSvcAccI.Patch(svcAccount, types.StrategicMergePatchType,
+		[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
+	if err != nil {
+		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
+			tgtNS, srcSecretName, err)
+	}
+	return newSecret, nil
 }
