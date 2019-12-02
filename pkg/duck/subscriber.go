@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
 	"knative.dev/eventing/pkg/logging"
 	duckapis "knative.dev/pkg/apis"
 )

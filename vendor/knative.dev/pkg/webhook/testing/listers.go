@@ -32,12 +32,16 @@ import (
 	fakeistioclientset "knative.dev/pkg/client/istio/clientset/versioned/fake"
 	istiolisters "knative.dev/pkg/client/istio/listers/networking/v1alpha3"
 	"knative.dev/pkg/reconciler/testing"
+	pkgtesting "knative.dev/pkg/testing"
+	pkgducktesting "knative.dev/pkg/testing/duck"
 )
 
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakeistioclientset.AddToScheme,
 	autoscalingv2beta1.AddToScheme,
+	pkgtesting.AddToScheme,
+	pkgducktesting.AddToScheme,
 }
 
 // Listers is used to synthesize informer-style Listers from fixed lists of resources in tests.
@@ -86,6 +90,16 @@ func (l *Listers) GetKubeObjects() []runtime.Object {
 // GetIstioObjects filters the Listers initial list of objects to types defined in knative/pkg
 func (l *Listers) GetIstioObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(fakeistioclientset.AddToScheme)
+}
+
+// GetTestObjects filters the Lister's initial list of objects to types defined in knative/pkg/testing
+func (l *Listers) GetTestObjects() []runtime.Object {
+	return l.sorter.ObjectsForSchemeFunc(pkgtesting.AddToScheme)
+}
+
+// GetDuckObjects filters the Listers initial list of objects to types defined in knative/pkg
+func (l *Listers) GetDuckObjects() []runtime.Object {
+	return l.sorter.ObjectsForSchemeFunc(pkgducktesting.AddToScheme)
 }
 
 // GetHorizontalPodAutoscalerLister gets lister for HorizontalPodAutoscaler resources.

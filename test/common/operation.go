@@ -21,9 +21,10 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgTest "knative.dev/pkg/test"
+
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
-	pkgTest "knative.dev/pkg/test"
 )
 
 // LabelNamespace labels the given namespace with the labels map.
@@ -157,4 +158,17 @@ func (client *Client) WaitForAllTestResourcesReady() error {
 	// Will delete it after we find the root cause and fix.
 	time.Sleep(10 * time.Second)
 	return nil
+}
+
+func (client *Client) WaitForAllTestResourcesReadyOrFail() {
+	if err := client.WaitForAllTestResourcesReady(); err != nil {
+		client.T.Fatalf("Failed to get all test resources ready: %v", err)
+	}
+}
+
+func (client *Client) WaitForServiceEndpointsOrFail(svcName string, numberOfExpectedEndpoints int) {
+	client.Tracker.logf("Waiting for %d endpoints in service %s", numberOfExpectedEndpoints, svcName)
+	if err := pkgTest.WaitForServiceEndpoints(client.Kube, svcName, client.Namespace, numberOfExpectedEndpoints); err != nil {
+		client.T.Fatalf("Failed while waiting for %d endpoints in service %s: %v", numberOfExpectedEndpoints, svcName, err)
+	}
 }
