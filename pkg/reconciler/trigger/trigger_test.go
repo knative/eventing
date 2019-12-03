@@ -22,6 +22,10 @@ import (
 	"net/url"
 	"testing"
 
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
+	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
+	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/resolver"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +51,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -865,6 +870,10 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = v1a1addr.WithDuck(ctx)
+		ctx = v1b1addr.WithDuck(ctx)
+		ctx = v1addr.WithDuck(ctx)
+		ctx = conditions.WithDuck(ctx)
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			triggerLister:      listers.GetTriggerLister(),
@@ -873,8 +882,8 @@ func TestAllCases(t *testing.T) {
 			serviceLister:      listers.GetK8sServiceLister(),
 			namespaceLister:    listers.GetNamespaceLister(),
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
-			addressableTracker: duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, func(types.NamespacedName) {}, 0),
-			kresourceTracker:   duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, func(types.NamespacedName) {}, 0),
+			addressableTracker: duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
+			kresourceTracker:   duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
 	},
@@ -902,7 +911,7 @@ func makeTrigger() *v1alpha1.Trigger {
 					Type:   "Any",
 				},
 			},
-			Subscriber: &duckv1beta1.Destination{
+			Subscriber: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					Name:       subscriberName,
 					Kind:       subscriberKind,

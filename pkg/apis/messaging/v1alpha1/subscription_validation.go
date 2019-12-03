@@ -83,11 +83,7 @@ func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
 		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &duckv1beta1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &duckv1beta1.Destination{})))
 }
 
-func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	original, ok := og.(*Subscription)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Subscription"}
-	}
+func (s *Subscription) CheckImmutableFields(ctx context.Context, original *Subscription) *apis.FieldError {
 	if original == nil {
 		return nil
 	}

@@ -48,14 +48,9 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func (et *EventType) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	if og == nil {
+func (et *EventType) CheckImmutableFields(ctx context.Context, original *EventType) *apis.FieldError {
+	if original == nil {
 		return nil
-	}
-
-	original, ok := og.(*EventType)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not an EventType"}
 	}
 
 	// All but Description field immutable.

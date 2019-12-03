@@ -25,6 +25,8 @@ import (
 	"knative.dev/pkg/apis/duck"
 )
 
+// +genduck
+
 // Subscribable is the schema for the subscribable portion of the spec
 // section of the resource.
 type Subscribable struct {
@@ -85,7 +87,6 @@ type SubscriberStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SubscribableType is a skeleton type wrapping Subscribable in the manner we expect resource writers
@@ -111,8 +112,7 @@ type SubscribableTypeSpec struct {
 
 // SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
 type SubscribableTypeStatus struct {
-	DeprecatedSubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
-	SubscribableStatus           *SubscribableStatus `json:"subscribableStatus,omitempty"`
+	SubscribableStatus *SubscribableStatus `json:"subscribableStatus,omitempty"`
 }
 
 var (
@@ -127,9 +127,6 @@ var (
 // where we read the V2 value first and if the value is absent then we read the V1 value,
 // Having this function here makes it convinient to read the default value at runtime.
 func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
-	if s.SubscribableStatus == nil {
-		return s.DeprecatedSubscribableStatus
-	}
 	return s.SubscribableStatus
 
 }
@@ -138,7 +135,6 @@ func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus
 // This helper function ensures that we set both the values (SubscribableStatus and DeprecatedSubscribableStatus)
 func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus SubscribableStatus) {
 	s.SubscribableStatus = &subscriberStatus
-	s.DeprecatedSubscribableStatus = &subscriberStatus
 }
 
 // AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
@@ -147,7 +143,6 @@ func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus Subs
 func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
 	subscribers := append(s.GetSubscribableTypeStatus().Subscribers, subscriberStatus)
 	s.SubscribableStatus.Subscribers = subscribers
-	s.DeprecatedSubscribableStatus.Subscribers = subscribers
 }
 
 // GetFullType implements duck.Implementable

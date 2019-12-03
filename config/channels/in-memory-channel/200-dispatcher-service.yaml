@@ -25,6 +25,7 @@ spec:
       messaging.knative.dev/channel: in-memory-channel
       messaging.knative.dev/role: dispatcher
   ports:
-    - port: 80
+    - name: http-dispatcher
+      port: 80
       protocol: TCP
       targetPort: 8080

@@ -213,7 +213,6 @@
   ]
   pruneopts = "NUT"
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
-  version = "v0.3.0"
 
 [[projects]]
   digest = "1:91099c6f78b1e7bdf9ed06eb4cb7f017174293a3689d76b995a06f4c8d64a7f0"
@@ -482,6 +481,14 @@
   pruneopts = "NUT"
   revision = "45fbe1491cdd47d74d1bf1396286d67faee8b8b5"
   version = "v3.0.0"
+
+[[projects]]
+  digest = "1:7842cc48c908d9d765c23193906a22f10f5b44ea048c2c2749443e6ccd7eacf4"
+  name = "github.com/rogpeppe/fastuuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "10c3923834d38e951ae8f627bfec2dc632c5b6cb"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:e09ada96a5a41deda4748b1659cc8953961799e798aea557257b56baee4ecaf3"
@@ -1245,7 +1252,8 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  digest = "1:db5d7cf3da6cf21eae3c5b98139dd5408e9ad0dc370ba8f1e59c5834c303d34a"
+  branch = "master"
+  digest = "1:21f168f0b1eed03be1e28d463b35f23683697554be0e473f498318c9984efcc4"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1253,25 +1261,22 @@
     "apis/duck/v1",
     "apis/duck/v1alpha1",
     "apis/duck/v1beta1",
-    "apis/istio",
-    "apis/istio/authentication",
-    "apis/istio/authentication/v1alpha1",
-    "apis/istio/common/v1alpha1",
-    "apis/istio/v1alpha3",
     "changeset",
-    "client/clientset/versioned",
-    "client/clientset/versioned/fake",
-    "client/clientset/versioned/scheme",
-    "client/clientset/versioned/typed/authentication/v1alpha1",
-    "client/clientset/versioned/typed/authentication/v1alpha1/fake",
-    "client/clientset/versioned/typed/istio/v1alpha3",
-    "client/clientset/versioned/typed/istio/v1alpha3/fake",
     "client/injection/apiextensions/client",
     "client/injection/apiextensions/client/fake",
     "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "client/injection/apiextensions/informers/factory",
     "client/injection/apiextensions/informers/factory/fake",
+    "client/injection/ducks/duck/v1/addressable",
+    "client/injection/ducks/duck/v1/addressable/fake",
+    "client/injection/ducks/duck/v1/conditions",
+    "client/injection/ducks/duck/v1/conditions/fake",
+    "client/injection/ducks/duck/v1/podspecable",
+    "client/injection/ducks/duck/v1alpha1/addressable",
+    "client/injection/ducks/duck/v1alpha1/addressable/fake",
+    "client/injection/ducks/duck/v1beta1/addressable",
+    "client/injection/ducks/duck/v1beta1/addressable/fake",
     "client/injection/kube/client",
     "client/injection/kube/client/fake",
     "client/injection/kube/informers/admissionregistration/v1beta1/mutatingwebhookconfiguration",
@@ -1343,22 +1348,24 @@
     "webhook/certificates",
     "webhook/certificates/resources",
     "webhook/configmaps",
+    "webhook/psbinding",
     "webhook/resourcesemantics",
+    "webhook/resourcesemantics/defaulting",
+    "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "0a20941b320845202b52748fc0514069debcb1d5"
-  source = "github.com/yanweiguo/pkg"
+  revision = "94a34e416c4486376a21d934f4bfebd730c82c12"
 
 [[projects]]
   branch = "master"
-  digest = "1:2cd00bc33160e185bcfea41d6fddcc345145cd930c02876d878481cd3d00864d"
+  digest = "1:6e839a9b4183b0fbf0df609fe9a6d226c941fa9221052ba0075b25cb353588a5"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "a6a34418ff337bec6e3191d4497d0e0936ebb44d"
+  revision = "a130cd2df6c15aecdcb8be97f5579ed4532d19f9"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
@@ -1389,6 +1396,7 @@
     "github.com/openzipkin/zipkin-go/model",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
+    "github.com/rogpeppe/fastuuid",
     "github.com/tsenart/vegeta/lib",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
@@ -1403,6 +1411,8 @@
     "google.golang.org/grpc/status",
     "k8s.io/api/apps/v1",
     "k8s.io/api/authorization/v1",
+    "k8s.io/api/batch/v1",
+    "k8s.io/api/batch/v1beta1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
@@ -1459,9 +1469,17 @@
     "knative.dev/pkg/apis/duck/v1",
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
-    "knative.dev/pkg/client/clientset/versioned/fake",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/addressable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/podspecable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake",
+    "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake",
     "knative.dev/pkg/client/injection/kube/client",
     "knative.dev/pkg/client/injection/kube/client/fake",
     "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment",
@@ -1511,7 +1529,10 @@
     "knative.dev/pkg/webhook",
     "knative.dev/pkg/webhook/certificates",
     "knative.dev/pkg/webhook/configmaps",
+    "knative.dev/pkg/webhook/psbinding",
     "knative.dev/pkg/webhook/resourcesemantics",
+    "knative.dev/pkg/webhook/resourcesemantics/defaulting",
+    "knative.dev/pkg/webhook/resourcesemantics/validation",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",
   ]

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
@@ -27,6 +28,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
+	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/sharedmain"
@@ -36,17 +38,41 @@ import (
 	"knative.dev/pkg/webhook"
 	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/configmaps"
+	"knative.dev/pkg/webhook/psbinding"
 	"knative.dev/pkg/webhook/resourcesemantics"
+	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
+	"knative.dev/pkg/webhook/resourcesemantics/validation"
 )
 
-func NewResourceAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
+	// For group eventing.knative.dev.
+	eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
+	eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
+	eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"): &eventingv1alpha1.EventType{},
+
+	// For group messaging.knative.dev.
+	messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
+	messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
+	messagingv1alpha1.SchemeGroupVersion.WithKind("Parallel"):        &messagingv1alpha1.Parallel{},
+	messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
+	messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
+
+	// For group sources.eventing.knative.dev.
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha1.ContainerSource{},
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &sourcesv1alpha1.CronJobSource{},
+
+	// For group flows.knative.dev
+	flowsv1alpha1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1alpha1.Parallel{},
+	flowsv1alpha1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1alpha1.Sequence{},
+}
+
+func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
 	// Decorate contexts with the current state of the config.
-	// store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
-	// store.WatchConfigs(cmw)
 	ctxFunc := func(ctx context.Context) context.Context {
-		// return v1.WithUpgradeViaDefaulting(store.ToContext(ctx))
 		return ctx
 	}
 
@@ -59,40 +85,46 @@ func NewResourceAdmissionController(ctx context.Context, cmw configmap.Watcher) 
 	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
 	cmw.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
-	return resourcesemantics.NewAdmissionController(ctx,
+	return defaulting.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
 		"webhook.eventing.knative.dev",
 
 		// The path on which to serve the webhook.
+		// TODO(mattmoor): This can be changed after 0.11 once
+		// we have release reconciliation-based webhooks.
 		"/",
 
 		// The resources to validate and default.
-		map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
-			// For group eventing.knative.dev.
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
-			eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"): &eventingv1alpha1.EventType{},
-
-			// For group messaging.knative.dev.
-			messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Sequence"):        &messagingv1alpha1.Sequence{},
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Parallel"):        &messagingv1alpha1.Parallel{},
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
-			messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
-
-			// For group sources.eventing.knative.dev.
-			sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
-			sourcesv1alpha1.SchemeGroupVersion.WithKind("ContainerSource"): &sourcesv1alpha1.ContainerSource{},
-			sourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &sourcesv1alpha1.CronJobSource{},
-
-			// For group flows.knative.dev
-			flowsv1alpha1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1alpha1.Parallel{},
-			flowsv1alpha1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1alpha1.Sequence{},
-		},
+		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
 		ctxFunc,
+
+		// Whether to disallow unknown fields.
+		true,
+	)
+}
+
+func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	return validation.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"validation.webhook.eventing.knative.dev",
+
+		// The path on which to serve the webhook.
+		// TODO(mattmoor): This can be changed after 0.11 once
+		// we have release reconciliation-based webhooks.
+		"/",
+
+		// The resources to validate and default.
+		ourTypes,
+
+		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
+		func(ctx context.Context) context.Context {
+			// return v1.WithUpgradeViaDefaulting(store.ToContext(ctx))
+			return ctx
+		},
 
 		// Whether to disallow unknown fields.
 		true,
@@ -117,17 +149,41 @@ func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *
 	)
 }
 
+func NewSinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+
+	return psbinding.NewAdmissionController(ctx,
+
+		// Name of the resource webhook.
+		"sinkbindings.webhook.sources.knative.dev",
+
+		// The path on which to serve the webhook.
+		"/sinkbindings",
+
+		// How to get all the Bindables for configuring the mutating webhook.
+		sinkbinding.ListAll,
+
+		// How to setup the context prior to invoking Do/Undo.
+		sbresolver,
+	)
+}
+
 func main() {
 	// Set up a signal context with our webhook options
 	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
 		ServiceName: logconfig.WebhookName(),
 		Port:        8443,
-		SecretName:  "eventing-webhook-certs",
+		// SecretName must match the name of the Secret created in the configuration.
+		SecretName: "eventing-webhook-certs",
 	})
 
 	sharedmain.MainWithContext(ctx, logconfig.WebhookName(),
 		certificates.NewController,
-		NewResourceAdmissionController,
 		NewConfigValidationController,
+		NewValidationAdmissionController,
+		NewDefaultingAdmissionController,
+
+		// For each binding we have a controller and a binding webhook.
+		sinkbinding.NewController, NewSinkBindingWebhook,
 	)
 }

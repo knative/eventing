@@ -1,42 +1,61 @@
 # Knative Eventing Performance Tests
 
-## Getting Started
+## Configuring your cluster to run a benchmark
 
-1.  Create a namespace or use an existing namespace.
+1. Create a namespace or use an existing namespace. Each namespace can be
+   configured with a single benchmark.
 
-Create a ConfigMap called `config-mako` in your chosen namespace.
+1. Install Knative eventing by following the steps in
+   https://github.com/knative/eventing/blob/2c6bf0526634804b7ebeee686445901440cc8edd/test/performance/performance-tests.sh#L31
+
+1. Create a ConfigMap called `config-mako` in your chosen namespace containing
+   the Mako config file.
 
 ```
-cat <<EOF | kubectl apply -n <namespace> -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: config-mako
-data:
-  environment: dev
-EOF
+kubectl create configmap -n <namespace> config-mako --from-file=test/performance/benchmarks/<benchmark>/dev.config
 ```
+
+1. Optionally edit the ConfigMap to set additional keys.
+
+   ```
+   kubectl edit configmap -n <namespace> config-mako
+   ```
 
 [`NewConfigFromMap`](https://github.com/knative/pkg/blob/master/test/mako/config.go#L41)
 determines the valid keys in this ConfigMap. Current keys are:
 
-- `environment`: Selects a Mako config file in kodata. E.g. `environment: dev`
-  corresponds to `kodata/dev.config`.
+- `environment`: Select a Mako config file in the ConfigMap. E.g.
+  `environment: dev` corresponds to `dev.config`.
 - `additionalTags`: Comma-separated list of tags to apply to the Mako run.
 
-## Running a benchmark
+To run a benchmark continuously, and make the result available on
+[Mako](https://mako.dev/project?name=Knative):
 
 1.  Use `ko` to apply yaml files in the benchmark directory.
 
-```
-ko apply -f test/performance/broker-imc
-```
+    ```
+    ko apply -f test/performance/benchmarks/broker-imc/continuous
+    ```
+
+To run a benchmark once, and use the result from `mako-stub` for plotting:
+
+1. Install the eventing resources for attacking:
+
+   ```
+   ko apply -f test/performance/benchmarks/broker-imc/100-broker-perf-setup.yaml
+   ```
+
+1. Start the benchmarking job:
+
+   ```
+   ko apply -f test/performance/benchmarks/broker-imc/200-broker-perf.yaml
+   ```
 
 ## Available benchmarks
 
 - `direct`: Source -> Sink (baseline test)
-- `broker-imc`: Source -> Broker IMC -> Sink
-- `channel-imc`: Source -> Channel IMC -> Sink
+- `broker-imc`: Source -> Broker with IMC -> Sink
+- `channel-imc`: Source -> IMC -> Sink
 
 ## Plotting results from mako-stub
 

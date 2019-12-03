@@ -55,9 +55,6 @@ var (
 	// Check that Parallel can return its spec untyped.
 	_ apis.HasSpec = (*Parallel)(nil)
 
-	// TODO: make appropriate fields immutable.
-	//_ apis.Immutable = (*Parallel)(nil)
-
 	_ runtime.Object = (*Parallel)(nil)
 
 	// Check that we can create OwnerReferences to a Parallel.

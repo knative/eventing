@@ -29,12 +29,14 @@ import (
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource/fake"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 	ctx = withCfgHost(ctx, &rest.Config{Host: "unit_test"})
+	ctx = addressable.WithDuck(ctx)
 	os.Setenv("METRICS_DOMAIN", "knative.dev/eventing")
 	os.Setenv("APISERVER_RA_IMAGE", "knative.dev/example")
 	c := NewController(ctx, configmap.NewStaticWatcher(&corev1.ConfigMap{

@@ -27,7 +27,7 @@ import (
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
-// +genclient
+// +genduck
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Channelable is a skeleton type wrapping Subscribable and Addressable in the manner we expect resource writers
@@ -69,8 +69,9 @@ type ChannelableStatus struct {
 
 var (
 	// Verify Channelable resources meet duck contracts.
-	_ duck.Populatable = (*Channelable)(nil)
-	_ apis.Listable    = (*Channelable)(nil)
+	_ duck.Populatable   = (*Channelable)(nil)
+	_ duck.Implementable = (*Channelable)(nil)
+	_ apis.Listable      = (*Channelable)(nil)
 )
 
 // Populate implements duck.Populatable
@@ -120,19 +121,6 @@ func (c *Channelable) Populate() {
 			},
 		},
 		SubscribableTypeStatus: SubscribableTypeStatus{
-			DeprecatedSubscribableStatus: &SubscribableStatus{
-				Subscribers: []SubscriberStatus{{
-					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 1,
-					Ready:              corev1.ConditionTrue,
-					Message:            "Some message",
-				}, {
-					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 2,
-					Ready:              corev1.ConditionFalse,
-					Message:            "Some message",
-				}},
-			},
 			SubscribableStatus: &SubscribableStatus{
 				Subscribers: []SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -148,6 +136,11 @@ func (c *Channelable) Populate() {
 			},
 		},
 	}
+}
+
+// GetFullType implements duck.Implementable
+func (s *Channelable) GetFullType() duck.Populatable {
+	return &Channelable{}
 }
 
 // GetListType implements apis.Listable

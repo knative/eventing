@@ -42,7 +42,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
@@ -217,11 +217,11 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		// validates that they are absent, we can ignore them here.
 	}
 
-	subscriberURI, err := r.uriResolver.URIFromDestination(*t.Spec.Subscriber, t)
+	subscriberURI, err := r.uriResolver.URIFromDestinationV1(*t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
-		t.Status.SubscriberURI = ""
+		t.Status.SubscriberURI = nil
 		return err
 	}
 	t.Status.SubscriberURI = subscriberURI
@@ -278,7 +278,7 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1alph
 		}
 		return fmt.Errorf("getting the dependency: %v", err)
 	}
-	dependency := dependencyObj.(*duckv1alpha1.KResource)
+	dependency := dependencyObj.(*duckv1.KResource)
 
 	// The dependency hasn't yet reconciled our latest changes to
 	// its desired state, so its conditions are outdated.

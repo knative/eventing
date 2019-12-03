@@ -20,10 +20,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"knative.dev/pkg/profiling"
 	"log"
 	"net/http"
 	"time"
+
+	"knative.dev/pkg/profiling"
 
 	// Uncomment the following line to load the gcp plugin
 	// (only required to authenticate against GKE clusters).
@@ -91,7 +92,7 @@ func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor)
 
 	// Check if metrics config contains profiling flag
 	if metricsConfig != nil && metricsConfig.ConfigMap != nil {
-		if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err != nil {
+		if enabled, err := profiling.ReadProfilingFlag(metricsConfig.ConfigMap); err == nil {
 			if enabled {
 				// Start a goroutine to server profiling metrics
 				logger.Info("Profiling enabled")

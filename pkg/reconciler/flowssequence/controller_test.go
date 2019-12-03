@@ -23,6 +23,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
+	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/sequence/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription/fake"
 )

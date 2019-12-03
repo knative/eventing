@@ -38,6 +38,15 @@ spec:
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: knative.dev/eventing/cmd/webhook
+        resources:
+          requests:
+            # taken from serving.
+            cpu: 20m
+            memory: 20Mi
+          limits:
+            # taken from serving.
+            cpu: 200m
+            memory: 200Mi
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:

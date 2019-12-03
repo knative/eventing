@@ -46,7 +46,6 @@ var (
 	// Check that EventType can be validated, can be defaulted, and has immutable fields.
 	_ apis.Validatable = (*EventType)(nil)
 	_ apis.Defaultable = (*EventType)(nil)
-	_ apis.Immutable   = (*EventType)(nil)
 
 	// Check that EventType can return its spec untyped.
 	_ apis.HasSpec = (*EventType)(nil)
