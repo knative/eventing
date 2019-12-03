@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/utils"
@@ -69,6 +68,8 @@ var (
 
 type Reconciler struct {
 	*reconciler.Base
+
+	brokerPullSecretName string
 
 	// listers index properties about resources
 	namespaceLister      corev1listers.NamespaceLister
@@ -151,12 +152,6 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 // Namespace 'ns'.
 func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName, configClusterRoleName string) error {
 
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		r.Recorder.Event(ns, corev1.EventTypeNormal, envConfigProcessed,
-			fmt.Sprintf("Failed to process env var %s", err))
-	}
-
 	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
 	if err != nil {
 		return fmt.Errorf("service account '%s': %v", saName, err)
@@ -191,7 +186,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 	}
 
 	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
-		_, err := CopySecret(r, "default", env.BrokerPullSecretName, ns.Name, sa.Name)
+		_, err := CopySecret(r, system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Error copying secret: %s", err))
