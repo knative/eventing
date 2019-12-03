@@ -427,7 +427,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	h.requestReceived = true
 
 	for n, v := range h.headers {
-		if strings.Contains(strings.ToLower(n), strings.ToLower(broker.V03TTLAttribute)) {
+		if strings.Contains(strings.ToLower(n), strings.ToLower(broker.TTLAttribute)) {
 			h.t.Errorf("Broker TTL should not be seen by the subscriber: %s", n)
 		}
 		if diff := cmp.Diff(v, req.Header[n]); diff != "" {
@@ -563,7 +563,7 @@ func makeEvent() *cloudevents.Event {
 }
 
 func addTTLToEvent(e cloudevents.Event) cloudevents.Event {
-	e.Context, _ = broker.SetTTL(e.Context, 1)
+	broker.SetTTL(e.Context, 1)
 	return e
 }
 

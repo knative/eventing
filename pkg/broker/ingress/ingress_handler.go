@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"reflect"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
@@ -18,7 +17,7 @@ import (
 var (
 	shutdownTimeout = 1 * time.Minute
 
-	defaultTTL = 255
+	defaultTTL int32 = 255
 )
 
 type Handler struct {
@@ -109,24 +108,17 @@ func (h *Handler) decrementTTL(event *cloudevents.Event) bool {
 		return false
 	}
 
-	var err error
-	event.Context, err = broker.SetTTL(event.Context, ttl)
-	if err != nil {
+	if err := broker.SetTTL(event.Context, ttl); err != nil {
 		h.Logger.Error("failed to set TTL", zap.Error(err))
 	}
 	return true
 }
 
-func (h *Handler) getTTLToSet(event *cloudevents.Event) int {
-	ttlInterface, _ := broker.GetTTL(event.Context)
-	if ttlInterface == nil {
-		h.Logger.Debug("No TTL found, defaulting")
+func (h *Handler) getTTLToSet(event *cloudevents.Event) int32 {
+	ttl, err := broker.GetTTL(event.Context)
+	if err != nil {
+		h.Logger.Info("Error retrieving TTL, defaulting.", zap.Error(err))
 		return defaultTTL
 	}
-	// This should be a JSON number, which json.Unmarshalls as a float64.
-	ttl, ok := ttlInterface.(float64)
-	if !ok {
-		h.Logger.Info("TTL attribute wasn't a float64, defaulting", zap.Any("ttlInterface", ttlInterface), zap.Any("typeOf(ttlInterface)", reflect.TypeOf(ttlInterface)))
-	}
-	return int(ttl) - 1
+	return ttl - 1
 }
