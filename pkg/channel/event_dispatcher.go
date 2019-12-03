@@ -32,7 +32,18 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-const correlationIDHeaderName = "Knative-Correlation-Id"
+const (
+	correlationIDHeaderName = "Knative-Correlation-Id"
+
+	// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
+	//  Issue: https://github.com/knative/eventing/issues/1777
+	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
+	// Set them on a 10:1 ratio, but this would actually depend on the Subscriptions' subscribers and the workload itself.
+	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
+)
 
 type Dispatcher interface {
 	// DispatchEvent dispatches an event to a destination over HTTP.
@@ -68,7 +79,11 @@ type EventDispatcher struct {
 // NewEventDispatcher creates a new event dispatcher that can dispatch
 // events to HTTP destinations.
 func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
-	ceClient, err := kncloudevents.NewDefaultClient()
+	cArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	ceClient, err := kncloudevents.NewDefaultClientGivenConnectionArgs(cArgs)
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
