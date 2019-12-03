@@ -20,22 +20,6 @@ type ConnectionArgs struct {
 }
 
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {
-	t, err := newHTTPTransport(target...)
-	if err != nil {
-		return nil, err
-	}
-	return NewDefaultClientGivenHttpTransport(t)
-}
-
-func NewDefaultClientGivenConnectionArgs(connectionArgs ConnectionArgs, target ...string) (cloudevents.Client, error) {
-	t, err := newHTTPTransport(target...)
-	if err != nil {
-		return nil, err
-	}
-	return NewDefaultClientGivenHttpTransport(t, connectionArgs)
-}
-
-func newHTTPTransport(target ...string) (*http.Transport, error) {
 	tOpts := []http.Option{
 		cloudevents.WithBinaryEncoding(),
 		// Add input tracing.
@@ -46,7 +30,11 @@ func newHTTPTransport(target ...string) (*http.Transport, error) {
 	}
 
 	// Make an http transport for the CloudEvents client.
-	return cloudevents.NewHTTPTransport(tOpts...)
+	t, err := cloudevents.NewHTTPTransport(tOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return NewDefaultClientGivenHttpTransport(t)
 }
 
 // NewDefaultClientGivenHttpTransport creates a new CloudEvents client using the provided cloudevents HTTP

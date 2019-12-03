@@ -27,6 +27,8 @@ import (
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+	pkgtracing "knative.dev/pkg/tracing"
+
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
@@ -35,7 +37,7 @@ import (
 const (
 	correlationIDHeaderName = "Knative-Correlation-Id"
 
-	// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
+	// TODO make these constants configurable (either as env variables, config map).
 	//  Issue: https://github.com/knative/eventing/issues/1777
 	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
 	// Set them on a 10:1 ratio, but this would actually depend on the Subscriptions' subscribers and the workload itself.
@@ -79,11 +81,17 @@ type EventDispatcher struct {
 // NewEventDispatcher creates a new event dispatcher that can dispatch
 // events to HTTP destinations.
 func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	if err != nil {
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
 	cArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenConnectionArgs(cArgs)
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, cArgs)
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
