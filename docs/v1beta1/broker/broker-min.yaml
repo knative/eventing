@@ -5,12 +5,12 @@ metadata:
   namespace: default
 spec: {}
 status:
-  TriggerChannel:
+  triggerChannel:
     apiVersion: messaging.knative.dev/v1beta1
     kind: <DefaultChannel>
     name: default-kne-trigger
     namespace: default
-  IngressChannel:
+  ingressChannel:
     apiVersion: messaging.knative.dev/v1beta1
     kind: <DefaultChannel>
     name: default-kne-ingress

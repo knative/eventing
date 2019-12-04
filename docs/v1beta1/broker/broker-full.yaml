@@ -11,7 +11,12 @@ spec:
       something:
         comlicated: here
 status:
-  IngressChannel:
+  triggerChannel:
+    apiVersion: messaging.knative.dev/v1beta1
+    kind: <DefaultChannel>
+    name: default-kne-trigger
+    namespace: default
+  ingressChannel:
     apiVersion: messaging.knative.dev/v1beta1
     kind: CustomChannel
     name: default-kne-ingress
