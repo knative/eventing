@@ -81,7 +81,7 @@ If you are using a private registry that will require authentication then you'll
 need to create a Secret in your `default` Namespace called
 `kn-eventing-test-pull-secret` with the Docker login credentials. This Secret
 will then be copied into any new Namespace that is created by the testing
-infrastructure, and linked to any ServiceAccount created as a imagePulLSecret.
+infrastructure, and linked to any ServiceAccount created as a imagePullSecret.
 Note: some tests will use the `knative-eventing-injection` label to
 automatically create new ServiceAccounts in some Namespaces, this feature does
 not yet support private registries. See
