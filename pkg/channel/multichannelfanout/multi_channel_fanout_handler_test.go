@@ -28,11 +28,12 @@ import (
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
+	"knative.dev/pkg/apis"
 )
 
-const (
+var (
 	// The httptest.Server's host name will replace this value in all ChannelConfigs.
-	replaceDomain = "replaceDomain"
+	replaceDomain = apis.HTTP("replaceDomain")
 )
 
 func TestNewHandler(t *testing.T) {
@@ -83,7 +84,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							SubscriberURI: "subscriberdomain",
+							SubscriberURI: apis.HTTP("subscriberdomain"),
 						},
 					},
 				},
@@ -98,7 +99,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							ReplyURI: "replydomain",
+							ReplyURI: apis.HTTP("replydomain"),
 						},
 					},
 				},
@@ -136,7 +137,7 @@ func TestConfigDiff(t *testing.T) {
 				FanoutConfig: fanout.Config{
 					Subscriptions: []eventingduck.SubscriberSpec{
 						{
-							SubscriberURI: "subscriberdomain",
+							SubscriberURI: apis.HTTP("subscriberdomain"),
 						},
 					},
 				},
@@ -166,7 +167,7 @@ func TestConfigDiff(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									SubscriberURI: "different",
+									SubscriberURI: apis.HTTP("different"),
 								},
 							},
 						},
@@ -241,7 +242,7 @@ func TestServeHTTP(t *testing.T) {
 						FanoutConfig: fanout.Config{
 							Subscriptions: []eventingduck.SubscriberSpec{
 								{
-									ReplyURI: "first-to-domain",
+									ReplyURI: apis.HTTP("first-to-domain"),
 								},
 							},
 						},
@@ -306,10 +307,10 @@ func replaceDomains(config Config, replacement string) {
 	for i, cc := range config.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
 			if sub.SubscriberURI == replaceDomain {
-				sub.SubscriberURI = replacement
+				sub.SubscriberURI = apis.HTTP(replacement)
 			}
 			if sub.ReplyURI == replaceDomain {
-				sub.ReplyURI = replacement
+				sub.ReplyURI = apis.HTTP(replacement)
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

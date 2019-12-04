@@ -533,9 +533,9 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 				},
 				UID:               sub.UID,
 				Generation:        sub.Generation,
-				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI.String(),
-				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI.String(),
-				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI.String(),
+				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
+				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
+				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
 			})
 		}
 	}

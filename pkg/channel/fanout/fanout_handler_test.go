@@ -30,13 +30,14 @@ import (
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/pkg/apis"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
 // servers.
-const (
-	replaceSubscriber = "replaceSubscriber"
-	replaceChannel    = "replaceChannel"
+var (
+	replaceSubscriber = apis.HTTP("replaceSubscriber")
+	replaceChannel    = apis.HTTP("replaceChannel")
 )
 
 func makeCloudEvent() cloudevents.Event {
@@ -218,10 +219,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs := make([]eventingduck.SubscriberSpec, 0)
 			for _, sub := range tc.subs {
 				if sub.SubscriberURI == replaceSubscriber {
-					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'
+					sub.SubscriberURI = apis.HTTP(callableServer.URL[7:]) // strip the leading 'http://'
 				}
 				if sub.ReplyURI == replaceChannel {
-					sub.ReplyURI = channelServer.URL[7:] // strip the leading 'http://'
+					sub.ReplyURI = apis.HTTP(channelServer.URL[7:]) // strip the leading 'http://'
 				}
 				subs = append(subs, sub)
 			}
