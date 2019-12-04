@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/configmap"
@@ -64,16 +65,18 @@ const (
 
 var (
 	channelDNS = "channel.mynamespace.svc." + utils.GetClusterDomainName()
-	channelURI = "http://" + channelDNS
+	channelURI = apis.HTTP(channelDNS)
 
-	subscriberDNS = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
-	subscriberURI = "http://" + subscriberDNS
+	subscriberDNS         = "subscriber.mynamespace.svc." + utils.GetClusterDomainName()
+	subscriberURI         = apis.HTTP(subscriberDNS)
+	subscriberURIWithPath = &apis.URL{Scheme: "http", Host: subscriberDNS, Path: "/"}
 
 	replyDNS = "reply.mynamespace.svc." + utils.GetClusterDomainName()
-	replyURI = "http://" + replyDNS
+	replyURI = apis.HTTP(replyDNS)
 
-	serviceDNS = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
-	serviceURI = "http://" + serviceDNS
+	serviceDNS         = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
+	serviceURI         = apis.HTTP(serviceDNS)
+	serviceURIWithPath = &apis.URL{Scheme: "http", Host: serviceDNS, Path: "/"}
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -698,12 +701,12 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI+"/"),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
+					{UID: subscriptionUID, SubscriberURI: serviceURIWithPath, DeprecatedRef: &corev1.ObjectReference{Name: subscriptionName, Namespace: testNS, UID: subscriptionUID}},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
@@ -722,7 +725,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -748,13 +751,13 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI+"/"),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
-					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURI + "/", DeprecatedRef: &corev1.ObjectReference{Name: "a-" + subscriptionName, Namespace: testNS, UID: "a-" + subscriptionUID}},
-					{UID: "b-" + subscriptionUID, SubscriberURI: serviceURI, DeprecatedRef: &corev1.ObjectReference{Name: "b-" + subscriptionName, Namespace: testNS, UID: "b-" + subscriptionUID}},
+					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURIWithPath, DeprecatedRef: &corev1.ObjectReference{Name: "a-" + subscriptionName, Namespace: testNS, UID: "a-" + subscriptionUID}},
+					{UID: "b-" + subscriptionUID, SubscriberURI: serviceURIWithPath, DeprecatedRef: &corev1.ObjectReference{Name: "b-" + subscriptionName, Namespace: testNS, UID: "b-" + subscriptionUID}},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},

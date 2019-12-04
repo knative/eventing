@@ -23,6 +23,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	apis "knative.dev/pkg/apis"
 	v1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
@@ -464,6 +465,21 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 		in, out := &in.DeprecatedRef, &out.DeprecatedRef
 		*out = new(v1.ObjectReference)
 		**out = **in
+	}
+	if in.SubscriberURI != nil {
+		in, out := &in.SubscriberURI, &out.SubscriberURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ReplyURI != nil {
+		in, out := &in.ReplyURI, &out.ReplyURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DeadLetterSinkURI != nil {
+		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

@@ -18,7 +18,7 @@ package testing
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -131,23 +131,21 @@ func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) Sub
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionSubscriber(uri string) SubscriptionOption {
+func WithSubscriptionPhysicalSubscriptionSubscriber(uri *apis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		u, err := apis.ParseURL(uri)
-		if err != nil {
-			panic(fmt.Sprintf("failed to parse URL: %s", err))
+		if uri == nil {
+			panic(errors.New("nil URI"))
 		}
-		s.Status.PhysicalSubscription.SubscriberURI = u
+		s.Status.PhysicalSubscription.SubscriberURI = uri
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionReply(uri string) SubscriptionOption {
+func WithSubscriptionPhysicalSubscriptionReply(uri *apis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		u, err := apis.ParseURL(uri)
-		if err != nil {
-			panic(fmt.Sprintf("failed to parse URL: %s", err))
+		if uri == nil {
+			panic(errors.New("nil URI"))
 		}
-		s.Status.PhysicalSubscription.ReplyURI = u
+		s.Status.PhysicalSubscription.ReplyURI = uri
 	}
 }
 

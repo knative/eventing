@@ -132,5 +132,5 @@ func (f *Handler) dispatch(ctx context.Context, event cloudevents.Event) error {
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *Handler) makeFanoutRequest(ctx context.Context, event cloudevents.Event, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchEventWithDelivery(ctx, event, sub.SubscriberURI, sub.ReplyURI, &channel.DeliveryOptions{DeadLetterSink: sub.DeadLetterSinkURI})
+	return f.dispatcher.DispatchEventWithDelivery(ctx, event, sub.SubscriberURI.String(), sub.ReplyURI.String(), &channel.DeliveryOptions{DeadLetterSink: sub.DeadLetterSinkURI.String()})
 }
