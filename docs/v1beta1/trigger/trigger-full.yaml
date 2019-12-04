@@ -1,0 +1,25 @@
+apiVersion: eventing.knative.dev/v1beta1
+kind: Trigger
+metadata:
+  name: classifier
+  namespace: default
+spec:
+  broker: default
+  filter:
+    attributes:
+      type: io.d2k8s.number
+      custom: value-here
+  subscriber:
+    uri: http://custom.example.url/here
+status:
+  conditions:
+  - lastTransitionTime: "2019-12-04T07:30:23Z"
+    status: "True"
+    type: Broker
+  - lastTransitionTime: "2019-12-04T07:30:23Z"
+    status: "True"
+    type: Dependency
+  - lastTransitionTime: "2019-12-04T07:30:24Z"
+    status: "True"
+    type: Ready
+  subscriberURI: http://custom.example.url/here

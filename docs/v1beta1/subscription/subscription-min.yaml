@@ -1,0 +1,34 @@
+apiVersion: messaging.knative.dev/v1beta1
+kind: Subscription
+metadata:
+  name: default-classifier-bzpgq-eed7cced-1667-11ea-8bd0-ea6f71e47c79
+  namespace: default
+spec:
+  channel:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: InMemoryChannel
+    name: channel-in
+  reply:
+    ref:
+      apiVersion: messaging.knative.dev/v1alpha1
+      kind: InMemoryChannel
+      name: channel-out
+  subscriber:
+    uri: http://example.com/subscriber
+status:
+  conditions:
+  - lastTransitionTime: "2019-12-04T07:30:23Z"
+    status: "True"
+    type: AddedToChannel
+  - lastTransitionTime: "2019-12-04T07:30:24Z"
+    status: "True"
+    type: ChannelReady
+  - lastTransitionTime: "2019-12-04T07:30:24Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2019-12-04T07:30:23Z"
+    status: "True"
+    type: Resolved
+  physicalSubscription:
+    replyURI: http://channel-out.default.svc.cluster.local
+    subscriberURI: http://example.com/subscriber

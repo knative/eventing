@@ -1,0 +1,23 @@
+apiVersion: eventing.knative.dev/v1beta1
+kind: Broker
+metadata:
+  name: default
+  namespace: default
+spec: {}
+status:
+  TriggerChannel:
+    apiVersion: messaging.knative.dev/v1beta1
+    kind: <DefaultChannel>
+    name: default-kne-trigger
+    namespace: default
+  IngressChannel:
+    apiVersion: messaging.knative.dev/v1beta1
+    kind: <DefaultChannel>
+    name: default-kne-ingress
+    namespace: default
+  address:
+    url: http://default-broker.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2019-11-22T22:03:39Z"
+    status: "True"
+    type: Ready

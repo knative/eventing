@@ -1,0 +1,25 @@
+apiVersion: eventing.knative.dev/v1beta1
+kind: Trigger
+metadata:
+  name: classifier
+  namespace: default
+spec:
+  broker: default
+  filter: {}
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: classifier
+status:
+  conditions:
+  - lastTransitionTime: "2019-12-04T07:30:23Z"
+    status: "True"
+    type: Broker
+  - lastTransitionTime: "2019-12-04T07:30:23Z"
+    status: "True"
+    type: Dependency
+  - lastTransitionTime: "2019-12-04T07:30:24Z"
+    status: "True"
+    type: Ready
+  subscriberURI: http://classifier.default.svc.cluster.local

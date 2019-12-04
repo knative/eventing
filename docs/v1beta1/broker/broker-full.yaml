@@ -1,0 +1,25 @@
+apiVersion: eventing.knative.dev/v1beta1
+kind: Broker
+metadata:
+  name: default
+  namespace: default
+spec:
+  channelTemplate:
+    apiVersion: custom.example.com/v1
+    kind: CustomChannel
+    spec:
+      something:
+        comlicated: here
+status:
+  IngressChannel:
+    apiVersion: messaging.knative.dev/v1beta1
+    kind: CustomChannel
+    name: default-kne-ingress
+    namespace: default
+  address:
+    hostname: default-broker.default.svc.cluster.local
+    url: http://default-broker.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2019-11-22T22:03:39Z"
+    status: "True"
+    type: Ready

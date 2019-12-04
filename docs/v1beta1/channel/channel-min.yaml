@@ -1,0 +1,19 @@
+apiVersion: messaging.knative.dev/v1beta1
+kind: Channel
+metadata:
+  name: my-default-channel
+  namespace: default
+spec:
+  channelTemplate:
+    apiVersion: custom.example.com/v1
+    kind: CustomChannel
+status:
+  address:
+    url: http://some-channel.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2019-11-12T20:12:00Z"
+    status: "True"
+    type: Addressable
+  - lastTransitionTime: "2019-11-14T23:55:46Z"
+    status: "True"
+    type: Ready
