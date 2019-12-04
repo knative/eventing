@@ -239,20 +239,14 @@ func (ag *Aggregator) Run(ctx context.Context) {
 			log.Printf("ERROR AddSamplePoint for deliver-throughput: %v", err)
 		}
 
-		if len(publishErrorTimestamps) > 2 {
-			sort.Slice(publishErrorTimestamps, func(x, y int) bool { return publishErrorTimestamps[x].Before(publishErrorTimestamps[y]) })
-			err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
-			if err != nil {
-				log.Printf("ERROR AddSamplePoint for publish-failure-throughput: %v", err)
-			}
+		err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint for publish-failure-throughput: %v", err)
 		}
 
-		if len(deliverErrorTimestamps) > 2 {
-			sort.Slice(deliverErrorTimestamps, func(x, y int) bool { return deliverErrorTimestamps[x].Before(deliverErrorTimestamps[y]) })
-			err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
-			if err != nil {
-				log.Printf("ERROR AddSamplePoint for deliver-failure-throughput: %v", err)
-			}
+		err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint for deliver-failure-throughput: %v", err)
 		}
 
 		log.Printf("Publishing aggregates")
@@ -276,19 +270,29 @@ func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Tim
 		t, _ := ptypes.Timestamp(v)
 		values = append(values, t)
 	}
-	sort.Slice(values, func(x, y int) bool { return values[x].Before(values[y]) })
 	return values
 }
 
 func publishThpt(timestamps []time.Time, q *quickstore.Quickstore, metricName string) error {
-	for i, t := range timestamps[1:] {
-		var thpt uint
-		j := i - 1
-		for j >= 0 && t.Sub(timestamps[j]) <= time.Second {
-			thpt++
-			j--
+	if len(timestamps) >= 2 {
+		sort.Slice(timestamps, func(x, y int) bool { return timestamps[x].Before(timestamps[y]) })
+		for i, t := range timestamps[1:] {
+			var thpt uint
+			j := i - 1
+			for j >= 0 && t.Sub(timestamps[j]) <= time.Second {
+				thpt++
+				j--
+			}
+			if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
+				return qerr
+			}
 		}
-		if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
+	} else if len(timestamps) == 1 {
+		if qerr := q.AddSamplePoint(mako.XTime(timestamps[0]), map[string]float64{metricName: 1}); qerr != nil {
+			return qerr
+		}
+	} else {
+		if qerr := q.AddSamplePoint(mako.XTime(time.Now()), map[string]float64{metricName: 0}); qerr != nil {
 			return qerr
 		}
 	}
