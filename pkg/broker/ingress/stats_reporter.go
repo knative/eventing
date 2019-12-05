@@ -33,7 +33,7 @@ var (
 	// eventCountM is a counter which records the number of events received
 	// by the Broker.
 	eventCountM = stats.Int64(
-		"event_count",
+		"broker_ingress_event_count",
 		"Number of events received by a Broker",
 		stats.UnitDimensionless,
 	)
@@ -41,7 +41,7 @@ var (
 	// dispatchTimeInMsecM records the time spent dispatching an event to
 	// a Channel, in milliseconds.
 	dispatchTimeInMsecM = stats.Float64(
-		"event_dispatch_latencies",
+		"broker_ingress_event_dispatch_latencies",
 		"The time spent dispatching an event to a Channel",
 		stats.UnitMilliseconds,
 	)

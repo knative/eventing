@@ -60,7 +60,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
-	metricstest.CheckCountData(t, "event_count", wantAllTags, 2)
+	metricstest.CheckCountData(t, "broker_filter_event_count", wantAllTags, 2)
 
 	// test ReportEventDispatchTime
 	expectSuccess(t, func() error {
@@ -69,7 +69,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventDispatchTime(args, http.StatusAccepted, 9100*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "event_dispatch_latencies", wantAllTags, 2, 1100.0, 9100.0)
+	metricstest.CheckDistributionData(t, "broker_filter_event_dispatch_latencies", wantAllTags, 2, 1100.0, 9100.0)
 
 	// test ReportEventProcessingTime
 	expectSuccess(t, func() error {
@@ -78,7 +78,7 @@ func TestStatsReporter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventProcessingTime(args, 8000*time.Millisecond)
 	})
-	metricstest.CheckDistributionData(t, "event_processing_latencies", wantTags, 2, 1000.0, 8000.0)
+	metricstest.CheckDistributionData(t, "broker_filter_event_processing_latencies", wantTags, 2, 1000.0, 8000.0)
 }
 
 func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
@@ -117,7 +117,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 	expectSuccess(t, func() error {
 		return r.ReportEventCount(args, http.StatusAccepted)
 	})
-	metricstest.CheckCountData(t, "event_count", wantTags, 4)
+	metricstest.CheckCountData(t, "broker_filter_event_count", wantTags, 4)
 }
 
 func expectSuccess(t *testing.T, f func() error) {
@@ -133,6 +133,9 @@ func setup() {
 
 func resetMetrics() {
 	// OpenCensus metrics carry global state that need to be reset between unit tests.
-	metricstest.Unregister("event_count", "event_dispatch_latencies", "event_processing_latencies")
+	metricstest.Unregister(
+		"broker_filter_event_count",
+		"broker_filter_event_dispatch_latencies",
+		"broker_filter_event_processing_latencies")
 	register()
 }
