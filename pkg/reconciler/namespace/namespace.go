@@ -179,6 +179,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 	}
 
 	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
+		// check for existence of brokerPullSecret, and skip copy if it already exists
 		for _, v := range sa.ImagePullSecrets {
 			if fmt.Sprintf("%s", v) == ("{" + r.brokerPullSecretName + "}") {
 				return nil
