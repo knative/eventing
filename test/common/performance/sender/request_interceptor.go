@@ -20,7 +20,7 @@ import "net/http"
 
 type requestInterceptor struct {
 	before      func(*http.Request)
-	transport   *http.Transport
+	transport   http.RoundTripper
 	after       func(*http.Request, *http.Response, error)
 }
 
