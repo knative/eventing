@@ -91,7 +91,7 @@ func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, cArgs)
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, &cArgs)
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}

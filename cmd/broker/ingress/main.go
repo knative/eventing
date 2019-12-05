@@ -28,9 +28,10 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/kelseyhightower/envconfig"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
-	"go.opencensus.io/stats/view"
+	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
@@ -58,9 +59,10 @@ const (
 	// Purposely set them to be equal, as the ingress only connects to its channel.
 	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
 	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
-	defaultMaxIdleConnections        = 1000
-	defaultMaxIdleConnectionsPerHost = 1000
-	component                        = "broker_ingress"
+	defaultMaxIdleConnections              = 1000
+	defaultMaxIdleConnectionsPerHost       = 1000
+	defaultTTL                       int32 = 255
+	component                              = "broker_ingress"
 )
 
 type envConfig struct {
@@ -146,7 +148,9 @@ func main() {
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, connectionArgs)
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(
+		httpTransport,
+		&connectionArgs)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}
@@ -160,6 +164,7 @@ func main() {
 		BrokerName: env.Broker,
 		Namespace:  env.Namespace,
 		Reporter:   reporter,
+		Defaulter:  broker.TTLDefaulter(logger, defaultTTL),
 	}
 
 	// configMapWatcher does not block, so start it first.

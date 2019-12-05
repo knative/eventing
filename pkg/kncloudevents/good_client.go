@@ -1,6 +1,7 @@
 package kncloudevents
 
 import (
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	nethttp "net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go"
@@ -34,19 +35,19 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewDefaultClientGivenHttpTransport(t)
+	return NewDefaultClientGivenHttpTransport(t, nil)
 }
 
 // NewDefaultClientGivenHttpTransport creates a new CloudEvents client using the provided cloudevents HTTP
 // transport. Note that it does modify the provided cloudevents HTTP Transport by adding tracing to its Client
 // and different connection options, in case they are specified.
-func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connectionArgs ...ConnectionArgs) (cloudevents.Client, error) {
+func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connectionArgs *ConnectionArgs, opts ...client.Option) (cloudevents.Client, error) {
 	// Add connection options to the default transport.
 	var base = nethttp.DefaultTransport
-	if len(connectionArgs) > 0 {
+	if connectionArgs != nil {
 		baseTransport := base.(*nethttp.Transport)
-		baseTransport.MaxIdleConns = connectionArgs[0].MaxIdleConns
-		baseTransport.MaxIdleConnsPerHost = connectionArgs[0].MaxIdleConnsPerHost
+		baseTransport.MaxIdleConns = connectionArgs.MaxIdleConns
+		baseTransport.MaxIdleConnsPerHost = connectionArgs.MaxIdleConnsPerHost
 	}
 	// Add output tracing.
 	t.Client = &nethttp.Client{
@@ -56,11 +57,13 @@ func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connection
 		},
 	}
 
+	if opts == nil {
+		opts = make([]client.Option, 0)
+	}
+	opts = append(opts, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
+
 	// Use the transport to make a new CloudEvents client.
-	c, err := cloudevents.NewClient(t,
-		cloudevents.WithUUIDs(),
-		cloudevents.WithTimeNow(),
-	)
+	c, err := cloudevents.NewClient(t, opts...)
 
 	if err != nil {
 		return nil, err
