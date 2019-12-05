@@ -53,16 +53,11 @@ func DeleteTTL(ctx cloudevents.EventContext) error {
 	return ctx.SetExtension(TTLAttribute, nil)
 }
 
-// ManageTTL returns a cloudevents client event defaulter that will manage the
-// TTL for outbound events with the following rules:
-// If TTL is not found, it will set it to the default passed in.
-// If TTL is <= 0, it will remain 0.
-// If TTL is > 1, it will be reduced by one.
-// The outbound event is
-func ManageTTL(logger *zap.Logger, defaultTTL int32) client.Option {
-	return client.WithEventDefaulter(TTLDefaulter(logger, defaultTTL))
-}
-
+// TTLDefaulter returns a cloudevents event defaulter that will manage the TTL
+// for events with the following rules:
+//   If TTL is not found, it will set it to the default passed in.
+//   If TTL is <= 0, it will remain 0.
+//   If TTL is > 1, it will be reduced by one.
 func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 	return func(ctx context.Context, event cloudevents.Event) cloudevents.Event {
 		// Get the current or default TTL from the event.
@@ -73,14 +68,14 @@ func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 				zap.Int32(TTLAttribute, defaultTTL),
 				zap.Error(err),
 			)
-			ttl = defaultTTL
+			ttl = defaultTTL + 1
 		} else if ttl, err = cetypes.ToInteger(ttlraw); err != nil {
 			logger.Warn("Failed to convert existing TTL into integer, defaulting.",
 				zap.String("event.id", event.ID()),
 				zap.Any(TTLAttribute, ttlraw),
 				zap.Error(err),
 			)
-			ttl = defaultTTL
+			ttl = defaultTTL + 1
 		}
 
 		// Decrement TTL.
