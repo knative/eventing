@@ -22,6 +22,7 @@ import (
 	nethttp "net/http"
 	"net/url"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,6 +59,7 @@ func (r *mockReporter) ReportEventDispatchTime(args *ReportArgs, responseCode in
 type fakeClient struct {
 	sent bool
 	fn   interface{}
+	mux  sync.Mutex
 }
 
 func (f *fakeClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
@@ -66,9 +68,18 @@ func (f *fakeClient) Send(ctx context.Context, event cloudevents.Event) (context
 }
 
 func (f *fakeClient) StartReceiver(ctx context.Context, fn interface{}) error {
+	f.mux.Lock()
 	f.fn = fn
+	f.mux.Unlock()
 	<-ctx.Done()
 	return nil
+}
+
+func (f *fakeClient) ready() bool {
+	f.mux.Lock()
+	ready := f.fn != nil
+	f.mux.Unlock()
+	return ready
 }
 
 func (f *fakeClient) fakeReceive(t *testing.T, event cloudevents.Event) {
@@ -228,7 +239,9 @@ func TestIngressHandler_Start(t *testing.T) {
 		}
 	}()
 	// Need time for the handler to start up. Wait.
-	time.Sleep(1 * time.Millisecond)
+	for !client.ready() {
+		time.Sleep(1 * time.Millisecond)
+	}
 
 	event := cloudevents.NewEvent()
 	client.fakeReceive(t, event)
