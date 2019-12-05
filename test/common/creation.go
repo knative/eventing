@@ -29,6 +29,7 @@ import (
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/test/helpers"
@@ -310,7 +311,7 @@ func (client *Client) CreateServiceAccountOrFail(saName string) {
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the new ServiceAccount we just created.
 	// This is needed for cases where the images are in a private registry.
-	_, err := CopySecret(client, "default", TestPullSecretName, namespace, saName)
+	_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", TestPullSecretName, namespace, saName)
 	if err != nil && !errors.IsNotFound(err) {
 		client.T.Fatalf("Error copying the secret: %s", err)
 	}

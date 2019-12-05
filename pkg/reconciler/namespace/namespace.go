@@ -18,7 +18,6 @@ package namespace
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"k8s.io/client-go/tools/cache"
@@ -37,7 +36,6 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
@@ -186,7 +184,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 				return nil
 			}
 		}
-		_, err := CopySecret(r, system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
+		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Error copying secret: %s", err))
@@ -258,44 +256,4 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 	}
 	// Don't update anything that is already present.
 	return current, nil
-}
-
-func CopySecret(r *Reconciler, srcNS string, srcSecretName string, tgtNS string, svcAccount string) (*corev1.Secret, error) {
-	tgtNamespaceSvcAcct := r.KubeClientSet.CoreV1().ServiceAccounts(tgtNS)
-	srcSecrets := r.KubeClientSet.CoreV1().Secrets(srcNS)
-	tgtNamespaceSecrets := r.KubeClientSet.CoreV1().Secrets(tgtNS)
-
-	// First try to find the secret we're supposed to copy
-	srcSecret, err := srcSecrets.Get(srcSecretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	// check for nil source secret
-	if srcSecret == nil {
-		return nil, errors.New("error copying secret")
-	}
-
-	// Found the secret, so now make a copy in our new namespace
-	newSecret, err := tgtNamespaceSecrets.Create(
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: srcSecretName,
-			},
-			Data: srcSecret.Data,
-			Type: srcSecret.Type,
-		})
-
-	// If the secret already exists then that's ok - may have already been created
-	if err != nil && !apierrs.IsAlreadyExists(err) {
-		return nil, fmt.Errorf("error copying the Secret: %s", err)
-	}
-
-	_, err = tgtNamespaceSvcAcct.Patch(svcAccount, types.StrategicMergePatchType,
-		[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
-	if err != nil {
-		return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
-			tgtNS, srcSecretName, err)
-	}
-	return newSecret, nil
 }
