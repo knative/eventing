@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,23 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sender
+package common
 
-import "net/http"
+import "github.com/golang/protobuf/ptypes/timestamp"
 
-type requestInterceptor struct {
-	before      func(*http.Request)
-	transport   *http.Transport
-	after       func(*http.Request, *http.Response, error)
+// EventTimestamp is the recorded EventTimestamp of an event.
+type EventTimestamp struct {
+	EventId string
+	At      *timestamp.Timestamp
 }
 
-func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, error) {
-	if r.before != nil {
-		r.before(request)
-	}
-	res, err := r.transport.RoundTrip(request)
-	if r.after != nil {
-		r.after(request, res, err)
-	}
-	return res, err
+// EventError is the recorded EventError of an event.
+type EventError struct {
+	EventId string
+	Text    string
 }

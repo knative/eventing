@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
+
 	"knative.dev/eventing/test/common/performance/common"
 )
 
@@ -121,19 +122,23 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 
 		loadGen.warmupAttacker = vegeta.NewAttacker(vegeta.Workers(minWorkers))
 		loadGen.paceAttacker = vegeta.NewAttacker(
-			vegeta.Client(&http.Client{Transport: requestInterceptor{
-				before: func(request *http.Request) {
-					id := request.Header.Get("Ce-Id")
-					loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+			vegeta.Client(&http.Client{
+				Timeout: vegeta.DefaultTimeout,
+				Transport: requestInterceptor{
+					before: func(request *http.Request) {
+						id := request.Header.Get("Ce-Id")
+						loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+					},
+					transport: vegetaAttackerTransport(),
+					after: func(request *http.Request, response *http.Response, e error) {
+						id := request.Header.Get("Ce-Id")
+						t := ptypes.TimestampNow()
+						if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
+							loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
+						}
+					},
 				},
-				after: func(request *http.Request, response *http.Response, e error) {
-					id := request.Header.Get("Ce-Id")
-					t := ptypes.TimestampNow()
-					if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
-						loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
-					}
-				},
-			}}),
+			}),
 			vegeta.Workers(minWorkers),
 			vegeta.MaxBody(0),
 		)
