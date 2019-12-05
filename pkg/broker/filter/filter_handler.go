@@ -175,9 +175,9 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		// Only messages sent by the Broker should be here. If the attribute isn't here, then the
 		// event wasn't sent by the Broker, so we can drop it.
 		r.logger.Warn("No TTL seen, dropping", zap.Any("triggerRef", triggerRef), zap.Any("event", event))
-		// This doesn't return an error because normally this function is called by a Channel, which
-		// will retry all non-2XX responses. If we return an error from this function, then the
-		// framework returns a 500 to the caller, so the Channel would send this repeatedly.
+		// Return a BadRequest error, so the upstream can decide how to handle it, e.g. sending
+		// the message to a DLQ.
+		resp.Status = http.StatusBadRequest
 		return nil
 	}
 	if err := broker.DeleteTTL(event.Context); err != nil {
