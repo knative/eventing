@@ -44,10 +44,6 @@ import (
 	"knative.dev/pkg/controller"
 )
 
-type envConfig struct {
-	BrokerPullSecretName string `envconfig:"BROKER_IMAGE_PULL_SECRET_NAME" required:"false"`
-}
-
 const (
 	namespaceReconciled       = "NamespaceReconciled"
 	namespaceReconcileFailure = "NamespaceReconcileFailure"
@@ -56,7 +52,6 @@ const (
 	brokerCreated             = "BrokerCreated"
 	serviceAccountCreated     = "BrokerServiceAccountCreated"
 	serviceAccountRBACCreated = "BrokerServiceAccountRBACCreated"
-	envConfigProcessed        = "EnvConfigProcessed"
 	secretCopied              = "SecretCopied"
 )
 
@@ -186,10 +181,18 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 	}
 
 	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
+		for _, v := range sa.ImagePullSecrets {
+			if fmt.Sprintf("%s", v) == ("{" + r.brokerPullSecretName + "}") {
+				return nil
+			}
+		}
 		_, err := CopySecret(r, system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Error copying secret: %s", err))
+		} else {
+			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+				fmt.Sprintf("Secret copied into namespace: %s", sa.Name))
 		}
 	}
 

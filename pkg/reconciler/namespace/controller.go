@@ -32,6 +32,10 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
 
+type envConfig struct {
+	BrokerPullSecretName string `envconfig:"BROKER_IMAGE_PULL_SECRET_NAME" required:"false"`
+}
+
 const (
 	// ReconcilerName is the name of the reconciler
 	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
