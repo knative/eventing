@@ -32,6 +32,7 @@ func TestRequestInterceptor(t *testing.T) {
 		before: func(*http.Request) {
 			calledBefore = true
 		},
+		transport: http.DefaultTransport,
 		after: func(*http.Request, *http.Response, error) {
 			calledAfter = true
 		},
