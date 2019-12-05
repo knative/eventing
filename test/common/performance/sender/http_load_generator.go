@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"time"
 
@@ -150,6 +151,25 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 		}
 
 		return loadGen, nil
+	}
+}
+
+// Since we need to add an interceptor to keep track of timestamps before and after sending events,
+// we need to have our own Transport implementation.
+// At the same time we still need to use the one implemented in Vegeta, which is optimized to being able to generate
+// high loads. But since the function is not exported, we need to add it here in order to use it.
+// The below function is mostly copied from https://github.com/tsenart/vegeta/blob/44a49c878dd6f28f04b9b5ce5751490b0dce1e18/lib/attack.go#L80
+func vegetaAttackerTransport() *http.Transport {
+	dialer := &net.Dialer{
+		LocalAddr: &net.TCPAddr{IP: vegeta.DefaultLocalAddr.IP, Zone: vegeta.DefaultLocalAddr.Zone},
+		KeepAlive: 30 * time.Second,
+	}
+
+	return &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		Dial:                dialer.Dial,
+		TLSClientConfig:     vegeta.DefaultTLSConfig,
+		MaxIdleConnsPerHost: vegeta.DefaultConnections,
 	}
 }
 
