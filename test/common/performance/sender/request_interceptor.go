@@ -19,15 +19,16 @@ package sender
 import "net/http"
 
 type requestInterceptor struct {
-	before func(*http.Request)
-	after  func(*http.Request, *http.Response, error)
+	before      func(*http.Request)
+	transport   http.RoundTripper
+	after       func(*http.Request, *http.Response, error)
 }
 
 func (r requestInterceptor) RoundTrip(request *http.Request) (*http.Response, error) {
 	if r.before != nil {
 		r.before(request)
 	}
-	res, err := http.DefaultTransport.RoundTrip(request)
+	res, err := r.transport.RoundTrip(request)
 	if r.after != nil {
 		r.after(request, res, err)
 	}
