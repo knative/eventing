@@ -18,6 +18,7 @@ package ingress
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"time"
 
@@ -33,7 +34,7 @@ var (
 	// eventCountM is a counter which records the number of events received
 	// by the Broker.
 	eventCountM = stats.Int64(
-		"broker_ingress_event_count",
+		"event_count",
 		"Number of events received by a Broker",
 		stats.UnitDimensionless,
 	)
@@ -41,7 +42,7 @@ var (
 	// dispatchTimeInMsecM records the time spent dispatching an event to
 	// a Channel, in milliseconds.
 	dispatchTimeInMsecM = stats.Float64(
-		"broker_ingress_event_dispatch_latencies",
+		"event_dispatch_latencies",
 		"The time spent dispatching an event to a Channel",
 		stats.UnitMilliseconds,
 	)
@@ -117,7 +118,7 @@ func register() {
 		},
 	)
 	if err != nil {
-		panic(err)
+		log.Printf("failed to register opencensus views, %s", err)
 	}
 }
 
