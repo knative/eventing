@@ -285,6 +285,11 @@ func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 }
 
 func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJobSource) (*eventingv1alpha1.EventType, error) {
+	sinkRef := src.Spec.Sink.GetRef()
+	if sinkRef == nil {
+		// Can't figure out the broker so return
+		return nil, nil
+	}
 	expected := resources.MakeEventType(src)
 	current, err := r.eventTypeLister.EventTypes(src.Namespace).Get(expected.Name)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -294,7 +299,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 
 	// Only create EventTypes for Broker sinks. But if there is an EventType and the src has a non-Broker sink
 	// (possibly because it was updated), then we need to delete it.
-	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
+	if sinkRef.Kind != "Broker" {
 		if current != nil {
 			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
 				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))

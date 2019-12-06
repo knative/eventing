@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/pkg/configmap"
@@ -68,6 +69,9 @@ var (
 			Kind:       "Channel",
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
+	}
+	sinkDestURI = duckv1beta1.Destination{
+		URI: apis.HTTP(sinkDNS),
 	}
 	brokerDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
@@ -209,6 +213,48 @@ func TestAllCases(t *testing.T) {
 						Schedule: testSchedule,
 						Data:     testData,
 						Sink:     &sinkDest,
+					}),
+					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
+					WithCronJobSourceStatusObservedGeneration(generation),
+				),
+			}},
+		}, {
+			Name: "valid with sink URI",
+			Objects: []runtime.Object{
+				NewCronJobSource(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDestURI,
+					}),
+					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeAvailableReceiveAdapter(sinkDest),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReconciled", `CronJobSource reconciled: "%s/%s"`, testNS, sourceName),
+				Eventf(corev1.EventTypeNormal, "CronJobSourceReadinessChanged", `CronJobSource %q became ready`, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewCronJobSource(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDestURI,
 					}),
 					WithCronJobSourceUID(sourceUID),
 					WithCronJobSourceObjectMetaGeneration(generation),
