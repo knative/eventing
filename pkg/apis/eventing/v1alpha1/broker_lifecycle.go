@@ -22,16 +22,13 @@ import (
 
 	"knative.dev/eventing/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 var brokerCondSet = apis.NewLivingConditionSet(
 	BrokerConditionIngress,
 	BrokerConditionTriggerChannel,
-	BrokerConditionIngressChannel,
 	BrokerConditionFilter,
 	BrokerConditionAddressable,
-	BrokerConditionIngressSubscription,
 )
 
 const (
@@ -39,10 +36,6 @@ const (
 	BrokerConditionIngress apis.ConditionType = "IngressReady"
 
 	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
-
-	BrokerConditionIngressChannel apis.ConditionType = "IngressChannelReady"
-
-	BrokerConditionIngressSubscription apis.ConditionType = "IngressSubscriptionReady"
 
 	BrokerConditionFilter apis.ConditionType = "FilterReady"
 
@@ -89,40 +82,6 @@ func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1alpha1.Channe
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionTriggerChannel)
 	} else {
 		bs.MarkTriggerChannelFailed("ChannelNotReady", "trigger Channel is not ready: not addressalbe")
-	}
-}
-
-func (bs *BrokerStatus) MarkIngressChannelFailed(reason, format string, args ...interface{}) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressChannel, reason, format, args...)
-}
-
-func (bs *BrokerStatus) PropagateIngressChannelReadiness(cs *duckv1alpha1.ChannelableStatus) {
-	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here...
-	address := cs.AddressStatus.Address
-	if address != nil {
-		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressChannel)
-	} else {
-		bs.MarkIngressChannelFailed("ChannelNotReady", "ingress Channel is not ready: not addressable")
-	}
-}
-
-func (bs *BrokerStatus) MarkIngressSubscriptionFailed(reason, format string, args ...interface{}) {
-	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngressSubscription, reason, format, args...)
-}
-
-func (bs *BrokerStatus) MarkIngressSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
-	bs.MarkIngressSubscriptionFailed("SubscriptionNotOwned", "Subscription %q is not owned by this Broker.", sub.Name)
-}
-
-func (bs *BrokerStatus) PropagateIngressSubscriptionReadiness(ss *messagingv1alpha1.SubscriptionStatus) {
-	if ss.IsReady() {
-		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngressSubscription)
-	} else {
-		msg := "nil"
-		if sc := ss.GetCondition(messagingv1alpha1.SubscriptionConditionReady); sc != nil {
-			msg = sc.Message
-		}
-		bs.MarkIngressSubscriptionFailed("SubscriptionNotReady", "ingress Subscription is not ready: %s", msg)
 	}
 }
 

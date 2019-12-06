@@ -30,10 +30,6 @@ func channelHost(domain, namespace, chanName string) string {
 	return fmt.Sprintf("%s-kn-channel.%s.svc.%s", chanName, namespace, domain)
 }
 
-func brokerIngressChannelHost(domain string, broker v1alpha1.Broker) string {
-	return channelHost(domain, broker.Namespace, fmt.Sprintf("%s-kne-ingress", broker.Name))
-}
-
 func brokerTriggerChannelHost(domain string, broker v1alpha1.Broker) string {
 	return channelHost(domain, broker.Namespace, fmt.Sprintf("%s-kne-trigger", broker.Name))
 }

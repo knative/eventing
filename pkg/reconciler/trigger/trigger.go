@@ -58,7 +58,6 @@ const (
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 	subscriptionGetFailed     = "SubscriptionGetFailed"
 	triggerChannelFailed      = "TriggerChannelFailed"
-	ingressChannelFailed      = "IngressChannelFailed"
 	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
@@ -185,13 +184,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return errors.New("failed to find Broker's Trigger channel")
 	}
 
-	brokerIngress := b.Status.IngressChannel
-	if brokerIngress == nil {
-		logging.FromContext(ctx).Error("Broker IngressChannel not populated")
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
-		return errors.New("failed to find Broker's Ingress channel")
-	}
-
 	// Get Broker filter service.
 	filterSvc, err := r.getBrokerFilterService(ctx, b)
 	if err != nil {
@@ -227,7 +219,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
-	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, &brokerObjRef, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
@@ -349,13 +341,13 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 		Path:   path.Generate(t),
 	}
-	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
+	expected := resources.NewSubscription(t, brokerTrigger, brokerRef, uri)
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.

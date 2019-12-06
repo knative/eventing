@@ -169,7 +169,6 @@ func setupBrokerTracing(
 
 	// Useful constants we will use below.
 	ingressHost := brokerIngressHost(domain, *broker)
-	ingressChanHost := brokerIngressChannelHost(domain, *broker)
 	triggerChanHost := brokerTriggerChannelHost(domain, *broker)
 	filterHost := brokerFilterHost(domain, *broker)
 	loggerTriggerPath := triggerPath(*loggerTrigger)
@@ -356,7 +355,7 @@ func setupBrokerTracing(
 		Tags: map[string]string{
 			"http.method":      http.MethodPost,
 			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s", ingressChanHost),
+			"http.url":         fmt.Sprintf("http://%s", ingressHost),
 		},
 		Children: []tracinghelper.TestSpanTree{
 			{
@@ -365,7 +364,7 @@ func setupBrokerTracing(
 				Tags: map[string]string{
 					"http.method":      http.MethodPost,
 					"http.status_code": "202",
-					"http.host":        ingressChanHost,
+					"http.host":        ingressHost,
 					"http.path":        "/",
 				},
 				Children: []tracinghelper.TestSpanTree{

@@ -298,31 +298,6 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "No Broker Ingress Channel",
-			Key:  triggerKey,
-			Objects: []runtime.Object{
-				makeReadyBrokerNoIngressChannel(),
-				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
-					reconciletesting.WithInitTriggerConditions,
-				),
-			},
-			WantErr: true,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "IngressChannelFailed", "Broker's Ingress channel not found"),
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: failed to find Broker's Ingress channel"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					reconciletesting.WithInitTriggerConditions,
-					reconciletesting.WithTriggerBrokerReady(),
-				),
-			}},
-		}, {
 			Name: "No Broker Filter Service",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -942,18 +917,10 @@ func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
 	return b
 }
 
-func makeReadyBrokerNoIngressChannel() *v1alpha1.Broker {
-	b := makeBroker()
-	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
-	b.Status.TriggerChannel = makeTriggerChannelRef()
-	return b
-}
-
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.TriggerChannel = makeTriggerChannelRef()
-	b.Status.IngressChannel = makeIngressChannelRef()
 	return b
 }
 
@@ -972,12 +939,12 @@ func makeTriggerChannelRef() *corev1.ObjectReference {
 	}
 }
 
-func makeIngressChannelRef() *corev1.ObjectReference {
+func makeBrokerRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
+		Kind:       "Broker",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
+		Name:       brokerName,
 	}
 }
 
@@ -1025,7 +992,7 @@ func makeServiceURI() *url.URL {
 }
 
 func makeIngressSubscription() *messagingv1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI())
 }
 
 func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription {

@@ -33,7 +33,7 @@ import (
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, uri *url.URL) *messagingv1alpha1.Subscription {
+func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *url.URL) *messagingv1alpha1.Subscription {
 	// TODO: Figure out once Trigger moves to Destination how this changes.
 	tmpURI, err := apis.ParseURL(uri.String())
 	if err != nil {
@@ -60,9 +60,9 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 			},
 			Reply: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
-					APIVersion: brokerIngress.APIVersion,
-					Kind:       brokerIngress.Kind,
-					Name:       brokerIngress.Name,
+					APIVersion: brokerRef.APIVersion,
+					Kind:       brokerRef.Kind,
+					Name:       brokerRef.Name,
 				},
 			},
 		},

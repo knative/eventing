@@ -120,11 +120,6 @@ func (in *BrokerStatus) DeepCopyInto(out *BrokerStatus) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
-	if in.IngressChannel != nil {
-		in, out := &in.IngressChannel, &out.IngressChannel
-		*out = new(v1.ObjectReference)
-		**out = **in
-	}
 	return
 }
 

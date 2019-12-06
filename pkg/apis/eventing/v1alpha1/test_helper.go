@@ -69,9 +69,7 @@ func (testHelper) NotReadySubscriptionStatus() *messagingv1alpha1.SubscriptionSt
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
 	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateIngressChannelReadiness(t.ReadyChannelStatus())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateIngressSubscriptionReadiness(t.ReadySubscriptionStatus())
 	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
 	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
 	return bs
@@ -79,7 +77,6 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 
 func (t testHelper) NotReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
-	bs.PropagateIngressChannelReadiness(&duckv1alpha1.ChannelableStatus{})
 	return bs
 }
 
