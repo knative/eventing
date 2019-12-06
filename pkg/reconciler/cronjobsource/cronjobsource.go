@@ -299,7 +299,7 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 
 	// Only create EventTypes for Broker sinks. But if there is an EventType and the src has a non-Broker sink
 	// (possibly because it was updated), then we need to delete it.
-	if sinkRef == nil || sinkRef.Kind != "Broker" {
+	if sinkRef.Kind != "Broker" {
 		if current != nil {
 			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
 				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))
