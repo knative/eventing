@@ -57,7 +57,7 @@ spec:
           - name: BROKER_FILTER_SERVICE_ACCOUNT
             value: eventing-broker-filter
           - name: BROKER_IMAGE_PULL_SECRET_NAME
-            value: broker-image-pull-secret
+            value:
         ports:
           - containerPort: 9090
             name: metrics
