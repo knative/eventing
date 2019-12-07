@@ -243,6 +243,6 @@ If both are specified, uri will be resolved using the base URI retrieved from re
 ### TriggerFilter
 
 | Field      | Type              | Description                                                                         | Constraints |
-| ---------- | ----------------- | --------------------------------------------------------------------- | ----------- |             |
+| ---------- | ----------------- | ----------------------------------------------------------------------------------- | ----------- |
 | attributes | map[string]string | A filter specifying which events match this trigger. Matches exactly on the fields. |             |
 
