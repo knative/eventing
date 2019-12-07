@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/resolver"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -89,8 +90,11 @@ var (
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS
+	sinkDNS     = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI     = "http://" + sinkDNS
+	sinkDestURI = duckv1beta1.Destination{
+		URI: apis.HTTP(sinkDNS),
+	}
 )
 
 func init() {
@@ -388,6 +392,71 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 						Sink: &sinkDest,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					// Status Update:
+					WithContainerSourceDeployed,
+					WithContainerSourceStatusObservedGeneration(generation),
+				),
+			}},
+		}, {
+			Name: "valid, with ready deployment with template",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkDestURI,
+					}),
+					WithContainerSourceUID(sourceUID),
+					WithContainerSourceObjectMetaGeneration(generation),
+					WithInitContainerSourceConditions,
+					WithContainerSourceSink(sinkURI),
+					WithContainerSourceDeploying(`Created deployment ""`),
+				),
+				NewChannel(sinkName, testNS,
+					WithChannelAddress(sinkDNS),
+				),
+				makeDeployment(NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						DeprecatedImage: image,
+					}),
+					WithContainerSourceUID(sourceUID),
+				), &conditionTrue, sinkURI, nil, nil),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "DeploymentReady", `Deployment "%s" has 1 ready replicas`, deploymentName),
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReconciled", `ContainerSource reconciled: "testnamespace/test-container-source"`),
+				Eventf(corev1.EventTypeNormal, "ContainerSourceReadinessChanged", `ContainerSource "test-container-source" became ready`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						Template: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:            "source",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+									},
+								},
+							},
+						},
+						Sink: &sinkDestURI,
 					}),
 					WithContainerSourceUID(sourceUID),
 					WithContainerSourceObjectMetaGeneration(generation),
