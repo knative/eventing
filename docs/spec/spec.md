@@ -29,17 +29,17 @@ broker._
 | ------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
 | broker       | String                  | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
 | filter       | TriggerFilter           | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
-| subscriber\* | eventing.SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
+| subscriber\* | pkg/duck.Destination | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
 
 \*: Required
 
 #### Status
 
 | Field              | Type        | Description                                                                                              | Constraints |
-| ------------------ | ----------- | -------------------------------------------------------------------------------------------------------- | ----------- |
+| ------------------ | ----------- | ------------------------------------------------------------------------------------------------ | ----------- |
 | observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                                |             |
-| subscriberURI      | Addressable | Address of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions         | Conditions  | Trigger conditions.                                                                                      |             |
+| subscriberURI      | string  | URI of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions         | Conditions  | Trigger conditions.                                                                              |             |
 
 ##### Conditions
 
@@ -221,6 +221,17 @@ channel._
 | subscriberURI | String | The URI name of the endpoint for the subscriber.            | Must be a URL. |
 | replyURI      | String | The URI name of the endpoint for the reply.                 | Must be a URL. |
 
+### pkg/duck.Destination
+
+| Field           | Type            | Description                                                 | Constraints    |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------- | -------------- |
+| ref<sup>1</sup> | ObjectReference | The Subscription UID this SubscriberSpec was resolved from.                                          |                |
+| uri<sup>1</sup> | String          | Either an absolute URL (if ref is not specified). Resolved using the base URI from ref if specified. | Must be a URL. |
+
+
+1: One or both (ref, uri), Required. If only uri is specified, it must be an absolute URL.
+If both are specified, uri will be resolved using the base URI retrieved from ref.
+
 ### ReplyStrategy
 
 | Field     | Type      | Description                            | Constraints        |
@@ -231,13 +242,7 @@ channel._
 
 ### TriggerFilter
 
-| Field         | Type                       | Description                                        | Constraints |
-| ------------- | -------------------------- | -------------------------------------------------- | ----------- |
-| sourceAndType | TriggerFilterSourceAndType | A filter that can specific both a source and type. |             |
+| Field      | Type              | Description                                                                         | Constraints |
+| ---------- | ----------------- | ----------------------------------------------------------------------------------- | ----------- |
+| attributes | map[string]string | A filter specifying which events match this trigger. Matches exactly on the fields. |             |
 
-### TriggerFilterSourceAndType
-
-| Field  | Type   | Description                             | Constraints                          |
-| ------ | ------ | --------------------------------------- | ------------------------------------ |
-| source | String | Event source as defined by CloudEvents. | Also allowed to be the string 'Any'. |
-| type   | String | Event type as defined by CloudEvents.   | Also allowed to be the string 'Any'. |
