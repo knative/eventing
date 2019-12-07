@@ -246,9 +246,3 @@ If both are specified, uri will be resolved using the base URI retrieved from re
 | ---------- | ----------------- | --------------------------------------------------------------------- | ----------- |             |
 | attributes | map[string]string | A filter specifying which events match this trigger. Matches exactly on the fields. |             |
 
-### TriggerFilterAttributes
-
-| Field  | Type   | Description                             | Constraints                          |
-| ------ | ------ | --------------------------------------- | ------------------------------------ |
-| source | String | Event source as defined by CloudEvents. | Also allowed to be the string 'Any'. |
-| type   | String | Event type as defined by CloudEvents.   | Also allowed to be the string 'Any'. |
