@@ -18,43 +18,47 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/pkg/apis"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/kmeta"
 )
 
-// ConfigMapPropagation
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ConfigMapPropagation is used to propagate configMaps from source namespace to target namespace
 type ConfigMapPropagation struct {
 	metav1.TypeMeta `json:". inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the
+	// Spec defines the desired state of the ConfigMapPropagation
 	Spec ConfigMapPropagationSpec `json:"spec,omitempty"`
 
+	// Status represents the current state of the EventType.
+	// This data may be out of date.
 	// +optional
 	Status ConfigMapPropagationStatus `json:"status,omitempty"`
 }
 
-var (
-	// Check that ConfigMapPropagation can be validated, can be defaulted, and has immutable fields.
-	_ apis.Validatable = (*ConfigMapPropagation)(nil)
-	_ apis.Defaultable = (*ConfigMapPropagation)(nil)
-
-	// Check that EventType can return its spec untyped.
-	_ apis.HasSpec = (*ConfigMapPropagation)(nil)
-
-	_ runtime.Object = (*ConfigMapPropagation)(nil)
-
-	// Check that we can create OwnerReferences to an EventType.
-	_ kmeta.OwnerRefable = (*ConfigMapPropagation)(nil)
-)
+//var (
+//	// Check that ConfigMapPropagation can be validated, can be defaulted, and has immutable fields.
+//	_ apis.Validatable = (*ConfigMapPropagation)(nil)
+//	_ apis.Defaultable = (*ConfigMapPropagation)(nil)
+//
+//	// Check that EventType can return its spec untyped.
+//	_ apis.HasSpec = (*ConfigMapPropagation)(nil)
+//
+//	_ runtime.Object = (*ConfigMapPropagation)(nil)
+//
+//	// Check that we can create OwnerReferences to an EventType.
+//	_ kmeta.OwnerRefable = (*ConfigMapPropagation)(nil)
+//)
 
 type ConfigMapPropagationSpec struct {
-	OriginalNamespace string           `json:"originalNamespace,omitempty"`
-	Selector          *fields.Selector `json:"selector,omitempty"`
+	// OriginalNamespace represents the namespace where the original configMaps are in
+	OriginalNamespace string `json:"originalNamespace,omitempty"`
+	// Selector only selects original configMaps with labels under Selector
+	Selector string `json:"selector,omitempty"`
 }
 
 // ConfigMapPropagationStatus represents the current state of a ConfigMapPropagation.
@@ -63,4 +67,24 @@ type ConfigMapPropagationStatus struct {
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1.Status `json:",inline"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ConfigMapPropagationList is a collection of EventTypes.
+type ConfigMapPropagationList struct {
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ConfigMapPropagation `json:"items"`
+}
+
+// GetGroupVersionKind returns GroupVersionKind for EventType
+func (p *ConfigMapPropagation) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("EventType")
+}
+
+// GetUntypedSpec returns the spec of the EventType.
+func (e *ConfigMapPropagation) GetUntypedSpec() interface{} {
+	return e.Spec
 }

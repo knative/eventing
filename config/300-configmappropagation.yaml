@@ -43,6 +43,12 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: OriginalNamepsace
+      type: string
+      JSONPath: ".spec.originalNamespace"
+    - name: Selector
+      type: string
+      JSONPath: ".spec.selector"
   validation:
     openAPIV3Schema:
       properties:
@@ -55,4 +61,4 @@ spec:
               type: string
               description: "The namespace where original configmaps exist in."
             selector:
-              type: object
+              type: string
