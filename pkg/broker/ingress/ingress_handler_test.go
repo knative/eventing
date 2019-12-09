@@ -84,7 +84,7 @@ func TestIngressHandler_ServeHTTP_FAIL(t *testing.T) {
 				Namespace:  namespace,
 				Reporter:   reporter,
 			}
-			event := cloudevents.NewEvent()
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			resp := new(cloudevents.EventResponse)
 			tctx := http.TransportContext{Header: nethttp.Header{}, Method: tc.httpmethod, URI: tc.URI}
 			ctx := http.WithTransportContext(context.Background(), tctx)
@@ -117,7 +117,7 @@ func TestIngressHandler_ServeHTTP_Succeed(t *testing.T) {
 		Namespace:  namespace,
 		Reporter:   reporter,
 	}
-	event := cloudevents.NewEvent()
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	resp := new(cloudevents.EventResponse)
 	tctx := http.TransportContext{Header: nethttp.Header{}, Method: validHTTPMethod, URI: validURI}
 	ctx := http.WithTransportContext(context.Background(), tctx)
