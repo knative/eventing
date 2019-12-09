@@ -18,9 +18,10 @@ package resources
 
 import (
 	"encoding/json"
-	corev1 "k8s.io/api/core/v1"
 	"net/url"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
