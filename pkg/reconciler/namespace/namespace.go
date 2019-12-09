@@ -180,22 +180,18 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 
 	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
 		// check for existence of brokerPullSecret, and skip copy if it already exists
-		secretFound := false
 		for _, v := range sa.ImagePullSecrets {
 			if fmt.Sprintf("%s", v) == ("{" + r.brokerPullSecretName + "}") {
-				secretFound = true
-				break
+				return nil
 			}
 		}
-		if (!secretFound) {
-			_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
-			if err != nil {
-				r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
-					fmt.Sprintf("Error copying secret: %s", err))
-			} else {
-				r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
-					fmt.Sprintf("Secret copied into namespace: %s", sa.Name))
-			}
+		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
+		if err != nil {
+			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+				fmt.Sprintf("Error copying secret: %s", err))
+		} else {
+			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+				fmt.Sprintf("Secret copied into namespace: %s", sa.Name))
 		}
 	}
 
