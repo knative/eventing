@@ -286,7 +286,7 @@ func TestServeHTTP(t *testing.T) {
 			tctx.URI = "/"
 			ctx = cehttp.WithTransportContext(ctx, tctx)
 
-			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			event.SetType("testtype")
 			event.SetSource("testsource")
 			event.SetData("{}")
