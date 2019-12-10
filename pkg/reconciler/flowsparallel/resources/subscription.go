@@ -19,7 +19,7 @@ package resources
 import (
 	"fmt"
 
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
 	corev1 "k8s.io/api/core/v1"
@@ -59,13 +59,13 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1a
 		},
 	}
 	if p.Spec.Branches[branchNumber].Filter != nil {
-		r.Spec.Subscriber = &duckv1beta1.Destination{
+		r.Spec.Subscriber = &duckv1.Destination{
 			Ref: p.Spec.Branches[branchNumber].Filter.Ref,
 			URI: p.Spec.Branches[branchNumber].Filter.URI,
 		}
 	}
 	r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-		Destination: &duckv1beta1.Destination{
+		Destination: &duckv1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
@@ -95,7 +95,7 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelBranchChannelName(p.Name, branchNumber),
 			},
-			Subscriber: &duckv1beta1.Destination{
+			Subscriber: &duckv1.Destination{
 				Ref: p.Spec.Branches[branchNumber].Subscriber.Ref,
 				URI: p.Spec.Branches[branchNumber].Subscriber.URI,
 			},
@@ -104,19 +104,17 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
 		r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-			&duckv1beta1.Destination{
+			&duckv1.Destination{
 				Ref: p.Spec.Branches[branchNumber].Reply.Ref,
 				URI: p.Spec.Branches[branchNumber].Reply.URI,
 			},
-			nil,
 		}
 	} else if p.Spec.Reply != nil {
 		r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-			&duckv1beta1.Destination{
+			&duckv1.Destination{
 				Ref: p.Spec.Reply.Ref,
 				URI: p.Spec.Reply.URI,
 			},
-			nil,
 		}
 	}
 	return r
