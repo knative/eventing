@@ -347,7 +347,6 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReplyDeprecated(),
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, fmt.Sprintf("Failed to resolve spec.reply: failed to get ref &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:reply,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: channels.messaging.knative.dev %q not found", replyName)),
 				),
@@ -386,7 +385,6 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(nonAddressableGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReplyDeprecated(),
 					WithSubscriptionReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: address not set for &ObjectReference{Kind:Trigger,Namespace:testnamespace,Name:reply,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}"),
 				),
 			}},
@@ -466,7 +464,6 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReplyDeprecated(),
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
@@ -483,7 +480,7 @@ func TestAllCases(t *testing.T) {
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
-					WithSubscriptionReplyNotDeprecated(channelGVK, replyName),
+					WithSubscriptionReply(channelGVK, replyName),
 				),
 				NewChannel(channelName, testNS,
 					WithInitChannelConditions,
@@ -507,7 +504,7 @@ func TestAllCases(t *testing.T) {
 				Object: NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(channelGVK, channelName),
-					WithSubscriptionReplyNotDeprecated(channelGVK, replyName),
+					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
@@ -558,7 +555,6 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					// The first reconciliation will initialize the status conditions.
 					WithInitSubscriptionConditions,
-					WithSubscriptionReplyDeprecated(),
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
@@ -660,7 +656,6 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionReply(channelGVK, replyName),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
-					WithSubscriptionReplyDeprecated(),
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
 			}},

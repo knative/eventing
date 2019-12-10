@@ -25,6 +25,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	apis "knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	v1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
@@ -447,12 +448,7 @@ func (in *ReplyStrategy) DeepCopyInto(out *ReplyStrategy) {
 	*out = *in
 	if in.Destination != nil {
 		in, out := &in.Destination, &out.Destination
-		*out = new(v1beta1.Destination)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.DeprecatedChannel != nil {
-		in, out := &in.DeprecatedChannel, &out.DeprecatedChannel
-		*out = new(v1beta1.Destination)
+		*out = new(duckv1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	return
@@ -697,7 +693,7 @@ func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 	out.Channel = in.Channel
 	if in.Subscriber != nil {
 		in, out := &in.Subscriber, &out.Subscriber
-		*out = new(v1beta1.Destination)
+		*out = new(duckv1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Reply != nil {

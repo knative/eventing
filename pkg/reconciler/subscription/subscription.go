@@ -46,7 +46,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -189,12 +189,10 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	subscription.Status.PhysicalSubscription.SubscriberURI = nil
 	if !isNilOrEmptySubscriber(subscriber) {
 		// Populate the namespace for the subscriber since it is in the namespace
-		// Note that we don't allow Deprecated fields here (like for Reply below, so
-		// we don't set the deprecation condition warning).
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
 		}
-		subscriberURIStr, err := r.destinationResolver.URIFromDestination(*subscriber, subscription)
+		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(*subscriber, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
 				zap.Error(err),
@@ -203,47 +201,21 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
 			return err
 		}
-		subscriberURI, err := apis.ParseURL(subscriberURIStr)
-		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to parse Subscriber URL",
-				zap.Error(err),
-				zap.Any("subscriber", subscriber))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to parse URL for spec.subscriber: %v", err)
-			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to parse URL for spec.subscriber: %v", err)
-			return err
-		}
 		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURIStr))
+		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()))
 	}
 
 	reply := subscription.Spec.Reply
 	subscription.Status.PhysicalSubscription.ReplyURI = nil
 	subscription.Status.ClearDeprecated()
 	if !isNilOrEmptyReply(reply) {
-		hasDeprecatedReplyStatus := false
-		var destination *duckv1beta1.Destination
-		if reply.DeprecatedChannel != nil && !equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{}) {
-			destination = reply.DeprecatedChannel
-			// Add a condition warning that the fields are deprecated.
-			subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using deprecated channel field when specifying spec.reply. Update to spec.reply.ref or spec.reply.uri. These will be removed in future release")
-			hasDeprecatedReplyStatus = true
-		} else {
-			destination = reply.Destination
-		}
+		destination := reply.Destination
 
 		// Populate the namespace for the subscriber since it is in the namespace
 		if destination.Ref != nil {
 			destination.Ref.Namespace = subscription.Namespace
-		} else if destination.DeprecatedName != "" {
-			// Add the check for DeprecatedName, since without that it wouldn't
-			// have passed validation.
-			destination.DeprecatedNamespace = subscription.Namespace
-			if !hasDeprecatedReplyStatus {
-				// Add a condition warning that the fields are deprecated.
-				subscription.Status.MarkReplyDeprecatedRef(replyFieldsDeprecated, "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in the future.")
-			}
 		}
-		replyURIStr, err := r.destinationResolver.URIFromDestination(*destination, subscription)
+		replyURI, err := r.destinationResolver.URIFromDestinationV1(*destination, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve reply",
 				zap.Error(err),
@@ -252,18 +224,8 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
 			return err
 		}
-		replyURI, err := apis.ParseURL(replyURIStr)
-		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to parse URL for spec.reply URL",
-				zap.Error(err),
-				zap.Any("reply", destination))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to parse URL for spec.reply: %v", err)
-			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to parse URL for spec.reply: %v", err)
-			return err
-		}
-
 		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURIStr))
+		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI.String()))
 	}
 
 	if !isNilOrEmptyDeliveryDeadLetterSink(subscription.Spec.Delivery) {
@@ -406,15 +368,15 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 
 func isNilOrEmptyReply(r *v1alpha1.ReplyStrategy) bool {
 	return r == nil || equality.Semantic.DeepEqual(r, &v1alpha1.ReplyStrategy{}) ||
-		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &duckv1beta1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &duckv1beta1.Destination{})))
+		equality.Semantic.DeepEqual(r.Destination, &duckv1.Destination{})
 }
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
 	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||
 		delivery.DeadLetterSink == nil
 }
 
-func isNilOrEmptySubscriber(subscriber *duckv1beta1.Destination) bool {
-	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &duckv1beta1.Destination{})
+func isNilOrEmptySubscriber(subscriber *duckv1.Destination) bool {
+	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &duckv1.Destination{})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
