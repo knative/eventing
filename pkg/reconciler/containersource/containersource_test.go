@@ -68,6 +68,14 @@ var (
 			APIVersion: "eventing.knative.dev/v1alpha1",
 		},
 	}
+	nonsinkDestWithNamespace = duckv1beta1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Namespace:  testNS,
+			Kind:       "Trigger",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
+	}
 
 	deploymentName = fmt.Sprintf("containersource-%s-%s", sourceName, sourceUID)
 
@@ -83,9 +91,30 @@ var (
 	}
 	serviceURI = fmt.Sprintf("http://%s.%s.svc.cluster.local/", sinkName, testNS)
 
+	deprecatedSinkDest = duckv1beta1.Destination{
+		DeprecatedName:       sinkName,
+		DeprecatedKind:       "Channel",
+		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
+	}
+
+	deprecatedSinkDestWithNamespace = duckv1beta1.Destination{
+		DeprecatedName:       sinkName,
+		DeprecatedKind:       "Channel",
+		DeprecatedNamespace:  testNS,
+		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
+	}
+
 	sinkDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       sinkName,
+			Kind:       "Channel",
+			APIVersion: "messaging.knative.dev/v1alpha1",
+		},
+	}
+	sinkDestWithNamespace = duckv1beta1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Namespace:  testNS,
 			Kind:       "Channel",
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
@@ -140,7 +169,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink"`),
+					WithContainerSourceSinkNotFound(fmt.Sprintf("Couldn't get Sink URI from %+v", &sinkDestWithNamespace)),
 				),
 			}},
 		}, {
@@ -170,7 +199,7 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink"`),
+					WithContainerSourceSinkNotFound(fmt.Sprintf("Couldn't get Sink URI from %+v", &nonsinkDestWithNamespace)),
 				),
 			}},
 		}, {
@@ -200,7 +229,37 @@ func TestAllCases(t *testing.T) {
 					// Status Update:
 					WithInitContainerSourceConditions,
 					WithContainerSourceStatusObservedGeneration(generation),
-					WithContainerSourceSinkNotFound(`Couldn't get Sink URI from "testnamespace/testsink"`),
+					WithContainerSourceSinkNotFound(fmt.Sprintf("Couldn't get Sink URI from %+v", &sinkDestWithNamespace)),
+				),
+			}},
+		}, {}, {
+			Name: "deprecated sink not ready",
+			Objects: []runtime.Object{
+				NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						DeprecatedImage: image,
+						Sink:            &deprecatedSinkDest,
+					}),
+					WithContainerSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS),
+			},
+			Key:     testNS + "/" + sourceName,
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SetSinkURIFailed", `Failed to set Sink URI: getting sink URI: address not set for &ObjectReference{Kind:Channel,Namespace:testnamespace,Name:testsink,UID:,APIVersion:messaging.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewContainerSource(sourceName, testNS,
+					WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+						DeprecatedImage: image,
+						Sink:            &deprecatedSinkDest,
+					}),
+					WithContainerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitContainerSourceConditions,
+					WithContainerSourceStatusObservedGeneration(generation),
+					WithContainerSourceSinkNotFound(fmt.Sprintf("Couldn't get Sink URI from %+v", &deprecatedSinkDestWithNamespace)),
 				),
 			}},
 		}, {
