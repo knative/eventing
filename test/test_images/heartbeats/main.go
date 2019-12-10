@@ -108,7 +108,7 @@ func main() {
 					"heart": "yes",
 					"beats": true,
 				},
-			}.AsV03(),
+			}.AsV1(),
 			Data: hb,
 		}
 
