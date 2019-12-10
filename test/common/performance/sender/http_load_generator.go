@@ -74,7 +74,7 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 
 	ceType := []string{cet.eventType}
 	ceSource := []string{cet.eventSource}
-	ceSpecVersion := []string{"0.2"}
+	ceSpecVersion := []string{"1.0"}
 	ceContentType := []string{"application/json"}
 
 	return func(t *vegeta.Target) error {
