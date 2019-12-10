@@ -200,18 +200,20 @@ func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint) {
 }
 
 func (h HttpLoadGenerator) SendGCEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
 	event.SetType(common.GCEventType)
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetSource(h.eventSource)
 
 	_, _, _ = h.ceClient.Send(context.TODO(), event)
 }
 
 func (h HttpLoadGenerator) SendEndEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
 	event.SetType(common.EndEventType)
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetSource(h.eventSource)
 
 	_, _, _ = h.ceClient.Send(context.TODO(), event)
