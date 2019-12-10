@@ -94,7 +94,7 @@ func (c *Channelable) Populate() {
 	linear := BackoffPolicyLinear
 	delay := "5s"
 	c.Spec.Delivery = &DeliverySpec{
-		DeadLetterSink: &duckv1beta1.Destination{
+		DeadLetterSink: &duckv1.Destination{
 			Ref: &corev1.ObjectReference{
 				Name: "aname",
 			},

@@ -45,7 +45,6 @@ import (
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -234,7 +233,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			subscription.Spec.Delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
 		}
 
-		deadLetterSinkStr, err := r.destinationResolver.URIFromDestination(*subscription.Spec.Delivery.DeadLetterSink, subscription)
+		deadLetterSink, err := r.destinationResolver.URIFromDestinationV1(*subscription.Spec.Delivery.DeadLetterSink, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve spec.delivery.deadLetterSink",
 				zap.Error(err),
@@ -244,18 +243,8 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			return err
 		}
 
-		deadLetterSinkURI, err := apis.ParseURL(deadLetterSinkStr)
-		if err != nil {
-			logging.FromContext(ctx).Warn("Failed to parse URL for spec.delivery.deadLetterSink URL",
-				zap.Error(err),
-				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
-			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to parse URL for spec.delivery.deadLetterSink: %v", err)
-			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to parse URL for spec.delivery.deadLetterSink: %v", err)
-			return err
-		}
-
-		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSinkURI
-		logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSinkStr))
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSink
+		logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSink.String()))
 
 	}
 
