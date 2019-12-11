@@ -96,6 +96,11 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 		*out = new(duckv1alpha1.ChannelTemplateSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Delivery != nil {
+		in, out := &in.Delivery, &out.Delivery
+		*out = new(duckv1alpha1.DeliverySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

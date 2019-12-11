@@ -1144,7 +1144,7 @@ func makeServiceURI() *url.URL {
 }
 
 func makeIngressSubscription() *messagingv1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI())
+	return resources.NewSubscription(makeBroker(), makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI())
 }
 
 func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription {

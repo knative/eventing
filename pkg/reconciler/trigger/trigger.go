@@ -31,6 +31,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -42,10 +47,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/tracker"
 )
 
 const (
@@ -219,7 +220,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
-	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, &brokerObjRef, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger, &brokerObjRef, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
@@ -341,13 +342,13 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 		Path:   path.Generate(t),
 	}
-	expected := resources.NewSubscription(t, brokerTrigger, brokerRef, uri)
+	expected := resources.NewSubscription(t, brokerTrigger, brokerRef, uri, b.Spec.Delivery)
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.

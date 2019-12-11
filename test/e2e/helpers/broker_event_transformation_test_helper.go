@@ -56,7 +56,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner lib
 		client.CreateRBACResourcesForBrokers()
 
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName, &channel)
+		client.CreateBrokerOrFail(brokerName, resources.WithChannelTemplateForBroker(&channel))
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create the event we want to transform to

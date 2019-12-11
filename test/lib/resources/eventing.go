@@ -108,12 +108,19 @@ func Subscription(
 }
 
 // WithChannelTemplateForBroker returns a function that adds a ChannelTemplate for the given Broker.
-func WithChannelTemplateForBroker(channelTypeMeta metav1.TypeMeta) BrokerOption {
+func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
 		channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
-			TypeMeta: channelTypeMeta,
+			TypeMeta: *channelTypeMeta,
 		}
 		b.Spec.ChannelTemplate = channelTemplate
+	}
+}
+
+// WithDeliveryForBroker returns a function that adds a Delivery for the given Broker.
+func WithDeliveryForBroker(delivery *eventingduckv1alpha1.DeliverySpec) BrokerOption {
+	return func(b *eventingv1alpha1.Broker) {
+		b.Spec.Delivery = delivery
 	}
 }
 
