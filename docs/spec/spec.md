@@ -70,7 +70,7 @@ Trigger._
 
 | Field           | Type        | Description                                                                                                     | Constraints                                      |
 | --------------- | ----------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to the default Channel for the namespace. | Only Provisioner and Arguments may be specified. |
+| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to the default Channel for the namespace. | Only Channel and Arguments may be specified. |
 
 #### Status
 
