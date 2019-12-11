@@ -18,8 +18,11 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 )
 
 // +genclient
@@ -40,19 +43,19 @@ type ConfigMapPropagation struct {
 	Status ConfigMapPropagationStatus `json:"status,omitempty"`
 }
 
-//var (
-//	// Check that ConfigMapPropagation can be validated, can be defaulted, and has immutable fields.
-//	_ apis.Validatable = (*ConfigMapPropagation)(nil)
-//	_ apis.Defaultable = (*ConfigMapPropagation)(nil)
-//
-//	// Check that EventType can return its spec untyped.
-//	_ apis.HasSpec = (*ConfigMapPropagation)(nil)
-//
-//	_ runtime.Object = (*ConfigMapPropagation)(nil)
-//
-//	// Check that we can create OwnerReferences to an EventType.
-//	_ kmeta.OwnerRefable = (*ConfigMapPropagation)(nil)
-//)
+var (
+	// Check that ConfigMapPropagation can be validated, can be defaulted, and has immutable fields.
+	_ apis.Validatable = (*ConfigMapPropagation)(nil)
+	_ apis.Defaultable = (*ConfigMapPropagation)(nil)
+
+	// Check that ConfigMapPropagation can return its spec untyped.
+	_ apis.HasSpec = (*ConfigMapPropagation)(nil)
+
+	_ runtime.Object = (*ConfigMapPropagation)(nil)
+
+	// Check that we can create OwnerReferences to an ConfigMapPropagation.
+	_ kmeta.OwnerRefable = (*ConfigMapPropagation)(nil)
+)
 
 type ConfigMapPropagationSpec struct {
 	// OriginalNamespace represents the namespace where the original configMaps are in
@@ -80,11 +83,11 @@ type ConfigMapPropagationList struct {
 }
 
 // GetGroupVersionKind returns GroupVersionKind for EventType
-func (p *ConfigMapPropagation) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("EventType")
+func (cmp *ConfigMapPropagation) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("ConfigMapPropagation")
 }
 
 // GetUntypedSpec returns the spec of the EventType.
-func (e *ConfigMapPropagation) GetUntypedSpec() interface{} {
-	return e.Spec
+func (cmp *ConfigMapPropagation) GetUntypedSpec() interface{} {
+	return cmp.Spec
 }

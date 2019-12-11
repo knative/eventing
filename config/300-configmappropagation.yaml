@@ -37,7 +37,7 @@ spec:
   subresources:
     status: {}
   additionalPrinterColumns:
-    - name: Propagated
+    - name: Ready
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
     - name: Reason
