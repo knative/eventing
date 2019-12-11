@@ -58,13 +58,11 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 			Subscriber: &duckv1.Destination{
 				URI: tmpURI,
 			},
-			Reply: &messagingv1alpha1.ReplyStrategy{
-				Destination: &duckv1.Destination{
-					Ref: &corev1.ObjectReference{
-						APIVersion: brokerIngress.APIVersion,
-						Kind:       brokerIngress.Kind,
-						Name:       brokerIngress.Name,
-					},
+			Reply: &duckv1.Destination{
+				Ref: &corev1.ObjectReference{
+					APIVersion: brokerIngress.APIVersion,
+					Kind:       brokerIngress.Kind,
+					Name:       brokerIngress.Name,
 				},
 			},
 		},

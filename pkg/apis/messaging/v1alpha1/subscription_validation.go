@@ -44,7 +44,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
-	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
+	missingReply := isDestinationNilOrEmpty(ss.Reply)
 	if missingSubscriber && missingReply {
 		fe := apis.ErrMissingField("reply", "subscriber")
 		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
@@ -58,7 +58,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingReply {
-		if fe := ss.Reply.Destination.Validate(ctx); fe != nil {
+		if fe := ss.Reply.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("reply"))
 		}
 	}
@@ -68,10 +68,6 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 
 func isDestinationNilOrEmpty(d *duckv1.Destination) bool {
 	return d == nil || equality.Semantic.DeepEqual(d, &duckv1.Destination{})
-}
-
-func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{})
 }
 
 func (s *Subscription) CheckImmutableFields(ctx context.Context, original *Subscription) *apis.FieldError {

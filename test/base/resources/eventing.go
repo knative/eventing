@@ -62,10 +62,8 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-				Destination: &duckv1.Destination{
-					Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
-				},
+			s.Spec.Reply = &duckv1.Destination{
+				Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 			}
 		}
 	}

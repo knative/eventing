@@ -61,21 +61,17 @@ func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *messagingv1alpha1.Su
 	// If it's not the last step, use the next channel as the reply to, if it's the very
 	// last one, we'll use the (optional) reply from the Sequence Spec.
 	if stepNumber < len(p.Spec.Steps)-1 {
-		r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-			&duckv1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: p.Spec.ChannelTemplate.APIVersion,
-					Kind:       p.Spec.ChannelTemplate.Kind,
-					Name:       SequenceChannelName(p.Name, stepNumber+1),
-				},
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: p.Spec.ChannelTemplate.APIVersion,
+				Kind:       p.Spec.ChannelTemplate.Kind,
+				Name:       SequenceChannelName(p.Name, stepNumber+1),
 			},
 		}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-			&duckv1.Destination{
-				Ref: p.Spec.Reply.Ref,
-				URI: p.Spec.Reply.URI,
-			},
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: p.Spec.Reply.Ref,
+			URI: p.Spec.Reply.URI,
 		}
 	}
 	return r

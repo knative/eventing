@@ -186,7 +186,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 
 	subscriber := subscription.Spec.Subscriber
 	subscription.Status.PhysicalSubscription.SubscriberURI = nil
-	if !isNilOrEmptySubscriber(subscriber) {
+	if !isNilOrEmptyDestination(subscriber) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if subscriber.Ref != nil {
 			subscriber.Ref.Namespace = subscription.Namespace
@@ -207,14 +207,12 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	reply := subscription.Spec.Reply
 	subscription.Status.PhysicalSubscription.ReplyURI = nil
 	subscription.Status.ClearDeprecated()
-	if !isNilOrEmptyReply(reply) {
-		destination := reply.Destination
-
+	if !isNilOrEmptyDestination(reply) {
 		// Populate the namespace for the subscriber since it is in the namespace
-		if destination.Ref != nil {
-			destination.Ref.Namespace = subscription.Namespace
+		if reply.Ref != nil {
+			reply.Ref.Namespace = subscription.Namespace
 		}
-		replyURI, err := r.destinationResolver.URIFromDestinationV1(*destination, subscription)
+		replyURI, err := r.destinationResolver.URIFromDestinationV1(*reply, subscription)
 		if err != nil {
 			logging.FromContext(ctx).Warn("Failed to resolve reply",
 				zap.Error(err),
@@ -355,17 +353,13 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 	return nil
 }
 
-func isNilOrEmptyReply(r *v1alpha1.ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &v1alpha1.ReplyStrategy{}) ||
-		equality.Semantic.DeepEqual(r.Destination, &duckv1.Destination{})
-}
 func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
 	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||
 		delivery.DeadLetterSink == nil
 }
 
-func isNilOrEmptySubscriber(subscriber *duckv1.Destination) bool {
-	return subscriber == nil || equality.Semantic.DeepEqual(subscriber, &duckv1.Destination{})
+func isNilOrEmptyDestination(destination *duckv1.Destination) bool {
+	return destination == nil || equality.Semantic.DeepEqual(destination, &duckv1.Destination{})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {

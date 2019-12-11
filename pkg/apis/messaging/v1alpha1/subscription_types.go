@@ -108,7 +108,7 @@ type SubscriptionSpec struct {
 	// Reply specifies (optionally) how to handle events returned from
 	// the Subscriber target.
 	// +optional
-	Reply *ReplyStrategy `json:"reply,omitempty"`
+	Reply *duckv1.Destination `json:"reply,omitempty"`
 
 	// Delivery configuration
 	// +optional

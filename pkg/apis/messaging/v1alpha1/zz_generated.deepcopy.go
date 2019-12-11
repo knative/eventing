@@ -697,7 +697,7 @@ func (in *SubscriptionSpec) DeepCopyInto(out *SubscriptionSpec) {
 	}
 	if in.Reply != nil {
 		in, out := &in.Reply, &out.Reply
-		*out = new(ReplyStrategy)
+		*out = new(duckv1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Delivery != nil {

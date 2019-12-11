@@ -64,14 +64,13 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1a
 			URI: p.Spec.Branches[branchNumber].Filter.URI,
 		}
 	}
-	r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-		Destination: &duckv1.Destination{
-			Ref: &corev1.ObjectReference{
-				APIVersion: p.Spec.ChannelTemplate.APIVersion,
-				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       ParallelBranchChannelName(p.Name, branchNumber),
-			},
-		}}
+	r.Spec.Reply = &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: p.Spec.ChannelTemplate.APIVersion,
+			Kind:       p.Spec.ChannelTemplate.Kind,
+			Name:       ParallelBranchChannelName(p.Name, branchNumber),
+		},
+	}
 	return r
 }
 
@@ -103,18 +102,14 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-			&duckv1.Destination{
-				Ref: p.Spec.Branches[branchNumber].Reply.Ref,
-				URI: p.Spec.Branches[branchNumber].Reply.URI,
-			},
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: p.Spec.Branches[branchNumber].Reply.Ref,
+			URI: p.Spec.Branches[branchNumber].Reply.URI,
 		}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-			&duckv1.Destination{
-				Ref: p.Spec.Reply.Ref,
-				URI: p.Spec.Reply.URI,
-			},
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: p.Spec.Reply.Ref,
+			URI: p.Spec.Reply.URI,
 		}
 	}
 	return r

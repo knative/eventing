@@ -169,13 +169,11 @@ func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOptio
 
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Destination: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: apiVersion(gvk),
-					Kind:       gvk.Kind,
-					Name:       name,
-				},
+		s.Spec.Reply = &duckv1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
 			},
 		}
 	}

@@ -43,14 +43,12 @@ func getValidChannelRef() corev1.ObjectReference {
 	}
 }
 
-func getValidReplyStrategy() *ReplyStrategy {
-	return &ReplyStrategy{
-		Destination: &duckv1.Destination{
-			Ref: &corev1.ObjectReference{
-				Name:       replyChannelName,
-				Kind:       channelKind,
-				APIVersion: channelAPIVersion,
-			},
+func getValidReply() *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			Name:       replyChannelName,
+			Kind:       channelKind,
+			APIVersion: channelAPIVersion,
 		},
 	}
 }
@@ -104,7 +102,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidDestination(),
-			Reply:      getValidReplyStrategy(),
+			Reply:      getValidReply(),
 		},
 		want: nil,
 	}, {
@@ -145,7 +143,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: &duckv1.Destination{},
-			Reply:      &ReplyStrategy{},
+			Reply:      &duckv1.Destination{},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("reply", "subscriber")
@@ -164,14 +162,14 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: getValidDestination(),
-			Reply:      &ReplyStrategy{},
+			Reply:      &duckv1.Destination{},
 		},
 		want: nil,
 	}, {
 		name: "missing Subscriber",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			Reply:   getValidReplyStrategy(),
+			Reply:   getValidReply(),
 		},
 		want: nil,
 	}, {
@@ -179,7 +177,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
 			Subscriber: &duckv1.Destination{},
-			Reply:      getValidReplyStrategy(),
+			Reply:      getValidReply(),
 		},
 		want: nil,
 	}, {
@@ -237,8 +235,8 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newSubscriber := getValidDestination()
 	newSubscriber.Ref.Name = "newSubscriber"
 
-	newReply := getValidReplyStrategy()
-	newReply.Destination.Ref.Name = "newReplyChannel"
+	newReply := getValidReply()
+	newReply.Ref.Name = "newReplyChannel"
 
 	tests := []struct {
 		name string
@@ -288,7 +286,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				Reply:   getValidReplyStrategy(),
+				Reply:   getValidReply(),
 			},
 		},
 		og: &Subscription{
@@ -303,7 +301,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				Reply:   getValidReplyStrategy(),
+				Reply:   getValidReply(),
 			},
 		},
 		og: &Subscription{
@@ -324,7 +322,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				Reply:   getValidReplyStrategy(),
+				Reply:   getValidReply(),
 			},
 		},
 		want: nil,
