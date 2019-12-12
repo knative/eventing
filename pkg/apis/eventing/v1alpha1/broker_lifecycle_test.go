@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -153,13 +152,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   BrokerConditionIngressChannel,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   BrokerConditionIngress,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   BrokerConditionIngressSubscription,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionReady,
@@ -189,13 +182,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionUnknown,
 				}, {
-					Type:   BrokerConditionIngressChannel,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   BrokerConditionIngress,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   BrokerConditionIngressSubscription,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionReady,
@@ -225,13 +212,7 @@ func TestBrokerInitializeConditions(t *testing.T) {
 					Type:   BrokerConditionFilter,
 					Status: corev1.ConditionTrue,
 				}, {
-					Type:   BrokerConditionIngressChannel,
-					Status: corev1.ConditionUnknown,
-				}, {
 					Type:   BrokerConditionIngress,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   BrokerConditionIngressSubscription,
 					Status: corev1.ConditionUnknown,
 				}, {
 					Type:   BrokerConditionReady,
@@ -259,7 +240,6 @@ func TestBrokerIsReady(t *testing.T) {
 		name                         string
 		markIngressReady             *bool
 		markTriggerChannelReady      *bool
-		markIngressChannelReady      *bool
 		markFilterReady              *bool
 		address                      *apis.URL
 		markIngressSubscriptionOwned bool
@@ -269,7 +249,6 @@ func TestBrokerIsReady(t *testing.T) {
 		name:                         "all happy",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
@@ -279,7 +258,6 @@ func TestBrokerIsReady(t *testing.T) {
 		name:                         "all happy - deprecated",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
@@ -289,7 +267,6 @@ func TestBrokerIsReady(t *testing.T) {
 		name:                         "ingress sad",
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
@@ -299,17 +276,6 @@ func TestBrokerIsReady(t *testing.T) {
 		name:                         "trigger channel sad",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &falseVal,
-		markIngressChannelReady:      &trueVal,
-		markFilterReady:              &trueVal,
-		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
-		markIngressSubscriptionOwned: true,
-		markIngressSubscriptionReady: &trueVal,
-		wantReady:                    false,
-	}, {
-		name:                         "ingress channel sad",
-		markIngressReady:             &trueVal,
-		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &falseVal,
 		markFilterReady:              &trueVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
@@ -319,7 +285,6 @@ func TestBrokerIsReady(t *testing.T) {
 		name:                         "filter sad",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &falseVal,
 		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
 		markIngressSubscriptionOwned: true,
@@ -329,35 +294,15 @@ func TestBrokerIsReady(t *testing.T) {
 		name:                         "addressable sad",
 		markIngressReady:             &trueVal,
 		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
 		markFilterReady:              &trueVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
 		markIngressSubscriptionReady: &trueVal,
 		wantReady:                    false,
 	}, {
-		name:                         "ingress subscription sad",
-		markIngressReady:             &trueVal,
-		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
-		markFilterReady:              &trueVal,
-		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
-		markIngressSubscriptionReady: &falseVal,
-		wantReady:                    false,
-	}, {
-		name:                         "ingress subscription not owned",
-		markIngressReady:             &trueVal,
-		markTriggerChannelReady:      &trueVal,
-		markIngressChannelReady:      &trueVal,
-		markFilterReady:              &trueVal,
-		address:                      &apis.URL{Scheme: "http", Host: "hostname"},
-		markIngressSubscriptionOwned: false,
-		wantReady:                    false,
-	}, {
 		name:                         "all sad",
 		markIngressReady:             &falseVal,
 		markTriggerChannelReady:      &falseVal,
-		markIngressChannelReady:      &falseVal,
 		markFilterReady:              &falseVal,
 		address:                      nil,
 		markIngressSubscriptionOwned: true,
@@ -387,26 +332,6 @@ func TestBrokerIsReady(t *testing.T) {
 					c = TestHelper.NotReadyChannelStatus()
 				}
 				bs.PropagateTriggerChannelReadiness(c)
-			}
-			if test.markIngressChannelReady != nil {
-				var c *duckv1alpha1.ChannelableStatus
-				if *test.markIngressChannelReady {
-					c = TestHelper.ReadyChannelStatus()
-				} else {
-					c = TestHelper.NotReadyChannelStatus()
-				}
-				bs.PropagateIngressChannelReadiness(c)
-			}
-			if !test.markIngressSubscriptionOwned {
-				bs.MarkIngressSubscriptionNotOwned(&messagingv1alpha1.Subscription{})
-			} else if test.markIngressSubscriptionReady != nil {
-				var sub *messagingv1alpha1.SubscriptionStatus
-				if *test.markIngressSubscriptionReady {
-					sub = TestHelper.ReadySubscriptionStatus()
-				} else {
-					sub = TestHelper.NotReadySubscriptionStatus()
-				}
-				bs.PropagateIngressSubscriptionReadiness(sub)
 			}
 			if test.markFilterReady != nil {
 				var d *v1.Deployment

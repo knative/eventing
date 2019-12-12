@@ -88,9 +88,6 @@ type BrokerStatus struct {
 
 	// TriggerChannel is an objectref to the object for the TriggerChannel
 	TriggerChannel *corev1.ObjectReference `json:"triggerChannel,omitempty"`
-
-	// IngressChannel is an objectref to the object for the IngressChannel
-	IngressChannel *corev1.ObjectReference `json:"IngressChannel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
