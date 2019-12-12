@@ -122,19 +122,6 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 
 	p.Status.InitializeConditions()
 
-	if reply := p.Spec.Reply; reply != nil && (reply.DeprecatedAPIVersion != "" || reply.DeprecatedKind != "" || reply.DeprecatedName != "" || reply.DeprecatedNamespace != "") {
-		p.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
-	} else if len(p.Spec.Branches) > 0 {
-		for _, branch := range p.Spec.Branches {
-			if branch.Reply != nil && (branch.Reply.DeprecatedAPIVersion != "" || branch.Reply.DeprecatedKind != "" || branch.Reply.DeprecatedName != "" || branch.Reply.DeprecatedNamespace != "") {
-				p.Status.MarkDeprecated("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.branches[*].reply.ref instead.")
-				break
-			}
-		}
-	} else {
-		p.Status.ClearDeprecated()
-	}
-
 	p.Status.MarkDeprecated("parallelMessagingDeprecated", "parallels.messaging.knative.dev are deprecated and will be removed in the future. Use parallels.flows.knative.dev instead.")
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(p.Namespace)

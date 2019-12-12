@@ -27,7 +27,7 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -55,16 +55,14 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerIngress *
 				Kind:       brokerTrigger.Kind,
 				Name:       brokerTrigger.Name,
 			},
-			Subscriber: &duckv1beta1.Destination{
+			Subscriber: &duckv1.Destination{
 				URI: tmpURI,
 			},
-			Reply: &messagingv1alpha1.ReplyStrategy{
-				Destination: &duckv1beta1.Destination{
-					Ref: &corev1.ObjectReference{
-						APIVersion: brokerIngress.APIVersion,
-						Kind:       brokerIngress.Kind,
-						Name:       brokerIngress.Name,
-					},
+			Reply: &duckv1.Destination{
+				Ref: &corev1.ObjectReference{
+					APIVersion: brokerIngress.APIVersion,
+					Kind:       brokerIngress.Kind,
+					Name:       brokerIngress.Name,
 				},
 			},
 		},

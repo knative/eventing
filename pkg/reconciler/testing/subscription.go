@@ -29,7 +29,7 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // SubscriptionOption enables further configuration of a Subscription.
@@ -121,7 +121,7 @@ func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) Subscript
 
 func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Subscriber = &duckv1beta1.Destination{
+		s.Spec.Subscriber = &duckv1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
@@ -169,32 +169,12 @@ func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOptio
 
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Destination: &duckv1beta1.Destination{
-				DeprecatedAPIVersion: apiVersion(gvk),
-				DeprecatedKind:       gvk.Kind,
-				DeprecatedName:       name,
+		s.Spec.Reply = &duckv1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
 			},
 		}
-	}
-}
-
-func WithSubscriptionReplyNotDeprecated(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
-	return func(s *v1alpha1.Subscription) {
-		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Destination: &duckv1beta1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: apiVersion(gvk),
-					Kind:       gvk.Kind,
-					Name:       name,
-				},
-			},
-		}
-	}
-}
-
-func WithSubscriptionReplyDeprecated() SubscriptionOption {
-	return func(s *v1alpha1.Subscription) {
-		s.Status.MarkReplyDeprecatedRef("ReplyFieldsDeprecated", "Using deprecated object ref fields when specifying spec.reply. Update to spec.reply.ref. These will be removed in the future.")
 	}
 }

@@ -17,8 +17,6 @@
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
-
 	"knative.dev/pkg/apis"
 )
 
@@ -39,9 +37,6 @@ const (
 
 	// SubscriptionConditionChannelReady has status True when the channel has marked the subscriber as 'ready'
 	SubscriptionConditionChannelReady apis.ConditionType = "ChannelReady"
-
-	// SubscriptionConditionReplyDeprecated is used to tell the user they are using deprecated fields.
-	SubscriptionConditionReplyDeprecated = "Deprecated"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -97,35 +92,4 @@ func (ss *SubscriptionStatus) MarkChannelNotReady(reason, messageFormat string, 
 // MarkNotAddedToChannel sets the AddedToChannel condition to False state.
 func (ss *SubscriptionStatus) MarkNotAddedToChannel(reason, messageFormat string, messageA ...interface{}) {
 	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionAddedToChannel, reason, messageFormat, messageA)
-}
-
-// MarkDeprecated adds a warning condition that this object's spec is using deprecated fields
-// and will stop working in the future. Note that this does not affect the Ready condition.
-func (s *SubscriptionStatus) MarkReplyDeprecatedRef(reason, msg string) {
-	dc := apis.Condition{
-		Type:     SubscriptionConditionReplyDeprecated,
-		Reason:   reason,
-		Status:   v1.ConditionTrue,
-		Severity: apis.ConditionSeverityWarning,
-		Message:  msg,
-	}
-	for i, c := range s.Conditions {
-		if c.Type == dc.Type {
-			s.Conditions[i] = dc
-			return
-		}
-	}
-	s.Conditions = append(s.Conditions, dc)
-}
-
-// ClearDeprecated removes the StatusConditionTypeDeprecated warning condition. Note that this does not
-// affect the Ready condition.
-func (s *SubscriptionStatus) ClearDeprecated() {
-	conds := make([]apis.Condition, 0, len(s.Conditions))
-	for _, c := range s.Conditions {
-		if c.Type != SubscriptionConditionReplyDeprecated {
-			conds = append(conds, c)
-		}
-	}
-	s.Conditions = conds
 }

@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -102,14 +101,14 @@ type SubscriptionSpec struct {
 
 	// Subscriber is reference to (optional) function for processing events.
 	// Events from the Channel will be delivered here and replies are
-	// sent to a channel as specified by the Reply.
+	// sent to a Destination as specified by the Reply.
 	// +optional
-	Subscriber *duckv1beta1.Destination `json:"subscriber,omitempty"`
+	Subscriber *duckv1.Destination `json:"subscriber,omitempty"`
 
 	// Reply specifies (optionally) how to handle events returned from
 	// the Subscriber target.
 	// +optional
-	Reply *ReplyStrategy `json:"reply,omitempty"`
+	Reply *duckv1.Destination `json:"reply,omitempty"`
 
 	// Delivery configuration
 	// +optional
@@ -123,13 +122,7 @@ type ReplyStrategy struct {
 	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
 	//  it will be reflected in the Subscription's status.
 	// +optional
-	*duckv1beta1.Destination `json:",inline"`
-
-	//  The resource pointed by this ObjectReference must meet the Addressable contract
-	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
-	// +optional
-	DeprecatedChannel *duckv1beta1.Destination `json:"channel,omitempty"`
+	*duckv1.Destination `json:",inline"`
 }
 
 // SubscriptionStatus (computed) for a subscription

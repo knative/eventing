@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
@@ -61,7 +62,7 @@ func TestChannelablePopulate(t *testing.T) {
 				},
 			},
 			Delivery: &DeliverySpec{
-				DeadLetterSink: &duckv1beta1.Destination{
+				DeadLetterSink: &duckv1.Destination{
 					Ref: &corev1.ObjectReference{
 						Name: "aname",
 					},

@@ -19,7 +19,7 @@ package resources
 import (
 	"fmt"
 
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 
 	corev1 "k8s.io/api/core/v1"
@@ -58,14 +58,13 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 			Subscriber: p.Spec.Branches[branchNumber].Filter,
 		},
 	}
-	r.Spec.Reply = &v1alpha1.ReplyStrategy{
-		Destination: &duckv1beta1.Destination{
-			Ref: &corev1.ObjectReference{
-				APIVersion: p.Spec.ChannelTemplate.APIVersion,
-				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       ParallelBranchChannelName(p.Name, branchNumber),
-			},
-		}}
+	r.Spec.Reply = &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: p.Spec.ChannelTemplate.APIVersion,
+			Kind:       p.Spec.ChannelTemplate.Kind,
+			Name:       ParallelBranchChannelName(p.Name, branchNumber),
+		},
+	}
 	return r
 }
 
@@ -94,9 +93,9 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscript
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Destination: p.Spec.Branches[branchNumber].Reply}
+		r.Spec.Reply = p.Spec.Branches[branchNumber].Reply
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = &v1alpha1.ReplyStrategy{Destination: p.Spec.Reply}
+		r.Spec.Reply = p.Spec.Reply
 	}
 	return r
 }

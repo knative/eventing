@@ -123,13 +123,6 @@ func (r *Reconciler) reconcile(ctx context.Context, s *v1alpha1.Sequence) error 
 
 	s.Status.InitializeConditions()
 
-	if s.Spec.Reply != nil {
-		if reply := s.Spec.Reply; reply.DeprecatedAPIVersion != "" || reply.DeprecatedKind != "" || reply.DeprecatedName != "" || reply.DeprecatedNamespace != "" {
-			s.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
-		} else {
-			s.Status.ClearDeprecated()
-		}
-	}
 	s.Status.MarkDeprecated("sequenceMessagingDeprecated", "sequences.messaging.knative.dev are deprecated and will be removed in the future. Use sequences.flows.knative.dev instead.")
 
 	gvr, _ := meta.UnsafeGuessKindToResource(s.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
