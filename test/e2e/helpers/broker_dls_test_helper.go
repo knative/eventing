@@ -37,9 +37,6 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chann
 		triggerName = "e2e-brokerchannel-trigger"
 
 		loggerPodName = "e2e-brokerchannel-logger-pod"
-
-		channelName      = "e2e-brokerchannel-channel"
-		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
 	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
