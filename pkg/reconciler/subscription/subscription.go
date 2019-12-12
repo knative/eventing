@@ -206,7 +206,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 
 	reply := subscription.Spec.Reply
 	subscription.Status.PhysicalSubscription.ReplyURI = nil
-	subscription.Status.ClearDeprecated()
 	if !isNilOrEmptyDestination(reply) {
 		// Populate the namespace for the subscriber since it is in the namespace
 		if reply.Ref != nil {
