@@ -16,5 +16,5 @@ limitations under the License.
 
 // Package v1alpha1 contains API Schema definitions for the sources v1alpha1 API group
 // +k8s:deepcopy-gen=package
-// +groupName=sources.eventing.knative.dev
+// +groupName=sources.knative.dev
 package v1alpha1

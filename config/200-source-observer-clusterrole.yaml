@@ -37,7 +37,7 @@ metadata:
 # Do not use this role directly. These rules will be added to the "source-observer" role.
 rules:
   - apiGroups:
-      - sources.eventing.knative.dev
+      - sources.knative.dev
     resources:
       - containersources
       - cronjobsources

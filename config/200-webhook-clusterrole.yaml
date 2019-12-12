@@ -73,7 +73,7 @@ rules:
 
   # For running the SinkBinding reconciler.
   - apiGroups:
-      - "sources.eventing.knative.dev"
+      - "sources.knative.dev"
     resources:
       - "sinkbindings"
       - "sinkbindings/status"

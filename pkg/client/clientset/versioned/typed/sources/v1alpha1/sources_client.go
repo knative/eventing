@@ -32,7 +32,7 @@ type SourcesV1alpha1Interface interface {
 	SinkBindingsGetter
 }
 
-// SourcesV1alpha1Client is used to interact with features provided by the sources.eventing.knative.dev group.
+// SourcesV1alpha1Client is used to interact with features provided by the sources.knative.dev group.
 type SourcesV1alpha1Client struct {
 	restClient rest.Interface
 }

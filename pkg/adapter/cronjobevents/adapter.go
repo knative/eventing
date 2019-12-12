@@ -64,7 +64,7 @@ type cronJobAdapter struct {
 }
 
 const (
-	resourceGroup = "cronjobsources.sources.eventing.knative.dev"
+	resourceGroup = "cronjobsources.sources.knative.dev"
 )
 
 func NewEnvConfig() adapter.EnvConfigAccessor {

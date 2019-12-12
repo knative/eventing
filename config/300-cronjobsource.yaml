@@ -26,9 +26,9 @@ metadata:
       [
         { "type": "dev.knative.cronjob.event" }
       ]
-  name: cronjobsources.sources.eventing.knative.dev
+  name: cronjobsources.sources.knative.dev
 spec:
-  group: sources.eventing.knative.dev
+  group: sources.knative.dev
   names:
     categories:
     - all

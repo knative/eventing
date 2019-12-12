@@ -20,9 +20,9 @@ metadata:
     eventing.knative.dev/source: "true"
     duck.knative.dev/source: "true"
     knative.dev/crd-install: "true"
-  name: containersources.sources.eventing.knative.dev
+  name: containersources.sources.knative.dev
 spec:
-  group: sources.eventing.knative.dev
+  group: sources.knative.dev
   names:
     categories:
     - all

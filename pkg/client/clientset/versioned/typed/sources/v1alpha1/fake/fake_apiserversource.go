@@ -34,9 +34,9 @@ type FakeApiServerSources struct {
 	ns   string
 }
 
-var apiserversourcesResource = schema.GroupVersionResource{Group: "sources.eventing.knative.dev", Version: "v1alpha1", Resource: "apiserversources"}
+var apiserversourcesResource = schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1alpha1", Resource: "apiserversources"}
 
-var apiserversourcesKind = schema.GroupVersionKind{Group: "sources.eventing.knative.dev", Version: "v1alpha1", Kind: "ApiServerSource"}
+var apiserversourcesKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1alpha1", Kind: "ApiServerSource"}
 
 // Get takes name of the apiServerSource, and returns the corresponding apiServerSource object, and an error if there is any.
 func (c *FakeApiServerSources) Get(name string, options v1.GetOptions) (result *v1alpha1.ApiServerSource, err error) {

@@ -33,7 +33,7 @@ const (
 	unmarshalFailedDependencyAnnotation = "{" +
 		"\"kind\":{CronJobSource}, " +
 		"\"name\":\"test-cronjob-source\"," +
-		"\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"" +
+		"\"apiVersion\":\"sources.knative.dev/v1alpha1\"" +
 		"}"
 )
 

@@ -34,9 +34,9 @@ type FakeContainerSources struct {
 	ns   string
 }
 
-var containersourcesResource = schema.GroupVersionResource{Group: "sources.eventing.knative.dev", Version: "v1alpha1", Resource: "containersources"}
+var containersourcesResource = schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1alpha1", Resource: "containersources"}
 
-var containersourcesKind = schema.GroupVersionKind{Group: "sources.eventing.knative.dev", Version: "v1alpha1", Kind: "ContainerSource"}
+var containersourcesKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1alpha1", Kind: "ContainerSource"}
 
 // Get takes name of the containerSource, and returns the corresponding containerSource object, and an error if there is any.
 func (c *FakeContainerSources) Get(name string, options v1.GetOptions) (result *v1alpha1.ContainerSource, err error) {

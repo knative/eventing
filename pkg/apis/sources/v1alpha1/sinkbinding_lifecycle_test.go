@@ -33,7 +33,7 @@ import (
 func TestSinkBindingGetGroupVersionKind(t *testing.T) {
 	r := &SinkBinding{}
 	want := schema.GroupVersionKind{
-		Group:   "sources.eventing.knative.dev",
+		Group:   "sources.knative.dev",
 		Version: "v1alpha1",
 		Kind:    "SinkBinding",
 	}

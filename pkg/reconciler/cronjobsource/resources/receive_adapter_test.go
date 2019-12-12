@@ -64,7 +64,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 				"test-key2": "test-value2",
 			},
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+				APIVersion:         "sources.knative.dev/v1alpha1",
 				Kind:               "CronJobSource",
 				Name:               src.Name,
 				UID:                src.UID,

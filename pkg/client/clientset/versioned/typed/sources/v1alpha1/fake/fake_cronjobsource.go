@@ -34,9 +34,9 @@ type FakeCronJobSources struct {
 	ns   string
 }
 
-var cronjobsourcesResource = schema.GroupVersionResource{Group: "sources.eventing.knative.dev", Version: "v1alpha1", Resource: "cronjobsources"}
+var cronjobsourcesResource = schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1alpha1", Resource: "cronjobsources"}
 
-var cronjobsourcesKind = schema.GroupVersionKind{Group: "sources.eventing.knative.dev", Version: "v1alpha1", Kind: "CronJobSource"}
+var cronjobsourcesKind = schema.GroupVersionKind{Group: "sources.knative.dev", Version: "v1alpha1", Kind: "CronJobSource"}
 
 // Get takes name of the cronJobSource, and returns the corresponding cronJobSource object, and an error if there is any.
 func (c *FakeCronJobSources) Get(name string, options v1.GetOptions) (result *v1alpha1.CronJobSource, err error) {

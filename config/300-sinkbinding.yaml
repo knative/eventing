@@ -21,9 +21,9 @@ metadata:
     duck.knative.dev/source: "true"
     duck.knative.dev/binding: "true"
     knative.dev/crd-install: "true"
-  name: sinkbindings.sources.eventing.knative.dev
+  name: sinkbindings.sources.knative.dev
 spec:
-  group: sources.eventing.knative.dev
+  group: sources.knative.dev
   names:
     categories:
     - all

@@ -794,7 +794,7 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.C
 	env := append(source.Spec.DeprecatedEnv, corev1.EnvVar{Name: "SINK", Value: sinkURI})
 
 	labs := map[string]string{
-		"sources.eventing.knative.dev/containerSource": source.Name,
+		"sources.knative.dev/containerSource": source.Name,
 	}
 	for k, v := range labels {
 		labs[k] = v
@@ -823,13 +823,13 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.C
 			Namespace:       source.Namespace,
 			OwnerReferences: getOwnerReferences(),
 			Labels: map[string]string{
-				"sources.eventing.knative.dev/containerSource": source.Name,
+				"sources.knative.dev/containerSource": source.Name,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"sources.eventing.knative.dev/containerSource": source.Name,
+					"sources.knative.dev/containerSource": source.Name,
 				},
 			},
 			Template: corev1.PodTemplateSpec{

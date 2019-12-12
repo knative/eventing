@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	sourceLabelKey = "sources.eventing.knative.dev/containerSource"
+	sourceLabelKey = "sources.knative.dev/containerSource"
 )
 
 func MakeDeployment(args ContainerArguments) *appsv1.Deployment {

@@ -110,9 +110,9 @@ const (
 
 	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
 
-	dependencyAnnotation    = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
+	dependencyAnnotation    = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}"
 	cronJobSourceName       = "test-cronjob-source"
-	cronJobSourceAPIVersion = "sources.eventing.knative.dev/v1alpha1"
+	cronJobSourceAPIVersion = "sources.knative.dev/v1alpha1"
 	testSchedule            = "*/2 * * * *"
 	testData                = "data"
 	sinkName                = "testsink"
@@ -752,7 +752,7 @@ func TestAllCases(t *testing.T) {
 			},
 			WantErr: true,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: propagating dependency readiness: getting the dependency: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: propagating dependency readiness: getting the dependency: cronjobsources.sources.knative.dev \"test-cronjob-source\" not found"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -765,7 +765,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
-					reconciletesting.WithTriggerDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+					reconciletesting.WithTriggerDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.knative.dev \"test-cronjob-source\" not found"),
 				),
 			}},
 		}, {

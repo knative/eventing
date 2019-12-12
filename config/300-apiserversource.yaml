@@ -32,9 +32,9 @@ metadata:
         { "type": "dev.knative.apiserver.ref.delete" },
         { "type": "dev.knative.apiserver.ref.update" }
       ]
-  name: apiserversources.sources.eventing.knative.dev
+  name: apiserversources.sources.knative.dev
 spec:
-  group: sources.eventing.knative.dev
+  group: sources.knative.dev
   names:
     categories:
     - all

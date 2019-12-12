@@ -43,7 +43,7 @@ rules:
 
   # Source resources and statuses we care about.
   - apiGroups:
-      - "sources.eventing.knative.dev"
+      - "sources.knative.dev"
     resources:
       - "cronjobsources"
       - "cronjobsources/status"

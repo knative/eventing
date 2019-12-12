@@ -54,7 +54,7 @@ import (
 var (
 	trueVal  = true
 	ownerRef = metav1.OwnerReference{
-		APIVersion:         "sources.eventing.knative.dev/v1alpha1",
+		APIVersion:         "sources.knative.dev/v1alpha1",
 		Kind:               "CronJobSource",
 		Name:               sourceName,
 		UID:                sourceUID,

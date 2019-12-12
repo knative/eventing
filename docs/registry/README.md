@@ -100,7 +100,7 @@ In order to _uniquely_ identify an EventType, we would need to look at the tuple
         Example:
 
         ```yaml
-        apiVersion: sources.eventing.knative.dev/v1alpha1
+        apiVersion: sources.knative.dev/v1alpha1
         kind: GitHubSource
         metadata:
           name: github-source-sample

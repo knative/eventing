@@ -23,7 +23,7 @@ const SystemNamespace = "knative-eventing"
 const (
 	CoreAPIVersion      = "v1"
 	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
-	SourcesAPIVersion   = "sources.eventing.knative.dev/v1alpha1"
+	SourcesAPIVersion   = "sources.knative.dev/v1alpha1"
 	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
 	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
 )

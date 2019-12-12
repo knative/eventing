@@ -73,7 +73,7 @@ const (
 	// ResourceMode produces payloads of ResourceEvent
 	ResourceMode = "Resource"
 
-	resourceGroup = "apiserversources.sources.eventing.knative.dev"
+	resourceGroup = "apiserversources.sources.knative.dev"
 )
 
 // GVRC is a combination of GroupVersionResource, Controller flag, LabelSelector and OwnerRef
