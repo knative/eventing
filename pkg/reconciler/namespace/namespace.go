@@ -50,6 +50,7 @@ const (
 	brokerCreated             = "BrokerCreated"
 	serviceAccountCreated     = "BrokerServiceAccountCreated"
 	serviceAccountRBACCreated = "BrokerServiceAccountRBACCreated"
+	secretCopied              = "SecretCopied"
 )
 
 var (
@@ -60,6 +61,8 @@ var (
 
 type Reconciler struct {
 	*reconciler.Base
+
+	brokerPullSecretName string
 
 	// listers index properties about resources
 	namespaceLister      corev1listers.NamespaceLister
@@ -141,6 +144,7 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 // reconcileServiceAccountAndRoleBinding reconciles the service account and role binding for
 // Namespace 'ns'.
 func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName, configClusterRoleName string) error {
+
 	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
 	if err != nil {
 		return fmt.Errorf("service account '%s': %v", saName, err)
@@ -172,6 +176,23 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
 	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
 		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
+	}
+
+	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
+		// check for existence of brokerPullSecret, and skip copy if it already exists
+		for _, v := range sa.ImagePullSecrets {
+			if fmt.Sprintf("%s", v) == ("{" + r.brokerPullSecretName + "}") {
+				return nil
+			}
+		}
+		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
+		if err != nil {
+			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+				fmt.Sprintf("Error copying secret: %s", err))
+		} else {
+			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+				fmt.Sprintf("Secret copied into namespace: %s", sa.Name))
+		}
 	}
 
 	return nil
