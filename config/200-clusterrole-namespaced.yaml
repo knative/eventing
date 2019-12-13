@@ -45,7 +45,7 @@ metadata:
     eventing.knative.dev/release: devel
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
 rules:
-  - apiGroups: ["sources.knative.dev"]
+  - apiGroups: ["sources.knative.dev", "sources.eventing.knative.dev"] # TODO(#2312): Remove this after v0.13.
     resources: ["*"]
     verbs: ["*"]
 
@@ -58,7 +58,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev""sources.eventing.knative.dev"] # TODO(#2312): Remove this after v0.13.
     resources: ["*"]
     verbs: ["create", "update", "patch", "delete"]
 ---
@@ -70,6 +70,6 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.knative.dev", "sources.eventing.knative.dev"] # TODO(#2312): Remove this after v0.13.
     resources: ["*"]
     verbs: ["get", "list", "watch"]

@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakelegacyclient "knative.dev/eventing/pkg/legacyclient/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
@@ -60,6 +61,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
+		ctx, legacyClient := fakelegacyclient.With(ctx, ls.GetLegacyObjects()...) // TODO(#2312): Remove this after v0.13.
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
 
@@ -88,6 +90,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 			kubeClient.PrependReactor("*", "*", reactor)
 			client.PrependReactor("*", "*", reactor)
 			dynamicClient.PrependReactor("*", "*", reactor)
+			legacyClient.PrependReactor("*", "*", reactor) // TODO(#2312): Remove this after v0.13.
 		}
 
 		// Validate all Create operations through the serving client.
@@ -98,7 +101,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 			return ValidateUpdates(ctx, action)
 		})
 
-		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
+		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient, legacyClient}
 		eventList := EventList{Recorder: eventRecorder}
 
 		return c, actionRecorderList, eventList, statsReporter

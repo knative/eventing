@@ -69,6 +69,11 @@ type SinkBindingStatus struct {
 	duckv1.SourceStatus `json:",inline"`
 }
 
+// GetListType implements apis.Listable
+func (*SinkBinding) GetListType() runtime.Object {
+	return &SinkBindingList{}
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SinkBindingList contains a list of SinkBinding

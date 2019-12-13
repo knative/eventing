@@ -104,6 +104,11 @@ type ContainerSourceStatus struct {
 	SinkURI string `json:"sinkUri,omitempty"`
 }
 
+// GetListType implements apis.Listable
+func (*ContainerSource) GetListType() runtime.Object {
+	return &ContainerSourceList{}
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ContainerSourceList contains a list of ContainerSource

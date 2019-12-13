@@ -44,6 +44,7 @@ rules:
   # Source resources and statuses we care about.
   - apiGroups:
       - "sources.knative.dev"
+      - "sources.eventing.knative.dev" # TODO(#2312): Remove this after v0.13.
     resources:
       - "cronjobsources"
       - "cronjobsources/status"

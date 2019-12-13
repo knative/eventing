@@ -20,6 +20,8 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	legacyapiserversource "knative.dev/eventing/pkg/legacyreconciler/apiserversource"
+	legacycontainersource "knative.dev/eventing/pkg/legacyreconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/containersource"
 	"knative.dev/eventing/pkg/reconciler/cronjobsource"
@@ -31,5 +33,9 @@ func main() {
 		apiserversource.NewController,
 		containersource.NewController,
 		cronjobsource.NewController,
+
+		// TODO(#2312): Remove this after v0.13.
+		legacyapiserversource.NewController,
+		legacycontainersource.NewController,
 	)
 }

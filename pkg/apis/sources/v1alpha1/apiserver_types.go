@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -64,6 +65,11 @@ const (
 // GetGroupVersionKind returns the GroupVersionKind.
 func (s *ApiServerSource) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ApiServerSource")
+}
+
+// GetListType implements apis.Listable
+func (*ApiServerSource) GetListType() runtime.Object {
+	return &ApiServerSourceList{}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

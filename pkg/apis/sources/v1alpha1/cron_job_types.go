@@ -117,6 +117,11 @@ type CronJobSourceStatus struct {
 	SinkURI string `json:"sinkUri,omitempty"`
 }
 
+// GetListType implements apis.Listable
+func (*CronJobSource) GetListType() runtime.Object {
+	return &CronJobSourceList{}
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // CronJobSourceList contains a list of CronJobSources.

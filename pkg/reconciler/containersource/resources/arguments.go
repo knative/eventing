@@ -18,7 +18,7 @@ package resources
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 )
 
 type ContainerArguments struct {

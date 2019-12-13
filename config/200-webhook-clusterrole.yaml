@@ -74,6 +74,7 @@ rules:
   # For running the SinkBinding reconciler.
   - apiGroups:
       - "sources.knative.dev"
+      - "sources.eventing.knative.dev" # TODO(#2312): Remove this after v0.13.
     resources:
       - "sinkbindings"
       - "sinkbindings/status"
