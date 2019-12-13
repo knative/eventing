@@ -197,10 +197,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	if t.Spec.Subscriber == nil {
-		return errors.New("subscriber cannot be nil")
-	}
-
 	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// We will use the Namespace of Trigger as the Namespace of dest.Ref
@@ -209,7 +205,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		// validates that they are absent, we can ignore them here.
 	}
 
-	subscriberURI, err := r.uriResolver.URIFromDestinationV1(*t.Spec.Subscriber, t)
+	subscriberURI, err := r.uriResolver.URIFromDestinationV1(t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
