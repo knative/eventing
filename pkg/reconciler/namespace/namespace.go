@@ -51,6 +51,7 @@ const (
 	serviceAccountCreated     = "BrokerServiceAccountCreated"
 	serviceAccountRBACCreated = "BrokerServiceAccountRBACCreated"
 	secretCopied              = "SecretCopied"
+	secretCopyFailure         = "SecretCopyFailure"
 )
 
 var (
@@ -187,7 +188,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		}
 		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
-			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+			r.Recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
 				fmt.Sprintf("Error copying secret: %s", err))
 		} else {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
