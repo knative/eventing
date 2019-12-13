@@ -84,6 +84,7 @@ func TestAllCases(t *testing.T) {
 	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
 	secretEventFilter := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace: eventing-broker-filter")
 	secretEventIngress := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace: eventing-broker-ingress")
+	secretEventFailure := Eventf(corev1.EventTypeWarning, "SecretCopyFailure", "Error copying secret: secrets \"broker-image-pull-secret\" not found")
 
 	// Patches
 	ingressPatch := createPatch(testNS, "eventing-broker-ingress")
@@ -169,6 +170,40 @@ func TestAllCases(t *testing.T) {
 		WantPatches: []clientgotesting.PatchActionImpl{
 			ingressPatch,
 			filterPatch,
+		},
+	}, {
+		Name: "Namespace enabled - secret copy fails",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 false,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "secrets"),
+		},
+		WantEvents: []string{
+			saIngressEvent,
+			rbIngressEvent,
+			rbIngressConfigEvent,
+			secretEventFailure,
+			saFilterEvent,
+			rbFilterEvent,
+			rbFilterConfigEvent,
+			secretEventFailure,
+			brokerEvent,
+			nsEvent,
+		},
+		WantCreates: []runtime.Object{
+			broker,
+			saIngress,
+			rbIngress,
+			rbIngressConfig,
+			saFilter,
+			rbFilter,
+			rbFilterConfig,
 		},
 	}, {
 		Name: "Namespace enabled, broker exists",
