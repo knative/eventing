@@ -259,6 +259,32 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "Broker get failure, status update fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"test-broker\" not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerUpdateStatusFailed", "Failed to update Trigger's status: inducing failure for update triggers"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("get", "brokers"),
+				InduceFailure("update", "triggers"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+				),
+			}},
+		}, {
 			Name: "Trigger being deleted",
 			Key:  triggerKey,
 			Objects: []runtime.Object{

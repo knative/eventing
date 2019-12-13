@@ -120,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if _, updateStatusErr := r.updateStatus(ctx, trigger); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", err)
+		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
 
