@@ -205,12 +205,6 @@ func TestAllCases(t *testing.T) {
 			rbFilter,
 			rbFilterConfig,
 		},
-		/*
-			WantPatches: []clientgotesting.PatchActionImpl{
-				ingressPatch,
-				filterPatch,
-			},
-		*/
 	}, {
 		Name: "Namespace enabled, broker exists",
 		Objects: []runtime.Object{
