@@ -115,16 +115,6 @@ type SubscriptionSpec struct {
 	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
 }
 
-// ReplyStrategy specifies the handling of the Subscriber's returned replies.
-// If no Subscriber is specified, the identity function is assumed.
-type ReplyStrategy struct {
-	//  The resource pointed by this Destination must meet the Addressable contract
-	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
-	// +optional
-	*duckv1.Destination `json:",inline"`
-}
-
 // SubscriptionStatus (computed) for a subscription
 type SubscriptionStatus struct {
 	// inherits duck/v1 Status, which currently provides:
