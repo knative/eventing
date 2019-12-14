@@ -216,8 +216,8 @@ which is expected to change as the span id will be altered at every network hop.
 
 ##### Retries
 
-Channels SHOULD retry resending CloudEvents when they fail to either connect or
-send CloudEvents to subscribers.
+Channels SHOULD retry on 5xx responses but SHOULD NOT retry on 4xx responses when
+sending CloudEvents to subscribers.
 
 Channels SHOULD support various retry configuration parameters, including, but
 not limited to:
