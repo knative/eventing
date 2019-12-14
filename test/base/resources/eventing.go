@@ -170,7 +170,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &duckv1.Destination{
+			t.Spec.Subscriber = duckv1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -181,7 +181,7 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &duckv1.Destination{
+		t.Spec.Subscriber = duckv1.Destination{
 			URI: apisURI,
 		}
 	}
