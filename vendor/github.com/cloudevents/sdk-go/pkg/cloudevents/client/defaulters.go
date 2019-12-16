@@ -35,3 +35,17 @@ func DefaultTimeToNowIfNotSet(ctx context.Context, event cloudevents.Event) clou
 	}
 	return event
 }
+
+// NewDefaultDataContentTypeIfNotSet returns a defaulter that will inspect the
+// provided event and set the provided content type if content type is found
+// to be empty.
+func NewDefaultDataContentTypeIfNotSet(contentType string) EventDefaulter {
+	return func(ctx context.Context, event cloudevents.Event) cloudevents.Event {
+		if event.Context != nil {
+			if event.DataContentType() == "" {
+				event.SetDataContentType(contentType)
+			}
+		}
+		return event
+	}
+}

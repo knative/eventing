@@ -74,8 +74,8 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 
 	ceType := []string{cet.eventType}
 	ceSource := []string{cet.eventSource}
-	ceSpecVersion := []string{"1.0"}
-	ceContentType := []string{"application/json"}
+	ceSpecVersion := []string{cloudevents.VersionV1}
+	ceContentType := []string{cloudevents.ApplicationJSON}
 
 	return func(t *vegeta.Target) error {
 		t.Method = http.MethodPost
@@ -200,8 +200,9 @@ func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint) {
 }
 
 func (h HttpLoadGenerator) SendGCEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetType(common.GCEventType)
 	event.SetSource(h.eventSource)
 
@@ -209,8 +210,9 @@ func (h HttpLoadGenerator) SendGCEvent() {
 }
 
 func (h HttpLoadGenerator) SendEndEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetType(common.EndEventType)
 	event.SetSource(h.eventSource)
 
