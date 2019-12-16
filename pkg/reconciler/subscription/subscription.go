@@ -143,7 +143,6 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 
 	if subscription.DeletionTimestamp != nil {
-
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
 		if channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel); !apierrors.IsNotFound(err) && subscription.Status.IsAddedToChannel() {
