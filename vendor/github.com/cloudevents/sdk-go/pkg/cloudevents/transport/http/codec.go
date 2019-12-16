@@ -112,7 +112,7 @@ func (c *Codec) convertEvent(event *cloudevents.Event) (*cloudevents.Event, erro
 		event.Context = ca
 		return event, nil
 	case BinaryV1, StructuredV1, BatchedV1:
-		ca := event.Context.AsV03()
+		ca := event.Context.AsV1()
 		event.Context = ca
 		return event, nil
 	default:
