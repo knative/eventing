@@ -163,6 +163,35 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "subscription, but channel does not exist - fail status update",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "subscriptions"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. channels.messaging.knative.dev %q not found", channelName),
+				Eventf(corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: inducing failure for update subscriptions"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved(channelReferenceFailed, fmt.Sprintf("Failed to get Spec.Channel as Channelable duck type. channels.messaging.knative.dev %q not found", channelName)),
+				),
+			}},
+		}, {
 			Name: "subscription, but channel crd does not exist",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
@@ -799,6 +828,44 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionDeleted,
 				),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, nil),
+			},
+		}, {
+			Name: "subscription deleted - channel patch fails",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName),
+					WithSubscriptionReply(channelGVK, replyName),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeleted,
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(channelDNS),
+				),
+
+				NewChannel(replyName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(replyDNS),
+				),
+			},
+			Key: testNS + "/" + subscriptionName,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("patch", "channels"),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch channels"),
+			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, nil),
 			},
