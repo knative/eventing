@@ -25,7 +25,9 @@ import (
 var (
 	defaultNamespace = "knative-eventing"
 	otherNamespace   = "testing-eventing"
-	selector         = "knative.dev/testing: eventing"
+	selector         = map[string]string{
+		"knative.dev/testing": "eventing",
+	}
 )
 
 func TestConfigMapPropagationDefaults(t *testing.T) {

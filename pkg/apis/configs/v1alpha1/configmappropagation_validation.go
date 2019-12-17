@@ -18,28 +18,58 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
+	"regexp"
+
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 )
 
+var (
+	// Only allow lowercase alphanumeric, starting with letters.
+	validSelectorName = regexp.MustCompile(`^[a-z][a-z0-9./-]*$`)
+)
+
+// Validate the ConfigMapPropagation.
 func (cmp *ConfigMapPropagation) Validate(ctx context.Context) *apis.FieldError {
 	return cmp.Spec.Validate(ctx).ViaField("spec")
 }
 
+// Validate the ConfigMapPropagationSpec.
 func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if cmps.OriginalNamespace == "" {
 		fe := apis.ErrMissingField("originalNamespace")
 		errs = errs.Also(fe)
 	}
-	if cmps.Selector == "" {
+	if cmps.Selector == nil {
 		fe := apis.ErrMissingField("selector")
 		errs = errs.Also(fe)
 	}
-	// TODO validate selector must be in right format
+
+	if cmps.Selector != nil {
+		if len(cmps.Selector) == 0 {
+			fe := &apis.FieldError{
+				Message: "At least one selector must be specified",
+				Paths:   []string{"selector"},
+			}
+			errs = errs.Also(fe)
+		} else {
+			for s := range cmps.Selector {
+				if !validSelectorName.MatchString(s) {
+					fe := &apis.FieldError{
+						Message: fmt.Sprintf("Invalid selector name: %q", s),
+						Paths:   []string{"selector"},
+					}
+					errs = errs.Also(fe)
+				}
+			}
+		}
+	}
 	return errs
 }
 
+// CheckImmutableFields checks that any immutable fields were not changed.
 func (cmp *ConfigMapPropagation) CheckImmutableFields(ctx context.Context, original *ConfigMapPropagation) *apis.FieldError {
 	if original == nil {
 		return nil

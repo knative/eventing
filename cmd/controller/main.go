@@ -24,6 +24,7 @@ import (
 
 	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/channel"
+	"knative.dev/eventing/pkg/reconciler/configmappropagation"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	flowsparallel "knative.dev/eventing/pkg/reconciler/flowsparallel"
 	flowssequence "knative.dev/eventing/pkg/reconciler/flowssequence"
@@ -46,5 +47,6 @@ func main() {
 		parallel.NewController,
 		flowsparallel.NewController,
 		flowssequence.NewController,
+		configmappropagation.NewController,
 	)
 }

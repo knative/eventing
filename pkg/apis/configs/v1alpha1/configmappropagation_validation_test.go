@@ -26,7 +26,9 @@ import (
 var (
 	originalNamespace = "original"
 	currentNamespace  = "current"
-	validSelector     = " "
+	validSelector     = map[string]string{
+		"testing": "testing",
+	}
 )
 
 func TestConfigMapPropagationValidation(t *testing.T) {
@@ -79,8 +81,38 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 			fe := apis.ErrMissingField("originalNamespace")
 			return fe
 		}(),
+	}, {
+		name: "missing selector keys",
+		cmps: &ConfigMapPropagationSpec{
+			OriginalNamespace: originalNamespace,
+			Selector:          map[string]string{}},
+		want: &apis.FieldError{
+			Message: "At least one selector must be specified",
+			Paths:   []string{"selector"},
+		},
+	}, {
+		name: "invalid selector keys, start with number",
+		cmps: &ConfigMapPropagationSpec{
+			OriginalNamespace: originalNamespace,
+			Selector: map[string]string{
+				"0nvalid": "testing",
+			}},
+		want: &apis.FieldError{
+			Message: `Invalid selector name: "0nvalid"`,
+			Paths:   []string{"selector"},
+		},
+	}, {
+		name: "invalid attribute name, capital letters",
+		cmps: &ConfigMapPropagationSpec{
+			OriginalNamespace: originalNamespace,
+			Selector: map[string]string{
+				"inValid": "testing",
+			}},
+		want: &apis.FieldError{
+			Message: `Invalid selector name: "inValid"`,
+			Paths:   []string{"selector"},
+		},
 	},
-	//TODO invalid selectors
 	}
 
 	for _, test := range tests {

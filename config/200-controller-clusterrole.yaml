@@ -86,6 +86,14 @@ rules:
       - "subscriptions/status"
     verbs: *everything
 
+  # config resources and statuses we care about.
+  - apiGroups:
+      - "configs.knative.dev"
+    resources:
+      - "configmappropagations"
+      - "configmappropagations/status"
+    verbs: *everything
+
   # Flow resources and statuses we care about.
   - apiGroups:
       - "flows.knative.dev"

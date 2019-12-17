@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -28,9 +29,9 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ConfigMapPropagation is used to propagate configMaps from source namespace to target namespace
+// ConfigMapPropagation is used to propagate configMaps from original namespace to current namespace
 type ConfigMapPropagation struct {
-	metav1.TypeMeta `json:". inline"`
+	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -53,15 +54,15 @@ var (
 
 	_ runtime.Object = (*ConfigMapPropagation)(nil)
 
-	// Check that we can create OwnerReferences to an ConfigMapPropagation.
+	// Check that we can create OwnerReferences to a ConfigMapPropagation.
 	_ kmeta.OwnerRefable = (*ConfigMapPropagation)(nil)
 )
 
 type ConfigMapPropagationSpec struct {
-	// OriginalNamespace represents the namespace where the original configMaps are in
+	// OriginalNamespace is the namespace where the original configMaps are in
 	OriginalNamespace string `json:"originalNamespace,omitempty"`
-	// Selector only selects original configMaps with labels under Selector
-	Selector string `json:"selector,omitempty"`
+	// Selector only selects original configMaps with corresponding labels
+	Selector map[string]string `json:"selector,omitempty"`
 }
 
 // ConfigMapPropagationStatus represents the current state of a ConfigMapPropagation.
@@ -74,7 +75,7 @@ type ConfigMapPropagationStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ConfigMapPropagationList is a collection of EventTypes.
+// ConfigMapPropagationList is a collection of ConfigMapPropagation.
 type ConfigMapPropagationList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -82,12 +83,12 @@ type ConfigMapPropagationList struct {
 	Items           []ConfigMapPropagation `json:"items"`
 }
 
-// GetGroupVersionKind returns GroupVersionKind for EventType
+// GetGroupVersionKind returns GroupVersionKind for ConfigMapPropagation
 func (cmp *ConfigMapPropagation) GetGroupVersionKind() schema.GroupVersionKind {
 	return SchemeGroupVersion.WithKind("ConfigMapPropagation")
 }
 
-// GetUntypedSpec returns the spec of the EventType.
+// GetUntypedSpec returns the spec of the ConfigMapPropagation.
 func (cmp *ConfigMapPropagation) GetUntypedSpec() interface{} {
 	return cmp.Spec
 }

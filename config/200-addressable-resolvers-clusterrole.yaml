@@ -155,3 +155,24 @@ rules:
   - get
   - list
   - watch
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: configs-addressable-resolver
+  labels:
+    eventing.knative.dev/release: devel
+    duck.knative.dev/addressable: "true"
+# Do not use this role directly. These rules will be added to the "addressable-resolver" role.
+rules:
+  - apiGroups:
+      - configs.knative.dev
+    resources:
+      - configmappropagations
+      - configmappropagations/status
+    verbs:
+      - get
+      - list
+      - watch
