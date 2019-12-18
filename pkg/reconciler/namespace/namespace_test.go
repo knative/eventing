@@ -82,11 +82,11 @@ func TestAllCases(t *testing.T) {
 	rbFilterConfigEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'knative-testing/eventing-broker-filter-test-namespace' created for the Broker")
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
-	nsEventFailure := Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: broker ingress: Error copying secret: secrets \"broker-image-pull-secret\" not found")
+	nsEventFailure := Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: broker ingress: Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
 
-	secretEventFilter := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace: eventing-broker-filter")
-	secretEventIngress := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace: eventing-broker-ingress")
-	secretEventFailure := Eventf(corev1.EventTypeWarning, "SecretCopyFailure", "Error copying secret: secrets \"broker-image-pull-secret\" not found")
+	secretEventFilter := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-filter")
+	secretEventIngress := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress")
+	secretEventFailure := Eventf(corev1.EventTypeWarning, "SecretCopyFailure", "Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
 
 	// Patches
 	ingressPatch := createPatch(testNS, "eventing-broker-ingress")
