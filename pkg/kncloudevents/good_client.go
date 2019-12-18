@@ -17,10 +17,10 @@
 package kncloudevents
 
 import (
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	nethttp "net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"

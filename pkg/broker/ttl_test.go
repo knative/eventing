@@ -18,9 +18,10 @@ package broker
 
 import (
 	"context"
+	"testing"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
-	"testing"
 )
 
 func TestTTLDefaulter(t *testing.T) {

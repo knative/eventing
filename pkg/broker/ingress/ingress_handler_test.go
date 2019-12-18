@@ -18,7 +18,6 @@ package ingress
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/broker"
 	nethttp "net/http"
 	"net/url"
 	"reflect"
@@ -29,6 +28,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/broker"
 )
 
 const (

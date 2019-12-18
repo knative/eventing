@@ -68,22 +68,21 @@ func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
 				zap.Int32(TTLAttribute, defaultTTL),
 				zap.Error(err),
 			)
-			ttl = defaultTTL + 1
+			ttl = defaultTTL
 		} else if ttl, err = cetypes.ToInteger(ttlraw); err != nil {
 			logger.Warn("Failed to convert existing TTL into integer, defaulting.",
 				zap.String("event.id", event.ID()),
 				zap.Any(TTLAttribute, ttlraw),
 				zap.Error(err),
 			)
-			ttl = defaultTTL + 1
+			ttl = defaultTTL
+		} else {
+			// Decrement TTL.
+			ttl = ttl - 1
+			if ttl < 0 {
+				ttl = 0
+			}
 		}
-
-		// Decrement TTL.
-		ttl = ttl - 1
-		if ttl < 0 {
-			ttl = 0
-		}
-
 		// Overwrite the TTL into the event.
 		if err := event.Context.SetExtension(TTLAttribute, ttl); err != nil {
 			logger.Error("Failed to set TTL on outbound event.",
