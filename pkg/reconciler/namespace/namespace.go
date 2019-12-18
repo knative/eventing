@@ -179,6 +179,11 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
 	}
 
+	// If the Broker pull secret has not been specified, then nothing to copy.
+	if r.brokerPullSecretName == "" {
+		return nil
+	}
+
 	if sa.Name == resources.IngressServiceAccountName || sa.Name == resources.FilterServiceAccountName {
 		// check for existence of brokerPullSecret, and skip copy if it already exists
 		for _, v := range sa.ImagePullSecrets {
@@ -189,10 +194,11 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
 			r.Recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
-				fmt.Sprintf("Error copying secret: %s", err))
+				fmt.Sprintf("Error copying secret %s/%s => %s/%s : %s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err))
+			return fmt.Errorf("Error copying secret %s/%s => %s/%s : %s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err)
 		} else {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
-				fmt.Sprintf("Secret copied into namespace: %s", sa.Name))
+				fmt.Sprintf("Secret copied into namespace %s/%s => %s/%s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name))
 		}
 	}
 
