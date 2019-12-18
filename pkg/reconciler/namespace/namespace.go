@@ -190,6 +190,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		if err != nil {
 			r.Recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
 				fmt.Sprintf("Error copying secret: %s", err))
+			return fmt.Errorf("Error copying secret: %s", err)
 		} else {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Secret copied into namespace: %s", sa.Name))
