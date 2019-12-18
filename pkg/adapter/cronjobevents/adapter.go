@@ -101,10 +101,11 @@ func (a *cronJobAdapter) Start(stopCh <-chan struct{}) error {
 func (a *cronJobAdapter) cronTick() {
 	logger := logging.FromContext(context.TODO())
 
-	event := cloudevents.NewEvent(cloudevents.VersionV03)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType(sourcesv1alpha1.CronJobEventType)
 	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	reportArgs := &source.ReportArgs{
 		Namespace:     a.Namespace,
 		EventSource:   event.Source(),

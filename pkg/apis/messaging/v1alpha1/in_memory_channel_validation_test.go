@@ -36,8 +36,8 @@ func TestInMemoryChannelValidation(t *testing.T) {
 			Spec: InMemoryChannelSpec{
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: "subscriberendpoint",
-						ReplyURI:      "resultendpoint",
+						SubscriberURI: apis.HTTP("subscriberendpoint"),
+						ReplyURI:      apis.HTTP("resultendpoint"),
 					}},
 				}},
 		},
@@ -48,8 +48,8 @@ func TestInMemoryChannelValidation(t *testing.T) {
 			Spec: InMemoryChannelSpec{
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: "subscriberendpoint",
-						ReplyURI:      "replyendpoint",
+						SubscriberURI: apis.HTTP("subscriberendpoint"),
+						ReplyURI:      apis.HTTP("replyendpoint"),
 					}, {}},
 				}},
 		},

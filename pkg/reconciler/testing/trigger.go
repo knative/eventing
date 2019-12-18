@@ -25,7 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -57,20 +58,35 @@ func NewTrigger(name, namespace, broker string, to ...TriggerOption) *v1alpha1.T
 	return t
 }
 
-func WithTriggerSubscriberURI(uri string) TriggerOption {
+func WithTriggerSubscriberURI(rawurl string) TriggerOption {
+	uri, _ := apis.ParseURL(rawurl)
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{URI: &uri}
+		t.Spec.Subscriber = duckv1.Destination{URI: uri}
 	}
 }
 
 func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+		t.Spec.Subscriber = duckv1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
 				Name:       name,
 			},
+		}
+	}
+}
+
+func WithTriggerSubscriberRefAndURIReference(gvk metav1.GroupVersionKind, name string, rawuri string) TriggerOption {
+	uri, _ := apis.ParseURL(rawuri)
+	return func(t *v1alpha1.Trigger) {
+		t.Spec.Subscriber = duckv1.Destination{
+			Ref: &corev1.ObjectReference{
+				APIVersion: apiVersion(gvk),
+				Kind:       gvk.Kind,
+				Name:       name,
+			},
+			URI: uri,
 		}
 	}
 }
@@ -108,7 +124,8 @@ func WithTriggerSubscribed() TriggerOption {
 
 func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
-		t.Status.SubscriberURI = uri
+		u, _ := apis.ParseURL(uri)
+		t.Status.SubscriberURI = u
 	}
 }
 
@@ -118,6 +135,15 @@ func WithUnmarshalFailedDependencyAnnotation() TriggerOption {
 			t.Annotations = make(map[string]string)
 		}
 		t.Annotations[v1alpha1.DependencyAnnotation] = unmarshalFailedDependencyAnnotation
+	}
+}
+
+func WithInjectionAnnotation(injectionAnnotation string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		if t.Annotations == nil {
+			t.Annotations = make(map[string]string)
+		}
+		t.Annotations[v1alpha1.InjectionAnnotation] = injectionAnnotation
 	}
 }
 
@@ -145,6 +171,24 @@ func WithTriggerDependencyFailed(reason, message string) TriggerOption {
 func WithTriggerDependencyUnknown(reason, message string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Status.MarkDependencyUnknown(reason, message)
+	}
+}
+
+func WithTriggerSubscriberResolvedSucceeded() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriberResolvedSucceeded()
+	}
+}
+
+func WithTriggerSubscriberResolvedFailed(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriberResolvedFailed(reason, message)
+	}
+}
+
+func WithTriggerSubscriberResolvedUnknown(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriberResolvedUnknown(reason, message)
 	}
 }
 

@@ -28,11 +28,13 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
+	"knative.dev/pkg/apis"
 )
 
+var replaceDomain = apis.HTTP("replaceDomain")
+
 const (
-	replaceDomain = "replaceDomain"
-	hostName      = "a.b.c.d"
+	hostName = "a.b.c.d"
 )
 
 func TestHandler(t *testing.T) {
@@ -184,7 +186,7 @@ func assertRequestAccepted(t *testing.T, h *Handler) {
 	tctx.URI = "/"
 	ctx = cehttp.WithTransportContext(ctx, tctx)
 
-	event := cloudevents.NewEvent(cloudevents.VersionV03)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType("testtype")
 	event.SetSource("testsource")
 	event.SetData("")
@@ -207,10 +209,10 @@ func replaceDomains(c multichannelfanout.Config, replacement string) multichanne
 	for i, cc := range c.ChannelConfigs {
 		for j, sub := range cc.FanoutConfig.Subscriptions {
 			if sub.ReplyURI == replaceDomain {
-				sub.ReplyURI = replacement
+				sub.ReplyURI = apis.HTTP(replacement)
 			}
 			if sub.SubscriberURI == replaceDomain {
-				sub.SubscriberURI = replacement
+				sub.SubscriberURI = apis.HTTP(replacement)
 			}
 			cc.FanoutConfig.Subscriptions[j] = sub
 		}

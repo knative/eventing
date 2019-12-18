@@ -30,6 +30,8 @@ type Interface interface {
 	ContainerSources() ContainerSourceInformer
 	// CronJobSources returns a CronJobSourceInformer.
 	CronJobSources() CronJobSourceInformer
+	// SinkBindings returns a SinkBindingInformer.
+	SinkBindings() SinkBindingInformer
 }
 
 type version struct {
@@ -56,4 +58,9 @@ func (v *version) ContainerSources() ContainerSourceInformer {
 // CronJobSources returns a CronJobSourceInformer.
 func (v *version) CronJobSources() CronJobSourceInformer {
 	return &cronJobSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// SinkBindings returns a SinkBindingInformer.
+func (v *version) SinkBindings() SinkBindingInformer {
+	return &sinkBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

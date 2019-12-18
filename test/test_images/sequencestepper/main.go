@@ -34,7 +34,7 @@ func init() {
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	ctx := event.Context.AsV03()
+	ctx := event.Context.AsV1()
 
 	data := &resources.CloudEventBaseData{}
 	if err := event.DataAs(data); err != nil {
@@ -52,7 +52,7 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 		Data:    data,
 	}
 
-	r.SetDataContentType("application/json")
+	r.SetDataContentType(cloudevents.ApplicationJSON)
 
 	log.Println("Transform the event to: ")
 	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)

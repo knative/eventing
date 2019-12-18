@@ -108,8 +108,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, s *v1alpha1.Sequence) error {
-	s.Status.InitializeConditions()
-
 	// Reconciling sequence is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole sequence
 	// 2. For each of the Steps, create a Subscription to the previous Channel
@@ -122,6 +120,10 @@ func (r *Reconciler) reconcile(ctx context.Context, s *v1alpha1.Sequence) error 
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
+
+	s.Status.InitializeConditions()
+
+	s.Status.MarkDeprecated("sequenceMessagingDeprecated", "sequences.messaging.knative.dev are deprecated and will be removed in the future. Use sequences.flows.knative.dev instead.")
 
 	gvr, _ := meta.UnsafeGuessKindToResource(s.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(s.Namespace)

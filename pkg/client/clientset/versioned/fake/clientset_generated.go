@@ -27,6 +27,8 @@ import (
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	flowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
+	fakeflowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1/fake"
 	messagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1"
 	fakemessagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1/fake"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
@@ -83,6 +85,11 @@ var _ clientset.Interface = &Clientset{}
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
 func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+}
+
+// FlowsV1alpha1 retrieves the FlowsV1alpha1Client
+func (c *Clientset) FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface {
+	return &fakeflowsv1alpha1.FakeFlowsV1alpha1{Fake: &c.Fake}
 }
 
 // MessagingV1alpha1 retrieves the MessagingV1alpha1Client

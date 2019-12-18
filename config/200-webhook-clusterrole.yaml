@@ -37,6 +37,9 @@ rules:
     verbs:
       - "get"
       - "create"
+      - "update"
+      - "list"
+      - "watch"
 
   # For getting our Deployment so we can decorate with ownerref.
   - apiGroups:
@@ -58,7 +61,8 @@ rules:
       - "admissionregistration.k8s.io"
     resources:
       - "mutatingwebhookconfigurations"
-    verbs: 
+      - "validatingwebhookconfigurations"
+    verbs: &everything
       - "get"
       - "list"
       - "create"
@@ -67,21 +71,11 @@ rules:
       - "patch"
       - "watch"
 
-  # Our own resources and statuses we care about.
+  # For running the SinkBinding reconciler.
   - apiGroups:
-      - "eventing.knative.dev"
+      - "sources.eventing.knative.dev"
     resources:
-      - "brokers"
-      - "brokers/status"
-      - "channels"
-      - "channels/status"
-      - "subscriptions"
-      - "subscriptions/status"
-      - "triggers"
-      - "triggers/status"
-      - "eventtypes"
-      - "eventtypes/status"
-    verbs:
-      - "get"
-      - "list"
-      - "watch"
+      - "sinkbindings"
+      - "sinkbindings/status"
+      - "sinkbindings/finalizers"
+    verbs: *everything

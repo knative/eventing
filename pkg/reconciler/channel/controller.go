@@ -25,7 +25,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 )
 
@@ -52,7 +52,7 @@ func NewController(
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.channelableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.Channelable{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	r.Logger.Info("Setting up event handlers")
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

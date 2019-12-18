@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -27,6 +28,8 @@ import (
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // SubscriptionOption enables further configuration of a Subscription.
@@ -118,7 +121,7 @@ func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) Subscript
 
 func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Subscriber = &v1alpha1.SubscriberSpec{
+		s.Spec.Subscriber = &duckv1.Destination{
 			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
@@ -128,14 +131,20 @@ func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name string) Sub
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionSubscriber(uri string) SubscriptionOption {
+func WithSubscriptionPhysicalSubscriptionSubscriber(uri *apis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
+		if uri == nil {
+			panic(errors.New("nil URI"))
+		}
 		s.Status.PhysicalSubscription.SubscriberURI = uri
 	}
 }
 
-func WithSubscriptionPhysicalSubscriptionReply(uri string) SubscriptionOption {
+func WithSubscriptionPhysicalSubscriptionReply(uri *apis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
+		if uri == nil {
+			panic(errors.New("nil URI"))
+		}
 		s.Status.PhysicalSubscription.ReplyURI = uri
 	}
 }
@@ -160,8 +169,8 @@ func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOptio
 
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Reply = &v1alpha1.ReplyStrategy{
-			Channel: &corev1.ObjectReference{
+		s.Spec.Reply = &duckv1.Destination{
+			Ref: &corev1.ObjectReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
 				Name:       name,

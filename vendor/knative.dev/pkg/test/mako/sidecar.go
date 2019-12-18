@@ -53,7 +53,7 @@ const (
 	// These token settings are for alerter.
 	// If we want to enable the alerter for a benchmark, we need to mount the
 	// token to the pod, with the same name and path.
-	// See https://github.com/knative/serving/blob/master/test/performance/dataplane-probe/dataplane-probe.yaml
+	// See https://github.com/knative/serving/blob/master/test/performance/benchmarks/dataplane-probe/continuous/dataplane-probe.yaml
 	tokenFolder     = "/var/secret"
 	githubToken     = "github-token"
 	slackReadToken  = "slack-read-token"
@@ -176,12 +176,8 @@ func SetupHelper(ctx context.Context, benchmarkKey *string, benchmarkName *strin
 }
 
 func Setup(ctx context.Context, extraTags ...string) (*Client, error) {
-	benchmarkKey, benchmarkName := config.MustGetBenchmark()
-	return SetupHelper(ctx, benchmarkKey, benchmarkName, extraTags...)
-}
-
-func SetupWithBenchmarkConfig(ctx context.Context, benchmarkKey *string, benchmarkName *string, extraTags ...string) (*Client, error) {
-	return SetupHelper(ctx, benchmarkKey, benchmarkName, extraTags...)
+	bench := config.MustGetBenchmark()
+	return SetupHelper(ctx, bench.BenchmarkKey, bench.BenchmarkName, extraTags...)
 }
 
 func tokenPath(token string) string {

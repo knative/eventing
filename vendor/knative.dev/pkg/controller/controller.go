@@ -98,6 +98,17 @@ func Filter(gvk schema.GroupVersionKind) func(obj interface{}) bool {
 	}
 }
 
+// FilterWithName makes it simple to create FilterFunc's for use with
+// cache.FilteringResourceEventHandler that filter based on a name.
+func FilterWithName(name string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		if object, ok := obj.(metav1.Object); ok {
+			return name == object.GetName()
+		}
+		return false
+	}
+}
+
 // FilterWithNameAndNamespace makes it simple to create FilterFunc's for use with
 // cache.FilteringResourceEventHandler that filter based on a namespace and a name.
 func FilterWithNameAndNamespace(namespace, name string) func(obj interface{}) bool {
@@ -173,6 +184,14 @@ func (c *Impl) Enqueue(obj interface{}) {
 		return
 	}
 	c.EnqueueKey(types.NamespacedName{Namespace: object.GetNamespace(), Name: object.GetName()})
+}
+
+// EnqueueSentinel returns a Enqueue method which will always enqueue a
+// predefined key instead of the object key.
+func (c *Impl) EnqueueSentinel(k types.NamespacedName) func(interface{}) {
+	return func(interface{}) {
+		c.EnqueueKey(k)
+	}
 }
 
 // EnqueueControllerOf takes a resource, identifies its controller resource,

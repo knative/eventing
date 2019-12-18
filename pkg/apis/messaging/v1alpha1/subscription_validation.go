@@ -20,9 +20,9 @@ import (
 	"context"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
 )
 
@@ -43,8 +43,8 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe.ViaField("channel"))
 	}
 
-	missingSubscriber := IsSubscriberSpecNilOrEmpty(ss.Subscriber)
-	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
+	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
+	missingReply := isDestinationNilOrEmpty(ss.Reply)
 	if missingSubscriber && missingReply {
 		fe := apis.ErrMissingField("reply", "subscriber")
 		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
@@ -52,13 +52,13 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingSubscriber {
-		if fe := IsValidSubscriberSpec(*ss.Subscriber); fe != nil {
+		if fe := ss.Subscriber.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
 
 	if !missingReply {
-		if fe := isValidReply(*ss.Reply); fe != nil {
+		if fe := ss.Reply.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("reply"))
 		}
 	}
@@ -66,63 +66,11 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func IsSubscriberSpecNilOrEmpty(s *SubscriberSpec) bool {
-	if s == nil || equality.Semantic.DeepEqual(s, &SubscriberSpec{}) {
-		return true
-	}
-	if equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) &&
-		s.DeprecatedDNSName == nil &&
-		s.URI == nil {
-		return true
-	}
-	return false
+func isDestinationNilOrEmpty(d *duckv1.Destination) bool {
+	return d == nil || equality.Semantic.DeepEqual(d, &duckv1.Destination{})
 }
 
-func IsValidSubscriberSpec(s SubscriberSpec) *apis.FieldError {
-	var errs *apis.FieldError
-
-	fieldsSet := make([]string, 0, 0)
-	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		fieldsSet = append(fieldsSet, "ref")
-	}
-	if s.DeprecatedDNSName != nil && *s.DeprecatedDNSName != "" {
-		fieldsSet = append(fieldsSet, "dnsName")
-	}
-	if s.URI != nil && *s.URI != "" {
-		fieldsSet = append(fieldsSet, "uri")
-	}
-	if len(fieldsSet) == 0 {
-		errs = errs.Also(apis.ErrMissingOneOf("ref", "dnsName", "uri"))
-	} else if len(fieldsSet) > 1 {
-		errs = errs.Also(apis.ErrMultipleOneOf(fieldsSet...))
-	}
-
-	// If Ref given, check the fields.
-	if s.Ref != nil && !equality.Semantic.DeepEqual(s.Ref, &corev1.ObjectReference{}) {
-		fe := IsValidObjectReference(*s.Ref)
-		if fe != nil {
-			errs = errs.Also(fe.ViaField("ref"))
-		}
-	}
-	return errs
-}
-
-func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) || equality.Semantic.DeepEqual(r.Channel, &corev1.ObjectReference{})
-}
-
-func isValidReply(r ReplyStrategy) *apis.FieldError {
-	if fe := IsValidObjectReference(*r.Channel); fe != nil {
-		return fe.ViaField("channel")
-	}
-	return nil
-}
-
-func (s *Subscription) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	original, ok := og.(*Subscription)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Subscription"}
-	}
+func (s *Subscription) CheckImmutableFields(ctx context.Context, original *Subscription) *apis.FieldError {
 	if original == nil {
 		return nil
 	}

@@ -20,14 +20,17 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
+	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
@@ -55,6 +58,7 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
 	serviceInformer := service.Get(ctx)
+	namespaceInformer := namespace.Get(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -62,6 +66,7 @@ func NewController(
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		serviceLister:      serviceInformer.Lister(),
+		namespaceLister:    namespaceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -85,8 +90,9 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	r.kresourceTracker = duck.NewListableTracker(ctx, &duckv1alpha1.KResource{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	return impl
 }

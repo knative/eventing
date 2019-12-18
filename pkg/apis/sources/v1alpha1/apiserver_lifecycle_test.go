@@ -75,6 +75,15 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
+		name: "mark sufficient permissions",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSufficientPermissions()
+			return s
+		}(),
+		want: false,
+	}, {
 		name: "mark event types",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
@@ -84,26 +93,38 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
-		name: "mark sink and deployed",
+		name: "mark sink and sufficient permissions and deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
+			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
 		want: true,
 	}, {
-		name: "mark sink and deployed and event types",
+		name: "mark sink and sufficient permissions and deployed and event types",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
+			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
 			return s
 		}(),
 		want: true,
+	}, {
+		name: "mark sink and not enough permissions",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink("uri://example")
+			s.MarkNoSufficientPermissions("areason", "amessage")
+			return s
+		}(),
+		want: false,
 	}}
 
 	for _, test := range tests {
@@ -166,11 +187,12 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
-		name: "mark sink and deployed",
+		name: "mark sink and enough permissions and deployed",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
+			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -180,11 +202,12 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			Status: corev1.ConditionTrue,
 		},
 	}, {
-		name: "mark sink and deployed and event types",
+		name: "mark sink and enough permissions and deployed and event types",
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSink("uri://example")
+			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
 			return s

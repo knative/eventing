@@ -32,13 +32,14 @@ import (
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	fakesharedclientset "knative.dev/pkg/client/clientset/versioned/fake"
 	"knative.dev/pkg/reconciler/testing"
 )
 
@@ -49,7 +50,6 @@ var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
 
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
-	fakesharedclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
@@ -107,12 +107,12 @@ func (l *Listers) GetAllObjects() []runtime.Object {
 	return all
 }
 
-func (l *Listers) GetSharedObjects() []runtime.Object {
-	return l.sorter.ObjectsForSchemeFunc(fakesharedclientset.AddToScheme)
-}
-
 func (l *Listers) GetSubscriptionLister() messaginglisters.SubscriptionLister {
 	return messaginglisters.NewSubscriptionLister(l.indexerFor(&messagingv1alpha1.Subscription{}))
+}
+
+func (l *Listers) GetFlowsSequenceLister() flowslisters.SequenceLister {
+	return flowslisters.NewSequenceLister(l.indexerFor(&flowsv1alpha1.Sequence{}))
 }
 
 func (l *Listers) GetTriggerLister() eventinglisters.TriggerLister {
@@ -141,6 +141,10 @@ func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
 
 func (l *Listers) GetParallelLister() messaginglisters.ParallelLister {
 	return messaginglisters.NewParallelLister(l.indexerFor(&messagingv1alpha1.Parallel{}))
+}
+
+func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
+	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
 }
 
 func (l *Listers) GetCronJobSourceLister() sourcelisters.CronJobSourceLister {

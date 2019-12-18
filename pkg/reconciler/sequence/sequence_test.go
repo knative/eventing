@@ -28,8 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -57,13 +59,14 @@ func init() {
 	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
-func createReplyChannel(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       channelName,
+func createReplyChannel(channelName string) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       channelName,
+		},
 	}
-
 }
 
 func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructured {
@@ -92,10 +95,11 @@ func createChannel(sequenceName string, stepNumber int) *unstructured.Unstructur
 
 }
 
-func createSubscriber(stepNumber int) v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/%d", stepNumber)
-	return v1alpha1.SubscriberSpec{
-		URI: &uriString,
+func createDestination(stepNumber int) duckv1.Destination {
+	uri := apis.HTTP("example.com")
+	uri.Path = fmt.Sprintf("%d", stepNumber)
+	return duckv1.Destination{
+		URI: uri,
 	}
 }
 
@@ -146,23 +150,25 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))},
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(sequenceName, 0),
-				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))),
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithSequenceDeprecatedStatus(),
 					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+
 					reconciletesting.WithSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
 						{
 							Channel: corev1.ObjectReference{
@@ -182,7 +188,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -198,7 +204,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))},
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
@@ -208,13 +214,14 @@ func TestAllCases(t *testing.T) {
 				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
+					reconciletesting.WithSequenceDeprecatedStatus(),
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
@@ -238,7 +245,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -253,10 +260,10 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
-						createSubscriber(0),
-						createSubscriber(1),
-						createSubscriber(2)}))},
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{
+						createDestination(0),
+						createDestination(1),
+						createDestination(2)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
@@ -265,18 +272,19 @@ func TestAllCases(t *testing.T) {
 				createChannel(sequenceName, 0),
 				createChannel(sequenceName, 1),
 				createChannel(sequenceName, 2),
-				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
-				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
+				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
+				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS, reconciletesting.WithSequenceChannelTemplateSpec(imc), reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
-						createSubscriber(0),
-						createSubscriber(1),
-						createSubscriber(2),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{
+						createDestination(0),
+						createDestination(1),
+						createDestination(2),
 					}),
+					reconciletesting.WithSequenceDeprecatedStatus(),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -327,7 +335,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -335,7 +343,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 								Namespace:  testNS,
@@ -343,7 +351,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 								Namespace:  testNS,
@@ -359,10 +367,10 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
-						createSubscriber(0),
-						createSubscriber(1),
-						createSubscriber(2)}))},
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{
+						createDestination(0),
+						createDestination(1),
+						createDestination(2)}))},
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
@@ -374,25 +382,26 @@ func TestAllCases(t *testing.T) {
 				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
 				resources.NewSubscription(1, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)}))),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
 				resources.NewSubscription(2, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0), createSubscriber(1), createSubscriber(2)})))},
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)})))},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{
-						createSubscriber(0),
-						createSubscriber(1),
-						createSubscriber(2),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{
+						createDestination(0),
+						createDestination(1),
+						createDestination(2),
 					}),
+					reconciletesting.WithSequenceDeprecatedStatus(),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -443,7 +452,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -451,7 +460,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 1),
 								Namespace:  testNS,
@@ -459,7 +468,7 @@ func TestAllCases(t *testing.T) {
 						},
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 2),
 								Namespace:  testNS,
@@ -475,11 +484,11 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(1)})),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(1)})),
 				createChannel(sequenceName, 0),
 				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(0)}))),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(0)}))),
 			},
 			WantErr: false,
 			WantEvents: []string{
@@ -491,13 +500,14 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(0, reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(1)}))),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(1)}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewSequence(sequenceName, testNS,
 					reconciletesting.WithInitSequenceConditions,
 					reconciletesting.WithSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithSequenceSteps([]v1alpha1.SubscriberSpec{createSubscriber(1)}),
+					reconciletesting.WithSequenceSteps([]duckv1.Destination{createDestination(1)}),
+					reconciletesting.WithSequenceDeprecatedStatus(),
 					reconciletesting.WithSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithSequenceAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -520,7 +530,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
 						{
 							Subscription: corev1.ObjectReference{
-								APIVersion: "eventing.knative.dev/v1alpha1",
+								APIVersion: "messaging.knative.dev/v1alpha1",
 								Kind:       "Subscription",
 								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
 								Namespace:  testNS,
@@ -533,10 +543,11 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = channelable.WithDuck(ctx)
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			sequenceLister:     listers.GetSequenceLister(),
-			channelableTracker: duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false, logger))

@@ -29,14 +29,15 @@ import (
 )
 
 const (
-	DefaultGKEMinNodes = 1
-	DefaultGKEMaxNodes = 3
-	DefaultGKENodeType = "n1-standard-4"
-	DefaultGKERegion   = "us-central1"
-	DefaultGKEZone     = ""
-	regionEnv          = "E2E_CLUSTER_REGION"
-	backupRegionEnv    = "E2E_CLUSTER_BACKUP_REGIONS"
-	defaultGKEVersion  = "latest"
+	DefaultGKEMinNodes  = 1
+	DefaultGKEMaxNodes  = 3
+	DefaultGKENodeType  = "n1-standard-4"
+	DefaultGKERegion    = "us-central1"
+	DefaultGKEZone      = ""
+	regionEnv           = "E2E_CLUSTER_REGION"
+	backupRegionEnv     = "E2E_CLUSTER_BACKUP_REGIONS"
+	defaultGKEVersion   = "latest"
+	DefaultResourceType = boskos.GKEProjectResource
 
 	ClusterRunning = "RUNNING"
 )
@@ -66,6 +67,9 @@ type GKERequest struct {
 	// NeedsCleanup: enforce clean up if given this option, used when running
 	// locally
 	NeedsCleanup bool
+
+	// ResourceType: the boskos resource type to acquire to hold the cluster in create
+	ResourceType string
 }
 
 // GKECluster implements ClusterOperations
@@ -89,14 +93,6 @@ func (gs *GKEClient) Setup(r GKERequest) ClusterOperations {
 	if r.Project != "" { // use provided project and create cluster
 		gc.Project = r.Project
 		gc.NeedsCleanup = true
-	}
-
-	if r.ClusterName == "" {
-		var err error
-		r.ClusterName, err = getResourceName(ClusterResource)
-		if err != nil {
-			log.Fatalf("Failed getting cluster name: '%v'", err)
-		}
 	}
 
 	if r.MinNodes == 0 {
@@ -129,6 +125,10 @@ func (gs *GKEClient) Setup(r GKERequest) ClusterOperations {
 		r.Zone = DefaultGKEZone
 	} else { // No backupregions if zone is provided
 		r.BackupRegions = make([]string, 0)
+	}
+
+	if r.ResourceType == "" {
+		r.ResourceType = DefaultResourceType
 	}
 
 	gc.Request = &r
@@ -176,7 +176,7 @@ func (gc *GKECluster) Acquire() error {
 	// Get project name from boskos if running in Prow, otherwise it should fail
 	// since we don't know which project to use
 	if common.IsProw() {
-		project, err := gc.boskosOps.AcquireGKEProject(nil)
+		project, err := gc.boskosOps.AcquireGKEProject(nil, gc.Request.ResourceType)
 		if err != nil {
 			return fmt.Errorf("failed acquiring boskos project: '%v'", err)
 		}
@@ -192,6 +192,14 @@ func (gc *GKECluster) Acquire() error {
 	request := gc.Request.DeepCopy()
 	// We are going to use request for creating cluster, set its Project
 	request.Project = gc.Project
+	// Set the cluster name if it doesn't exist
+	if request.ClusterName == "" {
+		var err error
+		request.ClusterName, err = getResourceName(ClusterResource)
+		if err != nil {
+			log.Fatalf("Failed getting cluster name: '%v'", err)
+		}
+	}
 
 	// Combine Region with BackupRegions, these will be the regions used for
 	// retrying creation logic
@@ -234,7 +242,7 @@ func (gc *GKECluster) Acquire() error {
 			if i != len(regions)-1 {
 				errMsg = fmt.Sprintf("%sRetry another region %q for cluster creation", errMsg, regions[i+1])
 			}
-			log.Printf(errMsg)
+			log.Print(errMsg)
 		} else {
 			log.Print("Cluster creation completed")
 			gc.Cluster = cluster

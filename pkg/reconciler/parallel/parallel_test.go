@@ -28,9 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -127,6 +128,7 @@ func TestAllBranches(t *testing.T) {
 					reconciletesting.WithInitParallelConditions,
 					reconciletesting.WithParallelChannelTemplateSpec(imc),
 					reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -166,6 +168,7 @@ func TestAllBranches(t *testing.T) {
 					reconciletesting.WithInitParallelConditions,
 					reconciletesting.WithParallelChannelTemplateSpec(imc),
 					reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -210,6 +213,7 @@ func TestAllBranches(t *testing.T) {
 					}),
 					reconciletesting.WithParallelReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
@@ -220,7 +224,7 @@ func TestAllBranches(t *testing.T) {
 					}})),
 			}},
 		}, {
-			Name: "single branch, no filter, with case and global reply",
+			Name: "single branch with deprecated reply, no filter, with case and global reply",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewParallel(parallelName, testNS,
@@ -253,6 +257,8 @@ func TestAllBranches(t *testing.T) {
 					}),
 					reconciletesting.WithParallelReply(createReplyChannel(replyChannelName)),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
+					reconciletesting.WithParallelDeprecatedBranchReplyStatus(),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
 					reconciletesting.WithParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
@@ -262,8 +268,7 @@ func TestAllBranches(t *testing.T) {
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 					}})),
 			}},
-		},
-		{
+		}, {
 			Name: "two branches, no filters",
 			Key:  pKey,
 			Objects: []runtime.Object{
@@ -306,6 +311,7 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0)},
 						{Subscriber: createSubscriber(1)},
 					}),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -368,6 +374,7 @@ func TestAllBranches(t *testing.T) {
 						{Subscriber: createSubscriber(0)},
 						{Subscriber: createSubscriber(1)},
 					}),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -422,6 +429,7 @@ func TestAllBranches(t *testing.T) {
 					reconciletesting.WithInitParallelConditions,
 					reconciletesting.WithParallelChannelTemplateSpec(imc),
 					reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{{Subscriber: createSubscriber(1)}}),
+					reconciletesting.WithParallelDeprecatedStatus(),
 					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
 					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -437,28 +445,33 @@ func TestAllBranches(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = channelable.WithDuck(ctx)
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			parallelLister:     listers.GetParallelLister(),
-			channelableTracker: duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, func(types.NamespacedName) {}, 0),
+			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
 	}, false, logger))
 }
 
-func createBranchReplyChannel(caseNumber int) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+func createBranchReplyChannel(caseNumber int) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+		},
 	}
 }
 
-func createReplyChannel(channelName string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "messaging.knative.dev/v1alpha1",
-		Kind:       "inmemorychannel",
-		Name:       channelName,
+func createReplyChannel(channelName string) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       channelName,
+		},
 	}
 }
 
@@ -549,7 +562,7 @@ func createParallelChannelStatus(parallelName string, status corev1.ConditionSta
 func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelSubscriptionStatus {
 	return v1alpha1.ParallelSubscriptionStatus{
 		Subscription: corev1.ObjectReference{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "Subscription",
 			Name:       resources.ParallelFilterSubscriptionName(parallelName, caseNumber),
 			Namespace:  testNS,
@@ -560,7 +573,7 @@ func createParallelFilterSubscriptionStatus(parallelName string, caseNumber int,
 func createParallelSubscriptionStatus(parallelName string, caseNumber int, status corev1.ConditionStatus) v1alpha1.ParallelSubscriptionStatus {
 	return v1alpha1.ParallelSubscriptionStatus{
 		Subscription: corev1.ObjectReference{
-			APIVersion: "eventing.knative.dev/v1alpha1",
+			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "Subscription",
 			Name:       resources.ParallelSubscriptionName(parallelName, caseNumber),
 			Namespace:  testNS,
@@ -568,16 +581,16 @@ func createParallelSubscriptionStatus(parallelName string, caseNumber int, statu
 	}
 }
 
-func createSubscriber(caseNumber int) v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/%d", caseNumber)
-	return v1alpha1.SubscriberSpec{
-		URI: &uriString,
+func createSubscriber(caseNumber int) duckv1.Destination {
+	uri := apis.HTTP(fmt.Sprintf("example.com/%d", caseNumber))
+	return duckv1.Destination{
+		URI: uri,
 	}
 }
 
-func createFilter(caseNumber int) *v1alpha1.SubscriberSpec {
-	uriString := fmt.Sprintf("http://example.com/filter-%d", caseNumber)
-	return &v1alpha1.SubscriberSpec{
-		URI: &uriString,
+func createFilter(caseNumber int) *duckv1.Destination {
+	uri := apis.HTTP(fmt.Sprintf("example.com/filter-%d", caseNumber))
+	return &duckv1.Destination{
+		URI: uri,
 	}
 }

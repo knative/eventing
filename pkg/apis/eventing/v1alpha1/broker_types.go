@@ -26,7 +26,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -55,13 +54,11 @@ var (
 	// Check that Broker can be validated, can be defaulted, and has immutable fields.
 	_ apis.Validatable = (*Broker)(nil)
 	_ apis.Defaultable = (*Broker)(nil)
-	_ apis.Immutable   = (*Broker)(nil)
 
 	// Check that Broker can return its spec untyped.
 	_ apis.HasSpec = (*Broker)(nil)
 
-	_ runtime.Object     = (*Broker)(nil)
-	_ webhook.GenericCRD = (*Broker)(nil)
+	_ runtime.Object = (*Broker)(nil)
 
 	// Check that we can create OwnerReferences to a Broker.
 	_ kmeta.OwnerRefable = (*Broker)(nil)
@@ -91,9 +88,6 @@ type BrokerStatus struct {
 
 	// TriggerChannel is an objectref to the object for the TriggerChannel
 	TriggerChannel *corev1.ObjectReference `json:"triggerChannel,omitempty"`
-
-	// IngressChannel is an objectref to the object for the IngressChannel
-	IngressChannel *corev1.ObjectReference `json:"IngressChannel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

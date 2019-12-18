@@ -33,7 +33,7 @@ func init() {
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	ctx := event.Context.AsV03()
+	ctx := event.Context.AsV1()
 
 	dataBytes, err := event.DataBytes()
 	if err != nil {
@@ -47,7 +47,7 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 		log.Println("Filter event")
 		resp.Status = 200
 	} else {
-		event.SetDataContentType("application/json")
+		event.SetDataContentType(cloudevents.ApplicationJSON)
 		log.Println("Reply with event")
 		resp.RespondWith(200, &event)
 	}

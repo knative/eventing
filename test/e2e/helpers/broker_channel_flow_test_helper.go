@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
@@ -50,16 +51,15 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel string) {
+	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := common.Setup(st, true)
 		defer common.TearDown(client)
-		channelTypeMeta := common.GetChannelTypeMeta(channel)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 		client.CreateRBACResourcesForBrokers()
 
 		// create a new broker
-		client.CreateBrokerOrFail(brokerName, channelTypeMeta)
+		client.CreateBrokerOrFail(brokerName, &channel)
 		client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
 
 		// create the event we want to transform to
@@ -96,11 +96,11 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		)
 
 		// create channel for trigger3
-		client.CreateChannelOrFail(channelName, channelTypeMeta)
-		client.WaitForResourceReady(channelName, channelTypeMeta)
+		client.CreateChannelOrFail(channelName, &channel)
+		client.WaitForResourceReady(channelName, &channel)
 
 		// create trigger3 to receive the transformed event, and send it to the channel
-		channelURL, err := client.GetAddressableURI(channelName, channelTypeMeta)
+		channelURL, err := client.GetAddressableURI(channelName, &channel)
 		if err != nil {
 			st.Fatalf("Failed to get the url for the channel %q: %v", channelName, err)
 		}
@@ -119,7 +119,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		client.CreateSubscriptionOrFail(
 			subscriptionName,
 			channelName,
-			channelTypeMeta,
+			&channel,
 			resources.WithSubscriberForSubscription(loggerPodName2),
 		)
 

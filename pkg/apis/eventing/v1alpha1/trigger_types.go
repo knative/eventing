@@ -20,17 +20,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 const (
 	// DependencyAnnotation is the annotation key used to mark the sources that the Trigger depends on.
 	// This will be used when the kn client creates an importer and trigger pair for the user such that the trigger only receives events produced by the paired importer.
 	DependencyAnnotation = "knative.dev/dependency"
+	// InjectionAnnotation is the annotation key used to enable knative eventing injection for a namespace and automatically create a default broker.
+	// This will be used when the client creates a trigger paired with default broker and the default broker doesn't exist in the namespace
+	InjectionAnnotation = "knative-eventing-injection"
 )
 
 // +genclient
@@ -56,13 +57,11 @@ var (
 	// Check that Trigger can be validated, can be defaulted, and has immutable fields.
 	_ apis.Validatable = (*Trigger)(nil)
 	_ apis.Defaultable = (*Trigger)(nil)
-	_ apis.Immutable   = (*Trigger)(nil)
 
 	// Check that Trigger can return its spec untyped.
 	_ apis.HasSpec = (*Trigger)(nil)
 
-	_ runtime.Object     = (*Trigger)(nil)
-	_ webhook.GenericCRD = (*Trigger)(nil)
+	_ runtime.Object = (*Trigger)(nil)
 
 	// Check that we can create OwnerReferences to a Trigger.
 	_ kmeta.OwnerRefable = (*Trigger)(nil)
@@ -81,7 +80,7 @@ type TriggerSpec struct {
 
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
-	Subscriber *messagingv1alpha1.SubscriberSpec `json:"subscriber,omitempty"`
+	Subscriber duckv1.Destination `json:"subscriber"`
 }
 
 type TriggerFilter struct {
@@ -124,7 +123,7 @@ type TriggerStatus struct {
 	duckv1.Status `json:",inline"`
 
 	// SubscriberURI is the resolved URI of the receiver for this Trigger.
-	SubscriberURI string `json:"subscriberURI,omitempty"`
+	SubscriberURI *apis.URL `json:"subscriberURI,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

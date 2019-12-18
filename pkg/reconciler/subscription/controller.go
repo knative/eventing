@@ -22,13 +22,13 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/resolver"
 
 	crd "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
 
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 )
 
@@ -62,8 +62,8 @@ func NewController(
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.addressableTracker = duck.NewListableTracker(ctx, &duckv1alpha1.AddressableType{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.channelableTracker = duck.NewListableTracker(ctx, &eventingduckv1alpha1.Channelable{}, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.destinationResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	return impl
 }

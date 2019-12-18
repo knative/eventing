@@ -17,12 +17,12 @@ limitations under the License.
 package profiling
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"strconv"
 	"sync"
 
-	perrors "github.com/pkg/errors"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -76,14 +76,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func readProfilingFlag(configMap *corev1.ConfigMap) (bool, error) {
-	profiling, ok := configMap.Data[profilingKey]
+func ReadProfilingFlag(config map[string]string) (bool, error) {
+	profiling, ok := config[profilingKey]
 	if !ok {
 		return false, nil
 	}
 	enabled, err := strconv.ParseBool(profiling)
 	if err != nil {
-		return false, perrors.Wrapf(err, "failed to parse the profiling flag")
+		return false, fmt.Errorf("failed to parse the profiling flag: %w", err)
 	}
 	return enabled, nil
 }
@@ -91,7 +91,7 @@ func readProfilingFlag(configMap *corev1.ConfigMap) (bool, error) {
 // UpdateFromConfigMap modifies the Enabled flag in the Handler
 // according to the value in the given ConfigMap
 func (h *Handler) UpdateFromConfigMap(configMap *corev1.ConfigMap) {
-	enabled, err := readProfilingFlag(configMap)
+	enabled, err := ReadProfilingFlag(configMap.Data)
 	if err != nil {
 		h.log.Errorw("Failed to update the profiling flag", zap.Error(err))
 		return

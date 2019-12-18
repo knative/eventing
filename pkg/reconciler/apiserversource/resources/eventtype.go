@@ -49,7 +49,7 @@ func MakeEventType(args *EventTypeArgs) eventingv1alpha1.EventType {
 		Spec: eventingv1alpha1.EventTypeSpec{
 			Type:   args.Type,
 			Source: args.Source,
-			Broker: args.Src.Spec.Sink.Name,
+			Broker: args.Src.Spec.Sink.GetRef().Name,
 		},
 	}
 }

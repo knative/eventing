@@ -26,7 +26,6 @@ import (
 	"knative.dev/pkg/kmp"
 
 	corev1 "k8s.io/api/core/v1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 var (
@@ -37,11 +36,8 @@ var (
 // Validate the Trigger.
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	errs := t.Spec.Validate(ctx).ViaField("spec")
-	dependencyAnnotation, ok := t.GetAnnotations()[DependencyAnnotation]
-	if ok {
-		dependencyAnnotationPrefix := fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
-		errs = errs.Also(t.validateDependencyAnnotation(dependencyAnnotation).ViaField(dependencyAnnotationPrefix))
-	}
+	errs = t.validateAnnotation(errs, DependencyAnnotation, t.validateDependencyAnnotation)
+	errs = t.validateAnnotation(errs, InjectionAnnotation, t.validateInjectionAnnotation)
 	return errs
 }
 
@@ -93,10 +89,7 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if messagingv1alpha1.IsSubscriberSpecNilOrEmpty(ts.Subscriber) {
-		fe := apis.ErrMissingField("subscriber")
-		errs = errs.Also(fe)
-	} else if fe := messagingv1alpha1.IsValidSubscriberSpec(*ts.Subscriber); fe != nil {
+	if fe := ts.Subscriber.Validate(ctx); fe != nil {
 		errs = errs.Also(fe.ViaField("subscriber"))
 	}
 
@@ -104,14 +97,9 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 }
 
 // CheckImmutableFields checks that any immutable fields were not changed.
-func (t *Trigger) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	if og == nil {
+func (t *Trigger) CheckImmutableFields(ctx context.Context, original *Trigger) *apis.FieldError {
+	if original == nil {
 		return nil
-	}
-
-	original, ok := og.(*Trigger)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Trigger"}
 	}
 
 	if diff, err := kmp.ShortDiff(original.Spec.Broker, t.Spec.Broker); err != nil {
@@ -136,6 +124,14 @@ func GetObjRefFromDependencyAnnotation(dependencyAnnotation string) (corev1.Obje
 		return objectRef, err
 	}
 	return objectRef, nil
+}
+
+func (t *Trigger) validateAnnotation(errs *apis.FieldError, annotation string, function func(string) *apis.FieldError) *apis.FieldError {
+	if annotationValue, ok := t.GetAnnotations()[annotation]; ok {
+		annotationPrefix := fmt.Sprintf("metadata.annotations[%s]", annotation)
+		errs = errs.Also(function(annotationValue).ViaField(annotationPrefix))
+	}
+	return errs
 }
 
 func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *apis.FieldError {
@@ -168,4 +164,20 @@ func (t *Trigger) validateDependencyAnnotation(dependencyAnnotation string) *api
 		errs = errs.Also(fe)
 	}
 	return errs
+}
+
+func (t *Trigger) validateInjectionAnnotation(injectionAnnotation string) *apis.FieldError {
+	if injectionAnnotation != "enabled" {
+		return &apis.FieldError{
+			Message: fmt.Sprintf(`The provided injection annotation value can only be "enabled", not %q`, injectionAnnotation),
+			Paths:   []string{""},
+		}
+	}
+	if t.Spec.Broker != "default" {
+		return &apis.FieldError{
+			Message: fmt.Sprintf("The provided injection annotation is only used for default broker, but non-default broker specified here: %q", t.Spec.Broker),
+			Paths:   []string{""},
+		}
+	}
+	return nil
 }

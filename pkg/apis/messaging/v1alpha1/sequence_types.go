@@ -26,7 +26,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/webhook"
 )
 
 // +genclient
@@ -55,20 +54,16 @@ var (
 	// Check that Sequence can return its spec untyped.
 	_ apis.HasSpec = (*Sequence)(nil)
 
-	// TODO: make appropriate fields immutable.
-	//_ apis.Immutable = (*Sequence)(nil)
-
-	_ runtime.Object     = (*Sequence)(nil)
-	_ webhook.GenericCRD = (*Sequence)(nil)
+	_ runtime.Object = (*Sequence)(nil)
 
 	// Check that we can create OwnerReferences to a Sequence.
 	_ kmeta.OwnerRefable = (*Sequence)(nil)
 )
 
 type SequenceSpec struct {
-	// Steps is the list of Subscribers (processors / functions) that will be called in the order
+	// Steps is the list of Destinations (processors / functions) that will be called in the order
 	// provided.
-	Steps []SubscriberSpec `json:"steps"`
+	Steps []duckv1.Destination `json:"steps"`
 
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
@@ -76,17 +71,8 @@ type SequenceSpec struct {
 	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate,omitempty"`
 
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
-	//
-	// You can specify only the following fields of the ObjectReference:
-	//   - Kind
-	//   - APIVersion
-	//   - Name
-	//
-	//  The resource pointed by this ObjectReference must meet the Addressable contract
-	//  with a reference to the Addressable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
 	// +optional
-	Reply *corev1.ObjectReference `json:"reply,omitempty"`
+	Reply *duckv1.Destination `json:"reply,omitempty"`
 }
 
 type SequenceChannelStatus struct {

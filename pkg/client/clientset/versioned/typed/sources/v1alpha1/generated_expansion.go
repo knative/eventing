@@ -23,3 +23,5 @@ type ApiServerSourceExpansion interface{}
 type ContainerSourceExpansion interface{}
 
 type CronJobSourceExpansion interface{}
+
+type SinkBindingExpansion interface{}

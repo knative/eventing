@@ -20,9 +20,9 @@ set -o pipefail
 
 source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/library.sh
 
-CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../../../k8s.io/code-generator)}
+CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 $(dirname $0)/../vendor/k8s.io/code-generator 2>/dev/null || echo ../../../k8s.io/code-generator)}
 
-KNATIVE_CODEGEN_PKG=${KNATIVE_CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 ./vendor/knative.dev/pkg 2>/dev/null || echo ../pkg)}
+KNATIVE_CODEGEN_PKG=${KNATIVE_CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 $(dirname $0)/../vendor/knative.dev/pkg 2>/dev/null || echo ../pkg)}
 
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
@@ -30,7 +30,7 @@ KNATIVE_CODEGEN_PKG=${KNATIVE_CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 ./ven
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1" \
+  "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1 flows:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Only deepcopy the Duck types, as they are not real resources.
@@ -42,7 +42,7 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
 # Knative Injection
 ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1" \
+  "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1 flows:v1alpha1 duck:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Make sure our dependencies are up-to-date

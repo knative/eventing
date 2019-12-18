@@ -27,7 +27,7 @@ import (
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
-// +genclient
+// +genduck
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Channelable is a skeleton type wrapping Subscribable and Addressable in the manner we expect resource writers
@@ -46,6 +46,10 @@ type Channelable struct {
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableSpec struct {
 	SubscribableTypeSpec `json:",inline"`
+
+	// DeliverySpec contains options controlling the event delivery
+	// +optional
+	Delivery *DeliverySpec `json:"delivery,omitempty"`
 }
 
 // ChannelableStatus contains the Status of a Channelable object.
@@ -58,12 +62,16 @@ type ChannelableStatus struct {
 	v1alpha1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	SubscribableTypeStatus `json:",inline"`
+	// ErrorChannel is set by the channel when it supports native error handling via a channel
+	// +optional
+	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
 }
 
 var (
 	// Verify Channelable resources meet duck contracts.
-	_ duck.Populatable = (*Channelable)(nil)
-	_ apis.Listable    = (*Channelable)(nil)
+	_ duck.Populatable   = (*Channelable)(nil)
+	_ duck.Implementable = (*Channelable)(nil)
+	_ apis.Listable      = (*Channelable)(nil)
 )
 
 // Populate implements duck.Populatable
@@ -73,14 +81,31 @@ func (c *Channelable) Populate() {
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			Generation:    1,
-			SubscriberURI: "call1",
-			ReplyURI:      "sink2",
+			SubscriberURI: apis.HTTP("call1"),
+			ReplyURI:      apis.HTTP("sink2"),
 		}, {
 			UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 			Generation:    2,
-			SubscriberURI: "call2",
-			ReplyURI:      "sink2",
+			SubscriberURI: apis.HTTP("call2"),
+			ReplyURI:      apis.HTTP("sink2"),
 		}},
+	}
+	retry := int32(5)
+	linear := BackoffPolicyLinear
+	delay := "5s"
+	c.Spec.Delivery = &DeliverySpec{
+		DeadLetterSink: &duckv1.Destination{
+			Ref: &corev1.ObjectReference{
+				Name: "aname",
+			},
+			URI: &apis.URL{
+				Scheme: "http",
+				Host:   "test-error-domain",
+			},
+		},
+		Retry:         &retry,
+		BackoffPolicy: &linear,
+		BackoffDelay:  &delay,
 	}
 	c.Status = ChannelableStatus{
 		AddressStatus: v1alpha1.AddressStatus{
@@ -96,19 +121,6 @@ func (c *Channelable) Populate() {
 			},
 		},
 		SubscribableTypeStatus: SubscribableTypeStatus{
-			DeprecatedSubscribableStatus: &SubscribableStatus{
-				Subscribers: []SubscriberStatus{{
-					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 1,
-					Ready:              corev1.ConditionTrue,
-					Message:            "Some message",
-				}, {
-					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 2,
-					Ready:              corev1.ConditionFalse,
-					Message:            "Some message",
-				}},
-			},
 			SubscribableStatus: &SubscribableStatus{
 				Subscribers: []SubscriberStatus{{
 					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -124,6 +136,11 @@ func (c *Channelable) Populate() {
 			},
 		},
 	}
+}
+
+// GetFullType implements duck.Implementable
+func (s *Channelable) GetFullType() duck.Populatable {
+	return &Channelable{}
 }
 
 // GetListType implements apis.Listable

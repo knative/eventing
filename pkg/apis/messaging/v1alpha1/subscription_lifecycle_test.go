@@ -245,12 +245,18 @@ func TestSubscriptionIsReady(t *testing.T) {
 			ss := &SubscriptionStatus{}
 			if test.markResolved {
 				ss.MarkReferencesResolved()
+				if !ss.AreReferencesResolved() {
+					t.Errorf("References marked resolved, but not reflected in AreReferencesResolved")
+				}
 			}
 			if test.markChannelReady {
 				ss.MarkChannelReady()
 			}
 			if test.markAddedToChannel {
 				ss.MarkAddedToChannel()
+				if !ss.IsAddedToChannel() {
+					t.Errorf("Channel added, but not reflected in IsAddedToChannel")
+				}
 			}
 			got := ss.IsReady()
 			if test.wantReady != got {

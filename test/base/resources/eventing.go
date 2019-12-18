@@ -21,8 +21,11 @@ package resources
 import (
 	"fmt"
 
+	"knative.dev/pkg/apis"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -48,7 +51,7 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+			s.Spec.Subscriber = &duckv1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -59,9 +62,27 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
-			s.Spec.Reply = &messagingv1alpha1.ReplyStrategy{
-				Channel: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
+			s.Spec.Reply = &duckv1.Destination{
+				Ref: pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name),
 			}
+		}
+	}
+}
+
+// WithDeadLetterSinkForSubscription returns an options that adds a DeadLetterSink for the given Subscription.
+func WithDeadLetterSinkForSubscription(name string) SubscriptionOption {
+	return func(s *messagingv1alpha1.Subscription) {
+		if name != "" {
+			delivery := s.Spec.Delivery
+			if delivery == nil {
+				delivery = &eventingduckv1alpha1.DeliverySpec{}
+				s.Spec.Delivery = delivery
+			}
+
+			delivery.DeadLetterSink = &duckv1.Destination{
+				Ref: ServiceRef(name),
+			}
+
 		}
 	}
 }
@@ -149,7 +170,7 @@ func WithBroker(brokerName string) TriggerOption {
 func WithSubscriberRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
-			t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
+			t.Spec.Subscriber = duckv1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
@@ -158,9 +179,10 @@ func WithSubscriberRefForTrigger(name string) TriggerOption {
 
 // WithSubscriberURIForTrigger returns an option that adds a Subscriber URI for the given Trigger.
 func WithSubscriberURIForTrigger(uri string) TriggerOption {
+	apisURI, _ := apis.ParseURL(uri)
 	return func(t *eventingv1alpha1.Trigger) {
-		t.Spec.Subscriber = &messagingv1alpha1.SubscriberSpec{
-			URI: &uri,
+		t.Spec.Subscriber = duckv1.Destination{
+			URI: apisURI,
 		}
 	}
 }

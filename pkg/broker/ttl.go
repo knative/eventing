@@ -17,32 +17,34 @@
 package broker
 
 import (
-	"strings"
-
 	cloudevents "github.com/cloudevents/sdk-go"
+	cetypes "github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
 const (
-	// V03TTLAttribute is the name of the CloudEvents 0.3 extension attribute used to store the
+	// TTLAttribute is the name of the CloudEvents extension attribute used to store the
 	// Broker's TTL (number of times a single event can reply through a Broker continuously). All
 	// interactions with the attribute should be done through the GetTTL and SetTTL functions.
-	V03TTLAttribute = "knativebrokerttl"
+	TTLAttribute = "knativebrokerttl"
 )
 
 // GetTTL finds the TTL in the EventContext using a case insensitive comparison
 // for the key. The second return param, is the case preserved key that matched.
 // Depending on the encoding/transport, the extension case could be changed.
-func GetTTL(ctx cloudevents.EventContext) (interface{}, string) {
-	for k, v := range ctx.AsV03().Extensions {
-		if lower := strings.ToLower(k); lower == V03TTLAttribute {
-			return v, k
-		}
+func GetTTL(ctx cloudevents.EventContext) (int32, error) {
+	ttl, err := ctx.GetExtension(TTLAttribute)
+	if err != nil {
+		return 0, err
 	}
-	return nil, V03TTLAttribute
+	return cetypes.ToInteger(ttl)
 }
 
 // SetTTL sets the TTL into the EventContext. ttl should be a positive integer.
-func SetTTL(ctx cloudevents.EventContext, ttl interface{}) (cloudevents.EventContext, error) {
-	err := ctx.SetExtension(V03TTLAttribute, ttl)
-	return ctx, err
+func SetTTL(ctx cloudevents.EventContext, ttl int32) error {
+	return ctx.SetExtension(TTLAttribute, ttl)
+}
+
+// DeleteTTL removes the TTL CE extension attribute
+func DeleteTTL(ctx cloudevents.EventContext) error {
+	return ctx.SetExtension(TTLAttribute, nil)
 }

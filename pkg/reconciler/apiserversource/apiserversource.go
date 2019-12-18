@@ -24,23 +24,29 @@ import (
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
+	pkgLogging "knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/resolver"
+
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
-	pkgLogging "knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
 )
 
 const (
@@ -78,12 +84,17 @@ type Reconciler struct {
 	receiveAdapterImage string
 
 	// listers index properties about resources
-	apiserversourceLister listers.ApiServerSourceLister
-	deploymentLister      appsv1listers.DeploymentLister
-	eventTypeLister       eventinglisters.EventTypeLister
+	apiserversourceLister    listers.ApiServerSourceLister
+	deploymentLister         appsv1listers.DeploymentLister
+	eventTypeLister          eventinglisters.EventTypeLister
+	roleLister               rbacv1listers.RoleLister
+	roleBindingLister        rbacv1listers.RoleBindingLister
+	clusterRoleLister        rbacv1listers.ClusterRoleLister
+	clusterRoleBindingLister rbacv1listers.ClusterRoleBindingLister
+	serviceAccountLister     corev1listers.ServiceAccountLister
 
 	source         string
-	sinkReconciler *duck.SinkReconciler
+	sinkResolver   *resolver.URIResolver
 	loggingContext context.Context
 	loggingConfig  *pkgLogging.Config
 	metricsConfig  *metrics.ExporterOptions
@@ -145,18 +156,45 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 
 	source.Status.InitializeConditions()
 
-	sinkObjRef := source.Spec.Sink
-	if sinkObjRef.Namespace == "" {
-		sinkObjRef.Namespace = source.Namespace
+	if source.Spec.Sink == nil {
+		source.Status.MarkNoSink("SinkMissing", "")
+		return fmt.Errorf("spec.sink missing")
 	}
 
-	sourceDesc := fmt.Sprintf("%s/%s,%s", source.Namespace, source.Name, source.GroupVersionKind().String())
-	sinkURI, err := r.sinkReconciler.GetSinkURI(sinkObjRef, source, sourceDesc)
+	dest := source.Spec.Sink.DeepCopy()
+	if dest.Ref != nil {
+		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is
+		// no Namespace defined in dest.Ref, we will use the Namespace of the source
+		// as the Namespace of dest.Ref.
+		if dest.Ref.Namespace == "" {
+			//TODO how does this work with deprecated fields
+			dest.Ref.Namespace = source.GetNamespace()
+		}
+	} else if dest.DeprecatedName != "" && dest.DeprecatedNamespace == "" {
+		// If Ref is nil and the deprecated ref is present, we need to check for
+		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
+		// removed.
+		dest.DeprecatedNamespace = source.GetNamespace()
+	}
+
+	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return fmt.Errorf("getting sink URI: %v", err)
 	}
-	source.Status.MarkSink(sinkURI)
+	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
+		source.Spec.Sink.DeprecatedKind != "" &&
+		source.Spec.Sink.DeprecatedName != "" {
+		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
+	} else {
+		source.Status.MarkSink(sinkURI)
+	}
+
+	err = r.runAccessCheck(source)
+	if err != nil {
+		logging.FromContext(ctx).Error("Not enough permission", zap.Error(err))
+		return err
+	}
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 	if err != nil {
@@ -294,7 +332,7 @@ func (r *Reconciler) makeEventTypes(src *v1alpha1.ApiServerSource) ([]eventingv1
 	// Only create EventTypes for Broker sinks.
 	// We add this check here in case the APIServerSource was changed from Broker to non-Broker sink.
 	// If so, we need to delete the existing ones, thus we return empty expected.
-	if src.Spec.Sink.Kind != "Broker" {
+	if ref := src.Spec.Sink.GetRef(); ref == nil || ref.Kind != "Broker" {
 		return eventTypes, nil
 	}
 
@@ -411,4 +449,71 @@ func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 		ConfigMap: cfg.Data,
 	}
 	logging.FromContext(r.loggingContext).Info("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
+}
+
+func (r *Reconciler) runAccessCheck(src *v1alpha1.ApiServerSource) error {
+	if src.Spec.Resources == nil || len(src.Spec.Resources) == 0 {
+		src.Status.MarkSufficientPermissions()
+		return nil
+	}
+
+	user := "system:serviceaccount:" + src.Namespace + ":"
+	if src.Spec.ServiceAccountName == "" {
+		user += "default"
+	} else {
+		user += src.Spec.ServiceAccountName
+	}
+
+	verbs := []string{"get", "list", "watch"}
+	resources := src.Spec.Resources
+	lastReason := ""
+
+	// Collect all missing permissions.
+	missing := ""
+	sep := ""
+
+	for _, res := range resources {
+		gv, err := schema.ParseGroupVersion(res.APIVersion)
+		if err != nil { // shouldn't happened after #2134 is fixed
+			return err
+		}
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version})
+		missingVerbs := ""
+		sep1 := ""
+		for _, verb := range verbs {
+			sar := &authorizationv1.SubjectAccessReview{
+				Spec: authorizationv1.SubjectAccessReviewSpec{
+					ResourceAttributes: &authorizationv1.ResourceAttributes{
+						Namespace: src.Namespace,
+						Verb:      verb,
+						Group:     gv.Group,
+						Resource:  gvr.Resource,
+					},
+					User: user,
+				},
+			}
+
+			response, err := r.KubeClientSet.AuthorizationV1().SubjectAccessReviews().Create(sar)
+			if err != nil {
+				return err
+			}
+
+			if !response.Status.Allowed {
+				missingVerbs += sep1 + verb
+				sep1 = ", "
+			}
+		}
+		if missingVerbs != "" {
+			missing += sep + missingVerbs + ` resource "` + gvr.Resource + `" in API group "` + gv.Group + `"`
+			sep = ", "
+		}
+	}
+	if missing == "" {
+		src.Status.MarkSufficientPermissions()
+		return nil
+	}
+
+	src.Status.MarkNoSufficientPermissions(lastReason, "User %s cannot %s", user, missing)
+	return fmt.Errorf("Insufficient permission: user %s cannot %s", user, missing)
+
 }

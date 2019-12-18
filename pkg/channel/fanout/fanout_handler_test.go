@@ -30,22 +30,24 @@ import (
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
+	"knative.dev/pkg/apis"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
 // servers.
-const (
-	replaceSubscriber = "replaceSubscriber"
-	replaceChannel    = "replaceChannel"
+var (
+	replaceSubscriber = apis.HTTP("replaceSubscriber")
+	replaceChannel    = apis.HTTP("replaceChannel")
 )
 
 func makeCloudEvent() cloudevents.Event {
-	event := cloudevents.NewEvent(cloudevents.VersionV03)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType("com.example.someevent")
 	event.SetSource("/mycontext")
 	event.SetID("A234-1234-1234")
-	event.SetExtension("comExampleExtension", "value")
+	event.SetExtension("comexampleextension", "value")
 	event.SetData("<much wow=\"xml\"/>")
+	event.SetDataContentType(cloudevents.ApplicationXML)
 	return event
 }
 
@@ -218,10 +220,10 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs := make([]eventingduck.SubscriberSpec, 0)
 			for _, sub := range tc.subs {
 				if sub.SubscriberURI == replaceSubscriber {
-					sub.SubscriberURI = callableServer.URL[7:] // strip the leading 'http://'
+					sub.SubscriberURI = apis.HTTP(callableServer.URL[7:]) // strip the leading 'http://'
 				}
 				if sub.ReplyURI == replaceChannel {
-					sub.ReplyURI = channelServer.URL[7:] // strip the leading 'http://'
+					sub.ReplyURI = apis.HTTP(channelServer.URL[7:]) // strip the leading 'http://'
 				}
 				subs = append(subs, sub)
 			}
@@ -286,7 +288,7 @@ func (s *succeedOnce) handler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("ce-specversion", cloudevents.VersionV03)
+	writer.Header().Set("ce-specversion", cloudevents.VersionV1)
 	writer.Header().Set("ce-type", "com.example.someotherevent")
 	writer.Header().Set("ce-source", "/myothercontext")
 	writer.Header().Set("ce-id", "B234-1234-1234")

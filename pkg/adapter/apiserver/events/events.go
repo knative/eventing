@@ -106,10 +106,11 @@ func makeEvent(source, eventType string, obj *unstructured.Unstructured, data in
 		Namespace:  obj.GetNamespace(),
 	})
 
-	event := cloudevents.NewEvent(cloudevents.VersionV03)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType(eventType)
 	event.SetSource(source)
 	event.SetSubject(subject)
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 
 	if err := event.SetData(data); err != nil {
 		return nil, err

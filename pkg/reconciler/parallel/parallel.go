@@ -108,8 +108,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error {
-	p.Status.InitializeConditions()
-
 	// Reconciling parallel is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
 	// 2. For each of the Branches:
@@ -122,6 +120,9 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 		return nil
 	}
 
+	p.Status.InitializeConditions()
+
+	p.Status.MarkDeprecated("parallelMessagingDeprecated", "parallels.messaging.knative.dev are deprecated and will be removed in the future. Use parallels.flows.knative.dev instead.")
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(p.Namespace)
 	if channelResourceInterface == nil {

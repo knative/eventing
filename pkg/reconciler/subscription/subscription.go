@@ -36,8 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -45,6 +45,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -59,6 +60,8 @@ const (
 	channelReferenceFailed              = "ChannelReferenceFailed"
 	subscriberResolveFailed             = "SubscriberResolveFailed"
 	replyResolveFailed                  = "ReplyResolveFailed"
+	replyFieldsDeprecated               = "ReplyFieldsDeprecated"
+	deadLetterSinkResolveFailed         = "DeadLetterSinkResolveFailed"
 
 	// Label to specify valid subscribable channel CRDs.
 	channelLabelKey   = "messaging.knative.dev/subscribable"
@@ -71,8 +74,8 @@ type Reconciler struct {
 	// listers index properties about resources
 	subscriptionLister             listers.SubscriptionLister
 	customResourceDefinitionLister apiextensionslisters.CustomResourceDefinitionLister
-	addressableTracker             eventingduck.ListableTracker
 	channelableTracker             eventingduck.ListableTracker
+	destinationResolver            *resolver.URIResolver
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -139,16 +142,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return fmt.Errorf("unable to track changes to spec.channel: %v", err)
 	}
 
-	// Track the subscriber using the addressableTracker.
-	trackAddressable := r.addressableTracker.TrackInNamespace(subscription)
-	if subscription.Spec.Subscriber != nil && subscription.Spec.Subscriber.Ref != nil {
-		if err := trackAddressable(*subscription.Spec.Subscriber.Ref); err != nil {
-			return fmt.Errorf("unable to track changes to spec.subscriber: %v", err)
-		}
-	}
-
 	if subscription.DeletionTimestamp != nil {
-
 		// If the subscription is Ready, then we have to remove it
 		// from the channel's subscriber list.
 		if channel, err := r.getChannelable(ctx, subscription.Namespace, &subscription.Spec.Channel); !apierrors.IsNotFound(err) && subscription.Status.IsAddedToChannel() {
@@ -189,31 +183,66 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 		return err
 	}
 
-	subscriberURI, err := eventingduck.SubscriberSpec(ctx, r.DynamicClientSet, subscription.Namespace, subscription.Spec.Subscriber, r.addressableTracker, trackAddressable)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
-			zap.Error(err),
-			zap.Any("subscriber", subscription.Spec.Subscriber))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
-		subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
-		return err
+	subscriber := subscription.Spec.Subscriber
+	subscription.Status.PhysicalSubscription.SubscriberURI = nil
+	if !isNilOrEmptyDestination(subscriber) {
+		// Populate the namespace for the subscriber since it is in the namespace
+		if subscriber.Ref != nil {
+			subscriber.Ref.Namespace = subscription.Namespace
+		}
+		subscriberURI, err := r.destinationResolver.URIFromDestinationV1(*subscriber, subscription)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to resolve Subscriber",
+				zap.Error(err),
+				zap.Any("subscriber", subscriber))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
+			subscription.Status.MarkReferencesNotResolved(subscriberResolveFailed, "Failed to resolve spec.subscriber: %v", err)
+			return err
+		}
+		subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
+		logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI.String()))
 	}
 
-	subscription.Status.PhysicalSubscription.SubscriberURI = subscriberURI
-	logging.FromContext(ctx).Debug("Resolved Subscriber", zap.String("subscriberURI", subscriberURI))
-
-	replyURI, err := r.resolveResult(ctx, subscription.Namespace, subscription.Spec.Reply, trackAddressable)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to resolve reply",
-			zap.Error(err),
-			zap.Any("reply", subscription.Spec.Reply))
-		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %v", err)
-		subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
-		return err
+	reply := subscription.Spec.Reply
+	subscription.Status.PhysicalSubscription.ReplyURI = nil
+	if !isNilOrEmptyDestination(reply) {
+		// Populate the namespace for the subscriber since it is in the namespace
+		if reply.Ref != nil {
+			reply.Ref.Namespace = subscription.Namespace
+		}
+		replyURI, err := r.destinationResolver.URIFromDestinationV1(*reply, subscription)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to resolve reply",
+				zap.Error(err),
+				zap.Any("reply", reply))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, replyResolveFailed, "Failed to resolve spec.reply: %v", err)
+			subscription.Status.MarkReferencesNotResolved(replyResolveFailed, "Failed to resolve spec.reply: %v", err)
+			return err
+		}
+		subscription.Status.PhysicalSubscription.ReplyURI = replyURI
+		logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI.String()))
 	}
 
-	subscription.Status.PhysicalSubscription.ReplyURI = replyURI
-	logging.FromContext(ctx).Debug("Resolved reply", zap.String("replyURI", replyURI))
+	if !isNilOrEmptyDeliveryDeadLetterSink(subscription.Spec.Delivery) {
+		// Populate the namespace for the dead letter sink since it is in the namespace
+		if subscription.Spec.Delivery.DeadLetterSink.Ref != nil {
+			subscription.Spec.Delivery.DeadLetterSink.Ref.Namespace = subscription.Namespace
+		}
+
+		deadLetterSink, err := r.destinationResolver.URIFromDestinationV1(*subscription.Spec.Delivery.DeadLetterSink, subscription)
+		if err != nil {
+			logging.FromContext(ctx).Warn("Failed to resolve spec.delivery.deadLetterSink",
+				zap.Error(err),
+				zap.Any("delivery.deadLetterSink", subscription.Spec.Delivery.DeadLetterSink))
+			r.Recorder.Eventf(subscription, corev1.EventTypeWarning, deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			subscription.Status.MarkReferencesNotResolved(deadLetterSinkResolveFailed, "Failed to resolve spec.delivery.deadLetterSink: %v", err)
+			return err
+		}
+
+		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSink
+		logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSink.String()))
+
+	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
 	subscription.Status.MarkReferencesResolved()
@@ -275,6 +304,7 @@ func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription,
 	}
 	return fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
+
 func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) bool {
 	if channel.Spec.Subscribable == nil {
 		return false
@@ -321,8 +351,13 @@ func (r *Reconciler) validateChannel(ctx context.Context, channel *eventingduckv
 	return nil
 }
 
-func isNilOrEmptyReply(reply *v1alpha1.ReplyStrategy) bool {
-	return reply == nil || equality.Semantic.DeepEqual(reply, &v1alpha1.ReplyStrategy{})
+func isNilOrEmptyDeliveryDeadLetterSink(delivery *eventingduckv1alpha1.DeliverySpec) bool {
+	return delivery == nil || equality.Semantic.DeepEqual(delivery, &eventingduckv1alpha1.DeliverySpec{}) ||
+		delivery.DeadLetterSink == nil
+}
+
+func isNilOrEmptyDestination(destination *duckv1.Destination) bool {
+	return destination == nil || equality.Semantic.DeepEqual(destination, &duckv1.Destination{})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
@@ -375,44 +410,6 @@ func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {
 
 	_, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Patch(sub.Name, types.MergePatchType, patch)
 	return err
-}
-
-// resolveResult resolves the Spec.Result object.
-func (r *Reconciler) resolveResult(ctx context.Context, namespace string, replyStrategy *v1alpha1.ReplyStrategy, trackAddressable eventingduck.Track) (string, error) {
-	if isNilOrEmptyReply(replyStrategy) {
-		return "", nil
-	}
-
-	// Tell tracker to reconcile this Subscription whenever the reply Channel changes. Note that it does not need to be
-	// a Channel, it needs to be an Addressable. As Channels are Addressable, we are fine.
-	if err := trackAddressable(*replyStrategy.Channel); err != nil {
-		logging.FromContext(ctx).Error("Unable to track changes to spec.reply.channel", zap.Error(err))
-		return "", err
-	}
-
-	lister, err := r.addressableTracker.ListerFor(*replyStrategy.Channel)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error getting lister for ReplyStrategy Channel", zap.Any("replyStrategy.Channel", replyStrategy.Channel), zap.Error(err))
-		return "", err
-	}
-
-	a, err := lister.ByNamespace(namespace).Get(replyStrategy.Channel.Name)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to fetch ReplyStrategy Channel", zap.Any("replyStrategy.Channel", replyStrategy.Channel), zap.Error(err))
-		return "", err
-	}
-
-	addressable, ok := a.(*duckv1alpha1.AddressableType)
-	if !ok {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to convert to Addressable Object: %s/%s", namespace, replyStrategy.Channel.Name), zap.Error(err))
-		return "", fmt.Errorf("object is not addressable: %s/%s", namespace, replyStrategy.Channel.Name)
-	}
-	if addressable.Status.Address != nil {
-		if url := addressable.Status.Address.GetURL(); url.Host != "" {
-			return url.String(), nil
-		}
-	}
-	return "", fmt.Errorf("reply.status does not contain address")
 }
 
 func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable, isDeleted bool) error {
@@ -477,10 +474,11 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 					Name:       sub.Name,
 					UID:        sub.UID,
 				},
-				UID:           sub.UID,
-				Generation:    sub.Generation,
-				SubscriberURI: sub.Status.PhysicalSubscription.SubscriberURI,
-				ReplyURI:      sub.Status.PhysicalSubscription.ReplyURI,
+				UID:               sub.UID,
+				Generation:        sub.Generation,
+				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
+				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
+				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
 			})
 		}
 	}

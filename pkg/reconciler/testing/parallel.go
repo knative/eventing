@@ -20,10 +20,10 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // ParallelOption enables further configuration of a Parallel.
@@ -66,7 +66,7 @@ func WithParallelBranches(branches []v1alpha1.ParallelBranch) ParallelOption {
 	}
 }
 
-func WithParallelReply(reply *corev1.ObjectReference) ParallelOption {
+func WithParallelReply(reply *duckv1.Destination) ParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Spec.Reply = reply
 	}
@@ -75,6 +75,24 @@ func WithParallelReply(reply *corev1.ObjectReference) ParallelOption {
 func WithParallelBranchStatuses(branchStatuses []v1alpha1.ParallelBranchStatus) ParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Status.BranchStatuses = branchStatuses
+	}
+}
+
+func WithParallelDeprecatedReplyStatus() ParallelOption {
+	return func(p *v1alpha1.Parallel) {
+		p.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
+	}
+}
+
+func WithParallelDeprecatedStatus() ParallelOption {
+	return func(p *v1alpha1.Parallel) {
+		p.Status.MarkDeprecated("parallelMessagingDeprecated", "parallels.messaging.knative.dev are deprecated and will be removed in the future. Use parallels.flows.knative.dev instead.")
+	}
+}
+
+func WithParallelDeprecatedBranchReplyStatus() ParallelOption {
+	return func(p *v1alpha1.Parallel) {
+		p.Status.MarkDeprecated("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.branches[*].reply.ref instead.")
 	}
 }
 

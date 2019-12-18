@@ -41,3 +41,11 @@ type CronJobSourceListerExpansion interface{}
 // CronJobSourceNamespaceListerExpansion allows custom methods to be added to
 // CronJobSourceNamespaceLister.
 type CronJobSourceNamespaceListerExpansion interface{}
+
+// SinkBindingListerExpansion allows custom methods to be added to
+// SinkBindingLister.
+type SinkBindingListerExpansion interface{}
+
+// SinkBindingNamespaceListerExpansion allows custom methods to be added to
+// SinkBindingNamespaceLister.
+type SinkBindingNamespaceListerExpansion interface{}

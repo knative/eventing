@@ -55,11 +55,6 @@ func SourcesTypeMeta(kind string) *metav1.TypeMeta {
 	}
 }
 
-// GetChannelTypeMeta gets the actual typemeta of the typed channel.
-func GetChannelTypeMeta(channelKind string) *metav1.TypeMeta {
-	return MessagingTypeMeta(channelKind)
-}
-
 // ChannelTypeMeta is the TypeMeta ref for Channel.
 var ChannelTypeMeta = MessagingTypeMeta(resources.ChannelKind)
 
@@ -69,10 +64,24 @@ var SequenceTypeMeta = MessagingTypeMeta(resources.SequenceKind)
 // ParallelTypeMeta is the TypeMeta ref for Parallel.
 var ParallelTypeMeta = MessagingTypeMeta(resources.ParallelKind)
 
-// MessagingTypeMeta returns the TypeMeta ref for an eventing messaing resource.
+// MessagingTypeMeta returns the TypeMeta ref for an eventing messaging resource.
 func MessagingTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
 		Kind:       kind,
 		APIVersion: resources.MessagingAPIVersion,
+	}
+}
+
+// FlowsParallelTypeMeta is the TypeMeta ref for Parallel (in flows.knative.dev).
+var FlowsParallelTypeMeta = FlowsTypeMeta(resources.FlowsParallelKind)
+
+// FlowsSequenceTypeMeta is the TypeMeta ref for Sequence (in flows.knative.dev).
+var FlowsSequenceTypeMeta = FlowsTypeMeta(resources.FlowsSequenceKind)
+
+// FlowsTypeMeta returns the TypeMeta ref for an eventing messaing resource.
+func FlowsTypeMeta(kind string) *metav1.TypeMeta {
+	return &metav1.TypeMeta{
+		Kind:       kind,
+		APIVersion: resources.FlowsAPIVersion,
 	}
 }

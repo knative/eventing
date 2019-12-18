@@ -27,18 +27,42 @@ import (
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
+	pkgtracing "knative.dev/pkg/tracing"
+
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
-const correlationIDHeaderName = "Knative-Correlation-Id"
+const (
+	correlationIDHeaderName = "Knative-Correlation-Id"
+
+	// TODO make these constants configurable (either as env variables, config map).
+	//  Issue: https://github.com/knative/eventing/issues/1777
+	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
+	// Set them on a 10:1 ratio, but this would actually depend on the Subscriptions' subscribers and the workload itself.
+	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+	defaultMaxIdleConnections        = 1000
+	defaultMaxIdleConnectionsPerHost = 100
+)
 
 type Dispatcher interface {
 	// DispatchEvent dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
 	DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string) error
+
+	// DispatchEventWithDelivery dispatches an event to a destination over HTTP with delivery options
+	//
+	// The destination and reply are URLs.
+	DispatchEventWithDelivery(ctx context.Context, event cloudevents.Event, destination, reply string, delivery *DeliveryOptions) error
+}
+
+// DeliveryOptions are the delivery options supported by this dispatcher
+type DeliveryOptions struct {
+	// DeadLetterSink is the sink receiving events that could not be dispatched.
+	DeadLetterSink string
 }
 
 // EventDispatcher is the 'real' Dispatcher used everywhere except unit tests.
@@ -57,7 +81,17 @@ type EventDispatcher struct {
 // NewEventDispatcher creates a new event dispatcher that can dispatch
 // events to HTTP destinations.
 func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
-	ceClient, err := kncloudevents.NewDefaultClient()
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	if err != nil {
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
+	cArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, cArgs)
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
@@ -72,14 +106,36 @@ func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 //
 // The destination and reply are URLs.
 func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.Event, destination, reply string) error {
+	return d.DispatchEventWithDelivery(ctx, event, destination, reply, nil)
+}
+
+// DispatchEventWithDelivery dispatches an event to a destination over HTTP with delivery options
+//
+// The destination and reply are URLs.
+func (d *EventDispatcher) DispatchEventWithDelivery(ctx context.Context, event cloudevents.Event, destination, reply string, delivery *DeliveryOptions) error {
 	var err error
 	// Default to replying with the original event. If there is a destination, then replace it
 	// with the response from the call to the destination instead.
 	response := &event
+	var nonerrctx context.Context = ctx
 	if destination != "" {
 		destinationURL := d.resolveURL(destination)
-		ctx, response, err = d.executeRequest(ctx, destinationURL, event)
+
+		nonerrctx, response, err = d.executeRequest(ctx, destinationURL, event)
 		if err != nil {
+
+			if delivery != nil && delivery.DeadLetterSink != "" {
+				deadLetterURL := d.resolveURL(delivery.DeadLetterSink)
+
+				// TODO: decorate event with deadletter attributes
+				_, _, err2 := d.executeRequest(ctx, deadLetterURL, event)
+				if err2 != nil {
+					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destinationURL, err, deadLetterURL, err2)
+				}
+
+				// Do not send event to reply
+				return nil
+			}
 			return fmt.Errorf("unable to complete request to %s: %v", destinationURL, err)
 		}
 	}
@@ -91,9 +147,19 @@ func (d *EventDispatcher) DispatchEvent(ctx context.Context, event cloudevents.E
 
 	if reply != "" && response != nil {
 		replyURL := d.resolveURL(reply)
-		_, _, err = d.executeRequest(ctx, replyURL, *response)
+		_, _, err = d.executeRequest(nonerrctx, replyURL, *response)
 		if err != nil {
-			return fmt.Errorf("failed to forward reply to %s: %v", replyURL, err)
+			if delivery != nil && delivery.DeadLetterSink != "" {
+				deadLetterURL := d.resolveURL(delivery.DeadLetterSink)
+
+				// TODO: decorate event with deadletter attributes
+				_, _, err2 := d.executeRequest(nonerrctx, deadLetterURL, event)
+				if err2 != nil {
+					return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", replyURL, err, deadLetterURL, err2)
+				}
+			} else {
+				return fmt.Errorf("failed to forward reply to %s: %v", replyURL, err)
+			}
 		}
 	}
 	return nil

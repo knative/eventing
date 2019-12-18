@@ -17,7 +17,6 @@ limitations under the License.
 package common
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -25,10 +24,11 @@ import (
 	"testing"
 	"time"
 
+	"knative.dev/eventing/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/storage/names"
 	pkgTest "knative.dev/pkg/test"
@@ -45,8 +45,8 @@ const TestPullSecretName = "kn-eventing-test-pull-secret"
 
 // ChannelTestRunner is used to run tests against channels.
 type ChannelTestRunner struct {
-	ChannelFeatureMap map[string][]Feature
-	ChannelsToTest    []string
+	ChannelFeatureMap map[metav1.TypeMeta][]Feature
+	ChannelsToTest    []metav1.TypeMeta
 }
 
 // RunTests will use all channels that support the given feature, to run
@@ -54,12 +54,16 @@ type ChannelTestRunner struct {
 func (tr *ChannelTestRunner) RunTests(
 	t *testing.T,
 	feature Feature,
-	testFunc func(st *testing.T, channel string),
+	testFunc func(st *testing.T, channel metav1.TypeMeta),
 ) {
 	t.Parallel()
 	for _, channel := range tr.ChannelsToTest {
-		features := tr.ChannelFeatureMap[channel]
-		if contains(features, feature) {
+		// If a Channel is not present in the map, then assume it has all properties. This is so an
+		// unknown Channel can be specified via the --channel flag and have tests run.
+		// TODO Use a flag to specify the features of the flag based Channel, rather than assuming
+		// it supports all features.
+		features, present := tr.ChannelFeatureMap[channel]
+		if !present || contains(features, feature) {
 			t.Run(fmt.Sprintf("%s-%s", t.Name(), channel), func(st *testing.T) {
 				testFunc(st, channel)
 			})
@@ -125,63 +129,6 @@ func TearDown(client *Client) {
 	}
 }
 
-// CopySecret will copy a secret from one namespace into another.
-// If a ServiceAccount name is provided then it'll add it as a PullSecret to
-// it.
-// It'll either return a pointer to the new Secret or and error indicating
-// why it couldn't do it.
-func CopySecret(client *Client, srcNS string, srcSecretName string, tgtNS string, svcAccount string) (*corev1.Secret, error) {
-	// Get the Interfaces we need to access the resources in the cluster
-	srcSecI := client.Kube.Kube.CoreV1().Secrets(srcNS)
-	tgtNSSvcAccI := client.Kube.Kube.CoreV1().ServiceAccounts(tgtNS)
-	tgtNSSecI := client.Kube.Kube.CoreV1().Secrets(tgtNS)
-
-	// First try to find the secret we're supposed to copy
-	srcSecret, err := srcSecI.Get(srcSecretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	// Just double checking
-	if srcSecret == nil {
-		return nil, errors.New("error copying Secret, it's nil w/o error")
-	}
-
-	// Found the secret, so now make a copy in our new namespace
-	newSecret, err := tgtNSSecI.Create(
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: srcSecretName,
-			},
-			Data: srcSecret.Data,
-			Type: srcSecret.Type,
-		})
-
-	// If the secret already exists then that's ok - some other test
-	// must have created it
-	if err != nil && !apierrs.IsAlreadyExists(err) {
-		return nil, fmt.Errorf("error copying the Secret: %s", err)
-	}
-
-	client.T.Logf("Copied Secret %q into Namespace %q",
-		srcSecretName, tgtNS)
-
-	// If a ServiceAccount was provided then add it as an ImagePullSecret.
-	// Note: if the SA aleady has it then this is no-op
-	if svcAccount != "" {
-		_, err = tgtNSSvcAccI.Patch(svcAccount, types.StrategicMergePatchType,
-			[]byte(`{"imagePullSecrets":[{"name":"`+srcSecretName+`"}]}`))
-		if err != nil {
-			return nil, fmt.Errorf("patch failed on NS/SA (%s/%s): %s",
-				tgtNS, srcSecretName, err)
-		}
-		client.T.Logf("Added Secret %q as ImagePullSecret to SA %q in NS %q",
-			srcSecretName, svcAccount, tgtNS)
-	}
-
-	return newSecret, nil
-}
-
 // CreateNamespaceIfNeeded creates a new namespace if it does not exist.
 func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 	_, err := client.Kube.Kube.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
@@ -205,7 +152,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 		// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 		// on the "default" ServiceAccount in this new Namespace.
 		// This is needed for cases where the images are in a private registry.
-		_, err := CopySecret(client, "default", TestPullSecretName, namespace, "default")
+		_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", TestPullSecretName, namespace, "default")
 		if err != nil && !apierrs.IsNotFound(err) {
 			t.Fatalf("error copying the secret into ns %q: %s", namespace, err)
 		}

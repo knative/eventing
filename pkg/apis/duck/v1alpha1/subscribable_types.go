@@ -25,6 +25,8 @@ import (
 	"knative.dev/pkg/apis/duck"
 )
 
+// +genduck
+
 // Subscribable is the schema for the subscribable portion of the spec
 // section of the resource.
 type Subscribable struct {
@@ -53,9 +55,11 @@ type SubscriberSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 	// +optional
-	SubscriberURI string `json:"subscriberURI,omitempty"`
+	SubscriberURI *apis.URL `json:"subscriberURI,omitempty"`
 	// +optional
-	ReplyURI string `json:"replyURI,omitempty"`
+	ReplyURI *apis.URL `json:"replyURI,omitempty"`
+	// +optional
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSink,omitempty"`
 }
 
 // SubscribableStatus is the schema for the subscribable's status portion of the status
@@ -83,7 +87,6 @@ type SubscriberStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SubscribableType is a skeleton type wrapping Subscribable in the manner we expect resource writers
@@ -109,8 +112,7 @@ type SubscribableTypeSpec struct {
 
 // SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
 type SubscribableTypeStatus struct {
-	DeprecatedSubscribableStatus *SubscribableStatus `json:"subscribablestatus,omitempty"`
-	SubscribableStatus           *SubscribableStatus `json:"subscribableStatus,omitempty"`
+	SubscribableStatus *SubscribableStatus `json:"subscribableStatus,omitempty"`
 }
 
 var (
@@ -125,9 +127,6 @@ var (
 // where we read the V2 value first and if the value is absent then we read the V1 value,
 // Having this function here makes it convinient to read the default value at runtime.
 func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
-	if s.SubscribableStatus == nil {
-		return s.DeprecatedSubscribableStatus
-	}
 	return s.SubscribableStatus
 
 }
@@ -136,7 +135,6 @@ func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus
 // This helper function ensures that we set both the values (SubscribableStatus and DeprecatedSubscribableStatus)
 func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus SubscribableStatus) {
 	s.SubscribableStatus = &subscriberStatus
-	s.DeprecatedSubscribableStatus = &subscriberStatus
 }
 
 // AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
@@ -145,7 +143,6 @@ func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus Subs
 func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
 	subscribers := append(s.GetSubscribableTypeStatus().Subscribers, subscriberStatus)
 	s.SubscribableStatus.Subscribers = subscribers
-	s.DeprecatedSubscribableStatus.Subscribers = subscribers
 }
 
 // GetFullType implements duck.Implementable
@@ -160,13 +157,13 @@ func (c *SubscribableType) Populate() {
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			Generation:    1,
-			SubscriberURI: "call1",
-			ReplyURI:      "sink2",
+			SubscriberURI: apis.HTTP("call1"),
+			ReplyURI:      apis.HTTP("sink2"),
 		}, {
 			UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
 			Generation:    2,
-			SubscriberURI: "call2",
-			ReplyURI:      "sink2",
+			SubscriberURI: apis.HTTP("call2"),
+			ReplyURI:      apis.HTTP("sink2"),
 		}},
 	}
 	c.Status.SetSubscribableTypeStatus(SubscribableStatus{

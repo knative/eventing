@@ -23,10 +23,11 @@ source $(dirname ${BASH_SOURCE})/library.sh
 # If not provided, they will fall back to the default values.
 readonly BENCHMARK_ROOT_PATH=${BENCHMARK_ROOT_PATH:-test/performance/benchmarks}
 readonly PROJECT_NAME=${PROJECT_NAME:-knative-performance}
-readonly SERVICE_ACCOUNT_NAME=${SERVICE_ACCOUNT_NAME:-mako-job}
+readonly SERVICE_ACCOUNT_NAME=${SERVICE_ACCOUNT_NAME:-mako-job@knative-performance.iam.gserviceaccount.com}
 
 # Setup env vars.
-readonly KO_DOCKER_REPO="gcr.io/${PROJECT_NAME}"
+export KO_DOCKER_REPO="gcr.io/${PROJECT_NAME}"
+# Constants
 readonly GOOGLE_APPLICATION_CREDENTIALS="/etc/performance-test/service-account.json"
 readonly GITHUB_TOKEN="/etc/performance-test/github-token"
 readonly SLACK_READ_TOKEN="/etc/performance-test/slack-read-token"
@@ -35,11 +36,10 @@ readonly SLACK_WRITE_TOKEN="/etc/performance-test/slack-write-token"
 # Set up the user for cluster operations.
 function setup_user() {
   echo ">> Setting up user"
+  echo "Using gcloud user ${SERVICE_ACCOUNT_NAME}"
+  gcloud config set core/account ${SERVICE_ACCOUNT_NAME}
   echo "Using gcloud project ${PROJECT_NAME}"
   gcloud config set core/project ${PROJECT_NAME}
-  local user_name="${SERVICE_ACCOUNT_NAME}@${PROJECT_NAME}.iam.gserviceaccount.com"
-  echo "Using gcloud user ${user_name}"
-  gcloud config set core/account ${user_name}
 }
 
 # Update resources installed on the cluster.
@@ -106,12 +106,18 @@ function update_clusters() {
   header "Done updating all clusters"
 }
 
+# Run the perf-tests tool
+# Parameters: $1..$n - parameters passed to the tool
+function run_perf_cluster_tool() {
+  go run ${REPO_ROOT_DIR}/vendor/knative.dev/pkg/testutils/clustermanager/perf-tests $@
+}
+
 # Delete the old clusters belonged to the current repo, and recreate them with the same configuration.
 function recreate_clusters() {
   header "Recreating clusters for ${REPO_NAME}"
-  go run ${REPO_ROOT_DIR}/vendor/knative.dev/pkg/testutils/clustermanager/perf-tests \
-    --recreate \
-    --gcp-project=${PROJECT_NAME} --repository=${REPO_NAME} --benchmark-root=${BENCHMARK_ROOT_PATH}
+  run_perf_cluster_tool --recreate \
+    --gcp-project=${PROJECT_NAME} --repository=${REPO_NAME} --benchmark-root=${BENCHMARK_ROOT_PATH} \
+    || abort "failed recreating clusters for ${REPO_NAME}"
   header "Done recreating clusters"
   # Update all clusters after they are recreated
   update_clusters
@@ -121,9 +127,9 @@ function recreate_clusters() {
 # This function will be run as postsubmit jobs.
 function reconcile_benchmark_clusters() {
   header "Reconciling clusters for ${REPO_NAME}"
-  go run ${REPO_ROOT_DIR}/vendor/knative.dev/pkg/testutils/clustermanager/perf-tests \
-    --reconcile \
-    --gcp-project=${PROJECT_NAME} --repository=${REPO_NAME} --benchmark-root=${BENCHMARK_ROOT_PATH}
+  run_perf_cluster_tool --reconcile \
+    --gcp-project=${PROJECT_NAME} --repository=${REPO_NAME} --benchmark-root=${BENCHMARK_ROOT_PATH} \
+    || abort "failed reconciling clusters for ${REPO_NAME}"
   header "Done reconciling clusters"
   # For now, do nothing after reconciling the clusters, and the next update_clusters job will automatically 
   # update them. So there will be a period that the newly created clusters are being idle, and the duration

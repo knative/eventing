@@ -37,7 +37,11 @@ import (
 	"knative.dev/pkg/test/mako"
 )
 
-const maxRcvMsgSize = 1024 * 1024 * 100
+const (
+	maxRcvMsgSize         = 1024 * 1024 * 1024
+	publishFailureMessage = "Publish failure"
+	deliverFailureMessage = "Delivery failure"
+)
 
 // thread-safe events recording map
 type eventsRecord struct {
@@ -51,7 +55,6 @@ type Aggregator struct {
 	// thread-safe events recording maps
 	sentEvents     *eventsRecord
 	acceptedEvents *eventsRecord
-	failedEvents   *eventsRecord
 	receivedEvents *eventsRecord
 
 	// channel to notify the main goroutine that an events record has been received
@@ -61,14 +64,12 @@ type Aggregator struct {
 	listener net.Listener
 	server   *grpc.Server
 
-	makoTags      []string
-	expectRecords uint
-
-	benchmarkKey  string
-	benchmarkName string
+	publishResults bool
+	makoTags       []string
+	expectRecords  uint
 }
 
-func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords uint, makoTags []string) (common.Executor, error) {
+func NewAggregator(listenAddr string, expectRecords uint, makoTags []string, publishResults bool) (common.Executor, error) {
 	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener: %v", err)
@@ -79,8 +80,7 @@ func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords
 		notifyEventsReceived: make(chan struct{}),
 		makoTags:             makoTags,
 		expectRecords:        expectRecords,
-		benchmarkKey:         benchmarkKey,
-		benchmarkName:        benchmarkName,
+		publishResults:       publishResults,
 	}
 
 	// --- Create GRPC server
@@ -99,10 +99,6 @@ func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords
 		Type:   pb.EventsRecord_ACCEPTED,
 		Events: make(map[string]*timestamp.Timestamp),
 	}}
-	executor.failedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
-		Type:   pb.EventsRecord_FAILED,
-		Events: make(map[string]*timestamp.Timestamp),
-	}}
 	executor.receivedEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
 		Type:   pb.EventsRecord_RECEIVED,
 		Events: make(map[string]*timestamp.Timestamp),
@@ -112,23 +108,30 @@ func NewAggregator(benchmarkKey, benchmarkName, listenAddr string, expectRecords
 }
 
 func (ag *Aggregator) Run(ctx context.Context) {
-	log.Printf("Configuring Mako")
+	var err error
+	var client *mako.Client
+	if ag.publishResults {
+		log.Printf("Configuring Mako")
 
-	// Use the benchmark key created
-	// TODO support to check benchmark key for dev or prod
-	client, err := mako.SetupWithBenchmarkConfig(ctx, &ag.benchmarkKey, &ag.benchmarkName, ag.makoTags...)
-	if err != nil {
-		fatalf("Failed to setup mako: %v", err)
-	}
+		makoClientCtx, _ := context.WithTimeout(ctx, time.Minute*10)
 
-	// Use a fresh context here so that our RPC to terminate the sidecar
-	// isn't subject to our timeout (or we won't shut it down when we time out)
-	defer client.ShutDownFunc(context.Background())
+		client, err = mako.Setup(makoClientCtx, ag.makoTags...)
+		if err != nil {
+			fatalf("Failed to setup mako: %v", err)
+		}
 
-	// Wrap fatalf in a helper or our sidecar will live forever.
-	fatalf = func(f string, args ...interface{}) {
-		client.ShutDownFunc(context.Background())
-		log.Fatalf(f, args...)
+		// Use a fresh context here so that our RPC to terminate the sidecar
+		// isn't subject to our timeout (or we won't shut it down when we time out)
+		defer client.ShutDownFunc(context.Background())
+
+		// Wrap fatalf in a helper or our sidecar will live forever.
+		fatalf = func(f string, args ...interface{}) {
+			client.ShutDownFunc(context.Background())
+			log.Fatalf(f, args...)
+		}
+
+	} else {
+		log.Printf("Results won't be published to mako-stub")
 	}
 
 	// --- Run GRPC events receiver
@@ -153,16 +156,15 @@ func (ag *Aggregator) Run(ctx context.Context) {
 	ag.server.GracefulStop()
 
 	// --- Publish latencies
-	log.Printf("%-15s: %d", "Sent count", len(ag.sentEvents.Events))
-	log.Printf("%-15s: %d", "Accepted count", len(ag.acceptedEvents.Events))
-	log.Printf("%-15s: %d", "Failed count", len(ag.failedEvents.Events))
-	log.Printf("%-15s: %d", "Received count", len(ag.receivedEvents.Events))
+	log.Printf("Sent count: %d", len(ag.sentEvents.Events))
+	log.Printf("Accepted count: %d", len(ag.acceptedEvents.Events))
+	log.Printf("Received count: %d", len(ag.receivedEvents.Events))
 
-	log.Printf("Publishing latencies")
+	log.Printf("Calculating latencies")
 
 	// count errors
-	var publishErrorCount int
-	var deliverErrorCount int
+	publishErrorTimestamps := make([]time.Time, 0)
+	deliverErrorTimestamps := make([]time.Time, 0)
 
 	for sentID := range ag.sentEvents.Events {
 		timestampSentProto := ag.sentEvents.Events[sentID]
@@ -175,80 +177,88 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		timestampReceived, _ := ptypes.Timestamp(timestampReceivedProto)
 
 		if !accepted {
-			errMsg := "Failed on broker"
-			if _, failed := ag.failedEvents.Events[sentID]; !failed {
-				errMsg = "Event not accepted but missing from failed map"
-			}
-
-			deliverErrorCount++
-
-			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), errMsg); qerr != nil {
-				log.Printf("ERROR AddError: %v", qerr)
-			}
+			publishErrorTimestamps = append(publishErrorTimestamps, timestampSent)
 			continue
 		}
 
-		sendLatency := timestampAccepted.Sub(timestampSent)
-		// Uncomment to get CSV directly from this container log
-		//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
-		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
-		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
-			log.Printf("ERROR AddSamplePoint: %v", qerr)
+		if ag.publishResults {
+			sendLatency := timestampAccepted.Sub(timestampSent)
+			// Uncomment to get CSV directly from this container log
+			//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
+			// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
+			if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
+				log.Printf("ERROR AddSamplePoint for publish-latency: %v", qerr)
+			}
 		}
 
 		if !received {
-			publishErrorCount++
-
-			if qerr := client.Quickstore.AddError(mako.XTime(timestampSent), "Event not delivered"); qerr != nil {
-				log.Printf("ERROR AddError: %v", qerr)
-			}
+			deliverErrorTimestamps = append(deliverErrorTimestamps, timestampSent)
 			continue
 		}
 
-		e2eLatency := timestampReceived.Sub(timestampSent)
-		// Uncomment to get CSV directly from this container log
-		//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
-		// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
-		if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
-			log.Printf("ERROR AddSamplePoint: %v", qerr)
+		if ag.publishResults {
+			e2eLatency := timestampReceived.Sub(timestampSent)
+			// Uncomment to get CSV directly from this container log
+			//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
+			// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
+			if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
+				log.Printf("ERROR AddSamplePoint for deliver-latency: %v", qerr)
+			}
 		}
 	}
 
-	// --- Publish throughput
+	log.Printf("Publish failure count: %d", len(publishErrorTimestamps))
+	log.Printf("Delivery failure count: %d", len(deliverErrorTimestamps))
 
-	log.Printf("Publishing throughputs")
+	if ag.publishResults {
+		log.Printf("Publishing errors")
 
-	sentTimestamps := eventsToTimestampsArray(&ag.sentEvents.Events)
-	err = publishThpt(sentTimestamps, client.Quickstore, "st")
-	if err != nil {
-		log.Printf("ERROR AddSamplePoint: %v", err)
-	}
+		for _, t := range publishErrorTimestamps {
+			if qerr := client.Quickstore.AddError(mako.XTime(t), publishFailureMessage); qerr != nil {
+				log.Printf("ERROR AddError for publish-failure: %v", qerr)
+			}
+		}
 
-	receivedTimestamps := eventsToTimestampsArray(&ag.receivedEvents.Events)
-	err = publishThpt(receivedTimestamps, client.Quickstore, "dt")
-	if err != nil {
-		log.Printf("ERROR AddSamplePoint: %v", err)
-	}
+		for _, t := range deliverErrorTimestamps {
+			if qerr := client.Quickstore.AddError(mako.XTime(t), deliverFailureMessage); qerr != nil {
+				log.Printf("ERROR AddSamplePoint for deliver-failure: %v", qerr)
+			}
+		}
 
-	failureTimestamps := eventsToTimestampsArray(&ag.failedEvents.Events)
-	if len(failureTimestamps) > 2 {
-		err = publishThpt(failureTimestamps, client.Quickstore, "ft")
+		log.Printf("Publishing throughputs")
+
+		sentTimestamps := eventsToTimestampsArray(&ag.sentEvents.Events)
+		err = publishThpt(sentTimestamps, client.Quickstore, "st")
 		if err != nil {
-			log.Printf("ERROR AddSamplePoint: %v", err)
+			log.Printf("ERROR AddSamplePoint for send-throughput: %v", err)
 		}
-	}
 
-	// --- Publish error counts as aggregate metrics
+		receivedTimestamps := eventsToTimestampsArray(&ag.receivedEvents.Events)
+		err = publishThpt(receivedTimestamps, client.Quickstore, "dt")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint for deliver-throughput: %v", err)
+		}
 
-	log.Printf("Publishing aggregates")
+		err = publishThpt(publishErrorTimestamps, client.Quickstore, "pet")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint for publish-failure-throughput: %v", err)
+		}
 
-	client.Quickstore.AddRunAggregate("pe", float64(publishErrorCount))
-	client.Quickstore.AddRunAggregate("de", float64(deliverErrorCount))
+		err = publishThpt(deliverErrorTimestamps, client.Quickstore, "det")
+		if err != nil {
+			log.Printf("ERROR AddSamplePoint for deliver-failure-throughput: %v", err)
+		}
 
-	log.Printf("Store to mako")
+		log.Printf("Publishing aggregates")
 
-	if out, err := client.Quickstore.Store(); err != nil {
-		fatalf("Failed to store data: %v\noutput: %v", err, out)
+		client.Quickstore.AddRunAggregate("pe", float64(len(publishErrorTimestamps)))
+		client.Quickstore.AddRunAggregate("de", float64(len(deliverErrorTimestamps)))
+
+		log.Printf("Store to mako")
+
+		if out, err := client.Quickstore.Store(); err != nil {
+			fatalf("Failed to store data: %v\noutput: %v", err, out)
+		}
 	}
 
 	log.Printf("Aggregation completed")
@@ -260,19 +270,29 @@ func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Tim
 		t, _ := ptypes.Timestamp(v)
 		values = append(values, t)
 	}
-	sort.Slice(values, func(x, y int) bool { return values[x].Before(values[y]) })
 	return values
 }
 
 func publishThpt(timestamps []time.Time, q *quickstore.Quickstore, metricName string) error {
-	for i, t := range timestamps[1:] {
-		var thpt uint
-		j := i - 1
-		for j >= 0 && t.Sub(timestamps[j]) <= time.Second {
+	if len(timestamps) >= 2 {
+		sort.Slice(timestamps, func(x, y int) bool { return timestamps[x].Before(timestamps[y]) })
+		var i, thpt int
+		for j, t := range timestamps[1:] {
 			thpt++
-			j--
+			for i < j && t.Sub(timestamps[i]) > time.Second {
+				i++
+				thpt--
+			}
+			if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
+				return qerr
+			}
 		}
-		if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
+	} else if len(timestamps) == 1 {
+		if qerr := q.AddSamplePoint(mako.XTime(timestamps[0]), map[string]float64{metricName: 1}); qerr != nil {
+			return qerr
+		}
+	} else {
+		if qerr := q.AddSamplePoint(mako.XTime(time.Now()), map[string]float64{metricName: 0}); qerr != nil {
 			return qerr
 		}
 	}
@@ -302,8 +322,6 @@ func (ag *Aggregator) RecordEvents(_ context.Context, in *pb.EventsRecordList) (
 			rec = ag.sentEvents
 		case pb.EventsRecord_ACCEPTED:
 			rec = ag.acceptedEvents
-		case pb.EventsRecord_FAILED:
-			rec = ag.failedEvents
 		case pb.EventsRecord_RECEIVED:
 			rec = ag.receivedEvents
 		default:

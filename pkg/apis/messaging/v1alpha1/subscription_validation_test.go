@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -42,9 +43,9 @@ func getValidChannelRef() corev1.ObjectReference {
 	}
 }
 
-func getValidReplyStrategy() *ReplyStrategy {
-	return &ReplyStrategy{
-		Channel: &corev1.ObjectReference{
+func getValidReply() *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
 			Name:       replyChannelName,
 			Kind:       channelKind,
 			APIVersion: channelAPIVersion,
@@ -52,20 +53,14 @@ func getValidReplyStrategy() *ReplyStrategy {
 	}
 }
 
-func getValidSubscriberSpec() *SubscriberSpec {
-	return &SubscriberSpec{
+func getValidDestination() *duckv1.Destination {
+	return &duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       subscriberName,
 			Kind:       routeKind,
 			APIVersion: routeAPIVersion,
 		},
 	}
-}
-
-type DummyImmutableType struct{}
-
-func (d *DummyImmutableType) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	return nil
 }
 
 func TestSubscriptionValidation(t *testing.T) {
@@ -99,7 +94,15 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "valid",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: getValidSubscriberSpec(),
+			Subscriber: getValidDestination(),
+		},
+		want: nil,
+	}, {
+		name: "valid with reply",
+		c: &SubscriptionSpec{
+			Channel:    getValidChannelRef(),
+			Subscriber: getValidDestination(),
+			Reply:      getValidReply(),
 		},
 		want: nil,
 	}, {
@@ -119,7 +122,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 				Kind:       channelKind,
 				APIVersion: channelAPIVersion,
 			},
-			Subscriber: getValidSubscriberSpec(),
+			Subscriber: getValidDestination(),
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channel.name")
@@ -139,8 +142,8 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "empty Subscriber and Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: &SubscriberSpec{},
-			Reply:      &ReplyStrategy{},
+			Subscriber: &duckv1.Destination{},
+			Reply:      &duckv1.Destination{},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("reply", "subscriber")
@@ -151,30 +154,30 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "missing Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: getValidSubscriberSpec(),
+			Subscriber: getValidDestination(),
 		},
 		want: nil,
 	}, {
 		name: "empty Reply",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: getValidSubscriberSpec(),
-			Reply:      &ReplyStrategy{},
+			Subscriber: getValidDestination(),
+			Reply:      &duckv1.Destination{},
 		},
 		want: nil,
 	}, {
 		name: "missing Subscriber",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			Reply:   getValidReplyStrategy(),
+			Reply:   getValidReply(),
 		},
 		want: nil,
 	}, {
 		name: "empty Subscriber",
 		c: &SubscriptionSpec{
 			Channel:    getValidChannelRef(),
-			Subscriber: &SubscriberSpec{},
-			Reply:      getValidReplyStrategy(),
+			Subscriber: &duckv1.Destination{},
+			Reply:      getValidReply(),
 		},
 		want: nil,
 	}, {
@@ -202,7 +205,7 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		name: "missing name in Subscriber.Ref",
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
-			Subscriber: &SubscriberSpec{
+			Subscriber: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					Kind:       channelKind,
 					APIVersion: channelAPIVersion,
@@ -211,21 +214,6 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("subscriber.ref.name")
-			return fe
-		}(),
-	}, {
-		name: "missing name in Reply.Ref",
-		c: &SubscriptionSpec{
-			Channel: getValidChannelRef(),
-			Reply: &ReplyStrategy{
-				Channel: &corev1.ObjectReference{
-					Kind:       channelKind,
-					APIVersion: channelAPIVersion,
-				},
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("reply.channel.name")
 			return fe
 		}(),
 	}}
@@ -244,11 +232,11 @@ func TestSubscriptionImmutable(t *testing.T) {
 	newChannel := getValidChannelRef()
 	newChannel.Name = "newChannel"
 
-	newSubscriber := getValidSubscriberSpec()
+	newSubscriber := getValidDestination()
 	newSubscriber.Ref.Name = "newSubscriber"
 
-	newReply := getValidReplyStrategy()
-	newReply.Channel.Name = "newReplyChannel"
+	newReply := getValidReply()
+	newReply.Ref.Name = "newReplyChannel"
 
 	tests := []struct {
 		name string
@@ -273,7 +261,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel:    getValidChannelRef(),
-				Subscriber: getValidSubscriberSpec(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		og:   nil,
@@ -283,7 +271,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel:    getValidChannelRef(),
-				Subscriber: getValidSubscriberSpec(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		og: &Subscription{
@@ -298,7 +286,7 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				Reply:   getValidReplyStrategy(),
+				Reply:   getValidReply(),
 			},
 		},
 		og: &Subscription{
@@ -313,13 +301,13 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				Reply:   getValidReplyStrategy(),
+				Reply:   getValidReply(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel:    getValidChannelRef(),
-				Subscriber: getValidSubscriberSpec(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		want: nil,
@@ -328,13 +316,13 @@ func TestSubscriptionImmutable(t *testing.T) {
 		c: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel:    getValidChannelRef(),
-				Subscriber: getValidSubscriberSpec(),
+				Subscriber: getValidDestination(),
 			},
 		},
 		og: &Subscription{
 			Spec: SubscriptionSpec{
 				Channel: getValidChannelRef(),
-				Reply:   getValidReplyStrategy(),
+				Reply:   getValidReply(),
 			},
 		},
 		want: nil,
@@ -368,26 +356,6 @@ func TestSubscriptionImmutable(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestInvalidImmutableType(t *testing.T) {
-	name := "invalid type"
-	c := &Subscription{
-		Spec: SubscriptionSpec{
-			Channel:    getValidChannelRef(),
-			Subscriber: getValidSubscriberSpec(),
-		},
-	}
-	og := &DummyImmutableType{}
-	want := &apis.FieldError{
-		Message: "The provided original was not a Subscription",
-	}
-	t.Run(name, func(t *testing.T) {
-		got := c.CheckImmutableFields(context.TODO(), og)
-		if diff := cmp.Diff(want.Error(), got.Error()); diff != "" {
-			t.Errorf("CheckImmutableFields (-want, +got) = %v", diff)
-		}
-	})
 }
 
 func TestValidChannel(t *testing.T) {
@@ -466,252 +434,6 @@ func TestValidChannel(t *testing.T) {
 			got := isValidChannel(test.c)
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("isValidChannel (-want, +got) = %v", diff)
-			}
-		})
-	}
-}
-
-func TestValidgetValidSubscriber(t *testing.T) {
-	uri := "http://example.com"
-	empty := ""
-	tests := []struct {
-		name string
-		s    SubscriberSpec
-		want *apis.FieldError
-	}{{
-		name: "valid ref",
-		s:    *getValidSubscriberSpec(),
-		want: nil,
-	}, {
-		name: "valid dnsName",
-		s: SubscriberSpec{
-			DeprecatedDNSName: &uri,
-		},
-		want: nil,
-	}, {
-		name: "both ref and dnsName given",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-			DeprecatedDNSName: &uri,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("ref", "dnsName")
-			return fe
-		}(),
-	}, {
-		name: "valid uri",
-		s: SubscriberSpec{
-			URI: &uri,
-		},
-		want: nil,
-	}, {
-		name: "both ref and uri given",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-			URI: &uri,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("ref", "uri")
-			return fe
-		}(),
-	}, {
-		name: "both dnsName and uri given",
-		s: SubscriberSpec{
-			DeprecatedDNSName: &uri,
-			URI:               &uri,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("dnsName", "uri")
-			return fe
-		}(),
-	}, {
-		name: "ref, dnsName, and uri given",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-			DeprecatedDNSName: &uri,
-			URI:               &uri,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("ref", "dnsName", "uri")
-			return fe
-		}(),
-	}, {
-		name: "empty ref, dnsName, and uri given",
-		s: SubscriberSpec{
-			Ref:               &corev1.ObjectReference{},
-			DeprecatedDNSName: &empty,
-			URI:               &empty,
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingOneOf("ref", "dnsName", "uri")
-			return fe
-		}(),
-	}, {
-		name: "missing name in ref",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("ref.name")
-			return fe
-		}(),
-	}, {
-		name: "missing apiVersion in ref",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name: channelName,
-				Kind: channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("ref.apiVersion")
-			return fe
-		}(),
-	}, {
-		name: "missing kind in ref",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("ref.kind")
-			return fe
-		}(),
-	}, {
-		name: "extra field, namespace",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-				Namespace:  "secretnamespace",
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("ref.Namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
-			return fe
-		}(),
-	}, {
-		// Make sure that if an empty field for namespace is given, it's treated as not there.
-		name: "valid extra field, namespace empty",
-		s: SubscriberSpec{
-			Ref: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-				Namespace:  "",
-			},
-		},
-		want: nil,
-	}}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := IsValidSubscriberSpec(test.s)
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: isValidSubscriber (-want, +got) = %v", test.name, diff)
-			}
-		})
-	}
-}
-
-func TestValidReply(t *testing.T) {
-	tests := []struct {
-		name string
-		r    ReplyStrategy
-		want *apis.FieldError
-	}{{
-		name: "valid target",
-		r:    *getValidReplyStrategy(),
-		want: nil,
-	}, {
-		name: "missing name in target",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.name")
-			return fe
-		}(),
-	}, {
-		name: "missing apiVersion in target",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name: channelName,
-				Kind: channelKind,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.apiVersion")
-			return fe
-		}(),
-	}, {
-		name: "missing kind in target",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("channel.kind")
-			return fe
-		}(),
-	}, {
-		name: "extra field, namespace",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-				Namespace:  "secretnamespace",
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrDisallowedFields("channel.Namespace")
-			fe.Details = "only name, apiVersion and kind are supported fields"
-			return fe
-		}(),
-	}, {
-		// Make sure that if an empty field for namespace is given, it's treated as not there.
-		name: "valid extra field, namespace empty",
-		r: ReplyStrategy{
-			Channel: &corev1.ObjectReference{
-				Name:       channelName,
-				APIVersion: channelAPIVersion,
-				Kind:       channelKind,
-				Namespace:  "",
-			},
-		},
-		want: nil,
-	}}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := isValidReply(test.r)
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("%s: isValidReply (-want, +got) = %v", test.name, diff)
 			}
 		})
 	}

@@ -144,7 +144,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 			tctx.URI = tc.path
 			ctx = cehttp.WithTransportContext(ctx, tctx)
 
-			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			event.Data = tc.body
 			eventResponse := cloudevents.EventResponse{}
 

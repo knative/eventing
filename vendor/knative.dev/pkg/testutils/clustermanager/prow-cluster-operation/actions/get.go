@@ -20,10 +20,11 @@ import (
 	"knative.dev/pkg/testutils/clustermanager/prow-cluster-operation/options"
 )
 
-func Get(o *options.RequestWrapper) {
+// Get gets a GKE cluster
+func Get(o *options.RequestWrapper) error {
 	o.Prep()
 	o.Request.SkipCreation = true
 	// Reuse `Create` for getting operation, so that we can reuse the same logic
 	// such as protected project/cluster etc.
-	Create(o)
+	return Create(o)
 }

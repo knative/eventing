@@ -30,10 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/tracker"
 )
 
@@ -51,16 +49,11 @@ type ListableTracker interface {
 type Track func(corev1.ObjectReference) error
 
 // NewListableTracker creates a new ListableTracker, backed by a TypedInformerFactory.
-func NewListableTracker(ctx context.Context, listable apis.Listable, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
+func NewListableTracker(ctx context.Context, getter func(context.Context) duck.InformerFactory, callback func(types.NamespacedName), lease time.Duration) ListableTracker {
 	return &listableTracker{
-		informerFactory: &duck.TypedInformerFactory{
-			Client:       dynamicclient.Get(ctx),
-			Type:         listable,
-			ResyncPeriod: controller.GetResyncPeriod(ctx),
-			StopChannel:  ctx.Done(),
-		},
-		tracker:  tracker.New(callback, lease),
-		concrete: map[schema.GroupVersionResource]informerListerPair{},
+		informerFactory: getter(ctx),
+		tracker:         tracker.New(callback, lease),
+		concrete:        map[schema.GroupVersionResource]informerListerPair{},
 	}
 }
 

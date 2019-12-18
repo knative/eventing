@@ -19,13 +19,17 @@ package common
 import (
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/test/helpers"
@@ -143,12 +147,34 @@ func (client *Client) CreateSequenceOrFail(sequence *messagingv1alpha1.Sequence)
 	client.Tracker.AddObj(sequence)
 }
 
+// CreateFlowsSequenceOrFail will create a Sequence (in flows.knative.dev api group) or
+// fail the test if there is an error.
+func (client *Client) CreateFlowsSequenceOrFail(sequence *flowsv1alpha1.Sequence) {
+	sequences := client.Eventing.FlowsV1alpha1().Sequences(client.Namespace)
+	_, err := sequences.Create(sequence)
+	if err != nil {
+		client.T.Fatalf("Failed to create sequence %q: %v", sequence.Name, err)
+	}
+	client.Tracker.AddObj(sequence)
+}
+
 // CreateParallelOrFail will create a Parallel or fail the test if there is an error.
 func (client *Client) CreateParallelOrFail(parallel *messagingv1alpha1.Parallel) {
 	parallels := client.Eventing.MessagingV1alpha1().Parallels(client.Namespace)
 	_, err := parallels.Create(parallel)
 	if err != nil {
 		client.T.Fatalf("Failed to create parallel %q: %v", parallel.Name, err)
+	}
+	client.Tracker.AddObj(parallel)
+}
+
+// CreateFlowsParallelOrFail will create a Parallel (in flows.knative.dev api group) or
+// fail the test if there is an error.
+func (client *Client) CreateFlowsParallelOrFail(parallel *flowsv1alpha1.Parallel) {
+	parallels := client.Eventing.FlowsV1alpha1().Parallels(client.Namespace)
+	_, err := parallels.Create(parallel)
+	if err != nil {
+		client.T.Fatalf("Failed to create flows parallel %q: %v", parallel.Name, err)
 	}
 	client.Tracker.AddObj(parallel)
 }
@@ -173,6 +199,16 @@ func (client *Client) CreateContainerSourceOrFail(containerSource *sourcesv1alph
 	client.Tracker.AddObj(containerSource)
 }
 
+// CreateSinkBindingOrFail will create a SinkBinding or fail the test if there is an error.
+func (client *Client) CreateSinkBindingOrFail(containerSource *sourcesv1alpha1.SinkBinding) {
+	containerSourceInterface := client.Eventing.SourcesV1alpha1().SinkBindings(client.Namespace)
+	_, err := containerSourceInterface.Create(containerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
+	}
+	client.Tracker.AddObj(containerSource)
+}
+
 // CreateApiServerSourceOrFail will create an ApiServerSource
 func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha1.ApiServerSource) {
 	apiServerInterface := client.Eventing.SourcesV1alpha1().ApiServerSources(client.Namespace)
@@ -183,11 +219,22 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
+func (client *Client) CreateServiceOrFail(svc *corev1.Service) *corev1.Service {
+	namespace := client.Namespace
+	if newSvc, err := client.Kube.Kube.CoreV1().Services(namespace).Create(svc); err != nil {
+		client.T.Fatalf("Failed to create service %q: %v", svc.Name, err)
+		return nil
+	} else {
+		client.Tracker.Add(coreAPIGroup, coreAPIVersion, "services", namespace, svc.Name)
+		return newSvc
+	}
+}
+
 // WithService returns an option that creates a Service binded with the given pod.
 func WithService(name string) func(*corev1.Pod, *Client) error {
 	return func(pod *corev1.Pod, client *Client) error {
 		namespace := pod.Namespace
-		svc := resources.Service(name, pod.Labels)
+		svc := resources.ServiceDefaultHTTP(name, pod.Labels)
 
 		svcs := client.Kube.Kube.CoreV1().Services(namespace)
 		if _, err := svcs.Create(svc); err != nil {
@@ -216,6 +263,40 @@ func (client *Client) CreatePodOrFail(pod *corev1.Pod, options ...func(*corev1.P
 	client.podsCreated = append(client.podsCreated, pod.Name)
 }
 
+// CreateDeploymentOrFail will create a Deployment or fail the test if there is an error.
+func (client *Client) CreateDeploymentOrFail(deploy *appsv1.Deployment, options ...func(*appsv1.Deployment, *Client) error) {
+	// set namespace for the deploy in case it's empty
+	namespace := client.Namespace
+	deploy.Namespace = namespace
+	// apply options on the deploy before creation
+	for _, option := range options {
+		if err := option(deploy, client); err != nil {
+			client.T.Fatalf("Failed to configure deploy %q: %v", deploy.Name, err)
+		}
+	}
+	if _, err := client.Kube.Kube.AppsV1().Deployments(deploy.Namespace).Create(deploy); err != nil {
+		client.T.Fatalf("Failed to create deploy %q: %v", deploy.Name, err)
+	}
+	client.Tracker.Add("apps", "v1", "deployments", namespace, deploy.Name)
+}
+
+// CreateCronJobOrFail will create a CronJob or fail the test if there is an error.
+func (client *Client) CreateCronJobOrFail(cronjob *batchv1beta1.CronJob, options ...func(*batchv1beta1.CronJob, *Client) error) {
+	// set namespace for the cronjob in case it's empty
+	namespace := client.Namespace
+	cronjob.Namespace = namespace
+	// apply options on the cronjob before creation
+	for _, option := range options {
+		if err := option(cronjob, client); err != nil {
+			client.T.Fatalf("Failed to configure cronjob %q: %v", cronjob.Name, err)
+		}
+	}
+	if _, err := client.Kube.Kube.BatchV1beta1().CronJobs(cronjob.Namespace).Create(cronjob); err != nil {
+		client.T.Fatalf("Failed to create cronjob %q: %v", cronjob.Name, err)
+	}
+	client.Tracker.Add("batch", "v1beta1", "cronjobs", namespace, cronjob.Name)
+}
+
 // CreateServiceAccountOrFail will create a ServiceAccount or fail the test if there is an error.
 func (client *Client) CreateServiceAccountOrFail(saName string) {
 	namespace := client.Namespace
@@ -230,7 +311,7 @@ func (client *Client) CreateServiceAccountOrFail(saName string) {
 	// "kn-eventing-test-pull-secret" then use that as the ImagePullSecret
 	// on the new ServiceAccount we just created.
 	// This is needed for cases where the images are in a private registry.
-	_, err := CopySecret(client, "default", TestPullSecretName, namespace, saName)
+	_, err := utils.CopySecret(client.Kube.Kube.CoreV1(), "default", TestPullSecretName, namespace, saName)
 	if err != nil && !errors.IsNotFound(err) {
 		client.T.Fatalf("Error copying the secret: %s", err)
 	}

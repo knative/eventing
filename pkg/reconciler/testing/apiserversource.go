@@ -65,6 +65,12 @@ func WithApiServerSourceSink(uri string) ApiServerSourceOption {
 	}
 }
 
+func WithApiServerSourceSinkDepRef(uri string) ApiServerSourceOption {
+	return func(s *v1alpha1.ApiServerSource) {
+		s.Status.MarkSinkWarnRefDeprecated(uri)
+	}
+}
+
 func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
 	name := utils.GenerateFixedName(s, fmt.Sprintf("apiserversource-%s", s.Name))
@@ -77,6 +83,14 @@ func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
 
 func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkEventTypes()
+}
+
+func WithApiServerSourceSufficientPermissions(s *v1alpha1.ApiServerSource) {
+	s.Status.MarkSufficientPermissions()
+}
+
+func WithApiServerSourceNoSufficientPermissions(s *v1alpha1.ApiServerSource) {
+	s.Status.MarkNoSufficientPermissions("", `User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`)
 }
 
 func WithApiServerSourceDeleted(c *v1alpha1.ApiServerSource) {

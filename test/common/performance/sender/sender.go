@@ -25,22 +25,15 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
+
 	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
-	pkgtest "knative.dev/pkg/test"
 )
 
 const (
-	defaultEventSource   = "perf-test-event-source"
-	warmupRps            = 100
-	defaultTestNamespace = "default"
-	podNameEnvVar        = "POD_NAME"
-	podNamespaceEnvVar   = "POD_NAMESPACE"
-
-	// Those two depends on the maximum tolerated latency. If latency is higher than 1 sec, increase these.
-	// But if latency is higher than 1 sec, something else is wrong
-
-	waitAfterWarmup = 5 * time.Second
+	defaultEventSource = "perf-test-event-source"
+	warmupRps          = 100
+	podNameEnvVar      = "POD_NAME"
 )
 
 type Sender struct {
@@ -51,12 +44,10 @@ type Sender struct {
 	// EventTimestamp channels
 	sentCh     chan common.EventTimestamp
 	acceptedCh chan common.EventTimestamp
-	failedCh   chan common.EventTimestamp
 
 	// events recording maps
 	sentEvents     *pb.EventsRecord
 	acceptedEvents *pb.EventsRecord
-	failedEvents   *pb.EventsRecord
 
 	// load generator
 	loadGenerator LoadGenerator
@@ -68,21 +59,13 @@ type Sender struct {
 func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msgSize uint, warmupSeconds uint, paceFlag string) (common.Executor, error) {
 	pacerSpecs, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse pace spec: %v", err)
-	}
-
-	// wait until all pods are ready (channel, consumers) to ensure we don’t start sending events too early
-	// and the GRPC client can connect to the aggregator
-	ns := testNamespace()
-	log.Printf("Waiting for all Pods to be ready in namespace %s", ns)
-	if err := waitForPods(ns); err != nil {
-		return nil, fmt.Errorf("Timeout waiting for Pods readiness in namespace %s: %v", ns, err)
+		return nil, fmt.Errorf("failed to parse pace spec: %v", err)
 	}
 
 	// create a connection to the aggregator
 	aggregatorClient, err := pb.NewAggregatorClient(aggregAddr)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to the aggregator: %v", err)
+		return nil, fmt.Errorf("failed to connect to the aggregator: %v", err)
 	}
 
 	// We need those estimates to allocate memory before benchmark starts
@@ -101,7 +84,6 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 
 		sentCh:     make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 		acceptedCh: make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
-		failedCh:   make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 
 		sentEvents: &pb.EventsRecord{
 			Type:   pb.EventsRecord_SENT,
@@ -111,15 +93,11 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 			Type:   pb.EventsRecord_ACCEPTED,
 			Events: make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages),
 		},
-		failedEvents: &pb.EventsRecord{
-			Type:   pb.EventsRecord_FAILED,
-			Events: make(map[string]*timestamp.Timestamp, estimatedNumberOfTotalMessages),
-		},
 
 		aggregatorClient: aggregatorClient,
 	}
 
-	executor.loadGenerator, err = loadGeneratorFactory(eventsSource(), executor.sentCh, executor.acceptedCh, executor.failedCh)
+	executor.loadGenerator, err = loadGeneratorFactory(eventsSource(), executor.sentCh, executor.acceptedCh)
 	if err != nil {
 		return nil, err
 	}
@@ -180,12 +158,10 @@ func (s *Sender) Run(ctx context.Context) {
 
 	log.Printf("%-15s: %d", "Sent count", len(s.sentEvents.Events))
 	log.Printf("%-15s: %d", "Accepted count", len(s.acceptedEvents.Events))
-	log.Printf("%-15s: %d", "Failed count", len(s.failedEvents.Events))
 
 	err := s.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		s.sentEvents,
 		s.acceptedEvents,
-		s.failedEvents,
 	}})
 	if err != nil {
 		log.Fatalf("Failed to send events record: %v\n", err)
@@ -198,7 +174,7 @@ func (s *Sender) warmup(ctx context.Context, warmupSeconds uint) error {
 	s.loadGenerator.Warmup(common.PaceSpec{Rps: warmupRps, Duration: time.Duration(warmupSeconds) * time.Second}, s.msgSize)
 
 	// give the channel some time to drain the events it may still have enqueued
-	time.Sleep(waitAfterWarmup)
+	time.Sleep(common.WaitAfterWarmup)
 
 	return nil
 }
@@ -208,7 +184,6 @@ func (s *Sender) closeChannels() {
 
 	close(s.sentCh)
 	close(s.acceptedCh)
-	close(s.failedCh)
 
 	log.Printf("All channels closed")
 }
@@ -228,12 +203,6 @@ func (s *Sender) processEvents() {
 				continue
 			}
 			s.acceptedEvents.Events[e.EventId] = e.At
-
-		case e, ok := <-s.failedCh:
-			if !ok {
-				continue
-			}
-			s.failedEvents.Events[e.EventId] = e.At
 		}
 	}
 }
@@ -243,19 +212,4 @@ func eventsSource() string {
 		return pn
 	}
 	return defaultEventSource
-}
-
-func testNamespace() string {
-	if pn := os.Getenv(podNamespaceEnvVar); pn != "" {
-		return pn
-	}
-	return defaultTestNamespace
-}
-
-func waitForPods(namespace string) error {
-	c, err := pkgtest.NewKubeClient("", "")
-	if err != nil {
-		return err
-	}
-	return pkgtest.WaitForAllPodsRunning(c, namespace)
 }

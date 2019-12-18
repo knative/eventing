@@ -36,11 +36,9 @@ func CalculateMemoryConstraintsForPaceSpecs(paceSpecs []PaceSpec) (estimatedNumb
 		totalMessages := uint64(pacer.Rps * int(pacer.Duration.Seconds()))
 		// Add a bit more, just to be sure that we don't under allocate
 		totalMessages = totalMessages + uint64(float64(totalMessages)*0.1)
-		// Queueing theory: given our channels can process 50 rps, queueLength = arrival rps / 50 rps = pacer.rps / 50
-		queueLength := uint64(pacer.Rps / 50)
-		if queueLength < 10 {
-			queueLength = 10
-		}
+		// Aggressively set the queue length so enqueue operation won't be blocked
+		// as the total number of messages grows.
+		queueLength := uint64(pacer.Rps * 5)
 		estimatedNumberOfTotalMessages += totalMessages
 		if queueLength > estimatedNumberOfMessagesInsideAChannel {
 			estimatedNumberOfMessagesInsideAChannel = queueLength

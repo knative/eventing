@@ -20,10 +20,10 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // SequenceOption enables further configuration of a Sequence.
@@ -60,13 +60,13 @@ func WithSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTemplateSp
 	}
 }
 
-func WithSequenceSteps(steps []v1alpha1.SubscriberSpec) SequenceOption {
+func WithSequenceSteps(steps []duckv1.Destination) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Steps = steps
 	}
 }
 
-func WithSequenceReply(reply *corev1.ObjectReference) SequenceOption {
+func WithSequenceReply(reply *duckv1.Destination) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Reply = reply
 	}
@@ -75,6 +75,18 @@ func WithSequenceReply(reply *corev1.ObjectReference) SequenceOption {
 func WithSequenceSubscriptionStatuses(subscriptionStatuses []v1alpha1.SequenceSubscriptionStatus) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Status.SubscriptionStatuses = subscriptionStatuses
+	}
+}
+
+func WithSequenceDeprecatedReplyStatus() SequenceOption {
+	return func(s *v1alpha1.Sequence) {
+		s.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
+	}
+}
+
+func WithSequenceDeprecatedStatus() SequenceOption {
+	return func(s *v1alpha1.Sequence) {
+		s.Status.MarkDeprecated("sequenceMessagingDeprecated", "sequences.messaging.knative.dev are deprecated and will be removed in the future. Use sequences.flows.knative.dev instead.")
 	}
 }
 

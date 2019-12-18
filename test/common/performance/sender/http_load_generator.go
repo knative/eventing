@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"time"
 
@@ -27,7 +28,9 @@ import (
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
+	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
+
 	"knative.dev/eventing/test/common/performance/common"
 )
 
@@ -42,15 +45,19 @@ type CloudEventsTargeter struct {
 	eventSource string
 }
 
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var letterBytes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+const markLetter = byte('"')
 
 // generateRandString returns a random string with the given length.
-func generateRandString(length uint) string {
-	b := make([]rune, length)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+func generateRandStringPayload(length uint) []byte {
+	b := make([]byte, length)
+	b[0] = markLetter
+	for i := uint(1); i < length-1; i++ {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
-	return string(b)
+	b[length-1] = markLetter
+	return b
 }
 
 func NewCloudEventsTargeter(sinkUrl string, msgSize uint, eventType string, eventSource string) CloudEventsTargeter {
@@ -63,20 +70,26 @@ func NewCloudEventsTargeter(sinkUrl string, msgSize uint, eventType string, even
 }
 
 func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
+	uuidGen := fastuuid.MustNewGenerator()
+
+	ceType := []string{cet.eventType}
+	ceSource := []string{cet.eventSource}
+	ceSpecVersion := []string{cloudevents.VersionV1}
+	ceContentType := []string{cloudevents.ApplicationJSON}
+
 	return func(t *vegeta.Target) error {
 		t.Method = http.MethodPost
 		t.URL = cet.sinkUrl
 
-		t.Header = make(http.Header)
+		t.Header = make(http.Header, 5)
 
-		t.Header.Set("Ce-Id", uuid.New().String())
-		t.Header.Set("Ce-Type", cet.eventType)
-		t.Header.Set("Ce-Source", cet.eventSource)
-		t.Header.Set("Ce-Specversion", "0.2")
+		t.Header["Ce-Id"] = []string{uuidGen.Hex128()}
 
-		t.Header.Set("Content-Type", "application/json")
-
-		t.Body = []byte("\"" + generateRandString(cet.msgSize) + "\"")
+		t.Header["Ce-Type"] = ceType
+		t.Header["Ce-Source"] = ceSource
+		t.Header["Ce-Specversion"] = ceSpecVersion
+		t.Header["Content-Type"] = ceContentType
+		t.Body = generateRandStringPayload(cet.msgSize)
 
 		return nil
 	}
@@ -88,7 +101,6 @@ type HttpLoadGenerator struct {
 
 	sentCh     chan common.EventTimestamp
 	acceptedCh chan common.EventTimestamp
-	failedCh   chan common.EventTimestamp
 
 	warmupAttacker *vegeta.Attacker
 	paceAttacker   *vegeta.Attacker
@@ -96,7 +108,7 @@ type HttpLoadGenerator struct {
 }
 
 func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGeneratorFactory {
-	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp, failedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
+	return func(eventSource string, sentCh chan common.EventTimestamp, acceptedCh chan common.EventTimestamp) (generator LoadGenerator, e error) {
 		if sinkUrl == "" {
 			panic("Missing --sink flag")
 		}
@@ -107,27 +119,29 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 
 			sentCh:     sentCh,
 			acceptedCh: acceptedCh,
-			failedCh:   failedCh,
 		}
 
 		loadGen.warmupAttacker = vegeta.NewAttacker(vegeta.Workers(minWorkers))
 		loadGen.paceAttacker = vegeta.NewAttacker(
-			vegeta.Client(&http.Client{Transport: requestInterceptor{
-				before: func(request *http.Request) {
-					id := request.Header.Get("Ce-Id")
-					loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+			vegeta.Client(&http.Client{
+				Timeout: vegeta.DefaultTimeout,
+				Transport: requestInterceptor{
+					before: func(request *http.Request) {
+						id := request.Header.Get("Ce-Id")
+						loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+					},
+					transport: vegetaAttackerTransport(),
+					after: func(request *http.Request, response *http.Response, e error) {
+						id := request.Header.Get("Ce-Id")
+						t := ptypes.TimestampNow()
+						if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
+							loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
+						}
+					},
 				},
-				after: func(request *http.Request, response *http.Response, e error) {
-					id := request.Header.Get("Ce-Id")
-					t := ptypes.TimestampNow()
-					if e != nil || response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-						loadGen.failedCh <- common.EventTimestamp{EventId: id, At: t}
-					} else {
-						loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
-					}
-				},
-			}}),
+			}),
 			vegeta.Workers(minWorkers),
+			vegeta.MaxBody(0),
 		)
 
 		var err error
@@ -137,6 +151,25 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 		}
 
 		return loadGen, nil
+	}
+}
+
+// Since we need to add an interceptor to keep track of timestamps before and after sending events,
+// we need to have our own Transport implementation.
+// At the same time we still need to use the one implemented in Vegeta, which is optimized to being able to generate
+// high loads. But since the function is not exported, we need to add it here in order to use it.
+// The below function is mostly copied from https://github.com/tsenart/vegeta/blob/44a49c878dd6f28f04b9b5ce5751490b0dce1e18/lib/attack.go#L80
+func vegetaAttackerTransport() *http.Transport {
+	dialer := &net.Dialer{
+		LocalAddr: &net.TCPAddr{IP: vegeta.DefaultLocalAddr.IP, Zone: vegeta.DefaultLocalAddr.Zone},
+		KeepAlive: 30 * time.Second,
+	}
+
+	return &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		Dial:                dialer.Dial,
+		TLSClientConfig:     vegeta.DefaultTLSConfig,
+		MaxIdleConnsPerHost: vegeta.DefaultConnections,
 	}
 }
 
@@ -167,8 +200,9 @@ func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint) {
 }
 
 func (h HttpLoadGenerator) SendGCEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetType(common.GCEventType)
 	event.SetSource(h.eventSource)
 
@@ -176,8 +210,9 @@ func (h HttpLoadGenerator) SendGCEvent() {
 }
 
 func (h HttpLoadGenerator) SendEndEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetType(common.EndEventType)
 	event.SetSource(h.eventSource)
 

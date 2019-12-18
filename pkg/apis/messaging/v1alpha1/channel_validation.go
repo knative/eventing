@@ -45,7 +45,7 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	if cs.Subscribable != nil {
 		for i, subscriber := range cs.Subscribable.Subscribers {
-			if subscriber.ReplyURI == "" && subscriber.SubscriberURI == "" {
+			if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
 				fe := apis.ErrMissingField("replyURI", "subscriberURI")
 				fe.Details = "expected at least one of, got none"
 				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
@@ -67,14 +67,9 @@ func isValidChannelTemplate(ct *eventingduck.ChannelTemplateSpec) *apis.FieldErr
 	return errs
 }
 
-func (c *Channel) CheckImmutableFields(ctx context.Context, og apis.Immutable) *apis.FieldError {
-	if og == nil {
+func (c *Channel) CheckImmutableFields(ctx context.Context, original *Channel) *apis.FieldError {
+	if original == nil {
 		return nil
-	}
-
-	original, ok := og.(*Channel)
-	if !ok {
-		return &apis.FieldError{Message: "The provided original was not a Channel"}
 	}
 
 	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Subscribable")

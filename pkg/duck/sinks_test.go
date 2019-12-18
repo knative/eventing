@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
 
@@ -109,6 +110,7 @@ func TestGetSinkURI(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx, _ := fakedynamicclient.With(context.Background(), scheme.Scheme, tc.objects...)
+			ctx = addressable.WithDuck(ctx)
 			sr := NewSinkReconciler(ctx, func(types.NamespacedName) {})
 			sourceName := "nilRef"
 			if tc.ref != nil {

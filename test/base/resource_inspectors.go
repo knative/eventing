@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/url"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"knative.dev/eventing/test/base/resources"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -42,4 +43,8 @@ func GetAddressableURI(dynamicClient dynamic.Interface, obj *resources.MetaResou
 		return url.URL{}, fmt.Errorf("addressable's URL does not have a Host: %+v", at)
 	}
 	return url.URL(au), nil
+}
+
+func GetServiceHostname(svc *corev1.Service) string {
+	return svc.Name + "." + svc.Namespace
 }

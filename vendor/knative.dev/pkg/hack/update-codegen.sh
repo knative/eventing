@@ -20,23 +20,19 @@ set -o pipefail
 
 source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/library.sh
 
-CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
+CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 $(dirname $0)/../vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
 
-go install ./vendor/k8s.io/code-generator/cmd/deepcopy-gen
+go install $(dirname $0)/../vendor/k8s.io/code-generator/cmd/deepcopy-gen
 
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
-${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
-  knative.dev/pkg/client knative.dev/pkg/apis \
-  "istio:v1alpha3 istio/authentication:v1alpha1" \
-  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Knative Injection
 ${REPO_ROOT_DIR}/hack/generate-knative.sh "injection" \
   knative.dev/pkg/client knative.dev/pkg/apis \
-  "istio:v1alpha3 istio/authentication:v1alpha1" \
+  "duck:v1alpha1,v1beta1,v1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 OUTPUT_PKG="knative.dev/pkg/client/injection/kube" \
@@ -45,7 +41,7 @@ EXTERNAL_INFORMER_PKG="k8s.io/client-go/informers" \
   ${REPO_ROOT_DIR}/hack/generate-knative.sh "injection" \
     k8s.io/client-go \
     k8s.io/api \
-    "apps:v1 autoscaling:v1,v2beta1 batch:v1,v1beta1 core:v1 rbac:v1" \
+    "admissionregistration:v1beta1 apps:v1 autoscaling:v1,v2beta1 batch:v1,v1beta1 core:v1 rbac:v1" \
     --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 OUTPUT_PKG="knative.dev/pkg/client/injection/apiextensions" \
@@ -64,7 +60,7 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
 
 # Depends on generate-groups.sh to install bin/deepcopy-gen
 ${GOPATH}/bin/deepcopy-gen --input-dirs \
-  knative.dev/pkg/apis,knative.dev/pkg/apis/v1alpha1,knative.dev/pkg/logging,knative.dev/pkg/testing \
+  knative.dev/pkg/apis,knative.dev/pkg/tracker,knative.dev/pkg/logging,knative.dev/pkg/metrics,knative.dev/pkg/testing,knative.dev/pkg/testing/duck \
   -O zz_generated.deepcopy \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 

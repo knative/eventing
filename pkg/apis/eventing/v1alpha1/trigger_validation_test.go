@@ -24,8 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -42,22 +42,37 @@ var (
 			"source": "other_source",
 		},
 	}
-	validSubscriber = &messagingv1alpha1.SubscriberSpec{
+	invalidFilterHasBoth = &TriggerFilter{
+		DeprecatedSourceAndType: &TriggerFilterSourceAndType{
+			Type:   "other_type",
+			Source: "other_source",
+		},
+		Attributes: &TriggerFilterAttributes{
+			"type":   "other_type",
+			"source": "other_source",
+		},
+	}
+	validSubscriber = duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
-	invalidSubscriber = &messagingv1alpha1.SubscriberSpec{
+	invalidSubscriber = duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
+	// Dependency annotation
 	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
+	// Create default broker annotation
+	validInjectionAnnotation   = "enabled"
+	invalidInjectionAnnotation = "disabled"
+	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -68,10 +83,14 @@ func TestTriggerValidation(t *testing.T) {
 	}{{
 		name: "invalid trigger spec",
 		t:    &Trigger{Spec: TriggerSpec{}},
-		want: &apis.FieldError{
-			Paths:   []string{"spec.broker", "spec.filter", "spec.subscriber"},
-			Message: "missing field(s)",
-		},
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrMissingField("spec.broker", "spec.filter")
+			errs = errs.Also(fe)
+			fe = apis.ErrGeneric("expected at least one, got none", "spec.subscriber.ref", "spec.subscriber.uri")
+			errs = errs.Also(fe)
+			return errs
+		}(),
 	}, {
 		name: "invalid dependency annotation, not a corev1.ObjectReference",
 		t: &Trigger{
@@ -187,14 +206,50 @@ func TestTriggerValidation(t *testing.T) {
 					Annotations: map[string]string{
 						DependencyAnnotation: "{}",
 					}},
-				Spec: TriggerSpec{}},
+				Spec: TriggerSpec{Subscriber: validSubscriber}},
 			want: &apis.FieldError{
 				Paths: []string{
-					"spec.broker", "spec.filter", "spec.subscriber",
+					"spec.broker", "spec.filter",
 					dependencyAnnotationPath + "." + "kind",
 					dependencyAnnotationPath + "." + "name",
 					dependencyAnnotationPath + "." + "apiVersion"},
 				Message: "missing field(s)",
+			},
+		},
+		{
+			name: "invalid injection annotation value",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						InjectionAnnotation: invalidInjectionAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "default",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{injectionAnnotationPath},
+				Message: "The provided injection annotation value can only be \"enabled\", not \"disabled\"",
+			},
+		},
+		{
+			name: "valid injection annotation value, non-default broker specified",
+			t: &Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "test-ns",
+					Annotations: map[string]string{
+						InjectionAnnotation: validInjectionAnnotation,
+					}},
+				Spec: TriggerSpec{
+					Broker:     "test-broker",
+					Filter:     validEmptyFilter,
+					Subscriber: validSubscriber,
+				}},
+			want: &apis.FieldError{
+				Paths:   []string{injectionAnnotationPath},
+				Message: "The provided injection annotation is only used for default broker, but non-default broker specified here: \"test-broker\"",
 			},
 		},
 	}
@@ -218,8 +273,13 @@ func TestTriggerSpecValidation(t *testing.T) {
 		name: "invalid trigger spec",
 		ts:   &TriggerSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("broker", "filter", "subscriber")
-			return fe
+			var errs *apis.FieldError
+			fe := apis.ErrMissingField("broker", "filter")
+			errs = errs.Also(fe)
+			fe = apis.ErrGeneric("expected at least one, got none", "subscriber.ref", "subscriber.uri")
+			errs = errs.Also(fe)
+			return errs
+
 		}(),
 	}, {
 		name: "missing broker",
@@ -286,22 +346,14 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Paths:   []string{"filter.attributes"},
 		},
 	}, {
-		name: "multiple oneof sourceAndType and attributes",
+		name: "Both attributes and deprecated source,type",
 		ts: &TriggerSpec{
-			Broker: "test_broker",
-			Filter: &TriggerFilter{
-				DeprecatedSourceAndType: &TriggerFilterSourceAndType{
-					Type:   "other_type",
-					Source: "other_source",
-				},
-				Attributes: &TriggerFilterAttributes{
-					"type": "other_type",
-				},
-			},
+			Broker:     "test_broker",
+			Filter:     invalidFilterHasBoth,
 			Subscriber: validSubscriber,
 		},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMultipleOneOf("filter.sourceAndType", "filter.attributes")
+			fe := apis.ErrMultipleOneOf("filter.attributes, filter.sourceAndType")
 			return fe
 		}(),
 	}, {
@@ -310,10 +362,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Broker: "test_broker",
 			Filter: validSourceAndTypeFilter,
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("subscriber")
-			return fe
-		}(),
+		want: apis.ErrGeneric("expected at least one, got none", "subscriber.ref", "subscriber.uri"),
 	}, {
 		name: "missing subscriber.ref.name",
 		ts: &TriggerSpec{
@@ -321,10 +370,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Filter:     validSourceAndTypeFilter,
 			Subscriber: invalidSubscriber,
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("subscriber.ref.name")
-			return fe
-		}(),
+		want: apis.ErrMissingField("subscriber.ref.name"),
 	}, {
 		name: "missing broker",
 		ts: &TriggerSpec{
@@ -332,10 +378,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 			Filter:     validSourceAndTypeFilter,
 			Subscriber: validSubscriber,
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("broker")
-			return fe
-		}(),
+		want: apis.ErrMissingField("broker"),
 	}, {
 		name: "valid empty filter",
 		ts: &TriggerSpec{
@@ -375,8 +418,8 @@ func TestTriggerSpecValidation(t *testing.T) {
 func TestTriggerImmutableFields(t *testing.T) {
 	tests := []struct {
 		name     string
-		current  apis.Immutable
-		original apis.Immutable
+		current  *Trigger
+		original *Trigger
 		want     *apis.FieldError
 	}{{
 		name: "good (no change)",
@@ -400,17 +443,6 @@ func TestTriggerImmutableFields(t *testing.T) {
 		},
 		original: nil,
 		want:     nil,
-	}, {
-		name: "invalid type",
-		current: &Trigger{
-			Spec: TriggerSpec{
-				Broker: "broker",
-			},
-		},
-		original: &Broker{},
-		want: &apis.FieldError{
-			Message: "The provided original was not a Trigger",
-		},
 	}, {
 		name: "good (filter change)",
 		current: &Trigger{

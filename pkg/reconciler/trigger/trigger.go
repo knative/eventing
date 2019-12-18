@@ -42,8 +42,9 @@ import (
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 )
 
@@ -57,7 +58,6 @@ const (
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 	subscriptionGetFailed     = "SubscriptionGetFailed"
 	triggerChannelFailed      = "TriggerChannelFailed"
-	ingressChannelFailed      = "IngressChannelFailed"
 	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
@@ -68,12 +68,14 @@ type Reconciler struct {
 	subscriptionLister messaginglisters.SubscriptionLister
 	brokerLister       listers.BrokerLister
 	serviceLister      corev1listers.ServiceLister
+	namespaceLister    corev1listers.NamespaceLister
 	// Regular tracker to track static resources. In particular, it tracks Broker's changes.
 	tracker tracker.Interface
 	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
 	kresourceTracker duck.ListableTracker
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
+	uriResolver        *resolver.URIResolver
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -118,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if _, updateStatusErr := r.updateStatus(ctx, trigger); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", err)
+		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
 
@@ -162,6 +164,12 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		if apierrs.IsNotFound(err) {
 			t.Status.MarkBrokerFailed("DoesNotExist", "Broker does not exist")
+			_, needDefaultBroker := t.GetAnnotations()[v1alpha1.InjectionAnnotation]
+			if t.Spec.Broker == "default" && needDefaultBroker {
+				if e := r.labelNamespace(ctx, t); e != nil {
+					logging.FromContext(ctx).Error("Unable to label the namespace", zap.Error(e))
+				}
+			}
 		} else {
 			t.Status.MarkBrokerFailed("BrokerGetFailed", "Failed to get broker")
 		}
@@ -174,13 +182,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		logging.FromContext(ctx).Error("Broker TriggerChannel not populated")
 		r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
 		return errors.New("failed to find Broker's Trigger channel")
-	}
-
-	brokerIngress := b.Status.IngressChannel
-	if brokerIngress == nil {
-		logging.FromContext(ctx).Error("Broker IngressChannel not populated")
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
-		return errors.New("failed to find Broker's Ingress channel")
 	}
 
 	// Get Broker filter service.
@@ -196,21 +197,25 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	trackAddressable := r.addressableTracker.TrackInNamespace(t)
-	if t.Spec.Subscriber != nil && t.Spec.Subscriber.Ref != nil {
-		if err := trackAddressable(*t.Spec.Subscriber.Ref); err != nil {
-			return fmt.Errorf("unable to track changes to Subscriber.Ref: %v", err)
-		}
+	if t.Spec.Subscriber.Ref != nil {
+		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
+		// We will use the Namespace of Trigger as the Namespace of dest.Ref
+		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
+		// Since Trigger never allowed ref fields at the subscriber level and
+		// validates that they are absent, we can ignore them here.
 	}
 
-	subscriberURI, err := duck.SubscriberSpec(ctx, r.DynamicClientSet, t.Namespace, t.Spec.Subscriber, r.addressableTracker, trackAddressable)
+	subscriberURI, err := r.uriResolver.URIFromDestinationV1(t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
+		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
+		t.Status.SubscriberURI = nil
 		return err
 	}
 	t.Status.SubscriberURI = subscriberURI
+	t.Status.MarkSubscriberResolvedSucceeded()
 
-	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, &brokerObjRef, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
@@ -261,7 +266,7 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1alph
 		}
 		return fmt.Errorf("getting the dependency: %v", err)
 	}
-	dependency := dependencyObj.(*duckv1alpha1.KResource)
+	dependency := dependencyObj.(*duckv1.KResource)
 
 	// The dependency hasn't yet reconciled our latest changes to
 	// its desired state, so its conditions are outdated.
@@ -305,6 +310,25 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger
 	return trig, err
 }
 
+// labelNamespace will label namespace with knative-eventing-injection=enabled
+func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) error {
+	current, err := r.namespaceLister.Get(t.Namespace)
+	if err != nil {
+		t.Status.MarkBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection")
+		return err
+	}
+	current = current.DeepCopy()
+	if current.Labels == nil {
+		current.Labels = map[string]string{}
+	}
+	current.Labels["knative-eventing-injection"] = "enabled"
+	if _, err = r.KubeClientSet.CoreV1().Namespaces().Update(current); err != nil {
+		t.Status.MarkBrokerFailed("NamespaceUpdateFailed", "Failed to label the namespace resource with knative-eventing-injection")
+		return err
+	}
+	return nil
+}
+
 // getBrokerFilterService returns the K8s service for trigger 't' if exists,
 // otherwise it returns an error.
 func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
@@ -313,13 +337,13 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 		Path:   path.Generate(t),
 	}
-	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
+	expected := resources.NewSubscription(t, brokerTrigger, brokerRef, uri)
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.
