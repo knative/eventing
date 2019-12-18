@@ -36,11 +36,11 @@ type ConfigMapArgs struct {
 func MakeConfigMap(args ConfigMapArgs) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      args.ConfigMapPropagation.Name + "-" + args.Original.Name,
+			Name:      MakeCopyConfigMapName(args.ConfigMapPropagation.Name, args.Original.Name),
 			Namespace: args.ConfigMapPropagation.Namespace,
 			Labels: map[string]string{
 				PropagationLabelKey: PropagationLabelValueCopy,
-				CopyLabelKey:        args.ConfigMapPropagation.Namespace + "-" + args.Original.Name,
+				CopyLabelKey:        MakeCopyConfigMapLabel(args.ConfigMapPropagation.Namespace, args.Original.Name),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.ConfigMapPropagation),
@@ -48,4 +48,12 @@ func MakeConfigMap(args ConfigMapArgs) *corev1.ConfigMap {
 		},
 		Data: args.Original.Data,
 	}
+}
+
+func MakeCopyConfigMapName(configMapPropagationName string, configMapName string) string {
+	return configMapPropagationName + "-" + configMapName
+}
+
+func MakeCopyConfigMapLabel(configMapPropagationNamespace string, configMapName string) string {
+	return configMapPropagationNamespace + "-" + configMapName
 }

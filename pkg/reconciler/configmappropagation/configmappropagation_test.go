@@ -43,7 +43,6 @@ const (
 	configMapPropagationName = "test-cmp"
 	originalConfigMapName    = "test-original-cm"
 	originalNS               = "knative-eventing"
-	copyConfigMapName        = configMapPropagationName + "-" + originalConfigMapName
 )
 
 var (
@@ -56,10 +55,11 @@ var (
 	}
 	copySelector = map[string]string{
 		resources.PropagationLabelKey: resources.PropagationLabelValueCopy,
-		resources.CopyLabelKey:        currentNS + "-" + originalConfigMapName,
+		resources.CopyLabelKey:        resources.MakeCopyConfigMapLabel(currentNS, originalConfigMapName),
 	}
-	originalData = map[string]string{"data": "original"}
-	copyData     = map[string]string{"data": "copy"}
+	copyConfigMapName = resources.MakeCopyConfigMapName(configMapPropagationName, originalConfigMapName)
+	originalData      = map[string]string{"data": "original"}
+	copyData          = map[string]string{"data": "copy"}
 )
 
 func init() {
