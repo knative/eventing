@@ -34,7 +34,7 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	for i, s := range ps.Steps {
-		if e := s.ValidateDisallowDeprecated(ctx); e != nil {
+		if e := s.Validate(ctx); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "steps", i))
 		}
 	}

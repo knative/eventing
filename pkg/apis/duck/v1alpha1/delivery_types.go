@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // DeliverySpec contains the delivery options for event senders,
@@ -27,7 +27,7 @@ type DeliverySpec struct {
 	// DeadLetterSink is the sink receiving event that couldn't be sent to
 	// a destination.
 	// +optional
-	DeadLetterSink *duckv1beta1.Destination `json:"deadLetterSink,omitempty"`
+	DeadLetterSink *duckv1.Destination `json:"deadLetterSink,omitempty"`
 
 	// Retry is the minimum number of retries the sender should attempt when
 	// sending an event before moving it to the dead letter sink.

@@ -19,6 +19,7 @@ package namespace
 import (
 	"context"
 
+	"github.com/kelseyhightower/envconfig"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
@@ -30,6 +31,10 @@ import (
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
 	"knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding"
 )
+
+type envConfig struct {
+	BrokerPullSecretName string `envconfig:"BROKER_IMAGE_PULL_SECRET_NAME" required:"false"`
+}
 
 const (
 	// ReconcilerName is the name of the reconciler
@@ -56,6 +61,13 @@ func NewController(
 		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 		namespaceLister: namespaceInformer.Lister(),
 	}
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		r.Logger.Info("no broker image pull secret name defined")
+	}
+	r.brokerPullSecretName = env.BrokerPullSecretName
+
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 	// TODO: filter label selector: on InjectionEnabledLabels()
 

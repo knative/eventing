@@ -40,7 +40,7 @@ func init() {
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	ctx := event.Context.AsV03()
+	ctx := event.Context.AsV1()
 
 	dataBytes, err := event.DataBytes()
 	if err != nil {
@@ -63,6 +63,7 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 		Context: ctx,
 		Data:    string(dataBytes),
 	}
+	r.SetDataContentType(cloudevents.ApplicationJSON)
 
 	log.Println("Transform the event to: ")
 	log.Printf("[%s] %s %s: %s", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), dataBytes)

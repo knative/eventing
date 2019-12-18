@@ -135,7 +135,7 @@ func TestIngressHandler_Receive_FAIL(t *testing.T) {
 				Reporter:   reporter,
 				Defaulter:  broker.TTLDefaulter(zap.NewNop(), 5),
 			}
-			event := cloudevents.NewEvent()
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			resp := new(cloudevents.EventResponse)
 			tctx := http.TransportContext{Header: nethttp.Header{}, Method: tc.httpmethod, URI: tc.URI}
 			ctx := http.WithTransportContext(context.Background(), tctx)
@@ -202,7 +202,7 @@ func TestIngressHandler_Receive_NoTTL(t *testing.T) {
 		Namespace:  namespace,
 		Reporter:   reporter,
 	}
-	event := cloudevents.NewEvent()
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	resp := new(cloudevents.EventResponse)
 	tctx := http.TransportContext{Header: nethttp.Header{}, Method: validHTTPMethod, URI: validURI}
 	ctx := http.WithTransportContext(context.Background(), tctx)

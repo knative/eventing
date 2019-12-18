@@ -80,7 +80,7 @@ type TriggerSpec struct {
 
 	// Subscriber is the addressable that receives events from the Broker that pass the Filter. It
 	// is required.
-	Subscriber *duckv1.Destination `json:"subscriber,omitempty"`
+	Subscriber duckv1.Destination `json:"subscriber"`
 }
 
 type TriggerFilter struct {

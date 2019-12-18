@@ -138,15 +138,11 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:b38ab1b8cf42d089d9f31d4918c57c2dd47d42f3e7fc50e12142140228cf81a9"
+  digest = "1:2b0e6c0bea11257c646616ebd6a62be0ef2b6a0fd8210ac3caeaf57ee136123b"
   name = "github.com/gogo/protobuf"
   packages = [
-    "gogoproto",
-    "jsonpb",
     "proto",
-    "protoc-gen-gogo/descriptor",
     "sortkeys",
-    "types",
   ]
   pruneopts = "NUT"
   revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
@@ -618,13 +614,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5578b99717f08e6480d7e0480f758749c12f9cc5da19a33a863dc7307fd699fb"
+  digest = "1:ab30187b3fce52d6bdedddd463ac788423992846b617ddda81d4fd1e04c3d342"
   name = "golang.org/x/net"
   packages = [
     "context",
     "context/ctxhttp",
     "http/httpguts",
     "http2",
+    "http2/h2c",
     "http2/hpack",
     "idna",
     "internal/timeseries",
@@ -858,30 +855,6 @@
   pruneopts = "NUT"
   revision = "f221b8435cfb71e54062f6c6e99e9ade30b124d5"
   version = "v2.2.4"
-
-[[projects]]
-  digest = "1:9579dd8b1ccd8cf54ed576af68438b69588cc136eac90b10aa7c8d1a1c8334ff"
-  name = "istio.io/api"
-  packages = ["networking/v1alpha3"]
-  pruneopts = "NUT"
-  revision = "35e06ef8d83858a2ccabd7a0d57128879b40a586"
-  version = "1.4.0-beta.5"
-
-[[projects]]
-  digest = "1:a4549838d0466ee623b1aee6220d14978e5ddbd7a65bbf40185b63b26c645fbf"
-  name = "istio.io/client-go"
-  packages = ["pkg/apis/networking/v1alpha3"]
-  pruneopts = "NUT"
-  revision = "9bd0ba57c3d24745eac756d3df8411d969f94d34"
-  version = "1.4.0-beta.5"
-
-[[projects]]
-  digest = "1:9c9f11af1b1f2ae03d897ba5de27103ec1c9c43605663ccdef67831d6a462a30"
-  name = "istio.io/gogo-genproto"
-  packages = ["googleapis/google/api"]
-  pruneopts = "NUT"
-  revision = "f7d19ec0141d49ac9efc83b5e61fa81ba103b445"
-  version = "1.4.0-beta.5"
 
 [[projects]]
   digest = "1:2b55f57d7b6d9f0f23478f2432b03273073f1bf93aed18620472e7117eb4451e"
@@ -1295,14 +1268,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6e839a9b4183b0fbf0df609fe9a6d226c941fa9221052ba0075b25cb353588a5"
+  digest = "1:c20a6bc69c6e4299afa4e4cb6016451fc751c5bb14025a271f3436f212ae73f7"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "9363d2f4cafd2ad3c1bfc925f447c91a1776be00"
+  revision = "32d84d399e44c68470d2703a6de633ab0a826d49"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
@@ -1346,7 +1319,6 @@
     "github.com/openzipkin/zipkin-go/reporter",
     "github.com/openzipkin/zipkin-go/reporter/http",
     "github.com/openzipkin/zipkin-go/reporter/recorder",
-    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/api",
     "github.com/prometheus/client_golang/api/prometheus/v1",
     "github.com/prometheus/common/model",
@@ -1364,6 +1336,8 @@
     "go.uber.org/zap/zapcore",
     "go.uber.org/zap/zaptest",
     "golang.org/x/net/context",
+    "golang.org/x/net/http2",
+    "golang.org/x/net/http2/h2c",
     "golang.org/x/oauth2",
     "golang.org/x/sync/errgroup",
     "google.golang.org/api/container/v1beta1",
@@ -1371,8 +1345,6 @@
     "google.golang.org/api/option",
     "google.golang.org/grpc",
     "gopkg.in/yaml.v2",
-    "istio.io/api/networking/v1alpha3",
-    "istio.io/client-go/pkg/apis/networking/v1alpha3",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/apps/v1",
@@ -1406,8 +1378,6 @@
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/apimachinery/pkg/version",
     "k8s.io/apimachinery/pkg/watch",
-    "k8s.io/client-go/discovery",
-    "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
     "k8s.io/client-go/informers",
@@ -1434,7 +1404,6 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/metrics",
     "k8s.io/client-go/tools/record",
-    "k8s.io/client-go/util/flowcontrol",
     "k8s.io/client-go/util/workqueue",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/client-gen/generators/util",

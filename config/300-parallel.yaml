@@ -139,18 +139,6 @@ spec:
                               name:
                                 type: string
                                 minLength: 1
-                      - type: object
-                        description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                        properties:
-                          apiVersion:
-                            type: string
-                            minLength: 1
-                          kind:
-                            type: string
-                            minLength: 1
-                          name:
-                            type: string
-                            minLength: 1
             channelTemplate:
               type: object
               description: "specifies which Channel to use. If left unspecified, it is set to the default Channel for the namespace (or cluster, in case there are no defaults for the namespace)."
@@ -195,15 +183,3 @@ spec:
                         name:
                           type: string
                           minLength: 1
-                - type: object
-                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                  properties:
-                    apiVersion:
-                      type: string
-                      minLength: 1
-                    kind:
-                      type: string
-                      minLength: 1
-                    name:
-                      type: string
-                      minLength: 1

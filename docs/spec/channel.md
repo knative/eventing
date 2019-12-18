@@ -1,4 +1,4 @@
-# Channel Spec (IN PROGRESS)
+# Channel Spec
 
 ## Background
 

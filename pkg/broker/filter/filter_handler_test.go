@@ -384,7 +384,7 @@ func TestReceiver(t *testing.T) {
 
 			// The TTL will be added again.
 			expectedResponseEvent := addTTLToEvent(*tc.returnedEvent)
-			if diff := cmp.Diff(expectedResponseEvent.Context.AsV03(), resp.Event.Context.AsV03()); diff != "" {
+			if diff := cmp.Diff(expectedResponseEvent.Context.AsV1(), resp.Event.Context.AsV1()); diff != "" {
 				t.Errorf("Incorrect response event context (-want +got): %s", diff)
 			}
 			if diff := cmp.Diff(expectedResponseEvent.Data, resp.Event.Data); diff != "" {
@@ -444,7 +444,7 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	c := &cehttp.CodecV03{}
+	c := &cehttp.CodecV1{}
 	m, err := c.Encode(context.Background(), *h.returnedEvent)
 	if err != nil {
 		h.t.Fatalf("Could not encode message: %v", err)
@@ -552,7 +552,7 @@ func makeEventWithoutTTL() *cloudevents.Event {
 				},
 			},
 			ContentType: cloudevents.StringOfApplicationJSON(),
-		}.AsV03(),
+		}.AsV1(),
 	}
 }
 

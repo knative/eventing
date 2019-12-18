@@ -209,6 +209,66 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithNamespaceLabeled(map[string]string{v1alpha1.InjectionAnnotation: injectionAnnotation})),
 			}},
 		}, {
+			Name: "Default broker not found, with injection annotation enabled, namespace get fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation)),
+			},
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("get", "namespaces"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"default\" not found"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+					reconciletesting.WithTriggerBrokerFailed("NamespaceGetFailed", "Failed to get namespace resource to enable knative-eventing-injection"),
+				),
+			}},
+		}, {
+			Name: "Default broker not found, with injection annotation enabled, namespace label fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation)),
+				reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{})),
+			},
+			WantErr: true,
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "namespaces"),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"default\" not found"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, "default",
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithInjectionAnnotation(injectionAnnotation),
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+					reconciletesting.WithTriggerBrokerFailed("NamespaceUpdateFailed", "Failed to label the namespace resource with knative-eventing-injection"),
+				),
+			}},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewNamespace(testNS,
+					reconciletesting.WithNamespaceLabeled(map[string]string{v1alpha1.InjectionAnnotation: injectionAnnotation})),
+			}},
+		}, {
 			Name: "Default broker found, with injection annotation enabled",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -259,6 +319,32 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
+			Name: "Broker get failure, status update fail",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: broker.eventing.knative.dev \"test-broker\" not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerUpdateStatusFailed", "Failed to update Trigger's status: inducing failure for update triggers"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("get", "brokers"),
+				InduceFailure("update", "triggers"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+				),
+			}},
+		}, {
 			Name: "Trigger being deleted",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -287,31 +373,6 @@ func TestAllCases(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "TriggerChannelFailed", "Broker's Trigger channel not found"),
 				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: failed to find Broker's Trigger channel"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
-					// The first reconciliation will initialize the status conditions.
-					reconciletesting.WithInitTriggerConditions,
-					reconciletesting.WithTriggerBrokerReady(),
-				),
-			}},
-		}, {
-			Name: "No Broker Ingress Channel",
-			Key:  triggerKey,
-			Objects: []runtime.Object{
-				makeReadyBrokerNoIngressChannel(),
-				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
-					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
-					reconciletesting.WithInitTriggerConditions,
-				),
-			},
-			WantErr: true,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "IngressChannelFailed", "Broker's Ingress channel not found"),
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: failed to find Broker's Ingress channel"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -911,7 +972,7 @@ func makeTrigger() *v1alpha1.Trigger {
 					Type:   "Any",
 				},
 			},
-			Subscriber: &duckv1.Destination{
+			Subscriber: duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					Name:       subscriberName,
 					Kind:       subscriberKind,
@@ -942,18 +1003,10 @@ func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
 	return b
 }
 
-func makeReadyBrokerNoIngressChannel() *v1alpha1.Broker {
-	b := makeBroker()
-	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
-	b.Status.TriggerChannel = makeTriggerChannelRef()
-	return b
-}
-
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.TriggerChannel = makeTriggerChannelRef()
-	b.Status.IngressChannel = makeIngressChannelRef()
 	return b
 }
 
@@ -972,12 +1025,12 @@ func makeTriggerChannelRef() *corev1.ObjectReference {
 	}
 }
 
-func makeIngressChannelRef() *corev1.ObjectReference {
+func makeBrokerRef() *corev1.ObjectReference {
 	return &corev1.ObjectReference{
 		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Channel",
+		Kind:       "Broker",
 		Namespace:  testNS,
-		Name:       fmt.Sprintf("%s-kn-ingress", brokerName),
+		Name:       brokerName,
 	}
 }
 
@@ -1025,7 +1078,7 @@ func makeServiceURI() *url.URL {
 }
 
 func makeIngressSubscription() *messagingv1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeIngressChannelRef(), makeServiceURI())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI())
 }
 
 func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription {

@@ -41,12 +41,13 @@ var (
 )
 
 func makeCloudEvent() cloudevents.Event {
-	event := cloudevents.NewEvent(cloudevents.VersionV03)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetType("com.example.someevent")
 	event.SetSource("/mycontext")
 	event.SetID("A234-1234-1234")
-	event.SetExtension("comExampleExtension", "value")
+	event.SetExtension("comexampleextension", "value")
 	event.SetData("<much wow=\"xml\"/>")
+	event.SetDataContentType(cloudevents.ApplicationXML)
 	return event
 }
 
@@ -287,7 +288,7 @@ func (s *succeedOnce) handler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("ce-specversion", cloudevents.VersionV03)
+	writer.Header().Set("ce-specversion", cloudevents.VersionV1)
 	writer.Header().Set("ce-type", "com.example.someotherevent")
 	writer.Header().Set("ce-source", "/myothercontext")
 	writer.Header().Set("ce-id", "B234-1234-1234")

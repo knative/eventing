@@ -27,7 +27,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // MakeSubscription returns a placeholder subscription for broker 'b', channelable 'c', and service 'svc'.
@@ -47,7 +47,7 @@ func MakeSubscription(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *core
 				Kind:       c.Kind,
 				Name:       c.Name,
 			},
-			Subscriber: &duckv1beta1.Destination{
+			Subscriber: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Service",
