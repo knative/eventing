@@ -26,7 +26,7 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 )
 
-func TestMakeSubscription(t *testing.T) {
+func TestMakeMakeConfigMap(t *testing.T) {
 	testCases := map[string]struct {
 		original             *corev1.ConfigMap
 		configmappropagation *configsv1alpha1.ConfigMapPropagation

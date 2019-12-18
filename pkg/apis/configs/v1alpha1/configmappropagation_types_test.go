@@ -16,12 +16,22 @@
 
 package v1alpha1
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestConfigMapPropagation_GetGroupVersionKind(t *testing.T) {
-	b := ConfigMapPropagation{}
-	gvk := b.GetGroupVersionKind()
+	cmp := ConfigMapPropagation{}
+	gvk := cmp.GetGroupVersionKind()
 	if gvk.Kind != "ConfigMapPropagation" {
 		t.Errorf("Should be ConfigMapPropagation.")
+	}
+}
+func TestConfigMapPropagation_GetUntypedSpec(t *testing.T) {
+	cmp := ConfigMapPropagation{}
+	int := cmp.GetUntypedSpec()
+	if !reflect.DeepEqual(int, cmp.Spec) {
+		t.Errorf("Should be ConfigMapPropagationSpec.")
 	}
 }
