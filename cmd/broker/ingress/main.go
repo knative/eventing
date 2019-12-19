@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"knative.dev/eventing/cmd/broker"
 	"log"
 	"net/http"
 	"net/url"
@@ -28,11 +29,13 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/kelseyhightower/envconfig"
+	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
-	"go.opencensus.io/stats/view"
 	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/eventing/pkg/kncloudevents"
+	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
+	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
@@ -42,8 +45,8 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
-	"knative.dev/pkg/system"
 	pkgtracing "knative.dev/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
 var (
@@ -88,13 +91,21 @@ func main() {
 		log.Fatal("Error building kubeconfig", err)
 	}
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	log.Printf("Registering %d clients", len(injection.Default.GetClients()))
 	log.Printf("Registering %d informer factories", len(injection.Default.GetInformerFactories()))
 	log.Printf("Registering %d informers", len(injection.Default.GetInformers()))
 
 	ctx, informers := injection.Default.SetupInformers(ctx, cfg)
 
-	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
+	loggingConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, logging.ConfigMapName())
+	metricsConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, metrics.ConfigMapName())
+
+	loggingConfig, err := broker.GetLoggingConfig(ctx, env.Namespace, loggingConfigMapName)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
@@ -104,11 +115,6 @@ func main() {
 
 	logger.Info("Starting the Broker Ingress")
 
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logger.Fatal("Failed to process env var", zap.Error(err))
-	}
-
 	channelURI := &url.URL{
 		Scheme: "http",
 		Host:   env.Channel,
@@ -116,18 +122,19 @@ func main() {
 	}
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
+	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), env.Namespace)
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	configMapWatcher.Watch(metricsConfigMapName, metrics.UpdateExporterFromConfigMap(component, sl))
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
-	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
+	configMapWatcher.Watch(loggingConfigMapName, logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin,
+		cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, tracingconfig.ConfigName)); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 

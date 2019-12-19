@@ -43,7 +43,7 @@ spec:
     - name: Reason
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
-    - name: OriginalNamepsace
+    - name: OriginalNamespace
       type: string
       JSONPath: ".spec.originalNamespace"
     - name: Selector

@@ -17,7 +17,9 @@ kind: ConfigMap
 metadata:
   name: config-tracing
   namespace: knative-eventing
-
+  labels:
+    knative.dev/config-category: eventing
+    knative.dev/config-propagation: original
 data:
   _example: |
     ################################

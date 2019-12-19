@@ -17,6 +17,9 @@ kind: ConfigMap
 metadata:
   name: config-logging
   namespace: knative-eventing
+  labels:
+    knative.dev/config-category: eventing
+    knative.dev/config-propagation: original
 data:
   # Common configuration for all Knative codebase
   zap-logger-config: |

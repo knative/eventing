@@ -30,6 +30,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
+	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
 const (
@@ -55,7 +56,7 @@ func NewController(
 
 	// Setup trace publishing.
 	iw := cmw.(*configmap.InformedWatcher)
-	if err := tracing.SetupDynamicPublishing(base.Logger, iw, "imc-dispatcher"); err != nil {
+	if err := tracing.SetupDynamicPublishing(base.Logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
 		base.Logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
