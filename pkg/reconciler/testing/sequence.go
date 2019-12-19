@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // SequenceOption enables further configuration of a Sequence.
@@ -60,13 +60,13 @@ func WithSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTemplateSp
 	}
 }
 
-func WithSequenceSteps(steps []duckv1beta1.Destination) SequenceOption {
+func WithSequenceSteps(steps []duckv1.Destination) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Steps = steps
 	}
 }
 
-func WithSequenceReply(reply *duckv1beta1.Destination) SequenceOption {
+func WithSequenceReply(reply *duckv1.Destination) SequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Reply = reply
 	}

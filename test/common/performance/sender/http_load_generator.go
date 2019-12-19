@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"
 	vegeta "github.com/tsenart/vegeta/lib"
+
 	"knative.dev/eventing/test/common/performance/common"
 )
 
@@ -72,8 +74,8 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 
 	ceType := []string{cet.eventType}
 	ceSource := []string{cet.eventSource}
-	ceSpecVersion := []string{"0.2"}
-	ceContentType := []string{"application/json"}
+	ceSpecVersion := []string{cloudevents.VersionV1}
+	ceContentType := []string{cloudevents.ApplicationJSON}
 
 	return func(t *vegeta.Target) error {
 		t.Method = http.MethodPost
@@ -121,19 +123,23 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 
 		loadGen.warmupAttacker = vegeta.NewAttacker(vegeta.Workers(minWorkers))
 		loadGen.paceAttacker = vegeta.NewAttacker(
-			vegeta.Client(&http.Client{Transport: requestInterceptor{
-				before: func(request *http.Request) {
-					id := request.Header.Get("Ce-Id")
-					loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+			vegeta.Client(&http.Client{
+				Timeout: vegeta.DefaultTimeout,
+				Transport: requestInterceptor{
+					before: func(request *http.Request) {
+						id := request.Header.Get("Ce-Id")
+						loadGen.sentCh <- common.EventTimestamp{EventId: id, At: ptypes.TimestampNow()}
+					},
+					transport: vegetaAttackerTransport(),
+					after: func(request *http.Request, response *http.Response, e error) {
+						id := request.Header.Get("Ce-Id")
+						t := ptypes.TimestampNow()
+						if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
+							loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
+						}
+					},
 				},
-				after: func(request *http.Request, response *http.Response, e error) {
-					id := request.Header.Get("Ce-Id")
-					t := ptypes.TimestampNow()
-					if e == nil && response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
-						loadGen.acceptedCh <- common.EventTimestamp{EventId: id, At: t}
-					}
-				},
-			}}),
+			}),
 			vegeta.Workers(minWorkers),
 			vegeta.MaxBody(0),
 		)
@@ -145,6 +151,25 @@ func NewHttpLoadGeneratorFactory(sinkUrl string, minWorkers uint64) LoadGenerato
 		}
 
 		return loadGen, nil
+	}
+}
+
+// Since we need to add an interceptor to keep track of timestamps before and after sending events,
+// we need to have our own Transport implementation.
+// At the same time we still need to use the one implemented in Vegeta, which is optimized to being able to generate
+// high loads. But since the function is not exported, we need to add it here in order to use it.
+// The below function is mostly copied from https://github.com/tsenart/vegeta/blob/44a49c878dd6f28f04b9b5ce5751490b0dce1e18/lib/attack.go#L80
+func vegetaAttackerTransport() *http.Transport {
+	dialer := &net.Dialer{
+		LocalAddr: &net.TCPAddr{IP: vegeta.DefaultLocalAddr.IP, Zone: vegeta.DefaultLocalAddr.Zone},
+		KeepAlive: 30 * time.Second,
+	}
+
+	return &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		Dial:                dialer.Dial,
+		TLSClientConfig:     vegeta.DefaultTLSConfig,
+		MaxIdleConnsPerHost: vegeta.DefaultConnections,
 	}
 }
 
@@ -175,8 +200,9 @@ func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint) {
 }
 
 func (h HttpLoadGenerator) SendGCEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetType(common.GCEventType)
 	event.SetSource(h.eventSource)
 
@@ -184,8 +210,9 @@ func (h HttpLoadGenerator) SendGCEvent() {
 }
 
 func (h HttpLoadGenerator) SendEndEvent() {
-	event := cloudevents.NewEvent(cloudevents.VersionV02)
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	event.SetID(uuid.New().String())
+	event.SetDataContentType(cloudevents.ApplicationJSON)
 	event.SetType(common.EndEventType)
 	event.SetSource(h.eventSource)
 

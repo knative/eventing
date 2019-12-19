@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
 )
 
@@ -44,7 +44,7 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	missingSubscriber := isDestinationNilOrEmpty(ss.Subscriber)
-	missingReply := isReplyStrategyNilOrEmpty(ss.Reply)
+	missingReply := isDestinationNilOrEmpty(ss.Reply)
 	if missingSubscriber && missingReply {
 		fe := apis.ErrMissingField("reply", "subscriber")
 		fe.Details = "the Subscription must reference at least one of (reply or a subscriber)"
@@ -52,35 +52,22 @@ func (ss *SubscriptionSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	if !missingSubscriber {
-		if fe := ss.Subscriber.ValidateDisallowDeprecated(ctx); fe != nil {
+		if fe := ss.Subscriber.Validate(ctx); fe != nil {
 			errs = errs.Also(fe.ViaField("subscriber"))
 		}
 	}
 
 	if !missingReply {
-		if !isDestinationNilOrEmpty(ss.Reply.DeprecatedChannel) && !isDestinationNilOrEmpty(ss.Reply.Destination) {
-			errs = errs.Also(apis.ErrGeneric("channel and [ref, uri] can't be both present", "reply.channel", "reply.ref", "reply.uri"))
-		} else if !isDestinationNilOrEmpty(ss.Reply.DeprecatedChannel) {
-			if fe := ss.Reply.DeprecatedChannel.Validate(ctx); fe != nil {
-				errs = errs.Also(fe.ViaField("reply.channel"))
-			}
-		} else {
-			if fe := ss.Reply.Destination.Validate(ctx); fe != nil {
-				errs = errs.Also(fe.ViaField("reply"))
-			}
+		if fe := ss.Reply.Validate(ctx); fe != nil {
+			errs = errs.Also(fe.ViaField("reply"))
 		}
 	}
 
 	return errs
 }
 
-func isDestinationNilOrEmpty(d *duckv1beta1.Destination) bool {
-	return d == nil || equality.Semantic.DeepEqual(d, &duckv1beta1.Destination{})
-}
-
-func isReplyStrategyNilOrEmpty(r *ReplyStrategy) bool {
-	return r == nil || equality.Semantic.DeepEqual(r, &ReplyStrategy{}) ||
-		(equality.Semantic.DeepEqual(r.DeprecatedChannel, &duckv1beta1.Destination{}) && (equality.Semantic.DeepEqual(r.Destination, &duckv1beta1.Destination{})))
+func isDestinationNilOrEmpty(d *duckv1.Destination) bool {
+	return d == nil || equality.Semantic.DeepEqual(d, &duckv1.Destination{})
 }
 
 func (s *Subscription) CheckImmutableFields(ctx context.Context, original *Subscription) *apis.FieldError {

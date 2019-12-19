@@ -83,7 +83,7 @@ func TestMessageHistory(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.expected, func(t *testing.T) {
-			event := cloudevents.NewEvent(cloudevents.VersionV03)
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			if tc.start != "" {
 				event.SetExtension(EventHistory, tc.start)
 			}

@@ -71,12 +71,15 @@ spec:
                   minLength: 1
             subscriber:
               type: object
+              description: "the subscriber that (optionally) processes events."
               properties:
                 uri:
                   type: string
+                  description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
                   minLength: 1
                 ref:
                   type: object
+                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
                   required:
                     - apiVersion
                     - kind
@@ -95,16 +98,24 @@ spec:
               type: object
               description: "the destination that (optionally) receive events."
               properties:
-                channel:
+                uri:
+                  type: string
+                  description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                  minLength: 1
+                ref:
                   type: object
+                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                  required:
+                    - apiVersion
+                    - kind
+                    - name
                   properties:
                     apiVersion:
                       type: string
                       minLength: 1
                     kind:
                       type: string
+                      minLength: 1
                     name:
                       type: string
                       minLength: 1
-            delivery:
-              type: object

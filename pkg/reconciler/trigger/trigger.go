@@ -58,7 +58,6 @@ const (
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 	subscriptionGetFailed     = "SubscriptionGetFailed"
 	triggerChannelFailed      = "TriggerChannelFailed"
-	ingressChannelFailed      = "IngressChannelFailed"
 	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
@@ -121,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	if _, updateStatusErr := r.updateStatus(ctx, trigger); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", err)
+		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 		return updateStatusErr
 	}
 
@@ -185,13 +184,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return errors.New("failed to find Broker's Trigger channel")
 	}
 
-	brokerIngress := b.Status.IngressChannel
-	if brokerIngress == nil {
-		logging.FromContext(ctx).Error("Broker IngressChannel not populated")
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, ingressChannelFailed, "Broker's Ingress channel not found")
-		return errors.New("failed to find Broker's Ingress channel")
-	}
-
 	// Get Broker filter service.
 	filterSvc, err := r.getBrokerFilterService(ctx, b)
 	if err != nil {
@@ -205,10 +197,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		return err
 	}
 
-	if t.Spec.Subscriber == nil {
-		return errors.New("subscriber cannot be nil")
-	}
-
 	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// We will use the Namespace of Trigger as the Namespace of dest.Ref
@@ -217,7 +205,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 		// validates that they are absent, we can ignore them here.
 	}
 
-	subscriberURI, err := r.uriResolver.URIFromDestinationV1(*t.Spec.Subscriber, t)
+	subscriberURI, err := r.uriResolver.URIFromDestinationV1(t.Spec.Subscriber, t)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Subscriber's URI", zap.Error(err))
 		t.Status.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "%v", err)
@@ -227,7 +215,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
-	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, brokerIngress, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, t, brokerTrigger, &brokerObjRef, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
@@ -349,13 +337,13 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerIngress *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
 	uri := &url.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 		Path:   path.Generate(t),
 	}
-	expected := resources.NewSubscription(t, brokerTrigger, brokerIngress, uri)
+	expected := resources.NewSubscription(t, brokerTrigger, brokerRef, uri)
 
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.

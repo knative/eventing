@@ -50,6 +50,15 @@ spec:
         volumeMounts:
           - name: config-logging
             mountPath: /etc/config-logging
+        resources:
+          # Set resource requests and limits based on the benchmarking results in
+          # https://github.com/knative/eventing/issues/2311#issuecomment-565311345
+          requests:
+            cpu: 1000m
+            memory: 150Mi
+          limits:
+            cpu: 2200m
+            memory: 300Mi
       volumes:
         - name: config-logging
           configMap:

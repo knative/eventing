@@ -31,8 +31,8 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -269,51 +269,6 @@ func TestAllBranches(t *testing.T) {
 					}})),
 			}},
 		}, {
-			Name: "single branch with no reply, no filter, with case and global deprecated reply",
-			Key:  pKey,
-			Objects: []runtime.Object{
-				reconciletesting.NewParallel(parallelName, testNS,
-					reconciletesting.WithInitParallelConditions,
-					reconciletesting.WithParallelChannelTemplateSpec(imc),
-					reconciletesting.WithParallelReply(createDeprecatedReplyChannel(replyChannelName)),
-					reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{
-						{Subscriber: createSubscriber(0)},
-					}))},
-			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
-			},
-			WantCreates: []runtime.Object{
-				createChannel(parallelName),
-				createBranchChannel(parallelName, 0),
-				resources.NewFilterSubscription(0, reconciletesting.NewParallel(parallelName, testNS, reconciletesting.WithParallelChannelTemplateSpec(imc), reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{
-					{Subscriber: createSubscriber(0)},
-				}))),
-				resources.NewSubscription(0, reconciletesting.NewParallel(parallelName, testNS, reconciletesting.WithParallelChannelTemplateSpec(imc), reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{
-					{Subscriber: createSubscriber(0)},
-				}), reconciletesting.WithParallelReply(createDeprecatedReplyChannel(replyChannelName)))),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewParallel(parallelName, testNS,
-					reconciletesting.WithInitParallelConditions,
-					reconciletesting.WithParallelChannelTemplateSpec(imc),
-					reconciletesting.WithParallelBranches([]v1alpha1.ParallelBranch{
-						{Subscriber: createSubscriber(0)},
-					}),
-					reconciletesting.WithParallelReply(createDeprecatedReplyChannel(replyChannelName)),
-					reconciletesting.WithParallelAddressableNotReady("emptyHostname", "hostname is the empty string"),
-					reconciletesting.WithParallelDeprecatedReplyStatus(),
-					reconciletesting.WithParallelDeprecatedStatus(),
-					reconciletesting.WithParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
-					reconciletesting.WithParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
-					reconciletesting.WithParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
-					reconciletesting.WithParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
-						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
-						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
-						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
-					}})),
-			}},
-		}, {
 			Name: "two branches, no filters",
 			Key:  pKey,
 			Objects: []runtime.Object{
@@ -500,29 +455,23 @@ func TestAllBranches(t *testing.T) {
 	}, false, logger))
 }
 
-func createBranchReplyChannel(caseNumber int) *duckv1beta1.Destination {
-	return &duckv1beta1.Destination{
-		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
-		DeprecatedKind:       "inmemorychannel",
-		DeprecatedName:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+func createBranchReplyChannel(caseNumber int) *duckv1.Destination {
+	return &duckv1.Destination{
+		Ref: &corev1.ObjectReference{
+			APIVersion: "messaging.knative.dev/v1alpha1",
+			Kind:       "inmemorychannel",
+			Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+		},
 	}
 }
 
-func createReplyChannel(channelName string) *duckv1beta1.Destination {
-	return &duckv1beta1.Destination{
+func createReplyChannel(channelName string) *duckv1.Destination {
+	return &duckv1.Destination{
 		Ref: &corev1.ObjectReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 			Name:       channelName,
 		},
-	}
-}
-
-func createDeprecatedReplyChannel(channelName string) *duckv1beta1.Destination {
-	return &duckv1beta1.Destination{
-		DeprecatedAPIVersion: "messaging.knative.dev/v1alpha1",
-		DeprecatedKind:       "inmemorychannel",
-		DeprecatedName:       channelName,
 	}
 }
 
@@ -632,16 +581,16 @@ func createParallelSubscriptionStatus(parallelName string, caseNumber int, statu
 	}
 }
 
-func createSubscriber(caseNumber int) duckv1beta1.Destination {
+func createSubscriber(caseNumber int) duckv1.Destination {
 	uri := apis.HTTP(fmt.Sprintf("example.com/%d", caseNumber))
-	return duckv1beta1.Destination{
+	return duckv1.Destination{
 		URI: uri,
 	}
 }
 
-func createFilter(caseNumber int) *duckv1beta1.Destination {
+func createFilter(caseNumber int) *duckv1.Destination {
 	uri := apis.HTTP(fmt.Sprintf("example.com/filter-%d", caseNumber))
-	return &duckv1beta1.Destination{
+	return &duckv1.Destination{
 		URI: uri,
 	}
 }

@@ -18,6 +18,7 @@ package filter
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"time"
 
@@ -130,7 +131,7 @@ func register() {
 		},
 	)
 	if err != nil {
-		panic(err)
+		log.Printf("failed to register opencensus views, %s", err)
 	}
 }
 

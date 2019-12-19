@@ -95,10 +95,11 @@ var (
 
 	// Client Options
 
-	WithEventDefaulter = client.WithEventDefaulter
-	WithUUIDs          = client.WithUUIDs
-	WithTimeNow        = client.WithTimeNow
-	WithConverterFn    = client.WithConverterFn
+	WithEventDefaulter  = client.WithEventDefaulter
+	WithUUIDs           = client.WithUUIDs
+	WithTimeNow         = client.WithTimeNow
+	WithConverterFn     = client.WithConverterFn
+	WithDataContentType = client.WithDataContentType
 
 	// Event Creation
 

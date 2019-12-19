@@ -21,13 +21,15 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"runtime"
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
 )
@@ -43,7 +45,7 @@ type Receiver struct {
 	timeout       time.Duration
 
 	receivedCh     chan common.EventTimestamp
-	endCh          chan bool
+	endCh          chan struct{}
 	receivedEvents *pb.EventsRecord
 
 	// aggregator GRPC client
@@ -83,7 +85,7 @@ func NewReceiver(paceFlag string, aggregAddr string, warmupSeconds uint, typeExt
 		idExtractor:   idExtractor,
 		timeout:       timeout,
 		receivedCh:    make(chan common.EventTimestamp, channelSize),
-		endCh:         make(chan bool, 1),
+		endCh:         make(chan struct{}, 1),
 		receivedEvents: &pb.EventsRecord{
 			Type:   pb.EventsRecord_RECEIVED,
 			Events: make(map[string]*timestamp.Timestamp, totalMessages),
@@ -108,9 +110,8 @@ func (r *Receiver) Run(ctx context.Context) {
 	// This timer sends to endCh a signal to stop processing events and start tear down of receiver
 	timeoutTimer := time.AfterFunc(r.timeout, func() {
 		log.Printf("Receiver timeout")
-		r.endCh <- true
+		r.endCh <- struct{}{}
 	})
-
 	log.Printf("Started receiver timeout timer of duration %v", r.timeout)
 
 	r.processEvents()
@@ -124,11 +125,9 @@ func (r *Receiver) Run(ctx context.Context) {
 
 	log.Printf("%-15s: %d", "Received count", len(r.receivedEvents.Events))
 
-	err := r.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
+	if err := r.aggregatorClient.Publish(&pb.EventsRecordList{Items: []*pb.EventsRecord{
 		r.receivedEvents,
-	}})
-
-	if err != nil {
+	}}); err != nil {
 		log.Fatalf("Failed to send events record: %v\n", err)
 	}
 
@@ -151,7 +150,7 @@ func (r *Receiver) processEvents() {
 }
 
 func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
-	cli, err := newCloudEventsClient()
+	cli, err := kncloudevents.NewDefaultClient()
 	if err != nil {
 		return fmt.Errorf("failed to create CloudEvents client: %v", err)
 	}
@@ -161,7 +160,7 @@ func (r *Receiver) startCloudEventsReceiver(ctx context.Context) error {
 }
 
 // processReceiveEvent processes the event received by the CloudEvents receiver.
-func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
+func (r *Receiver) processReceiveEvent(event cloudevents.Event, resp *cloudevents.EventResponse) {
 	t := r.typeExtractor(event)
 	switch t {
 	case common.MeasureEventType:
@@ -172,20 +171,10 @@ func (r *Receiver) processReceiveEvent(event cloudevents.Event) {
 		log.Printf("End message received correctly")
 		// Wait a bit so all messages on wire are processed
 		time.AfterFunc(shutdownWaitTime, func() {
-			r.endCh <- true
+			r.endCh <- struct{}{}
 		})
 	}
-}
-
-func newCloudEventsClient() (client.Client, error) {
-	t, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithBinaryEncoding(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create transport: %v", err)
-	}
-
-	return cloudevents.NewClient(t)
+	resp.Status = http.StatusAccepted
 }
 
 // waitForPortAvailable waits until the given TCP port is available.

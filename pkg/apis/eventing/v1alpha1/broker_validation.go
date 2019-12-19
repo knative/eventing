@@ -36,7 +36,7 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 	}
 
-	// TODO validate that the channelTemplate only specifies the provisioner and arguments.
+	// TODO validate that the channelTemplate only specifies the channel and arguments.
 	return errs
 }
 

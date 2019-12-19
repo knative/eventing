@@ -25,21 +25,21 @@ broker._
 
 #### Spec
 
-| Field        | Type                    | Description                                                                                                                                                                | Constraints |
-| ------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| broker       | String                  | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
-| filter       | TriggerFilter           | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
-| subscriber\* | eventing.SubscriberSpec | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
+| Field        | Type                 | Description                                                                                                                                                                | Constraints |
+| ------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| broker       | String               | Broker is the broker that this trigger receives events from. Defaults to 'default'.                                                                                        |             |
+| filter       | TriggerFilter        | Filter is the filter to apply against all events from the Broker. Only events that pass this filter will be sent to the Subscriber. Defaults to subscribing to all events. |             |
+| subscriber\* | pkg/duck.Destination | Subscriber is the addressable that receives events from the Broker that pass the Filter.                                                                                   |             |
 
 \*: Required
 
 #### Status
 
-| Field              | Type        | Description                                                                                              | Constraints |
-| ------------------ | ----------- | -------------------------------------------------------------------------------------------------------- | ----------- |
-| observedGeneration | int64       | The 'Generation' of the Broker that was last processed by the controller.                                |             |
-| subscriberURI      | Addressable | Address of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions         | Conditions  | Trigger conditions.                                                                                      |             |
+| Field              | Type       | Description                                                                                          | Constraints |
+| ------------------ | ---------- | ---------------------------------------------------------------------------------------------------- | ----------- |
+| observedGeneration | int64      | The 'Generation' of the Broker that was last processed by the controller.                            |             |
+| subscriberURI      | string     | URI of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
+| conditions         | Conditions | Trigger conditions.                                                                                  |             |
 
 ##### Conditions
 
@@ -68,9 +68,9 @@ Trigger._
 
 #### Spec
 
-| Field           | Type        | Description                                                                                                     | Constraints                                      |
-| --------------- | ----------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to the default Channel for the namespace. | Only Provisioner and Arguments may be specified. |
+| Field           | Type        | Description                                                                                                     | Constraints                                  |
+| --------------- | ----------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| channelTemplate | ChannelSpec | The template used to create Channels internal to the Broker. Defaults to the default Channel for the namespace. | Only Channel and Arguments may be specified. |
 
 #### Status
 
@@ -155,11 +155,11 @@ channel._
 
 #### Spec
 
-| Field                  | Type                    | Description                                                                       | Constraints        |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------------------- | ------------------ |
-| channel\*              | ObjectRef               | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
-| subscriber<sup>1</sup> | eventing.SubscriberSpec | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
-| reply<sup>1</sup>      | ReplyStrategy           | The continuation for the link.                                                    |                    |
+| Field                  | Type                 | Description                                                                       | Constraints        |
+| ---------------------- | -------------------- | --------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef            | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
+| subscriber<sup>1</sup> | pkg/duck.Destination | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
+| reply<sup>1</sup>      | pkg/duck.Destination | The continuation for the link.                                                    |                    |
 
 \*: Required
 
@@ -221,6 +221,17 @@ channel._
 | subscriberURI | String | The URI name of the endpoint for the subscriber.            | Must be a URL. |
 | replyURI      | String | The URI name of the endpoint for the reply.                 | Must be a URL. |
 
+### pkg/duck.Destination
+
+| Field           | Type            | Description                                                                                          | Constraints    |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------- | -------------- |
+| ref<sup>1</sup> | ObjectReference | The Subscription UID this SubscriberSpec was resolved from.                                          |                |
+| uri<sup>1</sup> | String          | Either an absolute URL (if ref is not specified). Resolved using the base URI from ref if specified. | Must be a URL. |
+
+1: One or both (ref, uri), Required. If only uri is specified, it must be an
+absolute URL. If both are specified, uri will be resolved using the base URI
+retrieved from ref.
+
 ### ReplyStrategy
 
 | Field     | Type      | Description                            | Constraints        |
@@ -231,13 +242,6 @@ channel._
 
 ### TriggerFilter
 
-| Field         | Type                       | Description                                        | Constraints |
-| ------------- | -------------------------- | -------------------------------------------------- | ----------- |
-| sourceAndType | TriggerFilterSourceAndType | A filter that can specific both a source and type. |             |
-
-### TriggerFilterSourceAndType
-
-| Field  | Type   | Description                             | Constraints                          |
-| ------ | ------ | --------------------------------------- | ------------------------------------ |
-| source | String | Event source as defined by CloudEvents. | Also allowed to be the string 'Any'. |
-| type   | String | Event type as defined by CloudEvents.   | Also allowed to be the string 'Any'. |
+| Field      | Type              | Description                                                                         | Constraints |
+| ---------- | ----------------- | ----------------------------------------------------------------------------------- | ----------- |
+| attributes | map[string]string | A filter specifying which events match this trigger. Matches exactly on the fields. |             |

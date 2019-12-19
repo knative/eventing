@@ -34,7 +34,7 @@ func init() {
 }
 
 func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
-	ctx := event.Context.AsV03()
+	ctx := event.Context.AsV1()
 
 	data := &resources.CloudEventBaseData{}
 	if err := event.DataAs(data); err != nil {
