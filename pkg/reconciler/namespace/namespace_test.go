@@ -194,6 +194,25 @@ func TestAllCases(t *testing.T) {
 			rbIngress,
 		},
 	}, {
+		Name: "Namespace enabled - configmappropagation fails",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "configmappropagations"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: configMapPropagation: inducing failure for create configmappropagations"),
+		},
+		WantCreates: []runtime.Object{
+			configMapPropagation,
+		},
+	}, {
 		Name: "Namespace enabled, broker exists",
 		Objects: []runtime.Object{
 			NewNamespace(testNS,

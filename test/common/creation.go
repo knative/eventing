@@ -25,6 +25,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -32,7 +33,6 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
-	"knative.dev/pkg/test/helpers"
 )
 
 // TODO(Fredy-Z): break this file into multiple files when it grows too large.
@@ -98,6 +98,18 @@ func (client *Client) CreateSubscriptionsOrFail(
 	for _, name := range names {
 		client.CreateSubscriptionOrFail(name, channelName, channelTypeMeta, options...)
 	}
+}
+
+func (client *Client) CreateConfigMapPropagationOrFail(name string) *configsv1alpha1.ConfigMapPropagation {
+	namespace := client.Namespace
+	configMapPropagation := resources.ConfigMapPropagation(name, namespace)
+	configMapPropagations := client.Eventing.ConfigsV1alpha1().ConfigMapPropagations(namespace)
+	configMapPropagation, err := configMapPropagations.Create(configMapPropagation)
+	if err != nil {
+		client.T.Fatalf("Failed to create configMapPropagation %q: %v", name, err)
+	}
+	client.Tracker.AddObj(configMapPropagation)
+	return configMapPropagation
 }
 
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
@@ -395,20 +407,20 @@ func (client *Client) CreateRBACResourcesForBrokers() {
 		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
 		client.Namespace,
 	)
-	// The two RoleBindings are required for access to shared configmaps for logging,
-	// tracing, and metrics configuration.
-	client.CreateRoleBindingOrFail(
-		saIngressName,
-		ClusterRoleKind,
-		crConfigReaderName,
-		fmt.Sprintf("%s-%s-%s", saIngressName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
-		resources.SystemNamespace,
-	)
-	client.CreateRoleBindingOrFail(
-		saFilterName,
-		ClusterRoleKind,
-		crConfigReaderName,
-		fmt.Sprintf("%s-%s-%s", saFilterName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
-		resources.SystemNamespace,
-	)
+	//// The two RoleBindings are required for access to shared configmaps for logging,
+	//// tracing, and metrics configuration.
+	//client.CreateRoleBindingOrFail(
+	//	saIngressName,
+	//	ClusterRoleKind,
+	//	crConfigReaderName,
+	//	fmt.Sprintf("%s-%s-%s", saIngressName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
+	//	resources.SystemNamespace,
+	//)
+	//client.CreateRoleBindingOrFail(
+	//	saFilterName,
+	//	ClusterRoleKind,
+	//	crConfigReaderName,
+	//	fmt.Sprintf("%s-%s-%s", saFilterName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
+	//	resources.SystemNamespace,
+	//)
 }
