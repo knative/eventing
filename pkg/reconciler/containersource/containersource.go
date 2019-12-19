@@ -20,21 +20,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
-	"strings"
-	"time"
-
 	"knative.dev/pkg/resolver"
+	"strings"
 
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	"k8s.io/client-go/tools/cache"
-
-	"go.uber.org/zap"
 	"knative.dev/pkg/controller"
 
 	status "knative.dev/eventing/pkg/apis/duck"
@@ -43,6 +38,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
+	pkgrec "knative.dev/pkg/reconciler"
 )
 
 const (
@@ -53,6 +49,7 @@ const (
 )
 
 type Reconciler struct {
+	*Core
 	*reconciler.Base
 
 	// listers index properties about resources
@@ -65,51 +62,7 @@ type Reconciler struct {
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the CronJobSource
-// resource with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
-		return nil
-	}
-
-	// Get the CronJobSource resource with this namespace/name
-	original, err := r.containerSourceLister.ContainerSources(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("ContainerSource key in work queue no longer exists", zap.Any("key", key))
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy
-	source := original.DeepCopy()
-
-	// Reconcile this copy of the ContainerSource and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, source)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling ContainerSource", zap.Error(err))
-	} else {
-		logging.FromContext(ctx).Debug("ContainerSource reconciled")
-		r.Recorder.Eventf(source, corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, source.Namespace, source.Name)
-	}
-
-	if _, updateStatusErr := r.updateStatus(ctx, source.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the ContainerSource", zap.Error(err))
-		r.Recorder.Eventf(source, corev1.EventTypeWarning, sourceUpdateStatusFailed, "Failed to update ContainerSource's status: %v", err)
-		return updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return err
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSource) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ContainerSource) error {
 	// No need to reconcile if the source has been marked for deletion.
 	if source.DeletionTimestamp != nil {
 		return nil
@@ -147,8 +100,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 
 	err := r.setSinkURIArg(ctx, source, &args)
 	if err != nil {
-		r.Recorder.Eventf(source, corev1.EventTypeWarning, "SetSinkURIFailed", "Failed to set Sink URI: %v", err)
-		return err
+		return pkgrec.New(corev1.EventTypeWarning, "SetSinkURIFailed", "Failed to set Sink URI: %v", err)
 	}
 
 	ra, err := r.reconcileReceiveAdapter(ctx, source, args)
@@ -157,8 +109,10 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 	}
 
 	if status.DeploymentIsAvailable(&ra.Status, false) {
-		source.Status.MarkDeployed()
-		r.Recorder.Eventf(source, corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
+		if !source.Status.IsDeployed() {
+			source.Status.MarkDeployed()
+			return pkgrec.New(corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
+		}
 	}
 	return nil
 }
@@ -284,41 +238,11 @@ func (r *Reconciler) podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1
 }
 
 func (r *Reconciler) markDeployingAndRecordEvent(source *v1alpha1.ContainerSource, evType string, reason string, messageFmt string, args ...interface{}) {
-	r.Recorder.Eventf(source, evType, reason, messageFmt, args...)
+	r.Core.Recorder.Eventf(source, evType, reason, messageFmt, args...)
 	source.Status.MarkDeploying(reason, messageFmt, args...)
 }
 
 func (r *Reconciler) markNotDeployedRecordEvent(source *v1alpha1.ContainerSource, evType string, reason string, messageFmt string, args ...interface{}) {
-	r.Recorder.Eventf(source, evType, reason, messageFmt, args...)
+	r.Core.Recorder.Eventf(source, evType, reason, messageFmt, args...)
 	source.Status.MarkNotDeployed(reason, messageFmt, args...)
-}
-
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ContainerSource) (*v1alpha1.ContainerSource, error) {
-	source, err := r.containerSourceLister.ContainerSources(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(source.Status, desired.Status) {
-		return source, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !source.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := source.DeepCopy()
-	existing.Status = desired.Status
-
-	cj, err := r.EventingClientSet.SourcesV1alpha1().ContainerSources(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("ContainerSource %q became ready after %v", source.Name, duration)
-		r.Recorder.Event(source, corev1.EventTypeNormal, sourceReadinessChanged, fmt.Sprintf("ContainerSource %q became ready", source.Name))
-		if reportErr := r.StatsReporter.ReportReady("ContainerSource", source.Namespace, source.Name, duration); reportErr != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ContainerSource, %v", reportErr)
-		}
-	}
-
-	return cj, err
 }

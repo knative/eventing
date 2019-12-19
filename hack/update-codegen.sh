@@ -58,5 +58,14 @@ ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   "legacysources:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
+# HACKHACK just for PoC
+go install ${KNATIVE_CODEGEN_PKG}/codegen/cmd/reconciler-gen
+
+# Knative Reconcilers
+reconciler-gen -O zz_generated \
+  --input-dirs knative.dev/eventing/pkg/legacyreconciler/... \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+## End PoC HACKHACK
+
 # Make sure our dependencies are up-to-date
 ${REPO_ROOT_DIR}/hack/update-deps.sh

@@ -36,7 +36,11 @@ required = [
 # Our master branch tracks knative/pkg master or a release.
 [[override]]
   name = "knative.dev/pkg"
-  branch = "master"
+  # TODO: PoC for generator import. DO NOT SUBMIT
+  # revision = "45be96514b2725ec3a0d4d225eda597d59125da6"
+  # TODO: PoC for errors.
+  revision = "d0c44a555e304e57fa3122704527b4831ae121ae"
+  source = "github.com/n3wscott/pkg"
 
 # TODO why is this overridden?
 [[override]]
