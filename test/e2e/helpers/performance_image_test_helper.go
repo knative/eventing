@@ -17,20 +17,19 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
-	"regexp"
-	"strconv"
+    "fmt"
+    "regexp"
+    "strconv"
+    "testing"
 
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/duck"
+    "knative.dev/eventing/test/resources"
 
-	"testing"
-
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgtest "knative.dev/pkg/test"
+    corev1 "k8s.io/api/core/v1"
+    rbacv1 "k8s.io/api/rbac/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    pkgtest "knative.dev/pkg/test"
 )
 
 func SetupPerformanceImageRBAC(client *common.Client) {
@@ -123,7 +122,7 @@ func TestWithPerformanceImage(st *testing.T, expectedAggregatorRecords int, setu
 	client.CreatePodOrFail(resources.PerformanceImageAggregatorPod(expectedAggregatorRecords, false))
 
 	// Call user function to setup the test
-	setupEnv(st, base.GetServiceHostname(consumerService), base.GetServiceHostname(aggregatorService), client)
+	setupEnv(st, duck.GetServiceHostname(consumerService), duck.GetServiceHostname(aggregatorService), client)
 
 	// Wait for everything ready in test namespace
 	client.WaitForAllTestResourcesReadyOrFail()

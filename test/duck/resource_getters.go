@@ -16,16 +16,17 @@ limitations under the License.
 
 // This file contains functions which get actual resources given the meta resource.
 
-package base
+package duck
 
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+
+	"knative.dev/eventing/test/resources"
 )
 
 // GetGenericObject returns a generic object representing a Kubernetes resource.

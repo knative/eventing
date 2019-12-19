@@ -18,19 +18,19 @@ limitations under the License.
 package e2e
 
 import (
-	"encoding/json"
-	"fmt"
-	"testing"
+    "encoding/json"
+    "fmt"
+    "testing"
 
-	"k8s.io/apimachinery/pkg/util/uuid"
+    "k8s.io/apimachinery/pkg/util/uuid"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+    eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+    "knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/resources"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
+    duckv1 "knative.dev/pkg/apis/duck/v1"
+    pkgTest "knative.dev/pkg/test"
 )
 
 func TestFlowsSequence(t *testing.T) {

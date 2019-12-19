@@ -17,12 +17,13 @@ limitations under the License.
 package main
 
 import (
-	"context"
-	"flag"
-	"log"
+    "context"
+    "flag"
+    "log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"knative.dev/eventing/test/base/resources"
+    cloudevents "github.com/cloudevents/sdk-go"
+
+    "knative.dev/eventing/test/resources"
 )
 
 var (

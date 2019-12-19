@@ -16,7 +16,7 @@ limitations under the License.
 
 // This file contains functions which create actual resources given the meta resource.
 
-package base
+package duck
 
 import (
 	"encoding/json"
@@ -25,9 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/base/resources"
+
+	"knative.dev/eventing/test/resources"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
 

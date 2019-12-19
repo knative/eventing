@@ -25,13 +25,15 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/duck"
+	"knative.dev/eventing/test/resources"
+
 	"knative.dev/pkg/test/helpers"
 )
 
@@ -46,7 +48,7 @@ var rbacAPIVersion = rbacv1.SchemeGroupVersion.Version
 func (client *Client) CreateChannelOrFail(name string, channelTypeMeta *metav1.TypeMeta) {
 	namespace := client.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, channelTypeMeta)
-	gvr, err := base.CreateGenericChannelObject(client.Dynamic, metaResource)
+	gvr, err := duck.CreateGenericChannelObject(client.Dynamic, metaResource)
 	if err != nil {
 		client.T.Fatalf("Failed to create %q %q: %v", channelTypeMeta.Kind, name, err)
 	}

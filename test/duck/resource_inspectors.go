@@ -17,16 +17,17 @@ limitations under the License.
 // This file contains functions which get property values for
 // resources provided by the caller.
 
-package base
+package duck
 
 import (
-	"fmt"
-	"net/url"
+    "fmt"
+    "net/url"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/base/resources"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+    corev1 "k8s.io/api/core/v1"
+    "k8s.io/client-go/dynamic"
+    duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+
+    "knative.dev/eventing/test/resources"
 )
 
 // GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.

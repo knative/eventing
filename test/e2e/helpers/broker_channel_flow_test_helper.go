@@ -16,14 +16,15 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
-	"testing"
+    "fmt"
+    "testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/apimachinery/pkg/util/uuid"
+
+    "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+    "knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/resources"
 )
 
 // BrokerChannelFlowTestHelper is the helper function for broker_channel_flow_test

@@ -17,13 +17,14 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
-	"testing"
+    "fmt"
+    "testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/apimachinery/pkg/util/uuid"
+
+    "knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/resources"
 )
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test

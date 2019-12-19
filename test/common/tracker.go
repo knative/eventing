@@ -20,19 +20,21 @@ limitations under the License.
 package common
 
 import (
-	"encoding/json"
-	"fmt"
+    "encoding/json"
+    "fmt"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/pkg/kmeta"
+    "k8s.io/apimachinery/pkg/api/meta"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/apimachinery/pkg/runtime/schema"
+    "k8s.io/apimachinery/pkg/util/wait"
+    "k8s.io/client-go/dynamic"
 
-	"knative.dev/pkg/test/logging"
+    "knative.dev/eventing/test/duck"
+    "knative.dev/eventing/test/resources"
+
+    "knative.dev/pkg/kmeta"
+
+    "knative.dev/pkg/test/logging"
 )
 
 // Tracker holds resources that need to be tracked during test execution.
@@ -87,7 +89,7 @@ func (t *Tracker) Add(group string, version string, resource string, namespace s
 		Resource: unstructured,
 		Name:     name,
 	}
-	//this is actually a prepend, we want to delete resources in reverse order
+	// this is actually a prepend, we want to delete resources in reverse order
 	t.resourcesToClean = append([]ResourceDeleter{res}, t.resourcesToClean...)
 }
 
@@ -144,7 +146,7 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 func (t *Tracker) WaitForKResourcesReady() error {
 	t.logf("Waiting for all KResources to become ready")
 	for _, metaResource := range t.resourcesToCheckStatus {
-		if err := base.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
+		if err := duck.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
 			return fmt.Errorf("failed waiting for %+v to become ready: %v", metaResource, err)
 		}
 	}

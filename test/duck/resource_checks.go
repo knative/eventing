@@ -17,7 +17,7 @@ limitations under the License.
 // This file contains functions which check resources until they
 // get into the state desired by the caller or time out.
 
-package base
+package duck
 
 import (
 	"context"
@@ -29,9 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/base/resources"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+
+	"knative.dev/eventing/test/resources"
 )
 
 const (

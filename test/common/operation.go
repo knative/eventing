@@ -23,8 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/duck"
+	"knative.dev/eventing/test/resources"
 )
 
 // LabelNamespace labels the given namespace with the labels map.
@@ -77,7 +77,7 @@ func (client *Client) SendFakeEventWithTracingToAddressable(
 func (client *Client) GetAddressableURI(addressableName string, typeMeta *metav1.TypeMeta) (string, error) {
 	namespace := client.Namespace
 	metaAddressable := resources.NewMetaResource(addressableName, namespace, typeMeta)
-	u, err := base.GetAddressableURI(client.Dynamic, metaAddressable)
+	u, err := duck.GetAddressableURI(client.Dynamic, metaAddressable)
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +125,7 @@ func (client *Client) sendFakeEventWithTracingToAddress(
 func (client *Client) WaitForResourceReady(name string, typemeta *metav1.TypeMeta) error {
 	namespace := client.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, typemeta)
-	if err := base.WaitForResourceReady(client.Dynamic, metaResource); err != nil {
+	if err := duck.WaitForResourceReady(client.Dynamic, metaResource); err != nil {
 		return err
 	}
 	return nil
@@ -136,7 +136,7 @@ func (client *Client) WaitForResourceReady(name string, typemeta *metav1.TypeMet
 func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
 	namespace := client.Namespace
 	metaResourceList := resources.NewMetaResourceList(namespace, typemeta)
-	if err := base.WaitForResourcesReady(client.Dynamic, metaResourceList); err != nil {
+	if err := duck.WaitForResourcesReady(client.Dynamic, metaResourceList); err != nil {
 		return err
 	}
 	return nil

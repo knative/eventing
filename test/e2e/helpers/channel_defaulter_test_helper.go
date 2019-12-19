@@ -17,19 +17,20 @@ limitations under the License.
 package helpers
 
 import (
-	"fmt"
-	"testing"
-	"time"
+    "fmt"
+    "testing"
+    "time"
 
-	"github.com/ghodss/yaml"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/defaultchannel"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+    "github.com/ghodss/yaml"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/apimachinery/pkg/util/uuid"
+
+    eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+    "knative.dev/eventing/pkg/defaultchannel"
+    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+    "knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/duck"
+    "knative.dev/eventing/test/resources"
 )
 
 const (
@@ -105,7 +106,7 @@ func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChann
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
 	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
-	objs, err := base.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduck.SubscribableType{})
+	objs, err := duck.GetGenericObjectList(client.Dynamic, metaResourceList, &eventingduck.SubscribableType{})
 	if err != nil {
 		t.Fatalf("Failed to list the underlying channels: %v", err)
 	}

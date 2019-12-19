@@ -28,12 +28,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/tracker"
+
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/resources"
 )
 
 func TestSinkBindingDeployment(t *testing.T) {

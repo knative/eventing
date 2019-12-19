@@ -18,16 +18,16 @@ limitations under the License.
 package e2e
 
 import (
-	"fmt"
-	"testing"
+    "fmt"
+    "testing"
 
-	"k8s.io/apimachinery/pkg/util/uuid"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+    "k8s.io/apimachinery/pkg/util/uuid"
+    duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+    sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+    "knative.dev/eventing/test/common"
+    "knative.dev/eventing/test/resources"
 )
 
 func TestCronJobSource(t *testing.T) {

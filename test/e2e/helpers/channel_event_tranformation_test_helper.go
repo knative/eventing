@@ -22,8 +22,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
+
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/resources"
 )
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
