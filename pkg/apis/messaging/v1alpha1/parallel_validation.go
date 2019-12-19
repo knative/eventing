@@ -34,11 +34,11 @@ func (ps *ParallelSpec) Validate(ctx context.Context) *apis.FieldError {
 	}
 
 	for i, s := range ps.Branches {
-		if err := s.Filter.ValidateDisallowDeprecated(ctx); err != nil {
+		if err := s.Filter.Validate(ctx); err != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches.filter", i))
 		}
 
-		if e := s.Subscriber.ValidateDisallowDeprecated(ctx); e != nil {
+		if e := s.Subscriber.Validate(ctx); e != nil {
 			errs = errs.Also(apis.ErrInvalidArrayValue(s, "branches.subscriber", i))
 		}
 

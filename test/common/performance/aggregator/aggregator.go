@@ -276,12 +276,12 @@ func eventsToTimestampsArray(events *map[string]*timestamp.Timestamp) []time.Tim
 func publishThpt(timestamps []time.Time, q *quickstore.Quickstore, metricName string) error {
 	if len(timestamps) >= 2 {
 		sort.Slice(timestamps, func(x, y int) bool { return timestamps[x].Before(timestamps[y]) })
-		for i, t := range timestamps[1:] {
-			var thpt uint
-			j := i - 1
-			for j >= 0 && t.Sub(timestamps[j]) <= time.Second {
-				thpt++
-				j--
+		var i, thpt int
+		for j, t := range timestamps[1:] {
+			thpt++
+			for i < j && t.Sub(timestamps[i]) > time.Second {
+				i++
+				thpt--
 			}
 			if qerr := q.AddSamplePoint(mako.XTime(t), map[string]float64{metricName: float64(thpt)}); qerr != nil {
 				return qerr

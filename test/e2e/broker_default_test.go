@@ -45,10 +45,12 @@ const (
 	eventSource2      = "source2"
 	// Be careful with the length of extension name and values,
 	// we use extension name and value as a part of the name of resources like subscriber and trigger, the maximum characters allowed of resource name is 63
-	extensionName1  = "extname1"
-	extensionValue1 = "extval1"
-	extensionName2  = "extname2"
-	extensionValue2 = "extvalue2"
+	extensionName1            = "extname1"
+	extensionValue1           = "extval1"
+	extensionName2            = "extname2"
+	extensionValue2           = "extvalue2"
+	nonMatchingExtensionName  = "nonmatchingextname"
+	nonMatchingExtensionValue = "nonmatchingextval"
 )
 
 type eventContext struct {
@@ -123,10 +125,10 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
 				{Type: eventType1, Source: eventSource1, Extensions: map[string]interface{}{extensionName2: extensionValue2}},
 				{Type: eventType1, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1}},
-				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: "non.matching.ext.val"}},
-				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{"non.matching.ext.name": extensionValue1}},
+				{Type: eventType2, Source: eventSource1, Extensions: map[string]interface{}{extensionName1: nonMatchingExtensionValue}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{nonMatchingExtensionName: extensionValue1}},
 				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, extensionName2: extensionValue2}},
-				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, "non.matching.ext.name": extensionValue2}},
+				{Type: eventType2, Source: eventSource2, Extensions: map[string]interface{}{extensionName1: extensionValue1, nonMatchingExtensionName: extensionValue2}},
 			},
 			deprecatedTriggerFilter: false,
 		},

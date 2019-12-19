@@ -108,9 +108,10 @@ func main() {
 					"heart": "yes",
 					"beats": true,
 				},
-			}.AsV03(),
+			}.AsV1(),
 			Data: hb,
 		}
+		event.SetDataContentType(cloudevents.ApplicationJSON)
 
 		log.Printf("sending cloudevent to %s", sink)
 		if _, _, err := c.Send(context.Background(), event); err != nil {

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 The Knative Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ingress
 
 import (
@@ -8,6 +24,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
@@ -16,8 +33,6 @@ import (
 
 var (
 	shutdownTimeout = 1 * time.Minute
-
-	defaultTTL int32 = 255
 )
 
 type Handler struct {
@@ -27,6 +42,8 @@ type Handler struct {
 	BrokerName string
 	Namespace  string
 	Reporter   StatsReporter
+
+	Defaulter client.EventDefaulter
 }
 
 func (h *Handler) Start(ctx context.Context) error {
@@ -35,7 +52,7 @@ func (h *Handler) Start(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- h.CeClient.StartReceiver(ctx, h.serveHTTP)
+		errCh <- h.CeClient.StartReceiver(ctx, h.receive)
 	}()
 
 	// Stop either if the receiver stops (sending to errCh) or if stopCh is closed.
@@ -57,16 +74,16 @@ func (h *Handler) Start(ctx context.Context) error {
 	}
 }
 
-func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	// Setting the extension as a string as the CloudEvents sdk does not support non-string extensions.
-	event.SetExtension(broker.EventArrivalTime, time.Now().Format(time.RFC3339))
+	event.SetExtension(broker.EventArrivalTime, cloudevents.Timestamp{Time: time.Now()})
 	tctx := cloudevents.HTTPTransportContextFrom(ctx)
 	if tctx.Method != http.MethodPost {
 		resp.Status = http.StatusMethodNotAllowed
 		return nil
 	}
 
-	// tctx.URI is actually the path...
+	// tctx.URI is actually the request uri...
 	if tctx.URI != "/" {
 		resp.Status = http.StatusNotFound
 		return nil
@@ -78,8 +95,15 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		eventType: event.Type(),
 	}
 
-	send := h.decrementTTL(&event)
-	if !send {
+	if h.Defaulter != nil {
+		event = h.Defaulter(ctx, event)
+	}
+
+	if ttl, err := broker.GetTTL(event.Context); err != nil || ttl <= 0 {
+		h.Logger.Debug("dropping event based on TTL status.",
+			zap.Int32("TTL", ttl),
+			zap.String("event.id", event.ID()),
+			zap.Error(err))
 		// Record the event count.
 		h.Reporter.ReportEventCount(reporterArgs, http.StatusBadRequest)
 		return nil
@@ -98,27 +122,4 @@ func (h *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 	// Record the event count.
 	h.Reporter.ReportEventCount(reporterArgs, rtctx.StatusCode)
 	return err
-}
-
-func (h *Handler) decrementTTL(event *cloudevents.Event) bool {
-	ttl := h.getTTLToSet(event)
-	if ttl <= 0 {
-		// TODO send to some form of dead letter queue rather than dropping.
-		h.Logger.Error("Dropping message due to TTL", zap.Any("event", event))
-		return false
-	}
-
-	if err := broker.SetTTL(event.Context, ttl); err != nil {
-		h.Logger.Error("Failed to set TTL", zap.Error(err))
-	}
-	return true
-}
-
-func (h *Handler) getTTLToSet(event *cloudevents.Event) int32 {
-	ttl, err := broker.GetTTL(event.Context)
-	if err != nil {
-		h.Logger.Debug("Error retrieving TTL, defaulting.", zap.Error(err))
-		return defaultTTL
-	}
-	return ttl - 1
 }
