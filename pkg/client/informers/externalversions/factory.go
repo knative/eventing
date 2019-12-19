@@ -32,7 +32,6 @@ import (
 	flows "knative.dev/eventing/pkg/client/informers/externalversions/flows"
 	internalinterfaces "knative.dev/eventing/pkg/client/informers/externalversions/internalinterfaces"
 	messaging "knative.dev/eventing/pkg/client/informers/externalversions/messaging"
-	sources "knative.dev/eventing/pkg/client/informers/externalversions/sources"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -178,7 +177,6 @@ type SharedInformerFactory interface {
 	Eventing() eventing.Interface
 	Flows() flows.Interface
 	Messaging() messaging.Interface
-	Sources() sources.Interface
 }
 
 func (f *sharedInformerFactory) Eventing() eventing.Interface {
@@ -191,8 +189,4 @@ func (f *sharedInformerFactory) Flows() flows.Interface {
 
 func (f *sharedInformerFactory) Messaging() messaging.Interface {
 	return messaging.New(f, f.namespace, f.tweakListOptions)
-}
-
-func (f *sharedInformerFactory) Sources() sources.Interface {
-	return sources.New(f, f.namespace, f.tweakListOptions)
 }

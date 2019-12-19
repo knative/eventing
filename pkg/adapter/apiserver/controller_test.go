@@ -19,7 +19,7 @@ package apiserver
 import (
 	"testing"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
 )
 

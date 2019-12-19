@@ -26,7 +26,6 @@ import (
 	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -80,16 +79,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Sequences().Informer()}, nil
 	case messagingv1alpha1.SchemeGroupVersion.WithResource("subscriptions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Messaging().V1alpha1().Subscriptions().Informer()}, nil
-
-		// Group=sources.eventing.knative.dev, Version=v1alpha1
-	case sourcesv1alpha1.SchemeGroupVersion.WithResource("apiserversources"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().ApiServerSources().Informer()}, nil
-	case sourcesv1alpha1.SchemeGroupVersion.WithResource("containersources"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().ContainerSources().Informer()}, nil
-	case sourcesv1alpha1.SchemeGroupVersion.WithResource("cronjobsources"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().CronJobSources().Informer()}, nil
-	case sourcesv1alpha1.SchemeGroupVersion.WithResource("sinkbindings"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().SinkBindings().Informer()}, nil
 
 	}
 

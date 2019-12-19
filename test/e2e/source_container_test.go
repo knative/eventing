@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -83,7 +83,7 @@ func TestContainerSource(t *testing.T) {
 			Sink: &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
-	client.CreateContainerSourceOrFail(containerSource)
+	client.CreateLegacyContainerSourceOrFail(containerSource)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
