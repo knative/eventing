@@ -25,7 +25,7 @@ import (
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/adapter"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 )

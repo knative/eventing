@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
@@ -57,7 +57,7 @@ func TestCronJobSource(t *testing.T) {
 			Sink:     &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
-	client.CreateCronJobSourceOrFail(cronJobSource)
+	client.CreateLegacyCronJobSourceOrFail(cronJobSource)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

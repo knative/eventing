@@ -30,7 +30,13 @@ KNATIVE_CODEGEN_PKG=${KNATIVE_CODEGEN_PKG:-$(cd ${REPO_ROOT_DIR}; ls -d -1 $(dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1 flows:v1alpha1" \
+  "eventing:v1alpha1 messaging:v1alpha1 flows:v1alpha1" \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+
+# TODO(#2312): Remove this after v0.13.
+${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
+  knative.dev/eventing/pkg/legacyclient knative.dev/eventing/pkg/apis \
+  "legacysources:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Only deepcopy the Duck types, as they are not real resources.
@@ -42,7 +48,13 @@ ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
 # Knative Injection
 ${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
   knative.dev/eventing/pkg/client knative.dev/eventing/pkg/apis \
-  "eventing:v1alpha1 sources:v1alpha1 messaging:v1alpha1 flows:v1alpha1 duck:v1alpha1" \
+  "eventing:v1alpha1 messaging:v1alpha1 flows:v1alpha1 duck:v1alpha1" \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+
+# TODO(#2312): Remove this after v0.13.
+${KNATIVE_CODEGEN_PKG}/hack/generate-knative.sh "injection" \
+  knative.dev/eventing/pkg/legacyclient knative.dev/eventing/pkg/apis \
+  "legacysources:v1alpha1" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
 
 # Make sure our dependencies are up-to-date

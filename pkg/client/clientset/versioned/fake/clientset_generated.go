@@ -31,8 +31,6 @@ import (
 	fakeflowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1/fake"
 	messagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1"
 	fakemessagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1/fake"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
-	fakesourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -95,9 +93,4 @@ func (c *Clientset) FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface {
 // MessagingV1alpha1 retrieves the MessagingV1alpha1Client
 func (c *Clientset) MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface {
 	return &fakemessagingv1alpha1.FakeMessagingV1alpha1{Fake: &c.Fake}
-}
-
-// SourcesV1alpha1 retrieves the SourcesV1alpha1Client
-func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
 }

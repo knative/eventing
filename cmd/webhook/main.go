@@ -24,11 +24,11 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
-	"knative.dev/eventing/pkg/reconciler/sinkbinding"
+	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection/sharedmain"
@@ -146,7 +146,7 @@ func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *
 }
 
 func NewSinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+	sbresolver := legacysinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
 
 	return psbinding.NewAdmissionController(ctx,
 
@@ -157,7 +157,7 @@ func NewSinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *controll
 		"/sinkbindings",
 
 		// How to get all the Bindables for configuring the mutating webhook.
-		sinkbinding.ListAll,
+		legacysinkbinding.ListAll,
 
 		// How to setup the context prior to invoking Do/Undo.
 		sbresolver,
@@ -180,6 +180,6 @@ func main() {
 		NewDefaultingAdmissionController,
 
 		// For each binding we have a controller and a binding webhook.
-		sinkbinding.NewController, NewSinkBindingWebhook,
+		legacysinkbinding.NewController, NewSinkBindingWebhook,
 	)
 }
