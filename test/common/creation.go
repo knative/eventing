@@ -407,20 +407,4 @@ func (client *Client) CreateRBACResourcesForBrokers() {
 		fmt.Sprintf("%s-%s", saFilterName, crFilterName),
 		client.Namespace,
 	)
-	//// The two RoleBindings are required for access to shared configmaps for logging,
-	//// tracing, and metrics configuration.
-	//client.CreateRoleBindingOrFail(
-	//	saIngressName,
-	//	ClusterRoleKind,
-	//	crConfigReaderName,
-	//	fmt.Sprintf("%s-%s-%s", saIngressName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
-	//	resources.SystemNamespace,
-	//)
-	//client.CreateRoleBindingOrFail(
-	//	saFilterName,
-	//	ClusterRoleKind,
-	//	crConfigReaderName,
-	//	fmt.Sprintf("%s-%s-%s", saFilterName, helpers.MakeK8sNamePrefix(client.Namespace), crConfigReaderName),
-	//	resources.SystemNamespace,
-	//)
 }

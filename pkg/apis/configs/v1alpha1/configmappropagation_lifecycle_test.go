@@ -197,8 +197,7 @@ func TestConfigMapPropagationIsReady(t *testing.T) {
 					cmps.MarkConfigMapPropagationNotPropagated()
 				}
 			}
-			got := cmps.IsReady()
-			if test.wantReady != got {
+			if got := cmps.IsReady(); test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
 			}
 		})

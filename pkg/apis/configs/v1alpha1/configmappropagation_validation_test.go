@@ -47,7 +47,7 @@ func TestConfigMapPropagationValidation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cmp.Validate(context.TODO())
+			got := test.cmp.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("ConfigMapPropagation.Validate (-want, +got) = %v", diff)
 			}
@@ -117,7 +117,7 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.cmps.Validate(context.TODO())
+			got := test.cmps.Validate(context.Background())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
 				t.Errorf("%s: Validate ConfigMapPropagationSpec (-want, +got) = %v", test.name, diff)
 			}
