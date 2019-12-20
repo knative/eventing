@@ -30,12 +30,15 @@ import (
 	"k8s.io/client-go/tools/record"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventingScheme "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	legacyclientset "knative.dev/eventing/pkg/legacyclient/clientset/versioned"
+	legacyScheme "knative.dev/eventing/pkg/legacyclient/clientset/versioned/scheme"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/logging/logkey"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	legacyclient "knative.dev/eventing/pkg/legacyclient/injection/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
 )
@@ -47,6 +50,9 @@ type Base struct {
 
 	// EventingClientSet allows us to configure Eventing objects
 	EventingClientSet clientset.Interface
+
+	// LegacyClientSet allows us to configure Legacy Eventing objects
+	LegacyClientSet legacyclientset.Interface
 
 	// ApiExtensionsClientSet allows us to configure k8s API extension objects.
 	ApiExtensionsClientSet apiextensionsclientset.Interface
@@ -115,12 +121,12 @@ func NewBase(ctx context.Context, controllerAgentName string, cmw configmap.Watc
 	base := &Base{
 		KubeClientSet:     kubeClient,
 		EventingClientSet: eventingclient.Get(ctx),
-		//ApiExtensionsClientSet: apiextclient.Get(ctx),
-		DynamicClientSet: dynamicclient.Get(ctx),
-		ConfigMapWatcher: cmw,
-		Recorder:         recorder,
-		StatsReporter:    statsReporter,
-		Logger:           logger,
+		LegacyClientSet:   legacyclient.Get(ctx),
+		DynamicClientSet:  dynamicclient.Get(ctx),
+		ConfigMapWatcher:  cmw,
+		Recorder:          recorder,
+		StatsReporter:     statsReporter,
+		Logger:            logger,
 	}
 
 	return base
@@ -130,4 +136,5 @@ func init() {
 	// Add eventing types to the default Kubernetes Scheme so Events can be
 	// logged for eventing types.
 	eventingScheme.AddToScheme(scheme.Scheme)
+	legacyScheme.AddToScheme(scheme.Scheme)
 }

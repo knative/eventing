@@ -43,8 +43,8 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"

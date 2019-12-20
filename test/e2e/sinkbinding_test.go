@@ -65,7 +65,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 			Name:       deploymentName,
 		}),
 	)
-	client.CreateSinkBindingOrFail(sinkBinding)
+	client.CreateLegacySinkBindingOrFail(sinkBinding)
 
 	data := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
@@ -149,7 +149,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 			},
 		}),
 	)
-	client.CreateSinkBindingOrFail(sinkBinding)
+	client.CreateLegacySinkBindingOrFail(sinkBinding)
 
 	data := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{

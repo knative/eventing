@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
+	legacy "knative.dev/eventing/pkg/legacyclient/clientset/versioned"
 	"knative.dev/pkg/test"
 )
 
@@ -32,6 +33,7 @@ import (
 type Client struct {
 	Kube     *test.KubeClient
 	Eventing *eventing.Clientset
+	Legacy   *legacy.Clientset
 	Dynamic  dynamic.Interface
 	Config   *rest.Config
 
@@ -58,6 +60,11 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 	}
 
 	client.Eventing, err = eventing.NewForConfig(client.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Legacy, err = legacy.NewForConfig(client.Config)
 	if err != nil {
 		return nil, err
 	}
