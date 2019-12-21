@@ -121,6 +121,7 @@ const (
 
 	currentGeneration  = 1
 	outdatedGeneration = 0
+	triggerGeneration  = 7
 )
 
 var (
@@ -392,6 +393,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerGeneration(triggerGeneration),
 				),
 			},
 			WantErr: true,
@@ -405,6 +407,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerGeneration(triggerGeneration),
+					reconciletesting.WithTriggerStatusObservedGeneration(triggerGeneration),
 					reconciletesting.WithTriggerBrokerReady(),
 				),
 			}},
