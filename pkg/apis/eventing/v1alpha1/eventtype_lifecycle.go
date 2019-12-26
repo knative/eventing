@@ -51,10 +51,34 @@ func (et *EventTypeStatus) MarkBrokerDoesNotExist() {
 	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerExists, "BrokerDoesNotExist", "Broker does not exist")
 }
 
+func (et *EventTypeStatus) MarkBrokerExistsUnknown(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerExists, reason, messageFormat, messageA...)
+}
+
 func (et *EventTypeStatus) MarkBrokerReady() {
 	eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
 }
 
-func (et *EventTypeStatus) MarkBrokerNotReady() {
-	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, "BrokerNotReady", "Broker is not ready")
+func (et *EventTypeStatus) MarkBrokerFailed(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkFalse(EventTypeConditionBrokerReady, reason, messageFormat, messageA...)
+}
+
+func (et *EventTypeStatus) MarkBrokerUnknown(reason, messageFormat string, messageA ...interface{}) {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerReady, reason, messageFormat, messageA...)
+}
+
+func (et *EventTypeStatus) PropagateBrokerStatus(bs *BrokerStatus) {
+	if bs.IsReady() {
+		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
+	} else {
+		msg := "nil"
+		if bc := brokerCondSet.Manage(bs).GetCondition(BrokerConditionReady); bc != nil {
+			msg = bc.Message
+		}
+		if bs.IsUnknown() {
+			et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: %s", msg)
+		} else {
+			et.MarkBrokerFailed("BrokerFalse", "The status of Broker is False: %s", msg)
+		}
+	}
 }

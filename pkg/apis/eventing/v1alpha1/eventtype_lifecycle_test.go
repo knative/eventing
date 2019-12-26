@@ -235,7 +235,7 @@ func TestEventTypeIsReady(t *testing.T) {
 				if *test.markBrokerReady {
 					ets.MarkBrokerReady()
 				} else {
-					ets.MarkBrokerNotReady()
+					ets.MarkBrokerFailed("BrokerFalse", "the status of Broker is False")
 				}
 			}
 

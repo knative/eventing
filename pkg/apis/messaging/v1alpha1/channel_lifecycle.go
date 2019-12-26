@@ -42,9 +42,24 @@ func (cs *ChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return chCondSet.Manage(cs).GetCondition(t)
 }
 
+// GetHappyCondition returns the condition currently associated with the ConditionType happy.
+func (cs *ChannelStatus) GetHappyCondition() *apis.Condition {
+	return chCondSet.Manage(cs).GetHappyCondition()
+}
+
 // IsReady returns true if the resource is ready overall.
 func (cs *ChannelStatus) IsReady() bool {
 	return chCondSet.Manage(cs).IsHappy()
+}
+
+// IsUnknown returns true if the resource is unknown overall.
+func (cs *ChannelStatus) IsUnknown() bool {
+	return chCondSet.Manage(cs).IsUnknown()
+}
+
+// IsFalse returns true if the resource is false overall.
+func (cs *ChannelStatus) IsFalse() bool {
+	return chCondSet.Manage(cs).IsFalse()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
@@ -71,18 +86,27 @@ func (cs *ChannelStatus) MarkBackingChannelFailed(reason, messageFormat string, 
 	chCondSet.Manage(cs).MarkFalse(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
 }
 
+func (cs *ChannelStatus) MarkBackingChannelUnknown(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkUnknown(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
+}
+
 func (cs *ChannelStatus) MarkBackingChannelReady() {
 	chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
 }
 
 func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
+
 	readyCondition := chs.Status.GetCondition(apis.ConditionReady)
-	if readyCondition != nil {
-		if readyCondition.Status != corev1.ConditionTrue {
-			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
-		} else {
+	if readyCondition == nil {
+		cs.MarkBackingChannelUnknown("readyCondition is: nil", "readyCondition is: nil")
+	} else {
+		if readyCondition.Status == corev1.ConditionTrue {
 			cs.MarkBackingChannelReady()
+		} else if readyCondition.Status == corev1.ConditionUnknown {
+			cs.MarkBackingChannelUnknown(readyCondition.Reason, readyCondition.Message)
+		} else {
+			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
 		}
 	}
 	// Set the address and update the Addressable conditions.

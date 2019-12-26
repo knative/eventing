@@ -52,6 +52,11 @@ func (bs *BrokerStatus) IsReady() bool {
 	return brokerCondSet.Manage(bs).IsHappy()
 }
 
+// IsUnknown returns true if the resource is unknown overall.
+func (bs *BrokerStatus) IsUnknown() bool {
+	return brokerCondSet.Manage(bs).IsUnknown()
+}
+
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (bs *BrokerStatus) InitializeConditions() {
 	brokerCondSet.Manage(bs).InitializeConditions()

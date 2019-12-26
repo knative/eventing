@@ -115,8 +115,14 @@ func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 
 	b, err := r.getBroker(ctx, et)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		et.Status.MarkBrokerDoesNotExist()
+
+		if apierrs.IsNotFound(err) {
+			logging.FromContext(ctx).Error("Broker does not exist", zap.Error(err))
+			et.Status.MarkBrokerDoesNotExist()
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
+			et.Status.MarkBrokerExistsUnknown("BrokerGetFailed", "Failed to get broker: %v", err)
+		}
 		return err
 	}
 	et.Status.MarkBrokerExists()
@@ -127,12 +133,7 @@ func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 		return err
 	}
 
-	if !b.Status.IsReady() {
-		logging.FromContext(ctx).Error("Broker is not ready", zap.String("broker", b.Name))
-		et.Status.MarkBrokerNotReady()
-		return nil
-	}
-	et.Status.MarkBrokerReady()
+	et.Status.PropagateBrokerStatus(&b.Status)
 
 	return nil
 }

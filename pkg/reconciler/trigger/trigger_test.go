@@ -295,7 +295,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Broker get failure",
+			Name: "Broker does not exist",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -319,7 +319,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Broker get failure, status update fail",
+			Name: "Broker does not exist, status update fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -342,6 +342,29 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerFailed("DoesNotExist", "Broker does not exist"),
+				),
+			}},
+		}, {
+			Name: "The status of Broker is Unknown",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeUnknownStatusBroker(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantErr: true,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerChannelFailed", "Broker's Trigger channel not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: failed to find Broker's Trigger channel"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: nil"),
 				),
 			}},
 		}, {
@@ -567,7 +590,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -602,7 +625,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -635,7 +658,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -668,7 +691,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -701,7 +724,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -742,7 +765,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				makeReadyBroker(),
 				makeBrokerFilterService(),
-				makeNotReadySubscription(),
+				makeFalseStatusSubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -760,7 +783,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionNotReady", "Subscription is not ready: test induced [error]"),
+					reconciletesting.WithTriggerNotSubscribed("SubscriptionFalse", "The status of Subscription is False: test induced [error]"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -826,17 +849,17 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
-					reconciletesting.WithTriggerDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+					reconciletesting.WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
 				),
 			}},
 		}, {
-			Name: "Dependency not ready",
+			Name: "The status of Dependency is False",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBroker(),
 				makeBrokerFilterService(),
 				makeReadySubscription(),
-				makeNotReadyCronJobSource(),
+				makeFalseStatusCronJobSource(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -858,10 +881,43 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
-					reconciletesting.WithTriggerDependencyFailed("DependencyNotReady", "Dependency is not ready: "),
+					reconciletesting.WithTriggerDependencyFailed("DependencyFalse", "The status of Dependency is False: "),
 				),
 			}},
 		}, {
+			Name: "The status of Dependency is Unknown",
+			Key:  triggerKey,
+			Objects: []runtime.Object{
+				makeReadyBroker(),
+				makeBrokerFilterService(),
+				makeReadySubscription(),
+				makeUnknownStatusCronJobSource(),
+				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+				),
+			},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled")},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithDependencyAnnotation(dependencyAnnotation),
+					reconciletesting.WithTriggerBrokerReady(),
+					reconciletesting.WithTriggerSubscribed(),
+					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
+					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
+					reconciletesting.WithTriggerDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: nil"),
+				),
+			}},
+		},
+		{
 			Name: "Dependency generation not equal",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
@@ -1010,6 +1066,12 @@ func makeReadyBroker() *v1alpha1.Broker {
 	return b
 }
 
+func makeUnknownStatusBroker() *v1alpha1.Broker {
+	b := makeBroker()
+	b.Status = *v1alpha1.TestHelper.UnknownBrokerStatus()
+	return b
+}
+
 func makeReadyDefaultBroker() *v1alpha1.Broker {
 	b := makeReadyBroker()
 	b.Name = "default"
@@ -1091,7 +1153,7 @@ func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription 
 func makeDifferentReadySubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
 	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
-	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	s.Status = *v1alpha1.TestHelper.FalseSubscriptionStatus()
 	return s
 }
 
@@ -1101,18 +1163,24 @@ func makeReadySubscription() *messagingv1alpha1.Subscription {
 	return s
 }
 
-func makeNotReadySubscription() *messagingv1alpha1.Subscription {
+func makeFalseStatusSubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
-	s.Status = *v1alpha1.TestHelper.NotReadySubscriptionStatus()
+	s.Status = *v1alpha1.TestHelper.FalseSubscriptionStatus()
 	return s
 }
 
-func makeNotReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
+func makeFalseStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
 	return NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion), WithCronJobSourceSinkNotFound)
 }
 
+func makeUnknownStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
+	cjs := NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion))
+	cjs.Status = *v1alpha1.TestHelper.UnknownCronJobSourceStatus()
+	return cjs
+}
+
 func makeGenerationNotEqualCronJobSource() *sourcesv1alpha1.CronJobSource {
-	c := makeNotReadyCronJobSource()
+	c := makeFalseStatusCronJobSource()
 	c.Generation = currentGeneration
 	c.Status.ObservedGeneration = outdatedGeneration
 	return c

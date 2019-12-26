@@ -83,7 +83,7 @@ func (s *CronJobSourceStatus) MarkSink(uri string) {
 	if len(uri) > 0 {
 		cronJobSourceCondSet.Manage(s).MarkTrue(CronJobConditionSinkProvided)
 	} else {
-		cronJobSourceCondSet.Manage(s).MarkUnknown(CronJobConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+		cronJobSourceCondSet.Manage(s).MarkFalse(CronJobConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
 }
 

@@ -49,6 +49,11 @@ func (ss *SubscriptionStatus) IsReady() bool {
 	return subCondSet.Manage(ss).IsHappy()
 }
 
+// IsUnknown returns true if the resource is unknown overall.
+func (ss *SubscriptionStatus) IsUnknown() bool {
+	return subCondSet.Manage(ss).IsUnknown()
+}
+
 // IsAddedToChannel returns true if SubscriptionConditionAddedToChannel is true
 func (ss *SubscriptionStatus) IsAddedToChannel() bool {
 	return ss.GetCondition(SubscriptionConditionAddedToChannel).IsTrue()
@@ -84,9 +89,19 @@ func (ss *SubscriptionStatus) MarkReferencesNotResolved(reason, messageFormat st
 	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionReferencesResolved, reason, messageFormat, messageA...)
 }
 
-// MarkChannelNotReady sets the ChannelReady condition to False state.
-func (ss *SubscriptionStatus) MarkChannelNotReady(reason, messageFormat string, messageA ...interface{}) {
+// MarkReferencesNotResolved sets the ReferencesResolved condition to Unknown state.
+func (ss *SubscriptionStatus) MarkReferencesResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	subCondSet.Manage(ss).MarkUnknown(SubscriptionConditionReferencesResolved, reason, messageFormat, messageA...)
+}
+
+// MarkChannelFailed sets the ChannelReady condition to False state.
+func (ss *SubscriptionStatus) MarkChannelFailed(reason, messageFormat string, messageA ...interface{}) {
 	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
+}
+
+// MarkChannelFailed sets the ChannelReady condition to Unknown state.
+func (ss *SubscriptionStatus) MarkChannelUnknown(reason, messageFormat string, messageA ...interface{}) {
+	subCondSet.Manage(ss).MarkUnknown(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
 }
 
 // MarkNotAddedToChannel sets the AddedToChannel condition to False state.

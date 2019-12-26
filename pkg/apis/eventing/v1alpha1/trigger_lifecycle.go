@@ -45,9 +45,19 @@ func (ts *TriggerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return triggerCondSet.Manage(ts).GetCondition(t)
 }
 
+// GetCondition returns the condition currently associated with the given ConditionType happy, or nil.
+func (ts *TriggerStatus) GetHappyCondition() *apis.Condition {
+	return triggerCondSet.Manage(ts).GetHappyCondition()
+}
+
 // IsReady returns true if the resource is ready overall.
 func (ts *TriggerStatus) IsReady() bool {
 	return triggerCondSet.Manage(ts).IsHappy()
+}
+
+// IsReady returns true if the resource is unknown overall.
+func (ts *TriggerStatus) IsUnknown() bool {
+	return triggerCondSet.Manage(ts).IsUnknown()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
@@ -63,12 +73,20 @@ func (ts *TriggerStatus) PropagateBrokerStatus(bs *BrokerStatus) {
 		if bc := brokerCondSet.Manage(bs).GetCondition(BrokerConditionReady); bc != nil {
 			msg = bc.Message
 		}
-		ts.MarkBrokerFailed("BrokerNotReady", "Broker is not ready: %s", msg)
+		if bs.IsUnknown() {
+			ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: %s", msg)
+		} else {
+			ts.MarkBrokerFailed("BrokerFalse", "The status of Broker is False: %s", msg)
+		}
 	}
 }
 
 func (ts *TriggerStatus) MarkBrokerFailed(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionBroker, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkBrokerUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionBroker, reason, messageFormat, messageA...)
 }
 
 func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *messagingv1alpha1.SubscriptionStatus) {
@@ -79,12 +97,20 @@ func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *messagingv1alpha1.Subsc
 		if sc := ss.Status.GetCondition(messagingv1alpha1.SubscriptionConditionReady); sc != nil {
 			msg = sc.Message
 		}
-		ts.MarkNotSubscribed("SubscriptionNotReady", "Subscription is not ready: %s", msg)
+		if ss.IsUnknown() {
+			ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: %s", msg)
+		} else {
+			ts.MarkNotSubscribed("SubscriptionFalse", "The status of Subscription is False: %s", msg)
+		}
 	}
 }
 
 func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, reason, messageFormat, messageA...)
+}
+
+func (ts *TriggerStatus) MarkSubscribedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscribed, reason, messageFormat, messageA...)
 }
 
 func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
@@ -124,6 +150,10 @@ func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.KResource) {
 		if kc != nil {
 			msg = kc.Message
 		}
-		ts.MarkDependencyFailed("DependencyNotReady", "Dependency is not ready: %s", msg)
+		if kc.IsUnknown() {
+			ts.MarkDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: %s", msg)
+		} else {
+			ts.MarkDependencyFailed("DependencyFalse", "The status of Dependency is False: %s", msg)
+		}
 	}
 }

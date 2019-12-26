@@ -52,6 +52,17 @@ type ConditionManager interface {
 	// set to true.
 	IsHappy() bool
 
+	// IsUnknown looks at the happy condition and returns true if that condition is
+	// set to unknown or that condition is nil.
+	IsUnknown() bool
+
+	// IsFalse looks at the happy condition and returns true if that condition is
+	// set to false.
+	IsFalse() bool
+
+	// GetCondition finds and returns the Condition that matches the ConditionType happy.
+	GetHappyCondition() *Condition
+
 	// GetCondition finds and returns the Condition that matches the ConditionType
 	// previously set on Conditions.
 	GetCondition(t ConditionType) *Condition
@@ -146,6 +157,29 @@ func (r conditionsImpl) IsHappy() bool {
 		return false
 	}
 	return true
+}
+
+// IsUnknown looks at the happy condition and returns true if that condition is
+// set to Unknown or that condition is nil.
+func (r conditionsImpl) IsUnknown() bool {
+	if c := r.GetCondition(r.happy); !c.IsUnknown() {
+		return false
+	}
+	return true
+}
+
+// IsFalse looks at the happy condition and returns true if that condition is
+// set to False.
+func (r conditionsImpl) IsFalse() bool {
+	if c := r.GetCondition(r.happy); c == nil || !c.IsFalse() {
+		return false
+	}
+	return true
+}
+
+// GetHappyCondition finds and returns the Condition that matches the ConditionType happy.
+func (r conditionsImpl) GetHappyCondition() *Condition {
+	return r.GetCondition(r.happy)
 }
 
 // GetCondition finds and returns the Condition that matches the ConditionType
