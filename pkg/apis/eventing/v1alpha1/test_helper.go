@@ -78,6 +78,7 @@ func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 
 func (t testHelper) UnknownBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
+	bs.InitializeConditions()
 	return bs
 }
 
@@ -95,7 +96,7 @@ func (t testHelper) ReadyTriggerStatus() *TriggerStatus {
 	ts.InitializeConditions()
 	ts.SubscriberURI = &apis.URL{Scheme: "http", Host: "foo"}
 	ts.PropagateBrokerStatus(t.ReadyBrokerStatus())
-	ts.PropagateSubscriptionStatus(t.FalseSubscriptionStatus())
+	ts.PropagateSubscriptionStatus(t.ReadySubscriptionStatus())
 	return ts
 }
 
@@ -125,5 +126,6 @@ func (t testHelper) AvailableDeployment() *v1.Deployment {
 
 func (t testHelper) UnknownCronJobSourceStatus() *v1alpha1.CronJobSourceStatus {
 	cjss := &v1alpha1.CronJobSourceStatus{}
+	cjss.InitializeConditions()
 	return cjss
 }

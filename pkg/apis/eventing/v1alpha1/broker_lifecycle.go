@@ -47,14 +47,14 @@ func (bs *BrokerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return brokerCondSet.Manage(bs).GetCondition(t)
 }
 
+// GetTopLevelCondition returns the top level Condition.
+func (bs *BrokerStatus) GetTopLevelCondition() *apis.Condition {
+	return brokerCondSet.Manage(bs).GetTopLevelCondition()
+}
+
 // IsReady returns true if the resource is ready overall.
 func (bs *BrokerStatus) IsReady() bool {
 	return brokerCondSet.Manage(bs).IsHappy()
-}
-
-// IsUnknown returns true if the resource is unknown overall.
-func (bs *BrokerStatus) IsUnknown() bool {
-	return brokerCondSet.Manage(bs).IsUnknown()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.

@@ -278,9 +278,9 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 	}
 	ss, err := r.getSubStatusByChannel(subscription, channel)
 	if err != nil {
-		logging.FromContext(ctx).Warn("Subscription not marked by Channel as Ready.", zap.Error(err))
+		logging.FromContext(ctx).Warn("Failed to get subscription status.", zap.Error(err))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
-		subscription.Status.MarkChannelFailed(subscriptionNotMarkedReadyByChannel, "Subscription not marked by Channel as Ready: %s", err)
+		subscription.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
 		return err
 	}
 	subStatus := ss.Ready

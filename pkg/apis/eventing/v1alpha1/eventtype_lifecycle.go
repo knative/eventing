@@ -68,17 +68,21 @@ func (et *EventTypeStatus) MarkBrokerUnknown(reason, messageFormat string, messa
 }
 
 func (et *EventTypeStatus) PropagateBrokerStatus(bs *BrokerStatus) {
-	if bs.IsReady() {
+	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
+	if bc == nil {
+		et.MarkBrokerUnknown("BrokerUnknown", "The condition of Broker is nil")
+		return
+	}
+	if bc.IsTrue() {
 		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
 	} else {
-		msg := "nil"
-		if bc := brokerCondSet.Manage(bs).GetCondition(BrokerConditionReady); bc != nil {
-			msg = bc.Message
-		}
-		if bs.IsUnknown() {
+		msg := bc.Message
+		if bc.IsUnknown() {
 			et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: %s", msg)
-		} else {
+		} else if bc.IsFalse() {
 			et.MarkBrokerFailed("BrokerFalse", "The status of Broker is False: %s", msg)
+		} else {
+			et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 		}
 	}
 }

@@ -360,7 +360,7 @@ func TestTriggerConditionStatus(t *testing.T) {
 					ts.MarkDependencyFailed("The status of dependency is false", "The status of dependency is unknown: nil")
 				}
 			}
-			got := ts.GetHappyCondition().Status
+			got := ts.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
 			}

@@ -364,7 +364,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
-					reconciletesting.WithTriggerBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: nil"),
+					reconciletesting.WithTriggerBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: "),
 				),
 			}},
 		}, {
@@ -590,7 +590,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -625,7 +625,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -658,7 +658,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -691,7 +691,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -724,7 +724,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: nil"),
+					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
 					reconciletesting.WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -913,7 +913,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
-					reconciletesting.WithTriggerDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: nil"),
+					reconciletesting.WithTriggerDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: "),
 				),
 			}},
 		},
@@ -1153,7 +1153,7 @@ func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription 
 func makeDifferentReadySubscription() *messagingv1alpha1.Subscription {
 	s := makeIngressSubscription()
 	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
-	s.Status = *v1alpha1.TestHelper.FalseSubscriptionStatus()
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
 	return s
 }
 

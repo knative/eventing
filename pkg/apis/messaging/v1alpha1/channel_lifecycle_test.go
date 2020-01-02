@@ -215,7 +215,7 @@ func TestChannelConditionStatus(t *testing.T) {
 			} else {
 				cs.MarkBackingChannelUnknown("ChannelUnknown", "testing")
 			}
-			got := cs.GetHappyCondition().Status
+			got := cs.GetTopLevelCondition().Status
 			if test.wantConditionStatus != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
 			}
@@ -390,7 +390,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.PropagateStatuses(tc.channelableStatus)
-			got := cs.GetHappyCondition().Status
+			got := cs.GetTopLevelCondition().Status
 			if tc.wantConditionStatus != got {
 				t.Errorf("unexpected readiness: want %v, got %v", tc.wantConditionStatus, got)
 			}

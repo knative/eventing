@@ -45,19 +45,14 @@ func (ts *TriggerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return triggerCondSet.Manage(ts).GetCondition(t)
 }
 
-// GetCondition returns the condition currently associated with the given ConditionType happy, or nil.
-func (ts *TriggerStatus) GetHappyCondition() *apis.Condition {
-	return triggerCondSet.Manage(ts).GetHappyCondition()
+// GetTopLevelCondition returns the top level Condition.
+func (ts *TriggerStatus) GetTopLevelCondition() *apis.Condition {
+	return triggerCondSet.Manage(ts).GetTopLevelCondition()
 }
 
 // IsReady returns true if the resource is ready overall.
 func (ts *TriggerStatus) IsReady() bool {
 	return triggerCondSet.Manage(ts).IsHappy()
-}
-
-// IsReady returns true if the resource is unknown overall.
-func (ts *TriggerStatus) IsUnknown() bool {
-	return triggerCondSet.Manage(ts).IsUnknown()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
@@ -66,17 +61,21 @@ func (ts *TriggerStatus) InitializeConditions() {
 }
 
 func (ts *TriggerStatus) PropagateBrokerStatus(bs *BrokerStatus) {
-	if bs.IsReady() {
+	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
+	if bc == nil {
+		ts.MarkBrokerUnknown("BrokerUnknown", "The condition of Broker is nil")
+		return
+	}
+	if bc.IsTrue() {
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBroker)
 	} else {
-		msg := "nil"
-		if bc := brokerCondSet.Manage(bs).GetCondition(BrokerConditionReady); bc != nil {
-			msg = bc.Message
-		}
-		if bs.IsUnknown() {
+		msg := bc.Message
+		if bc.IsUnknown() {
 			ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: %s", msg)
-		} else {
+		} else if bc.IsFalse() {
 			ts.MarkBrokerFailed("BrokerFalse", "The status of Broker is False: %s", msg)
+		} else {
+			ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 		}
 	}
 }
@@ -90,17 +89,21 @@ func (ts *TriggerStatus) MarkBrokerUnknown(reason, messageFormat string, message
 }
 
 func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *messagingv1alpha1.SubscriptionStatus) {
-	if ss.IsReady() {
+	sc := messagingv1alpha1.SubCondSet.Manage(ss).GetTopLevelCondition()
+	if sc == nil {
+		ts.MarkSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil")
+		return
+	}
+	if sc.IsTrue() {
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
 	} else {
-		msg := "nil"
-		if sc := ss.Status.GetCondition(messagingv1alpha1.SubscriptionConditionReady); sc != nil {
-			msg = sc.Message
-		}
-		if ss.IsUnknown() {
+		msg := sc.Message
+		if sc.IsUnknown() {
 			ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: %s", msg)
-		} else {
+		} else if sc.IsFalse() {
 			ts.MarkNotSubscribed("SubscriptionFalse", "The status of Subscription is False: %s", msg)
+		} else {
+			ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Broker is invalid: %v", sc.Status)
 		}
 	}
 }
@@ -143,13 +146,14 @@ func (ts *TriggerStatus) MarkDependencyUnknown(reason, messageFormat string, mes
 
 func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.KResource) {
 	kc := ks.Status.GetCondition(apis.ConditionReady)
-	if kc != nil && kc.IsTrue() {
+	if kc == nil {
+		ts.MarkDependencyUnknown("DependencyUnknown", "The condition of Dependency is nil")
+		return
+	}
+	if kc.IsTrue() {
 		ts.MarkDependencySucceeded()
 	} else {
-		msg := "nil"
-		if kc != nil {
-			msg = kc.Message
-		}
+		msg := kc.Message
 		if kc.IsUnknown() {
 			ts.MarkDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: %s", msg)
 		} else {

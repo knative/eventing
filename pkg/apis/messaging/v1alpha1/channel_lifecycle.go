@@ -42,24 +42,14 @@ func (cs *ChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return chCondSet.Manage(cs).GetCondition(t)
 }
 
-// GetHappyCondition returns the condition currently associated with the ConditionType happy.
-func (cs *ChannelStatus) GetHappyCondition() *apis.Condition {
-	return chCondSet.Manage(cs).GetHappyCondition()
+// GetTopLevelCondition returns the top level Condition.
+func (cs *ChannelStatus) GetTopLevelCondition() *apis.Condition {
+	return chCondSet.Manage(cs).GetTopLevelCondition()
 }
 
 // IsReady returns true if the resource is ready overall.
 func (cs *ChannelStatus) IsReady() bool {
 	return chCondSet.Manage(cs).IsHappy()
-}
-
-// IsUnknown returns true if the resource is unknown overall.
-func (cs *ChannelStatus) IsUnknown() bool {
-	return chCondSet.Manage(cs).IsUnknown()
-}
-
-// IsFalse returns true if the resource is false overall.
-func (cs *ChannelStatus) IsFalse() bool {
-	return chCondSet.Manage(cs).IsFalse()
 }
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
