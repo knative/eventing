@@ -45,6 +45,18 @@ func NewFlowsSequence(name, namespace string, popt ...FlowsSequenceOption) *v1al
 	return p
 }
 
+func WithFlowsSequenceGeneration(gen int64) FlowsSequenceOption {
+	return func(s *v1alpha1.Sequence) {
+		s.Generation = gen
+	}
+}
+
+func WithFlowsSequenceStatusObservedGeneration(gen int64) FlowsSequenceOption {
+	return func(s *v1alpha1.Sequence) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 func WithInitFlowsSequenceConditions(p *v1alpha1.Sequence) {
 	p.Status.InitializeConditions()
 }

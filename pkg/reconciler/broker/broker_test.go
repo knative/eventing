@@ -59,6 +59,8 @@ const (
 	ingressContainerName = "ingress"
 
 	triggerChannel channelType = "TriggerChannel"
+
+	brokerGeneration = 79
 )
 
 var (
@@ -378,7 +380,9 @@ func TestReconcile(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithInitBrokerConditions),
+					WithInitBrokerConditions,
+					WithBrokerGeneration(brokerGeneration),
+				),
 				createChannel(testNS, triggerChannel, true),
 				NewDeployment(filterDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
@@ -409,6 +413,8 @@ func TestReconcile(t *testing.T) {
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
+					WithBrokerGeneration(brokerGeneration),
+					WithBrokerStatusObservedGeneration(brokerGeneration),
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
