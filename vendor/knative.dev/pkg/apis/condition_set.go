@@ -52,7 +52,7 @@ type ConditionManager interface {
 	// set to true.
 	IsHappy() bool
 
-	// GetTopLevelCondition finds and returns the top level Condition((happy Condition).
+	// GetTopLevelCondition finds and returns the top level Condition (happy Condition).
 	GetTopLevelCondition() *Condition
 
 	// GetCondition finds and returns the Condition that matches the ConditionType
@@ -142,13 +142,13 @@ func (r ConditionSet) Manage(status ConditionsAccessor) ConditionManager {
 	}
 }
 
-// IsHappy looks at the happy condition and returns true if that condition is
+// IsHappy looks at the top level Condition (happy Condition) and returns true if that condition is
 // set to true.
 func (r conditionsImpl) IsHappy() bool {
 	return r.GetTopLevelCondition().IsTrue()
 }
 
-// GetTopLevelCondition finds and returns the top level Condition(happy Condition).
+// GetTopLevelCondition finds and returns the top level Condition (happy Condition).
 func (r conditionsImpl) GetTopLevelCondition() *Condition {
 	return r.GetCondition(r.happy)
 }
