@@ -38,6 +38,11 @@ func (et *EventTypeStatus) IsReady() bool {
 	return eventTypeCondSet.Manage(et).IsHappy()
 }
 
+// GetTopLevelCondition returns the top level Condition.
+func (et *EventTypeStatus) GetTopLevelCondition() *apis.Condition {
+	return eventTypeCondSet.Manage(et).GetTopLevelCondition()
+}
+
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (et *EventTypeStatus) InitializeConditions() {
 	eventTypeCondSet.Manage(et).InitializeConditions()
