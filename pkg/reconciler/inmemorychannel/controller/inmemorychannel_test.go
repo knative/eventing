@@ -53,6 +53,8 @@ const (
 	subscriberKind       = "Service"
 	subscriberName       = "subscriberName"
 	subscriberURI        = "http://example.com/subscriber"
+
+	imcGeneration = 7
 )
 
 var (
@@ -180,7 +182,8 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				makeService(),
 				makeReadyEndpoints(),
-				reconciletesting.NewInMemoryChannel(imcName, testNS),
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInMemoryChannelGeneration(imcGeneration)),
 			},
 			WantErr: false,
 			WantCreates: []runtime.Object{
@@ -190,6 +193,8 @@ func TestAllCases(t *testing.T) {
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelGeneration(imcGeneration),
+					reconciletesting.WithInMemoryChannelStatusObservedGeneration(imcGeneration),
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),
 					reconciletesting.WithInMemoryChannelChannelServiceReady(),

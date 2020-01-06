@@ -17,19 +17,19 @@ limitations under the License.
 package helpers
 
 import (
-    "fmt"
-    "regexp"
-    "strconv"
-    "testing"
+	"fmt"
+	"regexp"
+	"strconv"
+	"testing"
 
-    "knative.dev/eventing/test/common"
-    "knative.dev/eventing/test/duck"
-    "knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/duck"
+	"knative.dev/eventing/test/common/resources"
 
-    corev1 "k8s.io/api/core/v1"
-    rbacv1 "k8s.io/api/rbac/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    pkgtest "knative.dev/pkg/test"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtest "knative.dev/pkg/test"
 )
 
 func SetupPerformanceImageRBAC(client *common.Client) {

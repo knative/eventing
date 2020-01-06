@@ -21,8 +21,8 @@ package conformance
 import (
 	"testing"
 
+	"knative.dev/eventing/test/common/resources"
 	"knative.dev/eventing/test/conformance/helpers"
-	"knative.dev/eventing/test/resources"
 )
 
 // The Channel MUST pass through all tracing information as CloudEvents attributes

@@ -21,8 +21,8 @@ package e2e
 import (
 	"testing"
 
+	"knative.dev/eventing/test/common/resources"
 	"knative.dev/eventing/test/e2e/helpers"
-	"knative.dev/eventing/test/resources"
 )
 
 /*

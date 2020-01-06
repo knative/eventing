@@ -18,20 +18,20 @@ limitations under the License.
 package e2e
 
 import (
-    "fmt"
-    "testing"
-    "time"
+	"fmt"
+	"testing"
+	"time"
 
-    corev1 "k8s.io/api/core/v1"
-    rbacv1 "k8s.io/api/rbac/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
-    sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-    "knative.dev/eventing/test/common"
-    "knative.dev/eventing/test/resources"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/resources"
 
-    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 func TestApiServerSource(t *testing.T) {
@@ -159,7 +159,7 @@ func TestApiServerSource(t *testing.T) {
 			eventingtesting.WithApiServerSourceSpec(tc.spec),
 		)
 
-		client.CreateApiServerSourceOrFail(apiServerSource)
+		client.CreateLegacyApiServerSourceOrFail(apiServerSource)
 
 		// wait for all test resources to be ready
 		if err := client.WaitForAllTestResourcesReady(); err != nil {

@@ -24,7 +24,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common/resources"
 )
 
 // EventTransformationForTriggerTestHelper is the helper function for broker_event_tranformation_test

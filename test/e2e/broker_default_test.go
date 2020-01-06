@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common/resources"
 )
 
 const (

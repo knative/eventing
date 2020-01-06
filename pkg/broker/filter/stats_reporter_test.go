@@ -133,6 +133,9 @@ func setup() {
 
 func resetMetrics() {
 	// OpenCensus metrics carry global state that need to be reset between unit tests.
-	metricstest.Unregister("event_count", "event_dispatch_latencies", "event_processing_latencies")
+	metricstest.Unregister(
+		"event_count",
+		"event_dispatch_latencies",
+		"event_processing_latencies")
 	register()
 }

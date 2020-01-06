@@ -17,14 +17,14 @@ limitations under the License.
 package helpers
 
 import (
-    "fmt"
-    "testing"
+	"fmt"
+	"testing"
 
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
-    "knative.dev/eventing/test/common"
-    "knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/resources"
 )
 
 /*

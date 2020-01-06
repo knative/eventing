@@ -18,19 +18,19 @@ limitations under the License.
 package e2e
 
 import (
-    "encoding/json"
-    "fmt"
-    "testing"
+	"encoding/json"
+	"fmt"
+	"testing"
 
-    "k8s.io/apimachinery/pkg/util/uuid"
-    duckv1 "knative.dev/pkg/apis/duck/v1"
-    pkgTest "knative.dev/pkg/test"
+	"k8s.io/apimachinery/pkg/util/uuid"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	pkgTest "knative.dev/pkg/test"
 
-    eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-    "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-    "knative.dev/eventing/test/common"
-    "knative.dev/eventing/test/resources"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/resources"
 )
 
 type branchConfig struct {

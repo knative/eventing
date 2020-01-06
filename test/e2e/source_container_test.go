@@ -18,20 +18,20 @@ limitations under the License.
 package e2e
 
 import (
-    "fmt"
-    "testing"
+	"fmt"
+	"testing"
 
-    corev1 "k8s.io/api/core/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/uuid"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
-    duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-    pkgTest "knative.dev/pkg/test"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	pkgTest "knative.dev/pkg/test"
 
-    sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-    "knative.dev/eventing/test/common"
-    "knative.dev/eventing/test/resources"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/resources"
 )
 
 func TestContainerSource(t *testing.T) {
@@ -84,7 +84,7 @@ func TestContainerSource(t *testing.T) {
 			Sink: &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)},
 		}),
 	)
-	client.CreateContainerSourceOrFail(containerSource)
+	client.CreateLegacyContainerSourceOrFail(containerSource)
 
 	// wait for all test resources to be ready
 	if err := client.WaitForAllTestResourcesReady(); err != nil {

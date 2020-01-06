@@ -17,8 +17,12 @@
 package broker
 
 import (
+	"context"
+
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	cetypes "github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	"go.uber.org/zap"
 )
 
 const (
@@ -47,4 +51,47 @@ func SetTTL(ctx cloudevents.EventContext, ttl int32) error {
 // DeleteTTL removes the TTL CE extension attribute
 func DeleteTTL(ctx cloudevents.EventContext) error {
 	return ctx.SetExtension(TTLAttribute, nil)
+}
+
+// TTLDefaulter returns a cloudevents event defaulter that will manage the TTL
+// for events with the following rules:
+//   If TTL is not found, it will set it to the default passed in.
+//   If TTL is <= 0, it will remain 0.
+//   If TTL is > 1, it will be reduced by one.
+func TTLDefaulter(logger *zap.Logger, defaultTTL int32) client.EventDefaulter {
+	return func(ctx context.Context, event cloudevents.Event) cloudevents.Event {
+		// Get the current or default TTL from the event.
+		var ttl int32
+		if ttlraw, err := event.Context.GetExtension(TTLAttribute); err != nil {
+			logger.Debug("TTL not found in outbound event, defaulting.",
+				zap.String("event.id", event.ID()),
+				zap.Int32(TTLAttribute, defaultTTL),
+				zap.Error(err),
+			)
+			ttl = defaultTTL
+		} else if ttl, err = cetypes.ToInteger(ttlraw); err != nil {
+			logger.Warn("Failed to convert existing TTL into integer, defaulting.",
+				zap.String("event.id", event.ID()),
+				zap.Any(TTLAttribute, ttlraw),
+				zap.Error(err),
+			)
+			ttl = defaultTTL
+		} else {
+			// Decrement TTL.
+			ttl = ttl - 1
+			if ttl < 0 {
+				ttl = 0
+			}
+		}
+		// Overwrite the TTL into the event.
+		if err := event.Context.SetExtension(TTLAttribute, ttl); err != nil {
+			logger.Error("Failed to set TTL on outbound event.",
+				zap.String("event.id", event.ID()),
+				zap.Int32(TTLAttribute, ttl),
+				zap.Error(err),
+			)
+		}
+
+		return event
+	}
 }

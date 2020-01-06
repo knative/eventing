@@ -17,9 +17,9 @@ limitations under the License.
 package common
 
 import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-    "knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common/resources"
 )
 
 // DefaultChannel is the default channel we will run tests against.

@@ -23,8 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/duck"
-	"knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common/duck"
+	"knative.dev/eventing/test/common/resources"
 )
 
 // LabelNamespace labels the given namespace with the labels map.

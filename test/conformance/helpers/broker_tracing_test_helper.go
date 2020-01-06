@@ -17,18 +17,18 @@ limitations under the License.
 package helpers
 
 import (
-    "fmt"
-    "net/http"
-    "testing"
+	"fmt"
+	"net/http"
+	"testing"
 
-    "github.com/openzipkin/zipkin-go/model"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/uuid"
+	"github.com/openzipkin/zipkin-go/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
-    "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-    "knative.dev/eventing/test/common"
-    tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
-    "knative.dev/eventing/test/resources"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/resources"
+	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in

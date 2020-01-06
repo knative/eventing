@@ -17,20 +17,20 @@ limitations under the License.
 package helpers
 
 import (
-    "fmt"
-    "testing"
-    "time"
+	"fmt"
+	"testing"
+	"time"
 
-    "github.com/ghodss/yaml"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/uuid"
+	"github.com/ghodss/yaml"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 
-    eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-    "knative.dev/eventing/pkg/defaultchannel"
-    eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-    "knative.dev/eventing/test/common"
-    "knative.dev/eventing/test/duck"
-    "knative.dev/eventing/test/resources"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/defaultchannel"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/duck"
+	"knative.dev/eventing/test/common/resources"
 )
 
 const (
@@ -161,8 +161,12 @@ func updateDefaultChannelCM(client *common.Client, updateConfig func(config *def
 	configMap.Data[channelDefaulterKey] = string(configBytes)
 	_, err = cmInterface.Update(configMap)
 	// In cmd/webhook.go, configMapWatcher watches the configmap changes and set the config for channeldefaulter,
-	// the resync time is set to 0, so 5 seconds should be enough to get the OnChange callback triggered.
-	time.Sleep(5 * time.Second)
+	// the resync time is set to 0, which means the the resync will be delayed as long as possible (until the upstream
+	// source closes the watch or times out, or you stop the controller)
+	// Wait for 1 minute to let the ConfigMap be synced up.
+	// TODO(chizhg): 1 minute is an empirical duration, and does not solve the problem from the root.
+	// To make it work reliably, we may need to manually restart the controller.
+	time.Sleep(1 * time.Minute)
 	return nil
 }
 

@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/resources"
+	"knative.dev/eventing/test/common/resources"
 )
 
 // EventTransformationForSubscriptionTestHelper is the helper function for channel_event_tranformation_test
