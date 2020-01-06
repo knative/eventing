@@ -42,6 +42,11 @@ func (cs *ChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return chCondSet.Manage(cs).GetCondition(t)
 }
 
+// GetTopLevelCondition returns the top level Condition.
+func (cs *ChannelStatus) GetTopLevelCondition() *apis.Condition {
+	return chCondSet.Manage(cs).GetTopLevelCondition()
+}
+
 // IsReady returns true if the resource is ready overall.
 func (cs *ChannelStatus) IsReady() bool {
 	return chCondSet.Manage(cs).IsHappy()
@@ -71,6 +76,15 @@ func (cs *ChannelStatus) MarkBackingChannelFailed(reason, messageFormat string, 
 	chCondSet.Manage(cs).MarkFalse(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
 }
 
+func (cs *ChannelStatus) MarkBackingChannelUnknown(reason, messageFormat string, messageA ...interface{}) {
+	chCondSet.Manage(cs).MarkUnknown(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
+}
+
+func (cs *ChannelStatus) MarkBackingChannelNotConfigured() {
+	chCondSet.Manage(cs).MarkUnknown(ChannelConditionBackingChannelReady,
+		"BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")
+}
+
 func (cs *ChannelStatus) MarkBackingChannelReady() {
 	chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
 }
@@ -78,11 +92,18 @@ func (cs *ChannelStatus) MarkBackingChannelReady() {
 func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
 	readyCondition := chs.Status.GetCondition(apis.ConditionReady)
-	if readyCondition != nil {
-		if readyCondition.Status != corev1.ConditionTrue {
-			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
-		} else {
+	if readyCondition == nil {
+		cs.MarkBackingChannelNotConfigured()
+	} else {
+		switch {
+		case readyCondition.Status == corev1.ConditionUnknown:
+			cs.MarkBackingChannelUnknown(readyCondition.Reason, readyCondition.Message)
+		case readyCondition.Status == corev1.ConditionTrue:
 			cs.MarkBackingChannelReady()
+		case readyCondition.Status == corev1.ConditionFalse:
+			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
+		default:
+			cs.MarkBackingChannelUnknown("BackingChannelUnknown", "The status of BackingChannel is invalid: %v", readyCondition.Status)
 		}
 	}
 	// Set the address and update the Addressable conditions.

@@ -226,7 +226,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 	}
 }
 
-func TestTriggerIsReady(t *testing.T) {
+func TestTriggerConditionStatus(t *testing.T) {
 	tests := []struct {
 		name                        string
 		brokerStatus                *BrokerStatus
@@ -236,8 +236,8 @@ func TestTriggerIsReady(t *testing.T) {
 		subscriptionStatus          *messagingv1alpha1.SubscriptionStatus
 		subscriberResolvedStatus    bool
 		dependencyAnnotationExists  bool
-		dependencyStatusReady       bool
-		wantReady                   bool
+		dependencyStatus            corev1.ConditionStatus
+		wantConditionStatus         corev1.ConditionStatus
 	}{{
 		name:                        "all happy",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
@@ -247,27 +247,37 @@ func TestTriggerIsReady(t *testing.T) {
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
-		wantReady:                   true,
+		wantConditionStatus:         corev1.ConditionTrue,
 	}, {
-		name:                        "broker sad",
-		brokerStatus:                TestHelper.NotReadyBrokerStatus(),
+		name:                        "broker status unknown",
+		brokerStatus:                TestHelper.UnknownBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           true,
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
-		wantReady:                   false,
+		wantConditionStatus:         corev1.ConditionUnknown,
+	}, {
+		name:                        "broker status false",
+		brokerStatus:                TestHelper.FalseBrokerStatus(),
+		markKubernetesServiceExists: true,
+		markVirtualServiceExists:    true,
+		subscriptionOwned:           true,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
+		dependencyAnnotationExists:  false,
+		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "subscribed sad",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
 		subscriptionOwned:           true,
-		subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
+		subscriptionStatus:          TestHelper.FalseSubscriptionStatus(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
-		wantReady:                   false,
+		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "subscription not owned",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
@@ -277,7 +287,7 @@ func TestTriggerIsReady(t *testing.T) {
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
-		wantReady:                   false,
+		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "failed to resolve subscriber",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
@@ -287,10 +297,10 @@ func TestTriggerIsReady(t *testing.T) {
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		subscriberResolvedStatus:    false,
 		dependencyAnnotationExists:  true,
-		dependencyStatusReady:       true,
-		wantReady:                   false,
+		dependencyStatus:            corev1.ConditionTrue,
+		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
-		name:                        "dependency not ready",
+		name:                        "dependency unknown",
 		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
@@ -298,21 +308,31 @@ func TestTriggerIsReady(t *testing.T) {
 		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  true,
-		dependencyStatusReady:       false,
-		wantReady:                   false,
-	},
-		{
-			name:                        "all sad",
-			brokerStatus:                TestHelper.NotReadyBrokerStatus(),
-			markKubernetesServiceExists: false,
-			markVirtualServiceExists:    false,
-			subscriptionOwned:           false,
-			subscriptionStatus:          TestHelper.NotReadySubscriptionStatus(),
-			subscriberResolvedStatus:    false,
-			dependencyAnnotationExists:  true,
-			dependencyStatusReady:       false,
-			wantReady:                   false,
-		}}
+		dependencyStatus:            corev1.ConditionUnknown,
+		wantConditionStatus:         corev1.ConditionUnknown,
+	}, {
+		name:                        "dependency false",
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
+		markKubernetesServiceExists: true,
+		markVirtualServiceExists:    true,
+		subscriptionOwned:           true,
+		subscriptionStatus:          TestHelper.ReadySubscriptionStatus(),
+		subscriberResolvedStatus:    true,
+		dependencyAnnotationExists:  true,
+		dependencyStatus:            corev1.ConditionFalse,
+		wantConditionStatus:         corev1.ConditionFalse,
+	}, {
+		name:                        "all sad",
+		brokerStatus:                TestHelper.FalseBrokerStatus(),
+		markKubernetesServiceExists: false,
+		markVirtualServiceExists:    false,
+		subscriptionOwned:           false,
+		subscriptionStatus:          TestHelper.FalseSubscriptionStatus(),
+		subscriberResolvedStatus:    false,
+		dependencyAnnotationExists:  true,
+		dependencyStatus:            corev1.ConditionFalse,
+		wantConditionStatus:         corev1.ConditionFalse,
+	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ts := &TriggerStatus{}
@@ -329,14 +349,20 @@ func TestTriggerIsReady(t *testing.T) {
 			} else {
 				ts.MarkSubscriberResolvedFailed("Unable to get the Subscriber's URI", "subscriber not found")
 			}
-			if test.dependencyAnnotationExists && !test.dependencyStatusReady {
-				ts.MarkDependencyFailed("Dependency is not ready", "Dependency is not ready")
-			} else {
+			if !test.dependencyAnnotationExists {
 				ts.MarkDependencySucceeded()
+			} else {
+				if test.dependencyStatus == corev1.ConditionTrue {
+					ts.MarkDependencySucceeded()
+				} else if test.dependencyStatus == corev1.ConditionUnknown {
+					ts.MarkDependencyUnknown("The status of dependency is unknown", "The status of dependency is unknown: nil")
+				} else {
+					ts.MarkDependencyFailed("The status of dependency is false", "The status of dependency is unknown: nil")
+				}
 			}
-			got := ts.IsReady()
-			if test.wantReady != got {
-				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			got := ts.GetTopLevelCondition().Status
+			if test.wantConditionStatus != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
 			}
 		})
 	}

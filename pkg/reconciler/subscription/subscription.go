@@ -155,7 +155,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 					zap.Error(err),
 					zap.Any("channel", subscription.Spec.Channel))
 				r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-				subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+				subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
 				return err
 			}
 			err := r.syncPhysicalChannel(ctx, subscription, channel, true)
@@ -175,7 +175,7 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-		subscription.Status.MarkReferencesNotResolved(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
 		return err
 	}
 	if err := r.validateChannel(ctx, channel); err != nil {
@@ -277,36 +277,40 @@ func (r *Reconciler) reconcile(ctx context.Context, subscription *v1alpha1.Subsc
 			zap.Error(err),
 			zap.Any("channel", subscription.Spec.Channel))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-		subscription.Status.MarkChannelNotReady(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
+		subscription.Status.MarkChannelUnknown(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
 		return err
 	}
-	if err := r.subMarkedReadyByChannel(subscription, channel); err != nil {
-		logging.FromContext(ctx).Warn("Subscription not marked by Channel as Ready.", zap.Error(err))
+	ss, err := r.getSubStatusByChannel(subscription, channel)
+	if err != nil {
+		logging.FromContext(ctx).Warn("Failed to get subscription status.", zap.Error(err))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
-		subscription.Status.MarkChannelNotReady(subscriptionNotMarkedReadyByChannel, "Subscription not marked by Channel as Ready: %s", err)
+		subscription.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
 		return err
 	}
-
-	subscription.Status.MarkChannelReady()
+	subStatus := ss.Ready
+	if subStatus == corev1.ConditionTrue {
+		subscription.Status.MarkChannelReady()
+	} else if subStatus == corev1.ConditionUnknown {
+		subscription.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Subscription marked by Channel as Unknown")
+	} else if subStatus == corev1.ConditionFalse {
+		subscription.Status.MarkChannelFailed(subscriptionNotMarkedReadyByChannel, "Subscription marked by Channel as False")
+	}
 	return nil
 }
 
-func (r Reconciler) subMarkedReadyByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) error {
+func (r Reconciler) getSubStatusByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) (eventingduckv1alpha1.SubscriberStatus, error) {
 	subscribableStatus := channel.Status.GetSubscribableTypeStatus()
 
 	if subscribableStatus == nil {
-		return fmt.Errorf("channel.Status.SubscribableStatus is nil")
+		return eventingduckv1alpha1.SubscriberStatus{}, fmt.Errorf("channel.Status.SubscribableStatus is nil")
 	}
 	for _, sub := range subscribableStatus.Subscribers {
 		if sub.UID == subscription.GetUID() &&
 			sub.ObservedGeneration == subscription.GetGeneration() {
-			if sub.Ready == corev1.ConditionTrue {
-				return nil
-			}
-			return fmt.Errorf(sub.Message)
+			return sub, nil
 		}
 	}
-	return fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
+	return eventingduckv1alpha1.SubscriberStatus{}, fmt.Errorf("subscription %q not present in channel %q subscriber's list", subscription.Name, channel.Name)
 }
 
 func (r Reconciler) subPresentInChannelSpec(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) bool {
