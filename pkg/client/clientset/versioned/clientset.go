@@ -25,7 +25,6 @@ import (
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
 )
 
 type Interface interface {
@@ -33,7 +32,6 @@ type Interface interface {
 	EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface
 	FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface
 	MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface
-	SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -43,7 +41,6 @@ type Clientset struct {
 	eventingV1alpha1  *eventingv1alpha1.EventingV1alpha1Client
 	flowsV1alpha1     *flowsv1alpha1.FlowsV1alpha1Client
 	messagingV1alpha1 *messagingv1alpha1.MessagingV1alpha1Client
-	sourcesV1alpha1   *sourcesv1alpha1.SourcesV1alpha1Client
 }
 
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
@@ -59,11 +56,6 @@ func (c *Clientset) FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface {
 // MessagingV1alpha1 retrieves the MessagingV1alpha1Client
 func (c *Clientset) MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface {
 	return c.messagingV1alpha1
-}
-
-// SourcesV1alpha1 retrieves the SourcesV1alpha1Client
-func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
-	return c.sourcesV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -94,10 +86,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.sourcesV1alpha1, err = sourcesv1alpha1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -113,7 +101,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.eventingV1alpha1 = eventingv1alpha1.NewForConfigOrDie(c)
 	cs.flowsV1alpha1 = flowsv1alpha1.NewForConfigOrDie(c)
 	cs.messagingV1alpha1 = messagingv1alpha1.NewForConfigOrDie(c)
-	cs.sourcesV1alpha1 = sourcesv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -125,7 +112,6 @@ func New(c rest.Interface) *Clientset {
 	cs.eventingV1alpha1 = eventingv1alpha1.New(c)
 	cs.flowsV1alpha1 = flowsv1alpha1.New(c)
 	cs.messagingV1alpha1 = messagingv1alpha1.New(c)
-	cs.sourcesV1alpha1 = sourcesv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

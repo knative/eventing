@@ -35,11 +35,11 @@ broker._
 
 #### Status
 
-| Field              | Type       | Description                                                                                          | Constraints |
-| ------------------ | ---------- | ---------------------------------------------------------------------------------------------------- | ----------- |
-| observedGeneration | int64      | The 'Generation' of the Broker that was last processed by the controller.                            |             |
-| subscriberURI      | string     | URI of the subscribing endpoint which meets the [_Addressable_ contract](interfaces.md#addressable). |             |
-| conditions         | Conditions | Trigger conditions.                                                                                  |             |
+| Field              | Type       | Description                                                               | Constraints |
+| ------------------ | ---------- | ------------------------------------------------------------------------- | ----------- |
+| observedGeneration | int64      | The 'Generation' of the Broker that was last processed by the controller. |             |
+| subscriberURI      | apis.URL   | Address of the subscribing endpoint.                                      |             |
+| conditions         | Conditions | Trigger conditions.                                                       |             |
 
 ##### Conditions
 
@@ -155,11 +155,11 @@ channel._
 
 #### Spec
 
-| Field                  | Type                 | Description                                                                       | Constraints        |
-| ---------------------- | -------------------- | --------------------------------------------------------------------------------- | ------------------ |
-| channel\*              | ObjectRef            | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
-| subscriber<sup>1</sup> | pkg/duck.Destination | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
-| reply<sup>1</sup>      | pkg/duck.Destination | The continuation for the link.                                                    |                    |
+| Field                  | Type        | Description                                                                       | Constraints        |
+| ---------------------- | ----------- | --------------------------------------------------------------------------------- | ------------------ |
+| channel\*              | ObjectRef   | The originating _Subscribable_ for the link.                                      | Must be a Channel. |
+| subscriber<sup>1</sup> | Destination | Optional processing on the event. The result of subscriber will be sent to reply. |                    |
+| reply<sup>1</sup>      | Destination | The continuation for the link.                                                    |                    |
 
 \*: Required
 
@@ -204,33 +204,24 @@ channel._
 | apiVersion | String       | API version of backing channel CRD                  |             |
 | spec       | RawExtension | Spec to be passed to backing channel implementation |             |
 
-### eventing.SubscriberSpec
+### Destination
 
-| Field               | Type            | Description | Constraints              |
-| ------------------- | --------------- | ----------- | ------------------------ |
-| ref<sup>1</sup>     | ObjectReference |             | Must adhere to Callable. |
-| dnsName<sup>1</sup> | String          |             |                          |
-
-1: One of (ref, dnsName), Required.
-
-### duck.SubscriberSpec
-
-| Field         | Type   | Description                                                 | Constraints    |
-| ------------- | ------ | ----------------------------------------------------------- | -------------- |
-| uid           | String | The Subscription UID this SubscriberSpec was resolved from. |                |
-| subscriberURI | String | The URI name of the endpoint for the subscriber.            | Must be a URL. |
-| replyURI      | String | The URI name of the endpoint for the reply.                 | Must be a URL. |
-
-### pkg/duck.Destination
-
-| Field           | Type            | Description                                                                                          | Constraints    |
-| --------------- | --------------- | ---------------------------------------------------------------------------------------------------- | -------------- |
-| ref<sup>1</sup> | ObjectReference | The Subscription UID this SubscriberSpec was resolved from.                                          |                |
-| uri<sup>1</sup> | String          | Either an absolute URL (if ref is not specified). Resolved using the base URI from ref if specified. | Must be a URL. |
+| Field           | Type            | Description                                                                                          | Constraints                   |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------- |
+| ref<sup>1</sup> | ObjectReference | The Subscription UID this SubscriberSpec was resolved from.                                          | Must adhere to _Addressable_. |
+| uri<sup>1</sup> | apis.URL        | Either an absolute URL (if ref is not specified). Resolved using the base URI from ref if specified. | Must be a URL.                |
 
 1: One or both (ref, uri), Required. If only uri is specified, it must be an
 absolute URL. If both are specified, uri will be resolved using the base URI
 retrieved from ref.
+
+### duck.SubscriberSpec
+
+| Field         | Type     | Description                                                 | Constraints    |
+| ------------- | -------- | ----------------------------------------------------------- | -------------- |
+| uid           | String   | The Subscription UID this SubscriberSpec was resolved from. |                |
+| subscriberURI | apis.URL | The URI name of the endpoint for the subscriber.            | Must be a URL. |
+| replyURI      | apis.URL | The URI name of the endpoint for the reply.                 | Must be a URL. |
 
 ### ReplyStrategy
 

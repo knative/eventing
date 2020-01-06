@@ -35,6 +35,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakelegacyclient "knative.dev/eventing/pkg/legacyclient/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 
@@ -60,6 +61,7 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 
 		ctx, kubeClient := fakekubeclient.With(ctx, ls.GetKubeObjects()...)
 		ctx, client := fakeeventingclient.With(ctx, ls.GetEventingObjects()...)
+		ctx, legacy := fakelegacyclient.With(ctx, ls.GetLegacyObjects()...)
 		ctx, dynamicClient := fakedynamicclient.With(ctx,
 			NewScheme(), ToUnstructured(t, r.Objects)...)
 
@@ -87,10 +89,11 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 		for _, reactor := range r.WithReactors {
 			kubeClient.PrependReactor("*", "*", reactor)
 			client.PrependReactor("*", "*", reactor)
+			legacy.PrependReactor("*", "*", reactor)
 			dynamicClient.PrependReactor("*", "*", reactor)
 		}
 
-		// Validate all Create operations through the serving client.
+		// Validate all Create operations through the eventing client.
 		client.PrependReactor("create", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 			return ValidateCreates(ctx, action)
 		})
@@ -98,7 +101,15 @@ func MakeFactory(ctor Ctor, unstructured bool, logger *zap.SugaredLogger) Factor
 			return ValidateUpdates(ctx, action)
 		})
 
-		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient}
+		// Validate all Create operations through the legacy client.
+		legacy.PrependReactor("create", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			return ValidateCreates(ctx, action)
+		})
+		legacy.PrependReactor("update", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			return ValidateUpdates(ctx, action)
+		})
+
+		actionRecorderList := ActionRecorderList{dynamicClient, client, kubeClient, legacy}
 		eventList := EventList{Recorder: eventRecorder}
 
 		return c, actionRecorderList, eventList, statsReporter

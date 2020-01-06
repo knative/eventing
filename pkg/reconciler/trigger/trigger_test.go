@@ -43,8 +43,8 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -121,6 +121,7 @@ const (
 
 	currentGeneration  = 1
 	outdatedGeneration = 0
+	triggerGeneration  = 7
 )
 
 var (
@@ -415,6 +416,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerGeneration(triggerGeneration),
 				),
 			},
 			WantErr: true,
@@ -428,6 +430,8 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerGeneration(triggerGeneration),
+					reconciletesting.WithTriggerStatusObservedGeneration(triggerGeneration),
 					reconciletesting.WithTriggerBrokerReady(),
 				),
 			}},

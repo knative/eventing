@@ -115,7 +115,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(subscription, corev1.EventTypeNormal, subscriptionReconciled, "Subscription reconciled: %q", subscription.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, subscription.DeepCopy()); updateStatusErr != nil {
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	subscription.Status.ObservedGeneration = original.Generation
+
+	if _, updateStatusErr := r.updateStatus(ctx, subscription); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", updateStatusErr)
 		return updateStatusErr

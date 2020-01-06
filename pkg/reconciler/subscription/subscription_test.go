@@ -636,6 +636,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionStatusObservedGeneration(subscriptionGeneration),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -686,6 +687,7 @@ func TestAllCases(t *testing.T) {
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					WithSubscriptionStatusObservedGeneration(subscriptionGeneration),
 				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{

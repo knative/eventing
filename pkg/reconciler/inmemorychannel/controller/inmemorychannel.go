@@ -122,6 +122,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Event(channel, corev1.EventTypeNormal, reconciled, "InMemoryChannel reconciled")
 	}
 
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	channel.Status.ObservedGeneration = original.Generation
+
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update InMemoryChannel's status: %v", err)

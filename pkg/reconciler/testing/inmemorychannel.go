@@ -51,6 +51,18 @@ func WithInitInMemoryChannelConditions(imc *v1alpha1.InMemoryChannel) {
 	imc.Status.InitializeConditions()
 }
 
+func WithInMemoryChannelGeneration(gen int64) InMemoryChannelOption {
+	return func(s *v1alpha1.InMemoryChannel) {
+		s.Generation = gen
+	}
+}
+
+func WithInMemoryChannelStatusObservedGeneration(gen int64) InMemoryChannelOption {
+	return func(s *v1alpha1.InMemoryChannel) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 func WithInMemoryChannelDeleted(imc *v1alpha1.InMemoryChannel) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	imc.ObjectMeta.SetDeletionTimestamp(&deleteTime)

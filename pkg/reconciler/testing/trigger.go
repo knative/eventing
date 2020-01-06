@@ -96,6 +96,18 @@ func WithInitTriggerConditions(t *v1alpha1.Trigger) {
 	t.Status.InitializeConditions()
 }
 
+func WithTriggerGeneration(gen int64) TriggerOption {
+	return func(s *v1alpha1.Trigger) {
+		s.Generation = gen
+	}
+}
+
+func WithTriggerStatusObservedGeneration(gen int64) TriggerOption {
+	return func(s *v1alpha1.Trigger) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 // WithTriggerBrokerReady initializes the Triggers's conditions.
 func WithTriggerBrokerReady() TriggerOption {
 	return func(t *v1alpha1.Trigger) {
