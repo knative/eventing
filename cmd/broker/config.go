@@ -18,6 +18,7 @@ package broker
 
 import (
 	"context"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,12 +29,10 @@ import (
 // GetLoggingConfig will get config from a specific namespace
 func GetLoggingConfig(ctx context.Context, namespace, loggingConfigMapName string) (*logging.Config, error) {
 	loggingConfigMap, err := kubeclient.Get(ctx).CoreV1().ConfigMaps(namespace).Get(loggingConfigMapName, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return logging.NewConfigFromMap(nil)
-		} else {
-			return nil, err
-		}
+	if apierrors.IsNotFound(err) {
+		return logging.NewConfigFromMap(nil)
+	} else if err != nil {
+		return nil, err
 	}
 	return logging.NewConfigFromConfigMap(loggingConfigMap)
 }

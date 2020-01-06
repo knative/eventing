@@ -100,6 +100,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(parallel, corev1.EventTypeNormal, reconciled, "Parallel reconciled")
 	}
 
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	parallel.Status.ObservedGeneration = original.Generation
+
 	if _, updateStatusErr := r.updateStatus(ctx, parallel); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Parallel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update parallel status: %s", key)

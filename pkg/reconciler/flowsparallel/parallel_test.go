@@ -47,10 +47,11 @@ import (
 )
 
 const (
-	testNS           = "test-namespace"
-	parallelName     = "test-parallel"
-	parallelUID      = "test-parallel-uid"
-	replyChannelName = "reply-channel"
+	testNS             = "test-namespace"
+	parallelName       = "test-parallel"
+	parallelUID        = "test-parallel-uid"
+	replyChannelName   = "reply-channel"
+	parallelGeneration = 79
 )
 
 func init() {
@@ -106,6 +107,7 @@ func TestAllBranches(t *testing.T) {
 			Objects: []runtime.Object{
 				reconciletesting.NewFlowsParallel(parallelName, testNS,
 					reconciletesting.WithInitFlowsParallelConditions,
+					reconciletesting.WithFlowsParallelGeneration(parallelGeneration),
 					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
 					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{
 						{Subscriber: createSubscriber(0)},
@@ -127,6 +129,8 @@ func TestAllBranches(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
 					reconciletesting.WithInitFlowsParallelConditions,
+					reconciletesting.WithFlowsParallelGeneration(parallelGeneration),
+					reconciletesting.WithFlowsParallelStatusObservedGeneration(parallelGeneration),
 					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
 					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{{Subscriber: createSubscriber(0)}}),
 					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),

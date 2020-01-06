@@ -26,11 +26,7 @@ import (
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-)
-
-var (
-	trueValue  = true
-	falseValue = false
+	"knative.dev/pkg/ptr"
 )
 
 var ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
@@ -180,11 +176,11 @@ func TestConfigMapPropagationIsReady(t *testing.T) {
 		wantReady       bool
 	}{{
 		name:            "all happy",
-		markPropagation: &trueValue,
+		markPropagation: ptr.Bool(true),
 		wantReady:       true,
 	}, {
 		name:            "propagation sad",
-		markPropagation: &falseValue,
+		markPropagation: ptr.Bool(false),
 		wantReady:       false,
 	}}
 	for _, test := range tests {
@@ -192,9 +188,9 @@ func TestConfigMapPropagationIsReady(t *testing.T) {
 			cmps := &ConfigMapPropagationStatus{}
 			if test.markPropagation != nil {
 				if *test.markPropagation {
-					cmps.MarkConfigMapPropagationPropagated()
+					cmps.MarkPropagated()
 				} else {
-					cmps.MarkConfigMapPropagationNotPropagated()
+					cmps.MarkNotPropagated()
 				}
 			}
 			if got := cmps.IsReady(); test.wantReady != got {

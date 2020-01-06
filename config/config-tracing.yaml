@@ -20,6 +20,7 @@ metadata:
   labels:
     knative.dev/config-category: eventing
     knative.dev/config-propagation: original
+    eventing.knative.dev/release: devel
 data:
   _example: |
     ################################

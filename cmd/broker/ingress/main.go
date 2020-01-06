@@ -31,7 +31,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
-	cmdborker "knative.dev/eventing/cmd/broker"
+	cmdbroker "knative.dev/eventing/cmd/broker"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -107,7 +107,7 @@ func main() {
 	loggingConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, logging.ConfigMapName())
 	metricsConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, metrics.ConfigMapName())
 
-	loggingConfig, err := cmdborker.GetLoggingConfig(ctx, env.Namespace, loggingConfigMapName)
+	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, env.Namespace, loggingConfigMapName)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}

@@ -39,6 +39,7 @@ func NewConfigMapPropagation(name, namespace string, o ...ConfigMapPropagationOp
 		opt(cmp)
 	}
 	cmp.SetDefaults(context.Background())
+	cmp.Spec.OriginalNamespace = "knative-eventing"
 	return cmp
 }
 
@@ -60,10 +61,10 @@ func WithConfigMapPropagationSelector(selector map[string]string) ConfigMapPropa
 
 // WithConfigMapPropagationPropagated calls .Status.MarkConfigMapPropagationPropagated on the ConfigMapPropagation.
 func WithConfigMapPropagationPropagated(cmp *v1alpha1.ConfigMapPropagation) {
-	cmp.Status.MarkConfigMapPropagationPropagated()
+	cmp.Status.MarkPropagated()
 }
 
 // WithConfigMapPropagationNotPropagated calls .Status.MarkConfigMapPropagationNotPropagated on the ConfigMapPropagation.
 func WithConfigMapPropagationNotPropagated(cmp *v1alpha1.ConfigMapPropagation) {
-	cmp.Status.MarkConfigMapPropagationNotPropagated()
+	cmp.Status.MarkNotPropagated()
 }

@@ -17,11 +17,11 @@ limitations under the License.
 package testing
 
 import (
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/pkg/kmeta"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ConfigMapOption enables further configuration of a ConfigMap.

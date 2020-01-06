@@ -50,6 +50,18 @@ func WithInitBrokerConditions(b *v1alpha1.Broker) {
 	b.Status.InitializeConditions()
 }
 
+func WithBrokerGeneration(gen int64) BrokerOption {
+	return func(s *v1alpha1.Broker) {
+		s.Generation = gen
+	}
+}
+
+func WithBrokerStatusObservedGeneration(gen int64) BrokerOption {
+	return func(s *v1alpha1.Broker) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 func WithBrokerDeletionTimestamp(b *v1alpha1.Broker) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	b.ObjectMeta.SetDeletionTimestamp(&t)

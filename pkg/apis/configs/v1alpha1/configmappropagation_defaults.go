@@ -21,11 +21,9 @@ import (
 )
 
 func (cmp *ConfigMapPropagation) SetDefaults(ctx context.Context) {
-	// If we haven't configured the original namespace,
-	// then set the default original namespace to the knative-eventing.
-	// TODO if this API starts to become commonly adopted by others,
-	//  it will stop make sense defaulting to knative-eventing.
-	if cmp != nil && cmp.Spec.OriginalNamespace == "" {
-		cmp.Spec.OriginalNamespace = "knative-eventing"
+	// If we haven't configured the selector,
+	// then set the default selector to be an empty map
+	if cmp != nil && cmp.Spec.Selector == nil {
+		cmp.Spec.Selector = map[string]string{}
 	}
 }

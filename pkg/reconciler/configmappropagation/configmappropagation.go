@@ -42,7 +42,7 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	configMapPropagationReconcileError                  = "configMapPropagationReconcileError"
+	configMapPropagationReconcileError                  = "ConfigMapPropagationReconcileError"
 	configMapPropagationUpdateStatusFailed              = "ConfigMapPropagationStatusFailed"
 	configMapPropagationReadinessChanged                = "ConfigMapPropagationReadinessChanged"
 	configMapPropagationPropagateSingleConfigMapFailed  = "ConfigMapPropagationPropagateSingleConfigMapFailed"
@@ -77,7 +77,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	// Get the ConfigMapPropagation resource with this namespace/name
 	original, err := r.configMapPropagationLister.ConfigMapPropagations(namespace).Get(name)
-
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Info("ConfigMapPropagation key in work queue no longer exists")
@@ -155,11 +154,11 @@ func (r *Reconciler) reconcile(ctx context.Context, cmp *v1alpha1.ConfigMapPropa
 	}
 
 	if err := r.reconcileConfigMap(ctx, cmp); err != nil {
-		cmp.Status.MarkConfigMapPropagationNotPropagated()
+		cmp.Status.MarkNotPropagated()
 		return err
 	}
 
-	cmp.Status.MarkConfigMapPropagationPropagated()
+	cmp.Status.MarkPropagated()
 	return nil
 }
 
@@ -194,7 +193,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ConfigM
 }
 
 func (r *Reconciler) getOriginalLabelSelector(cmp *v1alpha1.ConfigMapPropagation) labels.Selector {
-	return labels.SelectorFromSet(resources.OriginalLabels(cmp.Spec.Selector))
+	return labels.SelectorFromSet(resources.OriginalLabels(r.copies(cmp.Spec.Selector)))
 }
 
 func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation) error {
@@ -281,7 +280,7 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 
 func (r *Reconciler) deleteOrKeepConfigMap(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation, copyConfigMap *corev1.ConfigMap, originalConfigMapName string, originalConfigMapList []*corev1.ConfigMap) error {
 	originalConfigMap, contains := r.contains(originalConfigMapName, originalConfigMapList)
-	if !contains || !r.isSubset(originalConfigMap.GetLabels(), resources.OriginalLabels(cmp.Spec.Selector)) {
+	if !contains || !r.isSubset(originalConfigMap.GetLabels(), resources.OriginalLabels(r.copies(cmp.Spec.Selector))) {
 		// If Original ConfigMap no longer exists or no longer has the required label, delete copy ConfigMap.
 		logging.FromContext(ctx).Info("Original ConfigMap " + originalConfigMapName +
 			` no longer exists/no longer has "knative.dev/eventing/config-propagation:original" label, delete corresponding copy ConfigMap ` + copyConfigMap.Name)
@@ -311,4 +310,13 @@ func (r *Reconciler) contains(name string, list []*corev1.ConfigMap) (*corev1.Co
 		}
 	}
 	return nil, false
+}
+
+// copies returns a map object
+func (r *Reconciler) copies(selector map[string]string) map[string]string {
+	copySelector := map[string]string{}
+	for index, element := range selector {
+		copySelector[index] = element
+	}
+	return copySelector
 }

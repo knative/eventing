@@ -50,10 +50,10 @@ func MakeConfigMap(args ConfigMapArgs) *corev1.ConfigMap {
 	}
 }
 
-func MakeCopyConfigMapName(configMapPropagationName string, configMapName string) string {
+func MakeCopyConfigMapName(configMapPropagationName, configMapName string) string {
 	return configMapPropagationName + "-" + configMapName
 }
 
-func MakeCopyConfigMapLabel(configMapPropagationNamespace string, configMapName string) string {
+func MakeCopyConfigMapLabel(configMapPropagationNamespace, configMapName string) string {
 	return configMapPropagationNamespace + "-" + configMapName
 }

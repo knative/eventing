@@ -26,7 +26,7 @@ const (
 	// ConfigMapPropagationConditionReady has status True when all subconditions below have been set to True.
 	ConfigMapPropagationConditionReady = apis.ConditionReady
 	// ConfigMapPropagationConditionPropagated has status True when the ConfigMaps in original namespace are all propagated to target namespace.
-	ConfigMapPropagationConditionPropagated apis.ConditionType = "ConfigMapPropagated"
+	ConfigMapPropagationConditionPropagated apis.ConditionType = "Propagated"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.
@@ -44,11 +44,11 @@ func (cmps *ConfigMapPropagationStatus) InitializeConditions() {
 	configMapPropagationCondSet.Manage(cmps).InitializeConditions()
 }
 
-func (cmps *ConfigMapPropagationStatus) MarkConfigMapPropagationPropagated() {
+func (cmps *ConfigMapPropagationStatus) MarkPropagated() {
 	configMapPropagationCondSet.Manage(cmps).MarkTrue(ConfigMapPropagationConditionPropagated)
 }
 
-func (cmps *ConfigMapPropagationStatus) MarkConfigMapPropagationNotPropagated() {
+func (cmps *ConfigMapPropagationStatus) MarkNotPropagated() {
 	configMapPropagationCondSet.Manage(cmps).MarkFalse(ConfigMapPropagationConditionPropagated, "PropagationFailed",
 		"ConfigMapPropagation does not fully propagate ConfigMaps from original namespace to current namespace")
 }

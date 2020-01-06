@@ -81,7 +81,7 @@ func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *t
 // just ensures that if generated, they are collected appropriately. This is normally done by using
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
-func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName string, tracingConfigName string) error {
+func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName, tracingConfigName string) error {
 	oct, err := setupPublishing(serviceName, logger)
 	if err != nil {
 		return err

@@ -18,6 +18,7 @@ metadata:
   name: config-observability
   namespace: knative-eventing
   labels:
+    eventing.knative.dev/release: devel
     knative.dev/config-category: eventing
     knative.dev/config-propagation: original
 data:

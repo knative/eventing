@@ -23,9 +23,9 @@ import (
 )
 
 var (
-	defaultNamespace = "knative-eventing"
-	otherNamespace   = "testing-eventing"
-	selector         = map[string]string{
+	namespace       = "testing-eventing"
+	defaultSelector = map[string]string{}
+	otherSelector   = map[string]string{
 		"knative.dev/testing": "eventing",
 	}
 )
@@ -37,15 +37,15 @@ func TestConfigMapPropagationDefaults(t *testing.T) {
 	}{
 		"nil spec": {
 			initial:  ConfigMapPropagation{},
-			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: defaultNamespace}},
+			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: defaultSelector}},
 		},
-		"original namespace empty": {
-			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: selector}},
-			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: defaultNamespace, Selector: selector}},
+		"selector empty": {
+			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: namespace}},
+			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: namespace, Selector: defaultSelector}},
 		},
-		"with namespace": {
-			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: otherNamespace}},
-			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: otherNamespace}},
+		"with selector": {
+			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: otherSelector}},
+			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: otherSelector}},
 		},
 	}
 	for n, tc := range testCases {

@@ -47,10 +47,11 @@ import (
 )
 
 const (
-	testNS           = "test-namespace"
-	sequenceName     = "test-sequence"
-	sequenceUID      = "test-sequence-uid"
-	replyChannelName = "reply-channel"
+	testNS             = "test-namespace"
+	sequenceName       = "test-sequence"
+	sequenceUID        = "test-sequence-uid"
+	replyChannelName   = "reply-channel"
+	sequenceGeneration = 7
 )
 
 func init() {
@@ -256,6 +257,7 @@ func TestAllCases(t *testing.T) {
 			Objects: []runtime.Object{
 				reconciletesting.NewFlowsSequence(sequenceName, testNS,
 					reconciletesting.WithInitFlowsSequenceConditions,
+					reconciletesting.WithFlowsSequenceGeneration(sequenceGeneration),
 					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{
 						createDestination(0),
@@ -275,6 +277,8 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
 					reconciletesting.WithInitFlowsSequenceConditions,
+					reconciletesting.WithFlowsSequenceGeneration(sequenceGeneration),
+					reconciletesting.WithFlowsSequenceStatusObservedGeneration(sequenceGeneration),
 					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{
 						createDestination(0),

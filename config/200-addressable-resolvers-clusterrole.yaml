@@ -167,12 +167,12 @@ metadata:
     duck.knative.dev/addressable: "true"
 # Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
-  - apiGroups:
-      - configs.knative.dev
-    resources:
-      - configmappropagations
-      - configmappropagations/status
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+    - configs.knative.dev
+  resources:
+    - configmappropagations
+    - configmappropagations/status
+  verbs:
+    - get
+    - list
+    - watch
