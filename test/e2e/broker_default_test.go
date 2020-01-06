@@ -31,6 +31,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -181,7 +182,12 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				// Using event type, source and extensions as part of the body for easier debugging.
 				extensionsStr := joinSortedExtensions(eventToSend.Extensions)
 				body := fmt.Sprintf(("Body-%s-%s-%s"), eventToSend.Type, eventToSend.Source, extensionsStr)
-				cloudEvent := makeCloudEvent(eventToSend, body)
+				cloudEvent := cloudevents.New(
+					fmt.Sprintf(`{"msg":%q}`, body),
+					cloudevents.WithSource(eventToSend.Source),
+					cloudevents.WithType(eventToSend.Type),
+					cloudevents.WithExtensions(eventToSend.Extensions),
+				)
 				// Create sender pod.
 				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.Extensions)
 				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
@@ -217,15 +223,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 		})
 	}
-
-}
-
-func makeCloudEvent(eventToSend eventContext, body string) *resources.CloudEvent {
-	return &resources.CloudEvent{
-		Source:     eventToSend.Source,
-		Type:       eventToSend.Type,
-		Extensions: eventToSend.Extensions,
-		Data:       fmt.Sprintf(`{"msg":%q}`, body)}
 }
 
 func getTriggerFilterOption(deprecatedTriggerFilter bool, context eventContext) resources.TriggerOption {

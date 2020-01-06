@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgTest "knative.dev/pkg/test"
+
+	"knative.dev/eventing/test/common/cloudevents"
 )
 
 // PodOption enables further configuration of a Pod.
@@ -37,23 +39,23 @@ type PodOption func(*corev1.Pod)
 type RoleOption func(*rbacv1.Role)
 
 // EventSenderPod creates a Pod that sends a single event to the given address.
-func EventSenderPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
+func EventSenderPod(name string, sink string, event *cloudevents.CloudEvent) (*corev1.Pod, error) {
 	return eventSenderPodImage("sendevents", name, sink, event, false)
 }
 
 // EventSenderTracingPod creates a Pod that sends a single event to the given address.
-func EventSenderTracingPod(name string, sink string, event *CloudEvent) (*corev1.Pod, error) {
+func EventSenderTracingPod(name string, sink string, event *cloudevents.CloudEvent) (*corev1.Pod, error) {
 	return eventSenderPodImage("sendevents", name, sink, event, true)
 }
 
-func eventSenderPodImage(imageName string, name string, sink string, event *CloudEvent, addTracing bool) (*corev1.Pod, error) {
+func eventSenderPodImage(imageName string, name string, sink string, event *cloudevents.CloudEvent, addTracing bool) (*corev1.Pod, error) {
 	if event.Encoding == "" {
-		event.Encoding = CloudEventEncodingBinary
+		event.Encoding = cloudevents.DefaultEncoding
 	}
-	eventExtensionsBytes, error := json.Marshal(event.Extensions)
+	eventExtensionsBytes, err := json.Marshal(event.Extensions)
 	eventExtensions := string(eventExtensionsBytes)
-	if error != nil {
-		return nil, fmt.Errorf("encountered error when we marshall cloud event extensions %v", error)
+	if err != nil {
+		return nil, fmt.Errorf("encountered error when we marshall cloud event extensions %v", err)
 	}
 
 	args := []string{
@@ -62,7 +64,7 @@ func eventSenderPodImage(imageName string, name string, sink string, event *Clou
 		"-event-type",
 		event.Type,
 		"-event-source",
-		event.Source,
+		event.Source.String(),
 		"-event-extensions",
 		eventExtensions,
 		"-event-data",
@@ -86,7 +88,7 @@ func eventSenderPodImage(imageName string, name string, sink string, event *Clou
 				ImagePullPolicy: corev1.PullAlways,
 				Args:            args,
 			}},
-			//TODO restart on failure?
+			// Never restart the event sender Pod.
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}, nil
@@ -120,7 +122,7 @@ func eventLoggerPod(imageName string, name string) *corev1.Pod {
 }
 
 // EventTransformationPod creates a Pod that transforms events received.
-func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
+func EventTransformationPod(name string, event *cloudevents.CloudEvent) *corev1.Pod {
 	const imageName = "transformevents"
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -136,7 +138,7 @@ func EventTransformationPod(name string, event *CloudEvent) *corev1.Pod {
 					"-event-type",
 					event.Type,
 					"-event-source",
-					event.Source,
+					event.Source.String(),
 					"-event-data",
 					event.Data,
 				},
@@ -159,7 +161,7 @@ func HelloWorldPod(name string, options ...PodOption) *corev1.Pod {
 				Image:           pkgTest.ImagePath(imageName),
 				ImagePullPolicy: corev1.PullAlways,
 			}},
-			RestartPolicy: corev1.RestartPolicyNever,
+			RestartPolicy: corev1.RestartPolicyAlways,
 		},
 	}
 	for _, option := range options {
@@ -176,7 +178,7 @@ func WithLabelsForPod(labels map[string]string) PodOption {
 }
 
 // SequenceStepperPod creates a Pod that can be used as a step in testing Sequence.
-// Note event data used in the test must be CloudEventBaseData, and this Pod as a Subscriber will receive the event,
+// Note event data used in the test must be BaseData, and this Pod as a Subscriber will receive the event,
 // and return a new event with eventMsgAppender added to data.Message.
 func SequenceStepperPod(name, eventMsgAppender string) *corev1.Pod {
 	const imageName = "sequencestepper"

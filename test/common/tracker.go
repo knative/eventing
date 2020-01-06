@@ -22,6 +22,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,8 +34,6 @@ import (
 	"knative.dev/eventing/test/common/resources"
 
 	"knative.dev/pkg/kmeta"
-
-	"knative.dev/pkg/test/logging"
 )
 
 // Tracker holds resources that need to be tracked during test execution.
@@ -44,7 +43,7 @@ import (
 type Tracker struct {
 	resourcesToCheckStatus []resources.MetaResource
 	resourcesToClean       []ResourceDeleter
-	logf                   logging.FormatLogger
+	tc                     *testing.T
 	dynamicClient          dynamic.Interface
 }
 
@@ -55,11 +54,11 @@ type ResourceDeleter struct {
 }
 
 // NewTracker creates a new Tracker
-func NewTracker(log logging.FormatLogger, client dynamic.Interface) *Tracker {
+func NewTracker(t *testing.T, client dynamic.Interface) *Tracker {
 	tracker := &Tracker{
 		resourcesToCheckStatus: make([]resources.MetaResource, 0),
 		resourcesToClean:       make([]ResourceDeleter, 0),
-		logf:                   log,
+		tc:                     t,
 		dynamicClient:          client,
 	}
 	return tracker
@@ -117,25 +116,31 @@ func (t *Tracker) AddObj(obj kmeta.OwnerRefable) {
 
 // Clean will delete all registered resources
 func (t *Tracker) Clean(awaitDeletion bool) error {
+	logf := t.tc.Logf
 	for _, deleter := range t.resourcesToClean {
 		r, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{})
 		if err != nil {
-			t.logf("Failed to get to-be cleaned resource %q : %v", deleter.Name, err)
+			logf("Failed to get to-be cleaned resource %q : %v", deleter.Name, err)
 		} else {
-			bytes, _ := json.MarshalIndent(r, "", "  ")
-			t.logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
+			// Only log the detailed resource data if the test fails.
+			if t.tc.Failed() {
+				bytes, _ := json.MarshalIndent(r, "", "  ")
+				logf("Cleaning resource: %q\n%+v", deleter.Name, string(bytes))
+			} else {
+				logf("Cleaning resource: %q", deleter.Name)
+			}
 		}
 		if err := deleter.Resource.Delete(deleter.Name, nil); err != nil {
-			t.logf("Failed to clean the resource %q : %v", deleter.Name, err)
+			logf("Failed to clean the resource %q : %v", deleter.Name, err)
 		} else if awaitDeletion {
-			t.logf("Waiting for %s to be deleted", deleter.Name)
+			logf("Waiting for %s to be deleted", deleter.Name)
 			if err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 				if _, err := deleter.Resource.Get(deleter.Name, metav1.GetOptions{}); err != nil {
 					return true, nil
 				}
 				return false, nil
 			}); err != nil {
-				t.logf("Failed to clean the resource %q : %v", deleter.Name, err)
+				logf("Failed to clean the resource %q : %v", deleter.Name, err)
 			}
 		}
 	}
@@ -144,7 +149,7 @@ func (t *Tracker) Clean(awaitDeletion bool) error {
 
 // WaitForKResourcesReady will wait for all registered KResources to become ready.
 func (t *Tracker) WaitForKResourcesReady() error {
-	t.logf("Waiting for all KResources to become ready")
+	t.tc.Logf("Waiting for all KResources to become ready")
 	for _, metaResource := range t.resourcesToCheckStatus {
 		if err := duck.WaitForResourceReady(t.dynamicClient, &metaResource); err != nil {
 			return fmt.Errorf("failed waiting for %+v to become ready: %v", metaResource, err)

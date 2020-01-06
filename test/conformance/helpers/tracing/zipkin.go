@@ -21,8 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/eventing/test/common"
 	"knative.dev/pkg/test/zipkin"
+
+	"knative.dev/eventing/test/common"
 )
 
 // Setup sets up port forwarding to Zipkin and sets the knative-eventing tracing config to debug

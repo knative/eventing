@@ -27,6 +27,7 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -83,7 +84,7 @@ func TestFlowsSequence(t *testing.T) {
 	}
 
 	// create channel as reply of the Sequence
-	// TODO(Fredy-Z): now we'll have to use a channel plus its subscription here, as reply of the Sequence
+	// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Sequence
 	//                must be Addressable. In the future if we use Knative Serving in the tests, we can
 	//                make the logger service as a Knative service, and remove the channel and subscription.
 	client.CreateChannelOrFail(channelName, channelTypeMeta)
@@ -118,18 +119,16 @@ func TestFlowsSequence(t *testing.T) {
 
 	// send fake CloudEvent to the Sequence
 	msg := fmt.Sprintf("TestSequence %s", uuid.NewUUID())
-	// NOTE: the eventData format must be CloudEventBaseData, as it needs to be correctly parsed in the stepper service.
-	eventData := resources.CloudEventBaseData{Message: msg}
+	// NOTE: the eventData format must be BaseData, as it needs to be correctly parsed in the stepper service.
+	eventData := cloudevents.BaseData{Message: msg}
 	eventDataBytes, err := json.Marshal(eventData)
 	if err != nil {
 		t.Fatalf("Failed to convert %v to json: %v", eventData, err)
 	}
-	event := &resources.CloudEvent{
-		Source:   senderPodName,
-		Type:     resources.CloudEventDefaultType,
-		Data:     string(eventDataBytes),
-		Encoding: resources.CloudEventDefaultEncoding,
-	}
+	event := cloudevents.New(
+		string(eventDataBytes),
+		cloudevents.WithSource(senderPodName),
+	)
 	if err := client.SendFakeEventToAddressable(
 		senderPodName,
 		sequenceName,

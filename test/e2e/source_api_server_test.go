@@ -170,7 +170,7 @@ func TestApiServerSource(t *testing.T) {
 		client.CreatePodOrFail(helloworldPod)
 
 		// verify the logger service receives the event(s)
-		// TODO(Fredy-Z): right now it's only doing a very basic check by looking for the tc.data word,
+		// TODO(chizhg): right now it's only doing a very basic check by looking for the tc.data word,
 		//                we can add a json matcher to improve it in the future.
 
 		if tc.expected == "" {

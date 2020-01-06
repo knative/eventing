@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -44,16 +45,14 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T, channelTestRunne
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
-		client.WaitForResourcesReady(&channel)
+		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create transformation pod and service
 		transformedEventBody := fmt.Sprintf("eventBody %s", uuid.NewUUID())
-		eventAfterTransformation := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventAfterTransformation := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
+			cloudevents.WithSource(senderName),
+		)
 		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
 		client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
 
@@ -84,12 +83,10 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T, channelTestRunne
 
 		// send fake CloudEvent to the first channel
 		eventBody := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
-		eventToSend := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventToSend := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, eventBody),
+			cloudevents.WithSource(senderName),
+		)
 		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], &channel, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}

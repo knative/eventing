@@ -24,6 +24,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -61,16 +62,15 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 
 		// create a new broker
 		client.CreateBrokerOrFail(brokerName, &channel)
-		client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, common.BrokerTypeMeta)
 
 		// create the event we want to transform to
 		transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-		eventAfterTransformation := &resources.CloudEvent{
-			Source:   eventSource2,
-			Type:     eventType2,
-			Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventAfterTransformation := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
+			cloudevents.WithSource(eventSource2),
+			cloudevents.WithType(eventType2),
+		)
 
 		// create the transformation service for trigger1
 		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
@@ -98,7 +98,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 
 		// create channel for trigger3
 		client.CreateChannelOrFail(channelName, &channel)
-		client.WaitForResourceReady(channelName, &channel)
+		client.WaitForResourceReadyOrFail(channelName, &channel)
 
 		// create trigger3 to receive the transformed event, and send it to the channel
 		channelURL, err := client.GetAddressableURI(channelName, &channel)
@@ -130,12 +130,11 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		}
 
 		// send fake CloudEvent to the broker
-		eventToSend := &resources.CloudEvent{
-			Source:   eventSource1,
-			Type:     eventType1,
-			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventToSend := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, eventBody),
+			cloudevents.WithSource(eventSource1),
+			cloudevents.WithType(eventType1),
+		)
 		if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 		}

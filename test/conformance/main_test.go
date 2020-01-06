@@ -20,9 +20,10 @@ import (
 	"os"
 	"testing"
 
+	"knative.dev/pkg/test/zipkin"
+
 	"knative.dev/eventing/test"
 	"knative.dev/eventing/test/common"
-	"knative.dev/pkg/test/zipkin"
 )
 
 var channelTestRunner common.ChannelTestRunner

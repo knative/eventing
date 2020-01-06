@@ -30,6 +30,7 @@ import (
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -93,7 +94,7 @@ func TestParallel(t *testing.T) {
 		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 		// create channel as reply of the Parallel
-		// TODO(Fredy-Z): now we'll have to use a channel plus its subscription here, as reply of the Subscription
+		// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
 		//                must be Addressable.
 		replyChannelName := fmt.Sprintf("reply-%s", tc.name)
 		client.CreateChannelOrFail(replyChannelName, channelTypeMeta)
@@ -118,18 +119,16 @@ func TestParallel(t *testing.T) {
 
 		// send fake CloudEvent to the Parallel
 		msg := fmt.Sprintf("TestParallel %s - ", uuid.NewUUID())
-		// NOTE: the eventData format must be CloudEventBaseData, as it needs to be correctly parsed in the stepper service.
-		eventData := resources.CloudEventBaseData{Message: msg}
+		// NOTE: the eventData format must be BaseData, as it needs to be correctly parsed in the stepper service.
+		eventData := cloudevents.BaseData{Message: msg}
 		eventDataBytes, err := json.Marshal(eventData)
 		if err != nil {
 			t.Fatalf("Failed to convert %v to json: %v", eventData, err)
 		}
-		event := &resources.CloudEvent{
-			Source:   senderPodName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     string(eventDataBytes),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		event := cloudevents.New(
+			string(eventDataBytes),
+			cloudevents.WithSource(senderPodName),
+		)
 		if err := client.SendFakeEventToAddressable(
 			senderPodName,
 			tc.name,

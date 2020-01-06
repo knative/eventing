@@ -29,6 +29,7 @@ import (
 	"knative.dev/eventing/pkg/defaultchannel"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/duck"
 	"knative.dev/eventing/test/common/resources"
 )
@@ -64,7 +65,7 @@ func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner common.Ch
 func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
 	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// we cannot run these tests in parallel as the updateDefaultChannelCM function is not thread-safe
-		// TODO(Fredy-Z): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
+		// TODO(chizhg): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
 		client := common.Setup(st, false)
 		defer common.TearDown(client)
 
@@ -116,12 +117,10 @@ func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChann
 
 	// send fake CloudEvent to the channel
 	body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-	event := &resources.CloudEvent{
-		Source:   senderName,
-		Type:     resources.CloudEventDefaultType,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: resources.CloudEventDefaultEncoding,
-	}
+	event := cloudevents.New(
+		fmt.Sprintf(`{"msg":%q}`, body),
+		cloudevents.WithSource(senderName),
+	)
 
 	if err := client.SendFakeEventToAddressable(senderName, channelName, common.ChannelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)

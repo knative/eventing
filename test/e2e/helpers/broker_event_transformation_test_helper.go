@@ -24,6 +24,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -56,16 +57,15 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 
 		// create a new broker
 		client.CreateBrokerOrFail(brokerName, &channel)
-		client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, common.BrokerTypeMeta)
 
 		// create the event we want to transform to
 		transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-		eventAfterTransformation := &resources.CloudEvent{
-			Source:   eventSource2,
-			Type:     eventType2,
-			Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventAfterTransformation := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
+			cloudevents.WithSource(eventSource2),
+			cloudevents.WithType(eventType2),
+		)
 
 		// create the transformation service
 		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
@@ -97,12 +97,12 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 		}
 
 		// send fake CloudEvent to the broker
-		eventToSend := &resources.CloudEvent{
-			Source:   eventSource1,
-			Type:     eventType1,
-			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventToSend := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, eventBody),
+			cloudevents.WithSource(eventSource1),
+			cloudevents.WithType(eventType1),
+		)
+
 		if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 		}

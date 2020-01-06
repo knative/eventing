@@ -22,12 +22,14 @@ import (
 	"testing"
 	"time"
 
+	ce "github.com/cloudevents/sdk-go"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/zipkin"
 
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 )
@@ -177,8 +179,10 @@ func setupChannelTracingWithReply(
 	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// Create the subscriber, a Pod that mutates the event.
-	transformerPod := resources.EventTransformationPod("transformer", &resources.CloudEvent{
-		Type: "mutated",
+	transformerPod := resources.EventTransformationPod("transformer", &cloudevents.CloudEvent{
+		EventContextV1: ce.EventContextV1{
+			Type: "mutated",
+		},
 	})
 	client.CreatePodOrFail(transformerPod, common.WithService(transformerPod.Name))
 
@@ -207,13 +211,11 @@ func setupChannelTracingWithReply(
 	senderName := "sender"
 	eventID := fmt.Sprintf("%s", uuid.NewUUID())
 	body := fmt.Sprintf("TestChannelTracing %s", eventID)
-	event := &resources.CloudEvent{
-		ID:       eventID,
-		Source:   senderName,
-		Type:     resources.CloudEventDefaultType,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: resources.CloudEventEncodingBinary,
-	}
+	event := cloudevents.New(
+		fmt.Sprintf(`{"msg":%q}`, body),
+		cloudevents.WithSource(senderName),
+		cloudevents.WithID(eventID),
+	)
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	sendEvent := client.SendFakeEventToAddressable

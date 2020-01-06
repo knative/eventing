@@ -37,7 +37,7 @@ import (
 	"knative.dev/pkg/test/helpers"
 )
 
-// TODO(Fredy-Z): break this file into multiple files when it grows too large.
+// TODO(chizhg): break this file into multiple files when it grows too large.
 
 var coreAPIGroup = corev1.SchemeGroupVersion.Group
 var coreAPIVersion = corev1.SchemeGroupVersion.Version

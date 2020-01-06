@@ -24,9 +24,10 @@ import (
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"knative.dev/pkg/test"
+
 	eventing "knative.dev/eventing/pkg/client/clientset/versioned"
 	legacy "knative.dev/eventing/pkg/legacyclient/clientset/versioned"
-	"knative.dev/pkg/test"
 )
 
 // Client holds instances of interfaces for making requests to Knative.
@@ -76,6 +77,6 @@ func NewClient(configPath string, clusterName string, namespace string, t *testi
 
 	client.Namespace = namespace
 	client.T = t
-	client.Tracker = NewTracker(t.Logf, client.Dynamic)
+	client.Tracker = NewTracker(t, client.Dynamic)
 	return client, nil
 }

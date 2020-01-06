@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -43,7 +44,7 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chan
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
-		client.WaitForResourcesReady(&channel)
+		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create loggerPod and expose it as a service
 		pod := resources.EventLoggerPod(loggerPodName)
@@ -65,12 +66,10 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chan
 
 		// send fake CloudEvent to the first channel
 		body := fmt.Sprintf("TestChannelDeadLetterSink %s", uuid.NewUUID())
-		event := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		event := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, body),
+			cloudevents.WithSource(senderName),
+		)
 		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], &channel, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}

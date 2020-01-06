@@ -21,12 +21,14 @@ import (
 	"net/http"
 	"testing"
 
+	ce "github.com/cloudevents/sdk-go"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 )
@@ -98,8 +100,10 @@ func setupBrokerTracing(
 
 	// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
 	// except the reply's event's type is changed to bar.
-	eventTransformerPod := resources.EventTransformationPod("transformer", &resources.CloudEvent{
-		Type: etLogger,
+	eventTransformerPod := resources.EventTransformationPod("transformer", &cloudevents.CloudEvent{
+		EventContextV1: ce.EventContextV1{
+			Type: etLogger,
+		},
 	})
 	client.CreatePodOrFail(eventTransformerPod, common.WithService(eventTransformerPod.Name))
 
@@ -120,13 +124,12 @@ func setupBrokerTracing(
 	senderName := "sender"
 	eventID := fmt.Sprintf("%s", uuid.NewUUID())
 	body := fmt.Sprintf("TestBrokerTracing %s", eventID)
-	event := &resources.CloudEvent{
-		ID:       eventID,
-		Source:   senderName,
-		Type:     etTransformer,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: resources.CloudEventEncodingBinary,
-	}
+	event := cloudevents.New(
+		fmt.Sprintf(`{"msg":%q}`, body),
+		cloudevents.WithSource(senderName),
+		cloudevents.WithID(eventID),
+		cloudevents.WithType(etTransformer),
+	)
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	sendEvent := client.SendFakeEventToAddressable

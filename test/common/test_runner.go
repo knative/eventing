@@ -99,7 +99,7 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 	CreateNamespaceIfNeeded(t, client, namespace)
 
 	// Disallow manually interrupting the tests.
-	// TODO(Fredy-Z): t.Skip() can only be called on its own goroutine.
+	// TODO(chizhg): t.Skip() can only be called on its own goroutine.
 	//                Investigate if there is other way to gracefully terminate the tests in the middle.
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -143,7 +143,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 
 		// https://github.com/kubernetes/kubernetes/issues/66689
 		// We can only start creating pods after the default ServiceAccount is created by the kube-controller-manager.
-		err = waitForServiceAccountExists(t, client, "default", namespace)
+		err = waitForServiceAccountExists(client, "default", namespace)
 		if err != nil {
 			t.Fatalf("The default ServiceAccount was not created for the Namespace: %s", namespace)
 		}
@@ -160,7 +160,7 @@ func CreateNamespaceIfNeeded(t *testing.T, client *Client, namespace string) {
 }
 
 // waitForServiceAccountExists waits until the ServiceAccount exists.
-func waitForServiceAccountExists(t *testing.T, client *Client, name, namespace string) error {
+func waitForServiceAccountExists(client *Client, name, namespace string) error {
 	return wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
 		sas := client.Kube.Kube.CoreV1().ServiceAccounts(namespace)
 		if _, err := sas.Get(name, metav1.GetOptions{}); err == nil {
@@ -177,15 +177,4 @@ func DeleteNameSpace(client *Client) error {
 		return client.Kube.Kube.CoreV1().Namespaces().Delete(client.Namespace, nil)
 	}
 	return err
-}
-
-// LogPodLogsForDebugging add the pod logs in the testing log for further debugging.
-func LogPodLogsForDebugging(client *Client, podName, containerName string) {
-	namespace := client.Namespace
-	logs, err := client.Kube.PodLogs(podName, containerName, namespace)
-	if err != nil {
-		client.T.Logf("Failed to get the logs for container %q of the pod %q in namespace %q: %v", containerName, podName, namespace, err)
-	} else {
-		client.T.Logf("Logs for the container %q of the pod %q in namespace %q:\n%s", containerName, podName, namespace, string(logs))
-	}
 }

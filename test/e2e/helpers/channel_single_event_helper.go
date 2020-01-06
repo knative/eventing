@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/common/cloudevents"
 	"knative.dev/eventing/test/common/resources"
 )
 
@@ -61,12 +62,11 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestR
 
 		// send fake CloudEvent to the channel
 		body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-		event := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: encoding,
-		}
+		event := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, body),
+			cloudevents.WithSource(senderName),
+			cloudevents.WithEncoding(encoding),
+		)
 
 		if err := client.SendFakeEventToAddressable(senderName, channelName, &channel, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
