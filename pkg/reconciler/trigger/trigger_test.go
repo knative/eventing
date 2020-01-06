@@ -365,7 +365,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
-					reconciletesting.WithTriggerBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: "),
+					reconciletesting.WithTriggerBrokerUnknown("", ""),
 				),
 			}},
 		}, {
@@ -594,7 +594,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
+					reconciletesting.WithTriggerSubscriptionNotConfigured(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -629,7 +629,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
+					reconciletesting.WithTriggerSubscriptionNotConfigured(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -662,7 +662,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
+					reconciletesting.WithTriggerSubscriptionNotConfigured(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -695,7 +695,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
+					reconciletesting.WithTriggerSubscriptionNotConfigured(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberResolvedTargetURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -728,7 +728,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil"),
+					reconciletesting.WithTriggerSubscriptionNotConfigured(),
 					reconciletesting.WithTriggerStatusSubscriberURI(k8sServiceResolvedURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -787,7 +787,7 @@ func TestAllCases(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
-					reconciletesting.WithTriggerNotSubscribed("SubscriptionFalse", "The status of Subscription is False: test induced [error]"),
+					reconciletesting.WithTriggerNotSubscribed("testInducedError", "test induced [error]"),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
 					reconciletesting.WithTriggerDependencyReady(),
@@ -885,7 +885,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
-					reconciletesting.WithTriggerDependencyFailed("DependencyFalse", "The status of Dependency is False: "),
+					reconciletesting.WithTriggerDependencyFailed("NotFound", ""),
 				),
 			}},
 		}, {
@@ -917,7 +917,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithTriggerSubscribed(),
 					reconciletesting.WithTriggerStatusSubscriberURI(subscriberURI),
 					reconciletesting.WithTriggerSubscriberResolvedSucceeded(),
-					reconciletesting.WithTriggerDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: "),
+					reconciletesting.WithTriggerDependencyUnknown("", ""),
 				),
 			}},
 		},

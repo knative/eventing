@@ -141,6 +141,12 @@ func WithTriggerSubscribedUnknown(reason, message string) TriggerOption {
 	}
 }
 
+func WithTriggerSubscriptionNotConfigured() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriptionNotConfigured()
+	}
+}
+
 func WithTriggerSubscribed() TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Status.PropagateSubscriptionStatus(v1alpha1.TestHelper.ReadySubscriptionStatus())

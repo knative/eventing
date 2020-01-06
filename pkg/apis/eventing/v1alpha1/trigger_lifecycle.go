@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -63,20 +64,19 @@ func (ts *TriggerStatus) InitializeConditions() {
 func (ts *TriggerStatus) PropagateBrokerStatus(bs *BrokerStatus) {
 	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
 	if bc == nil {
-		ts.MarkBrokerUnknown("BrokerUnknown", "The condition of Broker is nil")
+		ts.MarkBrokerNotConfigured()
 		return
 	}
-	if bc.IsTrue() {
+
+	switch {
+	case bc.Status == corev1.ConditionUnknown:
+		ts.MarkBrokerUnknown(bc.Reason, bc.Message)
+	case bc.Status == corev1.ConditionTrue:
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionBroker)
-	} else {
-		msg := bc.Message
-		if bc.IsUnknown() {
-			ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: %s", msg)
-		} else if bc.IsFalse() {
-			ts.MarkBrokerFailed("BrokerFalse", "The status of Broker is False: %s", msg)
-		} else {
-			ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
-		}
+	case bc.Status == corev1.ConditionFalse:
+		ts.MarkBrokerFailed(bc.Reason, bc.Message)
+	default:
+		ts.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 	}
 }
 
@@ -88,23 +88,27 @@ func (ts *TriggerStatus) MarkBrokerUnknown(reason, messageFormat string, message
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionBroker, reason, messageFormat, messageA...)
 }
 
+func (ts *TriggerStatus) MarkBrokerNotConfigured() {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionBroker,
+		"BrokerNotConfigured", "Broker has not yet been reconciled.")
+}
+
 func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *messagingv1alpha1.SubscriptionStatus) {
 	sc := messagingv1alpha1.SubCondSet.Manage(ss).GetTopLevelCondition()
 	if sc == nil {
-		ts.MarkSubscribedUnknown("SubscriptionUnknown", "The condition of Subscription is nil")
+		ts.MarkSubscriptionNotConfigured()
 		return
 	}
-	if sc.IsTrue() {
+
+	switch {
+	case sc.Status == corev1.ConditionUnknown:
+		ts.MarkSubscribedUnknown(sc.Reason, sc.Message)
+	case sc.Status == corev1.ConditionTrue:
 		triggerCondSet.Manage(ts).MarkTrue(TriggerConditionSubscribed)
-	} else {
-		msg := sc.Message
-		if sc.IsUnknown() {
-			ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is Unknown: %s", msg)
-		} else if sc.IsFalse() {
-			ts.MarkNotSubscribed("SubscriptionFalse", "The status of Subscription is False: %s", msg)
-		} else {
-			ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Broker is invalid: %v", sc.Status)
-		}
+	case sc.Status == corev1.ConditionFalse:
+		ts.MarkNotSubscribed(sc.Reason, sc.Message)
+	default:
+		ts.MarkSubscribedUnknown("SubscriptionUnknown", "The status of Subscription is invalid: %v", sc.Status)
 	}
 }
 
@@ -118,6 +122,11 @@ func (ts *TriggerStatus) MarkSubscribedUnknown(reason, messageFormat string, mes
 
 func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
 	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
+}
+
+func (ts *TriggerStatus) MarkSubscriptionNotConfigured() {
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscribed,
+		"SubscriptionNotConfigured", "Subscription has not yet been reconciled.")
 }
 
 func (ts *TriggerStatus) MarkSubscriberResolvedSucceeded() {
@@ -144,20 +153,26 @@ func (ts *TriggerStatus) MarkDependencyUnknown(reason, messageFormat string, mes
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionDependency, reason, messageFormat, messageA...)
 }
 
+func (ts *TriggerStatus) MarkDependencyNotConfigured() {
+	triggerCondSet.Manage(ts).MarkUnknown(EventTypeConditionBrokerReady,
+		"DependencyNotConfigured", "Dependency has not yet been reconciled.")
+}
+
 func (ts *TriggerStatus) PropagateDependencyStatus(ks *duckv1.KResource) {
 	kc := ks.Status.GetCondition(apis.ConditionReady)
 	if kc == nil {
-		ts.MarkDependencyUnknown("DependencyUnknown", "The condition of Dependency is nil")
+		ts.MarkDependencyNotConfigured()
 		return
 	}
-	if kc.IsTrue() {
+
+	switch {
+	case kc.Status == corev1.ConditionUnknown:
+		ts.MarkDependencyUnknown(kc.Reason, kc.Message)
+	case kc.Status == corev1.ConditionTrue:
 		ts.MarkDependencySucceeded()
-	} else {
-		msg := kc.Message
-		if kc.IsUnknown() {
-			ts.MarkDependencyUnknown("DependencyUnknown", "The status of Dependency is Unknown: %s", msg)
-		} else {
-			ts.MarkDependencyFailed("DependencyFalse", "The status of Dependency is False: %s", msg)
-		}
+	case kc.Status == corev1.ConditionFalse:
+		ts.MarkDependencyFailed(kc.Reason, kc.Message)
+	default:
+		ts.MarkDependencyUnknown("DependencyUnknown", "The status of Dependency is invalid: %v", kc.Status)
 	}
 }

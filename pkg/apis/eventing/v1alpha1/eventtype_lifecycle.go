@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -72,22 +73,25 @@ func (et *EventTypeStatus) MarkBrokerUnknown(reason, messageFormat string, messa
 	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerReady, reason, messageFormat, messageA...)
 }
 
+func (et *EventTypeStatus) MarkBrokerNotConfigured() {
+	eventTypeCondSet.Manage(et).MarkUnknown(EventTypeConditionBrokerReady,
+		"BrokerNotConfigured", "Broker has not yet been reconciled.")
+}
+
 func (et *EventTypeStatus) PropagateBrokerStatus(bs *BrokerStatus) {
 	bc := brokerCondSet.Manage(bs).GetTopLevelCondition()
 	if bc == nil {
-		et.MarkBrokerUnknown("BrokerUnknown", "The condition of Broker is nil")
+		et.MarkBrokerNotConfigured()
 		return
 	}
-	if bc.IsTrue() {
+	switch {
+	case bc.Status == corev1.ConditionUnknown:
+		et.MarkBrokerUnknown(bc.Reason, bc.Message)
+	case bc.Status == corev1.ConditionTrue:
 		eventTypeCondSet.Manage(et).MarkTrue(EventTypeConditionBrokerReady)
-	} else {
-		msg := bc.Message
-		if bc.IsUnknown() {
-			et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is Unknown: %s", msg)
-		} else if bc.IsFalse() {
-			et.MarkBrokerFailed("BrokerFalse", "The status of Broker is False: %s", msg)
-		} else {
-			et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
-		}
+	case bc.Status == corev1.ConditionFalse:
+		et.MarkBrokerFailed(bc.Reason, bc.Message)
+	default:
+		et.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", bc.Status)
 	}
 }

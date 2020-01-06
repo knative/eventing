@@ -80,23 +80,30 @@ func (cs *ChannelStatus) MarkBackingChannelUnknown(reason, messageFormat string,
 	chCondSet.Manage(cs).MarkUnknown(ChannelConditionBackingChannelReady, reason, messageFormat, messageA...)
 }
 
+func (cs *ChannelStatus) MarkBackingChannelNotConfigured() {
+	chCondSet.Manage(cs).MarkUnknown(ChannelConditionBackingChannelReady,
+		"BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")
+}
+
 func (cs *ChannelStatus) MarkBackingChannelReady() {
 	chCondSet.Manage(cs).MarkTrue(ChannelConditionBackingChannelReady)
 }
 
 func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) {
 	// TODO: Once you can get a Ready status from Channelable in a generic way, use it here.
-
 	readyCondition := chs.Status.GetCondition(apis.ConditionReady)
 	if readyCondition == nil {
-		cs.MarkBackingChannelUnknown("readyCondition is: nil", "readyCondition is: nil")
+		cs.MarkBackingChannelNotConfigured()
 	} else {
-		if readyCondition.Status == corev1.ConditionTrue {
-			cs.MarkBackingChannelReady()
-		} else if readyCondition.Status == corev1.ConditionUnknown {
+		switch {
+		case readyCondition.Status == corev1.ConditionUnknown:
 			cs.MarkBackingChannelUnknown(readyCondition.Reason, readyCondition.Message)
-		} else {
+		case readyCondition.Status == corev1.ConditionTrue:
+			cs.MarkBackingChannelReady()
+		case readyCondition.Status == corev1.ConditionFalse:
 			cs.MarkBackingChannelFailed(readyCondition.Reason, readyCondition.Message)
+		default:
+			cs.MarkBackingChannelUnknown("BackingChannelUnknown", "The status of BackingChannel is invalid: %v", readyCondition.Status)
 		}
 	}
 	// Set the address and update the Addressable conditions.
