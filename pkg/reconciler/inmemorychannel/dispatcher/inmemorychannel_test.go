@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+	"knative.dev/eventing/pkg/channel"
 	"testing"
 
 	"knative.dev/pkg/apis"
@@ -126,6 +127,7 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
+			configStore:           channel.NewEventDispatcherConfigStore(logger),
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO fix
 			inmemorychannelInformer: nil,

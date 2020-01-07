@@ -43,7 +43,8 @@ type Config struct {
 	Subscriptions []eventingduck.SubscriberSpec `json:"subscriptions"`
 	// AsyncHandler controls whether the Subscriptions are called synchronous or asynchronously.
 	// It is expected to be false when used as a sidecar.
-	AsyncHandler bool `json:"asyncHandler,omitempty"`
+	AsyncHandler     bool `json:"asyncHandler,omitempty"`
+	DispatcherConfig channel.EventDispatcherConfig
 }
 
 // Handler is a http.Handler that takes a single request in and fans it out to N other servers.
@@ -72,7 +73,7 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 	handler := &Handler{
 		logger:         logger,
 		config:         config,
-		dispatcher:     channel.NewEventDispatcher(logger),
+		dispatcher:     channel.NewEventDispatcherFromConfig(logger, config.DispatcherConfig),
 		receivedEvents: make(chan *forwardEvent, eventBufferSize),
 		timeout:        defaultTimeout,
 	}
