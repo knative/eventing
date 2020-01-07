@@ -1253,7 +1253,7 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  digest = "1:ff5072a005cc491b28761e2c806b01ed130749138f60955388710d7bf0da534b"
+  digest = "1:7f7abc607bbb8a8aaa55583bf3084f195fb702d5f5f0fbb1c5fe31de3d4f662d"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1317,6 +1317,7 @@
     "network",
     "profiling",
     "ptr",
+    "reconciler",
     "reconciler/testing",
     "resolver",
     "signals",
@@ -1354,7 +1355,7 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "e573a155e36ce4b46495180339d2a3219e8cb79d"
+  revision = "06533c174d8a3c78274fa34c32505d21c5ccb74b"
   source = "github.com/n3wscott/pkg"
 
 [[projects]]
@@ -1513,6 +1514,7 @@
     "knative.dev/pkg/metrics/metricstest",
     "knative.dev/pkg/metrics/testing",
     "knative.dev/pkg/profiling",
+    "knative.dev/pkg/reconciler",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/resolver",
     "knative.dev/pkg/signals",

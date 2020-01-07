@@ -62,7 +62,7 @@ type Reconciler struct {
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ContainerSource) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ContainerSource) pkgrec.Event {
 	// No need to reconcile if the source has been marked for deletion.
 	if source.DeletionTimestamp != nil {
 		return nil
@@ -100,7 +100,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.Contain
 
 	err := r.setSinkURIArg(ctx, source, &args)
 	if err != nil {
-		return pkgrec.New(corev1.EventTypeWarning, "SetSinkURIFailed", "Failed to set Sink URI: %v", err)
+		return pkgrec.NewReconcilerEvent(corev1.EventTypeWarning, "SetSinkURIFailed", "Failed to set Sink URI: %v", err)
 	}
 
 	ra, err := r.reconcileReceiveAdapter(ctx, source, args)
@@ -111,7 +111,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.Contain
 	if status.DeploymentIsAvailable(&ra.Status, false) {
 		if !source.Status.IsDeployed() {
 			source.Status.MarkDeployed()
-			return pkgrec.New(corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
+			return pkgrec.NewReconcilerEvent(corev1.EventTypeNormal, "DeploymentReady", "Deployment %q has %d ready replicas", ra.Name, ra.Status.ReadyReplicas)
 		}
 	}
 	return nil

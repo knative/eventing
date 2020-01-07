@@ -39,7 +39,7 @@ required = [
   # TODO: PoC for generator import. DO NOT SUBMIT
   # revision = "45be96514b2725ec3a0d4d225eda597d59125da6"
   # TODO: PoC for errors.
-  revision = "d0c44a555e304e57fa3122704527b4831ae121ae"
+  revision = "06533c174d8a3c78274fa34c32505d21c5ccb74b"
   source = "github.com/n3wscott/pkg"
 
 # TODO why is this overridden?

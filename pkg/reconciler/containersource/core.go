@@ -21,7 +21,6 @@ package containersource
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -51,7 +50,7 @@ type Interface interface {
 	// object. It is recommended that implementors do not call any update calls
 	// for the Kind inside of ReconcileKind, it is the responsibility of the core
 	// controller to propagate those properties.
-	ReconcileKind(ctx context.Context, o *v1alpha1.ContainerSource) error
+	ReconcileKind(ctx context.Context, o *v1alpha1.ContainerSource) reconciler.Event
 }
 
 // Reconciler implements controller.Reconciler for v1alpha1.ContainerSource resources.
@@ -136,7 +135,7 @@ func (r *Core) Reconcile(ctx context.Context, key string) error {
 	}
 
 	var event *reconciler.ReconcilerEvent
-	if errors.As(reconcileErr, &event) {
+	if reconciler.As(reconcileErr, &event) {
 		// Record the event.
 		r.Recorder.Eventf(resource, event.EventType, event.Reason, event.Format, event.Args...)
 		// The reconciler throws up an error if it wants to log a normal event.
