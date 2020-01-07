@@ -1,4 +1,4 @@
-# Copyright 2019 The Knative Authors
+# Copyright 2020 The Knative Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,6 +42,18 @@ rules:
     verbs: *everything
 
   # Source resources and statuses we care about.
+  - apiGroups:
+      - "sources.knative.dev"
+    resources:
+      - "sinkbindings"
+      - "sinkbindings/status"
+      - "sinkbindings/finalizers"
+      - "apiserversources"
+      - "apiserversources/status"
+      - "apiserversources/finalizers"
+    verbs: *everything
+
+  # Legacy Source resources and statuses we care about.
   - apiGroups:
       - "sources.eventing.knative.dev"
     resources:
