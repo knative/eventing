@@ -87,5 +87,6 @@ func isResourceReady(obj runtime.Object, err error) (bool, error) {
 	}
 
 	kr := obj.(*duckv1beta1.KResource)
-	return kr.Status.GetCondition(apis.ConditionReady).IsTrue(), nil
+	ready := kr.Status.GetCondition(apis.ConditionReady)
+	return ready != nil && ready.IsTrue(), nil
 }
