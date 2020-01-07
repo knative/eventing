@@ -228,9 +228,9 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			s.MarkEventTypes()
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ApiServerConditionReady,
 		want: &apis.Condition{
-			Type:    ContainerConditionReady,
+			Type:    ApiServerConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "SinkEmpty",
 			Message: "Sink has resolved to empty.",
