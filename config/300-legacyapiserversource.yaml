@@ -119,7 +119,7 @@ spec:
                     description: "If true, emits the managing controller ref. Only supported for mode=Ref. More info: https://kubernetes.io/docs/concepts/workloads/controllers/garbage-collection/"
                   labelSelector:
                     type: object
-                    description: "Label selector restricting this  list of objects to watch by their labels. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
+                    description: "Label selector restricting this list of objects to watch by their labels. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/"
                   controllerSelector:
                     type: object
                     description: "Controller selector restricting the list of objects to watch by a controlling owner reference of the specified kind."
