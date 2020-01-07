@@ -20,11 +20,8 @@ limitations under the License.
 package duck
 
 import (
-	"context"
-	"fmt"
 	"time"
 
-	"go.opencensus.io/trace"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -43,14 +40,8 @@ const (
 
 // WaitForResourceReady polls the status of the MetaResource from client
 // every interval until isResourceReady returns `true` indicating
-// it is done, returns an error or timeout. desc will be used to
-// name the metric that is emitted to track how long it took for
-// the resource to get into the state checked by isResourceReady.
+// it is done, returns an error or timeout.
 func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
-	metricName := fmt.Sprintf("WaitForResourceReady/%s/%s", obj.Namespace, obj.Name)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
 		return isResourceReady(untyped, err)
@@ -59,10 +50,6 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaRe
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
 func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
-	metricName := fmt.Sprintf("WaitForResourcesReady/%s", objList.Namespace)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		untypeds, err := GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
 		for _, untyped := range untypeds {
