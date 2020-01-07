@@ -24,10 +24,12 @@
 # project $PROJECT_ID, start Knative eventing system, run the tests and
 # delete the cluster.
 
-source $(dirname $0)/e2e-common.sh
+# shellcheck disable=SC1090
+source "$(dirname "$0")/e2e-common.sh"
 
 # Script entry point.
 
+# shellcheck disable=SC2068
 initialize $@ --skip-istio-addon
 
 go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance || fail_test

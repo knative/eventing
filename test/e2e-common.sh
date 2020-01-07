@@ -19,7 +19,7 @@
 source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/e2e-tests.sh
 
 # If gcloud is not available make it a no-op, not an error.
-which gcloud &> /dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
+which gcloud &>/dev/null || gcloud() { echo "[ignore-gcloud $*]" 1>&2; }
 
 # Use GNU tools on macOS. Requires the 'grep' and 'gnu-sed' Homebrew formulae.
 if [ "$(uname)" == "Darwin" ]; then
@@ -33,16 +33,45 @@ readonly EVENTING_CONFIG="config/"
 # In-memory channel CRD config.
 readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 
-# Setup the Knative environment for running tests.
-function knative_setup() {
-  # Install the latest Knative/eventing in the current cluster.
-  echo ">> Starting Knative Eventing"
-  echo "Installing Knative Eventing"
-  ko apply -f ${EVENTING_CONFIG} || return 1
+# Latest release. If user does not supply this as a flag, the latest
+# tagged release on the current branch will be used.
+readonly LATEST_RELEASE_VERSION=$(git describe --match "v[0-9]*" --abbrev=0)
+
+# Install Knative Eventing in the current cluster, and waits for it to be ready.
+# If no parameters are passed, installs the current source-based build.
+# Parameters: $1 - Knative Eventing YAML file
+#             $2 - Knative Monitoring YAML file (optional)
+function install_knative_eventing {
+  local INSTALL_RELEASE_YAML=$1
+  echo ">> Installing Knative Eventing"
+  if [[ -z "$1" ]]; then
+    install_head
+  else
+    kubectl apply -f "${INSTALL_RELEASE_YAML}" || return $?
+  fi
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
-  echo "Installing Knative Monitoring"
+  echo ">> Installing Knative Monitoring"
   start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+}
+
+function install_head {
+  ko apply -f ${EVENTING_CONFIG} || return $?
+}
+
+function install_latest_release {
+  header "Installing Knative latest public release"
+  local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
+  local yaml="release.yaml"
+
+  install_knative_eventing \
+    "${url}/${yaml}" \
+    || fail_test "Knative latest release installation failed"
+  wait_until_pods_running knative-eventing
+}
+
+function knative_setup {
+  install_knative_eventing
 }
 
 # Teardown the Knative environment after tests finish.
@@ -90,7 +119,7 @@ function dump_extra_cluster_state() {
   # Collecting logs from all knative's eventing pods.
   echo "============================================================"
   local namespace="knative-eventing"
-  for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}' ); do
+  for pod in $(kubectl get pod -n $namespace | grep Running | awk '{print $1}'); do
     for container in $(kubectl get pod "${pod}" -n $namespace -ojsonpath='{.spec.containers[*].name}'); do
       echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"
       kubectl logs -n $namespace "${pod}" -c "${container}" || true
