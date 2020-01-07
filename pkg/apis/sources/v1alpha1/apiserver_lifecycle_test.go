@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -38,6 +40,18 @@ var (
 		},
 	}
 )
+
+func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
+	r := &ApiServerSource{}
+	want := schema.GroupVersionKind{
+		Group:   "sources.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "ApiServerSource",
+	}
+	if got := r.GetGroupVersionKind(); got != want {
+		t.Errorf("got: %v, want: %v", got, want)
+	}
+}
 
 func TestApiServerSourceStatusIsReady(t *testing.T) {
 	tests := []struct {
@@ -246,5 +260,17 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
 			}
 		})
+	}
+}
+
+func TestApiServerSourceGetters(t *testing.T) {
+	r := &ApiServerSource{
+		Spec: ApiServerSourceSpec{
+			ServiceAccountName: "test",
+			Mode:               "test",
+		},
+	}
+	if got, want := r.GetUntypedSpec(), r.Spec; !reflect.DeepEqual(got, want) {
+		t.Errorf("GetUntypedSpec() = %v, want: %v", got, want)
 	}
 }

@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -60,11 +59,6 @@ const (
 	// ApiServerSourceDeleteRefEventType is the ApiServerSource CloudEvent type for ref deletions.
 	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
 )
-
-// GetGroupVersionKind returns the GroupVersionKind.
-func (s *ApiServerSource) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("ApiServerSource")
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -126,9 +120,4 @@ type ApiServerResource struct {
 
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
-}
-
-// GetUntypedSpec returns the spec of the ApiServerSource.
-func (a *ApiServerSource) GetUntypedSpec() interface{} {
-	return a.Spec
 }

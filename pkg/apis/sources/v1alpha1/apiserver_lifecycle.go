@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"knative.dev/pkg/apis"
 
@@ -47,6 +48,16 @@ var apiserverCondSet = apis.NewLivingConditionSet(
 	ApiServerConditionDeployed,
 	ApiServerConditionSufficientPermissions,
 )
+
+// GetGroupVersionKind returns the GroupVersionKind.
+func (s *ApiServerSource) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("ApiServerSource")
+}
+
+// GetUntypedSpec returns the spec of the ApiServerSource.
+func (s *ApiServerSource) GetUntypedSpec() interface{} {
+	return s.Spec
+}
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (s *ApiServerSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
