@@ -218,6 +218,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		if ag.publishResults {
 			sendLatency := timestampAccepted.Sub(timestampSent)
 			// Uncomment to get CSV directly from this container log
+			// TODO add a flag to control whether we need this.
 			// fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
 			// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 			if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
@@ -233,6 +234,7 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		if ag.publishResults {
 			e2eLatency := timestampReceived.Sub(timestampSent)
 			// Uncomment to get CSV directly from this container log
+			// TODO add a flag to control whether we need this.
 			// fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
 			// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 			if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
