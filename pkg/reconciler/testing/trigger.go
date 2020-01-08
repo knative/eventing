@@ -96,6 +96,18 @@ func WithInitTriggerConditions(t *v1alpha1.Trigger) {
 	t.Status.InitializeConditions()
 }
 
+func WithTriggerGeneration(gen int64) TriggerOption {
+	return func(s *v1alpha1.Trigger) {
+		s.Generation = gen
+	}
+}
+
+func WithTriggerStatusObservedGeneration(gen int64) TriggerOption {
+	return func(s *v1alpha1.Trigger) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 // WithTriggerBrokerReady initializes the Triggers's conditions.
 func WithTriggerBrokerReady() TriggerOption {
 	return func(t *v1alpha1.Trigger) {
@@ -110,9 +122,28 @@ func WithTriggerBrokerFailed(reason, message string) TriggerOption {
 	}
 }
 
+// WithTriggerBrokerUnknown marks the Broker as unknown
+func WithTriggerBrokerUnknown(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkBrokerUnknown(reason, message)
+	}
+}
+
 func WithTriggerNotSubscribed(reason, message string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Status.MarkNotSubscribed(reason, message)
+	}
+}
+
+func WithTriggerSubscribedUnknown(reason, message string) TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscribedUnknown(reason, message)
+	}
+}
+
+func WithTriggerSubscriptionNotConfigured() TriggerOption {
+	return func(t *v1alpha1.Trigger) {
+		t.Status.MarkSubscriptionNotConfigured()
 	}
 }
 

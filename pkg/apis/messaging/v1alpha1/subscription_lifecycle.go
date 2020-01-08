@@ -22,7 +22,7 @@ import (
 
 // subCondSet is a condition set with Ready as the happy condition and
 // ReferencesResolved and ChannelReady as the dependent conditions.
-var subCondSet = apis.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionAddedToChannel, SubscriptionConditionChannelReady)
+var SubCondSet = apis.NewLivingConditionSet(SubscriptionConditionReferencesResolved, SubscriptionConditionAddedToChannel, SubscriptionConditionChannelReady)
 
 const (
 	// SubscriptionConditionReady has status True when all subconditions below have been set to True.
@@ -41,12 +41,12 @@ const (
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ss *SubscriptionStatus) GetCondition(t apis.ConditionType) *apis.Condition {
-	return subCondSet.Manage(ss).GetCondition(t)
+	return SubCondSet.Manage(ss).GetCondition(t)
 }
 
 // IsReady returns true if the resource is ready overall.
 func (ss *SubscriptionStatus) IsReady() bool {
-	return subCondSet.Manage(ss).IsHappy()
+	return SubCondSet.Manage(ss).IsHappy()
 }
 
 // IsAddedToChannel returns true if SubscriptionConditionAddedToChannel is true
@@ -61,35 +61,45 @@ func (ss *SubscriptionStatus) AreReferencesResolved() bool {
 
 // InitializeConditions sets relevant unset conditions to Unknown state.
 func (ss *SubscriptionStatus) InitializeConditions() {
-	subCondSet.Manage(ss).InitializeConditions()
+	SubCondSet.Manage(ss).InitializeConditions()
 }
 
 // MarkReferencesResolved sets the ReferencesResolved condition to True state.
 func (ss *SubscriptionStatus) MarkReferencesResolved() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
+	SubCondSet.Manage(ss).MarkTrue(SubscriptionConditionReferencesResolved)
 }
 
 // MarkChannelReady sets the ChannelReady condition to True state.
 func (ss *SubscriptionStatus) MarkChannelReady() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionChannelReady)
+	SubCondSet.Manage(ss).MarkTrue(SubscriptionConditionChannelReady)
 }
 
 // MarkAddedToChannel sets the AddedToChannel condition to True state.
 func (ss *SubscriptionStatus) MarkAddedToChannel() {
-	subCondSet.Manage(ss).MarkTrue(SubscriptionConditionAddedToChannel)
+	SubCondSet.Manage(ss).MarkTrue(SubscriptionConditionAddedToChannel)
 }
 
 // MarkReferencesNotResolved sets the ReferencesResolved condition to False state.
 func (ss *SubscriptionStatus) MarkReferencesNotResolved(reason, messageFormat string, messageA ...interface{}) {
-	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionReferencesResolved, reason, messageFormat, messageA...)
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionReferencesResolved, reason, messageFormat, messageA...)
 }
 
-// MarkChannelNotReady sets the ChannelReady condition to False state.
-func (ss *SubscriptionStatus) MarkChannelNotReady(reason, messageFormat string, messageA ...interface{}) {
-	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
+// MarkReferencesResolvedUnknown sets the ReferencesResolved condition to Unknown state.
+func (ss *SubscriptionStatus) MarkReferencesResolvedUnknown(reason, messageFormat string, messageA ...interface{}) {
+	SubCondSet.Manage(ss).MarkUnknown(SubscriptionConditionReferencesResolved, reason, messageFormat, messageA...)
+}
+
+// MarkChannelFailed sets the ChannelReady condition to False state.
+func (ss *SubscriptionStatus) MarkChannelFailed(reason, messageFormat string, messageA ...interface{}) {
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
+}
+
+// MarkChannelUnknown sets the ChannelReady condition to Unknown state.
+func (ss *SubscriptionStatus) MarkChannelUnknown(reason, messageFormat string, messageA ...interface{}) {
+	SubCondSet.Manage(ss).MarkUnknown(SubscriptionConditionChannelReady, reason, messageFormat, messageA)
 }
 
 // MarkNotAddedToChannel sets the AddedToChannel condition to False state.
 func (ss *SubscriptionStatus) MarkNotAddedToChannel(reason, messageFormat string, messageA ...interface{}) {
-	subCondSet.Manage(ss).MarkFalse(SubscriptionConditionAddedToChannel, reason, messageFormat, messageA)
+	SubCondSet.Manage(ss).MarkFalse(SubscriptionConditionAddedToChannel, reason, messageFormat, messageA)
 }

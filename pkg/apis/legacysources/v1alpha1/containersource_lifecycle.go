@@ -58,7 +58,7 @@ func (s *ContainerSourceStatus) MarkSink(uri string) {
 	if len(uri) > 0 {
 		containerCondSet.Manage(s).MarkTrue(ContainerConditionSinkProvided)
 	} else {
-		containerCondSet.Manage(s).MarkUnknown(ContainerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+		containerCondSet.Manage(s).MarkFalse(ContainerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
 	}
 }
 

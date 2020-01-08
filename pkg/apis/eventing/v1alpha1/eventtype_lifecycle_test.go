@@ -194,33 +194,39 @@ func TestEventTypeInitializeConditions(t *testing.T) {
 	}
 }
 
-func TestEventTypeIsReady(t *testing.T) {
+func TestEventTypeConditionStatus(t *testing.T) {
 	tests := []struct {
-		name             string
-		markBrokerExists *bool
-		markBrokerReady  *bool
-		wantReady        bool
+		name                string
+		markBrokerExists    *bool
+		brokerStatus        *BrokerStatus
+		wantConditionStatus corev1.ConditionStatus
 	}{{
-		name:             "all happy",
-		markBrokerExists: &trueValue,
-		markBrokerReady:  &trueValue,
-		wantReady:        true,
+		name:                "all happy",
+		markBrokerExists:    &trueValue,
+		brokerStatus:        TestHelper.ReadyBrokerStatus(),
+		wantConditionStatus: corev1.ConditionTrue,
 	}, {
-		name:             "broker exist sad",
-		markBrokerExists: &falseValue,
-		markBrokerReady:  &trueValue,
-		wantReady:        false,
+		name:                "broker exist sad",
+		markBrokerExists:    &falseValue,
+		brokerStatus:        nil,
+		wantConditionStatus: corev1.ConditionFalse,
 	}, {
-		name:             "broker ready sad",
-		markBrokerExists: &trueValue,
-		markBrokerReady:  &falseValue,
-		wantReady:        false,
+		name:                "broker ready sad",
+		markBrokerExists:    &trueValue,
+		brokerStatus:        TestHelper.FalseBrokerStatus(),
+		wantConditionStatus: corev1.ConditionFalse,
 	}, {
-		name:             "all sad",
-		markBrokerExists: &falseValue,
-		markBrokerReady:  &falseValue,
-		wantReady:        false,
-	}}
+		name:                "broker ready unknown",
+		markBrokerExists:    &trueValue,
+		brokerStatus:        TestHelper.UnknownBrokerStatus(),
+		wantConditionStatus: corev1.ConditionUnknown,
+	},
+		{
+			name:                "all sad",
+			markBrokerExists:    &falseValue,
+			brokerStatus:        nil,
+			wantConditionStatus: corev1.ConditionFalse,
+		}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ets := &EventTypeStatus{}
@@ -231,17 +237,13 @@ func TestEventTypeIsReady(t *testing.T) {
 					ets.MarkBrokerDoesNotExist()
 				}
 			}
-			if test.markBrokerReady != nil {
-				if *test.markBrokerReady {
-					ets.MarkBrokerReady()
-				} else {
-					ets.MarkBrokerNotReady()
-				}
+			if test.brokerStatus != nil {
+				ets.PropagateBrokerStatus(test.brokerStatus)
 			}
 
-			got := ets.IsReady()
-			if test.wantReady != got {
-				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			got := ets.GetTopLevelCondition().Status
+			if test.wantConditionStatus != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
 			}
 		})
 	}

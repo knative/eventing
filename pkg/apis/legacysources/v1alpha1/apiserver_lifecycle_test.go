@@ -217,6 +217,24 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 			Type:   ApiServerConditionReady,
 			Status: corev1.ConditionTrue,
 		},
+	}, {
+		name: "mark sink empty and enough permissions and deployed and event types",
+		s: func() *ApiServerSourceStatus {
+			s := &ApiServerSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink("")
+			s.MarkSufficientPermissions()
+			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkEventTypes()
+			return s
+		}(),
+		condQuery: ContainerConditionReady,
+		want: &apis.Condition{
+			Type:    ContainerConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  "SinkEmpty",
+			Message: "Sink has resolved to empty.",
+		},
 	}}
 
 	for _, test := range tests {

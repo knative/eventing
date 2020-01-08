@@ -49,6 +49,18 @@ func WithInitFlowsParallelConditions(p *v1alpha1.Parallel) {
 	p.Status.InitializeConditions()
 }
 
+func WithFlowsParallelGeneration(gen int64) FlowsParallelOption {
+	return func(s *v1alpha1.Parallel) {
+		s.Generation = gen
+	}
+}
+
+func WithFlowsParallelStatusObservedGeneration(gen int64) FlowsParallelOption {
+	return func(s *v1alpha1.Parallel) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 func WithFlowsParallelDeleted(p *v1alpha1.Parallel) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)

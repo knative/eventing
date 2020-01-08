@@ -76,6 +76,12 @@ func WithSubscriptionGeneration(gen int64) SubscriptionOption {
 	}
 }
 
+func WithSubscriptionStatusObservedGeneration(gen int64) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 func WithSubscriptionGenerateName(generateName string) SubscriptionOption {
 	return func(c *v1alpha1.Subscription) {
 		c.ObjectMeta.GenerateName = generateName
@@ -164,6 +170,12 @@ func MarkSubscriptionReady(s *v1alpha1.Subscription) {
 func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Status.MarkReferencesNotResolved(reason, msg)
+	}
+}
+
+func WithSubscriptionReferencesResolvedUnknown(reason, msg string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.MarkReferencesResolvedUnknown(reason, msg)
 	}
 }
 

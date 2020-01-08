@@ -99,6 +99,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(sequence, corev1.EventTypeNormal, reconciled, "Sequence reconciled")
 	}
 
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	sequence.Status.ObservedGeneration = original.Generation
+
 	if _, updateStatusErr := r.updateStatus(ctx, sequence); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Sequence status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(sequence, corev1.EventTypeWarning, updateStatusFailed, "Failed to update sequence status: %s", key)

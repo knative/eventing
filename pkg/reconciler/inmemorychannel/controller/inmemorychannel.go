@@ -122,6 +122,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Event(channel, corev1.EventTypeNormal, reconciled, "InMemoryChannel reconciled")
 	}
 
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	channel.Status.ObservedGeneration = original.Generation
+
 	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update InMemoryChannel's status: %v", err)
@@ -153,7 +157,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
-			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
+			imc.Status.MarkDispatcherUnknown("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
 		}
 		return err
 	}
@@ -168,7 +172,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
-			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+			imc.Status.MarkServiceUnknown("DispatcherServiceGetFailed", "Failed to get dispatcher service")
 		}
 		return err
 	}
@@ -183,7 +187,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
-			imc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
+			imc.Status.MarkEndpointsUnknown("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
 		}
 		return err
 	}
@@ -200,7 +204,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, imc)
 	if err != nil {
-		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
@@ -225,22 +228,27 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.
 			svc, err = resources.NewK8sService(imc, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
+				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
 				return nil, err
 			}
 			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(svc)
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
+				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
 				return nil, err
 			}
 			return svc, nil
 		}
 		logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
+		imc.Status.MarkChannelServiceUnknown("ChannelServiceGetFailed", fmt.Sprintf("Unable to get the channel service: %s", err))
 		return nil, err
 	}
 
 	// Check to make sure that our IMC owns this service and if not, complain.
 	if !metav1.IsControlledBy(svc, imc) {
-		return nil, fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
+		err := fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+		return nil, err
 	}
 	return svc, nil
 }
