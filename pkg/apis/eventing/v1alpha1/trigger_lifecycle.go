@@ -29,11 +29,11 @@ const (
 	// TriggerConditionReady has status True when all subconditions below have been set to True.
 	TriggerConditionReady = apis.ConditionReady
 
-	TriggerConditionBroker apis.ConditionType = "Broker"
+	TriggerConditionBroker apis.ConditionType = "BrokerReady"
 
 	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
 
-	TriggerConditionDependency apis.ConditionType = "Dependency"
+	TriggerConditionDependency apis.ConditionType = "DependencyReady"
 
 	TriggerConditionSubscriberResolved apis.ConditionType = "SubscriberResolved"
 
