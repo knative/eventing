@@ -23,7 +23,7 @@ import (
 
 	ce "github.com/cloudevents/sdk-go"
 
-	"knative.dev/eventing/test/common/cloudevents"
+	"knative.dev/eventing/test/lib/cloudevents"
 )
 
 var (

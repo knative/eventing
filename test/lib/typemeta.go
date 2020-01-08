@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package lib
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // SubscriptionTypeMeta is the TypeMeta ref for Subscription.

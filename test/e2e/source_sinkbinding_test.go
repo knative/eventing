@@ -32,9 +32,10 @@ import (
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/tracker"
 
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
+
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/resources"
 )
 
 func TestSinkBindingDeployment(t *testing.T) {
@@ -52,7 +53,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBinding(
@@ -112,7 +113,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }
@@ -132,7 +133,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBinding(
@@ -200,7 +201,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }

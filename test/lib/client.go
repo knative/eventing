@@ -17,7 +17,7 @@ limitations under the License.
 // This file contains an object which encapsulates k8s clients and other info which are useful for e2e tests.
 // Each test case will need to create its own client.
 
-package common
+package lib
 
 import (
 	"testing"

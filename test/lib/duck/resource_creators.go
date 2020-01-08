@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/resources"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 

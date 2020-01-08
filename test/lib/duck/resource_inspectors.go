@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // GetAddressableURI returns the uri for the given resource that implements Addressable duck-type.

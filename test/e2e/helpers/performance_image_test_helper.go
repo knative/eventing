@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"testing"
 
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/duck"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -32,7 +32,7 @@ import (
 	pkgtest "knative.dev/pkg/test"
 )
 
-func SetupPerformanceImageRBAC(client *common.Client) {
+func SetupPerformanceImageRBAC(client *lib.Client) {
 	client.CreateServiceAccountOrFail(resources.PerfServiceAccount)
 	client.CreateClusterRoleOrFail(&rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
@@ -107,9 +107,9 @@ func parseLog(log string) (*PerformanceImageResults, error) {
 }
 
 // This function setups RBAC, services and aggregator pod. It DOESN'T setup channel, broker nor sender and receiver pod(s). The setup of these resources MUST be done inside `setupEnv` function
-func TestWithPerformanceImage(st *testing.T, expectedAggregatorRecords int, setupEnv func(t *testing.T, consumerHostname string, aggregatorHostname string, client *common.Client), assertResults func(*testing.T, *PerformanceImageResults)) {
-	client := common.Setup(st, true)
-	defer common.TearDown(client)
+func TestWithPerformanceImage(st *testing.T, expectedAggregatorRecords int, setupEnv func(t *testing.T, consumerHostname string, aggregatorHostname string, client *lib.Client), assertResults func(*testing.T, *PerformanceImageResults)) {
+	client := lib.Setup(st, true)
+	defer lib.TearDown(client)
 
 	// RBAC
 	SetupPerformanceImageRBAC(client)

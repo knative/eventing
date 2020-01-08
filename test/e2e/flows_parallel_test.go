@@ -26,12 +26,13 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
+
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/resources"
 )
 
 func TestFlowsParallel(t *testing.T) {
@@ -52,7 +53,7 @@ func TestFlowsParallel(t *testing.T) {
 			expected: "parallel-two-branches-pass-first-branch-only-branch-0-sub",
 		},
 	}
-	channelTypeMeta := &common.DefaultChannel
+	channelTypeMeta := &lib.DefaultChannel
 
 	client := setup(t, true)
 	defer tearDown(client)
@@ -63,12 +64,12 @@ func TestFlowsParallel(t *testing.T) {
 			// construct filter services
 			filterPodName := fmt.Sprintf("parallel-%s-branch-%d-filter", tc.name, branchNumber)
 			filterPod := resources.EventFilteringPod(filterPodName, cse.filter)
-			client.CreatePodOrFail(filterPod, common.WithService(filterPodName))
+			client.CreatePodOrFail(filterPod, lib.WithService(filterPodName))
 
 			// construct branch subscriber
 			subPodName := fmt.Sprintf("parallel-%s-branch-%d-sub", tc.name, branchNumber)
 			subPod := resources.SequenceStepperPod(subPodName, subPodName)
-			client.CreatePodOrFail(subPod, common.WithService(subPodName))
+			client.CreatePodOrFail(subPod, lib.WithService(subPodName))
 
 			parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
 				Filter: &duckv1.Destination{
@@ -87,7 +88,7 @@ func TestFlowsParallel(t *testing.T) {
 		// create logger service for global reply
 		loggerPodName := fmt.Sprintf("%s-logger", tc.name)
 		loggerPod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 		// create channel as reply of the Parallel
 		// TODO(chizhg): now we'll have to use a channel plus its subscription here, as reply of the Subscription
@@ -128,14 +129,14 @@ func TestFlowsParallel(t *testing.T) {
 		if err := client.SendFakeEventToAddressable(
 			senderPodName,
 			tc.name,
-			common.FlowsParallelTypeMeta,
+			lib.FlowsParallelTypeMeta,
 			event,
 		); err != nil {
 			t.Fatalf("Failed to send fake CloudEvent to the parallel %q : %s", tc.name, err)
 		}
 
 		// verify the logger service receives the correct transformed event
-		if err := client.CheckLog(loggerPodName, common.CheckerContains(tc.expected)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContains(tc.expected)); err != nil {
 			t.Fatalf("String %q not found in logs of logger pod %q: %v", tc.expected, loggerPodName, err)
 		}
 	}

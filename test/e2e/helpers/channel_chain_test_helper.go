@@ -23,13 +23,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // ChannelChainTestHelper is the helper function for channel_chain_test
-func ChannelChainTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
+func ChannelChainTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channelchain-logger-pod"
@@ -40,9 +40,9 @@ func ChannelChainTestHelper(t *testing.T, channelTestRunner common.ChannelTestRu
 	// subscriptionNames2 corresponds to Subscriptions on channelNames[1]
 	subscriptionNames2 := []string{"e2e-channelchain-subs21"}
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
@@ -50,7 +50,7 @@ func ChannelChainTestHelper(t *testing.T, channelTestRunner common.ChannelTestRu
 
 		// create loggerPod and expose it as a service
 		pod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
 		// create subscriptions that subscribe the first channel, and reply events directly to the second channel
 		client.CreateSubscriptionsOrFail(
@@ -85,7 +85,7 @@ func ChannelChainTestHelper(t *testing.T, channelTestRunner common.ChannelTestRu
 
 		// check if the logging service receives the correct number of event messages
 		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)
-		if err := client.CheckLog(loggerPodName, common.CheckerContainsCount(body, expectedContentCount)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(body, expectedContentCount)); err != nil {
 			st.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", body, expectedContentCount, loggerPodName, err)
 		}
 	})

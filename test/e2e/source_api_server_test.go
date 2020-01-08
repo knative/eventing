@@ -27,9 +27,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
+
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/resources"
 
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
@@ -138,7 +139,7 @@ func TestApiServerSource(t *testing.T) {
 	client.CreateRoleOrFail(r)
 	client.CreateRoleBindingOrFail(
 		serviceAccountName,
-		common.RoleKind,
+		lib.RoleKind,
 		roleName,
 		fmt.Sprintf("%s-%s", serviceAccountName, roleName),
 		client.Namespace,
@@ -151,7 +152,7 @@ func TestApiServerSource(t *testing.T) {
 		tc.spec.Sink = &duckv1beta1.Destination{Ref: resources.ServiceRef(loggerPodName)}
 
 		loggerPod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 		apiServerSource := eventingtesting.NewApiServerSource(
 			fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
@@ -179,7 +180,7 @@ func TestApiServerSource(t *testing.T) {
 			}
 
 		} else {
-			if err := client.CheckLog(loggerPodName, common.CheckerContains(tc.expected)); err != nil {
+			if err := client.CheckLog(loggerPodName, lib.CheckerContains(tc.expected)); err != nil {
 				t.Fatalf("String %q does not appear in logs of logger pod %q: %v", tc.expected, loggerPodName, err)
 			}
 		}

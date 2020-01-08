@@ -23,13 +23,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // BrokerChannelFlowTestHelper is the helper function for broker_channel_flow_test
-func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
+func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
 	const (
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
@@ -53,16 +53,16 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 		subscriptionName = "e2e-brokerchannel-subscription"
 	)
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 		client.CreateRBACResourcesForBrokers()
 
 		// create a new broker
 		client.CreateBrokerOrFail(brokerName, &channel)
-		client.WaitForResourceReadyOrFail(brokerName, common.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create the event we want to transform to
 		transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
@@ -74,7 +74,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 
 		// create the transformation service for trigger1
 		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
-		client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
+		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create trigger1 to receive the original event, and do event transformation
 		client.CreateTriggerOrFail(
@@ -86,7 +86,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 
 		// create logger pod and service for trigger2
 		loggerPod1 := resources.EventLoggerPod(loggerPodName1)
-		client.CreatePodOrFail(loggerPod1, common.WithService(loggerPodName1))
+		client.CreatePodOrFail(loggerPod1, lib.WithService(loggerPodName1))
 
 		// create trigger2 to receive all the events
 		client.CreateTriggerOrFail(
@@ -114,7 +114,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 
 		// create logger pod and service for subscription
 		loggerPod2 := resources.EventLoggerPod(loggerPodName2)
-		client.CreatePodOrFail(loggerPod2, common.WithService(loggerPodName2))
+		client.CreatePodOrFail(loggerPod2, lib.WithService(loggerPodName2))
 
 		// create subscription
 		client.CreateSubscriptionOrFail(
@@ -135,18 +135,18 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner common.ChannelT
 			cloudevents.WithSource(eventSource1),
 			cloudevents.WithType(eventType1),
 		)
-		if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 		}
 
 		// check if trigger2's logging service receives both events
 		eventBodies := []string{transformedEventBody, eventBody}
-		if err := client.CheckLog(loggerPodName1, common.CheckerContainsAll([]string{transformedEventBody, eventBody})); err != nil {
+		if err := client.CheckLog(loggerPodName1, lib.CheckerContainsAll([]string{transformedEventBody, eventBody})); err != nil {
 			st.Fatalf("Strings %v not found in logs of logger pod %q: %v", eventBodies, loggerPodName1, err)
 		}
 
 		// check if subscription's logging service receives the transformed event
-		if err := client.CheckLog(loggerPodName2, common.CheckerContains(transformedEventBody)); err != nil {
+		if err := client.CheckLog(loggerPodName2, lib.CheckerContains(transformedEventBody)); err != nil {
 			st.Fatalf("Strings %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName2, err)
 		}
 	})

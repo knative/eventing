@@ -27,20 +27,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/resources"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
 // the ChannelTestRunner.
 func BrokerTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner common.ChannelTestRunner,
+	channelTestRunner lib.ChannelTestRunner,
 	setupClient SetupClientFunc,
 ) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
 		t := struct{}{}
 		_ = fmt.Sprintf("%s", t)
@@ -74,7 +74,7 @@ func BrokerTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient 
 func setupBrokerTracing(
 	t *testing.T,
 	channel *metav1.TypeMeta,
-	client *common.Client,
+	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
 ) (tracinghelper.TestSpanTree, string) {
@@ -88,7 +88,7 @@ func setupBrokerTracing(
 
 	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
 	logPod := resources.EventDetailsPod(loggerPodName)
-	client.CreatePodOrFail(logPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 
 	// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 	loggerTrigger := client.CreateTriggerOrFail(
@@ -105,7 +105,7 @@ func setupBrokerTracing(
 			Type: etLogger,
 		},
 	})
-	client.CreatePodOrFail(eventTransformerPod, common.WithService(eventTransformerPod.Name))
+	client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
 
 	// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
 	transformerTrigger := client.CreateTriggerOrFail(
@@ -136,7 +136,7 @@ func setupBrokerTracing(
 	if tc.IncomingTraceId {
 		sendEvent = client.SendFakeEventWithTracingToAddressable
 	}
-	if err := sendEvent(senderName, broker.Name, common.BrokerTypeMeta, event); err != nil {
+	if err := sendEvent(senderName, broker.Name, lib.BrokerTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", broker.Name)
 	}
 

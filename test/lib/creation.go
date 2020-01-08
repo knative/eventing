@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package lib
 
 import (
 	"fmt"
@@ -31,8 +31,8 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/eventing/test/common/duck"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 
 	"knative.dev/pkg/test/helpers"
 )

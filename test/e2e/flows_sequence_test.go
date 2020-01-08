@@ -24,11 +24,12 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
+
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/resources"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
@@ -56,7 +57,7 @@ func TestFlowsSequence(t *testing.T) {
 		podName:     "e2e-stepper3",
 		msgAppender: "-step3",
 	}}
-	channelTypeMeta := &common.DefaultChannel
+	channelTypeMeta := &lib.DefaultChannel
 
 	client := setup(t, true)
 	defer tearDown(client)
@@ -69,7 +70,7 @@ func TestFlowsSequence(t *testing.T) {
 		msgAppender := config.msgAppender
 		stepperPod := resources.SequenceStepperPod(podName, msgAppender)
 
-		client.CreatePodOrFail(stepperPod, common.WithService(podName))
+		client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 		// create a new step
 		step := duckv1.Destination{
 			Ref: resources.ServiceRef(podName),
@@ -90,7 +91,7 @@ func TestFlowsSequence(t *testing.T) {
 	client.CreateChannelOrFail(channelName, channelTypeMeta)
 	// create logger service as the subscriber
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 	// create subscription to subscribe the channel, and forward the received events to the logger service
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
@@ -132,7 +133,7 @@ func TestFlowsSequence(t *testing.T) {
 	if err := client.SendFakeEventToAddressable(
 		senderPodName,
 		sequenceName,
-		common.FlowsSequenceTypeMeta,
+		lib.FlowsSequenceTypeMeta,
 		event,
 	); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the sequence %q : %s", sequenceName, err)
@@ -143,7 +144,7 @@ func TestFlowsSequence(t *testing.T) {
 	for _, config := range stepSubscriberConfigs {
 		expectedMsg += config.msgAppender
 	}
-	if err := client.CheckLog(loggerPodName, common.CheckerContains(expectedMsg)); err != nil {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContains(expectedMsg)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", expectedMsg, loggerPodName, err)
 	}
 }

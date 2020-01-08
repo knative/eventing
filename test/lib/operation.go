@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package lib
 
 import (
 	"fmt"
@@ -23,9 +23,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/duck"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // LabelNamespace labels the given namespace with the labels map.

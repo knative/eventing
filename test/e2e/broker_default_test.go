@@ -30,9 +30,9 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
@@ -146,7 +146,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 
 			// Wait for default broker ready.
-			if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
+			if err := client.WaitForResourceReady(defaultBrokerName, lib.BrokerTypeMeta); err != nil {
 				t.Fatalf("Error waiting for default broker to become ready: %v", err)
 			}
 
@@ -154,7 +154,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			for _, event := range test.eventsToReceive {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				pod := resources.EventLoggerPod(subscriberName)
-				client.CreatePodOrFail(pod, common.WithService(subscriberName))
+				client.CreatePodOrFail(pod, lib.WithService(subscriberName))
 			}
 
 			// Create triggers.
@@ -190,7 +190,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				)
 				// Create sender pod.
 				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.Extensions)
-				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
+				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, lib.BrokerTypeMeta, cloudEvent); err != nil {
 					t.Fatalf("Error send cloud event to broker: %v", err)
 				}
 
@@ -208,7 +208,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 			for _, event := range test.eventsToReceive {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
-				if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
+				if err := client.CheckLog(subscriberName, lib.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
 					t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 				}
 				// At this point all the events should have been received in the pod.

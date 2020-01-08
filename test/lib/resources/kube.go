@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	pkgTest "knative.dev/pkg/test"
 
-	"knative.dev/eventing/test/common/cloudevents"
+	"knative.dev/eventing/test/lib/cloudevents"
 )
 
 // PodOption enables further configuration of a Pod.

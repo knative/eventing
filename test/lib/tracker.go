@@ -17,7 +17,7 @@ limitations under the License.
 // cleanup allows you to define a cleanup function that will be executed
 // if your test is interrupted.
 
-package common
+package lib
 
 import (
 	"encoding/json"
@@ -30,8 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 
-	"knative.dev/eventing/test/common/duck"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 
 	"knative.dev/pkg/kmeta"
 )

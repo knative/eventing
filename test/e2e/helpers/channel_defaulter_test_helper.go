@@ -28,10 +28,10 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/common"
-	"knative.dev/eventing/test/common/cloudevents"
-	"knative.dev/eventing/test/common/duck"
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
@@ -45,11 +45,11 @@ const (
 )
 
 // ChannelClusterDefaulterTestHelper is the helper function for channel_defaulter_test
-func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// these tests cannot be run in parallel as they have cluster-wide impact
-		client := common.Setup(st, false)
-		defer common.TearDown(client)
+		client := lib.Setup(st, false)
+		defer lib.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *defaultchannel.Config) {
 			setClusterDefaultChannel(conf, channel)
@@ -62,12 +62,12 @@ func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner common.Ch
 }
 
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
-func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// we cannot run these tests in parallel as the updateDefaultChannelCM function is not thread-safe
 		// TODO(chizhg): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
-		client := common.Setup(st, false)
-		defer common.TearDown(client)
+		client := lib.Setup(st, false)
+		defer lib.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *defaultchannel.Config) {
 			setNamespaceDefaultChannel(conf, client.Namespace, channel)
@@ -79,7 +79,7 @@ func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner common.
 	})
 }
 
-func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChannel metav1.TypeMeta) {
+func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel metav1.TypeMeta) {
 	channelName := "e2e-defaulter-channel"
 	senderName := "e2e-defaulter-sender"
 	subscriptionName := "e2e-defaulter-subscription"
@@ -90,13 +90,13 @@ func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChann
 
 	// create logger service as the subscriber
 	pod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
 	// create subscription to subscribe the channel, and forward the received events to the logger service
 	client.CreateSubscriptionOrFail(
 		subscriptionName,
 		channelName,
-		common.ChannelTypeMeta,
+		lib.ChannelTypeMeta,
 		resources.WithSubscriberForSubscription(loggerPodName),
 	)
 
@@ -122,18 +122,18 @@ func defaultChannelTestHelper(t *testing.T, client *common.Client, expectedChann
 		cloudevents.WithSource(senderName),
 	)
 
-	if err := client.SendFakeEventToAddressable(senderName, channelName, common.ChannelTypeMeta, event); err != nil {
+	if err := client.SendFakeEventToAddressable(senderName, channelName, lib.ChannelTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 	}
 
 	// verify the logger service receives the event
-	if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContains(body)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 	}
 }
 
 // updateDefaultChannelCM will update the default channel configmap
-func updateDefaultChannelCM(client *common.Client, updateConfig func(config *defaultchannel.Config)) error {
+func updateDefaultChannelCM(client *lib.Client, updateConfig func(config *defaultchannel.Config)) error {
 	systemNamespace := resources.SystemNamespace
 	cmInterface := client.Kube.Kube.CoreV1().ConfigMaps(systemNamespace)
 	// get the defaultchannel configmap

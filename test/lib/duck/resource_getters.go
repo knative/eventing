@@ -26,7 +26,7 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // GetGenericObject returns a generic object representing a Kubernetes resource.

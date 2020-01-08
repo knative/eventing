@@ -29,7 +29,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
-	"knative.dev/eventing/test/common/resources"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
