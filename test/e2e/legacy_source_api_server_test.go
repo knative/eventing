@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -33,7 +33,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
-func TestApiServerSource(t *testing.T) {
+func TestLegacyApiServerSource(t *testing.T) {
 	const (
 		baseApiServerSourceName = "e2e-api-server-source"
 
@@ -152,13 +152,13 @@ func TestApiServerSource(t *testing.T) {
 		loggerPod := resources.EventLoggerPod(loggerPodName)
 		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
-		apiServerSource := eventingtesting.NewApiServerSource(
+		apiServerSource := eventingtesting.NewLegacyApiServerSource(
 			fmt.Sprintf("%s-%s", baseApiServerSourceName, tc.name),
 			client.Namespace,
-			eventingtesting.WithApiServerSourceSpec(tc.spec),
+			eventingtesting.WithLegacyApiServerSourceSpec(tc.spec),
 		)
 
-		client.CreateApiServerSourceOrFail(apiServerSource)
+		client.CreateLegacyApiServerSourceOrFail(apiServerSource)
 
 		// wait for all test resources to be ready
 		if err := client.WaitForAllTestResourcesReady(); err != nil {

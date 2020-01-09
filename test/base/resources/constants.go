@@ -21,11 +21,11 @@ const SystemNamespace = "knative-eventing"
 
 // API versions for the resources.
 const (
-	CoreAPIVersion      = "v1"
-	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
-	SourcesAPIVersion   = "sources.eventing.knative.dev/v1alpha1"
-	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
-	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
+	CoreAPIVersion          = "v1"
+	EventingAPIVersion      = "eventing.knative.dev/v1alpha1"
+	LegacySourcesAPIVersion = "sources.eventing.knative.dev/v1alpha1"
+	MessagingAPIVersion     = "messaging.knative.dev/v1alpha1"
+	FlowsAPIVersion         = "flows.knative.dev/v1alpha1"
 )
 
 // Kind for core Kubernetes resources.

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,15 +22,15 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 )
 
-// ApiServerSourceOption enables further configuration of a ApiServer.
-type ApiServerSourceOption func(*v1alpha1.ApiServerSource)
+// LegacyApiServerSourceOption enables further configuration of a Legacy ApiServerSource.
+type LegacyApiServerSourceOption func(*v1alpha1.ApiServerSource)
 
-// NewApiServerSource creates a ApiServer with ApiServerOptions
-func NewApiServerSource(name, namespace string, o ...ApiServerSourceOption) *v1alpha1.ApiServerSource {
+// NewLegacyApiServerSource creates a ApiServer with ApiServerOptions
+func NewLegacyApiServerSource(name, namespace string, o ...LegacyApiServerSourceOption) *v1alpha1.ApiServerSource {
 	c := &v1alpha1.ApiServerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -44,73 +44,73 @@ func NewApiServerSource(name, namespace string, o ...ApiServerSourceOption) *v1a
 	return c
 }
 
-func WithApiServerSourceUID(uid string) ApiServerSourceOption {
+func WithLegacyApiServerSourceUID(uid string) LegacyApiServerSourceOption {
 	return func(a *v1alpha1.ApiServerSource) {
 		a.UID = types.UID(uid)
 	}
 }
 
 // WithInitApiServerSourceConditions initializes the ApiServerSource's conditions.
-func WithInitApiServerSourceConditions(s *v1alpha1.ApiServerSource) {
+func WithInitLegacyApiServerSourceConditions(s *v1alpha1.ApiServerSource) {
 	s.Status.InitializeConditions()
 }
 
-func WithApiServerSourceSinkNotFound(s *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceSinkNotFound(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkNoSink("NotFound", "")
 }
 
-func WithApiServerSourceSink(uri string) ApiServerSourceOption {
+func WithLegacyApiServerSourceSink(uri string) LegacyApiServerSourceOption {
 	return func(s *v1alpha1.ApiServerSource) {
 		s.Status.MarkSink(uri)
 	}
 }
 
-func WithApiServerSourceSinkDepRef(uri string) ApiServerSourceOption {
+func WithLegacyApiServerSourceSinkDepRef(uri string) LegacyApiServerSourceOption {
 	return func(s *v1alpha1.ApiServerSource) {
 		s.Status.MarkSinkWarnRefDeprecated(uri)
 	}
 }
 
-func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
 	name := utils.GenerateFixedName(s, fmt.Sprintf("apiserversource-%s", s.Name))
 	s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
 }
 
-func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
 	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
 
-func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkEventTypes()
 }
 
-func WithApiServerSourceSufficientPermissions(s *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceSufficientPermissions(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkSufficientPermissions()
 }
 
-func WithApiServerSourceNoSufficientPermissions(s *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceNoSufficientPermissions(s *v1alpha1.ApiServerSource) {
 	s.Status.MarkNoSufficientPermissions("", `User system:serviceaccount:testnamespace:default cannot get, list, watch resource "namespaces" in API group ""`)
 }
 
-func WithApiServerSourceDeleted(c *v1alpha1.ApiServerSource) {
+func WithLegacyApiServerSourceDeleted(c *v1alpha1.ApiServerSource) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-func WithApiServerSourceSpec(spec v1alpha1.ApiServerSourceSpec) ApiServerSourceOption {
+func WithLegacyApiServerSourceSpec(spec v1alpha1.ApiServerSourceSpec) LegacyApiServerSourceOption {
 	return func(c *v1alpha1.ApiServerSource) {
 		c.Spec = spec
 	}
 }
 
-func WithApiServerSourceStatusObservedGeneration(generation int64) ApiServerSourceOption {
+func WithLegacyApiServerSourceStatusObservedGeneration(generation int64) LegacyApiServerSourceOption {
 	return func(c *v1alpha1.ApiServerSource) {
 		c.Status.ObservedGeneration = generation
 	}
 }
 
-func WithApiServerSourceObjectMetaGeneration(generation int64) ApiServerSourceOption {
+func WithLegacyApiServerSourceObjectMetaGeneration(generation int64) LegacyApiServerSourceOption {
 	return func(c *v1alpha1.ApiServerSource) {
 		c.ObjectMeta.Generation = generation
 	}
