@@ -72,8 +72,18 @@ rules:
       - "watch"
 
   # For running the SinkBinding reconciler.
+  # TODO(#2312): Remove this after v0.13.
   - apiGroups:
       - "sources.eventing.knative.dev"
+    resources:
+      - "sinkbindings"
+      - "sinkbindings/status"
+      - "sinkbindings/finalizers"
+    verbs: *everything
+
+  # For running the SinkBinding reconciler.
+  - apiGroups:
+      - "sources.knative.dev"
     resources:
       - "sinkbindings"
       - "sinkbindings/status"
