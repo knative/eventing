@@ -124,6 +124,8 @@ spec:
               volumeMounts:
                 - name: config-mako
                   mountPath: /etc/config-mako
+                - name: mako-secrets
+                  mountPath: /var/secret
               terminationMessagePolicy: FallbackToLogsOnError
             - name: mako
               image: gcr.io/knative-performance/mako-microservice:latest

@@ -32,9 +32,14 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
+	"knative.dev/pkg/test/mako"
+
+	"github.com/golang/protobuf/proto"
+	tpb "github.com/google/mako/clients/proto/analyzers/threshold_analyzer_go_proto"
+	mpb "github.com/google/mako/spec/proto/mako_go_proto"
+
 	"knative.dev/eventing/test/common/performance/common"
 	pb "knative.dev/eventing/test/common/performance/event_state"
-	"knative.dev/pkg/test/mako"
 )
 
 const (
@@ -49,7 +54,32 @@ type eventsRecord struct {
 	*pb.EventsRecord
 }
 
-var fatalf = log.Fatalf
+var (
+	fatalf = log.Fatalf
+
+	pea = &tpb.ThresholdAnalyzerInput{
+		Name: proto.String("Publish error throughput"),
+		Configs: []*tpb.ThresholdConfig{{
+			Max: proto.Float64(0),
+			DataFilter: &mpb.DataFilter{
+				DataType: mpb.DataFilter_METRIC_AGGREGATE_MAX.Enum(),
+				ValueKey: proto.String("pet"),
+			},
+		}},
+		CrossRunConfig: mako.NewCrossRunConfig(10),
+	}
+	dea = &tpb.ThresholdAnalyzerInput{
+		Name: proto.String("Deliver error throughput"),
+		Configs: []*tpb.ThresholdConfig{{
+			Max: proto.Float64(0),
+			DataFilter: &mpb.DataFilter{
+				DataType: mpb.DataFilter_METRIC_AGGREGATE_MAX.Enum(),
+				ValueKey: proto.String("det"),
+			},
+		}},
+		CrossRunConfig: mako.NewCrossRunConfig(10),
+	}
+)
 
 type Aggregator struct {
 	// thread-safe events recording maps
@@ -84,13 +114,11 @@ func NewAggregator(listenAddr string, expectRecords uint, makoTags []string, pub
 	}
 
 	// --- Create GRPC server
-
 	s := grpc.NewServer(grpc.MaxRecvMsgSize(maxRcvMsgSize))
 	pb.RegisterEventsRecorderServer(s, executor)
 	executor.server = s
 
 	// --- Initialize records maps
-
 	executor.sentEvents = &eventsRecord{EventsRecord: &pb.EventsRecord{
 		Type:   pb.EventsRecord_SENT,
 		Events: make(map[string]*timestamp.Timestamp),
@@ -119,6 +147,12 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		if err != nil {
 			fatalf("Failed to setup mako: %v", err)
 		}
+
+		// Add Analyzers to detect performance regression.
+		client.Quickstore.Input.ThresholdInputs = append(
+			client.Quickstore.Input.ThresholdInputs,
+			pea,
+			dea)
 
 		// Use a fresh context here so that our RPC to terminate the sidecar
 		// isn't subject to our timeout (or we won't shut it down when we time out)
@@ -184,7 +218,8 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		if ag.publishResults {
 			sendLatency := timestampAccepted.Sub(timestampSent)
 			// Uncomment to get CSV directly from this container log
-			//fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
+			// TODO add a flag to control whether we need this.
+			// fmt.Printf("%f,%d,\n", mako.XTime(timestampSent), sendLatency.Nanoseconds())
 			// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 			if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"pl": sendLatency.Seconds()}); qerr != nil {
 				log.Printf("ERROR AddSamplePoint for publish-latency: %v", qerr)
@@ -199,7 +234,8 @@ func (ag *Aggregator) Run(ctx context.Context) {
 		if ag.publishResults {
 			e2eLatency := timestampReceived.Sub(timestampSent)
 			// Uncomment to get CSV directly from this container log
-			//fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
+			// TODO add a flag to control whether we need this.
+			// fmt.Printf("%f,,%d\n", mako.XTime(timestampSent), e2eLatency.Nanoseconds())
 			// TODO mako accepts float64, which imo could lead to losing some precision on local tests. It should accept int64
 			if qerr := client.Quickstore.AddSamplePoint(mako.XTime(timestampSent), map[string]float64{"dl": e2eLatency.Seconds()}); qerr != nil {
 				log.Printf("ERROR AddSamplePoint for deliver-latency: %v", qerr)
@@ -256,8 +292,8 @@ func (ag *Aggregator) Run(ctx context.Context) {
 
 		log.Printf("Store to mako")
 
-		if out, err := client.Quickstore.Store(); err != nil {
-			fatalf("Failed to store data: %v\noutput: %v", err, out)
+		if err := client.StoreAndHandleResult(); err != nil {
+			fatalf("Failed to store data and handle the result: %v\n", err)
 		}
 	}
 
