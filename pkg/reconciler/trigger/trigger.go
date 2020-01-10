@@ -175,7 +175,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 				}
 			}
 		} else {
-			t.Status.MarkBrokerFailed("BrokerGetFailed", "Failed to get broker")
+			t.Status.MarkBrokerUnknown("BrokerGetFailed", "Failed to get broker: %v", err)
 		}
 		return err
 	}
@@ -264,7 +264,7 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1alph
 	dependencyObj, err := lister.ByNamespace(t.GetNamespace()).Get(dependencyObjRef.Name)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			t.Status.MarkDependencyUnknown("DependencyDoesNotExist", "Dependency does not exist: %v", err)
+			t.Status.MarkDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: %v", err)
 		} else {
 			t.Status.MarkDependencyUnknown("DependencyGetFailed", "Failed to get dependency: %v", err)
 		}

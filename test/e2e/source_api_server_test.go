@@ -25,14 +25,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
-
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestApiServerSource(t *testing.T) {
@@ -160,7 +158,7 @@ func TestApiServerSource(t *testing.T) {
 			eventingtesting.WithApiServerSourceSpec(tc.spec),
 		)
 
-		client.CreateLegacyApiServerSourceOrFail(apiServerSource)
+		client.CreateApiServerSourceOrFail(apiServerSource)
 
 		// wait for all test resources to be ready
 		if err := client.WaitForAllTestResourcesReady(); err != nil {

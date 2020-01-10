@@ -45,9 +45,6 @@ var _ duck.Implementable = (*Subscribable)(nil)
 // ReplyURI is the endpoint for the reply
 // At least one of SubscriberURI and ReplyURI must be present
 type SubscriberSpec struct {
-	// Deprecated: use UID.
-	// +optional
-	DeprecatedRef *corev1.ObjectReference `json:"ref,omitempty" yaml:"ref,omitempty"`
 	// UID is used to understand the origin of the subscriber.
 	// +optional
 	UID types.UID `json:"uid,omitempty"`

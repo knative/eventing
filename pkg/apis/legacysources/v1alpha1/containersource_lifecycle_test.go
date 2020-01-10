@@ -291,7 +291,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 		condQuery: ContainerConditionReady,
 		want: &apis.Condition{
 			Type:    ContainerConditionReady,
-			Status:  corev1.ConditionUnknown,
+			Status:  corev1.ConditionFalse,
 			Reason:  "SinkEmpty",
 			Message: "Sink has resolved to empty.",
 		},

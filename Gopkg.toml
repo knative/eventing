@@ -44,42 +44,40 @@ required = [
   version = "v2.2.4"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-09-19 is 1.14
+# GKE version as of 2020-01-06 is 1.15
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.15.3"
+  version = "kubernetes-1.16.4"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-09-19 is 1.14
+# GKE version as of 2020-01-06 is 1.15
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.15.3"
+  version = "kubernetes-1.16.4"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-09-19 is 1.14
+# GKE version as of 2020-01-06 is 1.15
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.15.3"
+  version = "kubernetes-1.16.4"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-09-19 is 1.14
+# GKE version as of 2020-01-06 is 1.15
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.15.3"
+  version = "kubernetes-1.16.4"
 
 # Overridden to ensure compatibility with GKE
-# GKE version as of 2019-09-19 is 1.14
+# GKE version as of 2020-01-06 is 1.15
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.15.3"
+  version = "kubernetes-1.16.4"
 
-# This is the commit at which k8s depends on this in 1.11
-# It seems to be broken at HEAD.
-# TODO When we upgrade to k8s 1.13 we can remove this override
-# thanks to https://github.com/kubernetes/kubernetes/pull/71296.
 [[override]]
   name = "github.com/json-iterator/go"
-  revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
+  # For k8s 1.16.4, the corresponding version is v1.1.7
+  # https://github.com/kubernetes/kubernetes/blob/v1.16.4/go.mod#L81
+  version = "v1.1.7"
 
 # TODO why is this overridden?
 [[override]]
