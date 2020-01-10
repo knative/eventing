@@ -81,7 +81,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner lib.ChannelTest
 			triggerName1,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource1, eventType1),
-			resources.WithSubscriberRefForTrigger(transformationPodName),
+			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
 		)
 
 		// create logger pod and service for trigger2
@@ -93,7 +93,7 @@ func BrokerChannelFlowTestHelper(t *testing.T, channelTestRunner lib.ChannelTest
 			triggerName2,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(any, any),
-			resources.WithSubscriberRefForTrigger(loggerPodName1),
+			resources.WithSubscriberServiceRefForTrigger(loggerPodName1),
 		)
 
 		// create channel for trigger3

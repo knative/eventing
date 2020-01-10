@@ -76,7 +76,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner lib
 			triggerName1,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource1, eventType1),
-			resources.WithSubscriberRefForTrigger(transformationPodName),
+			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
 		)
 
 		// create logger pod and service
@@ -88,7 +88,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner lib
 			triggerName2,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
-			resources.WithSubscriberRefForTrigger(loggerPodName),
+			resources.WithSubscriberServiceRefForTrigger(loggerPodName),
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events

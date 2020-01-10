@@ -166,8 +166,19 @@ func WithBroker(brokerName string) TriggerOption {
 	}
 }
 
-// WithSubscriberRefForTrigger returns an option that adds a Subscriber Ref for the given Trigger.
-func WithSubscriberRefForTrigger(name string) TriggerOption {
+// WithSubscriberKServiceRefForTrigger returns an option that adds a Subscriber Knative Service Ref for the given Trigger.
+func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
+	return func(t *eventingv1alpha1.Trigger) {
+		if name != "" {
+			t.Spec.Subscriber = duckv1.Destination{
+				Ref: ServiceRef(name),
+			}
+		}
+	}
+}
+
+// WithSubscriberServiceRefForTrigger returns an option that adds a Subscriber Kubernetes Service Ref for the given Trigger.
+func WithSubscriberServiceRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = duckv1.Destination{

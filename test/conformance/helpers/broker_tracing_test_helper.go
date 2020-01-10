@@ -95,7 +95,7 @@ func setupBrokerTracing(
 		"logger",
 		resources.WithBroker(broker.Name),
 		resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
-		resources.WithSubscriberRefForTrigger(loggerPodName),
+		resources.WithSubscriberServiceRefForTrigger(loggerPodName),
 	)
 
 	// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
@@ -112,7 +112,7 @@ func setupBrokerTracing(
 		"transformer",
 		resources.WithBroker(broker.Name),
 		resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
-		resources.WithSubscriberRefForTrigger(eventTransformerPod.Name),
+		resources.WithSubscriberServiceRefForTrigger(eventTransformerPod.Name),
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.

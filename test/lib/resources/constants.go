@@ -26,6 +26,12 @@ const (
 	SourcesAPIVersion   = "sources.eventing.knative.dev/v1alpha1"
 	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
 	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
+	ServingAPIVersion   = "serving.knative.dev/v1"
+)
+
+// Kind for Knative resources.
+const (
+	KServiceKind string = "Service"
 )
 
 // Kind for core Kubernetes resources.

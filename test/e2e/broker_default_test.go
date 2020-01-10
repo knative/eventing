@@ -163,7 +163,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, event.context)
 				client.CreateTriggerOrFail(triggerName,
-					resources.WithSubscriberRefForTrigger(subscriberName),
+					resources.WithSubscriberServiceRefForTrigger(subscriberName),
 					triggerOption,
 				)
 			}
