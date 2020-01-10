@@ -36,7 +36,7 @@ const (
 var (
 	// FIXME: Interval is set to 200 msec, as lower values will result in errors
 	// https://github.com/knative/eventing/issues/2357
-	interval = 200 * time.Millisecond
+	interval  = 200 * time.Millisecond
 	namespace = "event-test"
 )
 
@@ -60,8 +60,9 @@ func TestProbe(t *testing.T) {
 	// Use log.Printf instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
 	config := test.ProberConfig{
-		Namespace: namespace,
-		Interval:  interval,
+		Namespace:  namespace,
+		Interval:   interval,
+		UseServing: true,
 	}
 	prober := test.RunEventProber(log.Printf, client, config)
 	noError(ioutil.WriteFile(ready, []byte("prober ready"), 0666))

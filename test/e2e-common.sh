@@ -37,6 +37,8 @@ readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 # tagged release on the current branch will be used.
 readonly LATEST_RELEASE_VERSION=$(git describe --match "v[0-9]*" --abbrev=0)
 
+UNINSTALL_LIST=()
+
 # Install Knative Eventing in the current cluster, and waits for it to be ready.
 # If no parameters are passed, installs the current source-based build.
 # Parameters: $1 - Knative Eventing YAML file
@@ -53,10 +55,12 @@ function install_knative_eventing {
 
   echo ">> Installing Knative Monitoring"
   start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+  UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
 }
 
 function install_head {
   ko apply -f ${EVENTING_CONFIG} || return $?
+  wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 }
 
 function install_latest_release {
@@ -67,7 +71,7 @@ function install_latest_release {
   install_knative_eventing \
     "${url}/${yaml}" \
     || fail_test "Knative latest release installation failed"
-  wait_until_pods_running knative-eventing
+  wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 }
 
 function knative_setup {
@@ -80,6 +84,15 @@ function knative_teardown() {
   echo "Uninstalling Knative Eventing"
   ko delete --ignore-not-found=true --now --timeout 60s -f ${EVENTING_CONFIG}
   wait_until_object_does_not_exist namespaces knative-eventing
+
+  echo ">> Uninstalling dependencies"
+  # shellcheck disable=SC2068
+  for i in ${!UNINSTALL_LIST[@]}; do
+    # We uninstall elements in the reverse of the order they were installed.
+    local YAML="${UNINSTALL_LIST[$(( ${#array[@]} - $i ))]}"
+    echo ">> Bringing down YAML: ${YAML}"
+    kubectl delete --ignore-not-found=true -f "${YAML}" || return 1
+  done
 }
 
 # Setup resources common to all eventing tests.
@@ -129,6 +142,43 @@ function dump_extra_cluster_state() {
       echo "============================================================"
     done
   done
+}
+
+function install_istio {
+  if [[ -z "${ISTIO_VERSION}" ]]; then
+    readonly ISTIO_VERSION="latest"
+  fi
+  echo ">> Installing Istio: ${ISTIO_VERSION}"
+
+  local istio_base="./third_party/istio-${ISTIO_VERSION}"
+  INSTALL_ISTIO_CRD_YAML="${istio_base}/istio-crds.yaml"
+  INSTALL_ISTIO_YAML="${istio_base}/istio-minimal.yaml"
+
+  echo "Istio CRD YAML: ${INSTALL_ISTIO_CRD_YAML}"
+  echo "Istio YAML: ${INSTALL_ISTIO_YAML}"
+
+  echo ">> Bringing up Istio"
+  echo ">> Running Istio CRD installer"
+  kubectl apply -f "${INSTALL_ISTIO_CRD_YAML}" || return 1
+  wait_until_batch_job_complete istio-system || return 1
+  UNINSTALL_LIST+=( "${INSTALL_ISTIO_CRD_YAML}" )
+
+  echo ">> Running Istio"
+  kubectl apply -f "${INSTALL_ISTIO_YAML}" || return 1
+  UNINSTALL_LIST+=( "${INSTALL_ISTIO_YAML}" )
+}
+
+# Installs Knative Serving in the current cluster, and waits for it to be ready.
+function install_knative_serving {
+  install_istio
+  echo ">> Installing Knative serving"
+  readonly SERVING_YAML="https://github.com/knative/serving/releases/download/${LATEST_RELEASE_VERSION}/serving.yaml"
+
+  echo "Knative serving YAML: ${SERVING_YAML}"
+  kubectl apply -f "${SERVING_YAML}" || return 1
+  UNINSTALL_LIST+=( "${SERVING_YAML}" )
+
+  wait_until_pods_running knative-serving || fail_test "Knative Serving did not come up"
 }
 
 function wait_for_file {

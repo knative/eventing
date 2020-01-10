@@ -20,6 +20,7 @@ source "$(dirname "$0")/e2e-common.sh"
 # Script entry point.
 
 function knative_setup() {
+  install_knative_serving
   install_latest_release
 }
 
@@ -43,11 +44,13 @@ echo "Prober PID is ${PROBER_PID}"
 
 wait_for_file /tmp/prober-ready || fail_test
 
+header "Performing upgrade to HEAD"
 install_head
 
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
+header "Performing downgrade to latest release"
 install_latest_release
 
 header "Running postdowngrade tests"
