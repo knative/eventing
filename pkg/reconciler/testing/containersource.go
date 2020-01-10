@@ -119,6 +119,7 @@ func WithContainerSourceUID(uid types.UID) ContainerSourceOption {
 // WithInitContainerSourceConditions initializes the ContainerSource's conditions.
 func WithInitContainerSourceConditions(s *legacysourcesv1alpha1.ContainerSource) {
 	s.Status.InitializeConditions()
+	s.MarkDeprecated(&s.Status.Status, "ContainerSourceDeprecated", "containersources.sources.eventing.knative.dev are deprecated and will be removed in the future. Use a Deployment and SinkBinding.sources.knative.dev instead.")
 }
 
 func WithContainerSourceSinkNotFound(msg string) ContainerSourceOption {

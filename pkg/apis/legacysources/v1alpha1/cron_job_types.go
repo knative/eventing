@@ -35,6 +35,9 @@ import (
 
 // CronJobSource is the Schema for the cronjobsources API.
 type CronJobSource struct {
+	// Deprecated allows CronJobSource to have a deprecated message.
+	Deprecated
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 

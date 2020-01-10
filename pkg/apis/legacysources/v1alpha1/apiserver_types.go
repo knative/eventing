@@ -30,6 +30,9 @@ import (
 
 // ApiServerSource is the Schema for the apiserversources API
 type ApiServerSource struct {
+	// Deprecated allows ApiServerSource to have a deprecated message.
+	Deprecated
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
