@@ -18,7 +18,7 @@ package resources
 
 import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // DeliveryOption enables further configuration of DeliverySpec.
@@ -28,7 +28,7 @@ type DeliveryOption func(*eventingduckv1alpha1.DeliverySpec)
 func WithDeadLetterSinkForDelivery(name string) DeliveryOption {
 	return func(delivery *eventingduckv1alpha1.DeliverySpec) {
 		if name != "" {
-			delivery.DeadLetterSink = &duckv1beta1.Destination{
+			delivery.DeadLetterSink = &duckv1.Destination{
 				Ref: ServiceRef(name),
 			}
 		}
