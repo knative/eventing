@@ -14,22 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-readonly ROOT_DIR=$(dirname $0)/..
-source ${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh
+readonly ROOT_DIR=$(dirname "$0")/..
+# shellcheck disable=SC1090
+source "${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh"
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-cd ${ROOT_DIR}
+cd "${ROOT_DIR}"
 
 # Ensure we have everything we need under vendor/
 dep ensure
 
-rm -rf $(find vendor/ -name 'OWNERS')
-rm -rf $(find vendor/ -name 'OWNERS_ALIASES')
-rm -rf $(find vendor/ -name 'BUILD')
-rm -rf $(find vendor/ -name 'BUILD.bazel')
+find vendor/ -name 'OWNERS' -delete
+find vendor/ -name 'OWNERS_ALIASES' -delete
+find vendor/ -name 'BUILD' -delete
+find vendor/ -name 'BUILD.bazel' -delete
 
 update_licenses third_party/VENDOR-LICENSE \
   $(find . -name "*.go" | grep -v vendor | xargs grep "package main" | cut -d: -f1 | xargs -n1 dirname | uniq)

@@ -30,30 +30,28 @@ TIMEOUT=${TIMEOUT:-10m}
 
 header "Running preupgrade tests"
 
-go_test_e2e -tags=preupgrade -timeout="${TIMEOUT}" ./test/upgrade \
-  --resolvabledomain="$(use_resolvable_domain)" "$(use_https)" || fail_test
+go_test_e2e -tags=preupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 header "Starting prober test"
 
 # Remove this in case we failed to clean it up in an earlier test.
-rm -f /tmp/prober-signal
+rm -vf /tmp/prober-signal /tmp/prober-ready
 
-go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade \
-  --resolvabledomain="$(use_resolvable_domain)" "$(use_https)" &
+go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade &
 PROBER_PID=$!
 echo "Prober PID is ${PROBER_PID}"
+
+wait_for_file /tmp/prober-ready || fail_test
 
 install_head
 
 header "Running postupgrade tests"
-go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade \
-  --resolvabledomain="$(use_resolvable_domain)" "$(use_https)" || fail_test
+go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 install_latest_release
 
 header "Running postdowngrade tests"
-go_test_e2e -tags=postdowngrade -timeout=${TIMEOUT} ./test/upgrade \
-  --resolvabledomain=$(use_resolvable_domain) "$(use_https)" || fail_test
+go_test_e2e -tags=postdowngrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 # The prober is blocking on /tmp/prober-signal to know when it should exit.
 #
