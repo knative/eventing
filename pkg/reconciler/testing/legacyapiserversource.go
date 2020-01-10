@@ -53,6 +53,7 @@ func WithLegacyApiServerSourceUID(uid string) LegacyApiServerSourceOption {
 // WithInitApiServerSourceConditions initializes the ApiServerSource's conditions.
 func WithInitLegacyApiServerSourceConditions(s *v1alpha1.ApiServerSource) {
 	s.Status.InitializeConditions()
+	s.MarkDeprecated(&s.Status.Status, "ApiServerSourceDeprecated", "apiserversources.sources.eventing.knative.dev are deprecated and will be removed in the future. Use apiserversources.sources.knative.dev instead.")
 }
 
 func WithLegacyApiServerSourceSinkNotFound(s *v1alpha1.ApiServerSource) {

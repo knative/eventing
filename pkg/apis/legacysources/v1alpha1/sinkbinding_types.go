@@ -36,6 +36,9 @@ import (
 // environment variable holding the endpoint to which to send
 // cloud events.
 type SinkBinding struct {
+	// Deprecated allows ApiServerSource to have a deprecated message.
+	Deprecated
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
