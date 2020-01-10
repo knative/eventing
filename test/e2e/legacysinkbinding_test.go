@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -28,17 +28,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/eventing/test/base/resources"
+	"knative.dev/eventing/test/common"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 	"knative.dev/pkg/tracker"
-
-	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/lib/resources"
-
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
-func TestSinkBindingDeployment(t *testing.T) {
+func TestLegacySinkBindingDeployment(t *testing.T) {
 	const (
 		sinkBindingName = "e2e-sink-binding"
 		deploymentName  = "e2e-sink-binding-deployment"
@@ -53,21 +51,21 @@ func TestSinkBindingDeployment(t *testing.T) {
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// create sink binding
-	sinkBinding := eventingtesting.NewSinkBinding(
+	sinkBinding := eventingtesting.NewLegacySinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
-		eventingtesting.WithSubject(tracker.Reference{
+		eventingtesting.WithLegacySink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithLegacySubject(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Namespace:  client.Namespace,
 			Name:       deploymentName,
 		}),
 	)
-	client.CreateSinkBindingOrFail(sinkBinding)
+	client.CreateLegacySinkBindingOrFail(sinkBinding)
 
 	data := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
@@ -113,12 +111,12 @@ func TestSinkBindingDeployment(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }
 
-func TestSinkBindingCronJob(t *testing.T) {
+func TestLegacySinkBindingCronJob(t *testing.T) {
 	const (
 		sinkBindingName = "e2e-sink-binding"
 		deploymentName  = "e2e-sink-binding-cronjob"
@@ -133,14 +131,14 @@ func TestSinkBindingCronJob(t *testing.T) {
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
 
 	// create sink binding
-	sinkBinding := eventingtesting.NewSinkBinding(
+	sinkBinding := eventingtesting.NewLegacySinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
-		eventingtesting.WithSubject(tracker.Reference{
+		eventingtesting.WithLegacySink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithLegacySubject(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
 			Namespace:  client.Namespace,
@@ -151,7 +149,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 			},
 		}),
 	)
-	client.CreateSinkBindingOrFail(sinkBinding)
+	client.CreateLegacySinkBindingOrFail(sinkBinding)
 
 	data := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{
@@ -201,7 +199,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package legacysinkbinding
+package sinkbinding
 
 import (
 	"context"
 
-	fbinformer "knative.dev/eventing/pkg/legacyclient/injection/informers/legacysources/v1alpha1/sinkbinding"
+	sbinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/sinkbinding"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/podspecable"
 	"knative.dev/pkg/resolver"
 
@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	controllerAgentName = "legacysinkbinding-controller"
+	controllerAgentName = "sinkbinding-controller"
 )
 
 // NewController returns a new SinkBinding reconciler.
@@ -50,14 +50,14 @@ func NewController(
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
-	fbInformer := fbinformer.Get(ctx)
+	sbInformer := sbinformer.Get(ctx)
 	dc := dynamicclient.Get(ctx)
 	psInformerFactory := podspecable.Get(ctx)
 
 	c := &psbinding.BaseReconciler{
 		GVR: v1alpha1.SchemeGroupVersion.WithResource("sinkbindings"),
 		Get: func(namespace string, name string) (psbinding.Bindable, error) {
-			return fbInformer.Lister().SinkBindings(namespace).Get(name)
+			return sbInformer.Lister().SinkBindings(namespace).Get(name)
 		},
 		DynamicClient: dc,
 		Recorder: record.NewBroadcaster().NewRecorder(
@@ -67,7 +67,7 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 
-	fbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	sbInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	c.WithContext = WithContextFactory(ctx, impl.EnqueueKey)
 	c.Tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
@@ -82,7 +82,7 @@ func NewController(
 }
 
 func ListAll(ctx context.Context, handler cache.ResourceEventHandler) psbinding.ListAll {
-	fbInformer := fbinformer.Get(ctx)
+	fbInformer := sbinformer.Get(ctx)
 
 	// Whenever a SinkBinding changes our webhook programming might change.
 	fbInformer.Informer().AddEventHandler(handler)

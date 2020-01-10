@@ -19,21 +19,24 @@ package testing
 import (
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/tracker"
 )
 
 // SinkBindingOption enables further configuration of a SinkBinding.
-type SinkBindingOption func(*v1alpha1.SinkBinding)
+type SinkBindingOption func(*sourcesv1alpha1.SinkBinding)
 
-// NewSinkBinding creates a SinkBinding with SinkBindingOptions
-func NewSinkBinding(name, namespace string, o ...SinkBindingOption) *v1alpha1.SinkBinding {
-	c := &v1alpha1.SinkBinding{
+// LegacySinkBindingOption enables further configuration of a SinkBinding.
+type LegacySinkBindingOption func(*legacysourcesv1alpha1.SinkBinding)
+
+// NewLegacySinkBinding creates a SinkBinding with SinkBindingOptions
+func NewLegacySinkBinding(name, namespace string, o ...LegacySinkBindingOption) *legacysourcesv1alpha1.SinkBinding {
+	c := &legacysourcesv1alpha1.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -46,26 +49,55 @@ func NewSinkBinding(name, namespace string, o ...SinkBindingOption) *v1alpha1.Si
 	return c
 }
 
+// NewSinkBinding creates a SinkBinding with SinkBindingOptions
+func NewSinkBinding(name, namespace string, o ...SinkBindingOption) *sourcesv1alpha1.SinkBinding {
+	c := &sourcesv1alpha1.SinkBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	for _, opt := range o {
+		opt(c)
+	}
+	//c.SetDefaults(context.Background()) // TODO: We should add defaults and validation.
+	return c
+}
+
+// WithLegacySubject assigns the subject of the SinkBinding.
+func WithLegacySubject(subject tracker.Reference) LegacySinkBindingOption {
+	return func(sb *legacysourcesv1alpha1.SinkBinding) {
+		sb.Spec.Subject = subject
+	}
+}
+
 // WithSubject assigns the subject of the SinkBinding.
 func WithSubject(subject tracker.Reference) SinkBindingOption {
-	return func(sb *v1alpha1.SinkBinding) {
+	return func(sb *sourcesv1alpha1.SinkBinding) {
 		sb.Spec.Subject = subject
+	}
+}
+
+// WithLegacySink assigns the sink of the SinkBinding.
+func WithLegacySink(sink duckv1.Destination) LegacySinkBindingOption {
+	return func(sb *legacysourcesv1alpha1.SinkBinding) {
+		sb.Spec.Sink = sink
 	}
 }
 
 // WithSink assigns the sink of the SinkBinding.
 func WithSink(sink duckv1.Destination) SinkBindingOption {
-	return func(sb *v1alpha1.SinkBinding) {
+	return func(sb *sourcesv1alpha1.SinkBinding) {
 		sb.Spec.Sink = sink
 	}
 }
 
 // ContainerSourceOption enables further configuration of a ContainerSource.
-type ContainerSourceOption func(*v1alpha1.ContainerSource)
+type ContainerSourceOption func(*legacysourcesv1alpha1.ContainerSource)
 
 // NewContainerSource creates a ContainerSource with ContainerSourceOptions
-func NewContainerSource(name, namespace string, o ...ContainerSourceOption) *v1alpha1.ContainerSource {
-	c := &v1alpha1.ContainerSource{
+func NewContainerSource(name, namespace string, o ...ContainerSourceOption) *legacysourcesv1alpha1.ContainerSource {
+	c := &legacysourcesv1alpha1.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -79,81 +111,81 @@ func NewContainerSource(name, namespace string, o ...ContainerSourceOption) *v1a
 }
 
 func WithContainerSourceUID(uid types.UID) ContainerSourceOption {
-	return func(s *v1alpha1.ContainerSource) {
+	return func(s *legacysourcesv1alpha1.ContainerSource) {
 		s.UID = uid
 	}
 }
 
 // WithInitContainerSourceConditions initializes the ContainerSource's conditions.
-func WithInitContainerSourceConditions(s *v1alpha1.ContainerSource) {
+func WithInitContainerSourceConditions(s *legacysourcesv1alpha1.ContainerSource) {
 	s.Status.InitializeConditions()
 }
 
 func WithContainerSourceSinkNotFound(msg string) ContainerSourceOption {
-	return func(s *v1alpha1.ContainerSource) {
+	return func(s *legacysourcesv1alpha1.ContainerSource) {
 		s.Status.MarkNoSink("NotFound", msg)
 	}
 }
 
 func WithContainerSourceSinkMissing(msg string) ContainerSourceOption {
-	return func(s *v1alpha1.ContainerSource) {
+	return func(s *legacysourcesv1alpha1.ContainerSource) {
 		s.Status.MarkNoSink("Missing", msg)
 	}
 }
 
 func WithContainerSourceSink(uri string) ContainerSourceOption {
-	return func(s *v1alpha1.ContainerSource) {
+	return func(s *legacysourcesv1alpha1.ContainerSource) {
 		s.Status.MarkSink(uri)
 	}
 }
 
 func WithContainerSourceDeploying(msg string) ContainerSourceOption {
-	return func(s *v1alpha1.ContainerSource) {
+	return func(s *legacysourcesv1alpha1.ContainerSource) {
 		s.Status.MarkDeploying("DeploymentCreated", msg)
 	}
 }
 
 func WithContainerSourceDeployFailed(msg string) ContainerSourceOption {
-	return func(s *v1alpha1.ContainerSource) {
+	return func(s *legacysourcesv1alpha1.ContainerSource) {
 		s.Status.MarkNotDeployed("DeploymentCreateFailed", msg)
 	}
 }
 
-func WithContainerSourceDeployed(s *v1alpha1.ContainerSource) {
+func WithContainerSourceDeployed(s *legacysourcesv1alpha1.ContainerSource) {
 	s.Status.MarkDeployed()
 }
 
-func WithContainerSourceDeleted(c *v1alpha1.ContainerSource) {
+func WithContainerSourceDeleted(c *legacysourcesv1alpha1.ContainerSource) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-func WithContainerSourceSpec(spec v1alpha1.ContainerSourceSpec) ContainerSourceOption {
-	return func(c *v1alpha1.ContainerSource) {
+func WithContainerSourceSpec(spec legacysourcesv1alpha1.ContainerSourceSpec) ContainerSourceOption {
+	return func(c *legacysourcesv1alpha1.ContainerSource) {
 		c.Spec = spec
 	}
 }
 
 func WithContainerSourceLabels(labels map[string]string) ContainerSourceOption {
-	return func(c *v1alpha1.ContainerSource) {
+	return func(c *legacysourcesv1alpha1.ContainerSource) {
 		c.Labels = labels
 	}
 }
 
 func WithContainerSourceAnnotations(annotations map[string]string) ContainerSourceOption {
-	return func(c *v1alpha1.ContainerSource) {
+	return func(c *legacysourcesv1alpha1.ContainerSource) {
 		c.Annotations = annotations
 	}
 }
 
 func WithContainerSourceStatusObservedGeneration(generation int64) ContainerSourceOption {
-	return func(c *v1alpha1.ContainerSource) {
+	return func(c *legacysourcesv1alpha1.ContainerSource) {
 		c.Status.ObservedGeneration = generation
 	}
 }
 
 func WithContainerSourceObjectMetaGeneration(generation int64) ContainerSourceOption {
-	return func(c *v1alpha1.ContainerSource) {
+	return func(c *legacysourcesv1alpha1.ContainerSource) {
 		c.ObjectMeta.Generation = generation
 	}
 }
