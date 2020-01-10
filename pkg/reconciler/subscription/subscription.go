@@ -475,13 +475,6 @@ func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingd
 	for _, sub := range subs {
 		if sub.Status.AreReferencesResolved() && sub.DeletionTimestamp == nil {
 			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{
-				DeprecatedRef: &corev1.ObjectReference{
-					APIVersion: sub.APIVersion,
-					Kind:       sub.Kind,
-					Namespace:  sub.Namespace,
-					Name:       sub.Name,
-					UID:        sub.UID,
-				},
 				UID:               sub.UID,
 				Generation:        sub.Generation,
 				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
