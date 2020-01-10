@@ -33,7 +33,7 @@ const (
 type Deprecated struct{}
 
 // MarkDeprecated adds a warning condition that this object's spec is using deprecated fields
-// and will stop working in the future. Note that this does not affect the Ready condition.
+// and will stop working in the future.
 func (d *Deprecated) MarkDeprecated(s *duckv1.Status, reason, msg string) {
 	dc := apis.Condition{
 		Type:               StatusConditionTypeDeprecated,
@@ -50,16 +50,4 @@ func (d *Deprecated) MarkDeprecated(s *duckv1.Status, reason, msg string) {
 		}
 	}
 	s.Conditions = append(s.Conditions, dc)
-}
-
-// ClearDeprecated removes the StatusConditionTypeDeprecated warning condition. Note that this does not
-// affect the Ready condition.
-func (d *Deprecated) ClearDeprecated(s *duckv1.Status) {
-	conds := make([]apis.Condition, 0, len(s.Conditions))
-	for _, c := range s.Conditions {
-		if c.Type != StatusConditionTypeDeprecated {
-			conds = append(conds, c)
-		}
-	}
-	s.Conditions = conds
 }
