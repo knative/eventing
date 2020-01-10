@@ -61,9 +61,10 @@ type ChannelableStatus struct {
 	duckv1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	SubscribableTypeStatus `json:",inline"`
-	// ErrorChannel is set by the channel when it supports native error handling via a channel
+	// DeadLetterChannel is set by the channel when it supports native error handling via a channel
+	// Failed messages are delivered here.
 	// +optional
-	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
+	DeadLetterChannel *corev1.ObjectReference `json:"deadLetterChannel,omitempty"`
 }
 
 var (

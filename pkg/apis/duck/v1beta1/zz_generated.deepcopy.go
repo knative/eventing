@@ -116,8 +116,8 @@ func (in *ChannelableStatus) DeepCopyInto(out *ChannelableStatus) {
 	in.Status.DeepCopyInto(&out.Status)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
 	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
-	if in.ErrorChannel != nil {
-		in, out := &in.ErrorChannel, &out.ErrorChannel
+	if in.DeadLetterChannel != nil {
+		in, out := &in.DeadLetterChannel, &out.DeadLetterChannel
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}

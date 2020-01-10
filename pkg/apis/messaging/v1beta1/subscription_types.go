@@ -118,13 +118,13 @@ type SubscriptionStatus struct {
 // Subscription.
 type SubscriptionStatusPhysicalSubscription struct {
 	// SubscriberURI is the fully resolved URI for spec.subscriber.
-	SubscriberURI *apis.URL `json:"subscriberURI,omitempty"`
+	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 
 	// ReplyURI is the fully resolved URI for the spec.reply.
-	ReplyURI *apis.URL `json:"replyURI,omitempty"`
+	ReplyURI *apis.URL `json:"replyUri,omitempty"`
 
 	// ReplyURI is the fully resolved URI for the spec.delivery.deadLetterSink.
-	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkURI,omitempty"`
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

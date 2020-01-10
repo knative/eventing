@@ -109,22 +109,6 @@ func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
 		SubscribableStatus: s,
 	}
 
-	/* Test GetSubscribableTypeStatus */
-
-	// Should return SubscribableTypeStatus#SubscribableStatus
-	subscribableStatus := subscribableTypeStatus.GetSubscribableTypeStatus()
-	if subscribableStatus.Subscribers[0].Message != "This is new field" {
-		t.Error("Testing of GetSubscribableTypeStatus failed as the function returned something unexpected")
-	}
-
-	/* Test SetSubscribableTypeStatus */
-
-	// This should set both the fields to same value
-	subscribableTypeStatus.SetSubscribableTypeStatus(*s)
-	if subscribableTypeStatus.SubscribableStatus.Subscribers[0].Message != "This is new field" {
-		t.Error("SetSubscribableTypeStatus didn't work as expected")
-	}
-
 	/* Test AddSubscriberToSubscribableStatus */
 	subscribableTypeStatus.AddSubscriberToSubscribableStatus(SubscriberStatus{
 		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",

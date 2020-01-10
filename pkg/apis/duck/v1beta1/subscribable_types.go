@@ -52,11 +52,11 @@ type SubscriberSpec struct {
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
 	// +optional
-	SubscriberURI *apis.URL `json:"subscriberURI,omitempty"`
+	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 	// +optional
-	ReplyURI *apis.URL `json:"replyURI,omitempty"`
+	ReplyURI *apis.URL `json:"replyUri,omitempty"`
 	// +optional
-	DeadLetterSinkURI *apis.URL `json:"deadLetterSink,omitempty"`
+	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
 }
 
 // SubscribableStatus is the schema for the subscribable's status portion of the status
@@ -77,7 +77,6 @@ type SubscriberStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Status of the subscriber.
-	// +optional
 	Ready corev1.ConditionStatus `json:"ready,omitempty"`
 	// A human readable message indicating details of Ready status.
 	// +optional
@@ -118,28 +117,11 @@ var (
 	_ apis.Listable    = (*SubscribableType)(nil)
 )
 
-// GetSubscribableTypeStatus method Returns the Default SubscribableStatus in this case it's SubscribableStatus
-// This is w.r.t https://github.com/knative/eventing/pull/1685#discussion_r314797276
-// Due to change in the API, we support reading of SubscribableTypeStatus#DeprecatedSubscribableStatus in a logical way
-// where we read the V2 value first and if the value is absent then we read the V1 value,
-// Having this function here makes it convinient to read the default value at runtime.
-func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
-	return s.SubscribableStatus
-
-}
-
-// SetSubscribableTypeStatus method sets the SubscribableStatus Values in th SubscribableTypeStatus structs
-// This helper function ensures that we set both the values (SubscribableStatus and DeprecatedSubscribableStatus)
-func (s *SubscribableTypeStatus) SetSubscribableTypeStatus(subscriberStatus SubscribableStatus) {
-	s.SubscribableStatus = &subscriberStatus
-}
-
 // AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
 // with Subscribers, use this function, so that the value is reflected in both the duplicate fields residing
 // in SubscribableTypeStatus
 func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
-	subscribers := append(s.GetSubscribableTypeStatus().Subscribers, subscriberStatus)
-	s.SubscribableStatus.Subscribers = subscribers
+	s.SubscribableStatus.Subscribers = append(s.SubscribableStatus.Subscribers, subscriberStatus)
 }
 
 // GetFullType implements duck.Implementable
@@ -163,7 +145,7 @@ func (c *SubscribableType) Populate() {
 			ReplyURI:      apis.HTTP("sink2"),
 		}},
 	}
-	c.Status.SetSubscribableTypeStatus(SubscribableStatus{
+	c.Status.SubscribableStatus = &SubscribableStatus{
 		// Populate ALL fields
 		Subscribers: []SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -176,7 +158,7 @@ func (c *SubscribableType) Populate() {
 			Ready:              corev1.ConditionFalse,
 			Message:            "Some message",
 		}},
-	})
+	}
 }
 
 // GetListType implements apis.Listable
