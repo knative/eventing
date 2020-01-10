@@ -21,13 +21,15 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // EventTransformationForTriggerTestHelper is the helper function for broker_event_tranformation_test
-func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
+func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
 	const (
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"
@@ -46,48 +48,47 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 		loggerPodName         = "logger-pod"
 	)
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 		client.CreateRBACResourcesForBrokers()
 
 		// create a new broker
 		client.CreateBrokerOrFail(brokerName, &channel)
-		client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create the event we want to transform to
 		transformedEventBody := fmt.Sprintf("%s %s", eventBody, string(uuid.NewUUID()))
-		eventAfterTransformation := &resources.CloudEvent{
-			Source:   eventSource2,
-			Type:     eventType2,
-			Data:     fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventAfterTransformation := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, transformedEventBody),
+			cloudevents.WithSource(eventSource2),
+			cloudevents.WithType(eventType2),
+		)
 
 		// create the transformation service
 		transformationPod := resources.EventTransformationPod(transformationPodName, eventAfterTransformation)
-		client.CreatePodOrFail(transformationPod, common.WithService(transformationPodName))
+		client.CreatePodOrFail(transformationPod, lib.WithService(transformationPodName))
 
 		// create trigger1 for event transformation
 		client.CreateTriggerOrFail(
 			triggerName1,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource1, eventType1),
-			resources.WithSubscriberRefForTrigger(transformationPodName),
+			resources.WithSubscriberServiceRefForTrigger(transformationPodName),
 		)
 
 		// create logger pod and service
 		loggerPod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 		// create trigger2 for event receiving
 		client.CreateTriggerOrFail(
 			triggerName2,
 			resources.WithBroker(brokerName),
 			resources.WithDeprecatedSourceAndTypeTriggerFilter(eventSource2, eventType2),
-			resources.WithSubscriberRefForTrigger(loggerPodName),
+			resources.WithSubscriberServiceRefForTrigger(loggerPodName),
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
@@ -96,18 +97,18 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner com
 		}
 
 		// send fake CloudEvent to the broker
-		eventToSend := &resources.CloudEvent{
-			Source:   eventSource1,
-			Type:     eventType1,
-			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
-		if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
+		eventToSend := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, eventBody),
+			cloudevents.WithSource(eventSource1),
+			cloudevents.WithType(eventType1),
+		)
+
+		if err := client.SendFakeEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 		}
 
 		// check if the logging service receives the correct event
-		if err := client.CheckLog(loggerPodName, common.CheckerContains(transformedEventBody)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContains(transformedEventBody)); err != nil {
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", transformedEventBody, loggerPodName, err)
 		}
 	})

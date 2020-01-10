@@ -21,23 +21,26 @@ import (
 	"net/http"
 	"testing"
 
+	ce "github.com/cloudevents/sdk-go"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
 	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // BrokerTracingTestHelperWithChannelTestRunner runs the Broker tracing tests for all Channels in
 // the ChannelTestRunner.
 func BrokerTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner common.ChannelTestRunner,
+	channelTestRunner lib.ChannelTestRunner,
 	setupClient SetupClientFunc,
 ) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
 		t := struct{}{}
 		_ = fmt.Sprintf("%s", t)
@@ -71,7 +74,7 @@ func BrokerTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient 
 func setupBrokerTracing(
 	t *testing.T,
 	channel *metav1.TypeMeta,
-	client *common.Client,
+	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
 ) (tracinghelper.TestSpanTree, string) {
@@ -85,29 +88,31 @@ func setupBrokerTracing(
 
 	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
 	logPod := resources.EventDetailsPod(loggerPodName)
-	client.CreatePodOrFail(logPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 
 	// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
 	loggerTrigger := client.CreateTriggerOrFail(
 		"logger",
 		resources.WithBroker(broker.Name),
 		resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
-		resources.WithSubscriberRefForTrigger(loggerPodName),
+		resources.WithSubscriberServiceRefForTrigger(loggerPodName),
 	)
 
 	// Create a transformer (EventTransfrmer) Pod that replies with the same event as the input,
 	// except the reply's event's type is changed to bar.
-	eventTransformerPod := resources.EventTransformationPod("transformer", &resources.CloudEvent{
-		Type: etLogger,
+	eventTransformerPod := resources.EventTransformationPod("transformer", &cloudevents.CloudEvent{
+		EventContextV1: ce.EventContextV1{
+			Type: etLogger,
+		},
 	})
-	client.CreatePodOrFail(eventTransformerPod, common.WithService(eventTransformerPod.Name))
+	client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
 
 	// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
 	transformerTrigger := client.CreateTriggerOrFail(
 		"transformer",
 		resources.WithBroker(broker.Name),
 		resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
-		resources.WithSubscriberRefForTrigger(eventTransformerPod.Name),
+		resources.WithSubscriberServiceRefForTrigger(eventTransformerPod.Name),
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.
@@ -119,20 +124,19 @@ func setupBrokerTracing(
 	senderName := "sender"
 	eventID := fmt.Sprintf("%s", uuid.NewUUID())
 	body := fmt.Sprintf("TestBrokerTracing %s", eventID)
-	event := &resources.CloudEvent{
-		ID:       eventID,
-		Source:   senderName,
-		Type:     etTransformer,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: resources.CloudEventEncodingBinary,
-	}
+	event := cloudevents.New(
+		fmt.Sprintf(`{"msg":%q}`, body),
+		cloudevents.WithSource(senderName),
+		cloudevents.WithID(eventID),
+		cloudevents.WithType(etTransformer),
+	)
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	sendEvent := client.SendFakeEventToAddressable
 	if tc.IncomingTraceId {
 		sendEvent = client.SendFakeEventWithTracingToAddressable
 	}
-	if err := sendEvent(senderName, broker.Name, common.BrokerTypeMeta, event); err != nil {
+	if err := sendEvent(senderName, broker.Name, lib.BrokerTypeMeta, event); err != nil {
 		t.Fatalf("Failed to send fake CloudEvent to the broker %q", broker.Name)
 	}
 

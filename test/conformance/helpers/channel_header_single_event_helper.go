@@ -22,8 +22,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 /*
@@ -34,16 +36,16 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 */
 
 // SingleEventHelperForChannelTestHelper is the helper function for header_test
-func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channelTestRunner common.ChannelTestRunner) {
+func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channelTestRunner lib.ChannelTestRunner) {
 	channelName := "conformance-headers-channel-" + encoding
 	senderName := "conformance-headers-sender-" + encoding
 	subscriptionName := "conformance-headers-subscription-" + encoding
 	loggerPodName := "conformance-headers-logger-pod-" + encoding
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Running header conformance test with channel %q", channel)
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create channel
 		st.Logf("Creating channel")
@@ -51,7 +53,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 
 		// create logger service as the subscriber
 		pod := resources.EventDetailsPod(loggerPodName)
-		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
@@ -69,13 +71,12 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 		// send fake CloudEvent to the channel
 		eventID := fmt.Sprintf("%s", uuid.NewUUID())
 		body := fmt.Sprintf("TestSingleHeaderEvent %s", eventID)
-		event := &resources.CloudEvent{
-			ID:       eventID,
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: encoding,
-		}
+		event := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, body),
+			cloudevents.WithSource(senderName),
+			cloudevents.WithID(eventID),
+			cloudevents.WithEncoding(encoding),
+		)
 
 		st.Logf("Sending event with tracing headers to %s", senderName)
 		if err := client.SendFakeEventWithTracingToAddressable(senderName, channelName, &channel, event); err != nil {
@@ -85,7 +86,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 		// verify the logger service receives the event
 		st.Logf("Logging for event with body %s", body)
 
-		if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContains(body)); err != nil {
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
 
@@ -93,7 +94,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid", "X-B3-Sampled"}
 		for _, headerName := range requiredHeaderNameList {
 			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
-			if err := client.CheckLog(loggerPodName, common.CheckerContains(expectedHeaderLog)); err != nil {
+			if err := client.CheckLog(loggerPodName, lib.CheckerContains(expectedHeaderLog)); err != nil {
 				st.Fatalf("String %q not found in logs of logger pod %q: %v", expectedHeaderLog, loggerPodName, err)
 			}
 		}

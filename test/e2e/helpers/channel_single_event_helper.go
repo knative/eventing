@@ -22,28 +22,30 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
-func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestRunner common.ChannelTestRunner) {
+func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestRunner lib.ChannelTestRunner) {
 	channelName := "e2e-singleevent-channel-" + encoding
 	senderName := "e2e-singleevent-sender-" + encoding
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
 	loggerPodName := "e2e-singleevent-logger-pod-" + encoding
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Run test with channel %q", channel)
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create channel
 		client.CreateChannelOrFail(channelName, &channel)
 
 		// create logger service as the subscriber
 		pod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
 		client.CreateSubscriptionOrFail(
@@ -60,19 +62,18 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestR
 
 		// send fake CloudEvent to the channel
 		body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
-		event := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: encoding,
-		}
+		event := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, body),
+			cloudevents.WithSource(senderName),
+			cloudevents.WithEncoding(encoding),
+		)
 
 		if err := client.SendFakeEventToAddressable(senderName, channelName, &channel, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
 		}
 
 		// verify the logger service receives the event
-		if err := client.CheckLog(loggerPodName, common.CheckerContains(body)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContains(body)); err != nil {
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
 	})
