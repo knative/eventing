@@ -51,7 +51,6 @@ type CheckRunOutput struct {
 // CheckRunAnnotation represents an annotation object for a CheckRun output.
 type CheckRunAnnotation struct {
 	Path            *string `json:"path,omitempty"`
-	BlobHRef        *string `json:"blob_href,omitempty"`
 	StartLine       *int    `json:"start_line,omitempty"`
 	EndLine         *int    `json:"end_line,omitempty"`
 	StartColumn     *int    `json:"start_column,omitempty"`
@@ -141,7 +140,6 @@ func (s *ChecksService) GetCheckSuite(ctx context.Context, owner, repo string, c
 // CreateCheckRunOptions sets up parameters needed to create a CheckRun.
 type CreateCheckRunOptions struct {
 	Name        string            `json:"name"`                   // The name of the check (e.g., "code-coverage"). (Required.)
-	HeadBranch  string            `json:"head_branch"`            // The name of the branch to perform a check against. (Required.)
 	HeadSHA     string            `json:"head_sha"`               // The SHA of the commit. (Required.)
 	DetailsURL  *string           `json:"details_url,omitempty"`  // The URL of the integrator's site that has the full details of the check. (Optional.)
 	ExternalID  *string           `json:"external_id,omitempty"`  // A reference for the run on the integrator's system. (Optional.)
@@ -184,7 +182,6 @@ func (s *ChecksService) CreateCheckRun(ctx context.Context, owner, repo string, 
 // UpdateCheckRunOptions sets up parameters needed to update a CheckRun.
 type UpdateCheckRunOptions struct {
 	Name        string            `json:"name"`                   // The name of the check (e.g., "code-coverage"). (Required.)
-	HeadBranch  *string           `json:"head_branch,omitempty"`  // The name of the branch to perform a check against. (Optional.)
 	HeadSHA     *string           `json:"head_sha,omitempty"`     // The SHA of the commit. (Optional.)
 	DetailsURL  *string           `json:"details_url,omitempty"`  // The URL of the integrator's site that has the full details of the check. (Optional.)
 	ExternalID  *string           `json:"external_id,omitempty"`  // A reference for the run on the integrator's system. (Optional.)

@@ -22,9 +22,9 @@ package licenseclassifier
 import "github.com/google/licenseclassifier/internal/sets"
 
 // Canonical names of the licenses.
-// The names come from the https://spdx.org/licenses website, and are
-// also the filenames of the licenses in licenseclassifier/licenses.
 const (
+	// The names come from the https://spdx.org/licenses website, and are
+	// also the filenames of the licenses in licenseclassifier/licenses.
 	AFL11                       = "AFL-1.1"
 	AFL12                       = "AFL-1.2"
 	AFL20                       = "AFL-2.0"
@@ -94,6 +94,7 @@ const (
 	CPL10                       = "CPL-1.0"
 	eGenix                      = "eGenix"
 	EPL10                       = "EPL-1.0"
+	EPL20                       = "EPL-2.0"
 	EUPL10                      = "EUPL-1.0"
 	EUPL11                      = "EUPL-1.1"
 	Facebook2Clause             = "Facebook-2-Clause"
@@ -121,6 +122,7 @@ const (
 	LGPLLR                      = "LGPLLR"
 	Libpng                      = "Libpng"
 	Lil10                       = "Lil-1.0"
+	LinuxOpenIB                 = "Linux-OpenIB"
 	LPL102                      = "LPL-1.02"
 	LPL10                       = "LPL-1.0"
 	LPPL13c                     = "LPPL-1.3c"
@@ -132,8 +134,9 @@ const (
 	NCSA                        = "NCSA"
 	NPL10                       = "NPL-1.0"
 	NPL11                       = "NPL-1.1"
-	OFL                         = "OFL"
+	OFL11                       = "OFL-1.1"
 	OpenSSL                     = "OpenSSL"
+	OpenVision                  = "OpenVision"
 	OSL10                       = "OSL-1.0"
 	OSL11                       = "OSL-1.1"
 	OSL20                       = "OSL-2.0"
@@ -142,6 +145,7 @@ const (
 	PHP301                      = "PHP-3.01"
 	PHP30                       = "PHP-3.0"
 	PIL                         = "PIL"
+	PostgreSQL                  = "PostgreSQL"
 	Python20complete            = "Python-2.0-complete"
 	Python20                    = "Python-2.0"
 	QPL10                       = "QPL-1.0"
@@ -153,8 +157,12 @@ const (
 	SISSL                       = "SISSL"
 	Sleepycat                   = "Sleepycat"
 	UnicodeTOU                  = "Unicode-TOU"
+	UnicodeDFS2015              = "Unicode-DFS-2015"
+	UnicodeDFS2016              = "Unicode-DFS-2016"
 	Unlicense                   = "Unlicense"
+	UPL10                       = "UPL-1.0"
 	W3C19980720                 = "W3C-19980720"
+	W3C20150513                 = "W3C-20150513"
 	W3C                         = "W3C"
 	WTFPL                       = "WTFPL"
 	X11                         = "X11"
@@ -222,6 +230,7 @@ var (
 		CDDL11,
 		CPL10,
 		EPL10,
+		EPL20,
 		FreeImage,
 		IPL10,
 		MPL10,
@@ -270,6 +279,7 @@ var (
 		ImageMagick,
 		Libpng,
 		Lil10,
+		LinuxOpenIB,
 		LPL102,
 		LPL10,
 		MSPL,
@@ -281,11 +291,16 @@ var (
 		PIL,
 		Python20,
 		Python20complete,
+		PostgreSQL,
 		SGIB10,
 		SGIB11,
 		SGIB20,
+		UnicodeDFS2015,
+		UnicodeDFS2016,
 		UnicodeTOU,
+		UPL10,
 		W3C19980720,
+		W3C20150513,
 		W3C,
 		X11,
 		Xnet,
@@ -316,7 +331,8 @@ var (
 	// fall into this category.
 	byExceptionOnlyType = sets.NewStringSet(
 		Beerware,
-		OFL,
+		OFL11,
+		OpenVision,
 	)
 
 	// forbidden - Licenses that are forbidden to be used.

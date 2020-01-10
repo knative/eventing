@@ -70,17 +70,14 @@ var (
 // channel --> reply
 type SubscriptionSpec struct {
 	// Reference to a channel that will be used to create the subscription
-	// for receiving events. The channel must have spec.subscriptions
-	// list which will then be modified accordingly.
-	//
 	// You can specify only the following fields of the ObjectReference:
 	//   - Kind
 	//   - APIVersion
 	//   - Name
-	//  The resource pointed by this ObjectReference must meet the Subscribable contract
-	//  with a pointer to the Subscribable duck type. If the resource does not meet this contract,
-	//  it will be reflected in the Subscription's status.
-
+	//  The resource pointed by this ObjectReference must meet the
+	// contract to the ChannelableSpec duck type. If the resource does not
+	// meet this contract it will be reflected in the Subscription's status.
+	//
 	// This field is immutable. We have no good answer on what happens to
 	// the events that are currently in the channel being consumed from
 	// and what the semantics there should be. For now, you can always

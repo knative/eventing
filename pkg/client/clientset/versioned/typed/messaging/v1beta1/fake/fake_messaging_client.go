@@ -28,6 +28,10 @@ type FakeMessagingV1beta1 struct {
 	*testing.Fake
 }
 
+func (c *FakeMessagingV1beta1) Channels(namespace string) v1beta1.ChannelInterface {
+	return &FakeChannels{c, namespace}
+}
+
 func (c *FakeMessagingV1beta1) Subscriptions(namespace string) v1beta1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
 }

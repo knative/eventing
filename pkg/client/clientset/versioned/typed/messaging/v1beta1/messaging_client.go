@@ -26,12 +26,17 @@ import (
 
 type MessagingV1beta1Interface interface {
 	RESTClient() rest.Interface
+	ChannelsGetter
 	SubscriptionsGetter
 }
 
 // MessagingV1beta1Client is used to interact with features provided by the messaging.knative.dev group.
 type MessagingV1beta1Client struct {
 	restClient rest.Interface
+}
+
+func (c *MessagingV1beta1Client) Channels(namespace string) ChannelInterface {
+	return newChannels(c, namespace)
 }
 
 func (c *MessagingV1beta1Client) Subscriptions(namespace string) SubscriptionInterface {

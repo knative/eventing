@@ -24,6 +24,11 @@ import (
 // will search for such issues, sorting by creation date in ascending order
 // (i.e., oldest first).
 //
+// If query includes multiple conditions, it MUST NOT include "+" as the condition separator.
+// You have to use " " as the separator instead.
+// For example, querying with "language:c++" and "leveldb", then query should be
+// "language:c++ leveldb" but not "language:c+++leveldb".
+//
 // GitHub API docs: https://developer.github.com/v3/search/
 type SearchService service
 
@@ -68,6 +73,37 @@ type RepositoriesSearchResult struct {
 func (s *SearchService) Repositories(ctx context.Context, query string, opt *SearchOptions) (*RepositoriesSearchResult, *Response, error) {
 	result := new(RepositoriesSearchResult)
 	resp, err := s.search(ctx, "repositories", &searchParameters{Query: query}, opt, result)
+	return result, resp, err
+}
+
+// TopicsSearchResult represents the result of a topics search.
+type TopicsSearchResult struct {
+	Total             *int           `json:"total_count,omitempty"`
+	IncompleteResults *bool          `json:"incomplete_results,omitempty"`
+	Topics            []*TopicResult `json:"items,omitempty"`
+}
+
+type TopicResult struct {
+	Name             *string    `json:"name,omitempty"`
+	DisplayName      *string    `json:"display_name,omitempty"`
+	ShortDescription *string    `json:"short_description,omitempty"`
+	Description      *string    `json:"description,omitempty"`
+	CreatedBy        *string    `json:"created_by,omitempty"`
+	CreatedAt        *Timestamp `json:"created_at,omitempty"`
+	UpdatedAt        *string    `json:"updated_at,omitempty"`
+	Featured         *bool      `json:"featured,omitempty"`
+	Curated          *bool      `json:"curated,omitempty"`
+	Score            *float64   `json:"score,omitempty"`
+}
+
+// Topics finds topics via various criteria. Results are sorted by best match.
+// Please see https://help.github.com/en/articles/searching-topics for more
+// information about search qualifiers.
+//
+// GitHub API docs: https://developer.github.com/v3/search/#search-topics
+func (s *SearchService) Topics(ctx context.Context, query string, opt *SearchOptions) (*TopicsSearchResult, *Response, error) {
+	result := new(TopicsSearchResult)
+	resp, err := s.search(ctx, "topics", &searchParameters{Query: query}, opt, result)
 	return result, resp, err
 }
 
@@ -240,14 +276,14 @@ func (s *SearchService) search(ctx context.Context, searchType string, parameter
 		// Accept header for search commits preview endpoint
 		// TODO: remove custom Accept header when this API fully launches.
 		req.Header.Set("Accept", mediaTypeCommitSearchPreview)
+	case searchType == "topics":
+		// Accept header for search repositories based on topics preview endpoint
+		// TODO: remove custom Accept header when this API fully launches.
+		req.Header.Set("Accept", mediaTypeTopicsPreview)
 	case searchType == "repositories":
 		// Accept header for search repositories based on topics preview endpoint
 		// TODO: remove custom Accept header when this API fully launches.
 		req.Header.Set("Accept", mediaTypeTopicsPreview)
-	case searchType == "labels":
-		// Accept header for search labels based on label description preview endpoint.
-		// TODO: remove custom Accept header when this API fully launches.
-		req.Header.Set("Accept", mediaTypeLabelDescriptionSearchPreview)
 	case opt != nil && opt.TextMatch:
 		// Accept header defaults to "application/vnd.github.v3+json"
 		// We change it here to fetch back text-match metadata

@@ -7,6 +7,7 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -125,6 +126,18 @@ func (r Repository) String() string {
 	return Stringify(r)
 }
 
+// BranchListOptions specifies the optional parameters to the
+// RepositoriesService.ListBranches method.
+type BranchListOptions struct {
+	// Setting to true returns only protected branches.
+	// When set to false, only unprotected branches are returned.
+	// Omitting this parameter returns all branches.
+	// Default: nil
+	Protected *bool `url:"protected,omitempty"`
+
+	ListOptions
+}
+
 // RepositoryListOptions specifies the optional parameters to the
 // RepositoriesService.List method.
 type RepositoryListOptions struct {
@@ -200,6 +213,14 @@ type RepositoryListByOrgOptions struct {
 	// Type of repositories to list. Possible values are: all, public, private,
 	// forks, sources, member. Default is "all".
 	Type string `url:"type,omitempty"`
+
+	// How to sort the repository list. Can be one of created, updated, pushed,
+	// full_name. Default is "created".
+	Sort string `url:"sort,omitempty"`
+
+	// Direction in which to sort repositories. Can be one of asc or desc.
+	// Default when using full_name: asc; otherwise desc.
+	Direction string `url:"direction,omitempty"`
 
 	ListOptions
 }
@@ -499,6 +520,26 @@ type ListContributorsOptions struct {
 	ListOptions
 }
 
+// GetVulnerabilityAlerts checks if vulnerability alerts are enabled for a repository.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/#check-if-vulnerability-alerts-are-enabled-for-a-repository
+func (s *RepositoriesService) GetVulnerabilityAlerts(ctx context.Context, owner, repository string) (bool, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/vulnerability-alerts", owner, repository)
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches
+	req.Header.Set("Accept", mediaTypeRequiredVulnerabilityAlertsPreview)
+
+	resp, err := s.client.Do(ctx, req, nil)
+	vulnerabilityAlertsEnabled, err := parseBoolResponse(err)
+
+	return vulnerabilityAlertsEnabled, resp, err
+}
+
 // EnableVulnerabilityAlerts enables vulnerability alerts and the dependency graph for a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#enable-vulnerability-alerts
@@ -632,8 +673,6 @@ func (s *RepositoriesService) ListTeams(ctx context.Context, owner string, repo 
 		return nil, nil, err
 	}
 
-	req.Header.Set("Accept", mediaTypeNestedTeamsPreview)
-
 	var teams []*Team
 	resp, err := s.client.Do(ctx, req, &teams)
 	if err != nil {
@@ -716,7 +755,7 @@ type RequiredStatusChecksRequest struct {
 // PullRequestReviewsEnforcement represents the pull request reviews enforcement of a protected branch.
 type PullRequestReviewsEnforcement struct {
 	// Specifies which users and teams can dismiss pull request reviews.
-	DismissalRestrictions DismissalRestrictions `json:"dismissal_restrictions"`
+	DismissalRestrictions *DismissalRestrictions `json:"dismissal_restrictions,omitempty"`
 	// Specifies if approved reviews are dismissed automatically, when a new commit is pushed.
 	DismissStaleReviews bool `json:"dismiss_stale_reviews"`
 	// RequireCodeOwnerReviews specifies if an approved review is required in pull requests including files with a designated code owner.
@@ -771,6 +810,8 @@ type BranchRestrictions struct {
 	Users []*User `json:"users"`
 	// The list of team slugs with push access.
 	Teams []*Team `json:"teams"`
+	// The list of app slugs with push access.
+	Apps []*App `json:"apps"`
 }
 
 // BranchRestrictionsRequest represents the request to create/edit the
@@ -782,6 +823,8 @@ type BranchRestrictionsRequest struct {
 	Users []string `json:"users"`
 	// The list of team slugs with push access. (Required; use []string{} instead of nil for empty list.)
 	Teams []string `json:"teams"`
+	// The list of app slugs with push access.
+	Apps []string `json:"apps,omitempty"`
 }
 
 // DismissalRestrictions specifies which users and teams can dismiss pull request reviews.
@@ -814,7 +857,7 @@ type SignaturesProtectedBranch struct {
 // ListBranches lists branches for the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#list-branches
-func (s *RepositoriesService) ListBranches(ctx context.Context, owner string, repo string, opt *ListOptions) ([]*Branch, *Response, error) {
+func (s *RepositoriesService) ListBranches(ctx context.Context, owner string, repo string, opt *BranchListOptions) ([]*Branch, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -1114,9 +1157,9 @@ func (s *RepositoriesService) UpdatePullRequestReviewEnforcement(ctx context.Con
 func (s *RepositoriesService) DisableDismissalRestrictions(ctx context.Context, owner, repo, branch string) (*PullRequestReviewsEnforcement, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/required_pull_request_reviews", owner, repo, branch)
 
-	data := struct {
-		R []interface{} `json:"dismissal_restrictions"`
-	}{[]interface{}{}}
+	data := new(struct {
+		DismissalRestrictionsRequest `json:"dismissal_restrictions"`
+	})
 
 	req, err := s.client.NewRequest("PATCH", u, data)
 	if err != nil {
@@ -1267,6 +1310,93 @@ func (s *RepositoriesService) ReplaceAllTopics(ctx context.Context, owner, repo 
 	return t.Names, resp, nil
 }
 
+// ListApps lists the Github apps that have push access to a given protected branch.
+// It requires the Github apps to have `write` access to the `content` permission.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#list-apps-with-access-to-protected-branch
+func (s *RepositoriesService) ListApps(ctx context.Context, owner, repo, branch string) ([]*App, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/restrictions/apps", owner, repo, branch)
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var apps []*App
+	resp, err := s.client.Do(ctx, req, &apps)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return apps, resp, nil
+}
+
+// ReplaceAppRestrictions replaces the apps that have push access to a given protected branch.
+// It removes all apps that previously had push access and grants push access to the new list of apps.
+// It requires the Github apps to have `write` access to the `content` permission.
+//
+// Note: The list of users, apps, and teams in total is limited to 100 items.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#replace-app-restrictions-of-protected-branch
+func (s *RepositoriesService) ReplaceAppRestrictions(ctx context.Context, owner, repo, branch string, slug []string) ([]*App, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/restrictions/apps", owner, repo, branch)
+	req, err := s.client.NewRequest("PUT", u, slug)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var apps []*App
+	resp, err := s.client.Do(ctx, req, &apps)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return apps, resp, nil
+}
+
+// AddAppRestrictions grants the specified apps push access to a given protected branch.
+// It requires the Github apps to have `write` access to the `content` permission.
+//
+// Note: The list of users, apps, and teams in total is limited to 100 items.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#add-app-restrictions-of-protected-branch
+func (s *RepositoriesService) AddAppRestrictions(ctx context.Context, owner, repo, branch string, slug []string) ([]*App, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/restrictions/apps", owner, repo, branch)
+	req, err := s.client.NewRequest("POST", u, slug)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var apps []*App
+	resp, err := s.client.Do(ctx, req, &apps)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return apps, resp, nil
+}
+
+// RemoveAppRestrictions removes the ability of an app to push to this branch.
+// It requires the Github apps to have `write` access to the `content` permission.
+//
+// Note: The list of users, apps, and teams in total is limited to 100 items.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#remove-app-restrictions-of-protected-branch
+func (s *RepositoriesService) RemoveAppRestrictions(ctx context.Context, owner, repo, branch string, slug []string) ([]*App, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/restrictions/apps", owner, repo, branch)
+	req, err := s.client.NewRequest("DELETE", u, slug)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var apps []*App
+	resp, err := s.client.Do(ctx, req, &apps)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return apps, resp, nil
+}
+
 // TransferRequest represents a request to transfer a repository.
 type TransferRequest struct {
 	NewOwner string  `json:"new_owner"`
@@ -1290,8 +1420,37 @@ func (s *RepositoriesService) Transfer(ctx context.Context, owner, repo string, 
 		return nil, nil, err
 	}
 
+	r := new(Repository)
+	resp, err := s.client.Do(ctx, req, r)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return r, resp, nil
+}
+
+// DispatchRequestOptions represents a request to trigger a repository_dispatch event.
+type DispatchRequestOptions struct {
+	// EventType is a custom webhook event name. (Required.)
+	EventType string `json:"event_type"`
+	// ClientPayload is a custom JSON payload with extra information about the webhook event.
+	// Defaults to an empty JSON object.
+	ClientPayload *json.RawMessage `json:"client_payload,omitempty"`
+}
+
+// Dispatch triggers a repository_dispatch event in a GitHub Actions workflow.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/#create-a-repository-dispatch-event
+func (s *RepositoriesService) Dispatch(ctx context.Context, owner, repo string, opts DispatchRequestOptions) (*Repository, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/dispatches", owner, repo)
+
+	req, err := s.client.NewRequest("POST", u, &opts)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeRepositoryTransferPreview)
+	req.Header.Set("Accept", mediaTypeRepositoryDispatchPreview)
 
 	r := new(Repository)
 	resp, err := s.client.Do(ctx, req, r)
