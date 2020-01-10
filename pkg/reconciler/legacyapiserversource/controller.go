@@ -41,7 +41,7 @@ const (
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "apiserver-source-controller"
+	controllerAgentName = "legacy-apiserver-source-controller"
 )
 
 // envConfig will be used to extract the required environment variables using

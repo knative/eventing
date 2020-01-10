@@ -200,6 +200,16 @@ func (client *Client) CreateLegacyContainerSourceOrFail(containerSource *legacys
 	client.Tracker.AddObj(containerSource)
 }
 
+// CreateSinkBindingOrFail will create a SinkBinding or fail the test if there is an error.
+func (client *Client) CreateSinkBindingOrFail(sb *sourcesv1alpha1.SinkBinding) {
+	sbInterface := client.Eventing.SourcesV1alpha1().SinkBindings(client.Namespace)
+	_, err := sbInterface.Create(sb)
+	if err != nil {
+		client.T.Fatalf("Failed to create containersource %q: %v", sb.Name, err)
+	}
+	client.Tracker.AddObj(sb)
+}
+
 // CreateLegacySinkBindingOrFail will create a SinkBinding or fail the test if there is an error.
 func (client *Client) CreateLegacySinkBindingOrFail(containerSource *legacysourcesv1alpha1.SinkBinding) {
 	containerSourceInterface := client.Legacy.SourcesV1alpha1().SinkBindings(client.Namespace)
