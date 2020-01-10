@@ -39,19 +39,19 @@ func EventingTypeMeta(kind string) *metav1.TypeMeta {
 }
 
 // CronJobSourceTypeMeta is the TypeMeta ref for CronJobSource.
-var CronJobSourceTypeMeta = SourcesTypeMeta(resources.CronJobSourceKind)
+var CronJobSourceTypeMeta = LegacySourcesTypeMeta(resources.CronJobSourceKind)
 
 // ContainerSourceTypeMeta is the TypeMeta ref for ContainerSource.
-var ContainerSourceTypeMeta = SourcesTypeMeta(resources.ContainerSourceKind)
+var ContainerSourceTypeMeta = LegacySourcesTypeMeta(resources.ContainerSourceKind)
 
-// ApiServerSourceTypeMeta is the TypeMeta ref for ApiServerSource.
-var ApiServerSourceTypeMeta = SourcesTypeMeta(resources.ApiServerSourceKind)
+// LegacyApiServerSourceTypeMeta is the TypeMeta ref for ApiServerSource.
+var LegacyApiServerSourceTypeMeta = LegacySourcesTypeMeta(resources.ApiServerSourceKind)
 
-// SourcesTypeMeta returns the TypeMeta ref for an eventing sources resource.
-func SourcesTypeMeta(kind string) *metav1.TypeMeta {
+// LegacySourcesTypeMeta returns the TypeMeta ref for an eventing sources resource.
+func LegacySourcesTypeMeta(kind string) *metav1.TypeMeta {
 	return &metav1.TypeMeta{
 		Kind:       kind,
-		APIVersion: resources.SourcesAPIVersion,
+		APIVersion: resources.LegacySourcesAPIVersion,
 	}
 }
 

@@ -27,8 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/base"
 	"knative.dev/eventing/test/base/resources"
@@ -180,7 +181,7 @@ func (client *Client) CreateFlowsParallelOrFail(parallel *flowsv1alpha1.Parallel
 }
 
 // CreateLegacyCronJobSourceOrFail will create a CronJobSource or fail the test if there is an error.
-func (client *Client) CreateLegacyCronJobSourceOrFail(cronJobSource *sourcesv1alpha1.CronJobSource) {
+func (client *Client) CreateLegacyCronJobSourceOrFail(cronJobSource *legacysourcesv1alpha1.CronJobSource) {
 	cronJobSourceInterface := client.Legacy.SourcesV1alpha1().CronJobSources(client.Namespace)
 	_, err := cronJobSourceInterface.Create(cronJobSource)
 	if err != nil {
@@ -190,7 +191,7 @@ func (client *Client) CreateLegacyCronJobSourceOrFail(cronJobSource *sourcesv1al
 }
 
 // CreateLegacyContainerSourceOrFail will create a ContainerSource or fail the test if there is an error.
-func (client *Client) CreateLegacyContainerSourceOrFail(containerSource *sourcesv1alpha1.ContainerSource) {
+func (client *Client) CreateLegacyContainerSourceOrFail(containerSource *legacysourcesv1alpha1.ContainerSource) {
 	containerSourceInterface := client.Legacy.SourcesV1alpha1().ContainerSources(client.Namespace)
 	_, err := containerSourceInterface.Create(containerSource)
 	if err != nil {
@@ -200,7 +201,7 @@ func (client *Client) CreateLegacyContainerSourceOrFail(containerSource *sources
 }
 
 // CreateLegacySinkBindingOrFail will create a SinkBinding or fail the test if there is an error.
-func (client *Client) CreateLegacySinkBindingOrFail(containerSource *sourcesv1alpha1.SinkBinding) {
+func (client *Client) CreateLegacySinkBindingOrFail(containerSource *legacysourcesv1alpha1.SinkBinding) {
 	containerSourceInterface := client.Legacy.SourcesV1alpha1().SinkBindings(client.Namespace)
 	_, err := containerSourceInterface.Create(containerSource)
 	if err != nil {
@@ -209,8 +210,18 @@ func (client *Client) CreateLegacySinkBindingOrFail(containerSource *sourcesv1al
 	client.Tracker.AddObj(containerSource)
 }
 
+// CreateApiServerSourceOrFail will create an ApiServerSource
+func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha1.ApiServerSource) {
+	apiServerInterface := client.Eventing.SourcesV1alpha1().ApiServerSources(client.Namespace)
+	_, err := apiServerInterface.Create(apiServerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
+	}
+	client.Tracker.AddObj(apiServerSource)
+}
+
 // CreateLegacyApiServerSourceOrFail will create an ApiServerSource
-func (client *Client) CreateLegacyApiServerSourceOrFail(apiServerSource *sourcesv1alpha1.ApiServerSource) {
+func (client *Client) CreateLegacyApiServerSourceOrFail(apiServerSource *legacysourcesv1alpha1.ApiServerSource) {
 	apiServerInterface := client.Legacy.SourcesV1alpha1().ApiServerSources(client.Namespace)
 	_, err := apiServerInterface.Create(apiServerSource)
 	if err != nil {
