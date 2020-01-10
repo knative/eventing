@@ -26,6 +26,14 @@ type ChannelListerExpansion interface{}
 // ChannelNamespaceLister.
 type ChannelNamespaceListerExpansion interface{}
 
+// InMemoryChannelListerExpansion allows custom methods to be added to
+// InMemoryChannelLister.
+type InMemoryChannelListerExpansion interface{}
+
+// InMemoryChannelNamespaceListerExpansion allows custom methods to be added to
+// InMemoryChannelNamespaceLister.
+type InMemoryChannelNamespaceListerExpansion interface{}
+
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.
 type SubscriptionListerExpansion interface{}

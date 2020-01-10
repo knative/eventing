@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// Channels returns a ChannelInformer.
 	Channels() ChannelInformer
+	// InMemoryChannels returns a InMemoryChannelInformer.
+	InMemoryChannels() InMemoryChannelInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 }
@@ -44,6 +46,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Channels returns a ChannelInformer.
 func (v *version) Channels() ChannelInformer {
 	return &channelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// InMemoryChannels returns a InMemoryChannelInformer.
+func (v *version) InMemoryChannels() InMemoryChannelInformer {
+	return &inMemoryChannelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.

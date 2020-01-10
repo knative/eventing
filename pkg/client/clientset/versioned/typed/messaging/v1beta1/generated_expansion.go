@@ -20,4 +20,6 @@ package v1beta1
 
 type ChannelExpansion interface{}
 
+type InMemoryChannelExpansion interface{}
+
 type SubscriptionExpansion interface{}

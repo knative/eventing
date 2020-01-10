@@ -17,7 +17,6 @@
 package v1beta1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,81 +29,75 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channel represents a generic Channel. It is normally used when we want a Channel, but don't need a specific Channel implementation.
-type Channel struct {
+// InMemoryChannel is a resource representing an in memory channel
+type InMemoryChannel struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of the Channel.
-	Spec ChannelSpec `json:"spec,omitempty"`
+	Spec InMemoryChannelSpec `json:"spec,omitempty"`
 
 	// Status represents the current state of the Channel. This data may be out of
 	// date.
 	// +optional
-	Status ChannelStatus `json:"status,omitempty"`
+	Status InMemoryChannelStatus `json:"status,omitempty"`
 }
 
 var (
-	// Check that Channel can be validated and defaulted.
-	_ apis.Validatable = (*Channel)(nil)
-	_ apis.Defaultable = (*Channel)(nil)
+	// Check that InMemoryChannel can be validated and defaulted.
+	_ apis.Validatable = (*InMemoryChannel)(nil)
+	_ apis.Defaultable = (*InMemoryChannel)(nil)
 
-	// Check that Channel can return its spec untyped.
-	_ apis.HasSpec = (*Channel)(nil)
+	// Check that InMemoryChannel can return its spec untyped.
+	_ apis.HasSpec = (*InMemoryChannel)(nil)
 
-	_ runtime.Object = (*Channel)(nil)
+	_ runtime.Object = (*InMemoryChannel)(nil)
 
-	// Check that we can create OwnerReferences to a Channel.
-	_ kmeta.OwnerRefable = (*Channel)(nil)
+	// Check that we can create OwnerReferences to an InMemoryChannel.
+	_ kmeta.OwnerRefable = (*InMemoryChannel)(nil)
 )
 
-// ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel.
-// It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
-type ChannelSpec struct {
-	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
-	// This is immutable after creation. Normally this is set by the Channel defaulter, not directly by the user.
-	ChannelTemplate *eventingduck.ChannelTemplateSpec `json:"channelTemplate"`
-
+// InMemoryChannelSpec defines which subscribers have expressed interest in
+// receiving events from this InMemoryChannel.
+// arguments for a Channel.
+type InMemoryChannelSpec struct {
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
 }
 
 // ChannelStatus represents the current state of a Channel.
-type ChannelStatus struct {
+type InMemoryChannelStatus struct {
 	// inherits duck/v1 Status, which currently provides:
 	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
 	// * Conditions - the latest available observations of a resource's current state.
 	duckv1.Status `json:",inline"`
 
-	// Channel is Addressable. It currently exposes the endpoint as a
+	// InMemoryChannel is Addressable. It currently exposes the endpoint as a
 	// fully-qualified URI which will distribute traffic over the
 	// provided targets from inside the cluster.
 	duckv1.AddressStatus `json:",inline"`
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
 	eventingduck.SubscribableTypeStatus `json:",inline"`
-
-	// Channel is an ObjectReference to the Channel CRD backing this Channel.
-	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ChannelList is a collection of Channels.
-type ChannelList struct {
+// InMemoryChannelList is a collection of in-memory channels.
+type InMemoryChannelList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Channel `json:"items"`
+	Items           []InMemoryChannel `json:"items"`
 }
 
-// GetGroupVersionKind returns GroupVersionKind for Channels.
-func (dc *Channel) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Channel")
+// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
+func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("InMemoryChannel")
 }
 
-// GetUntypedSpec returns the spec of the Channel.
-func (c *Channel) GetUntypedSpec() interface{} {
-	return c.Spec
+// GetUntypedSpec returns the spec of the InMemoryChannel.
+func (i *InMemoryChannel) GetUntypedSpec() interface{} {
+	return i.Spec
 }

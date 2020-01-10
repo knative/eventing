@@ -27,6 +27,7 @@ import (
 type MessagingV1beta1Interface interface {
 	RESTClient() rest.Interface
 	ChannelsGetter
+	InMemoryChannelsGetter
 	SubscriptionsGetter
 }
 
@@ -37,6 +38,10 @@ type MessagingV1beta1Client struct {
 
 func (c *MessagingV1beta1Client) Channels(namespace string) ChannelInterface {
 	return newChannels(c, namespace)
+}
+
+func (c *MessagingV1beta1Client) InMemoryChannels(namespace string) InMemoryChannelInterface {
+	return newInMemoryChannels(c, namespace)
 }
 
 func (c *MessagingV1beta1Client) Subscriptions(namespace string) SubscriptionInterface {
