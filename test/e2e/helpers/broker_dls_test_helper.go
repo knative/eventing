@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,12 +20,13 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // BrokerDeadLetterSinkTestHelper is the helper function for broker_dls_test
-func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
+func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
 	const (
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
@@ -39,16 +40,16 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chann
 		loggerPodName = "e2e-brokerchannel-logger-pod"
 	)
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 		client.CreateRBACResourcesForBrokers()
 
 		// create logger pod and service for deadlettersink
 		loggerPod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 		delivery := resources.Delivery(resources.WithDeadLetterSinkForDelivery(loggerPodName))
 
@@ -57,7 +58,7 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chann
 			resources.WithChannelTemplateForBroker(&channel),
 			resources.WithDeliveryForBroker(delivery))
 
-		client.WaitForResourceReady(brokerName, common.BrokerTypeMeta)
+		client.WaitForResourceReady(brokerName, lib.BrokerTypeMeta)
 
 		// create trigger to receive the original event, and send to an invalid destination
 		client.CreateTriggerOrFail(
@@ -73,19 +74,18 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chann
 		}
 
 		// send fake CloudEvent to the broker
-		eventToSend := &resources.CloudEvent{
-			Source:   eventSource,
-			Type:     eventType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, eventBody),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		eventToSend := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, eventBody),
+			cloudevents.WithSource(eventSource),
+			cloudevents.WithType(eventType),
+		)
 
-		if err := client.SendFakeEventToAddressable(senderName, brokerName, common.BrokerTypeMeta, eventToSend); err != nil {
+		if err := client.SendFakeEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
 		}
 
 		// check if deadlettersink logging service received event
-		if err := client.CheckLog(loggerPodName, common.CheckerContains(eventBody)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContains(eventBody)); err != nil {
 			st.Fatalf("Strings %v not found in logs of logger pod %q: %v", eventBody, loggerPodName, err)
 		}
 
