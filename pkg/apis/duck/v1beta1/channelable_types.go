@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -48,7 +47,7 @@ type ChannelableSpec struct {
 
 	// DeliverySpec contains options controlling the event delivery
 	// +optional
-	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
+	Delivery *DeliverySpec `json:"delivery,omitempty"`
 }
 
 // ChannelableStatus contains the Status of a Channelable object.
@@ -91,9 +90,9 @@ func (c *Channelable) Populate() {
 		}},
 	}
 	retry := int32(5)
-	linear := eventingduckv1alpha1.BackoffPolicyLinear
+	linear := BackoffPolicyLinear
 	delay := "5s"
-	c.Spec.Delivery = &eventingduckv1alpha1.DeliverySpec{
+	c.Spec.Delivery = &DeliverySpec{
 		DeadLetterSink: &duckv1.Destination{
 			Ref: &corev1.ObjectReference{
 				Name: "aname",
