@@ -44,7 +44,7 @@ type DeliverySpec struct {
 	// For linear policy, backoff delay is the time interval between retries.
 	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>
 	// +optional
-	BackoffDelay *string
+	BackoffDelay *string `json:"backoffDelay,omitempty"`
 }
 
 // BackoffPolicyType is the type for backoff policies

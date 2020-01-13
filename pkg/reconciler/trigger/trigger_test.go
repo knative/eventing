@@ -42,6 +42,7 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/tracker"
 
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -1057,6 +1058,10 @@ func makeBroker() *v1alpha1.Broker {
 	}
 }
 
+func makeEmptyDelivery() *eventingduckv1alpha1.DeliverySpec {
+	return nil
+}
+
 func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
@@ -1144,7 +1149,7 @@ func makeServiceURI() *url.URL {
 }
 
 func makeIngressSubscription() *messagingv1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI())
+	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
 }
 
 func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription {

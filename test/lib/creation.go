@@ -104,9 +104,9 @@ func (client *Client) CreateSubscriptionsOrFail(
 }
 
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
-func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.TypeMeta) *v1alpha1.Broker {
+func (client *Client) CreateBrokerOrFail(name string, options ...resources.BrokerOption) *v1alpha1.Broker {
 	namespace := client.Namespace
-	broker := resources.Broker(name, resources.WithChannelTemplateForBroker(*channelTypeMeta))
+	broker := resources.Broker(name, options...)
 
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
 	// update broker with the new reference
@@ -121,7 +121,7 @@ func (client *Client) CreateBrokerOrFail(name string, channelTypeMeta *metav1.Ty
 // CreateBrokersOrFail will create a list of Brokers.
 func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
 	for _, name := range names {
-		client.CreateBrokerOrFail(name, channelTypeMeta)
+		client.CreateBrokerOrFail(name, resources.WithChannelTemplateForBroker(channelTypeMeta))
 	}
 }
 

@@ -42,6 +42,9 @@ type TriggerOption func(*eventingv1alpha1.Trigger)
 // SubscriptionOption enables further configuration of a Subscription.
 type SubscriptionOption func(*messagingv1alpha1.Subscription)
 
+// DeliveryOption enables further configuration of DeliverySpec.
+type DeliveryOption func(*eventingduckv1alpha1.DeliverySpec)
+
 // channelRef returns an ObjectReference for a given Channel name.
 func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference {
 	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
@@ -108,12 +111,19 @@ func Subscription(
 }
 
 // WithChannelTemplateForBroker returns a function that adds a ChannelTemplate for the given Broker.
-func WithChannelTemplateForBroker(channelTypeMeta metav1.TypeMeta) BrokerOption {
+func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
 		channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
-			TypeMeta: channelTypeMeta,
+			TypeMeta: *channelTypeMeta,
 		}
 		b.Spec.ChannelTemplate = channelTemplate
+	}
+}
+
+// WithDeliveryForBroker returns a function that adds a Delivery for the given Broker.
+func WithDeliveryForBroker(delivery *eventingduckv1alpha1.DeliverySpec) BrokerOption {
+	return func(b *eventingv1alpha1.Broker) {
+		b.Spec.Delivery = delivery
 	}
 }
 
@@ -209,4 +219,24 @@ func Trigger(name string, options ...TriggerOption) *eventingv1alpha1.Trigger {
 		option(trigger)
 	}
 	return trigger
+}
+
+// WithDeadLetterSinkForDelivery returns an options that adds a DeadLetterSink for the given DeliverySpec.
+func WithDeadLetterSinkForDelivery(name string) DeliveryOption {
+	return func(delivery *eventingduckv1alpha1.DeliverySpec) {
+		if name != "" {
+			delivery.DeadLetterSink = &duckv1.Destination{
+				Ref: ServiceRef(name),
+			}
+		}
+	}
+}
+
+// Delivery returns a DeliverySpec.
+func Delivery(options ...DeliveryOption) *eventingduckv1alpha1.DeliverySpec {
+	delivery := &eventingduckv1alpha1.DeliverySpec{}
+	for _, option := range options {
+		option(delivery)
+	}
+	return delivery
 }
