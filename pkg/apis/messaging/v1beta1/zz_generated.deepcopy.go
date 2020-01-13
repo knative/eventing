@@ -23,7 +23,6 @@ package v1beta1
 import (
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	apis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -267,7 +266,7 @@ func (in *InMemoryChannelSpec) DeepCopyInto(out *InMemoryChannelSpec) {
 	*out = *in
 	if in.Subscribable != nil {
 		in, out := &in.Subscribable, &out.Subscribable
-		*out = new(v1alpha1.Subscribable)
+		*out = new(duckv1beta1.Subscribable)
 		(*in).DeepCopyInto(*out)
 	}
 	return

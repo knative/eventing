@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -63,7 +63,7 @@ var (
 // arguments for a Channel.
 type InMemoryChannelSpec struct {
 	// Channel conforms to Duck type Subscribable.
-	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
+	Subscribable *eventingduckv1beta1.Subscribable `json:"subscribable,omitempty"`
 }
 
 // ChannelStatus represents the current state of a Channel.
@@ -79,7 +79,7 @@ type InMemoryChannelStatus struct {
 	duckv1.AddressStatus `json:",inline"`
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	eventingduck.SubscribableTypeStatus `json:",inline"`
+	eventingduckv1beta1.SubscribableTypeStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
