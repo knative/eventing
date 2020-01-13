@@ -18,8 +18,8 @@
 package upgrade
 
 import (
-	"github.com/pkg/errors"
 	"io/ioutil"
+	"knative.dev/eventing/test/common"
 	"knative.dev/eventing/test/prober"
 	"log"
 	"os"
@@ -37,8 +37,7 @@ const (
 var (
 	// FIXME: Interval is set to 200 msec, as lower values will result in errors
 	// https://github.com/knative/eventing/issues/2357
-	interval  = 200 * time.Millisecond
-	namespace = "event-test"
+	fixmeInterval = 200 * time.Millisecond
 )
 
 func TestProbe(t *testing.T) {
@@ -51,22 +50,16 @@ func TestProbe(t *testing.T) {
 	if err := syscall.Mkfifo(pipe, 0666); err != nil {
 		t.Fatalf("Failed to create pipe: %v", err)
 	}
-	defer func() {
-		noError(os.Remove(pipe))
-		noError(os.Remove(ready))
-	}()
+	defer cleanupTempFiles()
 	client := setup(t, false)
 	defer tearDown(client)
 
 	// Use log.Printf instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
-	config := prober.ProberConfig{
-		Namespace:  namespace,
-		Interval:   interval,
-		UseServing: true,
-	}
+	config := prober.NewConfig(client.Namespace)
+	config.Interval = fixmeInterval
 	probe := prober.RunEventProber(log.Printf, client, config)
-	noError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
+	common.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
 	defer prober.AssertEventProber(t, probe)
 
 	// e2e-upgrade-test.sh will close this pipe to signal the upgrade is
@@ -74,8 +67,12 @@ func TestProbe(t *testing.T) {
 	_, _ = ioutil.ReadFile(pipe)
 }
 
-func noError(err error) {
-	if err != nil {
-		panic(errors.WithMessage(err, "expected to be no error, but that was"))
+func cleanupTempFiles() {
+	filenames := []string{pipe, ready}
+	for _, filename := range filenames {
+		_, err := os.Stat(filename)
+		if err == nil {
+			common.NoError(os.Remove(filename))
+		}
 	}
 }

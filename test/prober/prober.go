@@ -32,19 +32,29 @@ type Prober interface {
 
 	// deploy a prober to a cluster
 	deploy()
-	// undeploy a prober from cluster
-	undeploy()
+	// remove a prober from cluster
+	remove()
 }
 
-// ProberConfig represents a configuration for prober
-type ProberConfig struct {
-	Namespace  string
-	Interval   time.Duration
-	UseServing bool
+// Config represents a configuration for prober
+type Config struct {
+	Namespace     string
+	Interval      time.Duration
+	UseServing    bool
+	FinishedSleep time.Duration
+}
+
+func NewConfig(namespace string) *Config {
+	return &Config{
+		Namespace:     namespace,
+		Interval:      10 * time.Millisecond,
+		UseServing:    true,
+		FinishedSleep: 5 * time.Second,
+	}
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(logf logging.FormatLogger, client *common.Client, config ProberConfig) Prober {
+func RunEventProber(logf logging.FormatLogger, client *common.Client, config *Config) Prober {
 	pm := newProber(logf, client, config)
 	pm.deploy()
 	return pm
@@ -54,6 +64,8 @@ func RunEventProber(logf logging.FormatLogger, client *common.Client, config Pro
 func AssertEventProber(t *testing.T, prober Prober) {
 	prober.Finish()
 
+	waitAfterFinished(prober)
+
 	errors := prober.Verify()
 	for _, err := range errors {
 		t.Error(err)
@@ -62,13 +74,13 @@ func AssertEventProber(t *testing.T, prober Prober) {
 		t.Log("All events propagated well")
 	}
 
-	prober.undeploy()
+	prober.remove()
 }
 
 type prober struct {
 	logf   logging.FormatLogger
 	client *common.Client
-	config ProberConfig
+	config *Config
 }
 
 func (p *prober) Verify() []error {
@@ -77,22 +89,37 @@ func (p *prober) Verify() []error {
 }
 
 func (p *prober) Finish() {
-	p.logf("ERR: Finish(): implement me")
+	p.removeSender()
 }
 
 func (p *prober) deploy() {
-	p.logf("ERR: deploy(): implement me")
-
+	p.deployConfiguration()
+	p.deployReceiver()
+	if p.config.UseServing {
+		p.deployForwarder()
+	}
+	p.deploySender()
 }
 
-func (p *prober) undeploy() {
-	p.logf("ERR: undeploy(): implement me")
+func (p *prober) remove() {
+	if p.config.UseServing {
+		p.removeForwarder()
+	}
+	p.removeReceiver()
+	p.removeConfiguration()
 }
 
-func newProber(logf logging.FormatLogger, client *common.Client, config ProberConfig) Prober {
+func newProber(logf logging.FormatLogger, client *common.Client, config *Config) Prober {
 	return &prober{
 		logf:   logf,
 		client: client,
 		config: config,
 	}
+}
+
+func waitAfterFinished(p Prober) {
+	s := p.(*prober)
+	cfg := s.config
+	s.logf("Waiting %v after sender finished...", cfg.FinishedSleep)
+	time.Sleep(cfg.FinishedSleep)
 }
