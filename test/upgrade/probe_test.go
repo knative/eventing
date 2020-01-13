@@ -62,8 +62,9 @@ func TestProbe(t *testing.T) {
 	common.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
 	defer prober.AssertEventProber(t, probe)
 
-	// e2e-upgrade-test.sh will close this pipe to signal the upgrade is
-	// over, at which point we will finish the test and check the prober.
+	log.Printf("Prober is ready. Waiting for file: %v as a signal that "+
+		"upgrade/downgrade is over, at which point we will finish the test "+
+		"and check the prober.", pipe)
 	_, _ = ioutil.ReadFile(pipe)
 }
 

@@ -22,6 +22,10 @@ import (
 	"time"
 )
 
+var (
+	Version = "v0.6.0"
+)
+
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
