@@ -20,7 +20,7 @@ package upgrade
 import (
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"knative.dev/eventing/test"
+	"knative.dev/eventing/test/prober"
 	"log"
 	"os"
 	"syscall"
@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	pipe  = "/tmp/prober-signal"
-	ready = "/tmp/prober-ready"
+	pipe         = "/tmp/prober-signal"
+	ready        = "/tmp/prober-ready"
+	readyMessage = "prober ready"
 )
 
 var (
@@ -59,14 +60,14 @@ func TestProbe(t *testing.T) {
 
 	// Use log.Printf instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
-	config := test.ProberConfig{
+	config := prober.ProberConfig{
 		Namespace:  namespace,
 		Interval:   interval,
 		UseServing: true,
 	}
-	prober := test.RunEventProber(log.Printf, client, config)
-	noError(ioutil.WriteFile(ready, []byte("prober ready"), 0666))
-	defer test.AssertEventProber(t, prober)
+	probe := prober.RunEventProber(log.Printf, client, config)
+	noError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
+	defer prober.AssertEventProber(t, probe)
 
 	// e2e-upgrade-test.sh will close this pipe to signal the upgrade is
 	// over, at which point we will finish the test and check the prober.

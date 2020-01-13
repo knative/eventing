@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package test
+package prober
 
 import (
 	"knative.dev/eventing/test/common"
@@ -82,6 +82,7 @@ func (p *prober) Finish() {
 
 func (p *prober) deploy() {
 	p.logf("ERR: deploy(): implement me")
+
 }
 
 func (p *prober) undeploy() {
