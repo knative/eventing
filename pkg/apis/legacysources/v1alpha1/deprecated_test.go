@@ -17,9 +17,10 @@ limitations under the License.
 package v1alpha1_test
 
 import (
+	"testing"
+
 	corev1 "k8s.io/api/core/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"testing"
 
 	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 )
