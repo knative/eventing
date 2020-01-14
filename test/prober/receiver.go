@@ -70,6 +70,14 @@ func (p *prober) deployReceiverPod() {
 							MountPath: "/.config/wathola",
 						},
 					},
+					ReadinessProbe: &corev1.Probe{
+						Handler: corev1.Handler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/healthz",
+								Port: intstr.FromInt(22111),
+							},
+						},
+					},
 				},
 			},
 		},
@@ -77,7 +85,9 @@ func (p *prober) deployReceiverPod() {
 	_, err := p.client.Kube.CreatePod(pod)
 	common.NoError(err)
 
-	p.log.Warn("TODO: wait until wathola-receiver is ready")
+	waitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
+		return p.waitForPodReady(receiverName, p.client.Namespace)
+	})
 }
 
 func (p *prober) deployReceiverService() {

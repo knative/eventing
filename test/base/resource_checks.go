@@ -35,9 +35,10 @@ import (
 )
 
 const (
-	// The interval and timeout used for polling in checking resource states.
-	interval = 1 * time.Second
-	timeout  = 4 * time.Minute
+	// Interval is used for polling in checking resource states
+	Interval = 1 * time.Second
+	// Timeout is used for polling in checking resource states
+	Timeout = 4 * time.Minute
 )
 
 // WaitForResourceReady polls the status of the MetaResource from client
@@ -50,7 +51,7 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaRe
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+	return wait.PollImmediate(Interval, Timeout, func() (bool, error) {
 		untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
 		return isResourceReady(untyped, err)
 	})
@@ -62,7 +63,7 @@ func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.M
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+	return wait.PollImmediate(Interval, Timeout, func() (bool, error) {
 		untypeds, err := GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
 		for _, untyped := range untypeds {
 			if isReady, err := isResourceReady(untyped, err); !isReady {

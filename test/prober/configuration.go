@@ -40,8 +40,21 @@ var (
 )
 
 func (p *prober) deployConfiguration() {
+	p.annotateNamespace()
 	p.deploySecret()
 	p.deployTriggers()
+}
+
+func (p *prober) annotateNamespace() {
+	ns, err := p.client.Kube.Kube.CoreV1().Namespaces().
+		Get(p.client.Namespace, metav1.GetOptions{})
+	common.NoError(err)
+	ns.Labels = map[string]string{
+		"knative-eventing-injection": "enabled",
+	}
+	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
+		Update(ns)
+	common.NoError(err)
 }
 
 func (p *prober) deploySecret() {
@@ -97,6 +110,9 @@ func (p *prober) deployTriggers() {
 		_, err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Create(trigger)
 		common.NoError(err)
+		waitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
+			return p.waitForTriggerReady(name, p.config.Namespace)
+		})
 	}
 }
 

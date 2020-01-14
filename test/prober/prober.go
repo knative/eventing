@@ -112,7 +112,10 @@ func (p *prober) deploy() {
 	if p.config.Serving.Use {
 		p.deployForwarder()
 	}
+	awaitAll(p.log)
+
 	p.deploySender()
+	awaitAll(p.log)
 }
 
 func (p *prober) remove() {

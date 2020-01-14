@@ -20,8 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/common"
 )
 
@@ -45,11 +43,16 @@ func (p *prober) deployForwarder() {
 	_, err := serving.Create(service, metav1.CreateOptions{})
 	common.NoError(err)
 
-	p.log.Infof("Wait until forwarder knative service is ready: %v", forwarderName)
-	p.waitForKServiceReady(forwarderName, p.client.Namespace)
+	waitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
+		return p.waitForKServiceReady(forwarderName, p.client.Namespace)
+	})
 
 	if p.config.Serving.ScaleToZero {
-		p.log.Warnf("TODO: wait until wathola-forwarder scales to zero: %v", forwarderName)
+		waitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
+			return p.waitForKServiceScale(forwarderName, p.client.Namespace, func(scale *int32) bool {
+				return *scale == 0
+			})
+		})
 	}
 }
 
@@ -57,12 +60,6 @@ func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
 	err := serving.Delete(forwarderName, &metav1.DeleteOptions{})
-	common.NoError(err)
-}
-
-func (p *prober) waitForKServiceReady(name, namespace string) {
-	meta := resources.NewMetaResource(name, namespace, &servingType)
-	err := base.WaitForResourceReady(p.client.Dynamic, meta)
 	common.NoError(err)
 }
 
