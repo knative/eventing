@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/common"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -45,14 +45,15 @@ func (p *prober) deployConfiguration() {
 }
 
 func (p *prober) deploySecret() {
-	p.logf("Deploying secret: %v", configName)
+	name := configName
+	p.logf("Deploying secret: %v", name)
 
 	configData := p.compileTemplate(configFilename)
 	data := make(map[string]string, 0)
 	data[configFilename] = configData
 	secret := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
-			Name: configName,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
 		},
 		StringData: data,
 		Type:       "Opaque",
@@ -69,15 +70,15 @@ func (p *prober) deployTriggers() {
 		ref := &corev1.ObjectReference{
 			Kind:       "Service",
 			Namespace:  p.config.Namespace,
-			Name:       "wathola-receiver",
+			Name:       receiverName,
 			APIVersion: "v1",
 		}
-		if p.config.UseServing {
-			ref.APIVersion = "serving.knative.dev/v1beta1"
-			ref.Name = "wathola-forwarder"
+		if p.config.Serving.Use {
+			ref.APIVersion = servicesCR.GroupVersion().String()
+			ref.Name = forwarderName
 		}
 		trigger := &v1alpha1.Trigger{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
 			Spec: v1alpha1.TriggerSpec{
@@ -107,7 +108,7 @@ func (p *prober) removeConfiguration() {
 func (p *prober) removeSecret() {
 	p.logf("Removing secret: %v", configName)
 	err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
-		Delete(configName, &v1.DeleteOptions{})
+		Delete(configName, &metav1.DeleteOptions{})
 	common.NoError(err)
 }
 
@@ -116,7 +117,7 @@ func (p *prober) removeTriggers() {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		p.logf("Removing trigger: %v", name)
 		err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
-			Delete(name, &v1.DeleteOptions{})
+			Delete(name, &metav1.DeleteOptions{})
 		common.NoError(err)
 	}
 }

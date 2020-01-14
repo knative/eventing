@@ -44,16 +44,24 @@ type Prober interface {
 type Config struct {
 	Namespace     string
 	Interval      time.Duration
-	UseServing    bool
+	Serving       ServingConfig
 	FinishedSleep time.Duration
+}
+
+type ServingConfig struct {
+	Use         bool
+	ScaleToZero bool
 }
 
 func NewConfig(namespace string) *Config {
 	return &Config{
 		Namespace:     namespace,
 		Interval:      10 * time.Millisecond,
-		UseServing:    true,
 		FinishedSleep: 5 * time.Second,
+		Serving: ServingConfig{
+			Use:         true,
+			ScaleToZero: true,
+		},
 	}
 }
 
@@ -99,14 +107,14 @@ func (p *prober) Finish() {
 func (p *prober) deploy() {
 	p.deployConfiguration()
 	p.deployReceiver()
-	if p.config.UseServing {
+	if p.config.Serving.Use {
 		p.deployForwarder()
 	}
 	p.deploySender()
 }
 
 func (p *prober) remove() {
-	if p.config.UseServing {
+	if p.config.Serving.Use {
 		p.removeForwarder()
 	}
 	p.removeReceiver()

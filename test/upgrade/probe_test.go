@@ -47,10 +47,11 @@ func TestProbe(t *testing.T) {
 	// can't coordinate with the test by just sending e.g. SIGCONT, so we
 	// create a named pipe and wait for the upgrade script to write to it
 	// to signal that we should stop probing.
+	ensureTempFilesAreCleaned()
 	if err := syscall.Mkfifo(pipe, 0666); err != nil {
 		t.Fatalf("Failed to create pipe: %v", err)
 	}
-	defer cleanupTempFiles()
+	defer ensureTempFilesAreCleaned()
 	client := setup(t, false)
 	defer tearDown(client)
 
@@ -68,7 +69,7 @@ func TestProbe(t *testing.T) {
 	_, _ = ioutil.ReadFile(pipe)
 }
 
-func cleanupTempFiles() {
+func ensureTempFilesAreCleaned() {
 	filenames := []string{pipe, ready}
 	for _, filename := range filenames {
 		_, err := os.Stat(filename)

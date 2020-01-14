@@ -23,8 +23,10 @@ import (
 	"knative.dev/eventing/test/common"
 )
 
-var receiverName = "wathola-receiver"
-var receiverNodePort int32 = -1
+var (
+	receiverName = "wathola-receiver"
+  receiverNodePort int32 = -1
+)
 
 func (p *prober) deployReceiver() {
 	p.deployReceiverPod()
@@ -74,6 +76,8 @@ func (p *prober) deployReceiverPod() {
 	}
 	_, err := p.client.Kube.CreatePod(pod)
 	common.NoError(err)
+
+	p.logf("TODO: wait until wathola-receiver is ready")
 }
 
 func (p *prober) deployReceiverService() {
