@@ -39,7 +39,7 @@ func (p *prober) removeReceiver() {
 }
 
 func (p *prober) deployReceiverPod() {
-	p.logf("Deploy of receiver pod: %v", receiverName)
+	p.log.Infof("Deploy of receiver pod: %v", receiverName)
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      receiverName,
@@ -77,11 +77,11 @@ func (p *prober) deployReceiverPod() {
 	_, err := p.client.Kube.CreatePod(pod)
 	common.NoError(err)
 
-	p.logf("TODO: wait until wathola-receiver is ready")
+	p.log.Warn("TODO: wait until wathola-receiver is ready")
 }
 
 func (p *prober) deployReceiverService() {
-	p.logf("Deploy of receiver service: %v", receiverName)
+	p.log.Infof("Deploy of receiver service: %v", receiverName)
 	service := &corev1.Service{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      receiverName,
@@ -116,19 +116,19 @@ func (p *prober) deployReceiverService() {
 	if receiverNodePort == -1 {
 		panic(fmt.Errorf("couldn't find a node port for service: %v", receiverName))
 	} else {
-		p.logf("Node port for service: %v is %v", receiverName, receiverNodePort)
+		p.log.Debugf("Node port for service: %v is %v", receiverName, receiverNodePort)
 	}
 }
 
 func (p *prober) removeReceiverPod() {
-	p.logf("Remove of receiver pod: %v", receiverName)
+	p.log.Infof("Remove of receiver pod: %v", receiverName)
 	err := p.client.Kube.Kube.CoreV1().Pods(p.config.Namespace).
 		Delete(receiverName, &v1.DeleteOptions{})
 	common.NoError(err)
 }
 
 func (p *prober) removeReceiverService() {
-	p.logf("Remove of receiver service: %v", receiverName)
+	p.log.Infof("Remove of receiver service: %v", receiverName)
 	err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
 		Delete(receiverName, &v1.DeleteOptions{})
 	common.NoError(err)

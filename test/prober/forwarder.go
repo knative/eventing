@@ -39,22 +39,22 @@ var (
 )
 
 func (p *prober) deployForwarder() {
-	p.logf("Deploy forwarder knative service")
+	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
 	service := forwarderKService(forwarderName, p.client.Namespace)
 	_, err := serving.Create(service, metav1.CreateOptions{})
 	common.NoError(err)
 
-	p.logf("Wait until forwarder knative service is ready")
+	p.log.Infof("Wait until forwarder knative service is ready: %v", forwarderName)
 	p.waitForKServiceReady(forwarderName, p.client.Namespace)
 
 	if p.config.Serving.ScaleToZero {
-		p.logf("TODO: wait until wathola-forwarder scales to zero")
+		p.log.Warnf("TODO: wait until wathola-forwarder scales to zero: %v", forwarderName)
 	}
 }
 
 func (p *prober) removeForwarder() {
-	p.logf("Remove forwarder knative service")
+	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
 	err := serving.Delete(forwarderName, &metav1.DeleteOptions{})
 	common.NoError(err)

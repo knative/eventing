@@ -16,8 +16,8 @@
 package prober
 
 import (
+	"go.uber.org/zap"
 	"knative.dev/eventing/test/common"
-	"knative.dev/pkg/test/logging"
 	"testing"
 	"time"
 )
@@ -66,8 +66,8 @@ func NewConfig(namespace string) *Config {
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(logf logging.FormatLogger, client *common.Client, config *Config) Prober {
-	pm := newProber(logf, client, config)
+func RunEventProber(log *zap.SugaredLogger, client *common.Client, config *Config) Prober {
+	pm := newProber(log, client, config)
 	pm.deploy()
 	return pm
 }
@@ -79,24 +79,26 @@ func AssertEventProber(t *testing.T, prober Prober) {
 	waitAfterFinished(prober)
 
 	errors := prober.Verify()
-	for _, err := range errors {
-		t.Error(err)
-	}
 	if len(errors) == 0 {
 		t.Log("All events propagated well")
+	} else {
+		t.Logf("There ware %v errors. Listing tem below.", len(errors))
+	}
+	for _, err := range errors {
+		t.Error(err)
 	}
 
 	prober.remove()
 }
 
 type prober struct {
-	logf   logging.FormatLogger
+	log    *zap.SugaredLogger
 	client *common.Client
 	config *Config
 }
 
 func (p *prober) Verify() []error {
-	p.logf("ERR: Verify(): implement me")
+	p.log.Error("Verify(): implement me")
 	return make([]error, 0)
 }
 
@@ -121,9 +123,9 @@ func (p *prober) remove() {
 	p.removeConfiguration()
 }
 
-func newProber(logf logging.FormatLogger, client *common.Client, config *Config) Prober {
+func newProber(log *zap.SugaredLogger, client *common.Client, config *Config) Prober {
 	return &prober{
-		logf:   logf,
+		log:    log,
 		client: client,
 		config: config,
 	}
@@ -132,6 +134,6 @@ func newProber(logf logging.FormatLogger, client *common.Client, config *Config)
 func waitAfterFinished(p Prober) {
 	s := p.(*prober)
 	cfg := s.config
-	s.logf("Waiting %v after sender finished...", cfg.FinishedSleep)
+	s.log.Infof("Waiting %v after sender finished...", cfg.FinishedSleep)
 	time.Sleep(cfg.FinishedSleep)
 }

@@ -46,7 +46,7 @@ func (p *prober) deployConfiguration() {
 
 func (p *prober) deploySecret() {
 	name := configName
-	p.logf("Deploying secret: %v", name)
+	p.log.Infof("Deploying secret: %v", name)
 
 	configData := p.compileTemplate(configFilename)
 	data := make(map[string]string, 0)
@@ -93,7 +93,7 @@ func (p *prober) deployTriggers() {
 				},
 			},
 		}
-		p.logf("Deploying trigger: %v", name)
+		p.log.Infof("Deploying trigger: %v", name)
 		_, err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Create(trigger)
 		common.NoError(err)
@@ -106,7 +106,7 @@ func (p *prober) removeConfiguration() {
 }
 
 func (p *prober) removeSecret() {
-	p.logf("Removing secret: %v", configName)
+	p.log.Infof("Removing secret: %v", configName)
 	err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
 		Delete(configName, &metav1.DeleteOptions{})
 	common.NoError(err)
@@ -115,7 +115,7 @@ func (p *prober) removeSecret() {
 func (p *prober) removeTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
-		p.logf("Removing trigger: %v", name)
+		p.log.Infof("Removing trigger: %v", name)
 		err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Delete(name, &metav1.DeleteOptions{})
 		common.NoError(err)

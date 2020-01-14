@@ -16,9 +16,9 @@
 package prober
 
 func (p *prober) deploySender() {
-	p.logf("ERR: deploySender(): implement me")
+	p.log.Error("deploySender(): implement me")
 }
 
 func (p *prober) removeSender() {
-	p.logf("ERR: removeSender(): implement me")
+	p.log.Error("removeSender(): implement me")
 }

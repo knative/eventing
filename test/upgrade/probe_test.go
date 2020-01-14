@@ -18,10 +18,10 @@
 package upgrade
 
 import (
+	"go.uber.org/zap"
 	"io/ioutil"
 	"knative.dev/eventing/test/common"
 	"knative.dev/eventing/test/prober"
-	"log"
 	"os"
 	"syscall"
 	"testing"
@@ -55,18 +55,26 @@ func TestProbe(t *testing.T) {
 	client := setup(t, false)
 	defer tearDown(client)
 
-	// Use log.Printf instead of t.Logf because we want to see failures
-	// inline with other logs instead of buffered until the end.
 	config := prober.NewConfig(client.Namespace)
+	// TODO: remove this after fix of #2357
 	config.Interval = fixmeInterval
-	probe := prober.RunEventProber(log.Printf, client, config)
+	// Use zap.SugarLogger instead of t.Logf because we want to see failures
+	// inline with other logs instead of buffered until the end.
+	log := createLogger()
+	probe := prober.RunEventProber(log, client, config)
 	common.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
 	defer prober.AssertEventProber(t, probe)
 
-	log.Printf("Prober is ready. Waiting for file: %v as a signal that "+
+	log.Infof("Prober is ready. Waiting for file: %v as a signal that "+
 		"upgrade/downgrade is over, at which point we will finish the test "+
 		"and check the prober.", pipe)
 	_, _ = ioutil.ReadFile(pipe)
+}
+
+func createLogger() *zap.SugaredLogger {
+	log, err := zap.NewDevelopment()
+	common.NoError(err)
+	return log.Sugar()
 }
 
 func ensureTempFilesAreCleaned() {
