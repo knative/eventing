@@ -58,7 +58,7 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 1. Retrieve results from mako-stub using the script in [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh):
 
    ```
-   bash "$GOPATH/src/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing 10001 120 100 10 "$output_file"
+   bash "$GOPATH/src/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
    ```
    This will download a CSV with all raw results.
 
