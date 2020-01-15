@@ -29,7 +29,9 @@ import (
 )
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
-func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+func ChannelDeadLetterSinkTestHelper(t *testing.T,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channel-dls-logger-pod"
@@ -39,7 +41,7 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner lib.Channel
 	subscriptionNames := []string{"e2e-channel-dls-subs1"}
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true)
+		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
 		// create channels

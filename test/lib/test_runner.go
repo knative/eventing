@@ -18,9 +18,6 @@ package lib
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"testing"
 	"time"
 
@@ -80,9 +77,18 @@ func contains(features []Feature, feature Feature) bool {
 	return false
 }
 
+// SetupClientOption does further setup for the Client. It can be used if other projects
+// need to do extra setups to run the tests we expose as test helpers.
+type SetupClientOption func(*Client)
+
+// SetupClientOptionNoop is a SetupClientOption that does nothing.
+var SetupClientOptionNoop SetupClientOption = func(*Client) {
+	// nothing
+}
+
 // Setup creates the client objects needed in the e2e tests,
 // and does other setups, like creating namespaces, set the test case to run in parallel, etc.
-func Setup(t *testing.T, runInParallel bool) *Client {
+func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Client {
 	// Create a new namespace to run this test case.
 	baseFuncName := helpers.GetBaseFuncName(t.Name())
 	namespace := makeK8sNamespace(baseFuncName)
@@ -98,19 +104,14 @@ func Setup(t *testing.T, runInParallel bool) *Client {
 
 	CreateNamespaceIfNeeded(t, client, namespace)
 
-	// Disallow manually interrupting the tests.
-	// TODO(chizhg): t.Skip() can only be called on its own goroutine.
-	//                Investigate if there is other way to gracefully terminate the tests in the middle.
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		fmt.Printf("Test %q running, please don't interrupt...\n", t.Name())
-	}()
-
 	// Run the test case in parallel if needed.
 	if runInParallel {
 		t.Parallel()
+	}
+
+	// Run further setups for the client.
+	for _, option := range options {
+		option(client)
 	}
 
 	return client

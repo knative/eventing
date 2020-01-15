@@ -22,8 +22,9 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test/conformance/helpers"
+	"knative.dev/eventing/test/lib"
 )
 
 func TestChannelTracingWithReply(t *testing.T) {
-	helpers.ChannelTracingTestHelperWithChannelTestRunner(t, channelTestRunner, helpers.SetupClientFuncNoop)
+	helpers.ChannelTracingTestHelperWithChannelTestRunner(t, channelTestRunner, lib.SetupClientOptionNoop)
 }

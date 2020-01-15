@@ -29,7 +29,9 @@ import (
 )
 
 // EventTransformationForTriggerTestHelper is the helper function for broker_event_tranformation_test
-func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+func EventTransformationForTriggerTestHelper(t *testing.T,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption) {
 	const (
 		senderName = "e2e-eventtransformation-sender"
 		brokerName = "e2e-eventtransformation-broker"
@@ -49,7 +51,7 @@ func EventTransformationForTriggerTestHelper(t *testing.T, channelTestRunner lib
 	)
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true)
+		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
