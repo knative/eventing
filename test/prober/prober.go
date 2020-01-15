@@ -121,6 +121,8 @@ func (p *prober) deploy() {
 
 	p.deploySender()
 	awaitAll(p.log)
+	p.log.Infof("Prober is now sending events with interval of %v in " +
+		"namespace: %v", p.config.Interval, p.client.Namespace)
 }
 
 func (p *prober) remove() {

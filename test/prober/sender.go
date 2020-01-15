@@ -61,7 +61,7 @@ func (p *prober) deploySender() {
 		Create(pod)
 	common.NoError(err)
 
-	waitFor(fmt.Sprintf("sender pod become ready: %v", senderName), func() error {
+	waitFor(fmt.Sprintf("sender pod be ready: %v", senderName), func() error {
 		return p.waitForPodReady(senderName, p.client.Namespace)
 	})
 }

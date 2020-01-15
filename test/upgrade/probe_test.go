@@ -56,7 +56,7 @@ func TestProbe(t *testing.T) {
 	common.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
 	defer prober.AssertEventProber(t, probe)
 
-	log.Infof("Prober is ready. Waiting for file: %v as a signal that "+
+	log.Infof("Waiting for file: %v as a signal that "+
 		"upgrade/downgrade is over, at which point we will finish the test "+
 		"and check the prober.", pipe)
 	_, _ = ioutil.ReadFile(pipe)
