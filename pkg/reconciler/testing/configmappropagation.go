@@ -55,7 +55,7 @@ func WithConfigMapPropagationDeletionTimestamp(cmp *v1alpha1.ConfigMapPropagatio
 
 func WithConfigMapPropagationSelector(selector map[string]string) ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
-		cmp.Spec.Selector = &selector
+		cmp.Spec.Selector = selector
 	}
 }
 

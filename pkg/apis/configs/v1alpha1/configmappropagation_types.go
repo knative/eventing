@@ -89,7 +89,7 @@ type ConfigMapPropagationStatusCopyConfigMap struct {
 	Ready string `json:"ready,omitempty"`
 
 	// Reason indicates reasons if the operation is not ready
-	Reason string `json:"deadLetterSinkURI,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
