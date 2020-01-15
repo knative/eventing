@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker/config"
 
 	_ "knative.dev/pkg/system/testing"
 )
@@ -43,6 +44,7 @@ func TestMakeFilterDeployment(t *testing.T) {
 				},
 				Image:              "image-uri",
 				ServiceAccountName: "service-account-name",
+				FilterConfig:       config.DefaultBrokerConfig.FilterConfig,
 			},
 			want: []byte(`{
   "metadata": {

@@ -39,6 +39,7 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/broker/config"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -297,6 +298,7 @@ func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.
 		Broker:             b,
 		Image:              r.filterImage,
 		ServiceAccountName: r.filterServiceAccountName,
+		FilterConfig:       config.FromContextOrDefault(ctx).FilterConfig,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }
@@ -415,6 +417,7 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
 		ChannelAddress:     c.Status.Address.GetURL().Host,
+		IngressConfig:      config.FromContextOrDefault(ctx).IngressConfig,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }

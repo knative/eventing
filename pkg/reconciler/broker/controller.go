@@ -27,6 +27,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker/config"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
@@ -45,8 +46,6 @@ import (
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Brokers"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "broker-controller"
@@ -93,7 +92,23 @@ func NewController(
 		brokerClass:               env.BrokerClass,
 	}
 
-	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass)
+	// Set up configStore.
+	opts := func(impl *controller.Impl) controller.Options {
+		// Only enqueue the brokers that matches the brokerclass of this controller.
+		filterFunc := pkgreconciler.AnnotationFilterFunc(eventing.BrokerClassKey, env.BrokerClass, true)
+		resyncOnConfigChange := configmap.TypeFilter(config.BrokerConfig{})(func(string, interface{}) {
+			impl.FilteredGlobalResync(filterFunc, brokerInformer.Informer())
+		})
+		configStore := config.NewStore(r.Logger.Named("config-store"), resyncOnConfigChange)
+		configStore.WatchConfigs(cmw)
+
+		// Return the controller options.
+		return controller.Options{
+			ConfigStore: configStore,
+		}
+	}
+
+	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass, opts)
 
 	r.Logger.Info("Setting up event handlers")
 
