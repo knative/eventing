@@ -19,6 +19,7 @@ package configmappropagation
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"strings"
 	"time"
@@ -47,6 +48,10 @@ const (
 	configMapPropagationReadinessChanged                = "ConfigMapPropagationReadinessChanged"
 	configMapPropagationPropagateSingleConfigMapFailed  = "ConfigMapPropagationPropagateSingleConfigMapFailed"
 	configMapPropagationPropagateSingleConfigMapSucceed = "ConfigMapPropagationPropagateSingleConfigMapSucceed"
+
+	// Name of operation to propagate single configmap
+	copyConfigMap   = "copy"
+	deleteConfigMap = "delete"
 )
 
 type Reconciler struct {
@@ -98,6 +103,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	} else {
 		logging.FromContext(ctx).Debug("ConfigMapPropagation reconciled")
 	}
+
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	configMapPropagation.Status.ObservedGeneration = original.Generation
 
 	if _, updateStatusErr := r.updateStatus(ctx, configMapPropagation); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the ConfigMapPropagation status", zap.Error(updateStatusErr))
@@ -192,31 +201,36 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ConfigM
 	return cmp, err
 }
 
-func (r *Reconciler) getOriginalLabelSelector(cmp *v1alpha1.ConfigMapPropagation) labels.Selector {
-	return labels.SelectorFromSet(resources.OriginalLabels(r.copies(cmp.Spec.Selector)))
-}
-
 func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation) error {
 	// List ConfigMaps in original namespace and create/update copy ConfigMap in current namespace.
 	var errs error
-	originalConfigMapList, err := r.configMapLister.ConfigMaps(cmp.Spec.OriginalNamespace).List(r.getOriginalLabelSelector(cmp))
+	originalConfigMapList, err := r.configMapLister.ConfigMaps(cmp.Spec.OriginalNamespace).List(resources.ExpectedOriginalSelector(cmp.Spec.Selector))
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the ConfigMap list in original namespace", zap.Error(err))
 		return err
 	}
 	for _, configMap := range originalConfigMapList {
-		if err = r.createOrUpdateConfigMaps(ctx, cmp, configMap); err != nil {
+		source := types.NamespacedName{Namespace: cmp.Spec.OriginalNamespace, Name: configMap.Name}.String()
+		expectedStatus := r.newCopyConfigMapStatus(source, copyConfigMap)
+		if err, msg := r.createOrUpdateConfigMaps(ctx, cmp, configMap); err != nil {
 			logging.FromContext(ctx).Warn("Failed to propagate ConfigMap: ", zap.Error(err))
 			r.Recorder.Eventf(cmp, corev1.EventTypeWarning, configMapPropagationPropagateSingleConfigMapFailed,
 				fmt.Sprintf("Failed to propagate ConfigMap %v: %v", configMap.Name, err))
 			if errs == nil {
 				errs = fmt.Errorf("one or more ConfigMap propagation failed")
 			}
+			expectedStatus.Reason = err.Error()
 		} else {
 			logging.FromContext(ctx).Debug("Propagate ConfigMap " + configMap.Name + " succeed")
 			r.Recorder.Eventf(cmp, corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed,
 				fmt.Sprintf("Propagate ConfigMap %v succeed", configMap.Name))
+			if msg != "" {
+				expectedStatus.Reason = msg
+			} else {
+				expectedStatus.Ready = "true"
+			}
 		}
+		cmp.Status.CopyConfigMaps[source] = expectedStatus
 	}
 
 	// List ConfigMaps in current namespace and delete copy ConfigMap if the corresponding original ConfigMap no longer exists or no longer has the required label
@@ -232,6 +246,8 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.Confi
 			// Get the name of original ConfigMap
 			// The name of Copy ConfigMap is followed by <ConfigMapPropagation.Name>-<originalConfigMap.Name>
 			originalConfigMapName := strings.TrimPrefix(copyConfigMap.Name, cmp.Name+"-")
+			source := types.NamespacedName{Namespace: cmp.Spec.OriginalNamespace, Name: originalConfigMapName}.String()
+			expectedStatus := r.newCopyConfigMapStatus(source, deleteConfigMap)
 			if err = r.deleteOrKeepConfigMap(ctx, cmp, copyConfigMap, originalConfigMapName, originalConfigMapList); err != nil {
 				logging.FromContext(ctx).Warn("Failed to propagate ConfigMap: ", zap.Error(err))
 				r.Recorder.Eventf(cmp, corev1.EventTypeWarning, configMapPropagationPropagateSingleConfigMapFailed,
@@ -239,6 +255,10 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.Confi
 				if errs == nil {
 					errs = fmt.Errorf("one or more ConfigMap propagation failed")
 				}
+				expectedStatus.Reason = err.Error()
+				cmp.Status.CopyConfigMaps[source] = expectedStatus
+			} else {
+				delete(cmp.Status.CopyConfigMaps, source)
 			}
 		}
 	}
@@ -246,7 +266,7 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.Confi
 	return errs
 }
 
-func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation, configMap *corev1.ConfigMap) error {
+func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation, configMap *corev1.ConfigMap) (error, string) {
 	expected := resources.MakeConfigMap(resources.ConfigMapArgs{
 		Original:             configMap,
 		ConfigMapPropagation: cmp,
@@ -254,33 +274,37 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 	current, err := r.configMapLister.ConfigMaps(cmp.Namespace).Get(expected.Name)
 	if err != nil && !apierrs.IsNotFound(err) {
 		logging.FromContext(ctx).Error("Unable to get ConfigMap: "+current.Name+" in current namespace", zap.Error(err))
-		return fmt.Errorf("error getting ConfigMap in current namespace: %w", err)
+		return fmt.Errorf("error getting ConfigMap in current namespace: %w", err), ""
 	}
 
-	// Only update ConfigMap with knative.dev/eventing/config-propagation:copy label.
+	// Only update ConfigMap with knative.dev/config-propagation:copy label.
 	// If the ConfigMap does not have this label, the controller must not update the ConfigMap.
-	// Instead, it should record a k8s WARN-level Event on the ConfigMap.
 	if current != nil {
 		label := current.GetLabels()
 		if label[resources.PropagationLabelKey] != resources.PropagationLabelValueCopy {
-			return fmt.Errorf(`unable to update ConfigMap in current namespace, ConfigMap doesn't have "knative.dev/eventing/config-propagation:copy" label`)
+			//  OwnerReference will be removed when the propagation label is not set to copy
+			//  so that this copied configmap will not be deleted if cmp is deleted
+			current.OwnerReferences = nil
+			return nil, `copy ConfigMap doesn't have "knative.dev/config-propagation:copy" label, stop propagation for this ConfigMap`
 		}
 		if current, err = r.KubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Update(expected); err != nil {
-			return fmt.Errorf("error updating ConfigMap in current namespace: %w", err)
+			return fmt.Errorf("error updating ConfigMap in current namespace: %w", err), ""
 		}
-		return nil
+		return nil, ""
 	}
 
 	if current, err = r.KubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Create(expected); err != nil {
-		return fmt.Errorf("error creating ConfigMap in current namespace: %w", err)
+		return fmt.Errorf("error creating ConfigMap in current namespace: %w", err), ""
 	}
 
-	return nil
+	return nil, ""
 }
 
 func (r *Reconciler) deleteOrKeepConfigMap(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation, copyConfigMap *corev1.ConfigMap, originalConfigMapName string, originalConfigMapList []*corev1.ConfigMap) error {
 	originalConfigMap, contains := r.contains(originalConfigMapName, originalConfigMapList)
-	if !contains || !r.isSubset(originalConfigMap.GetLabels(), resources.OriginalLabels(r.copies(cmp.Spec.Selector))) {
+	expectedSelector := resources.ExpectedOriginalSelector(cmp.Spec.Selector)
+	//if !contains || !r.isSubset(originalConfigMap.GetLabels(), resources.OriginalLabels(cmp.Spec.Selector)) {
+	if !contains || !expectedSelector.Matches(labels.Set(originalConfigMap.Labels)) {
 		// If Original ConfigMap no longer exists or no longer has the required label, delete copy ConfigMap.
 		logging.FromContext(ctx).Info("Original ConfigMap " + originalConfigMapName +
 			` no longer exists/no longer has "knative.dev/eventing/config-propagation:original" label, delete corresponding copy ConfigMap ` + copyConfigMap.Name)
@@ -290,16 +314,6 @@ func (r *Reconciler) deleteOrKeepConfigMap(ctx context.Context, cmp *v1alpha1.Co
 		}
 	}
 	return nil
-}
-
-// isSubset checks if sub is a subset of set
-func (r *Reconciler) isSubset(set map[string]string, sub map[string]string) bool {
-	for element := range sub {
-		if sub[element] != set[element] {
-			return false
-		}
-	}
-	return true
 }
 
 // contains returns a configmap object if its name is in a configmaplist
@@ -312,11 +326,11 @@ func (r *Reconciler) contains(name string, list []*corev1.ConfigMap) (*corev1.Co
 	return nil, false
 }
 
-// copies returns a map object
-func (r *Reconciler) copies(selector map[string]string) map[string]string {
-	copySelector := map[string]string{}
-	for index, element := range selector {
-		copySelector[index] = element
+func (r *Reconciler) newCopyConfigMapStatus(source, operation string) v1alpha1.ConfigMapPropagationStatusCopyConfigMap {
+	return v1alpha1.ConfigMapPropagationStatusCopyConfigMap{
+		Source:    source,
+		Operation: operation,
+		Ready:     "false",
+		Reason:    "",
 	}
-	return copySelector
 }

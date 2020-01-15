@@ -22,18 +22,19 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/utils"
 )
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *url.URL) *messagingv1alpha1.Subscription {
+func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *url.URL, delivery *eventingduckv1alpha1.DeliverySpec) *messagingv1alpha1.Subscription {
 	// TODO: Figure out once Trigger moves to Destination how this changes.
 	tmpURI, err := apis.ParseURL(uri.String())
 	if err != nil {
@@ -65,6 +66,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerRef *core
 					Name:       brokerRef.Name,
 				},
 			},
+			Delivery: delivery,
 		},
 	}
 }

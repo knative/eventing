@@ -26,9 +26,10 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/common"
 	pkgTest "knative.dev/pkg/test"
 	testLogging "knative.dev/pkg/test/logging"
+
+	"knative.dev/eventing/test/lib"
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
@@ -83,7 +84,7 @@ func InitializeEventingFlags() {
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
 	if f.Channels == nil || len(f.Channels) == 0 {
-		f.Channels = []metav1.TypeMeta{common.DefaultChannel}
+		f.Channels = []metav1.TypeMeta{lib.DefaultChannel}
 	}
 
 	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)

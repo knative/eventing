@@ -19,16 +19,16 @@ package main
 import (
 	"flag"
 
-	"knative.dev/eventing/test/common/performance"
-	"knative.dev/eventing/test/common/performance/receiver"
-	"knative.dev/eventing/test/common/performance/sender"
+	"knative.dev/eventing/test/performance/infra"
+	"knative.dev/eventing/test/performance/infra/receiver"
+	"knative.dev/eventing/test/performance/infra/sender"
 )
 
 var minWorkers uint64
 var sinkURL string
 
 func init() {
-	performance.DeclareFlags()
+	infra.DeclareFlags()
 
 	// Specific to http load generator
 	flag.Uint64Var(&minWorkers, "min-workers", 10, "Number of vegeta workers")
@@ -38,5 +38,5 @@ func init() {
 func main() {
 	flag.Parse()
 
-	performance.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers), receiver.EventTypeExtractor, receiver.EventIdExtractor)
+	infra.StartPerformanceImage(sender.NewHttpLoadGeneratorFactory(sinkURL, minWorkers), receiver.EventTypeExtractor, receiver.EventIdExtractor)
 }

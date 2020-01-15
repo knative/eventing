@@ -40,7 +40,7 @@ func TestConfigMapPropagationValidation(t *testing.T) {
 		name: "empty configmappropagation spec",
 		cmp:  &ConfigMapPropagation{Spec: ConfigMapPropagationSpec{}},
 		want: &apis.FieldError{
-			Paths:   []string{"spec.originalNamespace, spec.selector"},
+			Paths:   []string{"spec.originalNamespace"},
 			Message: "missing field(s)",
 		},
 	},
@@ -64,53 +64,49 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 		name: "missing configmappropagation spec",
 		cmps: &ConfigMapPropagationSpec{},
 		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("originalNamespace", "selector")
+			fe := apis.ErrMissingField("originalNamespace")
 			return fe
 		}(),
+	}, {
+		name: "empty selector",
+		cmps: &ConfigMapPropagationSpec{
+			Selector:          map[string]string{},
+			OriginalNamespace: originalNamespace,
+		},
+		want: &apis.FieldError{
+			Message: "At least one selector must be specified",
+			Paths:   []string{"selector"},
+		},
 	}, {
 		name: "missing original namespace",
-		cmps: &ConfigMapPropagationSpec{OriginalNamespace: originalNamespace},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("selector")
-			return fe
-		}(),
-	}, {
-		name: "missing selector",
 		cmps: &ConfigMapPropagationSpec{Selector: validSelector},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("originalNamespace")
 			return fe
 		}(),
 	}, {
-		name: "missing selector keys",
-		cmps: &ConfigMapPropagationSpec{
-			OriginalNamespace: originalNamespace,
-			Selector:          map[string]string{}},
-		want: &apis.FieldError{
-			Message: "At least one selector must be specified",
-			Paths:   []string{"selector"},
-		},
-	}, {
-		name: "invalid selector keys, start with number",
+		name: "invalid selector key",
 		cmps: &ConfigMapPropagationSpec{
 			OriginalNamespace: originalNamespace,
 			Selector: map[string]string{
-				"0nvalid": "testing",
+				"*nvalid": "testing",
 			}},
 		want: &apis.FieldError{
-			Message: `Invalid selector name: "0nvalid"`,
+			Message: `Invalid selector key: *nvalid`,
 			Paths:   []string{"selector"},
+			Details: "name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')",
 		},
 	}, {
-		name: "invalid attribute name, capital letters",
+		name: "invalid seletor value",
 		cmps: &ConfigMapPropagationSpec{
 			OriginalNamespace: originalNamespace,
 			Selector: map[string]string{
-				"inValid": "testing",
+				"invalid": "test/ing",
 			}},
 		want: &apis.FieldError{
-			Message: `Invalid selector name: "inValid"`,
+			Message: `Invalid selector value: test/ing`,
 			Paths:   []string{"selector"},
+			Details: "a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')",
 		},
 	},
 	}

@@ -75,6 +75,8 @@ func (fbs *SinkBindingStatus) MarkBindingAvailable() {
 
 // Do implements psbinding.Bindable
 func (fb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
+	fb.MarkDeprecated(&fb.Status.Status, "SinkBindingDeprecated", "sinkbindings.sources.eventing.knative.dev are deprecated and will be removed in the future. Use sinkbindings.sources.knative.dev instead.")
+
 	// First undo so that we can just unconditionally append below.
 	fb.Undo(ctx, ps)
 

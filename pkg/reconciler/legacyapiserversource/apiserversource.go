@@ -156,6 +156,8 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 
 	source.Status.InitializeConditions()
 
+	source.MarkDeprecated(&source.Status.Status, "ApiServerSourceDeprecated", "apiserversources.sources.eventing.knative.dev are deprecated and will be removed in the future. Use apiserversources.sources.knative.dev instead.")
+
 	if source.Spec.Sink == nil {
 		source.Status.MarkNoSink("SinkMissing", "")
 		return fmt.Errorf("spec.sink missing")

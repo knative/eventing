@@ -74,9 +74,15 @@ func WithInMemoryChannelSubscribers(subscribers []duckv1alpha1.SubscriberSpec) I
 	}
 }
 
-func WithInMemoryChannelDeploymentNotReady(reason, message string) InMemoryChannelOption {
+func WithInMemoryChannelDeploymentFailed(reason, message string) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
 		imc.Status.MarkDispatcherFailed(reason, message)
+	}
+}
+
+func WithInMemoryChannelDeploymentUnknown(reason, message string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.MarkDispatcherUnknown(reason, message)
 	}
 }
 

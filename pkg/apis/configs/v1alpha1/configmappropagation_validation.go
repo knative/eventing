@@ -20,6 +20,9 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
@@ -42,10 +45,6 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 		fe := apis.ErrMissingField("originalNamespace")
 		errs = errs.Also(fe)
 	}
-	if cmps.Selector == nil {
-		fe := apis.ErrMissingField("selector")
-		errs = errs.Also(fe)
-	}
 
 	if cmps.Selector != nil {
 		if len(cmps.Selector) == 0 {
@@ -55,11 +54,20 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 			}
 			errs = errs.Also(fe)
 		} else {
-			for s := range cmps.Selector {
-				if !validSelectorName.MatchString(s) {
+			for key, value := range cmps.Selector {
+				if err := validation.IsQualifiedName(key); len(err) != 0 {
 					fe := &apis.FieldError{
-						Message: fmt.Sprintf("Invalid selector name: %q", s),
+						Message: fmt.Sprintf("Invalid selector key: %v", key),
 						Paths:   []string{"selector"},
+						Details: strings.Join(err, "; "),
+					}
+					errs = errs.Also(fe)
+				}
+				if err := validation.IsValidLabelValue(value); len(err) != 0 {
+					fe := &apis.FieldError{
+						Message: fmt.Sprintf("Invalid selector value: %v", value),
+						Paths:   []string{"selector"},
+						Details: strings.Join(err, "; "),
 					}
 					errs = errs.Also(fe)
 				}

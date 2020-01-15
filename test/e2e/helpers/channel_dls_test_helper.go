@@ -22,12 +22,14 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 // ChannelDeadLetterSinkTestHelper is the helper function for channel_deadlettersink_test
-func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.ChannelTestRunner) {
+func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
 	const (
 		senderName    = "e2e-channelchain-sender"
 		loggerPodName = "e2e-channel-dls-logger-pod"
@@ -36,17 +38,17 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chan
 	// subscriptionNames corresponds to Subscriptions
 	subscriptionNames := []string{"e2e-channel-dls-subs1"}
 
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := common.Setup(st, true)
-		defer common.TearDown(client)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+		client := lib.Setup(st, true)
+		defer lib.TearDown(client)
 
 		// create channels
 		client.CreateChannelsOrFail(channelNames, &channel)
-		client.WaitForResourcesReady(&channel)
+		client.WaitForResourcesReadyOrFail(&channel)
 
 		// create loggerPod and expose it as a service
 		pod := resources.EventLoggerPod(loggerPodName)
-		client.CreatePodOrFail(pod, common.WithService(loggerPodName))
+		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
 		// create subscriptions that subscribe to a service that does not exist
 		client.CreateSubscriptionsOrFail(
@@ -64,19 +66,17 @@ func ChannelDeadLetterSinkTestHelper(t *testing.T, channelTestRunner common.Chan
 
 		// send fake CloudEvent to the first channel
 		body := fmt.Sprintf("TestChannelDeadLetterSink %s", uuid.NewUUID())
-		event := &resources.CloudEvent{
-			Source:   senderName,
-			Type:     resources.CloudEventDefaultType,
-			Data:     fmt.Sprintf(`{"msg":%q}`, body),
-			Encoding: resources.CloudEventDefaultEncoding,
-		}
+		event := cloudevents.New(
+			fmt.Sprintf(`{"msg":%q}`, body),
+			cloudevents.WithSource(senderName),
+		)
 		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], &channel, event); err != nil {
 			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
 		}
 
 		// check if the logging service receives the correct number of event messages
 		expectedContentCount := len(subscriptionNames)
-		if err := client.CheckLog(loggerPodName, common.CheckerContainsCount(body, expectedContentCount)); err != nil {
+		if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(body, expectedContentCount)); err != nil {
 			st.Fatalf("String %q does not appear %d times in logs of logger pod %q: %v", body, expectedContentCount, loggerPodName, err)
 		}
 	})

@@ -87,14 +87,20 @@ func (imcs *InMemoryChannelStatus) MarkDispatcherFailed(reason, messageFormat st
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionDispatcherReady, reason, messageFormat, messageA...)
 }
 
+func (imcs *InMemoryChannelStatus) MarkDispatcherUnknown(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkUnknown(InMemoryChannelConditionDispatcherReady, reason, messageFormat, messageA...)
+}
+
 // TODO: Unify this with the ones from Eventing. Say: Broker, Trigger.
 func (imcs *InMemoryChannelStatus) PropagateDispatcherStatus(ds *appsv1.DeploymentStatus) {
 	for _, cond := range ds.Conditions {
 		if cond.Type == appsv1.DeploymentAvailable {
-			if cond.Status != corev1.ConditionTrue {
-				imcs.MarkDispatcherFailed("DispatcherNotReady", "Dispatcher Deployment is not ready: %s : %s", cond.Reason, cond.Message)
-			} else {
+			if cond.Status == corev1.ConditionTrue {
 				imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionDispatcherReady)
+			} else if cond.Status == corev1.ConditionFalse {
+				imcs.MarkDispatcherFailed("DispatcherDeploymentFalse", "The status of Dispatcher Deployment is False: %s : %s", cond.Reason, cond.Message)
+			} else if cond.Status == corev1.ConditionUnknown {
+				imcs.MarkDispatcherUnknown("DispatcherDeploymentUnknown", "The status of Dispatcher Deployment is Unknown: %s : %s", cond.Reason, cond.Message)
 			}
 		}
 	}
@@ -102,6 +108,10 @@ func (imcs *InMemoryChannelStatus) PropagateDispatcherStatus(ds *appsv1.Deployme
 
 func (imcs *InMemoryChannelStatus) MarkServiceFailed(reason, messageFormat string, messageA ...interface{}) {
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionServiceReady, reason, messageFormat, messageA...)
+}
+
+func (imcs *InMemoryChannelStatus) MarkServiceUnknown(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkUnknown(InMemoryChannelConditionServiceReady, reason, messageFormat, messageA...)
 }
 
 func (imcs *InMemoryChannelStatus) MarkServiceTrue() {
@@ -112,12 +122,20 @@ func (imcs *InMemoryChannelStatus) MarkChannelServiceFailed(reason, messageForma
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionChannelServiceReady, reason, messageFormat, messageA...)
 }
 
+func (imcs *InMemoryChannelStatus) MarkChannelServiceUnknown(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkUnknown(InMemoryChannelConditionChannelServiceReady, reason, messageFormat, messageA...)
+}
+
 func (imcs *InMemoryChannelStatus) MarkChannelServiceTrue() {
 	imcCondSet.Manage(imcs).MarkTrue(InMemoryChannelConditionChannelServiceReady)
 }
 
 func (imcs *InMemoryChannelStatus) MarkEndpointsFailed(reason, messageFormat string, messageA ...interface{}) {
 	imcCondSet.Manage(imcs).MarkFalse(InMemoryChannelConditionEndpointsReady, reason, messageFormat, messageA...)
+}
+
+func (imcs *InMemoryChannelStatus) MarkEndpointsUnknown(reason, messageFormat string, messageA ...interface{}) {
+	imcCondSet.Manage(imcs).MarkUnknown(InMemoryChannelConditionEndpointsReady, reason, messageFormat, messageA...)
 }
 
 func (imcs *InMemoryChannelStatus) MarkEndpointsTrue() {

@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	controllerAgentName = "sinkbinding-controller"
+	controllerAgentName = "legacysinkbinding-controller"
 )
 
 // NewController returns a new SinkBinding reconciler.

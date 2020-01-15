@@ -16,13 +16,25 @@ limitations under the License.
 
 package resources
 
+import "k8s.io/apimachinery/pkg/labels"
+
 const (
 	PropagationLabelKey           = "knative.dev/config-propagation"
 	PropagationLabelValueOriginal = "original"
 	PropagationLabelValueCopy     = "copy"
+	CopyLabelKey                  = "knative.dev/config-original"
 )
 
-func OriginalLabels(selector map[string]string) map[string]string {
-	selector[PropagationLabelKey] = PropagationLabelValueOriginal
-	return selector
+// ExpectedOriginalSelector with return a selector which matches the input set with an additional label "knative.dev/config-propagation: original"
+// This is the expected selector to select original configmaps
+func ExpectedOriginalSelector(selector map[string]string) labels.Selector {
+	expectedOriginalSelector := map[string]string{}
+	for index, element := range selector {
+		expectedOriginalSelector[index] = element
+	}
+	// Add original label if it doesn't exist
+	if expectedOriginalSelector[PropagationLabelKey] == "" {
+		expectedOriginalSelector[PropagationLabelKey] = PropagationLabelValueOriginal
+	}
+	return labels.SelectorFromSet(expectedOriginalSelector)
 }

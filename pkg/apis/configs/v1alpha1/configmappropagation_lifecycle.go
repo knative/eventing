@@ -50,5 +50,5 @@ func (cmps *ConfigMapPropagationStatus) MarkPropagated() {
 
 func (cmps *ConfigMapPropagationStatus) MarkNotPropagated() {
 	configMapPropagationCondSet.Manage(cmps).MarkFalse(ConfigMapPropagationConditionPropagated, "PropagationFailed",
-		"ConfigMapPropagation does not fully propagate ConfigMaps from original namespace to current namespace")
+		"ConfigMapPropagation could not fully propagate ConfigMaps from original namespace to current namespace")
 }

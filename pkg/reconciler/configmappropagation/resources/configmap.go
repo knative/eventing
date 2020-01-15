@@ -24,10 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	CopyLabelKey = "knative.dev/config-original"
-)
-
 type ConfigMapArgs struct {
 	Original             *corev1.ConfigMap
 	ConfigMapPropagation *configsv1alpha1.ConfigMapPropagation
@@ -54,6 +50,8 @@ func MakeCopyConfigMapName(configMapPropagationName, configMapName string) strin
 	return configMapPropagationName + "-" + configMapName
 }
 
+// MakeCopyCOnfigMapLabel uses '-' to separate namespace and configmap name instead of '/',
+// for label values only accept '-', '.', '_'.
 func MakeCopyConfigMapLabel(configMapPropagationNamespace, configMapName string) string {
 	return configMapPropagationNamespace + "-" + configMapName
 }

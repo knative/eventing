@@ -22,6 +22,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.uber.org/zap"
+
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 )

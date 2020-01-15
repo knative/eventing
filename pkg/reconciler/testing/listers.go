@@ -36,11 +36,13 @@ import (
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	fakelegacyclientset "knative.dev/eventing/pkg/legacyclient/clientset/versioned/fake"
 	legacysourcelisters "knative.dev/eventing/pkg/legacyclient/listers/legacysources/v1alpha1"
 	"knative.dev/pkg/reconciler/testing"
@@ -154,6 +156,10 @@ func (l *Listers) GetParallelLister() messaginglisters.ParallelLister {
 
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
 	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
+}
+
+func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {
+	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha1.ApiServerSource{}))
 }
 
 func (l *Listers) GetLegacyCronJobSourceLister() legacysourcelisters.CronJobSourceLister {

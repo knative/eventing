@@ -27,7 +27,7 @@ import (
 // ConfigMapOption enables further configuration of a ConfigMap.
 type ConfigMapOption func(*v1.ConfigMap)
 
-// NewConfigMap creates a eew ConfigMap.
+// NewConfigMap creates a new ConfigMap.
 func NewConfigMap(name, namespace string, o ...ConfigMapOption) *v1.ConfigMap {
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

@@ -33,6 +33,9 @@ spec:
       - all
       - knative
       - eventing
+    shortNames:
+      - kcmp
+      - cmp
   scope: Namespaced
   subresources:
     status: {}

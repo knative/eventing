@@ -24,7 +24,7 @@ import (
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 )
 
-// ConfigMapPropagationOption enables further configuration of an ConfigMapPropagation.
+// ConfigMapPropagationOption enables further configuration of a ConfigMapPropagation.
 type ConfigMapPropagationOption func(*v1alpha1.ConfigMapPropagation)
 
 // NewConfigMapPropagation creates a ConfigMapPropagation.
@@ -55,7 +55,19 @@ func WithConfigMapPropagationDeletionTimestamp(cmp *v1alpha1.ConfigMapPropagatio
 
 func WithConfigMapPropagationSelector(selector map[string]string) ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
-		cmp.Spec.Selector = selector
+		cmp.Spec.Selector = &selector
+	}
+}
+
+func WithConfigMapPropagationGeneration(gen int64) ConfigMapPropagationOption {
+	return func(s *v1alpha1.ConfigMapPropagation) {
+		s.Generation = gen
+	}
+}
+
+func WithConfigMapPropagationStatusObservedGeneration(gen int64) ConfigMapPropagationOption {
+	return func(s *v1alpha1.ConfigMapPropagation) {
+		s.Status.ObservedGeneration = gen
 	}
 }
 

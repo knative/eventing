@@ -52,11 +52,11 @@ func TestMakeConfigMap(t *testing.T) {
 			})
 			// If name and namespace are correct.
 			if name := configmap.Name; name != "cmp-original-config-map" {
-				t.Errorf("Expected name %q, actually %q", "cmp-original-config-map", name)
+				t.Errorf("want %v, got %v", "cmp-original-config-map", name)
 			}
 
 			if ns := configmap.Namespace; ns != tc.configmappropagation.Namespace {
-				t.Errorf("Expected namespace %q, actually %q", tc.configmappropagation.Namespace, ns)
+				t.Errorf("want %v, got %v", tc.configmappropagation.Namespace, ns)
 			}
 
 			// If OwnerReferences is correct.
@@ -70,7 +70,7 @@ func TestMakeConfigMap(t *testing.T) {
 				CopyLabelKey:        "testing-original-config-map",
 			}
 			if labels := configmap.Labels; !reflect.DeepEqual(labels, expectedLabels) {
-				t.Errorf("Expected labels %q, actually %q", expectedLabels, labels)
+				t.Errorf("want %v, got %q", expectedLabels, labels)
 			}
 		})
 	}

@@ -391,7 +391,7 @@ func TestCronJobSourceStatusGetCondition(t *testing.T) {
 		condQuery: v1alpha1.CronJobConditionReady,
 		want: &apis.Condition{
 			Type:    v1alpha1.CronJobConditionReady,
-			Status:  corev1.ConditionUnknown,
+			Status:  corev1.ConditionFalse,
 			Reason:  "SinkEmpty",
 			Message: "Sink has resolved to empty.",
 		},

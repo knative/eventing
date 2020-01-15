@@ -43,6 +43,8 @@ const (
 	configMapPropagationName = "test-cmp"
 	originalConfigMapName    = "test-original-cm"
 	originalNS               = "knative-eventing"
+
+	configMapPropagationGeneration = 7
 )
 
 var (
@@ -345,7 +347,7 @@ func TestAllCase(t *testing.T) {
 			WantErr: true,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, configMapPropagationPropagateSingleConfigMapFailed,
-					`Failed to propagate ConfigMap %v: unable to update ConfigMap in current namespace, ConfigMap doesn't have "knative.dev/eventing/config-propagation:copy" label`, originalConfigMapName),
+					`Failed to propagate ConfigMap %v: unable to update ConfigMap in current namespace, ConfigMap doesn't have "knative.dev/config-propagation:copy" label`, originalConfigMapName),
 				Eventf(corev1.EventTypeWarning, configMapPropagationReconcileError,
 					"ConfigMapPropagation reconcile error: one or more ConfigMap propagation failed"),
 			},
@@ -394,6 +396,7 @@ func TestAllCase(t *testing.T) {
 				NewConfigMapPropagation(configMapPropagationName, currentNS,
 					WithInitConfigMapPropagationConditions,
 					WithConfigMapPropagationSelector(selector),
+					WithConfigMapPropagationGeneration(configMapPropagationGeneration),
 				),
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
@@ -413,6 +416,8 @@ func TestAllCase(t *testing.T) {
 					WithInitConfigMapPropagationConditions,
 					WithConfigMapPropagationSelector(selector),
 					WithConfigMapPropagationPropagated,
+					WithConfigMapPropagationGeneration(configMapPropagationGeneration),
+					WithConfigMapPropagationStatusObservedGeneration(configMapPropagationGeneration),
 				),
 			}},
 			WantEvents: []string{

@@ -25,10 +25,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+
 	"knative.dev/eventing/pkg/kncloudevents"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/kelseyhightower/envconfig"
 )
 

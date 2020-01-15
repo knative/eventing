@@ -17,15 +17,54 @@ limitations under the License.
 package resources
 
 import (
+	"k8s.io/apimachinery/pkg/labels"
 	"reflect"
 	"testing"
 )
 
 func TestOriginalLabels(t *testing.T) {
-	label := OriginalLabels(map[string]string{})
-	if !reflect.DeepEqual(label, map[string]string{
-		PropagationLabelKey: PropagationLabelValueOriginal,
-	}) {
-		t.Errorf("Should have required labels")
+	testCases := []struct {
+		Name string
+		F    func() labels.Selector
+		Want labels.Selector
+	}{{
+		Name: "empty map",
+		F: func() labels.Selector {
+			return ExpectedOriginalSelector(map[string]string{})
+		},
+		Want: labels.SelectorFromSet(map[string]string{
+			PropagationLabelKey: PropagationLabelValueOriginal,
+		}),
+	}, {
+		Name: "map with existing keys",
+		F: func() labels.Selector {
+			return ExpectedOriginalSelector(map[string]string{
+				"testing": "testing",
+			})
+		},
+		Want: labels.SelectorFromSet(map[string]string{
+			"testing":           "testing",
+			PropagationLabelKey: PropagationLabelValueOriginal,
+		}),
+	}, {
+		Name: "map with original key",
+		F: func() labels.Selector {
+			return ExpectedOriginalSelector(map[string]string{
+				"testing":           "testing",
+				PropagationLabelKey: PropagationLabelValueOriginal,
+			})
+		},
+		Want: labels.SelectorFromSet(map[string]string{
+			"testing":           "testing",
+			PropagationLabelKey: PropagationLabelValueOriginal,
+		}),
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			if got := tc.F(); !reflect.DeepEqual(got, tc.Want) {
+				t.Errorf("want %v, got %v", tc.Want, got)
+			}
+		})
 	}
 }

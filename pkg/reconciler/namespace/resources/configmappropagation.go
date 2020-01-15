@@ -19,10 +19,7 @@ package resources
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
-)
-
-const (
-	defaultNamespace = "knative-eventing"
+	"knative.dev/pkg/system"
 )
 
 // MakeConfigMapPropagation creates a default ConfigMapPropagation object for Namespace 'namespace'.
@@ -33,7 +30,7 @@ func MakeConfigMapPropagation(namespace string) *v1alpha1.ConfigMapPropagation {
 			Name:      DefaultConfigMapPropagationName,
 		},
 		Spec: v1alpha1.ConfigMapPropagationSpec{
-			OriginalNamespace: defaultNamespace,
+			OriginalNamespace: system.Namespace(),
 			Selector:          ConfigMapPropagationOwnedLabels(),
 		},
 	}

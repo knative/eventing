@@ -408,6 +408,11 @@ func TestSinkBindingDo(t *testing.T) {
 			sb := &SinkBinding{}
 			sb.Do(ctx, got)
 
+			dep := sb.Status.GetCondition(StatusConditionTypeDeprecated)
+			if dep == nil {
+				t.Errorf("expected Deprecated type condition to be set, found nil")
+			}
+
 			if !cmp.Equal(got, test.want) {
 				t.Errorf("Undo (-want, +got): %s", cmp.Diff(test.want, got))
 			}

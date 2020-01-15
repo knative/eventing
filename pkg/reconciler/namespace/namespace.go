@@ -37,7 +37,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	configsv1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
@@ -61,7 +61,7 @@ var (
 	serviceAccountGVK       = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
 	roleBindingGVK          = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
 	brokerGVK               = v1alpha1.SchemeGroupVersion.WithKind("Broker")
-	configMapPropagationGVK = configsv1.SchemeGroupVersion.WithKind("ConfigMapPropagation")
+	configMapPropagationGVK = configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation")
 )
 
 type Reconciler struct {
@@ -159,7 +159,7 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 }
 
 // reconcileConfigMapPropagation reconciles the default ConfigMapPropagation for the Namespace 'ns'.
-func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *corev1.Namespace) (*configsv1.ConfigMapPropagation, error) {
+func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *corev1.Namespace) (*configsv1alpha1.ConfigMapPropagation, error) {
 	current, err := r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Get(resources.DefaultConfigMapPropagationName, metav1.GetOptions{})
 
 	// If the resource doesn't exist, we'll create it.
