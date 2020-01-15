@@ -12,6 +12,7 @@ required = [
   "knative.dev/pkg/testutils/clustermanager/perf-tests",
   "knative.dev/test-infra/scripts",
   "knative.dev/test-infra/tools/dep-collector",
+  "contrib.go.opencensus.io/exporter/ocagent",
 ]
 
 [prune]
@@ -79,6 +80,10 @@ required = [
   # https://github.com/kubernetes/kubernetes/blob/v1.16.4/go.mod#L81
   version = "v1.1.7"
 
+[[override]]
+  name = "contrib.go.opencensus.io/exporter/ocagent"
+  version = "v0.6.0"
+
 # TODO why is this overridden?
 [[override]]
   name = "github.com/Shopify/sarama"
@@ -116,3 +121,7 @@ required = [
 [[constraint]]
   name = "github.com/tsenart/vegeta"
   version = "12.7.0"
+
+[[constraint]]
+  name = "contrib.go.opencensus.io/exporter/ocagent"
+  version = "0.6.0"
