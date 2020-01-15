@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	errors2 "github.com/pkg/errors"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 )
 
@@ -222,11 +224,17 @@ func (e *Event) JsonDecodeV02(body []byte, raw map[string]json.RawMessage) error
 
 	if len(raw) > 0 {
 		extensions := make(map[string]interface{}, len(raw))
+		ec.Extensions = extensions
 		for k, v := range raw {
 			k = strings.ToLower(k)
-			extensions[k] = v
+			var tmp interface{}
+			if err := json.Unmarshal(v, &tmp); err != nil {
+				return err
+			}
+			if err := ec.SetExtension(k, tmp); err != nil {
+				return errors2.Wrap(err, "Cannot set extension with key "+k)
+			}
 		}
-		ec.Extensions = extensions
 	}
 
 	e.Context = &ec
@@ -263,11 +271,17 @@ func (e *Event) JsonDecodeV03(body []byte, raw map[string]json.RawMessage) error
 
 	if len(raw) > 0 {
 		extensions := make(map[string]interface{}, len(raw))
+		ec.Extensions = extensions
 		for k, v := range raw {
 			k = strings.ToLower(k)
-			extensions[k] = v
+			var tmp interface{}
+			if err := json.Unmarshal(v, &tmp); err != nil {
+				return err
+			}
+			if err := ec.SetExtension(k, tmp); err != nil {
+				return errors2.Wrap(err, "Cannot set extension with key "+k)
+			}
 		}
-		ec.Extensions = extensions
 	}
 
 	e.Context = &ec
@@ -312,15 +326,17 @@ func (e *Event) JsonDecodeV1(body []byte, raw map[string]json.RawMessage) error 
 
 	if len(raw) > 0 {
 		extensions := make(map[string]interface{}, len(raw))
+		ec.Extensions = extensions
 		for k, v := range raw {
 			k = strings.ToLower(k)
-			var tmp string
+			var tmp interface{}
 			if err := json.Unmarshal(v, &tmp); err != nil {
 				return err
 			}
-			extensions[k] = tmp
+			if err := ec.SetExtension(k, tmp); err != nil {
+				return errors2.Wrap(err, "Cannot set extension with key "+k)
+			}
 		}
-		ec.Extensions = extensions
 	}
 
 	e.Context = &ec
