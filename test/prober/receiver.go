@@ -67,13 +67,13 @@ func (p *prober) deployReceiverPod() {
 						{
 							Name:      configName,
 							ReadOnly:  true,
-							MountPath: "/.config/wathola",
+							MountPath: configMountPoint,
 						},
 					},
 					ReadinessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/healthz",
+								Path: healthEndpoint,
 								Port: intstr.FromInt(22111),
 							},
 						},

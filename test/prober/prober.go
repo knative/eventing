@@ -111,6 +111,7 @@ func (p *prober) Finish() {
 }
 
 func (p *prober) deploy() {
+	p.log.Infof("Using namespace for probe testing: %v", p.client.Namespace)
 	p.deployConfiguration()
 	p.deployReceiver()
 	if p.config.Serving.Use {

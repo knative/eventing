@@ -82,12 +82,12 @@ func forwarderKService(name, namespace string) *unstructured.Unstructured {
 						"image": fmt.Sprintf("quay.io/cardil/wathola-forwarder:%v", Version),
 						"volumeMounts": []map[string]interface{}{{
 							"name":      configName,
-							"mountPath": "/.config/wathola",
+							"mountPath": configMountPoint,
 							"readOnly":  true,
 						}},
 						"readinessProbe": map[string]interface{}{
 							"httpGet": map[string]interface{}{
-								"path": "/healthz",
+								"path": healthEndpoint,
 							},
 						},
 					}},

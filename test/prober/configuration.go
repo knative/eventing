@@ -30,9 +30,11 @@ import (
 )
 
 const (
-	configName     = "wathola-config"
-	configFilename = "config.toml"
-	watholaEventNs = "com.github.cardil.wathola"
+	configName       = "wathola-config"
+	configMountPoint = "/.config/wathola"
+	configFilename   = "config.toml"
+	watholaEventNs   = "com.github.cardil.wathola"
+	healthEndpoint   = "/healthz"
 )
 
 var (
