@@ -14,29 +14,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Script entry point.
+
 # shellcheck disable=SC1090
 source "$(dirname "$0")/e2e-common.sh"
 
-# Script entry point.
+# Overrides
 
-function knative_setup() {
+function knative_setup {
   install_knative_serving
   install_latest_release
+}
+
+function install_test_resources {
+  # Nothing to install before tests
+  true
+}
+
+function uninstall_test_resources {
+  # Nothing to uninstall after tests
+  true
 }
 
 # shellcheck disable=SC2068
 initialize $@ --skip-istio-addon
 
-TIMEOUT=${TIMEOUT:-10m}
+TIMEOUT=${TIMEOUT:-30m}
 
 header "Running preupgrade tests"
 
 go_test_e2e -tags=preupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 header "Starting prober test"
-
-# Remove this in case we failed to clean it up in an earlier test.
-rm -vf /tmp/prober-signal /tmp/prober-ready
 
 go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade &
 PROBER_PID=$!
@@ -45,7 +54,8 @@ echo "Prober PID is ${PROBER_PID}"
 wait_for_file /tmp/prober-ready || fail_test
 
 header "Performing upgrade to HEAD"
-install_head
+install_head || return $?
+install_channel_crds || return $?
 
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
@@ -57,9 +67,6 @@ header "Running postdowngrade tests"
 go_test_e2e -tags=postdowngrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 # The prober is blocking on /tmp/prober-signal to know when it should exit.
-#
-# This is kind of gross. First attempt was to just send a signal to the go test,
-# but "go test" intercepts the signal and always exits with a non-zero code.
 echo "done" > /tmp/prober-signal
 
 header "Waiting for prober test"
