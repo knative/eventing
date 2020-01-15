@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -62,10 +63,7 @@ type ReceiverOptions func(*EventReceiver) error
 
 // ResolveChannelFromHostFunc function enables EventReceiver to get the Channel Reference from incoming request HostHeader
 // before calling receiverFunc.
-// TODO change this to take in a URL, rather than just the host string.
-//  That will allow us to use the path to distinguish between Channels too.
-//  Issue: https://github.com/knative/eventing/issues/1952
-type ResolveChannelFromHostFunc func(string) (ChannelReference, error)
+type ResolveChannelFromHostFunc func(url.URL) (ChannelReference, error)
 
 // ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannel function.
@@ -150,7 +148,13 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 
 	host := tctx.Host
 	r.logger.Debug("Received request", zap.String("host", host))
-	channel, err := r.hostToChannelFunc(host)
+	hostURL, err := url.Parse(host)
+	if err != nil {
+		r.logger.Info("Could not parse host as URL", zap.Error(err))
+		resp.Status = http.StatusInternalServerError
+		return err
+	}
+	channel, err := r.hostToChannelFunc(*hostURL)
 	if err != nil {
 		r.logger.Info("Could not extract channel", zap.Error(err))
 		resp.Status = http.StatusInternalServerError
@@ -178,10 +182,10 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 
 // ParseChannel converts the channel's hostname into a channel
 // reference.
-func ParseChannel(host string) (ChannelReference, error) {
-	chunks := strings.Split(host, ".")
+func ParseChannel(host url.URL) (ChannelReference, error) {
+	chunks := strings.Split(host.Path, ".")
 	if len(chunks) < 2 {
-		return ChannelReference{}, fmt.Errorf("bad host format %q", host)
+		return ChannelReference{}, fmt.Errorf("bad host format %v", host)
 	}
 	return ChannelReference{
 		Name:      chunks[0],
