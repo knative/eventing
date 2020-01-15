@@ -160,7 +160,7 @@ func (s *IssuesService) listIssues(ctx context.Context, u string, opt *IssueList
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeLockReasonPreview}
+	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var issues []*Issue
@@ -228,7 +228,7 @@ func (s *IssuesService) ListByRepo(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeIntegrationPreview}
+	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeLabelDescriptionSearchPreview, mediaTypeIntegrationPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var issues []*Issue
@@ -251,7 +251,7 @@ func (s *IssuesService) Get(ctx context.Context, owner string, repo string, numb
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeLockReasonPreview}
+	acceptHeaders := []string{mediaTypeReactionsPreview, mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	issue := new(Issue)
@@ -273,6 +273,9 @@ func (s *IssuesService) Create(ctx context.Context, owner string, repo string, i
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeLabelDescriptionSearchPreview)
+
 	i := new(Issue)
 	resp, err := s.client.Do(ctx, req, i)
 	if err != nil {
@@ -291,6 +294,9 @@ func (s *IssuesService) Edit(ctx context.Context, owner string, repo string, num
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeLabelDescriptionSearchPreview)
 
 	i := new(Issue)
 	resp, err := s.client.Do(ctx, req, i)

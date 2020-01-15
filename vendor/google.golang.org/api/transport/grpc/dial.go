@@ -108,7 +108,7 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 	// Add tracing, but before the other options, so that clients can override the
 	// gRPC stats handler.
 	// This assumes that gRPC options are processed in order, left to right.
-	grpcOpts = addOCStatsHandler(grpcOpts, o)
+	grpcOpts = addOCStatsHandler(grpcOpts)
 	grpcOpts = append(grpcOpts, o.GRPCDialOpts...)
 	if o.UserAgent != "" {
 		grpcOpts = append(grpcOpts, grpc.WithUserAgent(o.UserAgent))
@@ -125,10 +125,7 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 	return grpc.DialContext(ctx, o.Endpoint, grpcOpts...)
 }
 
-func addOCStatsHandler(opts []grpc.DialOption, settings internal.DialSettings) []grpc.DialOption {
-	if settings.TelemetryDisabled {
-		return opts
-	}
+func addOCStatsHandler(opts []grpc.DialOption) []grpc.DialOption {
 	return append(opts, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
 }
 

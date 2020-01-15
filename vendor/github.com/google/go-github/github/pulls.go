@@ -149,7 +149,7 @@ func (s *PullRequestsService) List(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeLockReasonPreview, mediaTypeDraftPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview, mediaTypeDraftPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var pulls []*PullRequest
@@ -179,7 +179,7 @@ func (s *PullRequestsService) ListPullRequestsWithCommit(ctx context.Context, ow
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeListPullsOrBranchesForCommitPreview, mediaTypeDraftPreview, mediaTypeLockReasonPreview}
+	acceptHeaders := []string{mediaTypeListPullsOrBranchesForCommitPreview, mediaTypeDraftPreview, mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 	var pulls []*PullRequest
 	resp, err := s.client.Do(ctx, req, &pulls)
@@ -201,7 +201,7 @@ func (s *PullRequestsService) Get(ctx context.Context, owner string, repo string
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeLockReasonPreview, mediaTypeDraftPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview, mediaTypeDraftPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	pull := new(PullRequest)
@@ -261,7 +261,7 @@ func (s *PullRequestsService) Create(ctx context.Context, owner string, repo str
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeDraftPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeDraftPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	p := new(PullRequest)
@@ -273,9 +273,9 @@ func (s *PullRequestsService) Create(ctx context.Context, owner string, repo str
 	return p, resp, nil
 }
 
-// PullRequestBranchUpdateOptions specifies the optional parameters to the
+// PullReqestBranchUpdateOptions specifies the optional parameters to the
 // PullRequestsService.UpdateBranch method.
-type PullRequestBranchUpdateOptions struct {
+type PullReqestBranchUpdateOptions struct {
 	// ExpectedHeadSHA specifies the most recent commit on the pull request's branch.
 	// Default value is the SHA of the pull request's current HEAD ref.
 	ExpectedHeadSHA *string `json:"expected_head_sha,omitempty"`
@@ -296,7 +296,7 @@ type PullRequestBranchUpdateResponse struct {
 // in a successful request.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#update-a-pull-request-branch
-func (s *PullRequestsService) UpdateBranch(ctx context.Context, owner, repo string, number int, opts *PullRequestBranchUpdateOptions) (*PullRequestBranchUpdateResponse, *Response, error) {
+func (s *PullRequestsService) UpdateBranch(ctx context.Context, owner, repo string, number int, opts *PullReqestBranchUpdateOptions) (*PullRequestBranchUpdateResponse, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/update-branch", owner, repo, number)
 
 	req, err := s.client.NewRequest("PUT", u, opts)
@@ -344,10 +344,7 @@ func (s *PullRequestsService) Edit(ctx context.Context, owner string, repo strin
 		State:               pull.State,
 		MaintainerCanModify: pull.MaintainerCanModify,
 	}
-	// avoid updating the base branch when closing the Pull Request
-	// - otherwise the GitHub API server returns a "Validation Failed" error:
-	// "Cannot change base branch of closed pull request".
-	if pull.Base != nil && pull.GetState() != "closed" {
+	if pull.Base != nil {
 		update.Base = pull.Base.Ref
 	}
 
@@ -357,7 +354,7 @@ func (s *PullRequestsService) Edit(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeLockReasonPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	p := new(PullRequest)

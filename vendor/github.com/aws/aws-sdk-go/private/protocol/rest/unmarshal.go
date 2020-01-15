@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
-	awsStrings "github.com/aws/aws-sdk-go/internal/strings"
 	"github.com/aws/aws-sdk-go/private/protocol"
 )
 
@@ -121,7 +120,7 @@ func unmarshalLocationElements(r *request.Request, v reflect.Value) {
 				}
 			case "headers":
 				prefix := field.Tag.Get("locationName")
-				err := unmarshalHeaderMap(m, r.HTTPResponse.Header, prefix, aws.BoolValue(r.Config.LowerCaseHeaderMaps))
+				err := unmarshalHeaderMap(m, r.HTTPResponse.Header, prefix)
 				if err != nil {
 					r.Error = awserr.New(request.ErrCodeSerialization, "failed to decode REST response", err)
 					break
@@ -146,7 +145,7 @@ func unmarshalStatusCode(v reflect.Value, statusCode int) {
 	}
 }
 
-func unmarshalHeaderMap(r reflect.Value, headers http.Header, prefix string, normalize bool) error {
+func unmarshalHeaderMap(r reflect.Value, headers http.Header, prefix string) error {
 	if len(headers) == 0 {
 		return nil
 	}
@@ -154,12 +153,8 @@ func unmarshalHeaderMap(r reflect.Value, headers http.Header, prefix string, nor
 	case map[string]*string: // we only support string map value types
 		out := map[string]*string{}
 		for k, v := range headers {
-			if awsStrings.HasPrefixFold(k, prefix) {
-				if normalize == true {
-					k = strings.ToLower(k)
-				} else {
-					k = http.CanonicalHeaderKey(k)
-				}
+			k = http.CanonicalHeaderKey(k)
+			if strings.HasPrefix(strings.ToLower(k), strings.ToLower(prefix)) {
 				out[k[len(prefix):]] = &v[0]
 			}
 		}

@@ -88,10 +88,6 @@ required = [
   name = "github.com/cloudevents/sdk-go"
   version = "0.11.0"
 
-[[override]]
-  name = "cloud.google.com/go"
-  version = "v0.34.0"
-
 # needed because pkg upgraded
 [[override]]
   name = "go.uber.org/zap"

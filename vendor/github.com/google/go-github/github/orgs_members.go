@@ -331,6 +331,9 @@ func (s *OrganizationsService) CreateOrgInvitation(ctx context.Context, org stri
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeOrganizationInvitationPreview)
+
 	var invitation *Invitation
 	resp, err := s.client.Do(ctx, req, &invitation)
 	if err != nil {
@@ -354,6 +357,9 @@ func (s *OrganizationsService) ListOrgInvitationTeams(ctx context.Context, org, 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeOrganizationInvitationPreview)
 
 	var orgInvitationTeams []*Team
 	resp, err := s.client.Do(ctx, req, &orgInvitationTeams)

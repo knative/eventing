@@ -158,8 +158,6 @@ type Msghdr C.struct_msghdr
 
 type Cmsghdr C.struct_cmsghdr
 
-type Inet4Pktinfo C.struct_in_pktinfo
-
 type Inet6Pktinfo C.struct_in6_pktinfo
 
 type IPv6MTUInfo C.struct_ip6_mtuinfo
@@ -177,7 +175,6 @@ const (
 	SizeofIPv6Mreq         = C.sizeof_struct_ipv6_mreq
 	SizeofMsghdr           = C.sizeof_struct_msghdr
 	SizeofCmsghdr          = C.sizeof_struct_cmsghdr
-	SizeofInet4Pktinfo     = C.sizeof_struct_in_pktinfo
 	SizeofInet6Pktinfo     = C.sizeof_struct_in6_pktinfo
 	SizeofIPv6MTUInfo      = C.sizeof_struct_ip6_mtuinfo
 	SizeofICMPv6Filter     = C.sizeof_struct_icmp6_filter

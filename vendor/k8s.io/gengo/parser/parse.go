@@ -548,10 +548,6 @@ func (b *Builder) findTypesIn(pkgPath importPathString, u *types.Universe) error
 		if ok && !tv.IsField() {
 			b.addVariable(*u, nil, tv)
 		}
-		tconst, ok := obj.(*tc.Const)
-		if ok {
-			b.addConstant(*u, nil, tconst)
-		}
 	}
 
 	importedPkgs := []string{}
@@ -782,10 +778,7 @@ func (b *Builder) walkType(u types.Universe, useName *types.Name, in tc.Type) *t
 				if out.Methods == nil {
 					out.Methods = map[string]*types.Type{}
 				}
-				method := t.Method(i)
-				mt := b.walkType(u, nil, method.Type())
-				mt.CommentLines = splitLines(b.priorCommentLines(method.Pos(), 1).Text())
-				out.Methods[method.Name()] = mt
+				out.Methods[t.Method(i).Name()] = b.walkType(u, nil, t.Method(i).Type())
 			}
 		}
 		return out
@@ -817,17 +810,6 @@ func (b *Builder) addVariable(u types.Universe, useName *types.Name, in *tc.Var)
 		name = *useName
 	}
 	out := u.Variable(name)
-	out.Kind = types.DeclarationOf
-	out.Underlying = b.walkType(u, nil, in.Type())
-	return out
-}
-
-func (b *Builder) addConstant(u types.Universe, useName *types.Name, in *tc.Const) *types.Type {
-	name := tcVarNameToName(in.String())
-	if useName != nil {
-		name = *useName
-	}
-	out := u.Constant(name)
 	out.Kind = types.DeclarationOf
 	out.Underlying = b.walkType(u, nil, in.Type())
 	return out

@@ -60,7 +60,7 @@ func newTransport(ctx context.Context, base http.RoundTripper, settings *interna
 		quotaProject:  settings.QuotaProject,
 		requestReason: settings.RequestReason,
 	}
-	trans = addOCTransport(trans, settings)
+	trans = addOCTransport(trans)
 	switch {
 	case settings.NoAuth:
 		// Do nothing.
@@ -109,15 +109,16 @@ func (t parameterTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	if rt == nil {
 		return nil, errors.New("transport: no Transport specified")
 	}
+	if t.userAgent == "" {
+		return rt.RoundTrip(req)
+	}
 	newReq := *req
 	newReq.Header = make(http.Header)
 	for k, vv := range req.Header {
 		newReq.Header[k] = vv
 	}
-	if t.userAgent != "" {
-		// TODO(cbro): append to existing User-Agent header?
-		newReq.Header.Set("User-Agent", t.userAgent)
-	}
+	// TODO(cbro): append to existing User-Agent header?
+	newReq.Header.Set("User-Agent", t.userAgent)
 
 	// Attach system parameters into the header
 	if t.quotaProject != "" {
@@ -142,10 +143,7 @@ func defaultBaseTransport(ctx context.Context) http.RoundTripper {
 	return http.DefaultTransport
 }
 
-func addOCTransport(trans http.RoundTripper, settings *internal.DialSettings) http.RoundTripper {
-	if settings.TelemetryDisabled {
-		return trans
-	}
+func addOCTransport(trans http.RoundTripper) http.RoundTripper {
 	return &ochttp.Transport{
 		Base:        trans,
 		Propagation: &propagation.HTTPFormat{},
