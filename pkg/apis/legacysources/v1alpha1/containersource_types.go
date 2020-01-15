@@ -33,6 +33,9 @@ import (
 
 // ContainerSource is the Schema for the containersources API
 type ContainerSource struct {
+	// Deprecated allows ContainerSource to have a deprecated message.
+	Deprecated
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 

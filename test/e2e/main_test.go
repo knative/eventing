@@ -20,17 +20,17 @@ import (
 	"testing"
 
 	"knative.dev/eventing/test"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
 )
 
-var setup = common.Setup
-var tearDown = common.TearDown
-var channelTestRunner common.ChannelTestRunner
+var setup = lib.Setup
+var tearDown = lib.TearDown
+var channelTestRunner lib.ChannelTestRunner
 
 func TestMain(m *testing.M) {
 	test.InitializeEventingFlags()
-	channelTestRunner = common.ChannelTestRunner{
-		ChannelFeatureMap: common.ChannelFeatureMap,
+	channelTestRunner = lib.ChannelTestRunner{
+		ChannelFeatureMap: lib.ChannelFeatureMap,
 		ChannelsToTest:    test.EventingFlags.Channels,
 	}
 	os.Exit(m.Run())

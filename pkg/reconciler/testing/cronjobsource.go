@@ -51,6 +51,7 @@ func WithCronJobSourceUID(uid string) CronJobSourceOption {
 // WithInitCronJobSourceConditions initializes the CronJobSource's conditions.
 func WithInitCronJobSourceConditions(s *v1alpha1.CronJobSource) {
 	s.Status.InitializeConditions()
+	s.MarkDeprecated(&s.Status.Status, "CronJobSourceDeprecated", "cronjobsources.sources.eventing.knative.dev are deprecated and will be removed in the future. Use a CronJob and SinkBinding.sources.knative.dev instead.")
 }
 
 func WithValidCronJobSourceSchedule(s *v1alpha1.CronJobSource) {

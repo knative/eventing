@@ -21,10 +21,13 @@ import (
 	"net/url"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	duckeventingv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 
 	_ "knative.dev/pkg/system/testing"
@@ -35,6 +38,7 @@ func TestMakeFilterDeployment(t *testing.T) {
 		trigger       *v1alpha1.Trigger
 		brokerTrigger *corev1.ObjectReference
 		brokerIngress *corev1.ObjectReference
+		delivery      *duckeventingv1alpha1.DeliverySpec
 		uri           *url.URL
 		want          []byte
 	}{
@@ -63,6 +67,11 @@ func TestMakeFilterDeployment(t *testing.T) {
 				u, _ := url.Parse("http://example.com/uid")
 				return u
 			}(),
+			delivery: &duckeventingv1alpha1.DeliverySpec{
+				DeadLetterSink: &duckv1.Destination{
+					URI: &apis.URL{Host: "deadlettersink.example.com"},
+				},
+			},
 			want: []byte(`{
   "metadata": {
     "name": "broker-happy-abc-uid",
@@ -96,6 +105,11 @@ func TestMakeFilterDeployment(t *testing.T) {
         "kind": "Aoo",
         "name": "Caz"
       }
+    },
+    "delivery": {
+      "deadLetterSink": {
+        "uri": "//deadlettersink.example.com"
+      }
     }
   },
   "status": {
@@ -106,7 +120,7 @@ func TestMakeFilterDeployment(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			dep := NewSubscription(tc.trigger, tc.brokerTrigger, tc.brokerIngress, tc.uri)
+			dep := NewSubscription(tc.trigger, tc.brokerTrigger, tc.brokerIngress, tc.uri, tc.delivery)
 
 			got, err := json.MarshalIndent(dep, "", "  ")
 			if err != nil {

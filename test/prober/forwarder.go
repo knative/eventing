@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
 )
 
 var (
@@ -41,7 +41,7 @@ func (p *prober) deployForwarder() {
 	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
 	service := forwarderKService(forwarderName, p.client.Namespace)
 	_, err := serving.Create(service, metav1.CreateOptions{})
-	common.NoError(err)
+	lib.NoError(err)
 
 	waitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
 		return p.waitForKServiceReady(forwarderName, p.client.Namespace)
@@ -60,7 +60,7 @@ func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
 	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
 	err := serving.Delete(forwarderName, &metav1.DeleteOptions{})
-	common.NoError(err)
+	lib.NoError(err)
 }
 
 func forwarderKService(name, namespace string) *unstructured.Unstructured {

@@ -26,11 +26,13 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"knative.dev/pkg/test/logging"
+
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
-	"knative.dev/pkg/test/logging"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 const (
@@ -144,7 +146,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 
 			// Wait for default broker ready.
-			if err := client.WaitForResourceReady(defaultBrokerName, common.BrokerTypeMeta); err != nil {
+			if err := client.WaitForResourceReady(defaultBrokerName, lib.BrokerTypeMeta); err != nil {
 				t.Fatalf("Error waiting for default broker to become ready: %v", err)
 			}
 
@@ -152,7 +154,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			for _, event := range test.eventsToReceive {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				pod := resources.EventLoggerPod(subscriberName)
-				client.CreatePodOrFail(pod, common.WithService(subscriberName))
+				client.CreatePodOrFail(pod, lib.WithService(subscriberName))
 			}
 
 			// Create triggers.
@@ -161,7 +163,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, event.context)
 				client.CreateTriggerOrFail(triggerName,
-					resources.WithSubscriberRefForTrigger(subscriberName),
+					resources.WithSubscriberServiceRefForTrigger(subscriberName),
 					triggerOption,
 				)
 			}
@@ -180,10 +182,15 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				// Using event type, source and extensions as part of the body for easier debugging.
 				extensionsStr := joinSortedExtensions(eventToSend.Extensions)
 				body := fmt.Sprintf(("Body-%s-%s-%s"), eventToSend.Type, eventToSend.Source, extensionsStr)
-				cloudEvent := makeCloudEvent(eventToSend, body)
+				cloudEvent := cloudevents.New(
+					fmt.Sprintf(`{"msg":%q}`, body),
+					cloudevents.WithSource(eventToSend.Source),
+					cloudevents.WithType(eventToSend.Type),
+					cloudevents.WithExtensions(eventToSend.Extensions),
+				)
 				// Create sender pod.
 				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.Extensions)
-				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, common.BrokerTypeMeta, cloudEvent); err != nil {
+				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, lib.BrokerTypeMeta, cloudEvent); err != nil {
 					t.Fatalf("Error send cloud event to broker: %v", err)
 				}
 
@@ -201,7 +208,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 
 			for _, event := range test.eventsToReceive {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
-				if err := client.CheckLog(subscriberName, common.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
+				if err := client.CheckLog(subscriberName, lib.CheckerContainsAll(expectedEvents[subscriberName])); err != nil {
 					t.Fatalf("Event(s) not found in logs of subscriber pod %q: %v", subscriberName, err)
 				}
 				// At this point all the events should have been received in the pod.
@@ -216,15 +223,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 		})
 	}
-
-}
-
-func makeCloudEvent(eventToSend eventContext, body string) *resources.CloudEvent {
-	return &resources.CloudEvent{
-		Source:     eventToSend.Source,
-		Type:       eventToSend.Type,
-		Extensions: eventToSend.Extensions,
-		Data:       fmt.Sprintf(`{"msg":%q}`, body)}
 }
 
 func getTriggerFilterOption(deprecatedTriggerFilter bool, context eventContext) resources.TriggerOption {

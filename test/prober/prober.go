@@ -17,7 +17,7 @@ package prober
 
 import (
 	"go.uber.org/zap"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
 	"testing"
 	"time"
 )
@@ -70,7 +70,7 @@ func NewConfig(namespace string) *Config {
 }
 
 // RunEventProber starts a single Prober of the given domain.
-func RunEventProber(log *zap.SugaredLogger, client *common.Client, config *Config) Prober {
+func RunEventProber(log *zap.SugaredLogger, client *lib.Client, config *Config) Prober {
 	pm := newProber(log, client, config)
 	pm.deploy()
 	return pm
@@ -97,7 +97,7 @@ func AssertEventProber(t *testing.T, prober Prober) {
 
 type prober struct {
 	log    *zap.SugaredLogger
-	client *common.Client
+	client *lib.Client
 	config *Config
 }
 
@@ -126,7 +126,7 @@ func (p *prober) remove() {
 	p.removeConfiguration()
 }
 
-func newProber(log *zap.SugaredLogger, client *common.Client, config *Config) Prober {
+func newProber(log *zap.SugaredLogger, client *lib.Client, config *Config) Prober {
 	return &prober{
 		log:    log,
 		client: client,

@@ -21,7 +21,8 @@ package e2e
 import (
 	"testing"
 
-	"knative.dev/eventing/test/base/resources"
+	cloudevents "github.com/cloudevents/sdk-go"
+
 	"knative.dev/eventing/test/e2e/helpers"
 )
 
@@ -35,7 +36,7 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 func TestSingleBinaryEventForChannel(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
-		resources.CloudEventEncodingBinary,
+		cloudevents.Binary,
 		channelTestRunner,
 	)
 }
@@ -43,7 +44,7 @@ func TestSingleBinaryEventForChannel(t *testing.T) {
 func TestSingleStructuredEventForChannel(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
-		resources.CloudEventEncodingStructured,
+		cloudevents.Structured,
 		channelTestRunner,
 	)
 }

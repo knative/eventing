@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"path"
 	"runtime"
@@ -50,13 +50,13 @@ func (p *prober) deployConfiguration() {
 func (p *prober) annotateNamespace() {
 	ns, err := p.client.Kube.Kube.CoreV1().Namespaces().
 		Get(p.client.Namespace, metav1.GetOptions{})
-	common.NoError(err)
+	lib.NoError(err)
 	ns.Labels = map[string]string{
 		"knative-eventing-injection": "enabled",
 	}
 	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
 		Update(ns)
-	common.NoError(err)
+	lib.NoError(err)
 }
 
 func (p *prober) deploySecret() {
@@ -75,7 +75,7 @@ func (p *prober) deploySecret() {
 	}
 	_, err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
 		Create(secret)
-	common.NoError(err)
+	lib.NoError(err)
 }
 
 func (p *prober) deployTriggers() {
@@ -111,7 +111,7 @@ func (p *prober) deployTriggers() {
 		p.log.Infof("Deploying trigger: %v", name)
 		_, err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Create(trigger)
-		common.NoError(err)
+		lib.NoError(err)
 		waitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
 			return p.waitForTriggerReady(name, p.config.Namespace)
 		})
@@ -127,7 +127,7 @@ func (p *prober) removeSecret() {
 	p.log.Infof("Removing secret: %v", configName)
 	err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
 		Delete(configName, &metav1.DeleteOptions{})
-	common.NoError(err)
+	lib.NoError(err)
 }
 
 func (p *prober) removeTriggers() {
@@ -136,7 +136,7 @@ func (p *prober) removeTriggers() {
 		p.log.Infof("Removing trigger: %v", name)
 		err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Delete(name, &metav1.DeleteOptions{})
-		common.NoError(err)
+		lib.NoError(err)
 	}
 }
 
@@ -144,10 +144,10 @@ func (p *prober) compileTemplate(templateName string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
-	common.NoError(err)
+	lib.NoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
-	common.NoError(err)
+	lib.NoError(err)
 	var buff bytes.Buffer
-	common.NoError(tmpl.Execute(&buff, p.config))
+	lib.NoError(tmpl.Execute(&buff, p.config))
 	return buff.String()
 }

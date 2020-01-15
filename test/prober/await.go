@@ -26,16 +26,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"knative.dev/eventing/test/base"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 	"sync"
 	"time"
 )
 
 func (p *prober) waitForKServiceReady(name, namespace string) error {
 	meta := resources.NewMetaResource(name, namespace, &servingType)
-	return base.WaitForResourceReady(p.client.Dynamic, meta)
+	return duck.WaitForResourceReady(p.client.Dynamic, meta)
 }
 
 func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(*int32) bool) error {
@@ -43,7 +43,7 @@ func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
-	return wait.PollImmediate(base.Interval, base.Timeout, func() (bool, error) {
+	return wait.PollImmediate(duck.Interval, duck.Timeout, func() (bool, error) {
 		serving := p.client.Dynamic.Resource(servicesCR).Namespace(namespace)
 		unstruct, err := serving.Get(name, metav1.GetOptions{})
 		return p.isScaledTo(satisfyScale, unstruct, namespace, err)
@@ -97,8 +97,8 @@ func (p *prober) isScaledTo(satisfyScale func(*int32) bool, un *unstructured.Uns
 }
 
 func (p *prober) waitForTriggerReady(name, namespace string) error {
-	meta := resources.NewMetaResource(name, namespace, common.TriggerTypeMeta)
-	return base.WaitForResourceReady(p.client.Dynamic, meta)
+	meta := resources.NewMetaResource(name, namespace, lib.TriggerTypeMeta)
+	return duck.WaitForResourceReady(p.client.Dynamic, meta)
 }
 
 func (p *prober) waitForPodReady(name, namespace string) error {
@@ -107,7 +107,7 @@ func (p *prober) waitForPodReady(name, namespace string) error {
 		APIVersion: "v1",
 	}
 	meta := resources.NewMetaResource(name, namespace, podType)
-	return base.WaitForResourceReady(p.client.Dynamic, meta)
+	return duck.WaitForResourceReady(p.client.Dynamic, meta)
 }
 
 type namedAwait struct {

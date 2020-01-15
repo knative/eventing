@@ -21,8 +21,8 @@ package conformance
 import (
 	"testing"
 
-	"knative.dev/eventing/test/base/resources"
 	"knative.dev/eventing/test/conformance/helpers"
+	"knative.dev/eventing/test/lib/cloudevents"
 )
 
 // The Channel MUST pass through all tracing information as CloudEvents attributes
@@ -30,7 +30,7 @@ func TestMustPassTracingHeaders(t *testing.T) {
 	t.Logf("Starting channel tracing headers test")
 	helpers.SingleEventHelperForChannelTestHelper(
 		t,
-		resources.CloudEventEncodingBinary,
+		cloudevents.DefaultEncoding,
 		channelTestRunner,
 	)
 }

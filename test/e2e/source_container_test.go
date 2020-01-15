@@ -25,12 +25,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	pkgTest "knative.dev/pkg/test"
+
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
+
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 func TestContainerSource(t *testing.T) {
@@ -48,7 +50,7 @@ func TestContainerSource(t *testing.T) {
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// create container source
 	data := fmt.Sprintf("TestContainerSource%s", uuid.NewUUID())
@@ -92,7 +94,7 @@ func TestContainerSource(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
-	if err := client.CheckLog(loggerPodName, common.CheckerContainsAtLeast(data, expectedCount)); err != nil {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
 	}
 }

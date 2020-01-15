@@ -28,6 +28,8 @@ determines the valid keys in this ConfigMap. Current keys are:
   `environment: dev` corresponds to `dev.config`.
 - `additionalTags`: Comma-separated list of tags to apply to the Mako run.
 
+### Run benchmarks continuously in CI using Mako
+
 To run a benchmark continuously, and make the result available on
 [Mako](https://mako.dev/project?name=Knative):
 
@@ -36,6 +38,8 @@ To run a benchmark continuously, and make the result available on
     ```
     ko apply -f test/performance/benchmarks/broker-imc/continuous
     ```
+
+### Run without Mako
 
 To run a benchmark once, and use the result from `mako-stub` for plotting:
 
@@ -51,6 +55,14 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
    ko apply -f test/performance/benchmarks/broker-imc/200-broker-perf.yaml
    ```
 
+1. Retrieve results from mako-stub using the script in [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh):
+
+   ```
+   bash "$GOPATH/src/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
+   ```
+   This will download a CSV with all raw results.
+
+
 ## Available benchmarks
 
 - `direct`: Source -> Sink (baseline test)
@@ -59,14 +71,7 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 
 ## Plotting results from mako-stub
 
-In order to plot results from the mako-stub, you need to have installed
-`gnuplot`.
-
-First you need to collect results from logs:
-
-```
-kubectl logs -n perf-eventing direct-perf-aggregator mako-stub -f > data.csv
-```
+In order to plot results from the mako-stub, you need to have installed `gnuplot`.
 
 Three plot scripts are available:
 

@@ -69,3 +69,6 @@ spec:
                   minLength: 1
                 spec:
                   type: object
+            delivery:
+              description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
+              type: object

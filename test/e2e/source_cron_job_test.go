@@ -24,10 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
+
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
 )
 
 func TestCronJobSource(t *testing.T) {
@@ -44,7 +45,7 @@ func TestCronJobSource(t *testing.T) {
 
 	// create event logger pod and service
 	loggerPod := resources.EventLoggerPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// create cron job source
 	data := fmt.Sprintf("TestCronJobSource %s", uuid.NewUUID())
@@ -65,7 +66,7 @@ func TestCronJobSource(t *testing.T) {
 	}
 
 	// verify the logger service receives the event
-	if err := client.CheckLog(loggerPodName, common.CheckerContains(data)); err != nil {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContains(data)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }

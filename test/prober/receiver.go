@@ -20,12 +20,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"knative.dev/eventing/test/common"
+	"knative.dev/eventing/test/lib"
 )
 
 var (
-	receiverName = "wathola-receiver"
-  receiverNodePort int32 = -1
+	receiverName           = "wathola-receiver"
+	receiverNodePort int32 = -1
 )
 
 func (p *prober) deployReceiver() {
@@ -83,7 +83,7 @@ func (p *prober) deployReceiverPod() {
 		},
 	}
 	_, err := p.client.Kube.CreatePod(pod)
-	common.NoError(err)
+	lib.NoError(err)
 
 	waitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
 		return p.waitForPodReady(receiverName, p.client.Namespace)
@@ -117,7 +117,7 @@ func (p *prober) deployReceiverService() {
 	}
 	created, err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
 		Create(service)
-	common.NoError(err)
+	lib.NoError(err)
 	for _, portSpec := range created.Spec.Ports {
 		if portSpec.Port == 80 {
 			receiverNodePort = portSpec.NodePort
@@ -134,12 +134,12 @@ func (p *prober) removeReceiverPod() {
 	p.log.Infof("Remove of receiver pod: %v", receiverName)
 	err := p.client.Kube.Kube.CoreV1().Pods(p.config.Namespace).
 		Delete(receiverName, &v1.DeleteOptions{})
-	common.NoError(err)
+	lib.NoError(err)
 }
 
 func (p *prober) removeReceiverService() {
 	p.log.Infof("Remove of receiver service: %v", receiverName)
 	err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
 		Delete(receiverName, &v1.DeleteOptions{})
-	common.NoError(err)
+	lib.NoError(err)
 }

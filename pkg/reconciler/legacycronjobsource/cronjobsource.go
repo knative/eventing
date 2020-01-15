@@ -136,6 +136,8 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.CronJobSour
 
 	source.Status.InitializeConditions()
 
+	source.MarkDeprecated(&source.Status.Status, "CronJobSourceDeprecated", "cronjobsources.sources.eventing.knative.dev are deprecated and will be removed in the future. Use a CronJob and SinkBinding.sources.knative.dev instead.")
+
 	dest := source.Spec.Sink.DeepCopy()
 	if dest.Ref != nil {
 		// To call URIFromDestination(), dest.Ref must have a Namespace. If there is

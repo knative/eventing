@@ -118,6 +118,8 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ContainerSo
 	source.Status.ObservedGeneration = source.Generation
 	source.Status.InitializeConditions()
 
+	source.MarkDeprecated(&source.Status.Status, "ContainerSourceDeprecated", "containersources.sources.eventing.knative.dev are deprecated and will be removed in the future. Use a Deployment and SinkBinding.sources.knative.dev instead.")
+
 	annotations := make(map[string]string)
 	// Then wire through any annotations / labels from the Source
 	if source.ObjectMeta.Annotations != nil {

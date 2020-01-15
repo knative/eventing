@@ -20,18 +20,19 @@ import (
 	"os"
 	"testing"
 
-	"knative.dev/eventing/test"
-	"knative.dev/eventing/test/common"
 	"knative.dev/pkg/test/zipkin"
+
+	"knative.dev/eventing/test"
+	"knative.dev/eventing/test/lib"
 )
 
-var channelTestRunner common.ChannelTestRunner
+var channelTestRunner lib.ChannelTestRunner
 
 func TestMain(m *testing.M) {
 	os.Exit(func() int {
 		test.InitializeEventingFlags()
-		channelTestRunner = common.ChannelTestRunner{
-			ChannelFeatureMap: common.ChannelFeatureMap,
+		channelTestRunner = lib.ChannelTestRunner{
+			ChannelFeatureMap: lib.ChannelFeatureMap,
 			ChannelsToTest:    test.EventingFlags.Channels,
 		}
 
