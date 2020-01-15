@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	Version  = "v0.6.0"
+	Version = "v0.7.0"
 	// FIXME: Interval is set to 200 msec, as lower values will result in errors
 	// https://github.com/knative/eventing/issues/2357
 	// Interval = 10 * time.Millisecond
@@ -33,7 +33,7 @@ var (
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
-	Verify() []error
+	Verify() ([]error, int)
 
 	// Finish send finished event
 	Finish()
@@ -82,9 +82,9 @@ func AssertEventProber(t *testing.T, prober Prober) {
 
 	waitAfterFinished(prober)
 
-	errors := prober.Verify()
+	errors, events := prober.Verify()
 	if len(errors) == 0 {
-		t.Log("All events propagated well")
+		t.Logf("All %d events propagated well", events)
 	} else {
 		t.Logf("There ware %v errors. Listing tem below.", len(errors))
 	}
@@ -101,15 +101,6 @@ type prober struct {
 	config *Config
 }
 
-func (p *prober) Verify() []error {
-	p.log.Error("Verify(): implement me")
-	return make([]error, 0)
-}
-
-func (p *prober) Finish() {
-	p.removeSender()
-}
-
 func (p *prober) deploy() {
 	p.log.Infof("Using namespace for probe testing: %v", p.client.Namespace)
 	p.deployConfiguration()
@@ -121,7 +112,9 @@ func (p *prober) deploy() {
 
 	p.deploySender()
 	awaitAll(p.log)
-	p.log.Infof("Prober is now sending events with interval of %v in " +
+	// allow sender to send at least some events, 2 sec wait
+	time.Sleep(2 * time.Second)
+	p.log.Infof("Prober is now sending events with interval of %v in "+
 		"namespace: %v", p.config.Interval, p.client.Namespace)
 }
 
