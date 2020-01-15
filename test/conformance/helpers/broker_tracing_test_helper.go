@@ -38,7 +38,7 @@ import (
 func BrokerTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
 	channelTestRunner lib.ChannelTestRunner,
-	setupClient SetupClientFunc,
+	setupClient lib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
@@ -50,7 +50,7 @@ func BrokerTracingTestHelperWithChannelTestRunner(
 }
 
 // BrokerTracingTestHelper runs the Broker tracing test using the given TypeMeta.
-func BrokerTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient SetupClientFunc) {
+func BrokerTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient lib.SetupClientOption) {
 	testCases := map[string]TracingTestCase{
 		"includes incoming trace id": {
 			IncomingTraceId: true,
