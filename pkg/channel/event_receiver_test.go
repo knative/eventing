@@ -55,6 +55,10 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 			host:     "no-dot",
 			expected: http.StatusInternalServerError,
 		},
+		"unparseable host name": {
+			host:     "http://something.host",
+			expected: http.StatusInternalServerError,
+		},
 		"unknown channel error": {
 			receiverFunc: func(_ context.Context, c ChannelReference, _ cloudevents.Event) error {
 				return &UnknownChannelError{c: c}
