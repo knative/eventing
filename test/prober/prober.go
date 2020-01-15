@@ -23,7 +23,11 @@ import (
 )
 
 var (
-	Version = "v0.6.0"
+	Version  = "v0.6.0"
+	// FIXME: Interval is set to 200 msec, as lower values will result in errors
+	// https://github.com/knative/eventing/issues/2357
+	// Interval = 10 * time.Millisecond
+	Interval = 200 * time.Millisecond
 )
 
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
@@ -56,7 +60,7 @@ type ServingConfig struct {
 func NewConfig(namespace string) *Config {
 	return &Config{
 		Namespace:     namespace,
-		Interval:      10 * time.Millisecond,
+		Interval:      Interval,
 		FinishedSleep: 5 * time.Second,
 		Serving: ServingConfig{
 			Use:         true,

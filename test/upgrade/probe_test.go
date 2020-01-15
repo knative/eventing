@@ -25,19 +25,12 @@ import (
 	"os"
 	"syscall"
 	"testing"
-	"time"
 )
 
 const (
 	pipe         = "/tmp/prober-signal"
 	ready        = "/tmp/prober-ready"
 	readyMessage = "prober ready"
-)
-
-var (
-	// FIXME: Interval is set to 200 msec, as lower values will result in errors
-	// https://github.com/knative/eventing/issues/2357
-	fixmeInterval = 200 * time.Millisecond
 )
 
 func TestProbe(t *testing.T) {
@@ -56,8 +49,6 @@ func TestProbe(t *testing.T) {
 	defer tearDown(client)
 
 	config := prober.NewConfig(client.Namespace)
-	// TODO: remove this after fix of #2357
-	config.Interval = fixmeInterval
 	// Use zap.SugarLogger instead of t.Logf because we want to see failures
 	// inline with other logs instead of buffered until the end.
 	log := createLogger()
