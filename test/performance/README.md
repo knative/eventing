@@ -55,13 +55,14 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
    ko apply -f test/performance/benchmarks/broker-imc/200-broker-perf.yaml
    ```
 
-1. Retrieve results from mako-stub using the script in [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh):
+1. Retrieve results from mako-stub using the script in
+   [knative/pkg](https://github.com/knative/pkg/blob/master/test/mako/stub-sidecar/read_results.sh):
 
    ```
    bash "$GOPATH/src/knative.dev/pkg/test/mako/stub-sidecar/read_results.sh" "$pod_name" perf-eventing ${mako_port:-10001} ${timeout:-120} ${retries:-100} ${retries_interval:-10} "$output_file"
    ```
-   This will download a CSV with all raw results.
 
+   This will download a CSV with all raw results.
 
 ## Available benchmarks
 
@@ -71,7 +72,8 @@ To run a benchmark once, and use the result from `mako-stub` for plotting:
 
 ## Plotting results from mako-stub
 
-In order to plot results from the mako-stub, you need to have installed `gnuplot`.
+In order to plot results from the mako-stub, you need to have installed
+`gnuplot`.
 
 Three plot scripts are available:
 
