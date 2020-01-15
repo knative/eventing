@@ -20,13 +20,16 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 )
 
 // BrokerDeadLetterSinkTestHelper is the helper function for broker_dls_test
-func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+func BrokerDeadLetterSinkTestHelper(t *testing.T,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption) {
 	const (
 		senderName = "e2e-brokerchannel-sender"
 		brokerName = "e2e-brokerchannel-broker"
@@ -41,7 +44,7 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T, channelTestRunner lib.ChannelT
 	)
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		client := lib.Setup(st, true)
+		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
