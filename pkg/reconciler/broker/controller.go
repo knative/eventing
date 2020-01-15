@@ -29,6 +29,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
+	"knative.dev/eventing/pkg/broker/config"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
@@ -79,7 +80,18 @@ func NewController(
 		filterImage:               env.FilterImage,
 		filterServiceAccountName:  env.FilterServiceAccount,
 	}
+
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+
+	// Nothing to filer, enqueue all brokers if configmap updates.
+	noopFilter := func(interface{}) bool { return true }
+	resyncBrokers := configmap.TypeFilter(config.BrokerConfig{})(func(string, interface{}) {
+		impl.FilteredGlobalResync(noopFilter, brokerInformer.Informer())
+	})
+	// Watch for configmap changes and trigger broker reconciliation by enqueuing brokers.
+	configStore := config.NewStore(r.Logger, resyncBrokers)
+	configStore.WatchConfigs(cmw)
+	r.configStore = configStore
 
 	r.Logger.Info("Setting up event handlers")
 

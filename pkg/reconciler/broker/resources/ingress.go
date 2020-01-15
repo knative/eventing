@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker/config"
 )
 
 const (
@@ -40,6 +41,7 @@ type IngressArgs struct {
 	Image              string
 	ServiceAccountName string
 	ChannelAddress     string
+	config.IngressConfig
 }
 
 // MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
@@ -65,18 +67,9 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 					ServiceAccountName: args.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
-							Image: args.Image,
-							Name:  ingressContainerName,
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       2,
-							},
+							Image:         args.Image,
+							Name:          ingressContainerName,
+							LivenessProbe: &args.LivenessProbe,
 							Env: []corev1.EnvVar{
 								{
 									Name:  system.NamespaceEnvKey,

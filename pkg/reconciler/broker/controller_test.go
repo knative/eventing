@@ -20,6 +20,9 @@ import (
 	"os"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/broker/config"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
@@ -39,7 +42,39 @@ func TestNew(t *testing.T) {
 	_ = os.Setenv("BROKER_FILTER_IMAGE", "FILTER_IMAGE")
 	_ = os.Setenv("BROKER_FILTER_SERVICE_ACCOUNT", "FILTER_SERVICE_ACCOUNT")
 
-	c := NewController(ctx, configmap.NewStaticWatcher())
+	cm := &corev1.ConfigMap{
+		TypeMeta: v1.TypeMeta{},
+		ObjectMeta: v1.ObjectMeta{
+			Name: config.BrokerConfigMap,
+		},
+		Data: map[string]string{
+			config.FilterConfigKey: `
+ {
+      "livenessProbe":{
+        "httpGet":{
+          "path":"/healthz",
+          "port":8080
+        },
+        "initialDelaySeconds":5,
+        "periodSeconds":2
+      }
+    }
+`,
+			config.IngressConfigKey: `
+{
+      "livenessProbe":{
+        "httpGet":{
+          "path":"/healthz",
+          "port":8080
+        },
+        "initialDelaySeconds":5,
+        "periodSeconds":2
+      }
+    }
+`,
+		},
+	}
+	c := NewController(ctx, configmap.NewStaticWatcher(cm))
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")

@@ -18,6 +18,7 @@ package resources
 
 import (
 	"encoding/json"
+	"knative.dev/eventing/pkg/broker/config"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -43,6 +44,7 @@ func TestMakeFilterDeployment(t *testing.T) {
 				},
 				Image:              "image-uri",
 				ServiceAccountName: "service-account-name",
+				FilterConfig:       config.DefaultBrokerConfig.FilterConfig,
 			},
 			want: []byte(`{
   "metadata": {

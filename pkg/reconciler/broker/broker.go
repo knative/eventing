@@ -40,6 +40,7 @@ import (
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker/config"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
@@ -70,6 +71,7 @@ type Reconciler struct {
 
 	channelableTracker duck.ListableTracker
 
+	configStore               *config.Store
 	ingressImage              string
 	ingressServiceAccountName string
 	filterImage               string
@@ -78,14 +80,6 @@ type Reconciler struct {
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
-
-// ReconcilerArgs are the arguments needed to create a broker.Reconciler.
-type ReconcilerArgs struct {
-	IngressImage              string
-	IngressServiceAccountName string
-	FilterImage               string
-	FilterServiceAccountName  string
-}
 
 // Reconcile compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Broker resource
@@ -275,6 +269,7 @@ func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.
 		Broker:             b,
 		Image:              r.filterImage,
 		ServiceAccountName: r.filterServiceAccountName,
+		FilterConfig:       r.configStore.GetConfig().FilterConfig,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }
@@ -406,6 +401,7 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
 		ChannelAddress:     c.Status.Address.GetURL().Host,
+		IngressConfig:      r.configStore.GetConfig().IngressConfig,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }

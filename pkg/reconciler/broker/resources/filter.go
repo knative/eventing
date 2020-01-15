@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/broker/config"
 )
 
 const (
@@ -39,6 +40,7 @@ type FilterArgs struct {
 	Broker             *eventingv1alpha1.Broker
 	Image              string
 	ServiceAccountName string
+	config.FilterConfig
 }
 
 // MakeFilterDeployment creates the in-memory representation of the Broker's filter Deployment.
@@ -64,28 +66,10 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 					ServiceAccountName: args.ServiceAccountName,
 					Containers: []corev1.Container{
 						{
-							Name:  filterContainerName,
-							Image: args.Image,
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       2,
-							},
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/readyz",
-										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       2,
-							},
+							Name:           filterContainerName,
+							Image:          args.Image,
+							LivenessProbe:  &args.LivenessProbe,
+							ReadinessProbe: &args.ReadinessProbe,
 							Env: []corev1.EnvVar{
 								{
 									Name:  system.NamespaceEnvKey,
