@@ -68,23 +68,23 @@ func Format(v interface{}) (string, error) {
 		return v, nil
 	case []byte:
 		return FormatBinary(v), nil
-	case url.URL:
+	case URI:
 		return v.String(), nil
-	case *url.URL:
+	case URIRef:
 		// url.URL is often passed by pointer so allow both
 		return v.String(), nil
-	case time.Time:
-		return FormatTime(v), nil
+	case Timestamp:
+		return FormatTime(v.Time), nil
 	default:
 		return "", fmt.Errorf("%T is not a CloudEvents type", v)
 	}
 }
 
 // Validate v is a valid CloudEvents attribute value, convert it to one of:
-//     bool, int32, string, []byte, *url.URL, time.Time
+//     bool, int32, string, []byte, types.URI, types.URIRef, types.Timestamp
 func Validate(v interface{}) (interface{}, error) {
 	switch v := v.(type) {
-	case bool, int32, string, []byte, time.Time:
+	case bool, int32, string, []byte:
 		return v, nil // Already a CloudEvents type, no validation needed.
 
 	case uint, uintptr, uint8, uint16, uint32, uint64:
@@ -110,18 +110,25 @@ func Validate(v interface{}) (interface{}, error) {
 		if v == nil {
 			break
 		}
-		return v, nil
+		return URI{*v}, nil
 	case url.URL:
-		return &v, nil
+		return URI{v}, nil
 	case URIRef:
-		return &v.URL, nil
+		return v, nil
 	case URI:
-		return &v.URL, nil
+		return v, nil
 	case URLRef:
-		return &v.URL, nil
-
+		// Convert old type to new one
+		return URIRef{v.URL}, nil
+	case time.Time:
+		return Timestamp{v}, nil
+	case *time.Time:
+		if v == nil {
+			break
+		}
+		return Timestamp{*v}, nil
 	case Timestamp:
-		return v.Time, nil
+		return v, nil
 	}
 	rx := reflect.ValueOf(v)
 	if rx.Kind() == reflect.Ptr && !rx.IsNil() {
@@ -203,8 +210,10 @@ func ToURL(v interface{}) (*url.URL, error) {
 		return nil, err
 	}
 	switch v := v.(type) {
-	case *url.URL:
-		return v, nil
+	case URI:
+		return &v.URL, nil
+	case URIRef:
+		return &v.URL, nil
 	case string:
 		u, err := url.Parse(v)
 		if err != nil {
@@ -223,8 +232,8 @@ func ToTime(v interface{}) (time.Time, error) {
 		return time.Time{}, err
 	}
 	switch v := v.(type) {
-	case time.Time:
-		return v, nil
+	case Timestamp:
+		return v.Time, nil
 	case string:
 		ts, err := time.Parse(time.RFC3339Nano, v)
 		if err != nil {

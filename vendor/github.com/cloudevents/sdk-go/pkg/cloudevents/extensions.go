@@ -27,4 +27,4 @@ func caseInsensitiveSearch(key string, space map[string]interface{}) (interface{
 	return nil, false
 }
 
-var IsAlphaNumericLowercaseLetters = regexp.MustCompile(`^[a-z0-9]+$`).MatchString
+var IsAlphaNumeric = regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString
