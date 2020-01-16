@@ -90,9 +90,13 @@ func (in *ConfigMapPropagationSpec) DeepCopyInto(out *ConfigMapPropagationSpec) 
 	*out = *in
 	if in.Selector != nil {
 		in, out := &in.Selector, &out.Selector
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
+		*out = new(map[string]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make(map[string]string, len(*in))
+			for key, val := range *in {
+				(*out)[key] = val
+			}
 		}
 	}
 	return

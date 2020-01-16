@@ -68,18 +68,8 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "empty selector",
-		cmps: &ConfigMapPropagationSpec{
-			Selector:          map[string]string{},
-			OriginalNamespace: originalNamespace,
-		},
-		want: &apis.FieldError{
-			Message: "At least one selector must be specified",
-			Paths:   []string{"selector"},
-		},
-	}, {
 		name: "missing original namespace",
-		cmps: &ConfigMapPropagationSpec{Selector: validSelector},
+		cmps: &ConfigMapPropagationSpec{Selector: &validSelector},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("originalNamespace")
 			return fe
@@ -88,7 +78,7 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 		name: "invalid selector key",
 		cmps: &ConfigMapPropagationSpec{
 			OriginalNamespace: originalNamespace,
-			Selector: map[string]string{
+			Selector: &map[string]string{
 				"*nvalid": "testing",
 			}},
 		want: &apis.FieldError{
@@ -100,7 +90,7 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 		name: "invalid seletor value",
 		cmps: &ConfigMapPropagationSpec{
 			OriginalNamespace: originalNamespace,
-			Selector: map[string]string{
+			Selector: &map[string]string{
 				"invalid": "test/ing",
 			}},
 		want: &apis.FieldError{

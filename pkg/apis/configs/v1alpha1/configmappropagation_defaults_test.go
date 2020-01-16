@@ -37,15 +37,15 @@ func TestConfigMapPropagationDefaults(t *testing.T) {
 	}{
 		"nil spec": {
 			initial:  ConfigMapPropagation{},
-			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: defaultSelector}},
+			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: &defaultSelector}},
 		},
 		"selector empty": {
 			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: namespace}},
-			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: namespace, Selector: defaultSelector}},
+			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{OriginalNamespace: namespace, Selector: &defaultSelector}},
 		},
 		"with selector": {
-			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: otherSelector}},
-			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: otherSelector}},
+			initial:  ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: &otherSelector}},
+			expected: ConfigMapPropagation{Spec: ConfigMapPropagationSpec{Selector: &otherSelector}},
 		},
 	}
 	for n, tc := range testCases {

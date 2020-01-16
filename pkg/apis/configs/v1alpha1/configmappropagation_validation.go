@@ -19,18 +19,12 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
-)
-
-var (
-	// Only allow lowercase alphanumeric, starting with letters.
-	validSelectorName = regexp.MustCompile(`^[a-z][a-z0-9./-]*$`)
 )
 
 // Validate the ConfigMapPropagation.
@@ -47,30 +41,22 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 	}
 
 	if cmps.Selector != nil {
-		if len(cmps.Selector) == 0 {
-			fe := &apis.FieldError{
-				Message: "At least one selector must be specified",
-				Paths:   []string{"selector"},
+		for key, value := range *cmps.Selector {
+			if err := validation.IsQualifiedName(key); len(err) != 0 {
+				fe := &apis.FieldError{
+					Message: fmt.Sprintf("Invalid selector key: %v", key),
+					Paths:   []string{"selector"},
+					Details: strings.Join(err, "; "),
+				}
+				errs = errs.Also(fe)
 			}
-			errs = errs.Also(fe)
-		} else {
-			for key, value := range cmps.Selector {
-				if err := validation.IsQualifiedName(key); len(err) != 0 {
-					fe := &apis.FieldError{
-						Message: fmt.Sprintf("Invalid selector key: %v", key),
-						Paths:   []string{"selector"},
-						Details: strings.Join(err, "; "),
-					}
-					errs = errs.Also(fe)
+			if err := validation.IsValidLabelValue(value); len(err) != 0 {
+				fe := &apis.FieldError{
+					Message: fmt.Sprintf("Invalid selector value: %v", value),
+					Paths:   []string{"selector"},
+					Details: strings.Join(err, "; "),
 				}
-				if err := validation.IsValidLabelValue(value); len(err) != 0 {
-					fe := &apis.FieldError{
-						Message: fmt.Sprintf("Invalid selector value: %v", value),
-						Paths:   []string{"selector"},
-						Details: strings.Join(err, "; "),
-					}
-					errs = errs.Also(fe)
-				}
+				errs = errs.Also(fe)
 			}
 		}
 	}

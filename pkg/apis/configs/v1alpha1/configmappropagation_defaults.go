@@ -24,6 +24,6 @@ func (cmp *ConfigMapPropagation) SetDefaults(ctx context.Context) {
 	// If we haven't configured the selector,
 	// then set the default selector to be an empty map
 	if cmp != nil && cmp.Spec.Selector == nil {
-		cmp.Spec.Selector = map[string]string{}
+		cmp.Spec.Selector = &map[string]string{}
 	}
 }
