@@ -48,7 +48,7 @@ header "Running preupgrade tests"
 go_test_e2e -tags=preupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 header "Starting prober test"
-
+rm -fv /tmp/prober-ready
 go_test_e2e -tags=probe -timeout="${TIMEOUT}" ./test/upgrade &
 PROBER_PID=$!
 echo "Prober PID is ${PROBER_PID}"

@@ -86,7 +86,7 @@ func AssertEventProber(t *testing.T, prober Prober) {
 	if len(errors) == 0 {
 		t.Logf("All %d events propagated well", events)
 	} else {
-		t.Logf("There ware %v errors. Listing tem below.", len(errors))
+		t.Logf("There ware %v errors. Listing them below.", len(errors))
 	}
 	for _, err := range errors {
 		t.Error(err)

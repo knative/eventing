@@ -44,6 +44,7 @@ UNINSTALL_LIST=()
 # Parameters: $1 - Knative Eventing YAML file
 #             $2 - Knative Monitoring YAML file (optional)
 function install_knative_eventing {
+  local knative_networking_pods
   local INSTALL_RELEASE_YAML=$1
   echo ">> Installing Knative Eventing"
   if [[ -z "$1" ]]; then
@@ -53,9 +54,16 @@ function install_knative_eventing {
   fi
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
-  echo ">> Installing Knative Monitoring"
-  start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
-  UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+  # Ensure knative monitoring is installed only once
+  knative_networking_pods=$(kubectl get pods -n knative-monitoring \
+    --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
+  if ! [[ ${knative_networking_pods} -gt 0 ]]; then
+    echo ">> Installing Knative Monitoring"
+    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+  else
+    echo ">> Knative Monitoring seems to be running, pods running: ${knative_networking_pods}."
+  fi
 }
 
 function install_head {
@@ -101,7 +109,7 @@ function test_setup() {
 
   # Publish test images.
   echo ">> Publishing test images"
-  $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
+  "$(dirname $0)/upload-test-images.sh" e2e || fail_test "Error uploading test images"
 }
 
 # Tear down resources used in the eventing tests.
@@ -182,26 +190,24 @@ function install_knative_serving {
 }
 
 function wait_for_file {
-  local file timeout
+  local file timeout waits
   file="$1"
-  timeout=300
+  waits=300
+  timeout=$waits
 
   echo "Waiting for existance of file: ${file}"
 
   while [ ! -f "${file}" ]; do
     # When the timeout is equal to zero, show an error and leave the loop.
     if [ "${timeout}" == 0 ]; then
-      echo ''
-      echo "ERROR: Timeout while waiting for the file ${file}."
+      echo "ERROR: Timeout (${waits}s) while waiting for the file ${file}."
       return 1
     fi
 
     sleep 1
-    echo -n '.'
 
     # Decrease the timeout of one
     ((timeout--))
   done
-  echo ''
   return 0
 }
