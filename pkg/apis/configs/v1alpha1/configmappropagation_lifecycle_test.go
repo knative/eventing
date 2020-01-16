@@ -202,7 +202,6 @@ func TestConfigMapPropagationIsReady(t *testing.T) {
 }
 
 func TestSetCopyConfigMapStatus(t *testing.T) {
-	sourceGeneration := int64(4)
 	tests := []struct {
 		name  string
 		cmpsc *ConfigMapPropagationStatusCopyConfigMap
@@ -212,13 +211,13 @@ func TestSetCopyConfigMapStatus(t *testing.T) {
 		cmpsc: &ConfigMapPropagationStatusCopyConfigMap{},
 		want: &ConfigMapPropagationStatusCopyConfigMap{
 			"source", "operation",
-			"ready", "reason", sourceGeneration,
+			"ready", "reason",
 		},
 	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.cmpsc.SetCopyConfigMapStatus("source", "operation",
-				"ready", "reason", &sourceGeneration)
+				"ready", "reason")
 			if got := test.cmpsc; !reflect.DeepEqual(test.want, got) {
 				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
 			}

@@ -47,12 +47,6 @@ func WithConfigMapLabels(labels map[string]string) ConfigMapOption {
 	}
 }
 
-func WithConfigMapGeneration(generation int64) ConfigMapOption {
-	return func(cm *v1.ConfigMap) {
-		cm.Generation = generation
-	}
-}
-
 func WithConfigMapOwnerReference(ConfigMapPropagation *v1alpha1.ConfigMapPropagation) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
 		cm.ObjectMeta.OwnerReferences = []metav1.OwnerReference{

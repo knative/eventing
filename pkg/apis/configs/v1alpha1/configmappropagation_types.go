@@ -90,9 +90,6 @@ type ConfigMapPropagationStatusCopyConfigMap struct {
 
 	// Reason indicates reasons if the operation is not ready
 	Reason string `json:"reason,omitempty"`
-
-	// Generation represents the generation of source configmap
-	SourceGeneration int64 `json:"generation,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

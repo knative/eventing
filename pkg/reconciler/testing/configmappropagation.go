@@ -54,14 +54,13 @@ func WithInitConfigMapStatus() ConfigMapPropagationOption {
 	}
 }
 
-func WithCopyConfigMapStatus(key, source, operation, ready, reason string, sourceGeneration int64) ConfigMapPropagationOption {
+func WithCopyConfigMapStatus(key, source, operation, ready, reason string) ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
 		cmp.Status.CopyConfigMaps[key] = v1alpha1.ConfigMapPropagationStatusCopyConfigMap{
-			Source:           source,
-			Operation:        operation,
-			Ready:            ready,
-			Reason:           reason,
-			SourceGeneration: sourceGeneration,
+			Source:    source,
+			Operation: operation,
+			Ready:     ready,
+			Reason:    reason,
 		}
 	}
 }
