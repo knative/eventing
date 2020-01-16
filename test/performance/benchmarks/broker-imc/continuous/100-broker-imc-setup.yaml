@@ -121,35 +121,15 @@ roleRef:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+apiVersion: configs.knative.dev/v1alpha1
+kind: ConfigMapPropagation
 metadata:
-  name: eventing-config-reader-default-eventing-broker-ingress
-  namespace: knative-eventing
-subjects:
-  - kind: ServiceAccount
-    name: eventing-broker-ingress
-    namespace: default
-roleRef:
-  kind: ClusterRole
-  name: eventing-config-reader
-  apiGroup: rbac.authorization.k8s.io
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: eventing-config-reader-default-eventing-broker-filter
-  namespace: knative-eventing
-subjects:
-  - kind: ServiceAccount
-    name: eventing-broker-filter
-    namespace: default
-roleRef:
-  kind: ClusterRole
-  name: eventing-config-reader
-  apiGroup: rbac.authorization.k8s.io
+  name: perf-eventing-cmp
+  namespace: default
+spec:
+  originalNamespace: knative-eventing
+  selector:
+    knative.dev/config-category: eventing
 
 ---
 

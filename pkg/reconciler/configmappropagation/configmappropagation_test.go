@@ -44,6 +44,7 @@ const (
 	originalConfigMapName    = "test-original-cm"
 	originalNS               = "knative-eventing"
 
+	configMapGeneration            = int64(9)
 	configMapPropagationGeneration = 7
 )
 
@@ -184,7 +185,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationNotPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"delete", "false", "inducing failure for delete configmaps"),
+						"delete", "false", "inducing failure for delete configmaps", int64(0)),
 				),
 			}},
 			WantErr: true,
@@ -206,6 +207,7 @@ func TestAllCase(t *testing.T) {
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
 					WithConfigMapData(originalData),
+					WithConfigMapGeneration(configMapGeneration),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
 					WithConfigMapLabels(copySelector),
@@ -235,7 +237,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationNotPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"copy", "false", "error updating ConfigMap in current namespace: inducing failure for update configmaps"),
+						"copy", "false", "error updating ConfigMap in current namespace: inducing failure for update configmaps", configMapGeneration),
 				),
 			}},
 			WantErr: true,
@@ -257,6 +259,7 @@ func TestAllCase(t *testing.T) {
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
 					WithConfigMapData(originalData),
+					WithConfigMapGeneration(configMapGeneration),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
 					WithConfigMapLabels(copySelector),
@@ -283,7 +286,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"copy", "true", ""),
+						"copy", "true", "", configMapGeneration),
 				),
 			}},
 			WantEvents: []string{
@@ -302,6 +305,7 @@ func TestAllCase(t *testing.T) {
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
 					WithConfigMapData(originalData),
+					WithConfigMapGeneration(configMapGeneration),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
 					WithConfigMapLabels(copySelector),
@@ -329,7 +333,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"copy", "true", ""),
+						"copy", "true", "", configMapGeneration),
 				),
 			}},
 			WantEvents: []string{
@@ -346,6 +350,7 @@ func TestAllCase(t *testing.T) {
 				),
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
+					WithConfigMapGeneration(configMapGeneration),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
 					WithConfigMapLabels(map[string]string{}),
@@ -367,7 +372,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"stop", "true", `copy ConfigMap doesn't have "knative.dev/config-propagation:copy" label, stop propagating this ConfigMap`),
+						"stop", "true", `copy ConfigMap doesn't have "knative.dev/config-propagation:copy" label, stop propagating this ConfigMap`, configMapGeneration),
 				),
 			}},
 			WantErr: false,
@@ -387,6 +392,7 @@ func TestAllCase(t *testing.T) {
 				),
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
+					WithConfigMapGeneration(configMapGeneration),
 				),
 			},
 			WantCreates: []runtime.Object{
@@ -408,7 +414,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationNotPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"copy", "false", "error creating ConfigMap in current namespace: inducing failure for create configmaps"),
+						"copy", "false", "error creating ConfigMap in current namespace: inducing failure for create configmaps", configMapGeneration),
 				),
 			}},
 			WantErr: true,
@@ -430,6 +436,7 @@ func TestAllCase(t *testing.T) {
 				),
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
+					WithConfigMapGeneration(configMapGeneration),
 				),
 			},
 			WantCreates: []runtime.Object{
@@ -450,7 +457,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationStatusObservedGeneration(configMapPropagationGeneration),
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"copy", "true", ""),
+						"copy", "true", "", configMapGeneration),
 				),
 			}},
 			WantEvents: []string{
