@@ -1,13 +1,13 @@
-# Channel Spec
+# Knative Channel Specification
 
 ## Background
 
-Starting with Version 0.7.0 all the different Channel CRDs (e.g.
-`InMemoryChannel` or `KafkaChannel`) are living in the
-`messaging.knative.dev/v1alpha1` API Group.
+The Knative Eventing project has one generic `Channel` CRD and might ship
+different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of
+in the `messaging.knative.dev/v1beta1` API Group.
 
-A channel logically receives events on its input domain and forwards them to its
-subscribers. Below is a specification for the generic parts of each _Channel_.
+A _channel_ logically receives events on its input domain and forwards them to its
+subscribers. Below is a specification for the generic parts of each `Channel`.
 
 A typical channel consists of a _Controller_ and a _Dispatcher_ pod.
 
@@ -30,20 +30,8 @@ The CRD's Kind SHOULD have the suffix `Channel`. The name MAY be just `Channel`.
 
 ### Control Plane
 
-Each Channel implementation is backed by its own CRD (e.g. `InMemoryChannel` or
-`KafkaChannel`). Below is an example for a `KafkaChannel` object:
-
-```
-apiVersion: messaging.knative.dev/v1alpha1
-kind: KafkaChannel
-metadata:
-  name: kafka-channel
-spec:
-  numPartitions: 3
-  replicationFactor: 1
-```
-
-A different example for the `InMemoryChannel`:
+Each Channel implementation is backed by its own CRD, like the `InMemoryChannel`.
+Below is an example for the `InMemoryChannel`:
 
 ```
 apiVersion: messaging.knative.dev/v1alpha1
@@ -53,30 +41,31 @@ metadata:
 ```
 
 Each _Channel Controller_ ensures the required tasks on the backing technology
-are applied. In this case a Kafka topic with the desired configuration is being
-created, backing all messages from the channel.
+are applied.
+
+> NOTE: For instance on a `KafkaChannel` this would mean taking care of creating
+a Apache Kafka topic and backing all messages from the _Knative Channel_.
 
 #### Aggregated Channelable Manipulator ClusterRole
 
 Every CRD MUST create a corresponding ClusterRole, that will be aggregated into
 the `channelable-manipulator` ClusterRole. This ClusterRole MUST include
 permissions to create, get, list, watch, patch, and update the CRD's custom
-objects and their status. Below is an example for the `KafkaChannel`:
+objects and their status. Below is an example for the `InMemoryChannel`:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kafka-channelable-manipulator
+  name: imc-channelable-manipulator
   labels:
     duck.knative.dev/channelable: "true"
-# Do not use this role directly. These rules will be added to the "channelable-manipulator" role.
 rules:
   - apiGroups:
       - messaging.knative.dev
     resources:
-      - kafkachannels
-      - kafkachannels/status
+      - inmemorychannels
+      - inmemorychannels/status
     verbs:
       - create
       - get
@@ -102,9 +91,7 @@ kind: ClusterRole
 metadata:
   name: imc-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
-# Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
   - apiGroups:
       - messaging.knative.dev
@@ -128,24 +115,24 @@ For each channel implementation a `CustomResourceDefinition` is created, like:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
- name: kafkachannels.messaging.knative.dev
+ name: inmemorychannels.messaging.knative.dev
  labels:
     knative.dev/crd-install: "true"
     messaging.knative.dev/subscribable: "true"
 spec:
   group: messaging.knative.dev
-  version: v1alpha1
+  version: v1beta1
   names:
-    kind: KafkaChannel
-    plural: kafkachannels
-    singular: kafkachannel
+    kind: InMemoryChannel
+    plural: inmemorychannels
+    singular: inmemorychannel
     categories:
     - all
     - knative
     - messaging
     - channel
     shortNames:
-    - kc
+    - imc
   scope: Namespaced
 ...
 ```
