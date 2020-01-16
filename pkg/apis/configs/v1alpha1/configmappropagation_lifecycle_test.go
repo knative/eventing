@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -195,6 +196,31 @@ func TestConfigMapPropagationIsReady(t *testing.T) {
 			}
 			if got := cmps.IsReady(); test.wantReady != got {
 				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			}
+		})
+	}
+}
+
+func TestSetCopyConfigMapStatus(t *testing.T) {
+	sourceGeneration := int64(4)
+	tests := []struct {
+		name  string
+		cmpsc *ConfigMapPropagationStatusCopyConfigMap
+		want  *ConfigMapPropagationStatusCopyConfigMap
+	}{{
+		name:  "all happy",
+		cmpsc: &ConfigMapPropagationStatusCopyConfigMap{},
+		want: &ConfigMapPropagationStatusCopyConfigMap{
+			"source", "operation",
+			"ready", "reason", sourceGeneration,
+		},
+	}}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.cmpsc.SetCopyConfigMapStatus("source", "operation",
+				"ready", "reason", &sourceGeneration)
+			if got := test.cmpsc; !reflect.DeepEqual(test.want, got) {
+				t.Errorf("unexpected readiness: want %v, got %v", test.want, got)
 			}
 		})
 	}
