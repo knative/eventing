@@ -20,17 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
+	"math/rand"
 	"net/http"
-	"net/url"
+	"sort"
 	"strings"
 )
-
-func (p *prober) figureOutClusterHostname() string {
-	u, err := url.Parse(p.client.Config.Host)
-	lib.NoError(err)
-	return u.Hostname()
-}
 
 func (p *prober) Verify() ([]error, int) {
 	hostname := p.figureOutClusterHostname()
@@ -49,6 +46,76 @@ func (p *prober) Verify() ([]error, int) {
 
 func (p *prober) Finish() {
 	p.removeSender()
+}
+
+type nodeAddresses []*corev1.NodeAddress
+
+type byAddressType struct {
+	nodeAddresses
+}
+
+func (s byAddressType) Len() int {
+	return len(s.nodeAddresses)
+}
+
+func (s byAddressType) Swap(i, j int) {
+	s.nodeAddresses[i], s.nodeAddresses[j] = s.nodeAddresses[j], s.nodeAddresses[i]
+}
+
+func (s byAddressType) Less(i, j int) bool {
+	return addressTypeToPriority(s.nodeAddresses[i]) < addressTypeToPriority(s.nodeAddresses[j])
+}
+
+var addressTypeToPriorities = map[corev1.NodeAddressType]int{
+	corev1.NodeExternalDNS: 0,
+	corev1.NodeExternalIP:  1,
+	corev1.NodeInternalIP:  2,
+	corev1.NodeInternalDNS: 3,
+	corev1.NodeHostName:    4,
+}
+
+func (p *prober) figureOutClusterHostname() string {
+	nodes, err := p.client.Kube.Kube.CoreV1().Nodes().List(metav1.ListOptions{})
+	lib.NoError(err)
+	if len(nodes.Items) == 1 {
+		node := nodes.Items[0]
+		return p.nodeExternalAddress(node)
+	} else {
+		workers := p.filterOutMasters(nodes.Items)
+		worker := workers[rand.Intn(len(workers))]
+		return p.nodeExternalAddress(worker)
+	}
+}
+
+func (p *prober) nodeExternalAddress(node corev1.Node) string {
+	return p.prioritizeAddresses(node.Status.Addresses)[0].Address
+}
+
+func (p *prober) prioritizeAddresses(addresses []corev1.NodeAddress) []*corev1.NodeAddress {
+	result := make([]*corev1.NodeAddress, 0)
+	for i := 0; i < len(addresses); i++ {
+		result = append(result, &addresses[i])
+	}
+	sort.Sort(byAddressType{result})
+	return result
+}
+
+func addressTypeToPriority(address *corev1.NodeAddress) int {
+	return addressTypeToPriorities[address.Type]
+}
+
+func (p *prober) filterOutMasters(nodes []corev1.Node) []corev1.Node {
+	result := make([]corev1.Node, 0)
+	for _, node := range nodes {
+		if node.Labels == nil {
+			result = append(result, node)
+			continue
+		}
+		if _, ok := node.Labels["node-role.kubernetes.io/master"]; !ok {
+			result = append(result, node)
+		}
+	}
+	return result
 }
 
 func (p *prober) fetchReceiverReport(hostname string) *Report {

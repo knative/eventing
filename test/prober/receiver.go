@@ -112,7 +112,7 @@ func (p *prober) deployReceiverService() {
 			Selector: map[string]string{
 				"app": receiverName,
 			},
-			Type: corev1.ServiceTypeLoadBalancer,
+			Type: corev1.ServiceTypeNodePort,
 		},
 	}
 	created, err := p.client.Kube.Kube.CoreV1().Services(p.config.Namespace).
