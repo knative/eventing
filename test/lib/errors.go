@@ -20,6 +20,6 @@ import "github.com/pkg/errors"
 // NoError will panic if given an error, as it was unexpected
 func NoError(err error) {
 	if err != nil {
-		panic(errors.WithMessage(err, "expected to be no error, but that was"))
+		panic(errors.WithMessage(err, "unexpected error"))
 	}
 }
