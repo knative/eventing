@@ -170,18 +170,18 @@ Each channel CRD SHOULD have the following fields in `Status`
 
 - [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go)
 MUST be populated if present
-- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go) (as an array) SHOULD 
+- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go) (as an array) SHOULD
 indicate status transitions and error reasons if present
 
 #### Channel Status
 
-When the channel instance is ready to receive events `status.address.hostname` and `status.address.url` MUST be 
+When the channel instance is ready to receive events `status.address.hostname` and `status.address.url` MUST be
 populated and `status.addressable` MUST be set to `True`.
 
 #### Channel Subscriber Status
 
 Each subscription to a channel is added to the channel `status.subscribableStatus.subscribers` automatically.  The `ready` field
-of the subscriber identified by its `uid` MUST be set to `True` when the subscription is ready to be 
+of the subscriber identified by its `uid` MUST be set to `True` when the subscription is ready to be
 processed.
 
 ### Data Plane
@@ -237,10 +237,10 @@ the
 Every Channel MUST support sending events via Binary Content Mode HTTP Transport
 Binding.
 
-Channels MUST send events to all subscribers which are marked with a status of `ready: "True"` in the 
-channel's `status.subscribableStatus.subscribers`.  The events must be sent to the `subscriberURI` field of 
+Channels MUST send events to all subscribers which are marked with a status of `ready: "True"` in the
+channel's `status.subscribableStatus.subscribers`.  The events must be sent to the `subscriberURI` field of
 `spec.subscribable.subscribers`.  Each channel implementation will have its own
-quality of service guarantees (e.g. at least once, at most once, etc) which SHOULD be documented. 
+quality of service guarantees (e.g. at least once, at most once, etc) which SHOULD be documented.
 
 Channels MUST NOT alter an event that goes through them. All CloudEvent
 attributes, including the data attribute, MUST be received at the subscriber
