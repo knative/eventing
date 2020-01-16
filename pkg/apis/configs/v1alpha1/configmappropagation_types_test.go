@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Knative Authors
+ * Copyright 2020 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ func TestConfigMapPropagation_GetGroupVersionKind(t *testing.T) {
 }
 func TestConfigMapPropagation_GetUntypedSpec(t *testing.T) {
 	cmp := ConfigMapPropagation{}
-	int := cmp.GetUntypedSpec()
-	if !reflect.DeepEqual(int, cmp.Spec) {
+	in := cmp.GetUntypedSpec()
+	if !reflect.DeepEqual(in, cmp.Spec) {
 		t.Errorf("Should be ConfigMapPropagationSpec.")
 	}
 }
