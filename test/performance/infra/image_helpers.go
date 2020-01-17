@@ -42,6 +42,7 @@ var (
 	msgSize       uint
 	paceFlag      string
 	warmupSeconds uint
+	fixedBody     bool
 
 	// role=aggregator
 	expectRecords uint
@@ -65,6 +66,7 @@ func DeclareFlags() {
 	flag.StringVar(&aggregAddr, "aggregator", "", "The aggregator address for sending events records.")
 	flag.UintVar(&msgSize, "msg-size", 100, "The size in bytes of each message we want to send. Generate random strings to avoid caching.")
 	flag.UintVar(&warmupSeconds, "warmup", 10, "Duration in seconds of warmup phase. During warmup latencies are not recorded. 0 means no warmup")
+	flag.BoolVar(&fixedBody, "generate-payload-on-each-request", true, "Produce unique body contents for each call")
 
 	// aggregator flags
 	flag.StringVar(&listenAddr, "listen-address", ":10000", "Network address the aggregator listens on.")
@@ -111,7 +113,7 @@ func StartPerformanceImage(factory sender.LoadGeneratorFactory, typeExtractor re
 
 		log.Println("Creating a sender")
 
-		sender, err := sender.NewSender(factory, aggregAddr, msgSize, warmupSeconds, paceFlag)
+		sender, err := sender.NewSender(factory, aggregAddr, msgSize, warmupSeconds, paceFlag, fixedBody)
 		if err != nil {
 			panic(err)
 		}
