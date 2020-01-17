@@ -123,7 +123,7 @@ type TriggerStatus struct {
 	duckv1.Status `json:",inline"`
 
 	// SubscriberURI is the resolved URI of the receiver for this Trigger.
-	SubscriberURI *apis.URL `json:"subscriberURI,omitempty"`
+	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
