@@ -87,9 +87,6 @@ func makeEnv(args DispatcherArgs) []corev1.EnvVar {
 			},
 		},
 	}, {
-		Name:  "SCOPE",
-		Value: "namespace",
-	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/inmemorychannel-dispatcher",
 	}, {

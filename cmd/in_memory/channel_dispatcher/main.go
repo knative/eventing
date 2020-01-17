@@ -32,16 +32,11 @@ import (
 
 func main() {
 	ctx := signals.NewContext()
-
-	scope := os.Getenv("SCOPE")
-	if scope == "namespace" {
-		ns := os.Getenv("NAMESPACE")
-		if ns == "" {
-			panic(errors.New("The environment variable NAMESPACE is not set"))
-		}
-
-		ctx = injection.WithNamespaceScope(ctx, ns)
+	ns := os.Getenv("NAMESPACE")
+	if ns == "" {
+		panic(errors.New("The environment variable NAMESPACE is not set"))
 	}
+	ctx = injection.WithNamespaceScope(ctx, ns)
 
 	sharedmain.MainWithContext(ctx, "inmemorychannel_dispatcher",
 		inmemorychannel.NewController,

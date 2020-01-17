@@ -22,11 +22,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -54,8 +52,7 @@ var (
 )
 
 type envConfig struct {
-	Scope string `envconfig:"DISPATCHER_SCOPE" required:"true"`
-	Image string `envconfig:"DISPATCHER_IMAGE" required:"false"` // only needed by scope is namespace
+	Image string `envconfig:"DISPATCHER_IMAGE" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code.
@@ -80,26 +77,15 @@ func NewController(
 		deploymentLister:        deploymentInformer.Lister(),
 		serviceLister:           serviceInformer.Lister(),
 		endpointsLister:         endpointsInformer.Lister(),
+		serviceAccountLister:    serviceAccountInformer.Lister(),
+		roleBindingLister:       roleBindingInformer.Lister(),
 	}
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
 		r.Logger.Panicf("unable to process in-memory channel's required environment variables: %v", err)
 	}
-
-	r.scope = scope(env.Scope)
-	if env.Scope == "cluster" {
-		r.dispatcherNamespace = system.Namespace()
-	} else {
-		r.dispatcherImage = env.Image
-		if r.dispatcherImage == "" {
-			r.Logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
-		}
-		r.dispatcherImage = env.Image
-
-		r.serviceAccountLister = serviceAccountInformer.Lister()
-		r.roleBindingLister = roleBindingInformer.Lister()
-	}
+	r.dispatcherImage = env.Image
 
 	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -109,25 +95,11 @@ func NewController(
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
-	if env.Scope == "namespace" {
-		deploymentInformer.Informer().AddEventHandler(r)
-		serviceInformer.Informer().AddEventHandler(r)
-		endpointsInformer.Informer().AddEventHandler(r)
-		serviceAccountInformer.Informer().AddEventHandler(r)
-		roleBindingInformer.Informer().AddEventHandler(r)
-	} else {
-		deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterWithNameAndNamespace(r.dispatcherNamespace, dispatcherName),
-			Handler:    r,
-		})
-		serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterWithNameAndNamespace(r.dispatcherNamespace, dispatcherName),
-			Handler:    r,
-		})
-		endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controller.FilterWithNameAndNamespace(r.dispatcherNamespace, dispatcherName),
-			Handler:    r,
-		})
-	}
+	deploymentInformer.Informer().AddEventHandler(r)
+	serviceInformer.Informer().AddEventHandler(r)
+	endpointsInformer.Informer().AddEventHandler(r)
+	serviceAccountInformer.Informer().AddEventHandler(r)
+	roleBindingInformer.Informer().AddEventHandler(r)
+
 	return r.impl
 }

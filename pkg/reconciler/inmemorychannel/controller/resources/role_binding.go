@@ -24,7 +24,7 @@ import (
 
 // MakeRoleBinding creates a RoleBinding object for the in-memory dispatcher
 // service account 'sa' in the Namespace 'ns'.
-func MakeRoleBinding(ns, name string, sa *corev1.ServiceAccount, clusterRoleName string) *rbacv1.RoleBinding {
+func MakeRoleBinding(ns, name string, sa *corev1.ServiceAccount, roleName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -32,8 +32,8 @@ func MakeRoleBinding(ns, name string, sa *corev1.ServiceAccount, clusterRoleName
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     clusterRoleName,
+			Kind:     "Role",
+			Name:     roleName,
 		},
 		Subjects: []rbacv1.Subject{
 			{

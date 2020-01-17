@@ -26,7 +26,6 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
@@ -35,7 +34,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/system"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -46,29 +44,22 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-type scope string
-
 const (
 	// Name of the corev1.Events emitted from the reconciliation process.
-	reconciled                      = "Reconciled"
-	reconcileFailed                 = "ReconcileFailed"
-	updateStatusFailed              = "UpdateStatusFailed"
+	reconciled                    = "Reconciled"
+	reconcileFailed               = "ReconcileFailed"
+	updateStatusFailed            = "UpdateStatusFailed"
 	dispatcherServiceAccountCreated = "DispatcherServiceAccountCreated"
 	dispatcherRoleBindingCreated    = "DispatcherRoleBindingCreated"
-	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
-	dispatcherServiceCreated        = "DispatcherServiceCreated"
-	observabilityConfigMapCreated   = "ObservabilityConfigMapCreated"
-	tracingConfigMapCreated         = "TracingConfigMapCreated"
-
-	scopeNamespace = scope("namespace")
-	scopeCluster   = scope("cluster")
+	dispatcherDeploymentCreated   = "DispatcherDeploymentCreated"
+	dispatcherServiceCreated      = "DispatcherServiceCreated"
+	observabilityConfigMapCreated = "ObservabilityConfigMapCreated"
+	tracingConfigMapCreated       = "TracingConfigMapCreated"
 )
 
 type Reconciler struct {
 	*reconciler.Base
 
-	scope                   scope
-	dispatcherNamespace     string
 	dispatcherImage         string
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
@@ -105,27 +96,18 @@ func FilterWithNamespace(namespace string) func(obj interface{}) bool {
 // should be reflected onto the channels.
 
 func (r *Reconciler) OnAdd(obj interface{}) {
-	if r.scope == scopeCluster {
-		r.impl.GlobalResync(r.inmemorychannelInformer)
-	} else if object, ok := obj.(metav1.Object); ok {
-		r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
-	}
+	// The informer is configured to only watch object in the imc namespace
+	r.impl.GlobalResync(r.inmemorychannelInformer)
 }
 
 func (r *Reconciler) OnUpdate(old, new interface{}) {
-	if r.scope == scopeCluster {
-		r.impl.GlobalResync(r.inmemorychannelInformer)
-	} else if object, ok := new.(metav1.Object); ok {
-		r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
-	}
+	// The informer is configured to only watch object in the imc namespace
+	r.impl.GlobalResync(r.inmemorychannelInformer)
 }
 
 func (r *Reconciler) OnDelete(obj interface{}) {
-	if r.scope == scopeCluster {
-		r.impl.GlobalResync(r.inmemorychannelInformer)
-	} else if object, ok := obj.(metav1.Object); ok {
-		r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
-	}
+	// The informer is configured to only watch object in the imc namespace
+	r.impl.GlobalResync(r.inmemorychannelInformer)
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
@@ -191,14 +173,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
 
-	dispatcherNamespace := r.dispatcherNamespace
-	if r.scope == scopeNamespace {
-		dispatcherNamespace = imc.Namespace
-	}
-
 	// Make sure the dispatcher deployment exists and propagate the status to the Channel
 	// For namespace-scope dispatcher, make sure configuration files exist and RBAC is properly configured.
-	d, err := r.reconcileDispatcher(ctx, dispatcherNamespace, imc)
+	d, err := r.reconcileDispatcher(ctx, imc)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
@@ -213,7 +190,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// Make sure the dispatcher service exists and propagate the status to the Channel in case it does not exist.
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
-	_, err = r.reconcileDispatcherService(ctx, dispatcherNamespace, imc)
+	_, err = r.reconcileDispatcherService(ctx, imc)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
@@ -228,7 +205,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 
 	// Get the Dispatcher Service Endpoints and propagate the status to the Channel
 	// endpoints has the same name as the service, so not a bug.
-	e, err := r.endpointsLister.Endpoints(dispatcherNamespace).Get(dispatcherName)
+	e, err := r.endpointsLister.Endpoints(imc.Namespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
@@ -249,7 +226,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 
 	// Reconcile the k8s service representing the actual Channel. It points to the Dispatcher service via
 	// ExternalName
-	svc, err := r.reconcileChannelService(ctx, dispatcherNamespace, imc)
+	svc, err := r.reconcileChannelService(ctx, imc)
 	if err != nil {
 		return err
 	}
@@ -268,66 +245,62 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	return nil
 }
 
-func (r *Reconciler) reconcileDispatcher(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
-	// Configure RBAC only for namespace scope dispatchers.
-	if r.scope == scopeNamespace {
-		sa, err := r.reconcileServiceAccount(ctx, dispatcherNamespace, imc)
+func (r *Reconciler) reconcileDispatcher(ctx context.Context, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
+	// Configure RBAC to access the namespace configmap.
+		sa, err := r.reconcileServiceAccount(ctx, imc)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = r.reconcileRoleBinding(ctx, dispatcherName, dispatcherNamespace, imc, dispatcherName, sa)
+		// TODO: add role
+
+		_, err = r.reconcileRoleBinding(ctx, imc, dispatcherName, sa)
 		if err != nil {
 			return nil, err
 		}
 
-		// Reconcile the RoleBinding allowing read access to the shared configmaps.
-		// Note this RoleBinding is created in the system namespace and points to a
-		// subject in the dispatcher's namespace.
-		roleBindingName := fmt.Sprintf("%s-%s", dispatcherName, dispatcherNamespace)
-		_, err = r.reconcileRoleBinding(ctx, roleBindingName, system.Namespace(), imc, "eventing-config-reader", sa)
-		if err != nil {
-			return nil, err
-		}
-	}
+		// // Reconcile the RoleBinding allowing read access to the shared configmaps.
+		// // Note this RoleBinding is created in the system namespace and points to a
+		// // subject in the dispatcher's namespace.
+		// roleBindingName := fmt.Sprintf("%s-%s", dispatcherName, dispatcherNamespace)
+		// _, err = r.reconcileRoleBinding(ctx, roleBindingName, system.Namespace(), imc, "eventing-config-reader", sa)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-	d, err := r.deploymentLister.Deployments(dispatcherNamespace).Get(dispatcherName)
+
+	d, err := r.deploymentLister.Deployments(imc.Namespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if r.scope == scopeCluster {
-				// The dispatcher should have been installed.
-				imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
-			} else {
-				// Create dispatcher in imc's namespace.
-				args := resources.DispatcherArgs{
-					ServiceAccountName: dispatcherName,
-					DispatcherName:     dispatcherName,
-					Image:              r.dispatcherImage,
-				}
-				expected := resources.MakeDispatcher(imc, args)
-				d, err := r.KubeClientSet.AppsV1().Deployments(dispatcherNamespace).Create(expected)
-				msg := "Dispatcher Deployment created"
-				if err != nil {
-					msg = fmt.Sprintf("Dispatcher Deployment not created, error: %v", err)
-				}
-				r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherDeploymentCreated, "%s", msg)
-				return d, err
+
+			// Create dispatcher in imc's namespace.
+			args := resources.DispatcherArgs{
+				ServiceAccountName: dispatcherName,
+				DispatcherName:     dispatcherName,
+				Image:              r.dispatcherImage,
 			}
-		} else {
-			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
-			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
+			expected := resources.MakeDispatcher(imc, args)
+			d, err := r.KubeClientSet.AppsV1().Deployments(imc.Namespace).Create(expected)
+			msg := "Dispatcher Deployment created"
+			if err != nil {
+				msg = fmt.Sprintf("Dispatcher Deployment not created, error: %v", err)
+			}
+			r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherDeploymentCreated, "%s", msg)
+			return d, err
 		}
+
+		logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
+		imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
 		return nil, err
 	}
 	return d, err
 }
-
-func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.ServiceAccount, error) {
-	sa, err := r.serviceAccountLister.ServiceAccounts(dispatcherNamespace).Get(dispatcherName)
+func (r *Reconciler) reconcileServiceAccount(ctx context.Context, imc *v1alpha1.InMemoryChannel) (*corev1.ServiceAccount, error) {
+	sa, err := r.serviceAccountLister.ServiceAccounts(imc.Namespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			expected := resources.MakeServiceAccount(dispatcherNamespace, dispatcherName)
-			sa, err := r.KubeClientSet.CoreV1().ServiceAccounts(dispatcherNamespace).Create(expected)
+			expected := resources.MakeServiceAccount(imc.Namespace, dispatcherName)
+			sa, err := r.KubeClientSet.CoreV1().ServiceAccounts(imc.Namespace).Create(expected)
 			msg := "Dispatcher ServiceAccount created"
 			if err != nil {
 				msg = fmt.Sprintf("Dispatcher ServiceAccount not created, error: %v", err)
@@ -343,7 +316,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, dispatcherName
 	return sa, err
 }
 
-func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns string, imc *v1alpha1.InMemoryChannel, clusterRoleName string, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
+func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string,   imc *v1alpha1.InMemoryChannel, clusterRoleName string, sa *corev1.ServiceAccount) (*rbacv1.RoleBinding, error) {
 	rb, err := r.roleBindingLister.RoleBindings(ns).Get(name)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
@@ -363,33 +336,28 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns s
 	return rb, err
 }
 
-func (r *Reconciler) reconcileDispatcherService(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
-	svc, err := r.serviceLister.Services(dispatcherNamespace).Get(dispatcherName)
+func (r *Reconciler) reconcileDispatcherService(ctx context.Context, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+	svc, err := r.serviceLister.Services(imc.Namespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if r.scope == scopeCluster {
-				// Should have been installed.
-				imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
-			} else {
-				expected := resources.MakeDispatcherService(imc, dispatcherName)
-				svc, err := r.KubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
-				msg := "Dispatcher Service created"
-				if err != nil {
-					msg = fmt.Sprintf("Dispatcher Service not created, error: %v", err)
-				}
-				r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherServiceCreated, "%s", msg)
-				return svc, err
+			expected := resources.MakeDispatcherService(imc, dispatcherName)
+			svc, err := r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(expected)
+			msg := "Dispatcher Service created"
+			if err != nil {
+				msg = fmt.Sprintf("Dispatcher Service not created, error: %v", err)
 			}
-		} else {
-			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
-			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
-			return nil, err
+			r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherServiceCreated, "%s", msg)
+			return svc, err
 		}
+
+		logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
+		imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+		return nil, err
 	}
 	return svc, err
 }
 
-func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
 	// Get the  Service and propagate the status to the Channel in case it does not exist.
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
@@ -397,7 +365,7 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 	svc, err := r.serviceLister.Services(imc.Namespace).Get(resources.CreateChannelServiceName(imc.Name))
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			svc, err = resources.NewK8sService(imc, resources.ExternalService(dispatcherNamespace, dispatcherName))
+			svc, err = resources.NewK8sService(imc, resources.ExternalService(imc.Namespace, dispatcherName))
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
 				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
