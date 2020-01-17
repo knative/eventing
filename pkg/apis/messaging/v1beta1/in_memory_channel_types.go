@@ -79,7 +79,7 @@ type InMemoryChannelStatus struct {
 	duckv1.AddressStatus `json:",inline"`
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	eventingduckv1beta1.SubscribableTypeStatus `json:",inline"`
+	eventingduckv1beta1.SubscribableStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

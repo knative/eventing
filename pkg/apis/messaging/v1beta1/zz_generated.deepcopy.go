@@ -120,7 +120,7 @@ func (in *ChannelStatus) DeepCopyInto(out *ChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
-	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
+	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
 	if in.Channel != nil {
 		in, out := &in.Channel, &out.Channel
 		*out = new(v1.ObjectReference)
@@ -287,7 +287,7 @@ func (in *InMemoryChannelStatus) DeepCopyInto(out *InMemoryChannelStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
 	in.AddressStatus.DeepCopyInto(&out.AddressStatus)
-	in.SubscribableTypeStatus.DeepCopyInto(&out.SubscribableTypeStatus)
+	in.SubscribableStatus.DeepCopyInto(&out.SubscribableStatus)
 	return
 }
 

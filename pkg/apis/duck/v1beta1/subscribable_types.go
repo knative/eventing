@@ -40,9 +40,7 @@ type Subscribable struct {
 var _ duck.Implementable = (*Subscribable)(nil)
 
 // SubscriberSpec defines a single subscriber to a Subscribable.
-// Ref is a reference to the Subscription this SubscriberSpec was created for
-// SubscriberURI is the endpoint for the subscriber
-// ReplyURI is the endpoint for the reply
+//
 // At least one of SubscriberURI and ReplyURI must be present
 type SubscriberSpec struct {
 	// UID is used to understand the origin of the subscriber.
@@ -51,21 +49,14 @@ type SubscriberSpec struct {
 	// Generation of the origin of the subscriber with uid:UID.
 	// +optional
 	Generation int64 `json:"generation,omitempty"`
+	// SubscriberURI is the endpoint for the subscriber
 	// +optional
 	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
+	// ReplyURI is the endpoint for the reply
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
 	// +optional
 	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
-}
-
-// SubscribableStatus is the schema for the subscribable's status portion of the status
-// section of the resource.
-type SubscribableStatus struct {
-	// This is the list of subscription's statuses for this channel.
-	// +patchMergeKey=uid
-	// +patchStrategy=merge
-	Subscribers []SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // SubscriberStatus defines the status of a single subscriber to a Channel.
@@ -92,23 +83,27 @@ type SubscribableType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// SubscribableTypeSpec is the part where Subscribable object is
+	// SubscribableSpec is the part where Subscribable object is
 	// configured as to be compatible with Subscribable contract.
-	Spec SubscribableTypeSpec `json:"spec"`
+	Spec SubscribableSpec `json:"spec"`
 
-	// SubscribableTypeStatus is the part where SubscribableStatus object is
+	// SubscribableStatus is the part where SubscribableStatus object is
 	// configured as to be compatible with Subscribable contract.
-	Status SubscribableTypeStatus `json:"status"`
+	Status SubscribableStatus `json:"status"`
 }
 
-// SubscribableTypeSpec shows how we expect folks to embed Subscribable in their Spec field.
-type SubscribableTypeSpec struct {
-	Subscribable *Subscribable `json:"subscribable,omitempty"`
+// SubscribableSpec shows how we expect folks to embed Subscribable in their Spec field.
+type SubscribableSpec struct {
+	Subscribable `json:",inline"`
 }
 
-// SubscribableTypeStatus shows how we expect folks to embed Subscribable in their Status field.
-type SubscribableTypeStatus struct {
-	SubscribableStatus *SubscribableStatus `json:"subscribableStatus,omitempty"`
+// SubscribableStatus is the schema for the subscribable's status portion of the status
+// section of the resource.
+type SubscribableStatus struct {
+	// This is the list of subscription's statuses for this channel.
+	// +patchMergeKey=uid
+	// +patchStrategy=merge
+	Subscribers []SubscriberStatus `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 var (
@@ -117,13 +112,6 @@ var (
 	_ apis.Listable    = (*SubscribableType)(nil)
 )
 
-// AddSubscriberToSubscribableStatus method is a Helper method for type SubscribableTypeStatus, if Subscribable Status needs to be appended
-// with Subscribers, use this function, so that the value is reflected in both the duplicate fields residing
-// in SubscribableTypeStatus
-func (s *SubscribableTypeStatus) AddSubscriberToSubscribableStatus(subscriberStatus SubscriberStatus) {
-	s.SubscribableStatus.Subscribers = append(s.SubscribableStatus.Subscribers, subscriberStatus)
-}
-
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {
 	return &SubscribableType{}
@@ -131,7 +119,7 @@ func (s *Subscribable) GetFullType() duck.Populatable {
 
 // Populate implements duck.Populatable
 func (c *SubscribableType) Populate() {
-	c.Spec.Subscribable = &Subscribable{
+	c.Spec.Subscribable = Subscribable{
 		// Populate ALL fields
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -145,9 +133,8 @@ func (c *SubscribableType) Populate() {
 			ReplyURI:      apis.HTTP("sink2"),
 		}},
 	}
-	c.Status.SubscribableStatus = &SubscribableStatus{
-		// Populate ALL fields
-		Subscribers: []SubscriberStatus{{
+	c.Status.Subscribers = // Populate ALL fields
+		[]SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 			ObservedGeneration: 1,
 			Ready:              corev1.ConditionTrue,
@@ -157,8 +144,7 @@ func (c *SubscribableType) Populate() {
 			ObservedGeneration: 2,
 			Ready:              corev1.ConditionFalse,
 			Message:            "Some message",
-		}},
-	}
+		}}
 }
 
 // GetListType implements apis.Listable

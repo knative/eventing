@@ -59,7 +59,7 @@ func (cs *ChannelStatus) InitializeConditions() {
 
 func (cs *ChannelStatus) SetAddress(address *duckv1.Addressable) {
 	cs.Address = address
-	if address.URL.IsEmpty() {
+	if address == nil || address.URL.IsEmpty() {
 		chCondSet.Manage(cs).MarkFalse(ChannelConditionAddressable, "EmptyHostname", "hostname is the empty string")
 	} else {
 		chCondSet.Manage(cs).MarkTrue(ChannelConditionAddressable)
@@ -104,5 +104,5 @@ func (cs *ChannelStatus) PropagateStatuses(chs *eventingduck.ChannelableStatus) 
 	// Set the address and update the Addressable conditions.
 	cs.SetAddress(chs.AddressStatus.Address)
 	// Set the subscribable status.
-	cs.SubscribableTypeStatus = chs.SubscribableTypeStatus
+	cs.SubscribableStatus = chs.SubscribableStatus
 }

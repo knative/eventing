@@ -43,7 +43,7 @@ type Channelable struct {
 
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableSpec struct {
-	SubscribableTypeSpec `json:",inline"`
+	Subscribable `json:",inline"`
 
 	// DeliverySpec contains options controlling the event delivery
 	// +optional
@@ -59,7 +59,7 @@ type ChannelableStatus struct {
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
 	duckv1.AddressStatus `json:",inline"`
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	SubscribableTypeStatus `json:",inline"`
+	SubscribableStatus `json:",inline"`
 	// DeadLetterChannel is set by the channel when it supports native error handling via a channel
 	// Failed messages are delivered here.
 	// +optional
@@ -75,7 +75,7 @@ var (
 
 // Populate implements duck.Populatable
 func (c *Channelable) Populate() {
-	c.Spec.Subscribable = &Subscribable{
+	c.Spec.Subscribable = Subscribable{
 		// Populate ALL fields
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -115,20 +115,18 @@ func (c *Channelable) Populate() {
 				},
 			},
 		},
-		SubscribableTypeStatus: SubscribableTypeStatus{
-			SubscribableStatus: &SubscribableStatus{
-				Subscribers: []SubscriberStatus{{
-					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 1,
-					Ready:              corev1.ConditionTrue,
-					Message:            "Some message",
-				}, {
-					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 2,
-					Ready:              corev1.ConditionFalse,
-					Message:            "Some message",
-				}},
-			},
+		SubscribableStatus: SubscribableStatus{
+			Subscribers: []SubscriberStatus{{
+				UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+				ObservedGeneration: 1,
+				Ready:              corev1.ConditionTrue,
+				Message:            "Some message",
+			}, {
+				UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+				ObservedGeneration: 2,
+				Ready:              corev1.ConditionFalse,
+				Message:            "Some message",
+			}},
 		},
 	}
 }

@@ -44,20 +44,18 @@ func TestChannelablePopulate(t *testing.T) {
 	delay := "5s"
 	want := &Channelable{
 		Spec: ChannelableSpec{
-			SubscribableTypeSpec: SubscribableTypeSpec{
-				Subscribable: &Subscribable{
-					Subscribers: []SubscriberSpec{{
-						UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-						Generation:    1,
-						SubscriberURI: apis.HTTP("call1"),
-						ReplyURI:      apis.HTTP("sink2"),
-					}, {
-						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-						Generation:    2,
-						SubscriberURI: apis.HTTP("call2"),
-						ReplyURI:      apis.HTTP("sink2"),
-					}},
-				},
+			Subscribable: Subscribable{
+				Subscribers: []SubscriberSpec{{
+					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					Generation:    1,
+					SubscriberURI: apis.HTTP("call1"),
+					ReplyURI:      apis.HTTP("sink2"),
+				}, {
+					UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					Generation:    2,
+					SubscriberURI: apis.HTTP("call2"),
+					ReplyURI:      apis.HTTP("sink2"),
+				}},
 			},
 			Delivery: &DeliverySpec{
 				DeadLetterSink: &duckv1.Destination{
@@ -84,20 +82,18 @@ func TestChannelablePopulate(t *testing.T) {
 					},
 				},
 			},
-			SubscribableTypeStatus: SubscribableTypeStatus{
-				SubscribableStatus: &SubscribableStatus{
-					Subscribers: []SubscriberStatus{{
-						UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-						ObservedGeneration: 1,
-						Ready:              corev1.ConditionTrue,
-						Message:            "Some message",
-					}, {
-						UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-						ObservedGeneration: 2,
-						Ready:              corev1.ConditionFalse,
-						Message:            "Some message",
-					}},
-				},
+			SubscribableStatus: SubscribableStatus{
+				Subscribers: []SubscriberStatus{{
+					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 1,
+					Ready:              corev1.ConditionTrue,
+					Message:            "Some message",
+				}, {
+					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+					ObservedGeneration: 2,
+					Ready:              corev1.ConditionFalse,
+					Message:            "Some message",
+				}},
 			},
 		},
 	}

@@ -48,8 +48,8 @@ func TestSubscribablePopulate(t *testing.T) {
 	got := &SubscribableType{}
 
 	want := &SubscribableType{
-		Spec: SubscribableTypeSpec{
-			Subscribable: &Subscribable{
+		Spec: SubscribableSpec{
+			Subscribable: Subscribable{
 				Subscribers: []SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					Generation:    1,
@@ -63,21 +63,19 @@ func TestSubscribablePopulate(t *testing.T) {
 				}},
 			},
 		},
-		Status: SubscribableTypeStatus{
-			SubscribableStatus: &SubscribableStatus{
-				// Populate ALL fields
-				Subscribers: []SubscriberStatus{{
-					UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 1,
-					Ready:              corev1.ConditionTrue,
-					Message:            "Some message",
-				}, {
-					UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					ObservedGeneration: 2,
-					Ready:              corev1.ConditionFalse,
-					Message:            "Some message",
-				}},
-			},
+		Status: SubscribableStatus{
+			// Populate ALL fields
+			Subscribers: []SubscriberStatus{{
+				UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+				ObservedGeneration: 1,
+				Ready:              corev1.ConditionTrue,
+				Message:            "Some message",
+			}, {
+				UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+				ObservedGeneration: 2,
+				Ready:              corev1.ConditionFalse,
+				Message:            "Some message",
+			}},
 		},
 	}
 
@@ -87,38 +85,4 @@ func TestSubscribablePopulate(t *testing.T) {
 		t.Errorf("Unexpected difference (-want, +got): %v", diff)
 	}
 
-}
-
-func TestSubscribableTypeStatusHelperMethods(t *testing.T) {
-	s := &SubscribableStatus{
-		// Populate ALL fields
-		Subscribers: []SubscriberStatus{{
-			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-			ObservedGeneration: 1,
-			Ready:              corev1.ConditionTrue,
-			Message:            "This is new field",
-		}, {
-			UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-			ObservedGeneration: 2,
-			Ready:              corev1.ConditionFalse,
-			Message:            "This is new field",
-		}},
-	}
-
-	subscribableTypeStatus := SubscribableTypeStatus{
-		SubscribableStatus: s,
-	}
-
-	/* Test AddSubscriberToSubscribableStatus */
-	subscribableTypeStatus.AddSubscriberToSubscribableStatus(SubscriberStatus{
-		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 1,
-		Ready:              corev1.ConditionTrue,
-		Message:            "This is new field",
-	})
-
-	// Check if the subscriber was added to both the fields of SubscribableTypeStatus
-	if len(subscribableTypeStatus.SubscribableStatus.Subscribers) != 3 {
-		t.Error("AddSubscriberToSubscribableStatus didn't add subscriberstatus to both the fields of SubscribableTypeStatus")
-	}
 }

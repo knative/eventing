@@ -83,7 +83,7 @@ type ChannelStatus struct {
 	duckv1.AddressStatus `json:",inline"`
 
 	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	eventingduck.SubscribableTypeStatus `json:",inline"`
+	eventingduck.SubscribableStatus `json:",inline"`
 
 	// Channel is an ObjectReference to the Channel CRD backing this Channel.
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
