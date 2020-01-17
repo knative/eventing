@@ -31,6 +31,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/broker/ingress"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -62,6 +63,7 @@ const (
 	defaultMaxIdleConnections              = 1000
 	defaultMaxIdleConnectionsPerHost       = 1000
 	defaultTTL                       int32 = 255
+	defaultMerticsPort                     = 9092
 	component                              = "broker_ingress"
 )
 
@@ -120,7 +122,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	configMapWatcher.Watch(metrics.ConfigMapName(), updateExporterFromConfigMap(component, sl))
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
@@ -183,6 +185,19 @@ func main() {
 		logger.Error("ingress.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+}
+
+// Same as metrics.UpdateExporterFromConfigMap except the PrometheusPort.
+func updateExporterFromConfigMap(component string, logger *zap.SugaredLogger) func(configMap *corev1.ConfigMap) {
+	domain := metrics.Domain()
+	return func(configMap *corev1.ConfigMap) {
+		metrics.UpdateExporter(metrics.ExporterOptions{
+			Domain:         domain,
+			Component:      component,
+			ConfigMap:      configMap.Data,
+			PrometheusPort: defaultMerticsPort,
+		}, logger)
+	}
 }
 
 func flush(logger *zap.SugaredLogger) {

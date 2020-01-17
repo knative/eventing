@@ -39,6 +39,7 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
+	corev1 "k8s.io/api/core/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned"
 	eventinginformers "knative.dev/eventing/pkg/client/informers/externalversions"
 )
@@ -49,7 +50,8 @@ var (
 )
 
 const (
-	component = "broker_filter"
+	defaultMerticsPort = 9092
+	component          = "broker_filter"
 )
 
 type envConfig struct {
@@ -103,7 +105,7 @@ func main() {
 	// Watch the logging config map and dynamically update logging levels.
 	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	configMapWatcher.Watch(metrics.ConfigMapName(), updateExporterFromConfigMap(component, sl))
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
@@ -144,6 +146,19 @@ func main() {
 		logger.Fatal("handler.Start() returned an error", zap.Error(err))
 	}
 	logger.Info("Exiting...")
+}
+
+// Same as metrics.UpdateExporterFromConfigMap except the PrometheusPort.
+func updateExporterFromConfigMap(component string, logger *zap.SugaredLogger) func(configMap *corev1.ConfigMap) {
+	domain := metrics.Domain()
+	return func(configMap *corev1.ConfigMap) {
+		metrics.UpdateExporter(metrics.ExporterOptions{
+			Domain:         domain,
+			Component:      component,
+			ConfigMap:      configMap.Data,
+			PrometheusPort: defaultMerticsPort,
+		}, logger)
+	}
 }
 
 func flush(logger *zap.SugaredLogger) {
