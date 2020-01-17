@@ -44,7 +44,7 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 		for key, value := range cmps.Selector.MatchLabels {
 			if err := validation.IsQualifiedName(key); len(err) != 0 {
 				fe := &apis.FieldError{
-					Message: fmt.Sprintf("Invalid selector key: %v", key),
+					Message: fmt.Sprintf("Invalid selector matchLabels key: %v", key),
 					Paths:   []string{"selector"},
 					Details: strings.Join(err, "; "),
 				}
@@ -52,12 +52,19 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 			}
 			if err := validation.IsValidLabelValue(value); len(err) != 0 {
 				fe := &apis.FieldError{
-					Message: fmt.Sprintf("Invalid selector value: %v", value),
+					Message: fmt.Sprintf("Invalid selector matchLabels value: %v", value),
 					Paths:   []string{"selector"},
 					Details: strings.Join(err, "; "),
 				}
 				errs = errs.Also(fe)
 			}
+		}
+		if cmps.Selector.MatchExpressions != nil {
+			fe := &apis.FieldError{
+				Message: fmt.Sprintf("MatchExppressions isn't supported yet"),
+				Paths:   []string{"selector"},
+			}
+			errs = errs.Also(fe)
 		}
 	}
 	return errs
