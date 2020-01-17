@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
@@ -54,6 +55,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -138,6 +140,16 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
+	testAllCases(t, makeBroker(), makeBrokerFilterService())
+}
+
+func TestAllCasesWithServingServiceBroker(t *testing.T) {
+	b := makeBroker()
+	b.Annotations = map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}
+	testAllCases(t, b, makeBrokerFilterServingService())
+}
+
+func testAllCases(t *testing.T, b *v1alpha1.Broker, brokerFilterSvc runtime.Object) {
 	triggerKey := testNS + "/" + triggerName
 	table := TableTest{
 		{
@@ -274,7 +286,7 @@ func TestAllCases(t *testing.T) {
 			Name: "Default broker found, with injection annotation enabled",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyDefaultBroker(),
+				makeReadyDefaultBroker(b),
 				reconciletesting.NewTrigger(triggerName, testNS, "default",
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -350,7 +362,7 @@ func TestAllCases(t *testing.T) {
 			Name: "The status of Broker is Unknown",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeUnknownStatusBroker(),
+				makeUnknownStatusBroker(b),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI)),
@@ -387,7 +399,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Trigger Channel",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBrokerNoTriggerChannel(),
+				makeReadyBrokerNoTriggerChannel(b),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -412,7 +424,7 @@ func TestAllCases(t *testing.T) {
 			Name: "No Broker Filter Service",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
+				makeReadyBroker(b),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -440,8 +452,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription not owned by Trigger",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeIngressSubscriptionNotOwnedByTrigger(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -468,8 +480,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription create fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -502,8 +514,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription delete fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -537,8 +549,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription create after delete fail",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -575,8 +587,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription updated works",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeDifferentReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -611,8 +623,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription Created, not ready",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
@@ -643,8 +655,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Trigger has subscriber ref exists",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeSubscriberAddressableAsUnstructured(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -676,8 +688,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Trigger has subscriber ref exists and URI",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeSubscriberAddressableAsUnstructured(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -709,8 +721,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Trigger has subscriber ref exists kubernetes Service",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeSubscriberKubernetesServiceAsUnstructured(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -742,8 +754,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Trigger has subscriber ref doesn't exist",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
 					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
@@ -768,8 +780,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription not ready, trigger marked not ready",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeFalseStatusSubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -798,8 +810,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Subscription ready, trigger marked ready",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -829,8 +841,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Dependency doesn't exist",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeReadySubscription(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
@@ -861,8 +873,8 @@ func TestAllCases(t *testing.T) {
 			Name: "The status of Dependency is False",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeReadySubscription(),
 				makeFalseStatusCronJobSource(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -893,8 +905,8 @@ func TestAllCases(t *testing.T) {
 			Name: "The status of Dependency is Unknown",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeReadySubscription(),
 				makeUnknownStatusCronJobSource(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -926,8 +938,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Dependency generation not equal",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeReadySubscription(),
 				makeGenerationNotEqualCronJobSource(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -958,8 +970,8 @@ func TestAllCases(t *testing.T) {
 			Name: "Dependency ready",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
-				makeReadyBroker(),
-				makeBrokerFilterService(),
+				makeReadyBroker(b),
+				brokerFilterSvc,
 				makeReadySubscription(),
 				makeReadyCronJobSource(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -996,22 +1008,31 @@ func TestAllCases(t *testing.T) {
 		ctx = v1b1addr.WithDuck(ctx)
 		ctx = v1addr.WithDuck(ctx)
 		ctx = conditions.WithDuck(ctx)
+		sh := reconciler.NewServiceHelper(
+			ctx, listers.GetDeploymentLister(), listers.GetK8sServiceLister(), listers.GetServingServiceLister())
+		sh.APIChecker = &fakeAPIChecker{}
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			triggerLister:      listers.GetTriggerLister(),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
-			serviceLister:      listers.GetK8sServiceLister(),
 			namespaceLister:    listers.GetNamespaceLister(),
 			tracker:            tracker.New(func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			kresourceTracker:   duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			serviceHelper:      sh,
 		}
 	},
 		false,
 		logger,
 	))
+}
+
+type fakeAPIChecker struct{}
+
+func (c *fakeAPIChecker) Exists(s schema.GroupVersion) error {
+	return nil
 }
 
 func makeTrigger() *v1alpha1.Trigger {
@@ -1062,27 +1083,28 @@ func makeEmptyDelivery() *eventingduckv1alpha1.DeliverySpec {
 	return nil
 }
 
-func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
-	b := makeBroker()
+func makeReadyBrokerNoTriggerChannel(seed *v1alpha1.Broker) *v1alpha1.Broker {
+	b := seed.DeepCopy()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	return b
 }
 
-func makeReadyBroker() *v1alpha1.Broker {
-	b := makeBroker()
+func makeReadyBroker(seed *v1alpha1.Broker) *v1alpha1.Broker {
+	b := seed.DeepCopy()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.TriggerChannel = makeTriggerChannelRef()
 	return b
 }
 
-func makeUnknownStatusBroker() *v1alpha1.Broker {
-	b := makeBroker()
+func makeUnknownStatusBroker(seed *v1alpha1.Broker) *v1alpha1.Broker {
+	b := seed.DeepCopy()
 	b.Status = *v1alpha1.TestHelper.UnknownBrokerStatus()
 	return b
 }
 
-func makeReadyDefaultBroker() *v1alpha1.Broker {
-	b := makeReadyBroker()
+func makeReadyDefaultBroker(seed *v1alpha1.Broker) *v1alpha1.Broker {
+	b := seed.DeepCopy()
+	b = makeReadyBroker(seed)
 	b.Name = "default"
 	return b
 }
@@ -1137,13 +1159,29 @@ func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured 
 }
 
 func makeBrokerFilterService() *corev1.Service {
-	return brokerresources.MakeFilterService(makeBroker())
+	args := brokerresources.MakeFilterServiceArgs(&brokerresources.FilterArgs{
+		Broker: makeBroker(),
+		Image:  "test-image",
+	})
+	return NewService(args.ServiceMeta.Name, args.ServiceMeta.Namespace)
+}
+
+func makeBrokerFilterServingService() *servingv1.Service {
+	args := brokerresources.MakeFilterServiceArgs(&brokerresources.FilterArgs{
+		Broker: makeBroker(),
+		Image:  "test-image",
+	})
+	return NewServingService(
+		args.ServiceMeta.Name,
+		args.ServiceMeta.Namespace,
+		args.DeployMeta.Name+"-rev",
+		WithServingServiceReady())
 }
 
 func makeServiceURI() *url.URL {
 	return &url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
+		Host:   fmt.Sprintf("%s.%s.svc.%s", brokerresources.MakeFilterServiceMeta(makeBroker()).Name, testNS, utils.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }

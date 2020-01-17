@@ -46,6 +46,9 @@ import (
 	fakelegacyclientset "knative.dev/eventing/pkg/legacyclient/clientset/versioned/fake"
 	legacysourcelisters "knative.dev/eventing/pkg/legacyclient/listers/legacysources/v1alpha1"
 	"knative.dev/pkg/reconciler/testing"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	fakeservingclientset "knative.dev/serving/pkg/client/clientset/versioned/fake"
+	servinglisters "knative.dev/serving/pkg/client/listers/serving/v1"
 )
 
 var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
@@ -58,6 +61,7 @@ var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakeeventingclientset.AddToScheme,
 	fakelegacyclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
+	fakeservingclientset.AddToScheme,
 	subscriberAddToScheme,
 }
 
@@ -110,11 +114,16 @@ func (l *Listers) GetSubscriberObjects() []runtime.Object {
 	return l.sorter.ObjectsForSchemeFunc(subscriberAddToScheme)
 }
 
+func (l *Listers) GetServingObjects() []runtime.Object {
+	return l.sorter.ObjectsForSchemeFunc(fakeservingclientset.AddToScheme)
+}
+
 func (l *Listers) GetAllObjects() []runtime.Object {
 	all := l.GetSubscriberObjects()
 	all = append(all, l.GetEventingObjects()...)
 	all = append(all, l.GetLegacyObjects()...)
 	all = append(all, l.GetKubeObjects()...)
+	all = append(all, l.GetServingObjects()...)
 	return all
 }
 
@@ -208,4 +217,8 @@ func (l *Listers) GetCustomResourceDefinitionLister() apiextensionsv1beta1lister
 
 func (l *Listers) GetConfigMapPropagationLister() configslisters.ConfigMapPropagationLister {
 	return configslisters.NewConfigMapPropagationLister(l.indexerFor(&configsv1alpha1.ConfigMapPropagation{}))
+}
+
+func (l *Listers) GetServingServiceLister() servinglisters.ServiceLister {
+	return servinglisters.NewServiceLister(l.indexerFor(&servingv1.Service{}))
 }

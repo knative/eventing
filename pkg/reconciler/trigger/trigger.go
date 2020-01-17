@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/resolver"
@@ -44,7 +45,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
-	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 )
@@ -68,7 +68,6 @@ type Reconciler struct {
 	triggerLister      listers.TriggerLister
 	subscriptionLister messaginglisters.SubscriptionLister
 	brokerLister       listers.BrokerLister
-	serviceLister      corev1listers.ServiceLister
 	namespaceLister    corev1listers.NamespaceLister
 	// Regular tracker to track static resources. In particular, it tracks Broker's changes.
 	tracker tracker.Interface
@@ -77,6 +76,8 @@ type Reconciler struct {
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
 	uriResolver        *resolver.URIResolver
+
+	serviceHelper *reconciler.ServiceHelper
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -190,7 +191,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 
 	// Get Broker filter service.
-	filterSvc, err := r.getBrokerFilterService(ctx, b)
+	filterSvcStatus, err := r.serviceHelper.ServiceStatus(ctx, b, brokerresources.MakeFilterServiceMeta(b))
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			logging.FromContext(ctx).Error("can not find Broker's Filter service", zap.Error(err))
@@ -220,7 +221,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
-	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger, &brokerObjRef, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger, &brokerObjRef, filterSvcStatus.URL)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
@@ -334,18 +335,11 @@ func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) er
 	return nil
 }
 
-// getBrokerFilterService returns the K8s service for trigger 't' if exists,
-// otherwise it returns an error.
-func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
-	svcName := brokerresources.MakeFilterService(b).Name
-	return r.serviceLister.Services(b.Namespace).Get(svcName)
-}
-
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, filterSvcURL *apis.URL) (*messagingv1alpha1.Subscription, error) {
 	uri := &url.URL{
-		Scheme: "http",
-		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+		Scheme: filterSvcURL.Scheme,
+		Host:   filterSvcURL.Host,
 		Path:   path.Generate(t),
 	}
 	expected := resources.NewSubscription(t, brokerTrigger, brokerRef, uri, b.Spec.Delivery)

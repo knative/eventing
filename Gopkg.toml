@@ -39,6 +39,10 @@ required = [
   name = "knative.dev/pkg"
   branch = "master"
 
+[[override]]
+  name = "knative.dev/serving"
+  branch = "master"
+
 # TODO why is this overridden?
 [[override]]
   name = "gopkg.in/yaml.v2"
@@ -120,7 +124,7 @@ required = [
 
 [[constraint]]
   name = "github.com/tsenart/vegeta"
-  version = "12.7.0"
+  version = "master"
 
 [[constraint]]
   name = "contrib.go.opencensus.io/exporter/ocagent"

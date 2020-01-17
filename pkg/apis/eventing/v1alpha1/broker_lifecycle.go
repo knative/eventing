@@ -66,6 +66,10 @@ func (bs *BrokerStatus) MarkIngressFailed(reason, format string, args ...interfa
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, reason, format, args...)
 }
 
+func (bs *BrokerStatus) MarkIngressReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
+}
+
 func (bs *BrokerStatus) PropagateIngressDeploymentAvailability(d *appsv1.Deployment) {
 	if duck.DeploymentIsAvailable(&d.Status, true) {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
@@ -92,6 +96,10 @@ func (bs *BrokerStatus) PropagateTriggerChannelReadiness(cs *duckv1alpha1.Channe
 
 func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interface{}) {
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
+}
+
+func (bs *BrokerStatus) MarkFilterReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 }
 
 func (bs *BrokerStatus) PropagateFilterDeploymentAvailability(d *appsv1.Deployment) {

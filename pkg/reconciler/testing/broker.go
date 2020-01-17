@@ -45,6 +45,12 @@ func NewBroker(name, namespace string, o ...BrokerOption) *v1alpha1.Broker {
 	return b
 }
 
+func WithBrokerAnnotations(annotations map[string]string) BrokerOption {
+	return func(s *v1alpha1.Broker) {
+		s.Annotations = annotations
+	}
+}
+
 // WithInitBrokerConditions initializes the Broker's conditions.
 func WithInitBrokerConditions(b *v1alpha1.Broker) {
 	b.Status.InitializeConditions()

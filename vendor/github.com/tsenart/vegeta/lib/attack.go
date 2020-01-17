@@ -28,6 +28,7 @@ type Attacker struct {
 	seqmu      sync.Mutex
 	seq        uint64
 	began      time.Time
+	chunked    bool
 }
 
 const (
@@ -111,6 +112,12 @@ func Connections(n int) func(*Attacker) {
 		tr := a.client.Transport.(*http.Transport)
 		tr.MaxIdleConnsPerHost = n
 	}
+}
+
+// ChunkedBody returns a functional option which makes the attacker send the
+// body of each request with the chunked transfer encoding.
+func ChunkedBody(b bool) func(*Attacker) {
+	return func(a *Attacker) { a.chunked = b }
 }
 
 // Redirects returns a functional option which sets the maximum
@@ -229,6 +236,16 @@ func Client(c *http.Client) func(*Attacker) {
 	return func(a *Attacker) { a.client = *c }
 }
 
+// ProxyHeader returns a functional option that allows you to add your own
+// Proxy CONNECT headers
+func ProxyHeader(h http.Header) func(*Attacker) {
+	return func(a *Attacker) {
+		if tr, ok := a.client.Transport.(*http.Transport); ok {
+			tr.ProxyConnectHeader = h
+		}
+	}
+}
+
 // Attack reads its Targets from the passed Targeter and attacks them at
 // the rate specified by the Pacer. When the duration is zero the attack
 // runs until Stop is called. Results are sent to the returned channel as soon
@@ -336,9 +353,16 @@ func (a *Attacker) hit(tr Targeter, name string) *Result {
 		return &res
 	}
 
+	res.Method = tgt.Method
+	res.URL = tgt.URL
+
 	req, err := tgt.Request()
 	if err != nil {
 		return &res
+	}
+
+	if a.chunked {
+		req.TransferEncoding = append(req.TransferEncoding, "chunked")
 	}
 
 	r, err := a.client.Do(req)

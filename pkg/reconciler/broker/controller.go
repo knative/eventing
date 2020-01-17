@@ -34,6 +34,7 @@ import (
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
+	servinginformer "knative.dev/serving/pkg/client/injection/informers/serving/v1/service"
 )
 
 const (
@@ -67,17 +68,18 @@ func NewController(
 	brokerInformer := brokerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
+	servingInformer := servinginformer.Get(ctx)
 
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 		brokerLister:              brokerInformer.Lister(),
-		serviceLister:             serviceInformer.Lister(),
-		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
 		ingressImage:              env.IngressImage,
 		ingressServiceAccountName: env.IngressServiceAccount,
 		filterImage:               env.FilterImage,
 		filterServiceAccountName:  env.FilterServiceAccount,
+		serviceHelper: reconciler.NewServiceHelper(
+			ctx, deploymentInformer.Lister(), serviceInformer.Lister(), servingInformer.Lister()),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -93,6 +95,11 @@ func NewController(
 	})
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	servingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

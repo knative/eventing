@@ -30,8 +30,10 @@ import (
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
+	_ "knative.dev/serving/pkg/client/injection/informers/serving/v1/service/fake"
 )
 
 func TestNew(t *testing.T) {

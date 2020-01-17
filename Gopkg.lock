@@ -228,6 +228,13 @@
   revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
 
 [[projects]]
+  digest = "1:10aa62acd56f635de190110a836aa261b3774e697b2b6a7af27d8263cf856d47"
+  name = "github.com/google/go-containerregistry"
+  packages = ["pkg/name"]
+  pruneopts = "NUT"
+  revision = "b02d448a3705facf11018efff34f1d2830be5724"
+
+[[projects]]
   digest = "1:91099c6f78b1e7bdf9ed06eb4cb7f017174293a3689d76b995a06f4c8d64a7f0"
   name = "github.com/google/go-github"
   packages = ["github"]
@@ -383,9 +390,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7bbccd3dd7998f2a180264ec1d12e362ed8e02f55ea7b82ac0d0f48ffa2d8888"
+  digest = "1:7badf75e6ce7d68cb393f84b7b0d02100a8ae414df870fc71dcf617899b5d8cb"
   name = "github.com/mailru/easyjson"
   packages = [
+    ".",
     "buffer",
     "jlexer",
     "jwriter",
@@ -545,12 +553,12 @@
   version = "v1.0.5"
 
 [[projects]]
-  digest = "1:435d9fe926ee0d903662215091e27fba6f1b7228d33a30c289cdb5aeff1c8fc8"
+  branch = "master"
+  digest = "1:30bbabb7875bb8cc6c2f756e68eecfbb77d58fe2779ef208489012db5a4171a9"
   name = "github.com/tsenart/vegeta"
   packages = ["lib"]
   pruneopts = "NUT"
-  revision = "9c95632b3e8562be6df690c639a3f5a6f40d3004"
-  version = "v12.7.0"
+  revision = "85244b4acb411f39075b7f47533ec04ac438201b"
 
 [[projects]]
   digest = "1:b7d98c64e9467a8e5e67509031cd6baee81fba090ba2c3d30df1ff3d02d1d035"
@@ -1405,6 +1413,61 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:c9cf1670af44077ad8a75b8fc5d617c668fe5560ac90e7d53147b9ef18b24458"
+  name = "knative.dev/serving"
+  packages = [
+    "pkg/apis/autoscaling",
+    "pkg/apis/autoscaling/v1alpha1",
+    "pkg/apis/config",
+    "pkg/apis/networking",
+    "pkg/apis/networking/v1alpha1",
+    "pkg/apis/serving",
+    "pkg/apis/serving/v1",
+    "pkg/apis/serving/v1alpha1",
+    "pkg/apis/serving/v1beta1",
+    "pkg/client/clientset/versioned",
+    "pkg/client/clientset/versioned/fake",
+    "pkg/client/clientset/versioned/scheme",
+    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1",
+    "pkg/client/clientset/versioned/typed/autoscaling/v1alpha1/fake",
+    "pkg/client/clientset/versioned/typed/networking/v1alpha1",
+    "pkg/client/clientset/versioned/typed/networking/v1alpha1/fake",
+    "pkg/client/clientset/versioned/typed/serving/v1",
+    "pkg/client/clientset/versioned/typed/serving/v1/fake",
+    "pkg/client/clientset/versioned/typed/serving/v1alpha1",
+    "pkg/client/clientset/versioned/typed/serving/v1alpha1/fake",
+    "pkg/client/clientset/versioned/typed/serving/v1beta1",
+    "pkg/client/clientset/versioned/typed/serving/v1beta1/fake",
+    "pkg/client/informers/externalversions",
+    "pkg/client/informers/externalversions/autoscaling",
+    "pkg/client/informers/externalversions/autoscaling/v1alpha1",
+    "pkg/client/informers/externalversions/internalinterfaces",
+    "pkg/client/informers/externalversions/networking",
+    "pkg/client/informers/externalversions/networking/v1alpha1",
+    "pkg/client/informers/externalversions/serving",
+    "pkg/client/informers/externalversions/serving/v1",
+    "pkg/client/informers/externalversions/serving/v1alpha1",
+    "pkg/client/informers/externalversions/serving/v1beta1",
+    "pkg/client/injection/client",
+    "pkg/client/injection/client/fake",
+    "pkg/client/injection/informers/factory",
+    "pkg/client/injection/informers/factory/fake",
+    "pkg/client/injection/informers/serving/v1/service",
+    "pkg/client/injection/informers/serving/v1/service/fake",
+    "pkg/client/listers/autoscaling/v1alpha1",
+    "pkg/client/listers/networking/v1alpha1",
+    "pkg/client/listers/serving/v1",
+    "pkg/client/listers/serving/v1alpha1",
+    "pkg/client/listers/serving/v1beta1",
+    "pkg/gc",
+    "pkg/network",
+    "pkg/reconciler/route/config",
+  ]
+  pruneopts = "NUT"
+  revision = "dbe73573742cfbc83a971e966705d51a36793fba"
+
+[[projects]]
+  branch = "master"
   digest = "1:4ba0f80b3feed917d2c9a1aa79ea95836c3aef84589431cff77ffd01615a1150"
   name = "knative.dev/test-infra"
   packages = [
@@ -1587,6 +1650,15 @@
     "knative.dev/pkg/webhook/resourcesemantics",
     "knative.dev/pkg/webhook/resourcesemantics/defaulting",
     "knative.dev/pkg/webhook/resourcesemantics/validation",
+    "knative.dev/serving/pkg/apis/serving",
+    "knative.dev/serving/pkg/apis/serving/v1",
+    "knative.dev/serving/pkg/client/clientset/versioned",
+    "knative.dev/serving/pkg/client/clientset/versioned/fake",
+    "knative.dev/serving/pkg/client/injection/client",
+    "knative.dev/serving/pkg/client/injection/client/fake",
+    "knative.dev/serving/pkg/client/injection/informers/serving/v1/service",
+    "knative.dev/serving/pkg/client/injection/informers/serving/v1/service/fake",
+    "knative.dev/serving/pkg/client/listers/serving/v1",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",
   ]

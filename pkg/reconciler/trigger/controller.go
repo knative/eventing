@@ -31,11 +31,14 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+
+	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
+	servinginformer "knative.dev/serving/pkg/client/injection/informers/serving/v1/service"
 )
 
 const (
@@ -57,16 +60,19 @@ func NewController(
 	triggerInformer := trigger.Get(ctx)
 	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
-	serviceInformer := service.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
+	deploymentInformer := deploymentinformer.Get(ctx)
+	serviceInformer := serviceinformer.Get(ctx)
+	servingInformer := servinginformer.Get(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 		triggerLister:      triggerInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
-		serviceLister:      serviceInformer.Lister(),
 		namespaceLister:    namespaceInformer.Lister(),
+		serviceHelper: reconciler.NewServiceHelper(
+			ctx, deploymentInformer.Lister(), serviceInformer.Lister(), servingInformer.Lister()),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
