@@ -124,12 +124,13 @@ roleRef:
 apiVersion: configs.knative.dev/v1alpha1
 kind: ConfigMapPropagation
 metadata:
-  name: perf-eventing-cmp
+  name: eventing
   namespace: default
 spec:
   originalNamespace: knative-eventing
   selector:
-    knative.dev/config-category: eventing
+    matchlabels:
+      knative.dev/config-category: eventing
 
 ---
 

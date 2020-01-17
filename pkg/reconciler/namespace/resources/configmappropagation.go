@@ -31,7 +31,7 @@ func MakeConfigMapPropagation(namespace string) *v1alpha1.ConfigMapPropagation {
 		},
 		Spec: v1alpha1.ConfigMapPropagationSpec{
 			OriginalNamespace: system.Namespace(),
-			Selector:          ConfigMapPropagationOwnedLabels(),
+			Selector:          &metav1.LabelSelector{MatchLabels: ConfigMapPropagationOwnedLabels()},
 		},
 	}
 }

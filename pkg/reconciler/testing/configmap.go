@@ -41,9 +41,9 @@ func NewConfigMap(name, namespace string, o ...ConfigMapOption) *v1.ConfigMap {
 	return cm
 }
 
-func WithConfigMapLabels(labels map[string]string) ConfigMapOption {
+func WithConfigMapLabels(labels metav1.LabelSelector) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
-		cm.ObjectMeta.Labels = labels
+		cm.ObjectMeta.Labels = labels.MatchLabels
 	}
 }
 

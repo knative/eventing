@@ -17,9 +17,11 @@ limitations under the License.
 package resources
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
 	"reflect"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestOriginalLabels(t *testing.T) {
@@ -30,7 +32,9 @@ func TestOriginalLabels(t *testing.T) {
 	}{{
 		Name: "empty map",
 		F: func() labels.Selector {
-			return ExpectedOriginalSelector(map[string]string{})
+			return ExpectedOriginalSelector(&metav1.LabelSelector{
+				MatchLabels: map[string]string{},
+			})
 		},
 		Want: labels.SelectorFromSet(map[string]string{
 			PropagationLabelKey: PropagationLabelValueOriginal,
@@ -38,8 +42,10 @@ func TestOriginalLabels(t *testing.T) {
 	}, {
 		Name: "map with existing keys",
 		F: func() labels.Selector {
-			return ExpectedOriginalSelector(map[string]string{
-				"testing": "testing",
+			return ExpectedOriginalSelector(&metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"testing": "testing",
+				},
 			})
 		},
 		Want: labels.SelectorFromSet(map[string]string{
@@ -49,9 +55,11 @@ func TestOriginalLabels(t *testing.T) {
 	}, {
 		Name: "map with original key",
 		F: func() labels.Selector {
-			return ExpectedOriginalSelector(map[string]string{
-				"testing":           "testing",
-				PropagationLabelKey: PropagationLabelValueOriginal,
+			return ExpectedOriginalSelector(&metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"testing":           "testing",
+					PropagationLabelKey: PropagationLabelValueOriginal,
+				},
 			})
 		},
 		Want: labels.SelectorFromSet(map[string]string{

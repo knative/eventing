@@ -41,7 +41,7 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 	}
 
 	if cmps.Selector != nil {
-		for key, value := range *cmps.Selector {
+		for key, value := range cmps.Selector.MatchLabels {
 			if err := validation.IsQualifiedName(key); len(err) != 0 {
 				fe := &apis.FieldError{
 					Message: fmt.Sprintf("Invalid selector key: %v", key),

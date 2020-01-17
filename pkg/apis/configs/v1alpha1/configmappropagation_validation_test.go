@@ -18,17 +18,18 @@ package v1alpha1
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
-	"knative.dev/pkg/apis"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 )
 
 var (
 	originalNamespace = "original"
 	currentNamespace  = "current"
-	validSelector     = map[string]string{
-		"testing": "testing",
-	}
+	validSelector     = metav1.LabelSelector{MatchLabels: map[string]string{"testing": "testing"}}
 )
 
 func TestConfigMapPropagationValidation(t *testing.T) {
@@ -78,9 +79,8 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 		name: "invalid selector key",
 		cmps: &ConfigMapPropagationSpec{
 			OriginalNamespace: originalNamespace,
-			Selector: &map[string]string{
-				"*nvalid": "testing",
-			}},
+			Selector:          &metav1.LabelSelector{MatchLabels: map[string]string{"*nvalid": "testing"}},
+		},
 		want: &apis.FieldError{
 			Message: `Invalid selector key: *nvalid`,
 			Paths:   []string{"selector"},
@@ -90,9 +90,7 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 		name: "invalid seletor value",
 		cmps: &ConfigMapPropagationSpec{
 			OriginalNamespace: originalNamespace,
-			Selector: &map[string]string{
-				"invalid": "test/ing",
-			}},
+			Selector:          &metav1.LabelSelector{MatchLabels: map[string]string{"invalid": "test/ing"}}},
 		want: &apis.FieldError{
 			Message: `Invalid selector value: test/ing`,
 			Paths:   []string{"selector"},

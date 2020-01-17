@@ -18,12 +18,13 @@ package v1alpha1
 
 import (
 	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (cmp *ConfigMapPropagation) SetDefaults(ctx context.Context) {
 	// If we haven't configured the selector,
 	// then set the default selector to be an empty map
 	if cmp != nil && cmp.Spec.Selector == nil {
-		cmp.Spec.Selector = &map[string]string{}
+		cmp.Spec.Selector = &metav1.LabelSelector{}
 	}
 }

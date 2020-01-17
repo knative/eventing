@@ -18,16 +18,17 @@ package v1alpha1
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	namespace       = "testing-eventing"
-	defaultSelector = map[string]string{}
-	otherSelector   = map[string]string{
-		"knative.dev/testing": "eventing",
-	}
+	defaultSelector = metav1.LabelSelector{}
+	otherSelector   = metav1.LabelSelector{MatchLabels: map[string]string{"testing": "testing"}}
 )
 
 func TestConfigMapPropagationDefaults(t *testing.T) {

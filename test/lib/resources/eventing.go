@@ -138,7 +138,9 @@ func ConfigMapPropagation(name, namespace string) *configsv1alpha1.ConfigMapProp
 		},
 		Spec: configsv1alpha1.ConfigMapPropagationSpec{
 			OriginalNamespace: "knative-eventing",
-			Selector:          resources.ConfigMapPropagationOwnedLabels(),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: resources.ConfigMapPropagationOwnedLabels(),
+			},
 		},
 	}
 }

@@ -34,8 +34,8 @@ func OwnedLabels() map[string]string {
 }
 
 // ConfigMapPropagationOwnedLabels generates the labels present on injected broker resources.
-func ConfigMapPropagationOwnedLabels() *map[string]string {
-	return &map[string]string{
+func ConfigMapPropagationOwnedLabels() map[string]string {
+	return map[string]string{
 		CmpDefaultLabelKey: CmpDefaultLabelValue,
 	}
 }

@@ -63,7 +63,7 @@ type ConfigMapPropagationSpec struct {
 	OriginalNamespace string `json:"originalNamespace,omitempty"`
 	// Selector only selects original configMaps with corresponding labels
 	// +optional
-	Selector *map[string]string `json:"selector,omitempty"`
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 }
 
 // ConfigMapPropagationStatus represents the current state of a ConfigMapPropagation.
@@ -74,22 +74,37 @@ type ConfigMapPropagationStatus struct {
 	duckv1.Status `json:",inline"`
 
 	//CopyConfigMaps is the status for each copied configmap.
-	CopyConfigMaps map[string]ConfigMapPropagationStatusCopyConfigMap `json:"CopyConfigmaps,omitempty"`
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	CopyConfigMaps []ConfigMapPropagationStatusCopyConfigMap `json:"copyConfigmaps" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ConfigMapPropagationStatusCopyConfigMap represents the status of a copied configmap
 type ConfigMapPropagationStatusCopyConfigMap struct {
+	// Name is copy configmap's name
+	// +required
+	Name string `json:"name,omitempty"`
+
 	// Source is "originalNamespace/originalConfigMapName"
+	// +required
 	Source string `json:"source,omitempty"`
 
-	// Operation represents the operation CMP takes for this configmap. The operations are copy|delete|stop,
+	// Operation represents the operation CMP takes for this configmap. The operations are copy|delete|stop
+	// +required
 	Operation string `json:"operation,omitempty"`
 
 	// Ready represents the operation is ready or not
+	// +required
 	Ready string `json:"ready,omitempty"`
 
 	// Reason indicates reasons if the operation is not ready
+	// +optional
 	Reason string `json:"reason,omitempty"`
+
+	// ResourceVersion is the resourceVersion of original configmap
+	// +optional
+	ResourceVersion string `json:"resourceVersionFromSource,omitempty" protobuf:"bytes,6,opt,name=resourceVersion"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

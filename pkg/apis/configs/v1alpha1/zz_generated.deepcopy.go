@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -90,14 +91,8 @@ func (in *ConfigMapPropagationSpec) DeepCopyInto(out *ConfigMapPropagationSpec) 
 	*out = *in
 	if in.Selector != nil {
 		in, out := &in.Selector, &out.Selector
-		*out = new(map[string]string)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make(map[string]string, len(*in))
-			for key, val := range *in {
-				(*out)[key] = val
-			}
-		}
+		*out = new(v1.LabelSelector)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -118,10 +113,8 @@ func (in *ConfigMapPropagationStatus) DeepCopyInto(out *ConfigMapPropagationStat
 	in.Status.DeepCopyInto(&out.Status)
 	if in.CopyConfigMaps != nil {
 		in, out := &in.CopyConfigMaps, &out.CopyConfigMaps
-		*out = make(map[string]ConfigMapPropagationStatusCopyConfigMap, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		*out = make([]ConfigMapPropagationStatusCopyConfigMap, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

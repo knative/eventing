@@ -49,23 +49,14 @@ spec:
     - name: OriginalNamespace
       type: string
       JSONPath: ".spec.originalNamespace"
-    - name: Selector
-      type: string
-      JSONPath: ".spec.selector"
   validation:
     openAPIV3Schema:
       properties:
         spec:
           required:
             - originalNamespace
-            - selector
           properties:
             originalNamespace:
               type: string
               description: "The namespace where original ConfigMaps exist in."
-            selector:
-              type: object
-              description: "Map of selectors used for select specific group of ConfigMaps."
-              additionalProperties:
-                type: string
 

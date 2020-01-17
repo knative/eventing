@@ -53,7 +53,10 @@ func (cmps *ConfigMapPropagationStatus) MarkNotPropagated() {
 		"ConfigMapPropagation could not fully propagate ConfigMaps from original namespace to current namespace")
 }
 
-func (cmpsc *ConfigMapPropagationStatusCopyConfigMap) SetCopyConfigMapStatus(source, operation, ready, reason string) {
+func (cmpsc *ConfigMapPropagationStatusCopyConfigMap) SetCopyConfigMapStatus(name, source, operation, ready, reason, resourceVersion string) {
+	if name != "" {
+		cmpsc.Name = name
+	}
 	if source != "" {
 		cmpsc.Source = source
 	}
@@ -65,5 +68,8 @@ func (cmpsc *ConfigMapPropagationStatusCopyConfigMap) SetCopyConfigMapStatus(sou
 	}
 	if reason != "" {
 		cmpsc.Reason = reason
+	}
+	if resourceVersion != "" {
+		cmpsc.ResourceVersion = resourceVersion
 	}
 }

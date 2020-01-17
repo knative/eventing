@@ -50,18 +50,19 @@ func WithInitConfigMapPropagationConditions(cmp *v1alpha1.ConfigMapPropagation) 
 
 func WithInitConfigMapStatus() ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
-		cmp.Status.CopyConfigMaps = map[string]v1alpha1.ConfigMapPropagationStatusCopyConfigMap{}
+		cmp.Status.CopyConfigMaps = []v1alpha1.ConfigMapPropagationStatusCopyConfigMap{}
 	}
 }
 
-func WithCopyConfigMapStatus(key, source, operation, ready, reason string) ConfigMapPropagationOption {
+func WithCopyConfigMapStatus(name, source, operation, ready, reason string) ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
-		cmp.Status.CopyConfigMaps[key] = v1alpha1.ConfigMapPropagationStatusCopyConfigMap{
+		cmp.Status.CopyConfigMaps = append(cmp.Status.CopyConfigMaps, v1alpha1.ConfigMapPropagationStatusCopyConfigMap{
+			Name:      name,
 			Source:    source,
 			Operation: operation,
 			Ready:     ready,
 			Reason:    reason,
-		}
+		})
 	}
 }
 
@@ -70,7 +71,7 @@ func WithConfigMapPropagationDeletionTimestamp(cmp *v1alpha1.ConfigMapPropagatio
 	cmp.ObjectMeta.SetDeletionTimestamp(&t)
 }
 
-func WithConfigMapPropagationSelector(selector map[string]string) ConfigMapPropagationOption {
+func WithConfigMapPropagationSelector(selector metav1.LabelSelector) ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
 		cmp.Spec.Selector = &selector
 	}

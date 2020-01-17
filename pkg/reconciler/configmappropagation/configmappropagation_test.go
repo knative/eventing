@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	"knative.dev/eventing/pkg/reconciler"
@@ -48,16 +49,20 @@ const (
 )
 
 var (
-	selector = map[string]string{
-		"testings": "testing",
+	selector = metav1.LabelSelector{
+		MatchLabels: map[string]string{"testings": "testing"},
 	}
-	originalSelector = map[string]string{
-		"testings":                    "testing",
-		resources.PropagationLabelKey: resources.PropagationLabelValueOriginal,
+	originalSelector = metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"testings":                    "testing",
+			resources.PropagationLabelKey: resources.PropagationLabelValueOriginal,
+		},
 	}
-	copySelector = map[string]string{
-		resources.PropagationLabelKey: resources.PropagationLabelValueCopy,
-		resources.CopyLabelKey:        resources.MakeCopyConfigMapLabel(currentNS, originalConfigMapName),
+	copySelector = metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			resources.PropagationLabelKey: resources.PropagationLabelValueCopy,
+			resources.CopyLabelKey:        resources.MakeCopyConfigMapLabel(currentNS, originalConfigMapName),
+		},
 	}
 	copyConfigMapName = resources.MakeCopyConfigMapName(configMapPropagationName, originalConfigMapName)
 	originalData      = map[string]string{"data": "original"}
@@ -100,9 +105,12 @@ func TestAllCase(t *testing.T) {
 				NewConfigMapPropagation(configMapPropagationName, currentNS,
 					WithInitConfigMapPropagationConditions,
 					WithConfigMapPropagationSelector(selector),
+					WithInitConfigMapStatus(),
 				),
 				NewConfigMap(originalConfigMapName, originalNS,
-					WithConfigMapLabels(map[string]string{}),
+					WithConfigMapLabels(metav1.LabelSelector{
+						MatchLabels: map[string]string{},
+					}),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
 					WithConfigMapLabels(copySelector),
@@ -120,6 +128,9 @@ func TestAllCase(t *testing.T) {
 					WithInitConfigMapPropagationConditions,
 					WithConfigMapPropagationSelector(selector),
 					WithConfigMapPropagationPropagated,
+					WithInitConfigMapStatus(),
+					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
+						"delete", "true", ""),
 				),
 			}},
 			WantEvents: []string{
@@ -150,6 +161,9 @@ func TestAllCase(t *testing.T) {
 					WithInitConfigMapPropagationConditions,
 					WithConfigMapPropagationSelector(selector),
 					WithConfigMapPropagationPropagated,
+					WithInitConfigMapStatus(),
+					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
+						"delete", "true", ""),
 				),
 			}},
 			WantEvents: []string{
@@ -162,6 +176,7 @@ func TestAllCase(t *testing.T) {
 				NewConfigMapPropagation(configMapPropagationName, currentNS,
 					WithInitConfigMapPropagationConditions,
 					WithConfigMapPropagationSelector(selector),
+					WithInitConfigMapStatus(),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
 					WithConfigMapLabels(copySelector),
@@ -348,7 +363,9 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapLabels(originalSelector),
 				),
 				NewConfigMap(copyConfigMapName, currentNS,
-					WithConfigMapLabels(map[string]string{}),
+					WithConfigMapLabels(metav1.LabelSelector{
+						MatchLabels: map[string]string{},
+					}),
 					WithConfigMapOwnerReference(NewConfigMapPropagation(configMapPropagationName, currentNS,
 						WithInitConfigMapPropagationConditions,
 						WithConfigMapPropagationSelector(selector),
@@ -357,7 +374,9 @@ func TestAllCase(t *testing.T) {
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewConfigMap(copyConfigMapName, currentNS,
-					WithConfigMapLabels(map[string]string{}),
+					WithConfigMapLabels(metav1.LabelSelector{
+						MatchLabels: map[string]string{},
+					}),
 				),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
