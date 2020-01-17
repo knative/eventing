@@ -61,6 +61,7 @@ spec:
           properties:
             broker:
               type: string
+              description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
             filter:
               type: object
               properties:
