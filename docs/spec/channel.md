@@ -4,7 +4,8 @@
 
 The Knative Eventing project has one generic `Channel` CRD and might ship
 different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of
-in the `messaging.knative.dev/v1beta1` API Group.
+in the `messaging.knative.dev/v1beta1` API Group. The generic `Channel` CRD
+points to the chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
 
 A _channel_ logically receives events on its input domain and forwards them to its
 subscribers. Below is a specification for the generic parts of each `Channel`.
@@ -44,7 +45,7 @@ Each _Channel Controller_ ensures the required tasks on the backing technology
 are applied.
 
 > NOTE: For instance on a `KafkaChannel` this would mean taking care of creating
-a Apache Kafka topic and backing all messages from the _Knative Channel_.
+an Apache Kafka topic and backing all messages from the _Knative Channel_.
 
 #### Aggregated Channelable Manipulator ClusterRole
 
@@ -183,9 +184,11 @@ exclusively communicate using CloudEvents.
 #### Input
 
 Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
-The endpoint(s) MUST conform to
-[HTTP Transport Binding for CloudEvents - Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md).
-It MUST support both Binary Content mode and Structured Content mode. The
+The endpoint(s) MUST conform to CloudEvents (
+[Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
+or [Version 1.0](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)).
+The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with
+the same version. It MUST support both Binary Content mode and Structured Content mode. The
 HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443. Channels
 MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion
 (e.g. expose a gRPC endpoint to accept events).
@@ -265,3 +268,8 @@ Channels SHOULD expose a variety of metrics, including, but not limited to:
 
 Metrics SHOULD be enabled by default, with a configuration parameter included to
 disable them if desired.
+
+## Changelog
+
+* `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
+* `0.12.x release`: Types in the API group `messaging.knative.dev` were promoted from `v1alpha1`to `v1beta1`.
