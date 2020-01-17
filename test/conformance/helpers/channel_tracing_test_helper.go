@@ -34,15 +34,6 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
-// SetupClientFunc sets up the client for running tracing tests. It does the equivalent of
-// client.Setup().
-type SetupClientFunc func(*lib.Client) error
-
-// SetupClientFuncNoop is a SetupClientFunc that does nothing.
-var SetupClientFuncNoop SetupClientFunc = func(*lib.Client) error {
-	return nil
-}
-
 // SetupInfrastructureFunc sets up the infrastructure for running tracing tests. It returns the
 // expected trace as well as a string that is expected to be in the logger Pod's logs.
 type SetupInfrastructureFunc func(
@@ -68,7 +59,7 @@ type TracingTestCase struct {
 func ChannelTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
 	channelTestRunner lib.ChannelTestRunner,
-	setupClient SetupClientFunc,
+	setupClient lib.SetupClientOption,
 ) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
@@ -80,7 +71,7 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 }
 
 // ChannelTracingTestHelper runs the Channel tracing test using the given TypeMeta.
-func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient SetupClientFunc) {
+func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient lib.SetupClientOption) {
 	testCases := map[string]TracingTestCase{
 		"includes incoming trace id": {
 			IncomingTraceId: true,
@@ -96,7 +87,7 @@ func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient
 
 func tracingTest(
 	t *testing.T,
-	setupClient SetupClientFunc,
+	setupClient lib.SetupClientOption,
 	setupInfrastructure SetupInfrastructureFunc,
 	channel metav1.TypeMeta,
 	tc TracingTestCase,
@@ -105,11 +96,8 @@ func tracingTest(
 		loggerPodName = "logger"
 	)
 
-	client := lib.Setup(t, true)
+	client := lib.Setup(t, true, setupClient)
 	defer lib.TearDown(client)
-	if err := setupClient(client); err != nil {
-		t.Fatalf("SetupClient function failed: %v", err)
-	}
 
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.

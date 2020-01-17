@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"

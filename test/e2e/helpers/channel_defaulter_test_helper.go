@@ -45,10 +45,12 @@ const (
 )
 
 // ChannelClusterDefaulterTestHelper is the helper function for channel_defaulter_test
-func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+func ChannelClusterDefaulterTestHelper(t *testing.T,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// these tests cannot be run in parallel as they have cluster-wide impact
-		client := lib.Setup(st, false)
+		client := lib.Setup(st, false, options...)
 		defer lib.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *defaultchannel.Config) {
@@ -62,11 +64,13 @@ func ChannelClusterDefaulterTestHelper(t *testing.T, channelTestRunner lib.Chann
 }
 
 // ChannelNamespaceDefaulterTestHelper is the helper function for channel_defaulter_test
-func ChannelNamespaceDefaulterTestHelper(t *testing.T, channelTestRunner lib.ChannelTestRunner) {
+func ChannelNamespaceDefaulterTestHelper(t *testing.T,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption) {
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// we cannot run these tests in parallel as the updateDefaultChannelCM function is not thread-safe
 		// TODO(chizhg): make updateDefaultChannelCM thread-safe and run in parallel if the tests are taking too long to finish
-		client := lib.Setup(st, false)
+		client := lib.Setup(st, false, options...)
 		defer lib.TearDown(client)
 
 		if err := updateDefaultChannelCM(client, func(conf *defaultchannel.Config) {

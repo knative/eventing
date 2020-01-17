@@ -22,14 +22,14 @@ source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 # Yaml files to generate, and the source config dir for them.
 declare -A COMPONENTS
 COMPONENTS=(
-  ["eventing.yaml"]="config"
+  ["eventing-core.yaml"]="config"
   ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
 )
 readonly COMPONENTS
 
 declare -A RELEASES
 RELEASES=(
-  ["release.yaml"]="eventing.yaml in-memory-channel.yaml"
+  ["eventing.yaml"]="eventing-core.yaml in-memory-channel.yaml"
 )
 readonly RELEASES
 

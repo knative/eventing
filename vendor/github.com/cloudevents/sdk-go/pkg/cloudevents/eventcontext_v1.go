@@ -73,8 +73,9 @@ func (ec EventContextV1) ExtensionAs(name string, obj interface{}) error {
 }
 
 // SetExtension adds the extension 'name' with value 'value' to the CloudEvents context.
+// This function fails if the name doesn't respect the regex ^[a-zA-Z0-9]+$
 func (ec *EventContextV1) SetExtension(name string, value interface{}) error {
-	if !IsAlphaNumericLowercaseLetters(name) {
+	if !IsAlphaNumeric(name) {
 		return errors.New("bad key, CloudEvents attribute names MUST consist of lower-case letters ('a' to 'z') or digits ('0' to '9') from the ASCII character set")
 	}
 
