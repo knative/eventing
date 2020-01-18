@@ -66,6 +66,19 @@ type Handler struct {
 	isReady       *atomic.Value
 }
 
+type sendError struct {
+	Err    error
+	Status int
+}
+
+func (e sendError) Error() string {
+	return e.Err.Error()
+}
+
+func (e sendError) Unwrap() error {
+	return e.Err
+}
+
 // FilterResult has the result of the filtering operation.
 type FilterResult string
 
@@ -188,6 +201,11 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 
 	responseEvent, err := r.sendEvent(ctx, tctx, triggerRef, &event)
 	if err != nil {
+		// Propagate any error codes from the invoke back upstram.
+		var httpError sendError
+		if errors.As(err, &httpError) {
+			resp.Status = httpError.Status
+		}
 		r.logger.Error("Error sending the event", zap.Error(err))
 		return err
 	}
@@ -265,6 +283,10 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 	r.reporter.ReportEventDispatchTime(reportArgs, rtctx.StatusCode, time.Since(start))
 	// Record the event count.
 	r.reporter.ReportEventCount(reportArgs, rtctx.StatusCode)
+	// Wrap any errors along with the response status code so that can be propagated upstream.
+	if err != nil {
+		err = sendError{err, rtctx.StatusCode}
+	}
 	return replyEvent, err
 }
 
