@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	// DO NOT SUBMIT. Change to v1beta1 before merge
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -149,14 +148,4 @@ type ParallelList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Parallel `json:"items"`
-}
-
-// GetGroupVersionKind returns GroupVersionKind for Parallel
-func (p *Parallel) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Parallel")
-}
-
-// GetUntypedSpec returns the spec of the Parallel.
-func (p *Parallel) GetUntypedSpec() interface{} {
-	return p.Spec
 }

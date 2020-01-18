@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	// DO NOT SUBMIT. Change to v1beta1 before merge
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -125,14 +124,4 @@ type SequenceList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Sequence `json:"items"`
-}
-
-// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
-func (p *Sequence) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Sequence")
-}
-
-// GetUntypedSpec returns the spec of the Sequence.
-func (s *Sequence) GetUntypedSpec() interface{} {
-	return s.Spec
 }

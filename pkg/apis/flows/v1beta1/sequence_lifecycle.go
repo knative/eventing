@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
@@ -42,6 +43,16 @@ const (
 	// the Addressable contract and has a non-empty hostname.
 	SequenceConditionAddressable apis.ConditionType = "Addressable"
 )
+
+// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
+func (p *Sequence) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("Sequence")
+}
+
+// GetUntypedSpec returns the spec of the Sequence.
+func (s *Sequence) GetUntypedSpec() interface{} {
+	return s.Spec
+}
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (ss *SequenceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
