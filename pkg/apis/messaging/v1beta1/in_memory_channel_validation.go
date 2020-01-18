@@ -30,13 +30,11 @@ func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
 func (imcs *InMemoryChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
-	if imcs.Subscribable != nil {
-		for i, subscriber := range imcs.Subscribable.Subscribers {
-			if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
-				fe := apis.ErrMissingField("replyURI", "subscriberURI")
-				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
-			}
+	for i, subscriber := range imcs.SubscribableSpec.Subscribers {
+		if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
+			fe := apis.ErrMissingField("replyURI", "subscriberURI")
+			fe.Details = "expected at least one of, got none"
+			errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
 		}
 	}
 

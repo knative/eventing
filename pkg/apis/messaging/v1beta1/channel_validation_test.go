@@ -76,13 +76,14 @@ func TestChannelValidation(t *testing.T) {
 						APIVersion: SchemeGroupVersion.String(),
 					},
 				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: apis.HTTP("subscriberendpoint"),
-						ReplyURI:      apis.HTTP("resultendpoint"),
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{
+							SubscriberURI: apis.HTTP("subscriberendpoint"),
+							ReplyURI:      apis.HTTP("resultendpoint"),
+						}},
 					}},
-				}},
-		},
+			}},
 		want: nil,
 	}, {
 		name: "empty subscriber at index 1",
@@ -94,12 +95,14 @@ func TestChannelValidation(t *testing.T) {
 						APIVersion: SchemeGroupVersion.String(),
 					},
 				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: apis.HTTP("subscriberendpoint"),
-						ReplyURI:      apis.HTTP("replyendpoint"),
-					}, {}},
-				}},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{
+							SubscriberURI: apis.HTTP("subscriberendpoint"),
+							ReplyURI:      apis.HTTP("replyendpoint"),
+						}, {}},
+					}},
+			},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
@@ -110,12 +113,14 @@ func TestChannelValidation(t *testing.T) {
 		name: "nil channelTemplate and empty subscriber at index 1",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: apis.HTTP("subscriberendpoint"),
-						ReplyURI:      apis.HTTP("replyendpoint"),
-					}, {}},
-				}},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{
+							SubscriberURI: apis.HTTP("subscriberendpoint"),
+							ReplyURI:      apis.HTTP("replyendpoint"),
+						}, {}},
+					}},
+			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -136,8 +141,10 @@ func TestChannelValidation(t *testing.T) {
 						APIVersion: SchemeGroupVersion.String(),
 					},
 				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{}, {}},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{}, {}},
+					},
 				},
 			},
 		},
@@ -254,11 +261,13 @@ func TestChannelImmutableFields(t *testing.T) {
 						APIVersion: SchemeGroupVersion.String(),
 					},
 				},
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: apis.HTTP("subscriberendpoint"),
-						ReplyURI:      apis.HTTP("replyendpoint"),
-					}},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{
+							SubscriberURI: apis.HTTP("subscriberendpoint"),
+							ReplyURI:      apis.HTTP("replyendpoint"),
+						}},
+					},
 				},
 			},
 		},

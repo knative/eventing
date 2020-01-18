@@ -43,7 +43,7 @@ type Channelable struct {
 
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableSpec struct {
-	Subscribable `json:",inline"`
+	SubscribableSpec `json:",inline"`
 
 	// DeliverySpec contains options controlling the event delivery
 	// +optional
@@ -75,7 +75,7 @@ var (
 
 // Populate implements duck.Populatable
 func (c *Channelable) Populate() {
-	c.Spec.Subscribable = Subscribable{
+	c.Spec.SubscribableSpec = SubscribableSpec{
 		// Populate ALL fields
 		Subscribers: []SubscriberSpec{{
 			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",

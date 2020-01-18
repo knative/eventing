@@ -44,7 +44,7 @@ func TestChannelablePopulate(t *testing.T) {
 	delay := "5s"
 	want := &Channelable{
 		Spec: ChannelableSpec{
-			Subscribable: Subscribable{
+			SubscribableSpec: SubscribableSpec{
 				Subscribers: []SubscriberSpec{{
 					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
 					Generation:    1,

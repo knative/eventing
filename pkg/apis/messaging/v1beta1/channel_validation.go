@@ -41,13 +41,11 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if cs.Subscribable != nil {
-		for i, subscriber := range cs.Subscribable.Subscribers {
-			if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
-				fe := apis.ErrMissingField("replyURI", "subscriberURI")
-				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
-			}
+	for i, subscriber := range cs.SubscribableSpec.Subscribers {
+		if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
+			fe := apis.ErrMissingField("replyURI", "subscriberURI")
+			fe.Details = "expected at least one of, got none"
+			errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
 		}
 	}
 
@@ -70,7 +68,7 @@ func (c *Channel) CheckImmutableFields(ctx context.Context, original *Channel) *
 		return nil
 	}
 
-	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "Subscribable")
+	ignoreArguments := cmpopts.IgnoreFields(ChannelSpec{}, "SubscribableSpec")
 	if diff, err := kmp.ShortDiff(original.Spec, c.Spec, ignoreArguments); err != nil {
 		return &apis.FieldError{
 			Message: "Failed to diff Channel",

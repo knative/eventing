@@ -20,10 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -66,24 +64,14 @@ type ChannelSpec struct {
 	// This is immutable after creation. Normally this is set by the Channel defaulter, not directly by the user.
 	ChannelTemplate *ChannelTemplateSpec `json:"channelTemplate"`
 
-	// Channel conforms to Duck type Subscribable.
-	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
+	// Channel conforms to ChannelableSpec
+	eventingduck.ChannelableSpec `json:",inline"`
 }
 
 // ChannelStatus represents the current state of a Channel.
 type ChannelStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
-
-	// Channel is Addressable. It currently exposes the endpoint as a
-	// fully-qualified URI which will distribute traffic over the
-	// provided targets from inside the cluster.
-	duckv1.AddressStatus `json:",inline"`
-
-	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	eventingduck.SubscribableStatus `json:",inline"`
+	// Channel conforms to ChannelableStatus
+	eventingduck.ChannelableStatus `json:",inline"`
 
 	// Channel is an ObjectReference to the Channel CRD backing this Channel.
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
@@ -97,14 +85,4 @@ type ChannelList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Channel `json:"items"`
-}
-
-// GetGroupVersionKind returns GroupVersionKind for Channels.
-func (dc *Channel) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("Channel")
-}
-
-// GetUntypedSpec returns the spec of the Channel.
-func (c *Channel) GetUntypedSpec() interface{} {
-	return c.Spec
 }

@@ -27,16 +27,6 @@ import (
 
 // +genduck
 
-// Subscribable is the schema for the subscribable portion of the spec
-// section of the resource.
-type Subscribable struct {
-	// This is the list of subscriptions for this subscribable.
-	// +patchMergeKey=uid
-	// +patchStrategy=merge
-	Subscribers []SubscriberSpec `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
-}
-
-// Subscribable is an Implementable "duck type".
 var _ duck.Implementable = (*Subscribable)(nil)
 
 // SubscriberSpec defines a single subscriber to a Subscribable.
@@ -56,7 +46,9 @@ type SubscriberSpec struct {
 	// +optional
 	ReplyURI *apis.URL `json:"replyUri,omitempty"`
 	// +optional
-	DeadLetterSinkURI *apis.URL `json:"deadLetterSinkUri,omitempty"`
+	// DeliverySpec contains options controlling the event delivery
+	// +optional
+	Delivery *DeliverySpec `json:"delivery,omitempty"`
 }
 
 // SubscriberStatus defines the status of a single subscriber to a Channel.
@@ -76,10 +68,10 @@ type SubscriberStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SubscribableType is a skeleton type wrapping Subscribable in the manner we expect resource writers
+// Subscribable is a skeleton type wrapping Subscribable in the manner we expect resource writers
 // defining compatible resources to embed it. We will typically use this type to deserialize
 // SubscribableType ObjectReferences and access the Subscription data.  This is not a real resource.
-type SubscribableType struct {
+type Subscribable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -94,7 +86,10 @@ type SubscribableType struct {
 
 // SubscribableSpec shows how we expect folks to embed Subscribable in their Spec field.
 type SubscribableSpec struct {
-	Subscribable `json:",inline"`
+	// This is the list of subscriptions for this subscribable.
+	// +patchMergeKey=uid
+	// +patchStrategy=merge
+	Subscribers []SubscriberSpec `json:"subscribers,omitempty" patchStrategy:"merge" patchMergeKey:"uid"`
 }
 
 // SubscribableStatus is the schema for the subscribable's status portion of the status
@@ -108,31 +103,28 @@ type SubscribableStatus struct {
 
 var (
 	// Verify SubscribableType resources meet duck contracts.
-	_ duck.Populatable = (*SubscribableType)(nil)
-	_ apis.Listable    = (*SubscribableType)(nil)
+	_ duck.Populatable = (*Subscribable)(nil)
+	_ apis.Listable    = (*Subscribable)(nil)
 )
 
 // GetFullType implements duck.Implementable
 func (s *Subscribable) GetFullType() duck.Populatable {
-	return &SubscribableType{}
+	return &Subscribable{}
 }
 
 // Populate implements duck.Populatable
-func (c *SubscribableType) Populate() {
-	c.Spec.Subscribable = Subscribable{
-		// Populate ALL fields
-		Subscribers: []SubscriberSpec{{
-			UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-			Generation:    1,
-			SubscriberURI: apis.HTTP("call1"),
-			ReplyURI:      apis.HTTP("sink2"),
-		}, {
-			UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-			Generation:    2,
-			SubscriberURI: apis.HTTP("call2"),
-			ReplyURI:      apis.HTTP("sink2"),
-		}},
-	}
+func (c *Subscribable) Populate() {
+	c.Spec.Subscribers = []SubscriberSpec{{
+		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: apis.HTTP("call1"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}, {
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    2,
+		SubscriberURI: apis.HTTP("call2"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}}
 	c.Status.Subscribers = // Populate ALL fields
 		[]SubscriberStatus{{
 			UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
@@ -148,16 +140,16 @@ func (c *SubscribableType) Populate() {
 }
 
 // GetListType implements apis.Listable
-func (c *SubscribableType) GetListType() runtime.Object {
-	return &SubscribableTypeList{}
+func (c *Subscribable) GetListType() runtime.Object {
+	return &SubscribableList{}
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SubscribableTypeList is a list of SubscribableType resources
-type SubscribableTypeList struct {
+type SubscribableList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []SubscribableType `json:"items"`
+	Items []Subscribable `json:"items"`
 }

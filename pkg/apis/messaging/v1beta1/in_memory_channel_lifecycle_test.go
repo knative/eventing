@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -85,9 +86,11 @@ func TestInMemoryChannelGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{
-					condReady,
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						condReady,
+					},
 				},
 			},
 		},
@@ -96,10 +99,12 @@ func TestInMemoryChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{
-					condReady,
-					condDispatcherNotReady,
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						condReady,
+						condDispatcherNotReady,
+					},
 				},
 			},
 		},
@@ -125,92 +130,102 @@ func TestInMemoryChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &InMemoryChannelStatus{},
 		want: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   InMemoryChannelConditionAddressable,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionChannelServiceReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionDispatcherReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionEndpointsReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionServiceReady,
-					Status: corev1.ConditionUnknown,
-				}},
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   InMemoryChannelConditionAddressable,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionChannelServiceReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionDispatcherReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionEndpointsReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionServiceReady,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
 			},
 		},
 	}, {
 		name: "one false",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   InMemoryChannelConditionDispatcherReady,
-					Status: corev1.ConditionFalse,
-				}},
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   InMemoryChannelConditionDispatcherReady,
+						Status: corev1.ConditionFalse,
+					}},
+				},
 			},
 		},
 		want: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   InMemoryChannelConditionAddressable,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionChannelServiceReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionDispatcherReady,
-					Status: corev1.ConditionFalse,
-				}, {
-					Type:   InMemoryChannelConditionEndpointsReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionServiceReady,
-					Status: corev1.ConditionUnknown,
-				}},
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   InMemoryChannelConditionAddressable,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionChannelServiceReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionDispatcherReady,
+						Status: corev1.ConditionFalse,
+					}, {
+						Type:   InMemoryChannelConditionEndpointsReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionServiceReady,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
 			},
 		},
 	}, {
 		name: "one true",
 		cs: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   InMemoryChannelConditionDispatcherReady,
-					Status: corev1.ConditionTrue,
-				}},
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   InMemoryChannelConditionDispatcherReady,
+						Status: corev1.ConditionTrue,
+					}},
+				},
 			},
 		},
 		want: &InMemoryChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   InMemoryChannelConditionAddressable,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionChannelServiceReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionDispatcherReady,
-					Status: corev1.ConditionTrue,
-				}, {
-					Type:   InMemoryChannelConditionEndpointsReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   InMemoryChannelConditionServiceReady,
-					Status: corev1.ConditionUnknown,
-				}},
+			ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   InMemoryChannelConditionAddressable,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionChannelServiceReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionDispatcherReady,
+						Status: corev1.ConditionTrue,
+					}, {
+						Type:   InMemoryChannelConditionEndpointsReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   InMemoryChannelConditionServiceReady,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
 			},
 		},
 	}}
@@ -325,39 +340,43 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 	}{
 		"empty string": {
 			want: &InMemoryChannelStatus{
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{
-							Type:   InMemoryChannelConditionAddressable,
-							Status: corev1.ConditionFalse,
-						},
-						// Note that Ready is here because when the condition is marked False, duck
-						// automatically sets Ready to false.
-						{
-							Type:   InMemoryChannelConditionReady,
-							Status: corev1.ConditionFalse,
+				ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   InMemoryChannelConditionAddressable,
+								Status: corev1.ConditionFalse,
+							},
+							// Note that Ready is here because when the condition is marked False, duck
+							// automatically sets Ready to false.
+							{
+								Type:   InMemoryChannelConditionReady,
+								Status: corev1.ConditionFalse,
+							},
 						},
 					},
+					AddressStatus: duckv1.AddressStatus{Address: &duckv1.Addressable{}},
 				},
-				AddressStatus: duckv1.AddressStatus{Address: &duckv1.Addressable{}},
 			},
 		},
 		"has domain": {
 			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &InMemoryChannelStatus{
-				AddressStatus: duckv1.AddressStatus{
-					Address: &duckv1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
+				ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: &apis.URL{
+								Scheme: "http",
+								Host:   "test-domain",
+							},
 						},
 					},
-				},
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{{
-						Type:   InMemoryChannelConditionAddressable,
-						Status: corev1.ConditionTrue,
-					}},
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{{
+							Type:   InMemoryChannelConditionAddressable,
+							Status: corev1.ConditionTrue,
+						}},
+					},
 				},
 			},
 		},

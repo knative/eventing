@@ -19,6 +19,7 @@ package v1beta1
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -51,6 +52,16 @@ const (
 	// Because this uses ExternalName, there are no endpoints to check.
 	InMemoryChannelConditionChannelServiceReady apis.ConditionType = "ChannelServiceReady"
 )
+
+// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
+func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("InMemoryChannel")
+}
+
+// GetUntypedSpec returns the spec of the InMemoryChannel.
+func (i *InMemoryChannel) GetUntypedSpec() interface{} {
+	return i.Spec
+}
 
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (imcs *InMemoryChannelStatus) GetCondition(t apis.ConditionType) *apis.Condition {

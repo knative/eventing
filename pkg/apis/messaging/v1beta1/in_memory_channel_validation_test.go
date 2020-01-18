@@ -34,24 +34,28 @@ func TestInMemoryChannelValidation(t *testing.T) {
 		name: "valid subscribers array",
 		cr: &InMemoryChannel{
 			Spec: InMemoryChannelSpec{
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: apis.HTTP("subscriberendpoint"),
-						ReplyURI:      apis.HTTP("resultendpoint"),
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{
+							SubscriberURI: apis.HTTP("subscriberendpoint"),
+							ReplyURI:      apis.HTTP("resultendpoint"),
+						}},
 					}},
-				}},
+			},
 		},
 		want: nil,
 	}, {
 		name: "empty subscriber at index 1",
 		cr: &InMemoryChannel{
 			Spec: InMemoryChannelSpec{
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{
-						SubscriberURI: apis.HTTP("subscriberendpoint"),
-						ReplyURI:      apis.HTTP("replyendpoint"),
-					}, {}},
-				}},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{
+							SubscriberURI: apis.HTTP("subscriberendpoint"),
+							ReplyURI:      apis.HTTP("replyendpoint"),
+						}, {}},
+					}},
+			},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
@@ -62,8 +66,10 @@ func TestInMemoryChannelValidation(t *testing.T) {
 		name: "2 empty subscribers",
 		cr: &InMemoryChannel{
 			Spec: InMemoryChannelSpec{
-				Subscribable: &eventingduck.Subscribable{
-					Subscribers: []eventingduck.SubscriberSpec{{}, {}},
+				ChannelableSpec: eventingduck.ChannelableSpec{
+					SubscribableSpec: eventingduck.SubscribableSpec{
+						Subscribers: []eventingduck.SubscriberSpec{{}, {}},
+					},
 				},
 			},
 		},

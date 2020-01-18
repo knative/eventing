@@ -27,41 +27,39 @@ import (
 func TestSubscribableGetFullType(t *testing.T) {
 	s := &Subscribable{}
 	switch s.GetFullType().(type) {
-	case *SubscribableType:
+	case *Subscribable:
 		// expected
 	default:
-		t.Errorf("expected GetFullType to return *SubscribableType, got %T", s.GetFullType())
+		t.Errorf("expected GetFullType to return *Subscribable, got %T", s.GetFullType())
 	}
 }
 
 func TestSubscribableGetListType(t *testing.T) {
-	c := &SubscribableType{}
+	c := &Subscribable{}
 	switch c.GetListType().(type) {
-	case *SubscribableTypeList:
+	case *SubscribableList:
 		// expected
 	default:
-		t.Errorf("expected GetListType to return *SubscribableTypeList, got %T", c.GetListType())
+		t.Errorf("expected GetListType to return *SubscribableList, got %T", c.GetListType())
 	}
 }
 
 func TestSubscribablePopulate(t *testing.T) {
-	got := &SubscribableType{}
+	got := &Subscribable{}
 
-	want := &SubscribableType{
+	want := &Subscribable{
 		Spec: SubscribableSpec{
-			Subscribable: Subscribable{
-				Subscribers: []SubscriberSpec{{
-					UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-					Generation:    1,
-					SubscriberURI: apis.HTTP("call1"),
-					ReplyURI:      apis.HTTP("sink2"),
-				}, {
-					UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-					Generation:    2,
-					SubscriberURI: apis.HTTP("call2"),
-					ReplyURI:      apis.HTTP("sink2"),
-				}},
-			},
+			Subscribers: []SubscriberSpec{{
+				UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+				Generation:    1,
+				SubscriberURI: apis.HTTP("call1"),
+				ReplyURI:      apis.HTTP("sink2"),
+			}, {
+				UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+				Generation:    2,
+				SubscriberURI: apis.HTTP("call2"),
+				ReplyURI:      apis.HTTP("sink2"),
+			}},
 		},
 		Status: SubscribableStatus{
 			// Populate ALL fields

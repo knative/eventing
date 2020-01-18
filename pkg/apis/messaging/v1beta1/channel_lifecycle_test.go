@@ -45,9 +45,11 @@ func TestChannelGetCondition(t *testing.T) {
 	}{{
 		name: "single condition",
 		cs: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{
-					condReady,
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						condReady,
+					},
 				},
 			},
 		},
@@ -56,9 +58,11 @@ func TestChannelGetCondition(t *testing.T) {
 	}, {
 		name: "unknown condition",
 		cs: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{
-					condReady,
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{
+						condReady,
+					},
 				},
 			},
 		},
@@ -84,65 +88,75 @@ func TestChannelInitializeConditions(t *testing.T) {
 		name: "empty",
 		cs:   &ChannelStatus{},
 		want: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   ChannelConditionAddressable,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   ChannelConditionBackingChannelReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   ChannelConditionReady,
-					Status: corev1.ConditionUnknown,
-				}},
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionBackingChannelReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
 			},
 		},
 	}, {
 		name: "one false",
 		cs: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   ChannelConditionAddressable,
-					Status: corev1.ConditionFalse,
-				}},
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionFalse,
+					}},
+				},
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   ChannelConditionAddressable,
-					Status: corev1.ConditionFalse,
-				}, {
-					Type:   ChannelConditionBackingChannelReady,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   ChannelConditionReady,
-					Status: corev1.ConditionUnknown,
-				}},
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionFalse,
+					}, {
+						Type:   ChannelConditionBackingChannelReady,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
 			},
 		},
 	}, {
 		name: "one true",
 		cs: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   ChannelConditionBackingChannelReady,
-					Status: corev1.ConditionTrue,
-				}},
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionBackingChannelReady,
+						Status: corev1.ConditionTrue,
+					}},
+				},
 			},
 		},
 		want: &ChannelStatus{
-			Status: duckv1.Status{
-				Conditions: []apis.Condition{{
-					Type:   ChannelConditionAddressable,
-					Status: corev1.ConditionUnknown,
-				}, {
-					Type:   ChannelConditionBackingChannelReady,
-					Status: corev1.ConditionTrue,
-				}, {
-					Type:   ChannelConditionReady,
-					Status: corev1.ConditionUnknown,
-				}},
+			ChannelableStatus: v1beta1.ChannelableStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionUnknown,
+					}, {
+						Type:   ChannelConditionBackingChannelReady,
+						Status: corev1.ConditionTrue,
+					}, {
+						Type:   ChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}},
+				},
 			},
 		},
 	}}
@@ -220,21 +234,23 @@ func TestChannelSetAddressable(t *testing.T) {
 	}{
 		"nil url": {
 			want: &ChannelStatus{
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{
-							Type:   ChannelConditionAddressable,
-							Status: corev1.ConditionFalse,
-						},
-						// Note that Ready is here because when the condition is marked False, duck
-						// automatically sets Ready to false.
-						{
-							Type:   ChannelConditionReady,
-							Status: corev1.ConditionFalse,
+				ChannelableStatus: v1beta1.ChannelableStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   ChannelConditionAddressable,
+								Status: corev1.ConditionFalse,
+							},
+							// Note that Ready is here because when the condition is marked False, duck
+							// automatically sets Ready to false.
+							{
+								Type:   ChannelConditionReady,
+								Status: corev1.ConditionFalse,
+							},
 						},
 					},
+					AddressStatus: duckv1.AddressStatus{},
 				},
-				AddressStatus: duckv1.AddressStatus{},
 			},
 		},
 		"has domain": {
@@ -245,20 +261,22 @@ func TestChannelSetAddressable(t *testing.T) {
 				},
 			},
 			want: &ChannelStatus{
-				AddressStatus: duckv1.AddressStatus{
-					Address: &duckv1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
+				ChannelableStatus: v1beta1.ChannelableStatus{
+					AddressStatus: duckv1.AddressStatus{
+						Address: &duckv1.Addressable{
+							URL: &apis.URL{
+								Scheme: "http",
+								Host:   "test-domain",
+							},
 						},
 					},
-				},
-				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{
-							Type:   ChannelConditionAddressable,
-							Status: corev1.ConditionTrue,
-						}},
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   ChannelConditionAddressable,
+								Status: corev1.ConditionTrue,
+							}},
+					},
 				},
 			},
 		},

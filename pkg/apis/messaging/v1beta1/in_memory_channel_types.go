@@ -19,10 +19,8 @@ package v1beta1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -62,24 +60,14 @@ var (
 // receiving events from this InMemoryChannel.
 // arguments for a Channel.
 type InMemoryChannelSpec struct {
-	// Channel conforms to Duck type Subscribable.
-	Subscribable *eventingduckv1beta1.Subscribable `json:"subscribable,omitempty"`
+	// Channel conforms to Duck type Channelable.
+	eventingduckv1beta1.ChannelableSpec `json:",inline"`
 }
 
 // ChannelStatus represents the current state of a Channel.
 type InMemoryChannelStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
-
-	// InMemoryChannel is Addressable. It currently exposes the endpoint as a
-	// fully-qualified URI which will distribute traffic over the
-	// provided targets from inside the cluster.
-	duckv1.AddressStatus `json:",inline"`
-
-	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	eventingduckv1beta1.SubscribableStatus `json:",inline"`
+	// Channel conforms to Duck type Channelable.
+	eventingduckv1beta1.ChannelableStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -90,14 +78,4 @@ type InMemoryChannelList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []InMemoryChannel `json:"items"`
-}
-
-// GetGroupVersionKind returns GroupVersionKind for InMemoryChannels
-func (imc *InMemoryChannel) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("InMemoryChannel")
-}
-
-// GetUntypedSpec returns the spec of the InMemoryChannel.
-func (i *InMemoryChannel) GetUntypedSpec() interface{} {
-	return i.Spec
 }
