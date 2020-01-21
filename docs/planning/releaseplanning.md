@@ -17,7 +17,7 @@ No later than midway through a release, start planning for the next release:
 - Community votes on issues anytime with thumbs-up or thumbs-down.
 
 One week before release:
-- WG leads and representatives from each contributing vendor will meet and finalize the plan with a list of issues they would 
+- WG leads and representatives from each contributing vendor will meet and finalize the plan with a list of issues they would
 like to have in the next release.
 - Try not to pack too much into the release. Keep the release backlog tight and focused.
 - All issues in the next release should be assigned to assist with headcount planning.
