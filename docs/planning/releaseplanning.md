@@ -23,7 +23,7 @@ like to have in the next release.
 - All issues in the next release should be assigned to assist with headcount planning.
 
 After release has started:
-- Have bi-weekly sprints. We recommend that everyone leverage sprints to bucket work rather than trying to push all features 
+- Have bi-weekly sprints. We recommend that everyone leverage sprints to bucket work rather than trying to push all features
 to the last 2 weeks of a release.
 
 ## Administrivia
