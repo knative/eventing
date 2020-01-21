@@ -26,6 +26,7 @@ webhooks:
       name: eventing-webhook
       namespace: knative-eventing
   failurePolicy: Fail
+  sideEffects: None
   name: webhook.eventing.knative.dev
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -42,6 +43,7 @@ webhooks:
       name: eventing-webhook
       namespace: knative-eventing
   failurePolicy: Fail
+  sideEffects: None
   name: validation.webhook.eventing.knative.dev
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -58,6 +60,7 @@ webhooks:
       name: eventing-webhook
       namespace: knative-eventing
   failurePolicy: Fail
+  sideEffects: None
   name: config.webhook.eventing.knative.dev
   namespaceSelector:
     matchExpressions:
@@ -78,6 +81,7 @@ webhooks:
             name: eventing-webhook
             namespace: knative-eventing
         failurePolicy: Fail
+        sideEffects: None
         name: sinkbindings.webhook.sources.knative.dev
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -94,6 +98,7 @@ webhooks:
         name: eventing-webhook
         namespace: knative-eventing
     failurePolicy: Fail
+    sideEffects: None
     name: legacysinkbindings.webhook.sources.knative.dev
 ---
 apiVersion: v1
