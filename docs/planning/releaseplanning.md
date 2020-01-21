@@ -28,7 +28,7 @@ to the last 2 weeks of a release.
 
 ## Administrivia
 
-- After the start of each release, un-label/re-label remaining issues from the proposed labels as necessary and delete the 
+- After the start of each release, un-label/re-label remaining issues from the proposed labels as necessary and delete the
 proposed label.
 - At the end of each release, un-label/re-label issues that were not closed in the release so that only issued that were
 completed remain in the release.
