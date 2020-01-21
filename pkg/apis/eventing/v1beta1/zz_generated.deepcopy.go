@@ -58,13 +58,9 @@ func (in *TriggerFilter) DeepCopyInto(out *TriggerFilter) {
 	*out = *in
 	if in.Attributes != nil {
 		in, out := &in.Attributes, &out.Attributes
-		*out = new(TriggerFilterAttributes)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make(map[string]string, len(*in))
-			for key, val := range *in {
-				(*out)[key] = val
-			}
+		*out = make(TriggerFilterAttributes, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 	return

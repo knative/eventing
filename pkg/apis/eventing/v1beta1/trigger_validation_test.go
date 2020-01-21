@@ -31,7 +31,7 @@ import (
 var (
 	validEmptyFilter      = &TriggerFilter{}
 	validAttributesFilter = &TriggerFilter{
-		Attributes: &TriggerFilterAttributes{
+		Attributes: TriggerFilterAttributes{
 			"type":   "other_type",
 			"source": "other_source",
 		},
@@ -277,24 +277,21 @@ func TestTriggerSpecValidation(t *testing.T) {
 			return fe
 		}(),
 	}, {
-		name: "missing attributes keys",
+		name: "missing attributes keys, match all",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
 			Filter: &TriggerFilter{
-				Attributes: &TriggerFilterAttributes{},
+				Attributes: TriggerFilterAttributes{},
 			},
 			Subscriber: validSubscriber,
 		},
-		want: &apis.FieldError{
-			Message: "At least one filter attribute must be specified",
-			Paths:   []string{"filter.attributes"},
-		},
+		want: &apis.FieldError{},
 	}, {
 		name: "invalid attribute name, start with number",
 		ts: &TriggerSpec{
 			Broker: "test_broker",
 			Filter: &TriggerFilter{
-				Attributes: &TriggerFilterAttributes{
+				Attributes: TriggerFilterAttributes{
 					"0invalid": "my-value",
 				},
 			},
@@ -309,7 +306,7 @@ func TestTriggerSpecValidation(t *testing.T) {
 		ts: &TriggerSpec{
 			Broker: "test_broker",
 			Filter: &TriggerFilter{
-				Attributes: &TriggerFilterAttributes{
+				Attributes: TriggerFilterAttributes{
 					"invALID": "my-value",
 				},
 			},

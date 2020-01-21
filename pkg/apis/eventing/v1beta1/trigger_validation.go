@@ -49,22 +49,14 @@ func (ts *TriggerSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if ts.Filter != nil && ts.Filter.Attributes != nil {
-		if len(*ts.Filter.Attributes) == 0 {
-			fe := &apis.FieldError{
-				Message: "At least one filter attribute must be specified",
-				Paths:   []string{"filter.attributes"},
-			}
-			errs = errs.Also(fe)
-		} else {
-			for attr := range map[string]string(*ts.Filter.Attributes) {
-				if !validAttributeName.MatchString(attr) {
-					fe := &apis.FieldError{
-						Message: fmt.Sprintf("Invalid attribute name: %q", attr),
-						Paths:   []string{"filter.attributes"},
-					}
-					errs = errs.Also(fe)
+	if ts.Filter != nil {
+		for attr := range map[string]string(ts.Filter.Attributes) {
+			if !validAttributeName.MatchString(attr) {
+				fe := &apis.FieldError{
+					Message: fmt.Sprintf("Invalid attribute name: %q", attr),
+					Paths:   []string{"filter.attributes"},
 				}
+				errs = errs.Also(fe)
 			}
 		}
 	}

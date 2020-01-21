@@ -26,7 +26,7 @@ import (
 
 const (
 	// DependencyAnnotation is the annotation key used to mark the sources that the Trigger depends on.
-	// This will be used when the kn client creates an importer and trigger pair for the user such that the trigger only receives events produced by the paired importer.
+	// This will be used when the kn client creates a source and trigger pair for the user such that the trigger only receives events produced by the paired source.
 	DependencyAnnotation = "knative.dev/dependency"
 	// InjectionAnnotation is the annotation key used to enable knative eventing injection for a namespace and automatically create a default broker.
 	// This will be used when the client creates a trigger paired with default broker and the default broker doesn't exist in the namespace
@@ -91,7 +91,7 @@ type TriggerFilter struct {
 	// Nested context attributes are not supported as keys. Only string values are supported.
 	//
 	// +optional
-	Attributes *TriggerFilterAttributes `json:"attributes,omitempty"`
+	Attributes TriggerFilterAttributes `json:"attributes,omitempty"`
 }
 
 // TriggerFilterAttributes is a map of context attribute names to values for
@@ -107,7 +107,7 @@ type TriggerStatus struct {
 	duckv1.Status `json:",inline"`
 
 	// SubscriberURI is the resolved URI of the receiver for this Trigger.
-	SubscriberURI *apis.URL `json:"subscriberURI,omitempty"`
+	SubscriberURI *apis.URL `json:"subscriberUri,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
