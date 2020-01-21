@@ -151,11 +151,6 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		return fmt.Errorf("service account '%s': %v", saName, err)
 	}
 
-	// Tell tracker to reconcile this namespace whenever the Service Account changes.
-	if err = r.tracker.Track(utils.ObjectRef(sa, serviceAccountGVK), ns); err != nil {
-		return fmt.Errorf("track service account '%s': %v", sa.Name, err)
-	}
-
 	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %v", rbName, err)

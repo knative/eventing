@@ -20,10 +20,12 @@ import (
 	"context"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
@@ -78,9 +80,11 @@ func NewController(
 	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	// Watch all the resources that this reconciler reconciles.
-	serviceAccountInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
-	))
+	serviceAccountInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
 	roleBindingInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
 	))
