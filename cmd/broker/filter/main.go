@@ -50,7 +50,7 @@ var (
 )
 
 const (
-	defaultMerticsPort = 9092
+	defaultMetricsPort = 9092
 	component          = "broker_filter"
 )
 
@@ -156,7 +156,7 @@ func updateExporterFromConfigMap(component string, logger *zap.SugaredLogger) fu
 			Domain:         domain,
 			Component:      component,
 			ConfigMap:      configMap.Data,
-			PrometheusPort: defaultMerticsPort,
+			PrometheusPort: defaultMetricsPort,
 		}, logger)
 	}
 }

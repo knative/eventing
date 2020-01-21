@@ -63,7 +63,7 @@ const (
 	defaultMaxIdleConnections              = 1000
 	defaultMaxIdleConnectionsPerHost       = 1000
 	defaultTTL                       int32 = 255
-	defaultMerticsPort                     = 9092
+	defaultMetricsPort                     = 9092
 	component                              = "broker_ingress"
 )
 
@@ -195,7 +195,7 @@ func updateExporterFromConfigMap(component string, logger *zap.SugaredLogger) fu
 			Domain:         domain,
 			Component:      component,
 			ConfigMap:      configMap.Data,
-			PrometheusPort: defaultMerticsPort,
+			PrometheusPort: defaultMetricsPort,
 		}, logger)
 	}
 }
