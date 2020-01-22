@@ -222,40 +222,6 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 
 	b.Status.SetAddress(ingressStatus.URL)
-
-	// filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
-	// if err != nil {
-	// 	logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
-	// 	b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
-	// 	return err
-	// }
-	// _, err = r.reconcileFilterService(ctx, b)
-	// if err != nil {
-	// 	logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
-	// 	b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
-	// 	return err
-	// }
-	// b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
-
-	// ingressDeployment, err := r.reconcileIngressDeployment(ctx, b, triggerChan)
-	// if err != nil {
-	// 	logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
-	// 	b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
-	// 	return err
-	// }
-
-	// svc, err := r.reconcileIngressService(ctx, b)
-	// if err != nil {
-	// 	logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
-	// 	b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
-	// 	return err
-	// }
-	// b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
-	// b.Status.SetAddress(&apis.URL{
-	// 	Scheme: "http",
-	// 	Host:   names.ServiceHostName(svc.Name, svc.Namespace),
-	// })
-
 	return nil
 }
 
