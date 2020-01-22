@@ -36,14 +36,6 @@ func (c *FakeMessagingV1alpha1) InMemoryChannels(namespace string) v1alpha1.InMe
 	return &FakeInMemoryChannels{c, namespace}
 }
 
-func (c *FakeMessagingV1alpha1) Parallels(namespace string) v1alpha1.ParallelInterface {
-	return &FakeParallels{c, namespace}
-}
-
-func (c *FakeMessagingV1alpha1) Sequences(namespace string) v1alpha1.SequenceInterface {
-	return &FakeSequences{c, namespace}
-}
-
 func (c *FakeMessagingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {
 	return &FakeSubscriptions{c, namespace}
 }

@@ -28,10 +28,6 @@ type Interface interface {
 	Channels() ChannelInformer
 	// InMemoryChannels returns a InMemoryChannelInformer.
 	InMemoryChannels() InMemoryChannelInformer
-	// Parallels returns a ParallelInformer.
-	Parallels() ParallelInformer
-	// Sequences returns a SequenceInformer.
-	Sequences() SequenceInformer
 	// Subscriptions returns a SubscriptionInformer.
 	Subscriptions() SubscriptionInformer
 }
@@ -55,16 +51,6 @@ func (v *version) Channels() ChannelInformer {
 // InMemoryChannels returns a InMemoryChannelInformer.
 func (v *version) InMemoryChannels() InMemoryChannelInformer {
 	return &inMemoryChannelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Parallels returns a ParallelInformer.
-func (v *version) Parallels() ParallelInformer {
-	return &parallelInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Sequences returns a SequenceInformer.
-func (v *version) Sequences() SequenceInformer {
-	return &sequenceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Subscriptions returns a SubscriptionInformer.
