@@ -595,7 +595,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 			},
@@ -614,7 +614,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -631,7 +631,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewServingService(filterServiceName, testNS, filterRevisionName,
@@ -648,7 +648,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -674,7 +674,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewServingService(filterServiceName, testNS, filterRevisionName,
@@ -701,7 +701,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
@@ -719,7 +719,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithBrokerGeneration(brokerGeneration),
 				),
@@ -755,7 +755,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithBrokerGeneration(brokerGeneration),
 					WithBrokerStatusObservedGeneration(brokerGeneration),
@@ -775,7 +775,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewServingService(filterServiceName, testNS, filterRevisionName,
@@ -798,7 +798,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerAnnotations(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
+					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),

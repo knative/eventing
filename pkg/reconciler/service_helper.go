@@ -345,9 +345,12 @@ func (h *ServiceHelper) reconcileService(ctx context.Context, svc *corev1.Servic
 }
 
 func (h *ServiceHelper) useServingService(ctx context.Context, owner kmeta.OwnerRefable) (bool, error) {
-	if v, ok := owner.GetObjectMeta().GetAnnotations()["eventing.knative.dev/serviceFlavor"]; !ok && v != "knative" {
+	if v, ok := owner.GetObjectMeta().GetLabels()["eventing.knative.dev/serviceFlavor"]; !ok && v != "knative" {
 		return false, nil
 	}
+
+	// TODO: changing the label after broker creation is dangerous.
+	// In the webhook we should make it immutable.
 
 	if err := h.APIChecker.Exists(servingv1.SchemeGroupVersion); err != nil {
 		if strings.Contains(err.Error(), "server does not support API version") {

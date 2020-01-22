@@ -145,7 +145,7 @@ func TestAllCases(t *testing.T) {
 
 func TestAllCasesWithServingServiceBroker(t *testing.T) {
 	b := makeBroker()
-	b.Annotations = map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}
+	b.Labels = map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}
 	testAllCases(t, b, makeBrokerFilterServingService())
 }
 
