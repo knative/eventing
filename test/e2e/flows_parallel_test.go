@@ -35,6 +35,10 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
+type branchConfig struct {
+	filter bool
+}
+
 func TestFlowsParallel(t *testing.T) {
 	const (
 		senderPodName = "e2e-parallel"
