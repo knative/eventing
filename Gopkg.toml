@@ -124,7 +124,7 @@ required = [
 
 [[constraint]]
   name = "github.com/tsenart/vegeta"
-  version = "master"
+  branch = "master"
 
 [[constraint]]
   name = "contrib.go.opencensus.io/exporter/ocagent"
