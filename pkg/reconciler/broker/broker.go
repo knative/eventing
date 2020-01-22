@@ -274,22 +274,6 @@ func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Br
 	return r.serviceHelper.ReconcileService(ctx, b, *svcArgs)
 }
 
-// reconcileFilterDeployment reconciles Broker's 'b' filter deployment.
-// func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
-// 	expected := resources.MakeFilterDeployment(&resources.FilterArgs{
-// 		Broker:             b,
-// 		Image:              r.filterImage,
-// 		ServiceAccountName: r.filterServiceAccountName,
-// 	})
-// 	return r.reconcileDeployment(ctx, expected)
-// }
-
-// // reconcileFilterService reconciles Broker's 'b' filter service.
-// func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
-// 	expected := resources.MakeFilterService(b)
-// 	return r.reconcileService(ctx, expected)
-// }
-
 func newTriggerChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
 	return resources.NewChannel("trigger", b, TriggerChannelLabels(b.Name))
 }
@@ -350,73 +334,3 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }
-
-// reconcileDeployment reconciles the K8s Deployment 'd'.
-// func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
-// 	current, err := r.deploymentLister.Deployments(d.Namespace).Get(d.Name)
-// 	if apierrs.IsNotFound(err) {
-// 		current, err = r.KubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		return current, nil
-// 	} else if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
-// 		// Don't modify the informers copy.
-// 		desired := current.DeepCopy()
-// 		desired.Spec = d.Spec
-// 		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 	}
-// 	return current, nil
-// }
-
-// // reconcileService reconciles the K8s Service 'svc'.
-// func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
-// 	current, err := r.serviceLister.Services(svc.Namespace).Get(svc.Name)
-// 	if apierrs.IsNotFound(err) {
-// 		current, err = r.KubeClientSet.CoreV1().Services(svc.Namespace).Create(svc)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		return current, nil
-// 	} else if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// spec.clusterIP is immutable and is set on existing services. If we don't set this to the same value, we will
-// 	// encounter an error while updating.
-// 	svc.Spec.ClusterIP = current.Spec.ClusterIP
-// 	if !equality.Semantic.DeepDerivative(svc.Spec, current.Spec) {
-// 		// Don't modify the informers copy.
-// 		desired := current.DeepCopy()
-// 		desired.Spec = svc.Spec
-// 		current, err = r.KubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 	}
-// 	return current, nil
-// }
-
-// reconcileIngressDeploymentCRD reconciles the Ingress Deployment for a CRD backed channel.
-// func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
-// 	expected := resources.MakeIngress(&resources.IngressArgs{
-// 		Broker:             b,
-// 		Image:              r.ingressImage,
-// 		ServiceAccountName: r.ingressServiceAccountName,
-// 		ChannelAddress:     c.Status.Address.GetURL().Host,
-// 	})
-// 	return r.reconcileDeployment(ctx, expected)
-// }
-
-// // reconcileIngressService reconciles the Ingress Service.
-// func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
-// 	expected := resources.MakeIngressService(b)
-// 	return r.reconcileService(ctx, expected)
-// }
