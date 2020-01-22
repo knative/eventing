@@ -40,6 +40,7 @@ rules:
       - sources.knative.dev
     resources:
       - apiserversources
+      - pingsources
     verbs:
       - get
       - list
