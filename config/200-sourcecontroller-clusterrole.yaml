@@ -51,6 +51,9 @@ rules:
       - "apiserversources"
       - "apiserversources/status"
       - "apiserversources/finalizers"
+      - "pingsources"
+      - "pingsources/status"
+      - "pingsources/finalizers"
     verbs: *everything
 
   # Legacy Source resources and statuses we care about.
