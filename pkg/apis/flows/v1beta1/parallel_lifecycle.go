@@ -17,10 +17,7 @@
 package v1beta1
 
 import (
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
@@ -29,12 +26,6 @@ import (
 )
 
 var pParallelCondSet = apis.NewLivingConditionSet(ParallelConditionReady, ParallelConditionChannelsReady, ParallelConditionSubscriptionsReady, ParallelConditionAddressable)
-
-const (
-	// StatusConditionTypeDeprecated is the status.conditions.type used to provide deprecation
-	// warnings.
-	StatusConditionTypeDeprecated = "Deprecated"
-)
 
 const (
 	// ParallelConditionReady has status True when all subconditions below have been set to True.
@@ -100,7 +91,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 			},
 		}
 
-		readyCondition := s.Status.GetCondition(messagingv1beta1.SubscriptionConditionReady)
+		readyCondition := s.Status.GetTopLevelCondition()
 		if readyCondition != nil {
 			ps.BranchStatuses[i].SubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
@@ -206,36 +197,4 @@ func (ps *ParallelStatus) setAddress(address *pkgduckv1.Addressable) {
 	} else {
 		pParallelCondSet.Manage(ps).MarkTrue(ParallelConditionAddressable)
 	}
-}
-
-// MarkDeprecated adds a warning condition that this object's spec is using deprecated fields
-// and will stop working in the future. Note that this does not affect the Ready condition.
-func (ps *ParallelStatus) MarkDestinationDeprecatedRef(reason, msg string) {
-	dc := apis.Condition{
-		Type:               StatusConditionTypeDeprecated,
-		Reason:             reason,
-		Status:             corev1.ConditionTrue,
-		Severity:           apis.ConditionSeverityWarning,
-		Message:            msg,
-		LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(time.Now())},
-	}
-	for i, c := range ps.Conditions {
-		if c.Type == dc.Type {
-			ps.Conditions[i] = dc
-			return
-		}
-	}
-	ps.Conditions = append(ps.Conditions, dc)
-}
-
-// ClearDeprecated removes the StatusConditionTypeDeprecated warning condition. Note that this does not
-// affect the Ready condition.
-func (ps *ParallelStatus) ClearDeprecated() {
-	conds := make([]apis.Condition, 0, len(ps.Conditions))
-	for _, c := range ps.Conditions {
-		if c.Type != StatusConditionTypeDeprecated {
-			conds = append(conds, c)
-		}
-	}
-	ps.Conditions = conds
 }
