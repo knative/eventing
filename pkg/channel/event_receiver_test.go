@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go"
@@ -52,6 +53,10 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 		},
 		"invalid host name": {
 			host:     "no-dot",
+			expected: http.StatusInternalServerError,
+		},
+		"unparseable host name": {
+			host:     ":abc.def.ghi",
 			expected: http.StatusInternalServerError,
 		},
 		"unknown channel error": {
@@ -156,5 +161,19 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 				t.Fatalf("Unexpected status code. Expected %v. Actual %v", tc.expected, eventResponse.Status)
 			}
 		})
+	}
+}
+
+func TestEventReceiver_ParseChannel(t *testing.T) {
+	url, _ := url.Parse("test-channel.test-namespace.svc.")
+	c, err := ParseChannel(*url)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if c.Name != "test-channel" {
+		t.Errorf("Expected Name: test-channel. Got: %q", c.Name)
+	}
+	if c.Namespace != "test-namespace" {
+		t.Errorf("Expected Name: test-namespace. Got: %q", c.Namespace)
 	}
 }
