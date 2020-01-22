@@ -41,6 +41,23 @@ var (
 	}
 )
 
+func TestPingSource_GetGroupVersionKind(t *testing.T) {
+	src := v1alpha1.PingSource{}
+	gvk := src.GetGroupVersionKind()
+
+	if gvk.Kind != "PingSource" {
+		t.Errorf("Should be PingSource.")
+	}
+}
+
+func TestPingSource_PingSourceSource(t *testing.T) {
+	cePingSource := v1alpha1.PingSourceSource("ns1", "job1")
+
+	if cePingSource != "/apis/v1/namespaces/ns1/pingsources/job1" {
+		t.Errorf("Should be '/apis/v1/namespaces/ns1/pingsources/job1'")
+	}
+}
+
 func TestPingSourceStatusIsReady(t *testing.T) {
 	tests := []struct {
 		name string
@@ -420,6 +437,11 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+			}
+
+			got = test.s.GetTopLevelCondition()
+			if test.want != got {
+				t.Errorf("unexpected top level condition: want %v, got %v", test.want, got)
 			}
 		})
 	}

@@ -22,6 +22,8 @@ package v1alpha1
 
 import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	apis "knative.dev/pkg/apis"
+	v1 "knative.dev/pkg/apis/duck/v1"
 	v1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
@@ -265,7 +267,7 @@ func (in *PingSourceSpec) DeepCopyInto(out *PingSourceSpec) {
 	*out = *in
 	if in.Sink != nil {
 		in, out := &in.Sink, &out.Sink
-		*out = new(v1beta1.Destination)
+		*out = new(v1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
 	out.Resources = in.Resources
@@ -286,6 +288,11 @@ func (in *PingSourceSpec) DeepCopy() *PingSourceSpec {
 func (in *PingSourceStatus) DeepCopyInto(out *PingSourceStatus) {
 	*out = *in
 	in.Status.DeepCopyInto(&out.Status)
+	if in.SinkURI != nil {
+		in, out := &in.SinkURI, &out.SinkURI
+		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

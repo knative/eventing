@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/duck"
@@ -51,9 +51,34 @@ var PingSourceCondSet = apis.NewLivingConditionSet(
 	PingSourceConditionSinkProvided,
 	PingSourceConditionDeployed)
 
+const (
+	// PingSourceEventType is the default PingSource CloudEvent type.
+	PingSourceEventType = "dev.knative.sources.ping"
+)
+
+// PingSourceSource returns the PingSource CloudEvent source.
+func PingSourceSource(namespace, name string) string {
+	return fmt.Sprintf("/apis/v1/namespaces/%s/pingsources/%s", namespace, name)
+}
+
+// GetUntypedSpec returns the spec of the PingSource.
+func (s *PingSource) GetUntypedSpec() interface{} {
+	return s.Spec
+}
+
+// GetGroupVersionKind returns the GroupVersionKind.
+func (s *PingSource) GetGroupVersionKind() schema.GroupVersionKind {
+	return SchemeGroupVersion.WithKind("PingSource")
+}
+
 // GetCondition returns the condition currently associated with the given type, or nil.
 func (s *PingSourceStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return PingSourceCondSet.Manage(s).GetCondition(t)
+}
+
+// GetTopLevelCondition returns the top level Condition.
+func (ps *PingSourceStatus) GetTopLevelCondition() *apis.Condition {
+	return PingSourceCondSet.Manage(ps).GetTopLevelCondition()
 }
 
 // IsReady returns true if the resource is ready overall.
@@ -84,22 +109,6 @@ func (s *PingSourceStatus) MarkSink(uri string) {
 		PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionSinkProvided)
 	} else {
 		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")
-	}
-}
-
-// MarkSinkWarnDeprecated sets the condition that the source has a sink configured and warns ref is deprecated.
-func (s *PingSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
-	s.SinkURI = uri
-	if len(uri) > 0 {
-		c := apis.Condition{
-			Type:     PingSourceConditionSinkProvided,
-			Status:   corev1.ConditionTrue,
-			Severity: apis.ConditionSeverityError,
-			Message:  "Using deprecated object ref fields when specifying spec.sink. Update to spec.sink.ref. These will be removed in the future.",
-		}
-		apiserverCondSet.Manage(s).SetCondition(c)
-	} else {
-		apiserverCondSet.Manage(s).MarkUnknown(PingSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")
 	}
 }
 

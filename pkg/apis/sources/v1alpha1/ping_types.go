@@ -17,15 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-
 	"knative.dev/pkg/apis"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -55,16 +51,6 @@ var (
 	_ apis.HasSpec = (*PingSource)(nil)
 )
 
-const (
-	// PingSourceEventType is the default PingSource CloudEvent type.
-	PingSourceEventType = "dev.knative.sources.ping"
-)
-
-// PingSourceSource returns the PingSource CloudEvent source.
-func PingSourceSource(namespace, name string) string {
-	return fmt.Sprintf("/apis/v1/namespaces/%s/pingsources/%s", namespace, name)
-}
-
 type PingRequestsSpec struct {
 	ResourceCPU    string `json:"cpu,omitempty"`
 	ResourceMemory string `json:"memory,omitempty"`
@@ -89,8 +75,8 @@ type PingSourceSpec struct {
 	// Data is the data posted to the target function.
 	Data string `json:"data,omitempty"`
 
-	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
-	Sink *duckv1beta1.Destination `json:"sink,omitempty"`
+	// Sink is a reference to an object that will resolve to a uri to use as the sink.
+	Sink *duckv1.Destination `json:"sink,omitempty"`
 
 	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
 	// Adapter Deployment.
@@ -98,11 +84,6 @@ type PingSourceSpec struct {
 
 	// Resource limits and Request specifications of the Receive Adapter Deployment
 	Resources PingResourceSpec `json:"resources,omitempty"`
-}
-
-// GetGroupVersionKind returns the GroupVersionKind.
-func (s *PingSource) GetGroupVersionKind() schema.GroupVersionKind {
-	return SchemeGroupVersion.WithKind("PingSource")
 }
 
 // PingSourceStatus defines the observed state of PingSource.
@@ -114,7 +95,7 @@ type PingSourceStatus struct {
 
 	// SinkURI is the current active sink URI that has been configured for the PingSource.
 	// +optional
-	SinkURI string `json:"sinkUri,omitempty"`
+	SinkURI *apis.URL `json:"sinkUri,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -124,9 +105,4 @@ type PingSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PingSource `json:"items"`
-}
-
-// GetUntypedSpec returns the spec of the PingSource.
-func (c *PingSource) GetUntypedSpec() interface{} {
-	return c.Spec
 }
