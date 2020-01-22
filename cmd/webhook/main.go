@@ -60,6 +60,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 
 	// For group sources.knative.dev.
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
+	sourcesv1alpha1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha1.PingSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 
 	// For group sources.eventing.knative.dev.

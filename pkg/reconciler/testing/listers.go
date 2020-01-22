@@ -152,6 +152,10 @@ func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister
 	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha1.ApiServerSource{}))
 }
 
+func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
+	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1alpha1.PingSource{}))
+}
+
 func (l *Listers) GetLegacyCronJobSourceLister() legacysourcelisters.CronJobSourceLister {
 	return legacysourcelisters.NewCronJobSourceLister(l.indexerFor(&legacysourcesv1alpha1.CronJobSource{}))
 }
