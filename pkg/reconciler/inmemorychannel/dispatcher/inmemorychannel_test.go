@@ -25,7 +25,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	clientgotesting "k8s.io/client-go/testing"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
@@ -59,16 +58,6 @@ func TestAllCases(t *testing.T) {
 		Generation:    2,
 		SubscriberURI: apis.HTTP("call2"),
 		ReplyURI:      apis.HTTP("sink2"),
-	}}
-
-	subscriberStatuses := []duckv1alpha1.SubscriberStatus{{
-		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 1,
-		Ready:              "True",
-	}, {
-		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 2,
-		Ready:              "True",
 	}}
 
 	imcKey := testNS + "/" + imcName
@@ -107,17 +96,6 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
 					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
 			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentReady(),
-					reconciletesting.WithInMemoryChannelServiceReady(),
-					reconciletesting.WithInMemoryChannelEndpointsReady(),
-					reconciletesting.WithInMemoryChannelChannelServiceReady(),
-					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
-					reconciletesting.WithInMemoryChannelStatusSubscribers(subscriberStatuses),
-					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
-			}},
 			WantErr: false,
 		}, {},
 	}

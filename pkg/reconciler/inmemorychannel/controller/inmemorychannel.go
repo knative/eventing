@@ -31,14 +31,16 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/controller"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/controller"
 )
 
 const (
@@ -212,6 +214,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		Host:   fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()),
 	})
 
+	if subscribableStatus := r.createSubscribableStatus(imc.Spec.Subscribable); subscribableStatus != nil {
+		imc.Status.SubscribableTypeStatus.SetSubscribableTypeStatus(*subscribableStatus)
+	}
+
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
 	return nil
@@ -251,6 +257,24 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.
 		return nil, err
 	}
 	return svc, nil
+}
+
+func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable) *eventingduck.SubscribableStatus {
+	if subscribable == nil {
+		return nil
+	}
+	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
+	for _, sub := range subscribable.Subscribers {
+		status := eventingduck.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
+		}
+		subscriberStatus = append(subscriberStatus, status)
+	}
+	return &eventingduck.SubscribableStatus{
+		Subscribers: subscriberStatus,
+	}
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {
