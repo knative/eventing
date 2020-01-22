@@ -151,27 +151,17 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		return fmt.Errorf("service account '%s': %v", saName, err)
 	}
 
-	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
+	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %v", rbName, err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
-	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
-		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
 	}
 
 	// Reconcile the RoleBinding allowing read access to the shared configmaps.
 	// Note this RoleBinding is created in the system namespace and points to a
 	// subject in the Broker's namespace.
-	rb, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(resources.ConfigRoleBindingName(sa.Name, ns.Name), system.Namespace(), sa, configClusterRoleName))
+	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(resources.ConfigRoleBindingName(sa.Name, ns.Name), system.Namespace(), sa, configClusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %v", rbName, err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
-	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
-		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
 	}
 
 	// If the Broker pull secret has not been specified, then nothing to copy.

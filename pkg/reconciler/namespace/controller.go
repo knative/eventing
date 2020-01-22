@@ -85,12 +85,15 @@ func NewController(
 			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
-	roleBindingInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
-	))
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
-	))
-
+	roleBindingInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
+	brokerInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
 	return impl
 }
