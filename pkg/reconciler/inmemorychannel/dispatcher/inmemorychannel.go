@@ -20,16 +20,16 @@ import (
 	"context"
 	"fmt"
 
-	"knative.dev/eventing/pkg/inmemorychannel"
-
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
@@ -39,6 +39,7 @@ import (
 type Reconciler struct {
 	*reconciler.Base
 
+	configStore             *channel.EventDispatcherConfigStore
 	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
@@ -120,8 +121,9 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 		}
 		if c.Spec.Subscribable != nil {
 			channelConfig.FanoutConfig = fanout.Config{
-				AsyncHandler:  true,
-				Subscriptions: c.Spec.Subscribable.Subscribers,
+				AsyncHandler:     true,
+				Subscriptions:    c.Spec.Subscribable.Subscribers,
+				DispatcherConfig: r.configStore.GetConfig(),
 			}
 		}
 		cc = append(cc, channelConfig)
