@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,10 +23,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
-
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 const (
@@ -36,20 +35,20 @@ const (
 
 func TestNewDispatcher(t *testing.T) {
 	os.Setenv(system.NamespaceEnvKey, "knative-testing")
-	imc := &v1alpha1.InMemoryChannel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      imcName,
-			Namespace: testNS,
-		},
-	}
+
 	args := DispatcherArgs{
-		ServiceAccountName: saName,
-		DispatcherName:     serviceName,
-		Image:              imageName,
+		ServiceAccountName:  saName,
+		DispatcherName:      serviceName,
+		DispatcherNamespace: testNS,
+		Image:               imageName,
 	}
 
 	replicas := int32(1)
 	want := &v1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployments",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNS,
 			Name:      serviceName,
@@ -73,16 +72,6 @@ func TestNewDispatcher(t *testing.T) {
 								Name:  system.NamespaceEnvKey,
 								Value: "knative-testing",
 							}, {
-								Name: "NAMESPACE",
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										FieldPath: "metadata.namespace",
-									},
-								},
-							}, {
-								Name:  "SCOPE",
-								Value: "namespace",
-							}, {
 								Name:  "METRICS_DOMAIN",
 								Value: "knative.dev/inmemorychannel-dispatcher",
 							}, {
@@ -91,7 +80,24 @@ func TestNewDispatcher(t *testing.T) {
 							}, {
 								Name:  "CONFIG_LOGGING_NAME",
 								Value: "config-logging",
+							}, {
+								Name: "NAMESPACE",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.namespace",
+									},
+								},
 							}},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2200m"),
+									corev1.ResourceMemory: resource.MustParse("2048Mi"),
+								},
+							},
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
@@ -103,7 +109,7 @@ func TestNewDispatcher(t *testing.T) {
 		},
 	}
 
-	got := MakeDispatcher(imc, args)
+	got := MakeDispatcher("namespace", args)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)

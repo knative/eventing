@@ -128,19 +128,31 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
-			Name: "deployment does not exist",
+			Name: "deployment does not exist, should be created.",
 			Key:  imcKey,
 			Objects: []runtime.Object{
+				makeReadyEndpoints(),
 				reconciletesting.NewInMemoryChannel(imcName, testNS),
 			},
-			WantErr: true,
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeDispatcherDeployment("cluster", reconciletesting.NewInMemoryChannel(imcName, testNS)),
+				makeDispatcherService(testNS),
+				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress),
+				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: deployment.apps \"imc-dispatcher\" not found"),
+				Eventf(corev1.EventTypeNormal, "DispatcherDeploymentCreated", "Dispatcher Deployment created"),
+				Eventf(corev1.EventTypeNormal, "DispatcherServiceCreated", "Dispatcher Service created"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "the status of deployment is false",
@@ -193,21 +205,30 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
-			Name: "Service does not exist",
+			Name: "Service does not exist, should be created",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
+				makeReadyEndpoints(),
 				reconciletesting.NewInMemoryChannel(imcName, testNS),
 			},
-			WantErr: true,
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeDispatcherService(testNS),
+				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelDeploymentReady(),
-					reconciletesting.WithInMemoryChannelServicetNotReady("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: service \"imc-dispatcher\" not found"),
+				Eventf(corev1.EventTypeNormal, "DispatcherServiceCreated", "Dispatcher Service created"),
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "Endpoints does not exist",
@@ -388,8 +409,9 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
-			scope:                 scopeCluster,
-			dispatcherNamespace:   testNS,
+			dispatcherScope:       scopeCluster,
+			systemNamespace:       testNS,
+			dispatcherImage:       imageName,
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO: FIx
 			inmemorychannelInformer: nil,
@@ -418,8 +440,8 @@ func TestInNamespace(t *testing.T) {
 			WantCreates: []runtime.Object{
 				makeServiceAccount(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, reconciletesting.NewInMemoryChannel(imcName, testNS)),
-				makeDispatcherDeployment(reconciletesting.NewInMemoryChannel(imcName, testNS)),
-				makeDispatcherService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+				makeDispatcherDeployment("namespace", reconciletesting.NewInMemoryChannel(imcName, testNS)),
+				makeDispatcherService(testNS),
 				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
@@ -447,8 +469,8 @@ func TestInNamespace(t *testing.T) {
 				makeServiceAccount(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", reconciletesting.NewInMemoryChannel(imcName, "knative-testing")),
-				makeDispatcherDeployment(reconciletesting.NewInMemoryChannel(imcName, testNS)),
-				makeDispatcherService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+				makeDispatcherDeployment("namespace", reconciletesting.NewInMemoryChannel(imcName, testNS)),
+				makeDispatcherService(testNS),
 				makeReadyEndpoints(),
 			},
 			WantErr: false,
@@ -474,8 +496,9 @@ func TestInNamespace(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
-			scope:                 scopeNamespace,
+			dispatcherScope:       scopeNamespace,
 			dispatcherImage:       imageName,
+			systemNamespace:       systemNS,
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO: FIx
 			inmemorychannelInformer: nil,
@@ -544,16 +567,17 @@ func makeRoleBinding(ns, name, clusterRoleName string, imc *v1alpha1.InMemoryCha
 	return resources.MakeRoleBinding(ns, name, makeServiceAccount(imc), clusterRoleName)
 }
 
-func makeDispatcherService(imc *v1alpha1.InMemoryChannel) *corev1.Service {
-	return resources.MakeDispatcherService(imc, dispatcherName)
+func makeDispatcherDeployment(scope string, imc *v1alpha1.InMemoryChannel) *appsv1.Deployment {
+	return resources.MakeDispatcher(scope, resources.DispatcherArgs{
+		DispatcherName:      dispatcherName,
+		DispatcherNamespace: testNS,
+		Image:               imageName,
+		ServiceAccountName:  dispatcherName,
+	})
 }
 
-func makeDispatcherDeployment(imc *v1alpha1.InMemoryChannel) *appsv1.Deployment {
-	return resources.MakeDispatcher(imc, resources.DispatcherArgs{
-		DispatcherName:     dispatcherName,
-		Image:              imageName,
-		ServiceAccountName: dispatcherName,
-	})
+func makeDispatcherService(ns string) *corev1.Service {
+	return resources.MakeDispatcherService(dispatcherName, ns)
 }
 
 func makeChannelService(imc *v1alpha1.InMemoryChannel) *corev1.Service {

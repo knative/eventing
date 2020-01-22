@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ package resources
 import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/pkg/system"
 
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/pkg/system"
 )
 
 var (
@@ -33,18 +33,23 @@ var (
 )
 
 type DispatcherArgs struct {
-	ServiceAccountName string
-	DispatcherName     string
-	Image              string
+	ServiceAccountName  string
+	DispatcherName      string
+	DispatcherNamespace string
+	Image               string
 }
 
 // MakeDispatcher generates the dispatcher deployment for the in-memory channel
-func MakeDispatcher(imc *messagingv1alpha1.InMemoryChannel, args DispatcherArgs) *v1.Deployment {
+func MakeDispatcher(scope string, args DispatcherArgs) *v1.Deployment {
 	replicas := int32(1)
 
 	return &v1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployments",
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: imc.Namespace,
+			Namespace: args.DispatcherNamespace,
 			Name:      args.DispatcherName,
 		},
 		Spec: v1.DeploymentSpec{
@@ -62,7 +67,20 @@ func MakeDispatcher(imc *messagingv1alpha1.InMemoryChannel, args DispatcherArgs)
 						{
 							Name:  "dispatcher",
 							Image: args.Image,
-							Env:   makeEnv(args),
+							Env:   makeEnv(scope, args),
+
+							// Set resource requests and limits based on the benchmarking results in
+							//  https://github.com/knative/eventing/issues/2311#issuecomment-565311345
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1000m"),
+									corev1.ResourceMemory: resource.MustParse("256Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2200m"),
+									corev1.ResourceMemory: resource.MustParse("2048Mi"),
+								},
+							},
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
@@ -75,17 +93,10 @@ func MakeDispatcher(imc *messagingv1alpha1.InMemoryChannel, args DispatcherArgs)
 	}
 }
 
-func makeEnv(args DispatcherArgs) []corev1.EnvVar {
-	return []corev1.EnvVar{{
+func makeEnv(scope string, args DispatcherArgs) []corev1.EnvVar {
+	vars := []corev1.EnvVar{{
 		Name:  system.NamespaceEnvKey,
 		Value: system.Namespace(),
-	}, {
-		Name: "NAMESPACE",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.namespace",
-			},
-		},
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/inmemorychannel-dispatcher",
@@ -96,4 +107,17 @@ func makeEnv(args DispatcherArgs) []corev1.EnvVar {
 		Name:  "CONFIG_LOGGING_NAME",
 		Value: "config-logging",
 	}}
+
+	if scope == "namespace" {
+		vars = append(vars, corev1.EnvVar{
+			Name: "NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		})
+	}
+
+	return vars
 }

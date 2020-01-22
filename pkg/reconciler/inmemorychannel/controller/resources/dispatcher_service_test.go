@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,18 +23,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 func TestNewDispatcherService(t *testing.T) {
-	imc := &v1alpha1.InMemoryChannel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      imcName,
-			Namespace: testNS,
-		},
-	}
-
 	want := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -57,7 +48,7 @@ func TestNewDispatcherService(t *testing.T) {
 		},
 	}
 
-	got := MakeDispatcherService(imc, dispatcherName)
+	got := MakeDispatcherService(dispatcherName, testNS)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)

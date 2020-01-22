@@ -23,6 +23,10 @@ characterics:
    ```shell
    ko apply -f config/channels/in-memory-channel/...
    ```
+1. Optional: to deploy dispatchers in the same namespace as the channel specification, set `DISPATCHER_SCOPE` to `namespace`:
+   ```sh
+    kubectl set env deployment/imc-controller DISPATCHER_SCOPE=namespace -n knative-eventing
+   ```
 1. Create InMemoryChannels
 
    ```yaml

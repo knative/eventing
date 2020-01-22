@@ -22,9 +22,11 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -52,6 +54,7 @@ var (
 )
 
 type envConfig struct {
+	Scope string `envconfig:"DISPATCHER_SCOPE" required:"true"`
 	Image string `envconfig:"DISPATCHER_IMAGE" required:"true"`
 }
 
@@ -72,6 +75,7 @@ func NewController(
 	r := &Reconciler{
 		Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
 
+		systemNamespace:         system.Namespace(),
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: inmemorychannelInformer.Informer(),
 		deploymentLister:        deploymentInformer.Lister(),
@@ -85,6 +89,8 @@ func NewController(
 	if err := envconfig.Process("", env); err != nil {
 		r.Logger.Panicf("unable to process in-memory channel's required environment variables: %v", err)
 	}
+
+	r.dispatcherScope = env.Scope
 	r.dispatcherImage = env.Image
 
 	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
@@ -95,11 +101,27 @@ func NewController(
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
-	deploymentInformer.Informer().AddEventHandler(r)
-	serviceInformer.Informer().AddEventHandler(r)
-	endpointsInformer.Informer().AddEventHandler(r)
-	serviceAccountInformer.Informer().AddEventHandler(r)
-	roleBindingInformer.Informer().AddEventHandler(r)
+
+	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+		Handler:    r,
+	})
+	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+		Handler:    r,
+	})
+	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+		Handler:    r,
+	})
+	serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+		Handler:    r,
+	})
+	roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+		Handler:    r,
+	})
 
 	return r.impl
 }

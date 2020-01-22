@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,19 +20,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 // MakeDispatcherService creates the dispatcher service
-func MakeDispatcherService(imc *v1alpha1.InMemoryChannel, dispatcherName string) *corev1.Service {
+func MakeDispatcherService(name, namespace string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dispatcherName,
-			Namespace: imc.Namespace,
+			Name:      name,
+			Namespace: namespace,
 			Labels:    dispatcherLabels,
 		},
 		Spec: corev1.ServiceSpec{

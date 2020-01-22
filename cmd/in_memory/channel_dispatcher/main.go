@@ -20,7 +20,6 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"errors"
 	"os"
 
 	"knative.dev/pkg/injection"
@@ -33,10 +32,9 @@ import (
 func main() {
 	ctx := signals.NewContext()
 	ns := os.Getenv("NAMESPACE")
-	if ns == "" {
-		panic(errors.New("The environment variable NAMESPACE is not set"))
+	if ns != "" {
+		ctx = injection.WithNamespaceScope(ctx, ns)
 	}
-	ctx = injection.WithNamespaceScope(ctx, ns)
 
 	sharedmain.MainWithContext(ctx, "inmemorychannel_dispatcher",
 		inmemorychannel.NewController,

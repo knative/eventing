@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/swappable"
@@ -46,10 +45,6 @@ const (
 	port         = 8080
 )
 
-type envConfig struct {
-	Scope string `envconfig:"SCOPE" required:"true"`
-}
-
 // NewController initializes the controller and is called by the generated code.
 // Registers event handlers to enqueue events.
 func NewController(
@@ -57,11 +52,6 @@ func NewController(
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	base := reconciler.NewBase(ctx, controllerAgentName, cmw)
-
-	env := &envConfig{}
-	if err := envconfig.Process("", env); err != nil {
-		base.Logger.Fatalw("unable to process in-memory channel's required environment variables: %v", err)
-	}
 
 	// Setup trace publishing.
 	iw := cmw.(*configmap.InformedWatcher)
@@ -88,7 +78,6 @@ func NewController(
 
 	r := &Reconciler{
 		Base:                    base,
-		scope:                   scope(env.Scope),
 		dispatcher:              inMemoryDispatcher,
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: informer,

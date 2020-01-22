@@ -28,18 +28,16 @@ source $(dirname $0)/e2e-common.sh
 
 # Override functions to install multitenant controllers
 
-# Multi-tenant In-memory channel CRD config.
-readonly MULTI_TENANT_IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel-multitenant"
-
 function install_channel_crds() {
   echo "Installing Multi-Tenant In-Memory Channel CRD"
-  ko apply -f ${MULTI_TENANT_IN_MEMORY_CHANNEL_CRD_CONFIG_DIR} || return 1
+  ko apply -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR} || return 1
+  kubectl set env deployment/imc-controller DISPATCHER_SCOPE=namespace -n knative-eventing
   wait_until_pods_running knative-eventing || fail_test "Failed to install the Multi-Tenant In-Memory Channel CRD"
 }
 
 function uninstall_channel_crds() {
   echo "Uninstalling Multi-Tenant In-Memory Channel CRD"
-  ko delete --ignore-not-found=true --now --timeout 60s -f ${MULTI_TENANT_IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}
+  ko delete --ignore-not-found=true --now --timeout 60s -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR}
 }
 
 # Script entry point.
