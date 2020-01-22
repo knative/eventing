@@ -144,14 +144,6 @@ func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
 	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
 }
 
-func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
-	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
-}
-
-func (l *Listers) GetParallelLister() messaginglisters.ParallelLister {
-	return messaginglisters.NewParallelLister(l.indexerFor(&messagingv1alpha1.Parallel{}))
-}
-
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
 	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
 }

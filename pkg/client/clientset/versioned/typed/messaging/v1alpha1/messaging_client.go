@@ -28,8 +28,6 @@ type MessagingV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ChannelsGetter
 	InMemoryChannelsGetter
-	ParallelsGetter
-	SequencesGetter
 	SubscriptionsGetter
 }
 
@@ -44,14 +42,6 @@ func (c *MessagingV1alpha1Client) Channels(namespace string) ChannelInterface {
 
 func (c *MessagingV1alpha1Client) InMemoryChannels(namespace string) InMemoryChannelInterface {
 	return newInMemoryChannels(c, namespace)
-}
-
-func (c *MessagingV1alpha1Client) Parallels(namespace string) ParallelInterface {
-	return newParallels(c, namespace)
-}
-
-func (c *MessagingV1alpha1Client) Sequences(namespace string) SequenceInterface {
-	return newSequences(c, namespace)
 }
 
 func (c *MessagingV1alpha1Client) Subscriptions(namespace string) SubscriptionInterface {
