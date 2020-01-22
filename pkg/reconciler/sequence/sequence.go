@@ -41,7 +41,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/flowssequence/resources"
+	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 )
 
 const (

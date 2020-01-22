@@ -41,7 +41,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/flowsparallel/resources"
+	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 )

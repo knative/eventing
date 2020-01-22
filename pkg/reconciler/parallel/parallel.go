@@ -42,7 +42,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/flowsparallel/resources"
+	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 )
 
 const (
