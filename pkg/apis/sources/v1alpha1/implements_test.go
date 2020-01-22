@@ -26,7 +26,7 @@ func TestTypesImplements(t *testing.T) {
 		instance interface{}
 		iface    duck.Implementable
 	}{
-		// CronJobSource
+		// PingSource
 		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
 		// ContainerSource
 		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
