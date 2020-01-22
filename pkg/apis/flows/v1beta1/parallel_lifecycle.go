@@ -22,8 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -80,7 +80,7 @@ func (ps *ParallelStatus) InitializeConditions() {
 
 // PropagateSubscriptionStatuses sets the ParallelConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*messagingv1alpha1.Subscription, subscriptions []*messagingv1alpha1.Subscription) {
+func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*messagingv1beta1.Subscription, subscriptions []*messagingv1beta1.Subscription) {
 	if ps.BranchStatuses == nil {
 		ps.BranchStatuses = make([]ParallelBranchStatus, len(subscriptions))
 	}
@@ -100,7 +100,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 			},
 		}
 
-		readyCondition := s.Status.GetCondition(messagingv1alpha1.SubscriptionConditionReady)
+		readyCondition := s.Status.GetCondition(messagingv1beta1.SubscriptionConditionReady)
 		if readyCondition != nil {
 			ps.BranchStatuses[i].SubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
@@ -119,7 +119,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 				Namespace:  fs.Namespace,
 			},
 		}
-		readyCondition = fs.Status.GetCondition(messagingv1alpha1.SubscriptionConditionReady)
+		readyCondition = fs.Status.GetCondition(messagingv1beta1.SubscriptionConditionReady)
 		if readyCondition != nil {
 			ps.BranchStatuses[i].FilterSubscriptionStatus.ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
@@ -139,7 +139,7 @@ func (ps *ParallelStatus) PropagateSubscriptionStatuses(filterSubscriptions []*m
 
 // PropagateChannelStatuses sets the ChannelStatuses and ParallelConditionChannelsReady based on the
 // status of the incoming channels.
-func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1alpha1.Channelable, channels []*duckv1alpha1.Channelable) {
+func (ps *ParallelStatus) PropagateChannelStatuses(ingressChannel *duckv1beta1.Channelable, channels []*duckv1beta1.Channelable) {
 	if ps.BranchStatuses == nil {
 		ps.BranchStatuses = make([]ParallelBranchStatus, len(channels))
 	}

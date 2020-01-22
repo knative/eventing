@@ -19,15 +19,14 @@ package v1beta1
 import (
 	"context"
 
-	// DO NOT SUBMIT. Change to v1beta1 before merge
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 func (s *Sequence) SetDefaults(ctx context.Context) {
 	if s != nil && s.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
-		if cd := eventingduckv1alpha1.ChannelDefaulterSingleton; cd != nil {
+		if cd := messagingv1beta1.ChannelDefaulterSingleton; cd != nil {
 			channelTemplate := cd.GetDefault(s.Namespace)
 			s.Spec.ChannelTemplate = channelTemplate
 		}

@@ -19,8 +19,8 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -71,7 +71,7 @@ func (ss *SequenceStatus) InitializeConditions() {
 
 // PropagateSubscriptionStatuses sets the SubscriptionStatuses and SequenceConditionSubscriptionsReady based on
 // the status of the incoming subscriptions.
-func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagingv1alpha1.Subscription) {
+func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagingv1beta1.Subscription) {
 	ss.SubscriptionStatuses = make([]SequenceSubscriptionStatus, len(subscriptions))
 	allReady := true
 	// If there are no subscriptions, treat that as a False case. Could go either way, but this seems right.
@@ -88,7 +88,7 @@ func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagi
 				Namespace:  s.Namespace,
 			},
 		}
-		readyCondition := s.Status.GetCondition(messagingv1alpha1.SubscriptionConditionReady)
+		readyCondition := s.Status.GetCondition(messagingv1beta1.SubscriptionConditionReady)
 		if readyCondition != nil {
 			ss.SubscriptionStatuses[i].ReadyCondition = *readyCondition
 			if readyCondition.Status != corev1.ConditionTrue {
@@ -108,7 +108,7 @@ func (ss *SequenceStatus) PropagateSubscriptionStatuses(subscriptions []*messagi
 
 // PropagateChannelStatuses sets the ChannelStatuses and SequenceConditionChannelsReady based on the
 // status of the incoming channels.
-func (ss *SequenceStatus) PropagateChannelStatuses(channels []*duckv1alpha1.Channelable) {
+func (ss *SequenceStatus) PropagateChannelStatuses(channels []*duckv1beta1.Channelable) {
 	ss.ChannelStatuses = make([]SequenceChannelStatus, len(channels))
 	allReady := true
 	// If there are no channels, treat that as a False case. Could go either way, but this seems right.

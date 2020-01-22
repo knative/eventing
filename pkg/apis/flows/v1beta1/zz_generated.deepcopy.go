@@ -22,7 +22,7 @@ package v1beta1
 
 import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -163,7 +163,7 @@ func (in *ParallelSpec) DeepCopyInto(out *ParallelSpec) {
 	}
 	if in.ChannelTemplate != nil {
 		in, out := &in.ChannelTemplate, &out.ChannelTemplate
-		*out = new(v1alpha1.ChannelTemplateSpec)
+		*out = new(messagingv1beta1.ChannelTemplateSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Reply != nil {
@@ -319,7 +319,7 @@ func (in *SequenceSpec) DeepCopyInto(out *SequenceSpec) {
 	}
 	if in.ChannelTemplate != nil {
 		in, out := &in.ChannelTemplate, &out.ChannelTemplate
-		*out = new(v1alpha1.ChannelTemplateSpec)
+		*out = new(messagingv1beta1.ChannelTemplateSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Reply != nil {
