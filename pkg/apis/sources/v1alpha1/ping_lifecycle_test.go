@@ -213,6 +213,206 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 	}
 }
 
+func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
+	tests := []struct {
+		name string
+		s    *v1alpha1.PingSourceStatus
+		want *apis.Condition
+	}{{
+		name: "uninitialized",
+		s:    &v1alpha1.PingSourceStatus{},
+		want: nil,
+	}, {
+		name: "initialized",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark deployed",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.PropagateDeploymentAvailability(availableDeployment)
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark sink",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink("uri://example")
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark schedule",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark event types",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkEventType()
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark sink and deployed",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSink("uri://example")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark schedule and sink",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionUnknown,
+		},
+	}, {
+		name: "mark schedule, sink and deployed",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionTrue,
+		},
+	}, {
+		name: "mark schedule, sink, deployed, and event types",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkEventType()
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionTrue,
+		},
+	}, {
+		name: "mark schedule, sink and deployed then not deployed",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:    v1alpha1.PingSourceConditionReady,
+			Reason:  "DeploymentUnavailable",
+			Status:  corev1.ConditionFalse,
+			Message: "The Deployment '' is unavailable.",
+		},
+	}, {
+		name: "mark schedule, sink, deployed and event types then no event types",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("uri://example")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkNoEventType("Testing", "")
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionTrue,
+		},
+	}, {
+		name: "mark schedule validated, sink empty and deployed",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:    v1alpha1.PingSourceConditionReady,
+			Reason:  "SinkEmpty",
+			Status:  corev1.ConditionFalse,
+			Message: "Sink has resolved to empty.",
+		},
+	}, {
+		name: "mark schedule validated, sink empty and deployed then sink",
+		s: func() *v1alpha1.PingSourceStatus {
+			s := &v1alpha1.PingSourceStatus{}
+			s.InitializeConditions()
+			s.MarkSchedule()
+			s.MarkSink("")
+			s.PropagateDeploymentAvailability(availableDeployment)
+			s.MarkSink("uri://example")
+			return s
+		}(),
+		want: &apis.Condition{
+			Type:   v1alpha1.PingSourceConditionReady,
+			Status: corev1.ConditionTrue,
+		},
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.s.GetTopLevelCondition()
+			ignoreTime := cmpopts.IgnoreFields(apis.Condition{},
+				"LastTransitionTime", "Severity")
+			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
+				t.Errorf("unexpected condition (-want, +got) = %v", diff)
+			}
+		})
+	}
+}
+
 func TestPingSourceStatusGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -437,11 +637,6 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 				"LastTransitionTime", "Severity")
 			if diff := cmp.Diff(test.want, got, ignoreTime); diff != "" {
 				t.Errorf("unexpected condition (-want, +got) = %v", diff)
-			}
-
-			got = test.s.GetTopLevelCondition()
-			if test.want != got {
-				t.Errorf("unexpected top level condition: want %v, got %v", test.want, got)
 			}
 		})
 	}

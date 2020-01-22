@@ -18,12 +18,12 @@ package v1alpha1
 
 import (
 	"context"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestPingSourceValidation(t *testing.T) {
@@ -35,7 +35,7 @@ func TestPingSourceValidation(t *testing.T) {
 		name: "valid spec",
 		spec: PingSourceSpec{
 			Schedule: "*/2 * * * *",
-			Sink: &duckv1beta1.Destination{
+			Sink: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
@@ -59,7 +59,7 @@ func TestPingSourceValidation(t *testing.T) {
 		name: "invalid schedule",
 		spec: PingSourceSpec{
 			Schedule: "2",
-			Sink: &duckv1beta1.Destination{
+			Sink: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
