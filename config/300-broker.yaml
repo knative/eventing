@@ -57,15 +57,18 @@ spec:
           properties:
             channelTemplateSpec:
               type: object
+              description: "Channel implementation which dictates the durability guarantees of events to the Broker. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
               required:
                 - apiVersion
                 - kind
               properties:
                 apiVersion:
                   type: string
+                  description: "API version of the channel implementation."
                   minLength: 1
                 kind:
                   type: string
+                  description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
                   minLength: 1
                 spec:
                   type: object

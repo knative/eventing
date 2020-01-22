@@ -68,14 +68,19 @@ spec:
           properties:
             type:
               type: string
+              description: "Describes the type of event relating to the originating occurrence (com.github.pull.create, com.example.object.delete.v2, etc.). More information: https://knative.dev/docs/eventing/event-registry."
               minLength: 1
             source:
               type: string
+              description: "The context in which an event happened. Often this will include information such as the type of the event source, the organization publishing the event or the process that produced the event. More information: https://github.com/cloudevents/spec/blob/master/spec.md."
               minLength: 1
             schema:
               type: string
+              description: "URI with the EventType schema that the data adheres to. It may be JSON, protobuf, etc."
             broker:
               type: string
+              description: "Broker that can provide the EventType."
               minLength: 1
             description:
               type: string
+              description: "Describes the EventType, in any meaningful way."
