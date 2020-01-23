@@ -75,8 +75,8 @@ var (
 	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )
 const (
-	labelNameOk = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	labelNameNok = labelNameOk + "b"
+	validLabelName   = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	invalidLabelName = validLabelName + "b"
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -100,8 +100,8 @@ func TestTriggerValidation(t *testing.T) {
 		t:    &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				// ups ... name too long
-				Name:                       labelNameNok,
-				Namespace:                  "dummy",
+				Name:      invalidLabelName,
+				Namespace: "dummy",
 			},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
@@ -118,12 +118,12 @@ func TestTriggerValidation(t *testing.T) {
 		name: "invalid broker name",
 		t:    &Trigger{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      labelNameOk,
+				Name:      validLabelName,
 				Namespace: "dummy",
 			},
 			Spec: TriggerSpec{
 				// ups ... name too long
-				Broker:     labelNameNok,
+				Broker:     invalidLabelName,
 				Filter:     validEmptyFilter,
 				Subscriber: validSubscriber,
 			},
