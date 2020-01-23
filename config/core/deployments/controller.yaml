@@ -59,6 +59,9 @@ spec:
           - name: BROKER_IMAGE_PULL_SECRET_NAME
             value:
 
+        securityContext:
+          allowPrivilegeEscalation: false
+
         ports:
         - name: metrics
           containerPort: 9090

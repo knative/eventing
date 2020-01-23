@@ -62,6 +62,9 @@ spec:
             # that is containerized and substituted here.
             value: knative.dev/eventing/cmd/apiserver_receive_adapter
 
+        securityContext:
+          allowPrivilegeEscalation: false
+
         ports:
           - name: metrics
             containerPort: 9090
