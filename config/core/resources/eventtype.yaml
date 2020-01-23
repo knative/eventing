@@ -1,0 +1,86 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: eventtypes.eventing.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+spec:
+  group: eventing.knative.dev
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  names:
+    kind: EventType
+    plural: eventtypes
+    singular: eventtype
+    categories:
+      - all
+      - knative
+      - eventing
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Type
+      type: string
+      JSONPath: ".spec.type"
+    - name: Source
+      type: string
+      JSONPath: ".spec.source"
+    - name: Schema
+      type: string
+      JSONPath: ".spec.schema"
+    - name: Broker
+      type: string
+      JSONPath: ".spec.broker"
+    - name: Description
+      type: string
+      JSONPath: ".spec.description"
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          required:
+            - type
+            - source
+            - broker
+          properties:
+            type:
+              type: string
+              description: "Describes the type of event relating to the originating occurrence (com.github.pull.create, com.example.object.delete.v2, etc.). More information: https://knative.dev/docs/eventing/event-registry."
+              minLength: 1
+            source:
+              type: string
+              description: "The context in which an event happened. Often this will include information such as the type of the event source, the organization publishing the event or the process that produced the event. More information: https://github.com/cloudevents/spec/blob/master/spec.md."
+              minLength: 1
+            schema:
+              type: string
+              description: "URI with the EventType schema that the data adheres to. It may be JSON, protobuf, etc."
+            broker:
+              type: string
+              description: "Broker that can provide the EventType."
+              minLength: 1
+            description:
+              type: string
+              description: "Describes the EventType, in any meaningful way."

@@ -1,0 +1,87 @@
+# Copyright 2018 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventing-webhook
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &labels
+      app: eventing-webhook
+      role: eventing-webhook
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: eventing-webhook
+
+      containers:
+      - name: eventing-webhook
+        terminationMessagePolicy: FallbackToLogsOnError
+
+        # This is the Go import path for the binary that is containerized
+        # and substituted here.
+        image: knative.dev/eventing/cmd/webhook
+
+        resources:
+          requests:
+            # taken from serving.
+            cpu: 20m
+            memory: 20Mi
+          limits:
+            # taken from serving.
+            cpu: 200m
+            memory: 200Mi
+
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_LOGGING_NAME
+          value: config-logging
+        - name: METRICS_DOMAIN
+          value: knative.dev/eventing
+        - name: WEBHOOK_NAME
+          value: eventing-webhook
+
+        ports:
+        - name: https-webhook
+          containerPort: 8443
+        - name: metrics
+          containerPort: 9090
+        - name: profiling
+          containerPort: 8008
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    role: eventing-webhook
+  name: eventing-webhook
+  namespace: knative-eventing
+spec:
+  ports:
+    - name: https-webhook
+      port: 443
+      targetPort: 8443
+  selector:
+    role: eventing-webhook
