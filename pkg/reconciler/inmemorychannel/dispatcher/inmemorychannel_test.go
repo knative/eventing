@@ -18,8 +18,9 @@ package dispatcher
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/channel"
 	"testing"
+
+	"knative.dev/eventing/pkg/channel"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
