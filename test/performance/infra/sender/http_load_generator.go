@@ -43,6 +43,8 @@ type CloudEventsTargeter struct {
 	msgSize     uint
 	eventType   string
 	eventSource string
+	body        []byte
+	fixedBody   bool
 }
 
 var letterBytes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -60,12 +62,19 @@ func generateRandStringPayload(length uint) []byte {
 	return b
 }
 
-func NewCloudEventsTargeter(sinkUrl string, msgSize uint, eventType string, eventSource string) CloudEventsTargeter {
+func NewCloudEventsTargeter(sinkUrl string, msgSize uint, eventType string, eventSource string, fixedBody bool) CloudEventsTargeter {
+	var body []byte
+
+	if fixedBody {
+		body = generateRandStringPayload(msgSize)
+	}
 	return CloudEventsTargeter{
 		sinkUrl:     sinkUrl,
 		msgSize:     msgSize,
 		eventType:   eventType,
 		eventSource: eventSource,
+		fixedBody:   fixedBody,
+		body:        body,
 	}
 }
 
@@ -89,7 +98,11 @@ func (cet CloudEventsTargeter) VegetaTargeter() vegeta.Targeter {
 		t.Header["Ce-Source"] = ceSource
 		t.Header["Ce-Specversion"] = ceSpecVersion
 		t.Header["Content-Type"] = ceContentType
-		t.Body = generateRandStringPayload(cet.msgSize)
+		if cet.fixedBody {
+			t.Body = cet.body
+		} else {
+			t.Body = generateRandStringPayload(cet.msgSize)
+		}
 
 		return nil
 	}
@@ -185,15 +198,15 @@ func newCloudEventsClient(sinkUrl string) (client.Client, error) {
 	return cloudevents.NewClient(t)
 }
 
-func (h HttpLoadGenerator) Warmup(pace common.PaceSpec, msgSize uint) {
-	targeter := NewCloudEventsTargeter(h.sinkUrl, msgSize, common.WarmupEventType, defaultEventSource).VegetaTargeter()
+func (h HttpLoadGenerator) Warmup(pace common.PaceSpec, msgSize uint, fixedBody bool) {
+	targeter := NewCloudEventsTargeter(h.sinkUrl, msgSize, common.WarmupEventType, defaultEventSource, fixedBody).VegetaTargeter()
 	vegetaResults := h.warmupAttacker.Attack(targeter, vegeta.ConstantPacer{Freq: pace.Rps, Per: time.Second}, pace.Duration, common.WarmupEventType+"-attack")
 	for range vegetaResults {
 	}
 }
 
-func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint) {
-	targeter := NewCloudEventsTargeter(h.sinkUrl, msgSize, common.MeasureEventType, eventsSource()).VegetaTargeter()
+func (h HttpLoadGenerator) RunPace(i int, pace common.PaceSpec, msgSize uint, fixedBody bool) {
+	targeter := NewCloudEventsTargeter(h.sinkUrl, msgSize, common.MeasureEventType, eventsSource(), fixedBody).VegetaTargeter()
 	res := h.paceAttacker.Attack(targeter, vegeta.ConstantPacer{Freq: pace.Rps, Per: time.Second}, pace.Duration, fmt.Sprintf("%s-attack-%d", h.eventSource, i))
 	for range res {
 	}
