@@ -79,6 +79,7 @@ type ParallelSpec struct {
 
 type ParallelBranch struct {
 	// Filter is the expression guarding the branch
+	// +optional
 	Filter *duckv1.Destination `json:"filter,omitempty"`
 
 	// Subscriber receiving the event when the filter passes
