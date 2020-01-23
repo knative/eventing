@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"knative.dev/pkg/apis"
 	"testing"
 
 	v1 "k8s.io/api/apps/v1"
@@ -43,6 +44,8 @@ func TestMakeReceiveAdapter(t *testing.T) {
 		},
 	}
 
+	exampleUri, _ := apis.ParseURL("uri://example")
+
 	got := MakeReceiveAdapter(&Args{
 		Image:  "test-image",
 		Source: src,
@@ -50,7 +53,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			"test-key1": "test-value1",
 			"test-key2": "test-value2",
 		},
-		SinkURI: "sink-uri",
+		SinkURI: exampleUri,
 	})
 
 	one := int32(1)
@@ -58,14 +61,14 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
-			Name:      fmt.Sprintf("cronjobsource-%s-%s", src.Name, src.UID),
+			Name:      fmt.Sprintf("pingsource-%s-%s", src.Name, src.UID),
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",
 			},
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "sources.eventing.knative.dev/v1alpha1",
-				Kind:               "CronJobSource",
+				APIVersion:         "sources.knative.dev/v1alpha1",
+				Kind:               "PingSource",
 				Name:               src.Name,
 				UID:                src.UID,
 				Controller:         &yes,
@@ -108,7 +111,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 								},
 								{
 									Name:  "K_SINK",
-									Value: "sink-uri",
+									Value: "uri://example",
 								},
 								{
 									Name:  "NAME",
