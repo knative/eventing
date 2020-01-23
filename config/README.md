@@ -13,11 +13,11 @@ The files in this directory are organized as follows:
 
 The Core is complex enough that it further breaks down as follows:
 
-- `roles/`: The [cluster] roles needed for the core controllers to function,
-  or to plug knative/eventing into standard Kubernetes RBAC constructs.
+- `roles/`: The [cluster] roles needed for the core controllers to function, or
+  to plug knative/eventing into standard Kubernetes RBAC constructs.
 - `configmaps/`: The configmaps that are used to configure the core components.
 - `resources/`: The eventing resource definitions.
 - `webhooks/`: The eventing {mutating, validating} admission webhook
   configurations, and supporting resources.
-- `deployments/`: The eventing executable components and associated configuration
-  resources.
+- `deployments/`: The eventing executable components and associated
+  configuration resources.
