@@ -19,6 +19,7 @@ package helpers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	ce "github.com/cloudevents/sdk-go"
@@ -77,7 +78,7 @@ func setupBrokerTracing(
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, string) {
+) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
 	const (
 		etTransformer  = "transformer"
 		etLogger       = "logger"
@@ -89,7 +90,7 @@ func setupBrokerTracing(
 	broker := client.CreateBrokerOrFail("br", resources.WithChannelTemplateForBroker(channel))
 
 	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
-	logPod := resources.EventDetailsPod(loggerPodName)
+	logPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 
 	// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
@@ -440,5 +441,16 @@ func setupBrokerTracing(
 			},
 		}
 	}
-	return expected, body
+	matchFunc := func(ev ce.Event) bool {
+		if ev.Source() != senderName {
+			return false
+		}
+		if ev.ID() != eventID {
+			return false
+		}
+		db, _ := ev.DataBytes()
+		return strings.Contains(string(db), body)
+	}
+
+	return expected, matchFunc
 }
