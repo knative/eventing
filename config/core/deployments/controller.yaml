@@ -60,8 +60,6 @@ spec:
             value:
 
         ports:
-        - name: https-webhook
-          containerPort: 8443
         - name: metrics
           containerPort: 9090
         - name: profiling
