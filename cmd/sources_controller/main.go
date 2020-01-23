@@ -24,12 +24,14 @@ import (
 	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
 	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
 	"knative.dev/eventing/pkg/reconciler/legacycronjobsource"
+	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/pkg/injection/sharedmain"
 )
 
 func main() {
 	sharedmain.Main("source_controller",
 		apiserversource.NewController,
+		pingsource.NewController,
 		// TODO(#2312): Remove this after v0.13.
 		legacyapiserversource.NewController,
 		legacycontainersource.NewController,

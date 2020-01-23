@@ -212,6 +212,16 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
+// CreatePingSourceOrFail will create an PingSource
+func (client *Client) CreatePingSourceOrFail(pingSource *sourcesv1alpha1.PingSource) {
+	pingInterface := client.Eventing.SourcesV1alpha1().PingSources(client.Namespace)
+	_, err := pingInterface.Create(pingSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
+	}
+	client.Tracker.AddObj(pingSource)
+}
+
 // CreateLegacyApiServerSourceOrFail will create an ApiServerSource
 func (client *Client) CreateLegacyApiServerSourceOrFail(apiServerSource *legacysourcesv1alpha1.ApiServerSource) {
 	apiServerInterface := client.Legacy.SourcesV1alpha1().ApiServerSources(client.Namespace)

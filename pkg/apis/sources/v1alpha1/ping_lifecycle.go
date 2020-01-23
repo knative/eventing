@@ -104,10 +104,10 @@ func (s *PingSourceStatus) MarkInvalidSchedule(reason, messageFormat string, mes
 }
 
 // MarkSink sets the condition that the source has a sink configured.
-func (s *PingSourceStatus) MarkSink(uri string) {
+func (s *PingSourceStatus) MarkSink(uri *apis.URL) {
 	// TODO: Update sources to use MarkSink(url.URL or apis.URI)
-	s.SinkURI, _ = apis.ParseURL(uri)
-	if len(uri) > 0 {
+	s.SinkURI = uri
+	if uri != nil {
 		PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionSinkProvided)
 	} else {
 		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")

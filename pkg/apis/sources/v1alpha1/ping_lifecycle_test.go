@@ -59,6 +59,8 @@ func TestPingSource_PingSourceSource(t *testing.T) {
 }
 
 func TestPingSourceStatusIsReady(t *testing.T) {
+	exampleUri, _ := apis.ParseURL("uri://example")
+
 	tests := []struct {
 		name string
 		s    *v1alpha1.PingSourceStatus
@@ -89,7 +91,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		s: func() *v1alpha1.PingSourceStatus {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: false,
@@ -116,7 +119,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 		s: func() *v1alpha1.PingSourceStatus {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -127,7 +130,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: false,
@@ -137,7 +140,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -148,7 +151,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventType()
 			return s
@@ -160,7 +163,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
@@ -172,7 +175,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkNoEventType("Testing", "")
 			return s
@@ -184,7 +187,7 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -195,9 +198,9 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.PropagateDeploymentAvailability(availableDeployment)
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: true,
@@ -214,6 +217,8 @@ func TestPingSourceStatusIsReady(t *testing.T) {
 }
 
 func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
+	exampleUri, _ := apis.ParseURL("uri://example")
+
 	tests := []struct {
 		name string
 		s    *v1alpha1.PingSourceStatus
@@ -250,7 +255,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		s: func() *v1alpha1.PingSourceStatus {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: &apis.Condition{
@@ -286,7 +291,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 		s: func() *v1alpha1.PingSourceStatus {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -300,7 +305,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: &apis.Condition{
@@ -313,7 +318,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -327,7 +332,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventType()
 			return s
@@ -342,7 +347,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
@@ -359,7 +364,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkNoEventType("Testing", "")
 			return s
@@ -374,7 +379,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -390,9 +395,9 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.PropagateDeploymentAvailability(availableDeployment)
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		want: &apis.Condition{
@@ -414,6 +419,7 @@ func TestPingSourceStatusGetTopLevelCondition(t *testing.T) {
 }
 
 func TestPingSourceStatusGetCondition(t *testing.T) {
+	exampleUri, _ := apis.ParseURL("uri://example")
 	tests := []struct {
 		name      string
 		s         *v1alpha1.PingSourceStatus
@@ -454,7 +460,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 		s: func() *v1alpha1.PingSourceStatus {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		condQuery: v1alpha1.PingSourceConditionReady,
@@ -481,7 +487,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -496,7 +502,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventType()
 			return s
@@ -512,7 +518,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkNoSink("Testing", "hi%s", "")
 			return s
@@ -530,7 +536,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkInvalidSchedule("Testing", "hi%s", "")
 			return s
@@ -548,7 +554,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
@@ -566,7 +572,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.PropagateDeploymentAvailability(&appsv1.Deployment{})
 			return s
@@ -584,7 +590,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventType()
 			s.MarkNoEventType("Testing", "hi")
@@ -601,7 +607,7 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
 		}(),
@@ -618,9 +624,9 @@ func TestPingSourceStatusGetCondition(t *testing.T) {
 			s := &v1alpha1.PingSourceStatus{}
 			s.InitializeConditions()
 			s.MarkSchedule()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.PropagateDeploymentAvailability(availableDeployment)
-			s.MarkSink("uri://example")
+			s.MarkSink(exampleUri)
 			return s
 		}(),
 		condQuery: v1alpha1.PingSourceConditionReady,
