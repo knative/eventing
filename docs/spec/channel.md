@@ -122,7 +122,7 @@ metadata:
     messaging.knative.dev/subscribable: "true"
 spec:
   group: messaging.knative.dev
-  version: v1beta1
+  version: v1alpha1
   names:
     kind: InMemoryChannel
     plural: inmemorychannels
@@ -184,9 +184,7 @@ exclusively communicate using CloudEvents.
 #### Input
 
 Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
-The endpoint(s) MUST conform to CloudEvents (
-[Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
-or [Version 1.0](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)).
+The endpoint(s) MUST conform to CloudEvents [Version 1.0](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md).
 The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit the event with
 the same version. It MUST support both Binary Content mode and Structured Content mode. The
 HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443. Channels
@@ -272,4 +270,4 @@ disable them if desired.
 ## Changelog
 
 * `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
-* `0.12.x release`: Types in the API group `messaging.knative.dev` were promoted from `v1alpha1`to `v1beta1`.
+* `0.13.x release`: Types in the API group `messaging.knative.dev` will be promoted from `v1alpha1`to `v1beta1`.
