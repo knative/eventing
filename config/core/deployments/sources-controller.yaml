@@ -20,34 +20,28 @@ metadata:
   labels:
     eventing.knative.dev/release: devel
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: sources-controller
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         app: sources-controller
         eventing.knative.dev/release: devel
     spec:
       serviceAccountName: eventing-source-controller
+
       containers:
       - name: controller
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: knative.dev/eventing/cmd/sources_controller
+
         resources:
           requests:
             cpu: 100m
             memory: 100Mi
-        ports:
-          - name: metrics
-            containerPort: 9090
-        volumeMounts:
-          - name: config-logging
-            mountPath: /etc/config-logging
+
         env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
@@ -64,8 +58,12 @@ spec:
           - name: PING_IMAGE
             value: knative.dev/eventing/cmd/ping
           - name: APISERVER_RA_IMAGE
+            # This is the Go import path for API server receive adapter binary
+            # that is containerized and substituted here.
             value: knative.dev/eventing/cmd/apiserver_receive_adapter
-      volumes:
-        - name: config-logging
-          configMap:
-            name: config-logging
+
+        ports:
+          - name: metrics
+            containerPort: 9090
+          - name: profiling
+            containerPort: 8008

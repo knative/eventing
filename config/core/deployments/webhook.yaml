@@ -27,17 +27,18 @@ spec:
       role: eventing-webhook
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels: *labels
     spec:
       serviceAccountName: eventing-webhook
+
       containers:
       - name: eventing-webhook
         terminationMessagePolicy: FallbackToLogsOnError
+
         # This is the Go import path for the binary that is containerized
         # and substituted here.
         image: knative.dev/eventing/cmd/webhook
+
         resources:
           requests:
             # taken from serving.
@@ -47,6 +48,7 @@ spec:
             # taken from serving.
             cpu: 200m
             memory: 200Mi
+
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:
@@ -58,3 +60,28 @@ spec:
           value: knative.dev/eventing
         - name: WEBHOOK_NAME
           value: eventing-webhook
+
+        ports:
+        - name: https-webhook
+          containerPort: 8443
+        - name: metrics
+          containerPort: 9090
+        - name: profiling
+          containerPort: 8008
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    eventing.knative.dev/release: devel
+    role: eventing-webhook
+  name: eventing-webhook
+  namespace: knative-eventing
+spec:
+  ports:
+    - name: https-webhook
+      port: 443
+      targetPort: 8443
+  selector:
+    role: eventing-webhook

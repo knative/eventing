@@ -12,18 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Service
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
 metadata:
+  name: config.webhook.eventing.knative.dev
   labels:
-    eventing.knative.dev/release: devel
-    role: eventing-webhook
-  name: eventing-webhook
-  namespace: knative-eventing
-spec:
-  ports:
-    - name: https-webhook
-      port: 443
-      targetPort: 8443
-  selector:
-    role: eventing-webhook
+    serving.knative.dev/release: devel
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: eventing-webhook
+      namespace: knative-eventing
+  sideEffects: None
+  failurePolicy: Fail
+  name: config.webhook.eventing.knative.dev
+  namespaceSelector:
+    matchExpressions:
+    - key: eventing.knative.dev/release
+      operator: Exists
