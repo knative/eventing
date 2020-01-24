@@ -19,8 +19,9 @@ package pingsource
 import (
 	"context"
 	"fmt"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"testing"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/resolver"
