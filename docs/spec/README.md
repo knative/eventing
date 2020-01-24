@@ -14,8 +14,7 @@ Docs in this directory:
 - [Resource type overview](overview.md)
 - [Interface contracts](interfaces.md)
 - [Object model specification](spec.md)
-- [Channel specification](channel.md) and
-  [older channel (0.6.0) spec](channel_060.md)
+- [Channel specification](channel.md)
 - [Sources specification](sources.md)
 - [Error conditions and reporting](https://knative.dev/docs/serving/spec/knative-api-specification-1.0/#error-signalling)
 
