@@ -13,22 +13,18 @@
 # limitations under the License.
 
 apiVersion: admissionregistration.k8s.io/v1beta1
-kind: ValidatingWebhookConfiguration
+kind: MutatingWebhookConfiguration
 metadata:
-  name: config.webhook.eventing.knative.dev
+  name: legacysinkbindings.webhook.sources.knative.dev
   labels:
     eventing.knative.dev/release: devel
 webhooks:
-- admissionReviewVersions:
-  - v1beta1
-  clientConfig:
-    service:
-      name: eventing-webhook
-      namespace: knative-eventing
-  sideEffects: None
-  failurePolicy: Fail
-  name: config.webhook.eventing.knative.dev
-  namespaceSelector:
-    matchExpressions:
-    - key: eventing.knative.dev/release
-      operator: Exists
+  - admissionReviewVersions:
+      - v1beta1
+    clientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
+    failurePolicy: Fail
+    sideEffects: None
+    name: legacysinkbindings.webhook.sources.knative.dev
