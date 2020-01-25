@@ -41,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
+	"knative.dev/eventing/pkg/reconciler/utils/services"
 )
 
 const (
@@ -62,7 +63,7 @@ type Reconciler struct {
 
 	channelableTracker duck.ListableTracker
 
-	serviceHelper *reconciler.ServiceHelper
+	services services.ServiceFlavor
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -255,23 +256,23 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker)
 	return b, err
 }
 
-func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*reconciler.ServiceStatus, error) {
+func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*services.Status, error) {
 	svcArgs := resources.MakeFilterServiceArgs(&resources.FilterArgs{
 		Broker:             b,
 		Image:              r.filterImage,
 		ServiceAccountName: r.filterServiceAccountName,
 	})
-	return r.serviceHelper.ReconcileService(ctx, b, *svcArgs)
+	return r.services.Reconcile(ctx, b, *svcArgs)
 }
 
-func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*reconciler.ServiceStatus, error) {
+func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*services.Status, error) {
 	svcArgs := resources.MakeIngressServiceArgs(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
 		ChannelAddress:     c.Status.Address.GetURL().Host,
 	})
-	return r.serviceHelper.ReconcileService(ctx, b, *svcArgs)
+	return r.services.Reconcile(ctx, b, *svcArgs)
 }
 
 func newTriggerChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {

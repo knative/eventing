@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler/utils/services"
 )
 
 const (
@@ -46,8 +46,8 @@ func MakeFilterServiceMeta(b *eventingv1alpha1.Broker) metav1.ObjectMeta {
 	}
 }
 
-func MakeFilterServiceArgs(args *FilterArgs) *reconciler.ServiceArgs {
-	return &reconciler.ServiceArgs{
+func MakeFilterServiceArgs(args *FilterArgs) *services.Args {
+	return &services.Args{
 		ServiceMeta: MakeFilterServiceMeta(args.Broker),
 		DeployMeta:  MakeFilterServiceMeta(args.Broker),
 		PodSpec: corev1.PodSpec{

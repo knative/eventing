@@ -39,10 +39,14 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	kubeservice "knative.dev/eventing/pkg/reconciler/utils/services/kube"
+	servingservice "knative.dev/eventing/pkg/reconciler/utils/services/serving"
 	"knative.dev/eventing/pkg/utils"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+	servingclient "knative.dev/serving/pkg/client/injection/client"
 )
 
 type channelType string
@@ -568,13 +572,15 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		sh := reconciler.NewServiceHelper(
-			ctx, listers.GetDeploymentLister(), listers.GetK8sServiceLister(), listers.GetServingServiceLister())
 		return &Reconciler{
-			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
-			subscriptionLister:        listers.GetSubscriptionLister(),
-			brokerLister:              listers.GetBrokerLister(),
-			serviceHelper:             sh,
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			brokerLister:       listers.GetBrokerLister(),
+			services: &kubeservice.KubeFlavor{
+				KubeClientSet:    kubeclient.Get(ctx),
+				DeploymentLister: listers.GetDeploymentLister(),
+				ServiceLister:    listers.GetK8sServiceLister(),
+			},
 			filterImage:               filterImage,
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
@@ -595,7 +601,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 			},
@@ -614,7 +619,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -631,7 +635,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewServingService(filterServiceName, testNS, filterRevisionName,
@@ -648,7 +651,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -674,7 +676,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewServingService(filterServiceName, testNS, filterRevisionName,
@@ -701,7 +702,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
@@ -719,7 +719,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithBrokerGeneration(brokerGeneration),
 				),
@@ -755,7 +754,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions,
 					WithBrokerGeneration(brokerGeneration),
 					WithBrokerStatusObservedGeneration(brokerGeneration),
@@ -775,7 +773,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
 				NewServingService(filterServiceName, testNS, filterRevisionName,
@@ -798,7 +795,6 @@ func TestReconcileWithServingService(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
-					WithBrokerLabels(map[string]string{"eventing.knative.dev/serviceFlavor": "knative"}),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
@@ -813,14 +809,14 @@ func TestReconcileWithServingService(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		sh := reconciler.NewServiceHelper(
-			ctx, listers.GetDeploymentLister(), listers.GetK8sServiceLister(), listers.GetServingServiceLister())
-		sh.APIChecker = &fakeAPIChecker{}
 		return &Reconciler{
-			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
-			subscriptionLister:        listers.GetSubscriptionLister(),
-			brokerLister:              listers.GetBrokerLister(),
-			serviceHelper:             sh,
+			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			subscriptionLister: listers.GetSubscriptionLister(),
+			brokerLister:       listers.GetBrokerLister(),
+			services: &servingservice.ServingFlavor{
+				ServingClientSet: servingclient.Get(ctx),
+				ServingLister:    listers.GetServingServiceLister(),
+			},
 			filterImage:               filterImage,
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,

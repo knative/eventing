@@ -47,6 +47,7 @@ import (
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
+	"knative.dev/eventing/pkg/reconciler/utils/services"
 )
 
 const (
@@ -77,7 +78,7 @@ type Reconciler struct {
 	addressableTracker duck.ListableTracker
 	uriResolver        *resolver.URIResolver
 
-	serviceHelper *reconciler.ServiceHelper
+	services services.ServiceFlavor
 }
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
@@ -191,7 +192,7 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	}
 
 	// Get Broker filter service.
-	filterSvcStatus, err := r.serviceHelper.ServiceStatus(ctx, b, brokerresources.MakeFilterServiceMeta(b))
+	filterSvcStatus, err := r.services.GetStatus(ctx, b, brokerresources.MakeFilterServiceMeta(b))
 	if err != nil {
 		if apierrs.IsNotFound(err) {
 			logging.FromContext(ctx).Error("can not find Broker's Filter service", zap.Error(err))

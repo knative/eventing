@@ -17,6 +17,7 @@ limitations under the License.
 package trigger
 
 import (
+	"os"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -34,9 +35,21 @@ import (
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
 	_ "knative.dev/serving/pkg/client/injection/informers/serving/v1/service/fake"
+	_ "knative.dev/eventing/pkg/client/injection/serving/informers/v1/service/fake"
 )
 
 func TestNew(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	c := NewController(ctx, configmap.NewStaticWatcher())
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func TestNewWithServing(t *testing.T) {
+	_ = os.Setenv("BROKER_RESOURCE_FLAVOR", "knative")
 	ctx, _ := SetupFakeContext(t)
 
 	c := NewController(ctx, configmap.NewStaticWatcher())

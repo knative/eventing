@@ -27,9 +27,9 @@ import (
 	_ "knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription/fake"
+	_ "knative.dev/eventing/pkg/client/injection/serving/informers/v1/service/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
-	_ "knative.dev/serving/pkg/client/injection/informers/serving/v1/service/fake"
 )
 
 func TestNew(t *testing.T) {
@@ -39,6 +39,22 @@ func TestNew(t *testing.T) {
 	_ = os.Setenv("BROKER_INGRESS_SERVICE_ACCOUNT", "INGRESS_SERVICE_ACCOUNT")
 	_ = os.Setenv("BROKER_FILTER_IMAGE", "FILTER_IMAGE")
 	_ = os.Setenv("BROKER_FILTER_SERVICE_ACCOUNT", "FILTER_SERVICE_ACCOUNT")
+
+	c := NewController(ctx, configmap.NewStaticWatcher())
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func TestNewWithServing(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	_ = os.Setenv("BROKER_INGRESS_IMAGE", "INGRESS_IMAGE")
+	_ = os.Setenv("BROKER_INGRESS_SERVICE_ACCOUNT", "INGRESS_SERVICE_ACCOUNT")
+	_ = os.Setenv("BROKER_FILTER_IMAGE", "FILTER_IMAGE")
+	_ = os.Setenv("BROKER_FILTER_SERVICE_ACCOUNT", "FILTER_SERVICE_ACCOUNT")
+	_ = os.Setenv("BROKER_RESOURCE_FLAVOR", "knative")
 
 	c := NewController(ctx, configmap.NewStaticWatcher())
 

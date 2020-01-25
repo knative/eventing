@@ -26,15 +26,21 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/reconciler/utils/services"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	servinginformer "knative.dev/eventing/pkg/client/injection/serving/informers/v1/service"
+	kubeservice "knative.dev/eventing/pkg/reconciler/utils/services/kube"
+	servingservice "knative.dev/eventing/pkg/reconciler/utils/services/serving"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
-	servinginformer "knative.dev/serving/pkg/client/injection/informers/serving/v1/service"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	servingclient "knative.dev/serving/pkg/client/injection/client"
 )
 
 const (
@@ -50,6 +56,7 @@ type envConfig struct {
 	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
 	FilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
 	FilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
+	ResourceFlavor        string `envconfig:"BROKER_RESOURCE_FLAVOR"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -70,6 +77,24 @@ func NewController(
 	serviceInformer := serviceinformer.Get(ctx)
 	servingInformer := servinginformer.Get(ctx)
 
+	if env.ResourceFlavor == services.ServingFlavor && servingInformer.IsEmpty() {
+		log.Fatalf(`BROKER_RESOURCE_FLAVOR is set to %q but %v was not available`, services.ServingFlavor, servingv1.SchemeGroupVersion)
+	}
+
+	var sf services.ServiceFlavor
+	if env.ResourceFlavor == services.ServingFlavor {
+		sf = &servingservice.ServingFlavor{
+			ServingClientSet: servingclient.Get(ctx),
+			ServingLister:    servingInformer.GetInternal().Lister(),
+		}
+	} else {
+		sf = &kubeservice.KubeFlavor{
+			KubeClientSet:    kubeclient.Get(ctx),
+			DeploymentLister: deploymentInformer.Lister(),
+			ServiceLister:    serviceInformer.Lister(),
+		}
+	}
+
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 		brokerLister:              brokerInformer.Lister(),
@@ -78,8 +103,7 @@ func NewController(
 		ingressServiceAccountName: env.IngressServiceAccount,
 		filterImage:               env.FilterImage,
 		filterServiceAccountName:  env.FilterServiceAccount,
-		serviceHelper: reconciler.NewServiceHelper(
-			ctx, deploymentInformer.Lister(), serviceInformer.Lister(), servingInformer.Lister()),
+		services:                  sf,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -99,10 +123,12 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	servingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
+	if !servingInformer.IsEmpty() {
+		servingInformer.GetInternal().Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
+	}
 
 	return impl
 }
