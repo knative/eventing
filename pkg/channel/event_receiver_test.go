@@ -121,6 +121,56 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 			},
 			expected: http.StatusAccepted,
 		},
+		"host URL with scheme -- headers and body pass through": {
+			// The header, body, and host values set here are verified in the receiverFunc. Altering
+			// them here will require the same alteration in the receiverFunc.
+			header: map[string][]string{
+				"not":                       {"passed", "through"},
+				"nor":                       {"this-one"},
+				"x-requEst-id":              {"1234"},
+				"knatIve-will-pass-through": {"true", "always"},
+				// Ce headers won't pass through our header filtering as they should actually be set in the CloudEvent itself,
+				// as extensions. The SDK then sets them as as Ce- headers when sending them through HTTP.
+				"cE-not-pass-through": {"true"},
+				"x-B3-pass":           {"will not pass"},
+				"x-ot-pass":           {"will not pass"},
+			},
+			body: "event-body",
+			host: "http://test-name.test-namespace.svc." + utils.GetClusterDomainName(),
+			receiverFunc: func(ctx context.Context, r ChannelReference, e cloudevents.Event) error {
+				if r.Namespace != "test-namespace" || r.Name != "test-name" {
+					return fmt.Errorf("test receiver func -- bad reference: %v", r)
+				}
+				payload := fmt.Sprintf("%v", e.Data)
+				if payload != "event-body" {
+					return fmt.Errorf("test receiver func -- bad payload: %v", payload)
+				}
+				expectedHeaders := map[string]string{
+					"x-requEst-id": "1234",
+					// Note that only the first value was passed through, the remaining values were
+					// discarded.
+					"knatIve-will-pass-through": "true",
+				}
+				tctx := cloudevents.HTTPTransportContextFrom(ctx)
+				actualHeaders := make(map[string]string)
+				for h, v := range tctx.Header {
+					actualHeaders[h] = v[0]
+				}
+				if diff := cmp.Diff(expectedHeaders, actualHeaders); diff != "" {
+					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
+				}
+				var h string
+				if err := e.ExtensionAs(EventHistory, &h); err != nil {
+					return fmt.Errorf("test receiver func -- history not added: %v", err)
+				}
+				expectedHistory := "http://test-name.test-namespace.svc." + utils.GetClusterDomainName()
+				if h != expectedHistory {
+					return fmt.Errorf("test receiver func -- bad history: %v", h)
+				}
+				return nil
+			},
+			expected: http.StatusAccepted,
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
@@ -165,7 +215,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 }
 
 func TestEventReceiver_ParseChannel(t *testing.T) {
-	url, _ := url.Parse("test-channel.test-namespace.svc.")
+	url, _ := url.Parse("http://test-channel.test-namespace.svc.")
 	c, err := ParseChannel(*url)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)

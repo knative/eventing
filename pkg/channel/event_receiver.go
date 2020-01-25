@@ -148,7 +148,7 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 
 	host := tctx.Host
 	r.logger.Debug("Received request", zap.String("host", host))
-	hostURL, err := url.Parse(host)
+	hostURL, err := translateHostStringToURL(host)
 	if err != nil {
 		r.logger.Info("Could not parse host as URL", zap.Error(err))
 		resp.Status = http.StatusInternalServerError
@@ -183,7 +183,7 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 // ParseChannel converts the channel's hostname into a channel
 // reference.
 func ParseChannel(host url.URL) (ChannelReference, error) {
-	chunks := strings.Split(host.Path, ".")
+	chunks := strings.Split(host.Host, ".")
 	if len(chunks) < 2 {
 		return ChannelReference{}, fmt.Errorf("bad host format %v", host)
 	}
@@ -191,4 +191,20 @@ func ParseChannel(host url.URL) (ChannelReference, error) {
 		Name:      chunks[0],
 		Namespace: chunks[1],
 	}, nil
+}
+
+func translateHostStringToURL(host string) (*url.URL, error) {
+	url, err:= url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+
+	// If a scheme is provided (including just "//"), Parse will work as expected.
+	if (url.Host != ""){
+		return url, nil
+	}
+
+	// Otherwise, we prepend a "//" to ensure the provided host is parsed properly.
+	hostWithPrefix := "//" + host
+	return url.Parse(hostWithPrefix)
 }
