@@ -26,20 +26,20 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
-
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
+
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
 type branchConfig struct {
 	filter bool
 }
 
-func TestParallel(t *testing.T) {
+func TestFlowsParallel(t *testing.T) {
 	const (
 		senderPodName = "e2e-parallel"
 	)
@@ -107,19 +107,19 @@ func TestParallel(t *testing.T) {
 			resources.WithSubscriberForSubscription(loggerPodName),
 		)
 
-		parallel := eventingtesting.NewParallel(tc.name, client.Namespace,
-			eventingtesting.WithParallelChannelTemplateSpec(channelTemplate),
-			eventingtesting.WithParallelBranches(parallelBranches),
-			eventingtesting.WithParallelReply(&duckv1.Destination{Ref: pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)}))
+		parallel := eventingtesting.NewFlowsParallel(tc.name, client.Namespace,
+			eventingtesting.WithFlowsParallelChannelTemplateSpec(channelTemplate),
+			eventingtesting.WithFlowsParallelBranches(parallelBranches),
+			eventingtesting.WithFlowsParallelReply(&duckv1.Destination{Ref: pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)}))
 
-		client.CreateParallelOrFail(parallel)
+		client.CreateFlowsParallelOrFail(parallel)
 
 		if err := client.WaitForAllTestResourcesReady(); err != nil {
 			t.Fatalf("Failed to get all test resources ready: %v", err)
 		}
 
 		// send fake CloudEvent to the Parallel
-		msg := fmt.Sprintf("TestParallel %s - ", uuid.NewUUID())
+		msg := fmt.Sprintf("TestFlowParallel %s - ", uuid.NewUUID())
 		// NOTE: the eventData format must be BaseData, as it needs to be correctly parsed in the stepper service.
 		eventData := cloudevents.BaseData{Message: msg}
 		eventDataBytes, err := json.Marshal(eventData)
@@ -133,10 +133,10 @@ func TestParallel(t *testing.T) {
 		if err := client.SendFakeEventToAddressable(
 			senderPodName,
 			tc.name,
-			lib.ParallelTypeMeta,
+			lib.FlowsParallelTypeMeta,
 			event,
 		); err != nil {
-			t.Fatalf("Failed to send fake CloudEvent to the parallel %q", tc.name)
+			t.Fatalf("Failed to send fake CloudEvent to the parallel %q : %s", tc.name, err)
 		}
 
 		// verify the logger service receives the correct transformed event

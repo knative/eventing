@@ -21,11 +21,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 
 	corev1 "k8s.io/api/core/v1"
+	validationutil "k8s.io/apimachinery/pkg/util/validation"
 )
 
 var (
@@ -36,6 +38,7 @@ var (
 // Validate the Trigger.
 func (t *Trigger) Validate(ctx context.Context) *apis.FieldError {
 	errs := t.Spec.Validate(ctx).ViaField("spec")
+	errs = t.validateSubscriptionLabels(errs)
 	errs = t.validateAnnotation(errs, DependencyAnnotation, t.validateDependencyAnnotation)
 	errs = t.validateAnnotation(errs, InjectionAnnotation, t.validateInjectionAnnotation)
 	return errs
@@ -131,6 +134,33 @@ func (t *Trigger) validateAnnotation(errs *apis.FieldError, annotation string, f
 		annotationPrefix := fmt.Sprintf("metadata.annotations[%s]", annotation)
 		errs = errs.Also(function(annotationValue).ViaField(annotationPrefix))
 	}
+	return errs
+}
+
+// validateSubscriptionLabels ensures that the labels for the subscription
+// (created by trigger reconciler, see SubscriptionLabels) will be not too long
+func (t *Trigger) validateSubscriptionLabels(errs *apis.FieldError) *apis.FieldError {
+
+	// validate trigger name
+	nameErrors := validationutil.IsValidLabelValue(t.Name)
+	if len(nameErrors) > 0 {
+		fe := &apis.FieldError{
+			Message: strings.Join(nameErrors, ","),
+			Paths:   []string{"name"},
+		}
+		errs = errs.Also(fe).ViaField("metadata")
+	}
+
+	// validate broker name
+	brokerErrors := validationutil.IsValidLabelValue(t.Spec.Broker)
+	if len(brokerErrors) > 0 {
+		fe := &apis.FieldError{
+			Message: strings.Join(brokerErrors, ","),
+			Paths:   []string{"broker"},
+		}
+		errs = errs.Also(fe).ViaField("spec")
+	}
+
 	return errs
 }
 

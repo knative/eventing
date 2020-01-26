@@ -35,7 +35,7 @@ import (
 	pkgTest "knative.dev/pkg/test"
 )
 
-func TestSequence(t *testing.T) {
+func TestFlowsSequence(t *testing.T) {
 	const (
 		sequenceName  = "e2e-sequence"
 		senderPodName = "e2e-sequence-sender-pod"
@@ -102,16 +102,16 @@ func TestSequence(t *testing.T) {
 	replyRef := pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, channelName)
 
 	// create the sequence object
-	sequence := eventingtesting.NewSequence(
+	sequence := eventingtesting.NewFlowsSequence(
 		sequenceName,
 		client.Namespace,
-		eventingtesting.WithSequenceSteps(steps),
-		eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
-		eventingtesting.WithSequenceReply(&duckv1.Destination{Ref: replyRef}),
+		eventingtesting.WithFlowsSequenceSteps(steps),
+		eventingtesting.WithFlowsSequenceChannelTemplateSpec(channelTemplate),
+		eventingtesting.WithFlowsSequenceReply(&duckv1.Destination{Ref: replyRef}),
 	)
 
 	// create Sequence or fail the test if there is an error
-	client.CreateSequenceOrFail(sequence)
+	client.CreateFlowsSequenceOrFail(sequence)
 
 	// wait for all test resources to be ready, so that we can start sending events
 	if err := client.WaitForAllTestResourcesReady(); err != nil {
@@ -133,10 +133,10 @@ func TestSequence(t *testing.T) {
 	if err := client.SendFakeEventToAddressable(
 		senderPodName,
 		sequenceName,
-		lib.SequenceTypeMeta,
+		lib.FlowsSequenceTypeMeta,
 		event,
 	); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the sequence %q", sequenceName)
+		t.Fatalf("Failed to send fake CloudEvent to the sequence %q : %s", sequenceName, err)
 	}
 
 	// verify the logger service receives the correct transformed event

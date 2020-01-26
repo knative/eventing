@@ -34,8 +34,11 @@ import (
 	"knative.dev/pkg/tracker"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+
+	listers "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
@@ -55,7 +58,7 @@ type Reconciler struct {
 	parallelLister     listers.ParallelLister
 	tracker            tracker.Interface
 	channelableTracker duck.ListableTracker
-	subscriptionLister listers.SubscriptionLister
+	subscriptionLister messaginglisters.SubscriptionLister
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -97,6 +100,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(parallel, corev1.EventTypeNormal, reconciled, "Parallel reconciled")
 	}
 
+	// Since the reconciler took a crack at this, make sure it's reflected
+	// in the status correctly.
+	parallel.Status.ObservedGeneration = original.Generation
+
 	if _, updateStatusErr := r.updateStatus(ctx, parallel); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Parallel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update parallel status: %s", key)
@@ -108,6 +115,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error {
+	p.Status.InitializeConditions()
+
 	// Reconciling parallel is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
 	// 2. For each of the Branches:
@@ -120,9 +129,6 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 		return nil
 	}
 
-	p.Status.InitializeConditions()
-
-	p.Status.MarkDeprecated("parallelMessagingDeprecated", "parallels.messaging.knative.dev are deprecated and will be removed in the future. Use parallels.flows.knative.dev instead.")
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(p.Namespace)
 	if channelResourceInterface == nil {
@@ -169,8 +175,8 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	}
 	p.Status.PropagateChannelStatuses(ingressChannel, channels)
 
-	filterSubs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Branches))
-	subs := make([]*v1alpha1.Subscription, 0, len(p.Spec.Branches))
+	filterSubs := make([]*messagingv1alpha1.Subscription, 0, len(p.Spec.Branches))
+	subs := make([]*messagingv1alpha1.Subscription, 0, len(p.Spec.Branches))
 	for i := 0; i < len(p.Spec.Branches); i++ {
 		filterSub, sub, err := r.reconcileBranch(ctx, i, p)
 		if err != nil {
@@ -200,7 +206,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Paralle
 	existing := p.DeepCopy()
 	existing.Status = desired.Status
 
-	return r.EventingClientSet.MessagingV1alpha1().Parallels(desired.Namespace).UpdateStatus(existing)
+	return r.EventingClientSet.FlowsV1alpha1().Parallels(desired.Namespace).UpdateStatus(existing)
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {
@@ -245,7 +251,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 	return channelable, nil
 }
 
-func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v1alpha1.Parallel) (*v1alpha1.Subscription, *v1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v1alpha1.Parallel) (*messagingv1alpha1.Subscription, *messagingv1alpha1.Subscription, error) {
 	filterExpected := resources.NewFilterSubscription(branchNumber, p)
 	filterSubName := resources.ParallelFilterSubscriptionName(p.Name, branchNumber)
 
@@ -265,7 +271,7 @@ func (r *Reconciler) reconcileBranch(ctx context.Context, branchNumber int, p *v
 	return filterSub, sub, nil
 }
 
-func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int, expected *v1alpha1.Subscription, subName, ns string) (*v1alpha1.Subscription, error) {
+func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int, expected *messagingv1alpha1.Subscription, subName, ns string) (*messagingv1alpha1.Subscription, error) {
 	sub, err := r.subscriptionLister.Subscriptions(ns).Get(subName)
 
 	// If the resource doesn't exist, we'll create it.

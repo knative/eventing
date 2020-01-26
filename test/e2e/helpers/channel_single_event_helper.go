@@ -29,7 +29,9 @@ import (
 )
 
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
-func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestRunner lib.ChannelTestRunner) {
+func SingleEventForChannelTestHelper(t *testing.T, encoding string,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption) {
 	channelName := "e2e-singleevent-channel-" + encoding
 	senderName := "e2e-singleevent-sender-" + encoding
 	subscriptionName := "e2e-singleevent-subscription-" + encoding
@@ -37,7 +39,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string, channelTestR
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Run test with channel %q", channel)
-		client := lib.Setup(st, true)
+		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
 		// create channel

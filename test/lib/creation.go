@@ -151,16 +151,6 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 	return trigger
 }
 
-// CreateSequenceOrFail will create a Sequence or fail the test if there is an error.
-func (client *Client) CreateSequenceOrFail(sequence *messagingv1alpha1.Sequence) {
-	sequences := client.Eventing.MessagingV1alpha1().Sequences(client.Namespace)
-	_, err := sequences.Create(sequence)
-	if err != nil {
-		client.T.Fatalf("Failed to create sequence %q: %v", sequence.Name, err)
-	}
-	client.Tracker.AddObj(sequence)
-}
-
 // CreateFlowsSequenceOrFail will create a Sequence (in flows.knative.dev api group) or
 // fail the test if there is an error.
 func (client *Client) CreateFlowsSequenceOrFail(sequence *flowsv1alpha1.Sequence) {
@@ -170,16 +160,6 @@ func (client *Client) CreateFlowsSequenceOrFail(sequence *flowsv1alpha1.Sequence
 		client.T.Fatalf("Failed to create sequence %q: %v", sequence.Name, err)
 	}
 	client.Tracker.AddObj(sequence)
-}
-
-// CreateParallelOrFail will create a Parallel or fail the test if there is an error.
-func (client *Client) CreateParallelOrFail(parallel *messagingv1alpha1.Parallel) {
-	parallels := client.Eventing.MessagingV1alpha1().Parallels(client.Namespace)
-	_, err := parallels.Create(parallel)
-	if err != nil {
-		client.T.Fatalf("Failed to create parallel %q: %v", parallel.Name, err)
-	}
-	client.Tracker.AddObj(parallel)
 }
 
 // CreateFlowsParallelOrFail will create a Parallel (in flows.knative.dev api group) or
@@ -241,6 +221,16 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 		client.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
 	}
 	client.Tracker.AddObj(apiServerSource)
+}
+
+// CreatePingSourceOrFail will create an PingSource
+func (client *Client) CreatePingSourceOrFail(pingSource *sourcesv1alpha1.PingSource) {
+	pingInterface := client.Eventing.SourcesV1alpha1().PingSources(client.Namespace)
+	_, err := pingInterface.Create(pingSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
+	}
+	client.Tracker.AddObj(pingSource)
 }
 
 // CreateLegacyApiServerSourceOrFail will create an ApiServerSource

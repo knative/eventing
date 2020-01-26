@@ -36,7 +36,10 @@ EventSource ---> Channel ---> Subscription ---> Service(Logger)
 */
 
 // SingleEventHelperForChannelTestHelper is the helper function for header_test
-func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channelTestRunner lib.ChannelTestRunner) {
+func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
+	channelTestRunner lib.ChannelTestRunner,
+	options ...lib.SetupClientOption,
+) {
 	channelName := "conformance-headers-channel-" + encoding
 	senderName := "conformance-headers-sender-" + encoding
 	subscriptionName := "conformance-headers-subscription-" + encoding
@@ -44,7 +47,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string, channe
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		st.Logf("Running header conformance test with channel %q", channel)
-		client := lib.Setup(st, true)
+		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
 		// create channel

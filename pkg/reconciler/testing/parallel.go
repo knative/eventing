@@ -22,15 +22,15 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // ParallelOption enables further configuration of a Parallel.
-type ParallelOption func(*v1alpha1.Parallel)
+type FlowsParallelOption func(*v1alpha1.Parallel)
 
-// NewParallel creates an Parallel with ParallelOptions.
-func NewParallel(name, namespace string, popt ...ParallelOption) *v1alpha1.Parallel {
+// NewFlowsParallel creates an Parallel with ParallelOptions.
+func NewFlowsParallel(name, namespace string, popt ...FlowsParallelOption) *v1alpha1.Parallel {
 	p := &v1alpha1.Parallel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -45,76 +45,70 @@ func NewParallel(name, namespace string, popt ...ParallelOption) *v1alpha1.Paral
 	return p
 }
 
-func WithInitParallelConditions(p *v1alpha1.Parallel) {
+func WithInitFlowsParallelConditions(p *v1alpha1.Parallel) {
 	p.Status.InitializeConditions()
 }
 
-func WithParallelDeleted(p *v1alpha1.Parallel) {
+func WithFlowsParallelGeneration(gen int64) FlowsParallelOption {
+	return func(s *v1alpha1.Parallel) {
+		s.Generation = gen
+	}
+}
+
+func WithFlowsParallelStatusObservedGeneration(gen int64) FlowsParallelOption {
+	return func(s *v1alpha1.Parallel) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
+func WithFlowsParallelDeleted(p *v1alpha1.Parallel) {
 	deleteTime := metav1.NewTime(time.Unix(1e9, 0))
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithParallelChannelTemplateSpec(cts *eventingduck.ChannelTemplateSpec) ParallelOption {
+func WithFlowsParallelChannelTemplateSpec(cts *eventingduck.ChannelTemplateSpec) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Spec.ChannelTemplate = cts
 	}
 }
 
-func WithParallelBranches(branches []v1alpha1.ParallelBranch) ParallelOption {
+func WithFlowsParallelBranches(branches []v1alpha1.ParallelBranch) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Spec.Branches = branches
 	}
 }
 
-func WithParallelReply(reply *duckv1.Destination) ParallelOption {
+func WithFlowsParallelReply(reply *duckv1.Destination) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Spec.Reply = reply
 	}
 }
 
-func WithParallelBranchStatuses(branchStatuses []v1alpha1.ParallelBranchStatus) ParallelOption {
+func WithFlowsParallelBranchStatuses(branchStatuses []v1alpha1.ParallelBranchStatus) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Status.BranchStatuses = branchStatuses
 	}
 }
 
-func WithParallelDeprecatedReplyStatus() ParallelOption {
-	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDeprecated("replyDeprecatedRef", "spec.reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.reply.ref instead.")
-	}
-}
-
-func WithParallelDeprecatedStatus() ParallelOption {
-	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDeprecated("parallelMessagingDeprecated", "parallels.messaging.knative.dev are deprecated and will be removed in the future. Use parallels.flows.knative.dev instead.")
-	}
-}
-
-func WithParallelDeprecatedBranchReplyStatus() ParallelOption {
-	return func(p *v1alpha1.Parallel) {
-		p.Status.MarkDeprecated("branchReplyDeprecatedRef", "spec.branches[*].reply.{apiVersion,kind,name} are deprecated and will be removed in the future. Use spec.branches[*].reply.ref instead.")
-	}
-}
-
-func WithParallelIngressChannelStatus(status v1alpha1.ParallelChannelStatus) ParallelOption {
+func WithFlowsParallelIngressChannelStatus(status v1alpha1.ParallelChannelStatus) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Status.IngressChannelStatus = status
 	}
 }
 
-func WithParallelChannelsNotReady(reason, message string) ParallelOption {
+func WithFlowsParallelChannelsNotReady(reason, message string) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Status.MarkChannelsNotReady(reason, message)
 	}
 }
 
-func WithParallelSubscriptionsNotReady(reason, message string) ParallelOption {
+func WithFlowsParallelSubscriptionsNotReady(reason, message string) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Status.MarkSubscriptionsNotReady(reason, message)
 	}
 }
 
-func WithParallelAddressableNotReady(reason, message string) ParallelOption {
+func WithFlowsParallelAddressableNotReady(reason, message string) FlowsParallelOption {
 	return func(p *v1alpha1.Parallel) {
 		p.Status.MarkAddressableNotReady(reason, message)
 	}

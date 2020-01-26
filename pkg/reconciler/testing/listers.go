@@ -146,20 +146,16 @@ func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
 	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
 }
 
-func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
-	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
-}
-
-func (l *Listers) GetParallelLister() messaginglisters.ParallelLister {
-	return messaginglisters.NewParallelLister(l.indexerFor(&messagingv1alpha1.Parallel{}))
-}
-
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
 	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
 }
 
 func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {
 	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha1.ApiServerSource{}))
+}
+
+func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
+	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1alpha1.PingSource{}))
 }
 
 func (l *Listers) GetLegacyCronJobSourceLister() legacysourcelisters.CronJobSourceLister {

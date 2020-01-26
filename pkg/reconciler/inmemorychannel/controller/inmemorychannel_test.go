@@ -27,12 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -72,6 +74,29 @@ func init() {
 
 func TestAllCases(t *testing.T) {
 	imcKey := testNS + "/" + imcName
+
+	subscribers := []eventingduckv1alpha1.SubscriberSpec{{
+		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: apis.HTTP("call1"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}, {
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    2,
+		SubscriberURI: apis.HTTP("call2"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}}
+
+	subscriberStatuses := []eventingduckv1alpha1.SubscriberStatus{{
+		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              "True",
+	}, {
+		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 2,
+		Ready:              "True",
+	}}
+
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -300,6 +325,33 @@ func TestAllCases(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
+			},
+		}, {
+			Name: "Works, channel exists with subscribers",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInMemoryChannelSubscribers(subscribers)),
+				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
+					reconciletesting.WithInMemoryChannelStatusSubscribers(subscriberStatuses),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "channel does not exist, fails to create",

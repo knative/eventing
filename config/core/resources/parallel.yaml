@@ -1,0 +1,185 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: parallels.messaging.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: messaging.knative.dev
+  version: v1alpha1
+  names:
+    kind: Parallel
+    plural: parallels
+    singular: parallel
+    categories:
+    - all
+    - knative
+    - eventing
+    - messaging
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          required:
+            - branches
+            - channelTemplate
+          properties:
+            branches:
+              type: array
+              description: "the list of filter/subscribers pairs."
+              items:
+                type: object
+                required:
+                - subscriber
+                properties:
+                  filter:
+                    type: object
+                    description: "the destination of the filter expression that is guarding the branch."
+                    properties:
+                      ref:
+                        type: object
+                        description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                        required:
+                          - apiVersion
+                          - kind
+                          - name
+                        properties:
+                          apiVersion:
+                            type: string
+                            minLength: 1
+                          kind:
+                            type: string
+                            minLength: 1
+                          name:
+                            type: string
+                            minLength: 1
+                      uri:
+                        type: string
+                        description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                  subscriber:
+                    type: object
+                    description: "the destination of the events if the filter passes."
+                    properties:
+                      ref:
+                        type: object
+                        description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                        required:
+                          - apiVersion
+                          - kind
+                          - name
+                        properties:
+                          apiVersion:
+                            type: string
+                            minLength: 1
+                          kind:
+                            type: string
+                            minLength: 1
+                          name:
+                            type: string
+                            minLength: 1
+                      uri:
+                        type: string
+                        description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                  reply:
+                    description: "a reference to where the result of the subscriber of this branch gets sent to. If not specified, the result is sent to the Parallel reply."
+                    anyOf:
+                      - type: object
+                        properties:
+                          uri:
+                            type: string
+                            description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                            minLength: 1
+                      - type: object
+                        description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                        properties:
+                          ref:
+                            type: object
+                            required:
+                              - apiVersion
+                              - kind
+                              - name
+                            properties:
+                              apiVersion:
+                                type: string
+                                minLength: 1
+                              kind:
+                                type: string
+                                minLength: 1
+                              name:
+                                type: string
+                                minLength: 1
+            channelTemplate:
+              type: object
+              description: "specifies which Channel to use. If left unspecified, it is set to the default Channel for the namespace (or cluster, in case there are no defaults for the namespace)."
+              required:
+                - apiVersion
+                - kind
+              properties:
+                apiVersion:
+                  type: string
+                  minLength: 1
+                kind:
+                  type: string
+                  minLength: 1
+                spec:
+                  type: object
+            reply:
+              type: object
+              description: "a reference to where the result of a branch subscriber gets sent to when the branch does not have a reply."
+              anyOf:
+                - type: object
+                  properties:
+                    uri:
+                      type: string
+                      description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                      minLength: 1
+                - type: object
+                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                  properties:
+                    ref:
+                      type: object
+                      required:
+                        - apiVersion
+                        - kind
+                        - name
+                      properties:
+                        apiVersion:
+                          type: string
+                          minLength: 1
+                        kind:
+                          type: string
+                          minLength: 1
+                        name:
+                          type: string
+                          minLength: 1
