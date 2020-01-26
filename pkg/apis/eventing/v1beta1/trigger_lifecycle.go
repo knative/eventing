@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -105,8 +104,7 @@ func (ts *TriggerStatus) MarkBrokerNotConfigured() {
 		"BrokerNotConfigured", "Broker has not yet been reconciled.")
 }
 
-func (ts *TriggerStatus) PropagateSubscriptionStatus(ss *messagingv1alpha1.SubscriptionStatus) {
-	sc := messagingv1alpha1.SubCondSet.Manage(ss).GetTopLevelCondition()
+func (ts *TriggerStatus) PropagateSubscriptionCondition(sc *apis.Condition) {
 	if sc == nil {
 		ts.MarkSubscriptionNotConfigured()
 		return
@@ -130,10 +128,6 @@ func (ts *TriggerStatus) MarkNotSubscribed(reason, messageFormat string, message
 
 func (ts *TriggerStatus) MarkSubscribedUnknown(reason, messageFormat string, messageA ...interface{}) {
 	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionSubscribed, reason, messageFormat, messageA...)
-}
-
-func (ts *TriggerStatus) MarkSubscriptionNotOwned(sub *messagingv1alpha1.Subscription) {
-	triggerCondSet.Manage(ts).MarkFalse(TriggerConditionSubscribed, "SubscriptionNotOwned", "Subscription %q is not owned by this Trigger.", sub.Name)
 }
 
 func (ts *TriggerStatus) MarkSubscriptionNotConfigured() {

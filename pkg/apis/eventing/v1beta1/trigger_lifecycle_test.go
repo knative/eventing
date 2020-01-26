@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
@@ -238,102 +237,83 @@ func TestTriggerConditionStatus(t *testing.T) {
 		brokerStatus                *eventingv1alpha1.BrokerStatus
 		markKubernetesServiceExists bool
 		markVirtualServiceExists    bool
-		subscriptionOwned           bool
-		subscriptionStatus          *messagingv1beta1.SubscriptionStatus
+		subscriptionCondition       *apis.Condition
 		subscriberResolvedStatus    bool
 		dependencyAnnotationExists  bool
 		dependencyStatus            corev1.ConditionStatus
 		wantConditionStatus         corev1.ConditionStatus
 	}{{
 		name:                        "all happy",
-		brokerStatus:                eventingv1alpha1.TestHelper.ReadyBrokerStatus(),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantConditionStatus:         corev1.ConditionTrue,
 	}, {
 		name:                        "broker status unknown",
-		brokerStatus:                eventingv1alpha1.TestHelper.UnknownBrokerStatus(),
+		brokerStatus:                TestHelper.UnknownBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantConditionStatus:         corev1.ConditionUnknown,
 	}, {
 		name:                        "broker status false",
-		brokerStatus:                eventingv1alpha1.TestHelper.FalseBrokerStatus(),
+		brokerStatus:                TestHelper.FalseBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "subscribed sad",
-		brokerStatus:                eventingv1alpha1.TestHelper.ReadyBrokerStatus(),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.FalseSubscriptionStatus(),
-		subscriberResolvedStatus:    true,
-		dependencyAnnotationExists:  false,
-		wantConditionStatus:         corev1.ConditionFalse,
-	}, {
-		name:                        "subscription not owned",
-		brokerStatus:                eventingv1alpha1.TestHelper.ReadyBrokerStatus(),
-		markKubernetesServiceExists: true,
-		markVirtualServiceExists:    true,
-		subscriptionOwned:           false,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.FalseSubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  false,
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "failed to resolve subscriber",
-		brokerStatus:                eventingv1alpha1.TestHelper.ReadyBrokerStatus(),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    false,
 		dependencyAnnotationExists:  true,
 		dependencyStatus:            corev1.ConditionTrue,
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "dependency unknown",
-		brokerStatus:                eventingv1alpha1.TestHelper.ReadyBrokerStatus(),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  true,
 		dependencyStatus:            corev1.ConditionUnknown,
 		wantConditionStatus:         corev1.ConditionUnknown,
 	}, {
 		name:                        "dependency false",
-		brokerStatus:                eventingv1alpha1.TestHelper.ReadyBrokerStatus(),
+		brokerStatus:                TestHelper.ReadyBrokerStatus(),
 		markKubernetesServiceExists: true,
 		markVirtualServiceExists:    true,
-		subscriptionOwned:           true,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.ReadySubscriptionStatus(),
+		subscriptionCondition:       TestHelper.ReadySubscriptionCondition(),
 		subscriberResolvedStatus:    true,
 		dependencyAnnotationExists:  true,
 		dependencyStatus:            corev1.ConditionFalse,
 		wantConditionStatus:         corev1.ConditionFalse,
 	}, {
 		name:                        "all sad",
-		brokerStatus:                eventingv1alpha1.TestHelper.FalseBrokerStatus(),
+		brokerStatus:                TestHelper.FalseBrokerStatus(),
 		markKubernetesServiceExists: false,
 		markVirtualServiceExists:    false,
-		subscriptionOwned:           false,
-		subscriptionStatus:          eventingv1alpha1.TestHelper.FalseSubscriptionStatus(),
+		subscriptionCondition:       TestHelper.FalseSubscriptionCondition(),
 		subscriberResolvedStatus:    false,
 		dependencyAnnotationExists:  true,
 		dependencyStatus:            corev1.ConditionFalse,
@@ -345,10 +325,8 @@ func TestTriggerConditionStatus(t *testing.T) {
 			if test.brokerStatus != nil {
 				ts.PropagateBrokerStatus(test.brokerStatus)
 			}
-			if !test.subscriptionOwned {
-				ts.MarkSubscriptionNotOwned(&messagingv1beta1.Subscription{})
-			} else if test.subscriptionStatus != nil {
-				ts.PropagateSubscriptionStatus(test.subscriptionStatus)
+			if test.subscriptionCondition != nil {
+				ts.PropagateSubscriptionCondition(test.subscriptionCondition)
 			}
 			if test.subscriberResolvedStatus {
 				ts.MarkSubscriberResolvedSucceeded()
