@@ -74,6 +74,7 @@ var (
 	invalidInjectionAnnotation = "disabled"
 	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )
+
 const (
 	validLabelNameMaxCharsNotReached = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	invalidLabelNameMaxCharsReached  = validLabelNameMaxCharsNotReached + "b"
@@ -95,9 +96,9 @@ func TestTriggerValidation(t *testing.T) {
 			errs = errs.Also(fe)
 			return errs
 		}(),
-	},{
+	}, {
 		name: "invalid trigger name",
-		t:    &Trigger{
+		t: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				// ups ... name too long
 				Name:      invalidLabelNameMaxCharsReached,
@@ -114,9 +115,9 @@ func TestTriggerValidation(t *testing.T) {
 			Paths:   []string{"metadata.name"},
 			Details: "",
 		},
-	},{
+	}, {
 		name: "invalid broker name",
-		t:    &Trigger{
+		t: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      validLabelNameMaxCharsNotReached,
 				Namespace: "dummy",
@@ -133,7 +134,7 @@ func TestTriggerValidation(t *testing.T) {
 			Paths:   []string{"spec.broker"},
 			Details: "",
 		},
-	},  {
+	}, {
 		name: "invalid dependency annotation, not a corev1.ObjectReference",
 		t: &Trigger{
 			ObjectMeta: v1.ObjectMeta{
