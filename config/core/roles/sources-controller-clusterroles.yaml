@@ -15,7 +15,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: knative-eventing-source-controller
+  name: knative-eventing-sources-controller
   labels:
     eventing.knative.dev/release: devel
 rules:
