@@ -54,22 +54,10 @@ func (cmps *ConfigMapPropagationStatus) MarkNotPropagated() {
 }
 
 func (cmpsc *ConfigMapPropagationStatusCopyConfigMap) SetCopyConfigMapStatus(name, source, operation, ready, reason, resourceVersion string) {
-	if name != "" {
-		cmpsc.Name = name
-	}
-	if source != "" {
-		cmpsc.Source = source
-	}
-	if operation != "" {
-		cmpsc.Operation = operation
-	}
-	if ready != "" {
-		cmpsc.Ready = ready
-	}
-	if reason != "" {
-		cmpsc.Reason = reason
-	}
-	if resourceVersion != "" {
-		cmpsc.ResourceVersion = resourceVersion
-	}
+	cmpsc.Name = name
+	cmpsc.Source = source
+	cmpsc.Operation = operation
+	cmpsc.Ready = ready
+	cmpsc.Reason = reason
+	cmpsc.ResourceVersion = resourceVersion
 }

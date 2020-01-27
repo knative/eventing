@@ -61,7 +61,7 @@ func (cmps *ConfigMapPropagationSpec) Validate(ctx context.Context) *apis.FieldE
 		}
 		if cmps.Selector.MatchExpressions != nil {
 			fe := &apis.FieldError{
-				Message: fmt.Sprintf("MatchExppressions isn't supported yet"),
+				Message: fmt.Sprintf("matchExpressions isn't supported yet"),
 				Paths:   []string{"selector"},
 			}
 			errs = errs.Also(fe)

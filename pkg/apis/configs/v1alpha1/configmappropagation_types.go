@@ -87,23 +87,18 @@ type ConfigMapPropagationStatusCopyConfigMap struct {
 	Name string `json:"name,omitempty"`
 
 	// Source is "originalNamespace/originalConfigMapName"
-	// +required
 	Source string `json:"source,omitempty"`
 
 	// Operation represents the operation CMP takes for this configmap. The operations are copy|delete|stop
-	// +required
 	Operation string `json:"operation,omitempty"`
 
 	// Ready represents the operation is ready or not
-	// +required
 	Ready string `json:"ready,omitempty"`
 
 	// Reason indicates reasons if the operation is not ready
-	// +optional
 	Reason string `json:"reason,omitempty"`
 
 	// ResourceVersion is the resourceVersion of original configmap
-	// +optional
 	ResourceVersion string `json:"resourceVersionFromSource,omitempty" protobuf:"bytes,6,opt,name=resourceVersion"`
 }
 

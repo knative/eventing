@@ -230,7 +230,7 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.Confi
 			r.Recorder.Eventf(cmp, corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed,
 				fmt.Sprintf("Stop propagating ConfigMap: %s", configMap.Name))
 			expectedStatus.SetCopyConfigMapStatus(name, source, stopConfigMap, "True",
-				`copy ConfigMap doesn't have "knative.dev/config-propagation:copy" label, stop propagating this ConfigMap`, resourceVersion)
+				`copy ConfigMap doesn't have copy label, stop propagating this ConfigMap`, resourceVersion)
 		} else {
 			logging.FromContext(ctx).Debug("Propagate ConfigMap " + configMap.Name + " succeed")
 			r.Recorder.Eventf(cmp, corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed,
@@ -241,7 +241,7 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.Confi
 		cmp.Status.CopyConfigMaps = append(cmp.Status.CopyConfigMaps, expectedStatus)
 	}
 	// List ConfigMaps in current namespace and delete copy ConfigMap if the corresponding original ConfigMap no longer exists or no longer has the required label.
-	copyConfigMapList, err := r.configMapLister.ConfigMaps(cmp.Namespace).List(labels.Everything())
+	copyConfigMapList, err := r.configMapLister.ConfigMaps(cmp.Namespace).List(labels.SelectorFromSet(map[string]string{resources.PropagationLabelKey: resources.PropagationLabelValueCopy}))
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the ConfigMap list in current namespace", zap.Error(err))
 		return err
