@@ -70,6 +70,11 @@ type BrokerSpec struct {
 	// are no defaults for the namespace).
 	// +optional
 	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
+
+	// Delivery is the delivery specification to be used internally by the broker to
+	// create subscriptions.
+	// +optional
+	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // BrokerStatus represents the current state of a Broker.

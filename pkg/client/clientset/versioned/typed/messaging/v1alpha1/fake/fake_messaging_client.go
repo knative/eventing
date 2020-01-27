@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,14 +34,6 @@ func (c *FakeMessagingV1alpha1) Channels(namespace string) v1alpha1.ChannelInter
 
 func (c *FakeMessagingV1alpha1) InMemoryChannels(namespace string) v1alpha1.InMemoryChannelInterface {
 	return &FakeInMemoryChannels{c, namespace}
-}
-
-func (c *FakeMessagingV1alpha1) Parallels(namespace string) v1alpha1.ParallelInterface {
-	return &FakeParallels{c, namespace}
-}
-
-func (c *FakeMessagingV1alpha1) Sequences(namespace string) v1alpha1.SequenceInterface {
-	return &FakeSequences{c, namespace}
 }
 
 func (c *FakeMessagingV1alpha1) Subscriptions(namespace string) v1alpha1.SubscriptionInterface {

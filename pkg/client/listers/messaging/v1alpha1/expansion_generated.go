@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,22 +33,6 @@ type InMemoryChannelListerExpansion interface{}
 // InMemoryChannelNamespaceListerExpansion allows custom methods to be added to
 // InMemoryChannelNamespaceLister.
 type InMemoryChannelNamespaceListerExpansion interface{}
-
-// ParallelListerExpansion allows custom methods to be added to
-// ParallelLister.
-type ParallelListerExpansion interface{}
-
-// ParallelNamespaceListerExpansion allows custom methods to be added to
-// ParallelNamespaceLister.
-type ParallelNamespaceListerExpansion interface{}
-
-// SequenceListerExpansion allows custom methods to be added to
-// SequenceLister.
-type SequenceListerExpansion interface{}
-
-// SequenceNamespaceListerExpansion allows custom methods to be added to
-// SequenceNamespaceLister.
-type SequenceNamespaceListerExpansion interface{}
 
 // SubscriptionListerExpansion allows custom methods to be added to
 // SubscriptionLister.

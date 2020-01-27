@@ -27,12 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -72,6 +74,29 @@ func init() {
 
 func TestAllCases(t *testing.T) {
 	imcKey := testNS + "/" + imcName
+
+	subscribers := []eventingduckv1alpha1.SubscriberSpec{{
+		UID:           "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: apis.HTTP("call1"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}, {
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    2,
+		SubscriberURI: apis.HTTP("call2"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}}
+
+	subscriberStatuses := []eventingduckv1alpha1.SubscriberStatus{{
+		UID:                "2f9b5e8e-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              "True",
+	}, {
+		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 2,
+		Ready:              "True",
+	}}
+
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -112,10 +137,60 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
-					reconciletesting.WithInMemoryChannelDeploymentNotReady("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
+					reconciletesting.WithInMemoryChannelDeploymentFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: deployment.apps \"test-deployment\" not found"),
+			},
+		}, {
+			Name: "the status of deployment is false",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeFalseDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentFailed("DispatcherDeploymentFalse", "The status of Dispatcher Deployment is False: Deployment Failed : Deployment Failed"),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+			},
+		}, {
+			Name: "the status of deployment is unknown",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeUnknownDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS),
+			},
+			WantErr: false,
+			WantCreates: []runtime.Object{
+				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentUnknown("DispatcherDeploymentUnknown", "The status of Dispatcher Deployment is Unknown: Deployment Unknown : Deployment Unknown"),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
 			},
 		}, {
 			Name: "Service does not exist",
@@ -252,6 +327,33 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
 			},
 		}, {
+			Name: "Works, channel exists with subscribers",
+			Key:  imcKey,
+			Objects: []runtime.Object{
+				makeReadyDeployment(),
+				makeService(),
+				makeReadyEndpoints(),
+				reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInMemoryChannelSubscribers(subscribers)),
+				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
+			},
+			WantErr: false,
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelSubscribers(subscribers),
+					reconciletesting.WithInMemoryChannelStatusSubscribers(subscriberStatuses),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress),
+				),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+			},
+		}, {
 			Name: "channel does not exist, fails to create",
 			Key:  imcKey,
 			Objects: []runtime.Object{
@@ -319,6 +421,18 @@ func makeDeployment() *appsv1.Deployment {
 func makeReadyDeployment() *appsv1.Deployment {
 	d := makeDeployment()
 	d.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+	return d
+}
+
+func makeFalseDeployment() *appsv1.Deployment {
+	d := makeDeployment()
+	d.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionFalse, Reason: "Deployment Failed", Message: "Deployment Failed"}}
+	return d
+}
+
+func makeUnknownDeployment() *appsv1.Deployment {
+	d := makeDeployment()
+	d.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionUnknown, Reason: "Deployment Unknown", Message: "Deployment Unknown"}}
 	return d
 }
 

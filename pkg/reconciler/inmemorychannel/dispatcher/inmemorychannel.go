@@ -19,20 +19,17 @@ package dispatcher
 import (
 	"context"
 	"fmt"
-	"reflect"
-
-	"knative.dev/eventing/pkg/inmemorychannel"
 
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
@@ -42,6 +39,7 @@ import (
 type Reconciler struct {
 	*reconciler.Base
 
+	configStore             *channel.EventDispatcherConfigStore
 	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
@@ -60,7 +58,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	// Get the IMC resource with this namespace/name.
-	original, err := r.inmemorychannelLister.InMemoryChannels(namespace).Get(name)
+	channel, err := r.inmemorychannelLister.InMemoryChannels(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Error("InMemoryChannel key in work queue no longer exists")
@@ -69,24 +67,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	if !original.Status.IsReady() {
-		return fmt.Errorf("Channel is not ready. Cannot configure and update subscriber status")
+	if !channel.Status.IsReady() {
+		return fmt.Errorf("Channel is not ready. Cannot configure the dispatcher")
 	}
 
-	// Don't modify the informers copy.
-	channel := original.DeepCopy()
-
+	// Just update the dispatcher config
 	reconcileErr := r.reconcile(ctx, channel)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
 	} else {
 		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
-	}
-
-	// todo: Should this check for subscribable status rather than entire status?
-	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
-		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
-		return updateStatusErr
 	}
 	return nil
 }
@@ -116,28 +106,8 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		logging.FromContext(ctx).Error("Error updating InMemory dispatcher config")
 		return err
 	}
-	if subscribableStatus := r.createSubscribableStatus(imc.Spec.Subscribable); subscribableStatus != nil {
-		imc.Status.SubscribableTypeStatus.SetSubscribableTypeStatus(*subscribableStatus)
-	}
-	return nil
-}
 
-func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable) *eventingduck.SubscribableStatus {
-	if subscribable == nil {
-		return nil
-	}
-	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
-	for _, sub := range subscribable.Subscribers {
-		status := eventingduck.SubscriberStatus{
-			UID:                sub.UID,
-			ObservedGeneration: sub.Generation,
-			Ready:              corev1.ConditionTrue,
-		}
-		subscriberStatus = append(subscriberStatus, status)
-	}
-	return &eventingduck.SubscribableStatus{
-		Subscribers: subscriberStatus,
-	}
+	return nil
 }
 
 // newConfigFromInMemoryChannels creates a new Config from the list of inmemory channels.
@@ -151,8 +121,9 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 		}
 		if c.Spec.Subscribable != nil {
 			channelConfig.FanoutConfig = fanout.Config{
-				AsyncHandler:  true,
-				Subscriptions: c.Spec.Subscribable.Subscribers,
+				AsyncHandler:     true,
+				Subscriptions:    c.Spec.Subscribable.Subscribers,
+				DispatcherConfig: r.configStore.GetConfig(),
 			}
 		}
 		cc = append(cc, channelConfig)
@@ -160,21 +131,4 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 	return &multichannelfanout.Config{
 		ChannelConfigs: cc,
 	}
-}
-
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {
-	imc, err := r.inmemorychannelLister.InMemoryChannels(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	if reflect.DeepEqual(imc.Status, desired.Status) {
-		return imc, nil
-	}
-
-	// Don't modify the informers copy.
-	existing := imc.DeepCopy()
-	existing.Status = desired.Status
-
-	return r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
 }

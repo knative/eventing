@@ -79,6 +79,8 @@ type EventContextWriter interface {
 	// SetExtension sets the given interface onto the extension attributes
 	// determined by the provided name.
 	//
+	// This function fails in V1 if the name doesn't respect the regex ^[a-zA-Z0-9]+$
+	//
 	// Package ./types documents the types that are allowed as extension values.
 	SetExtension(string, interface{}) error
 }

@@ -30,6 +30,22 @@ import (
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
+var (
+	validAddress = &duckv1alpha1.Addressable{
+		Addressable: duckv1beta1.Addressable{
+			URL: &apis.URL{
+				Scheme: "http",
+				Host:   "test-domain",
+			},
+		},
+		Hostname: "test-domain",
+	}
+	urlNotSetAddress = &duckv1alpha1.Addressable{
+		Addressable: duckv1beta1.Addressable{},
+		Hostname:    "test-domain",
+	}
+)
+
 func TestChannelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -154,50 +170,54 @@ func TestChannelInitializeConditions(t *testing.T) {
 	}
 }
 
-func TestChannelIsReady(t *testing.T) {
+func TestChannelConditionStatus(t *testing.T) {
 	tests := []struct {
-		name                    string
-		setAddress              bool
-		markBackingChannelReady bool
-		wantReady               bool
+		name                 string
+		address              *duckv1alpha1.Addressable
+		backingChannelStatus corev1.ConditionStatus
+		wantConditionStatus  corev1.ConditionStatus
 	}{{
-		name:                    "all happy",
-		setAddress:              true,
-		markBackingChannelReady: true,
-		wantReady:               true,
+		name:                 "all happy",
+		address:              validAddress,
+		backingChannelStatus: corev1.ConditionTrue,
+		wantConditionStatus:  corev1.ConditionTrue,
 	}, {
-		name:                    "address not set",
-		setAddress:              false,
-		markBackingChannelReady: true,
-		wantReady:               false,
-	}, {
-		name:                    "backing channel not ready",
-		setAddress:              true,
-		markBackingChannelReady: false,
-		wantReady:               false,
-	}}
+		name:                 "address not set",
+		address:              &duckv1alpha1.Addressable{},
+		backingChannelStatus: corev1.ConditionTrue,
+		wantConditionStatus:  corev1.ConditionFalse,
+	},
+		{
+			name:                 "address without url",
+			address:              urlNotSetAddress,
+			backingChannelStatus: corev1.ConditionTrue,
+			wantConditionStatus:  corev1.ConditionFalse,
+		}, {
+			name:                 "backing channel with unknown status",
+			address:              validAddress,
+			backingChannelStatus: corev1.ConditionUnknown,
+			wantConditionStatus:  corev1.ConditionUnknown,
+		}, {
+			name:                 "backing channel with false status",
+			address:              validAddress,
+			backingChannelStatus: corev1.ConditionFalse,
+			wantConditionStatus:  corev1.ConditionFalse,
+		}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.InitializeConditions()
-			if test.setAddress {
-				cs.SetAddress(&duckv1alpha1.Addressable{
-					Addressable: duckv1beta1.Addressable{
-						URL: &apis.URL{
-							Scheme: "http",
-							Host:   "test-domain",
-						},
-					},
-				})
-			}
-			if test.markBackingChannelReady {
+			cs.SetAddress(test.address)
+			if test.backingChannelStatus == corev1.ConditionTrue {
 				cs.MarkBackingChannelReady()
-			} else {
+			} else if test.backingChannelStatus == corev1.ConditionFalse {
 				cs.MarkBackingChannelFailed("ChannelFailure", "testing")
+			} else {
+				cs.MarkBackingChannelUnknown("ChannelUnknown", "testing")
 			}
-			got := cs.IsReady()
-			if test.wantReady != got {
-				t.Errorf("unexpected readiness: want %v, got %v", test.wantReady, got)
+			got := cs.GetTopLevelCondition().Status
+			if test.wantConditionStatus != got {
+				t.Errorf("unexpected readiness: want %v, got %v", test.wantConditionStatus, got)
 			}
 		})
 	}
@@ -275,24 +295,16 @@ func TestChannelSetAddressable(t *testing.T) {
 
 func TestChannelPropagateStatuses(t *testing.T) {
 	testCases := map[string]struct {
-		channelableStatus *v1alpha1.ChannelableStatus
-		wantReady         bool
+		channelableStatus   *v1alpha1.ChannelableStatus
+		wantConditionStatus corev1.ConditionStatus
 	}{
 		"address set": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
 				AddressStatus: duckv1alpha1.AddressStatus{
-					Address: &duckv1alpha1.Addressable{
-						Addressable: duckv1beta1.Addressable{
-							URL: &apis.URL{
-								Scheme: "http",
-								Host:   "test-domain",
-							},
-						},
-						Hostname: "test-domain",
-					},
+					Address: validAddress,
 				},
 			},
-			wantReady: false,
+			wantConditionStatus: corev1.ConditionUnknown,
 		},
 		"address not set": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
@@ -300,31 +312,20 @@ func TestChannelPropagateStatuses(t *testing.T) {
 					Address: &duckv1alpha1.Addressable{},
 				},
 			},
-			wantReady: false,
+			wantConditionStatus: corev1.ConditionFalse,
 		},
 		"url not set": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
 				AddressStatus: duckv1alpha1.AddressStatus{
-					Address: &duckv1alpha1.Addressable{
-						Addressable: duckv1beta1.Addressable{},
-						Hostname:    "test-domain",
-					},
+					Address: urlNotSetAddress,
 				},
 			},
-			wantReady: false,
+			wantConditionStatus: corev1.ConditionFalse,
 		},
 		"all set": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
 				AddressStatus: duckv1alpha1.AddressStatus{
-					Address: &duckv1alpha1.Addressable{
-						Addressable: duckv1beta1.Addressable{
-							URL: &apis.URL{
-								Scheme: "http",
-								Host:   "test-domain",
-							},
-						},
-						Hostname: "test-domain",
-					},
+					Address: validAddress,
 				},
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
@@ -333,20 +334,12 @@ func TestChannelPropagateStatuses(t *testing.T) {
 					}},
 				},
 			},
-			wantReady: true,
+			wantConditionStatus: corev1.ConditionTrue,
 		},
-		"backing channel not ready": {
+		"backing channel with unknown status": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
 				AddressStatus: duckv1alpha1.AddressStatus{
-					Address: &duckv1alpha1.Addressable{
-						Addressable: duckv1beta1.Addressable{
-							URL: &apis.URL{
-								Scheme: "http",
-								Host:   "test-domain",
-							},
-						},
-						Hostname: "test-domain",
-					},
+					Address: validAddress,
 				},
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
@@ -355,20 +348,12 @@ func TestChannelPropagateStatuses(t *testing.T) {
 					}},
 				},
 			},
-			wantReady: false,
+			wantConditionStatus: corev1.ConditionUnknown,
 		},
 		"no condition ready in backing channel": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
 				AddressStatus: duckv1alpha1.AddressStatus{
-					Address: &duckv1alpha1.Addressable{
-						Addressable: duckv1beta1.Addressable{
-							URL: &apis.URL{
-								Scheme: "http",
-								Host:   "test-domain",
-							},
-						},
-						Hostname: "test-domain",
-					},
+					Address: validAddress,
 				},
 				Status: duckv1.Status{
 					Conditions: []apis.Condition{{
@@ -377,7 +362,7 @@ func TestChannelPropagateStatuses(t *testing.T) {
 					}},
 				},
 			},
-			wantReady: false,
+			wantConditionStatus: corev1.ConditionUnknown,
 		},
 		"test subscribableTypeStatus is set": {
 			channelableStatus: &v1alpha1.ChannelableStatus{
@@ -398,16 +383,16 @@ func TestChannelPropagateStatuses(t *testing.T) {
 					},
 				},
 			},
-			wantReady: false,
+			wantConditionStatus: corev1.ConditionFalse,
 		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			cs := &ChannelStatus{}
 			cs.PropagateStatuses(tc.channelableStatus)
-			got := cs.IsReady()
-			if tc.wantReady != got {
-				t.Errorf("unexpected readiness: want %v, got %v", tc.wantReady, got)
+			got := cs.GetTopLevelCondition().Status
+			if tc.wantConditionStatus != got {
+				t.Errorf("unexpected readiness: want %v, got %v", tc.wantConditionStatus, got)
 			}
 		})
 	}

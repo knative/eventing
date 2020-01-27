@@ -20,14 +20,14 @@ import (
 	"context"
 
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/parallel"
+	"knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/parallel"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 )
 

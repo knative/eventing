@@ -21,8 +21,9 @@ import (
 	"flag"
 	"log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"knative.dev/eventing/test/base/resources"
+	ce "github.com/cloudevents/sdk-go"
+
+	"knative.dev/eventing/test/lib/cloudevents"
 )
 
 var (
@@ -33,10 +34,10 @@ func init() {
 	flag.StringVar(&eventMsgAppender, "msg-appender", "", "a string we want to append on the event message")
 }
 
-func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
+func gotEvent(event ce.Event, resp *ce.EventResponse) error {
 	ctx := event.Context.AsV1()
 
-	data := &resources.CloudEventBaseData{}
+	data := &cloudevents.BaseData{}
 	if err := event.DataAs(data); err != nil {
 		log.Printf("Got Data Error: %s\n", err.Error())
 		return err
@@ -47,12 +48,12 @@ func gotEvent(event cloudevents.Event, resp *cloudevents.EventResponse) error {
 
 	// append eventMsgAppender to message of the data
 	data.Message = data.Message + eventMsgAppender
-	r := cloudevents.Event{
+	r := ce.Event{
 		Context: ctx,
 		Data:    data,
 	}
 
-	r.SetDataContentType(cloudevents.ApplicationJSON)
+	r.SetDataContentType(ce.ApplicationJSON)
 
 	log.Println("Transform the event to: ")
 	log.Printf("[%s] %s %s: %+v", ctx.Time.String(), ctx.GetSource(), ctx.GetType(), data)
@@ -65,7 +66,7 @@ func main() {
 	// parse the command line flags
 	flag.Parse()
 
-	c, err := cloudevents.NewDefaultClient()
+	c, err := ce.NewDefaultClient()
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}

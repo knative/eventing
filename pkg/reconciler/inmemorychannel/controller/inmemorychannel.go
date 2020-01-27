@@ -31,14 +31,16 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/apis"
+	"knative.dev/pkg/controller"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/controller"
 )
 
 const (
@@ -157,7 +159,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
-			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
+			imc.Status.MarkDispatcherUnknown("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
 		}
 		return err
 	}
@@ -172,7 +174,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
-			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+			imc.Status.MarkServiceUnknown("DispatcherServiceGetFailed", "Failed to get dispatcher service")
 		}
 		return err
 	}
@@ -187,7 +189,7 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 			imc.Status.MarkEndpointsFailed("DispatcherEndpointsDoesNotExist", "Dispatcher Endpoints does not exist")
 		} else {
 			logging.FromContext(ctx).Error("Unable to get the dispatcher endpoints", zap.Error(err))
-			imc.Status.MarkEndpointsFailed("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
+			imc.Status.MarkEndpointsUnknown("DispatcherEndpointsGetFailed", "Failed to get dispatcher endpoints")
 		}
 		return err
 	}
@@ -204,7 +206,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// ExternalName
 	svc, err := r.reconcileChannelService(ctx, imc)
 	if err != nil {
-		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
 		return err
 	}
 	imc.Status.MarkChannelServiceTrue()
@@ -212,6 +213,10 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, utils.GetClusterDomainName()),
 	})
+
+	if subscribableStatus := r.createSubscribableStatus(imc.Spec.Subscribable); subscribableStatus != nil {
+		imc.Status.SubscribableTypeStatus.SetSubscribableTypeStatus(*subscribableStatus)
+	}
 
 	// Ok, so now the Dispatcher Deployment & Service have been created, we're golden since the
 	// dispatcher watches the Channel and where it needs to dispatch events to.
@@ -229,24 +234,47 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, imc *v1alpha1.
 			svc, err = resources.NewK8sService(imc, resources.ExternalService(r.dispatcherNamespace, r.dispatcherServiceName))
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
+				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
 				return nil, err
 			}
 			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(svc)
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
+				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
 				return nil, err
 			}
 			return svc, nil
 		}
 		logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
+		imc.Status.MarkChannelServiceUnknown("ChannelServiceGetFailed", fmt.Sprintf("Unable to get the channel service: %s", err))
 		return nil, err
 	}
 
 	// Check to make sure that our IMC owns this service and if not, complain.
 	if !metav1.IsControlledBy(svc, imc) {
-		return nil, fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
+		err := fmt.Errorf("inmemorychannel: %s/%s does not own Service: %q", imc.Namespace, imc.Name, svc.Name)
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+		return nil, err
 	}
 	return svc, nil
+}
+
+func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscribable) *eventingduck.SubscribableStatus {
+	if subscribable == nil {
+		return nil
+	}
+	subscriberStatus := make([]eventingduck.SubscriberStatus, 0)
+	for _, sub := range subscribable.Subscribers {
+		status := eventingduck.SubscriberStatus{
+			UID:                sub.UID,
+			ObservedGeneration: sub.Generation,
+			Ready:              corev1.ConditionTrue,
+		}
+		subscriberStatus = append(subscriberStatus, status)
+	}
+	return &eventingduck.SubscribableStatus{
+		Subscribers: subscriberStatus,
+	}
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {

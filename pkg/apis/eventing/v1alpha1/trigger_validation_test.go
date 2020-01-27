@@ -75,6 +75,11 @@ var (
 	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
 )
 
+const (
+	validLabelNameMaxCharsNotReached = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	invalidLabelNameMaxCharsReached  = validLabelNameMaxCharsNotReached + "b"
+)
+
 func TestTriggerValidation(t *testing.T) {
 	tests := []struct {
 		name string
@@ -91,6 +96,44 @@ func TestTriggerValidation(t *testing.T) {
 			errs = errs.Also(fe)
 			return errs
 		}(),
+	}, {
+		name: "invalid trigger name",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				// ups ... name too long
+				Name:      invalidLabelNameMaxCharsReached,
+				Namespace: "dummy",
+			},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			},
+		},
+		want: &apis.FieldError{
+			Message: "must be no more than 63 characters",
+			Paths:   []string{"metadata.name"},
+			Details: "",
+		},
+	}, {
+		name: "invalid broker name",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      validLabelNameMaxCharsNotReached,
+				Namespace: "dummy",
+			},
+			Spec: TriggerSpec{
+				// ups ... name too long
+				Broker:     invalidLabelNameMaxCharsReached,
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			},
+		},
+		want: &apis.FieldError{
+			Message: "must be no more than 63 characters",
+			Paths:   []string{"spec.broker"},
+			Details: "",
+		},
 	}, {
 		name: "invalid dependency annotation, not a corev1.ObjectReference",
 		t: &Trigger{

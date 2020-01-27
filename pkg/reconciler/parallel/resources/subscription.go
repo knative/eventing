@@ -24,7 +24,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 )
 
 func ParallelFilterSubscriptionName(parallelName string, branchNumber int) string {
@@ -35,8 +36,8 @@ func ParallelSubscriptionName(parallelName string, branchNumber int) string {
 	return fmt.Sprintf("%s-kn-parallel-%d", parallelName, branchNumber)
 }
 
-func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
-	r := &v1alpha1.Subscription{
+func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.Subscription {
+	r := &messagingv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
 			APIVersion: "messaging.knative.dev/v1alpha1",
@@ -49,14 +50,19 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: v1alpha1.SubscriptionSpec{
+		Spec: messagingv1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelChannelName(p.Name),
 			},
-			Subscriber: p.Spec.Branches[branchNumber].Filter,
 		},
+	}
+	if p.Spec.Branches[branchNumber].Filter != nil {
+		r.Spec.Subscriber = &duckv1.Destination{
+			Ref: p.Spec.Branches[branchNumber].Filter.Ref,
+			URI: p.Spec.Branches[branchNumber].Filter.URI,
+		}
 	}
 	r.Spec.Reply = &duckv1.Destination{
 		Ref: &corev1.ObjectReference{
@@ -68,8 +74,8 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Sub
 	return r
 }
 
-func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscription {
-	r := &v1alpha1.Subscription{
+func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1alpha1.Subscription {
+	r := &messagingv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
 			APIVersion: "messaging.knative.dev/v1alpha1",
@@ -82,20 +88,29 @@ func NewSubscription(branchNumber int, p *v1alpha1.Parallel) *v1alpha1.Subscript
 				*kmeta.NewControllerRef(p),
 			},
 		},
-		Spec: v1alpha1.SubscriptionSpec{
+		Spec: messagingv1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
 				APIVersion: p.Spec.ChannelTemplate.APIVersion,
 				Kind:       p.Spec.ChannelTemplate.Kind,
 				Name:       ParallelBranchChannelName(p.Name, branchNumber),
 			},
-			Subscriber: &p.Spec.Branches[branchNumber].Subscriber,
+			Subscriber: &duckv1.Destination{
+				Ref: p.Spec.Branches[branchNumber].Subscriber.Ref,
+				URI: p.Spec.Branches[branchNumber].Subscriber.URI,
+			},
 		},
 	}
 
 	if p.Spec.Branches[branchNumber].Reply != nil {
-		r.Spec.Reply = p.Spec.Branches[branchNumber].Reply
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: p.Spec.Branches[branchNumber].Reply.Ref,
+			URI: p.Spec.Branches[branchNumber].Reply.URI,
+		}
 	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = p.Spec.Reply
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: p.Spec.Reply.Ref,
+			URI: p.Spec.Reply.URI,
+		}
 	}
 	return r
 }

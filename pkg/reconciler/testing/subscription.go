@@ -173,6 +173,12 @@ func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOptio
 	}
 }
 
+func WithSubscriptionReferencesResolvedUnknown(reason, msg string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.MarkReferencesResolvedUnknown(reason, msg)
+	}
+}
+
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &duckv1.Destination{

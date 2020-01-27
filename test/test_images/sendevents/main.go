@@ -33,6 +33,7 @@ import (
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+
 	"knative.dev/eventing/pkg/tracing"
 )
 

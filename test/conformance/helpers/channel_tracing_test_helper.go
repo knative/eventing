@@ -22,30 +22,24 @@ import (
 	"testing"
 	"time"
 
+	ce "github.com/cloudevents/sdk-go"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"knative.dev/eventing/test/base/resources"
-	"knative.dev/eventing/test/common"
-	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
 	"knative.dev/pkg/test/zipkin"
+
+	tracinghelper "knative.dev/eventing/test/conformance/helpers/tracing"
+	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/cloudevents"
+	"knative.dev/eventing/test/lib/resources"
 )
-
-// SetupClientFunc sets up the client for running tracing tests. It does the equivalent of
-// client.Setup().
-type SetupClientFunc func(*common.Client) error
-
-// SetupClientFuncNoop is a SetupClientFunc that does nothing.
-var SetupClientFuncNoop SetupClientFunc = func(*common.Client) error {
-	return nil
-}
 
 // SetupInfrastructureFunc sets up the infrastructure for running tracing tests. It returns the
 // expected trace as well as a string that is expected to be in the logger Pod's logs.
 type SetupInfrastructureFunc func(
 	t *testing.T,
 	channel *metav1.TypeMeta,
-	client *common.Client,
+	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
 ) (tracinghelper.TestSpanTree, string)
@@ -64,10 +58,10 @@ type TracingTestCase struct {
 // the ChannelTestRunner.
 func ChannelTracingTestHelperWithChannelTestRunner(
 	t *testing.T,
-	channelTestRunner common.ChannelTestRunner,
-	setupClient SetupClientFunc,
+	channelTestRunner lib.ChannelTestRunner,
+	setupClient lib.SetupClientOption,
 ) {
-	channelTestRunner.RunTests(t, common.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
 		t := struct{}{}
 		_ = fmt.Sprintf("%s", t)
@@ -77,7 +71,7 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 }
 
 // ChannelTracingTestHelper runs the Channel tracing test using the given TypeMeta.
-func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient SetupClientFunc) {
+func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient lib.SetupClientOption) {
 	testCases := map[string]TracingTestCase{
 		"includes incoming trace id": {
 			IncomingTraceId: true,
@@ -93,7 +87,7 @@ func ChannelTracingTestHelper(t *testing.T, channel metav1.TypeMeta, setupClient
 
 func tracingTest(
 	t *testing.T,
-	setupClient SetupClientFunc,
+	setupClient lib.SetupClientOption,
 	setupInfrastructure SetupInfrastructureFunc,
 	channel metav1.TypeMeta,
 	tc TracingTestCase,
@@ -102,11 +96,8 @@ func tracingTest(
 		loggerPodName = "logger"
 	)
 
-	client := common.Setup(t, true)
-	defer common.TearDown(client)
-	if err := setupClient(client); err != nil {
-		t.Fatalf("SetupClient function failed: %v", err)
-	}
+	client := lib.Setup(t, true, setupClient)
+	defer lib.TearDown(client)
 
 	// Do NOT call zipkin.CleanupZipkinTracingSetup. That will be called exactly once in
 	// TestMain.
@@ -129,14 +120,14 @@ func tracingTest(
 
 // assertLogContents verifies that loggerPodName's logs contains mustContain. It is used to show
 // that the expected event was sent to the logger Pod.
-func assertLogContents(t *testing.T, client *common.Client, loggerPodName string, mustContain string) {
-	if err := client.CheckLog(loggerPodName, common.CheckerContains(mustContain)); err != nil {
+func assertLogContents(t *testing.T, client *lib.Client, loggerPodName string, mustContain string) {
+	if err := client.CheckLog(loggerPodName, lib.CheckerContains(mustContain)); err != nil {
 		t.Fatalf("String %q not found in logs of logger pod %q: %v", mustContain, loggerPodName, err)
 	}
 }
 
 // getTraceID gets the TraceID from loggerPodName's logs. It will also assert that body is present.
-func getTraceID(t *testing.T, client *common.Client, loggerPodName string) string {
+func getTraceID(t *testing.T, client *lib.Client, loggerPodName string) string {
 	logs, err := client.GetLog(loggerPodName)
 	if err != nil {
 		t.Fatalf("Error getting logs: %v", err)
@@ -160,7 +151,7 @@ func getTraceID(t *testing.T, client *common.Client, loggerPodName string) strin
 func setupChannelTracingWithReply(
 	t *testing.T,
 	channel *metav1.TypeMeta,
-	client *common.Client,
+	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
 ) (tracinghelper.TestSpanTree, string) {
@@ -173,13 +164,15 @@ func setupChannelTracingWithReply(
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
 	loggerPod := resources.EventDetailsPod(loggerPodName)
-	client.CreatePodOrFail(loggerPod, common.WithService(loggerPodName))
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// Create the subscriber, a Pod that mutates the event.
-	transformerPod := resources.EventTransformationPod("transformer", &resources.CloudEvent{
-		Type: "mutated",
+	transformerPod := resources.EventTransformationPod("transformer", &cloudevents.CloudEvent{
+		EventContextV1: ce.EventContextV1{
+			Type: "mutated",
+		},
 	})
-	client.CreatePodOrFail(transformerPod, common.WithService(transformerPod.Name))
+	client.CreatePodOrFail(transformerPod, lib.WithService(transformerPod.Name))
 
 	// Create the Subscription linking the Channel to the mutator.
 	client.CreateSubscriptionOrFail(
@@ -206,13 +199,11 @@ func setupChannelTracingWithReply(
 	senderName := "sender"
 	eventID := fmt.Sprintf("%s", uuid.NewUUID())
 	body := fmt.Sprintf("TestChannelTracing %s", eventID)
-	event := &resources.CloudEvent{
-		ID:       eventID,
-		Source:   senderName,
-		Type:     resources.CloudEventDefaultType,
-		Data:     fmt.Sprintf(`{"msg":%q}`, body),
-		Encoding: resources.CloudEventEncodingBinary,
-	}
+	event := cloudevents.New(
+		fmt.Sprintf(`{"msg":%q}`, body),
+		cloudevents.WithSource(senderName),
+		cloudevents.WithID(eventID),
+	)
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
 	sendEvent := client.SendFakeEventToAddressable

@@ -1,0 +1,121 @@
+# Copyright 2019 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: channels.messaging.knative.dev
+  labels:
+    eventing.knative.dev/release: devel
+    knative.dev/crd-install: "true"
+    messaging.knative.dev/subscribable: "true"
+    duck.knative.dev/addressable: "true"
+spec:
+  group: messaging.knative.dev
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  names:
+    kind: Channel
+    plural: channels
+    singular: channel
+    categories:
+      - all
+      - knative
+      - messaging
+      - channel
+    shortNames:
+      - ch
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    - name: URL
+      type: string
+      JSONPath: .status.address.url
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            channelTemplate:
+              type: object
+              description: "Channel implementation which dictates the durability guarantees of events. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
+              properties:
+                apiVersion:
+                  type: string
+                  description: "API version of the channel implementation."
+                  minLength: 1
+                kind:
+                  type: string
+                  description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
+                  minLength: 1
+                spec:
+                  type: object
+              required:
+                - apiVersion
+                - kind
+            subscribable:
+              type: object
+              properties:
+                subscribers:
+                  type: array
+                  description: "Events received on the channel are forwarded to its subscribers."
+                  items:
+                    required:
+                      - uid
+                    properties:
+                      ref:
+                        type: object
+                        description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                        required:
+                          - namespace
+                          - name
+                          - uid
+                        properties:
+                          apiVersion:
+                            type: string
+                          kind:
+                            type: string
+                          name:
+                            type: string
+                            minLength: 1
+                          namespace:
+                            type: string
+                            minLength: 1
+                          uid:
+                            type: string
+                            minLength: 1
+                      uid:
+                        type: string
+                        description: "Used to understand the origin of the subscriber."
+                        minLength: 1
+                      subscriberURI:
+                        type: string
+                        description: "Endpoint for the subscriber."
+                        minLength: 1
+                      replyURI:
+                        type: string
+                        description: "Endpoint for the reply."
+                        minLength: 1
