@@ -386,7 +386,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapPropagationPropagated,
 					WithInitConfigMapStatus(),
 					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
-						"Stop", "True", `copy ConfigMap doesn't have "knative.dev/config-propagation:copy" label, stop propagating this ConfigMap`),
+						"Stop", "True", `copy ConfigMap doesn't have copy label, stop propagating this ConfigMap`),
 				),
 			}},
 			WantErr: false,

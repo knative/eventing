@@ -102,7 +102,7 @@ func TestConfigMapPropagationSpecValidation(t *testing.T) {
 			OriginalNamespace: originalNamespace,
 			Selector:          &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{}}},
 		want: &apis.FieldError{
-			Message: `MatchExppressions isn't supported yet`,
+			Message: `MatchExpressions isn't supported yet`,
 			Paths:   []string{"selector"},
 		},
 	},
