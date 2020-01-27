@@ -35,7 +35,6 @@ rules:
   - apiGroups: ["messaging.knative.dev"]
     resources: ["*"]
     verbs: ["*"]
-
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -48,6 +47,18 @@ rules:
   - apiGroups: ["sources.eventing.knative.dev"]
     resources: ["*"]
     verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: knative-sources-namespaced-admin
+  labels:
+    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["sources.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
 
 ---
 kind: ClusterRole
@@ -58,7 +69,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev", "sources.knative.dev"]
     resources: ["*"]
     verbs: ["create", "update", "patch", "delete"]
 ---
@@ -70,6 +81,6 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev", "sources.knative.dev"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]

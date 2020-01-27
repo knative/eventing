@@ -92,6 +92,9 @@ spec:
     ports:
     - name: quickstore
       containerPort: 9813
+    volumeMounts:
+      - name: config-mako
+        mountPath: /etc/config-mako
     terminationMessagePolicy: FallbackToLogsOnError
     resources:
       requests:
