@@ -38,9 +38,9 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
+	kubeservice "knative.dev/eventing/pkg/reconciler/service/kube"
+	servingservice "knative.dev/eventing/pkg/reconciler/service/serving"
 	. "knative.dev/eventing/pkg/reconciler/testing"
-	kubeservice "knative.dev/eventing/pkg/reconciler/utils/services/kube"
-	servingservice "knative.dev/eventing/pkg/reconciler/utils/services/serving"
 	"knative.dev/eventing/pkg/utils"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/controller"
@@ -576,7 +576,7 @@ func TestReconcile(t *testing.T) {
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
-			services: &kubeservice.KubeFlavor{
+			svcReconciler: &kubeservice.ServiceReconciler{
 				KubeClientSet:    kubeclient.Get(ctx),
 				DeploymentLister: listers.GetDeploymentLister(),
 				ServiceLister:    listers.GetK8sServiceLister(),
@@ -813,7 +813,7 @@ func TestReconcileWithServingService(t *testing.T) {
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			brokerLister:       listers.GetBrokerLister(),
-			services: &servingservice.ServingFlavor{
+			svcReconciler: &servingservice.ServiceReconciler{
 				ServingClientSet: servingclient.Get(ctx),
 				ServingLister:    listers.GetServingServiceLister(),
 			},

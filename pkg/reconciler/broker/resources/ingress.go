@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler/utils/services"
+	"knative.dev/eventing/pkg/reconciler/service"
 )
 
 const (
@@ -39,8 +39,8 @@ type IngressArgs struct {
 	ChannelAddress     string
 }
 
-func MakeIngressServiceArgs(args *IngressArgs) *services.Args {
-	return &services.Args{
+func MakeIngressServiceArgs(args *IngressArgs) *service.Args {
+	return &service.Args{
 		ServiceMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
 			Name:      fmt.Sprintf("%s-broker", args.Broker.Name),

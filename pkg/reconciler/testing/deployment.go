@@ -85,6 +85,12 @@ func WithDeploymentContainer(name, image string, liveness *corev1.Probe, readine
 	}
 }
 
+func WithDeploymentPodSpec(podSpec corev1.PodSpec) DeploymentOption {
+	return func(d *appsv1.Deployment) {
+		d.Spec.Template.Spec = podSpec
+	}
+}
+
 // WithDeploymentAvailable marks the Deployment as available.
 func WithDeploymentAvailable() DeploymentOption {
 	return func(d *appsv1.Deployment) {
@@ -92,6 +98,17 @@ func WithDeploymentAvailable() DeploymentOption {
 			{
 				Type:   appsv1.DeploymentAvailable,
 				Status: corev1.ConditionTrue,
+			},
+		}
+	}
+}
+
+func WithDeploymentNotAvailable() DeploymentOption {
+	return func(d *appsv1.Deployment) {
+		d.Status.Conditions = []appsv1.DeploymentCondition{
+			{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionFalse,
 			},
 		}
 	}

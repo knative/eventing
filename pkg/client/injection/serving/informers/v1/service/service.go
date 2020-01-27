@@ -21,8 +21,6 @@ import (
 	"strings"
 
 	"k8s.io/client-go/discovery"
-
-	informerv1 "knative.dev/eventing/pkg/client/injection/serving/informers/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	controller "knative.dev/pkg/controller"
 	injection "knative.dev/pkg/injection"
@@ -32,6 +30,10 @@ import (
 	factory "knative.dev/serving/pkg/client/injection/informers/factory"
 )
 
+// This package register a serving v1 service informer as an "emptyable" informer.
+// An "emptyable" informer delegates a real informer if the serving v1 API exists;
+// otherwise it does nothing.
+// This allows informer injection without knowing if the API exists in advance.
 func init() {
 	injection.Default.RegisterInformer(withInformer)
 }
@@ -44,48 +46,52 @@ func withInformer(ctx context.Context) (context.Context, controller.Informer) {
 	// Register an empty informer if the serving API is not available.
 	if err := discovery.ServerSupportsVersion(kc.Discovery(), servingv1.SchemeGroupVersion); err != nil {
 		if strings.Contains(err.Error(), "server does not support API version") {
-			var inf informerv1.EmptyableServiceInformer
-			inf = &emptyableImpl{}
+			inf := &EmptyableServiceInformer{}
 			return context.WithValue(ctx, Key{}, inf), inf
 		}
-		logging.FromContext(ctx).Panic(
-			"Failed to check API version", servingv1.SchemeGroupVersion)
+		logging.FromContext(ctx).Panic("Failed to check API version", servingv1.SchemeGroupVersion)
 	}
 
 	f := factory.Get(ctx)
-	var inf informerv1.EmptyableServiceInformer
-	inf = &emptyableImpl{internal: f.Serving().V1().Services()}
+	inf := NewEmptyableServiceInformer(f.Serving().V1().Services())
 	return context.WithValue(ctx, Key{}, inf), inf
 }
 
 // Get extracts the typed informer from the context.
-func Get(ctx context.Context) informerv1.EmptyableServiceInformer {
+func Get(ctx context.Context) *EmptyableServiceInformer {
 	untyped := ctx.Value(Key{})
 	if untyped == nil {
 		logging.FromContext(ctx).Panic(
-			"Unable to fetch knative.dev/eventing/pkg/serving/EmptyableServiceInformer from context.")
+			"Unable to fetch knative.dev/eventing/pkg/client/injection/serving/informers/v1/service.EmptyableServiceInformer from context.")
 	}
-	return untyped.(informerv1.EmptyableServiceInformer)
+	return untyped.(*EmptyableServiceInformer)
 }
 
-var (
-	_ controller.Informer                 = (*emptyableImpl)(nil)
-	_ informerv1.EmptyableServiceInformer = (*emptyableImpl)(nil)
-)
+var _ controller.Informer = (*EmptyableServiceInformer)(nil)
 
-type emptyableImpl struct {
+// EmptyableServiceInformer is an "emptyable" version of v1.ServiceInformer.
+type EmptyableServiceInformer struct {
 	internal v1.ServiceInformer
 }
 
-func (i *emptyableImpl) IsEmpty() bool {
+// NewEmptyableServiceInformer returns a new EmptyableServiceInformer.
+func NewEmptyableServiceInformer(internal v1.ServiceInformer) *EmptyableServiceInformer {
+	return &EmptyableServiceInformer{internal: internal}
+}
+
+// IsEmpty returns whether the informer is empty.
+func (i *EmptyableServiceInformer) IsEmpty() bool {
 	return (i.internal == nil)
 }
 
-func (i *emptyableImpl) GetInternal() v1.ServiceInformer {
+// GetInternal returns the internal v1.ServiceInformer if the informer is not empty.
+func (i *EmptyableServiceInformer) GetInternal() v1.ServiceInformer {
 	return i.internal
 }
 
-func (i *emptyableImpl) Run(stopCh <-chan struct{}) {
+// Run delegates to v1.ServiceInformer if the informer is not empty.
+// Otherwise it does nothing.
+func (i *EmptyableServiceInformer) Run(stopCh <-chan struct{}) {
 	if i.internal != nil {
 		i.internal.Informer().Run(stopCh)
 	} else {
@@ -93,7 +99,9 @@ func (i *emptyableImpl) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (i *emptyableImpl) HasSynced() bool {
+// HasSynced delegates to v1.ServiceInformer if the informer is not empty.
+// Otherwise it always returns true.
+func (i *EmptyableServiceInformer) HasSynced() bool {
 	if i.internal != nil {
 		return i.internal.Informer().HasSynced()
 	}

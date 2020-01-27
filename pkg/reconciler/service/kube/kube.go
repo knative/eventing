@@ -29,22 +29,25 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-
 	"knative.dev/eventing/pkg/apis/duck"
 	"knative.dev/eventing/pkg/reconciler/names"
-	"knative.dev/eventing/pkg/reconciler/utils/services"
+	"knative.dev/eventing/pkg/reconciler/service"
 	"knative.dev/pkg/apis"
-	"knative.dev/pkg/kmeta"
 )
 
-type KubeFlavor struct {
+// ServiceReconciler reconciles addressable services implemented with
+// k8s services and deployments.
+type ServiceReconciler struct {
 	KubeClientSet    kubernetes.Interface
 	ServiceLister    corev1listers.ServiceLister
 	DeploymentLister appsv1listers.DeploymentLister
 }
 
-func (k *KubeFlavor) Reconcile(ctx context.Context, owner kmeta.OwnerRefable, args services.Args) (*services.Status, error) {
-	if err := services.ValidateArgs(args); err != nil {
+var _ service.Reconciler = (*ServiceReconciler)(nil)
+
+// Reconcile reconciles an addressable service with k8s service and deployment.
+func (r *ServiceReconciler) Reconcile(ctx context.Context, owner metav1.OwnerReference, args service.Args) (*service.Status, error) {
+	if err := service.ValidateArgs(args); err != nil {
 		return nil, err
 	}
 	fillDefaults(&args, owner)
@@ -63,7 +66,7 @@ func (k *KubeFlavor) Reconcile(ctx context.Context, owner kmeta.OwnerRefable, ar
 			},
 		},
 	}
-	rd, err := k.reconcileDeployment(ctx, d)
+	rd, err := r.reconcileDeployment(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +84,13 @@ func (k *KubeFlavor) Reconcile(ctx context.Context, owner kmeta.OwnerRefable, ar
 			},
 		},
 	}
-	rsvc, err := k.reconcileService(ctx, svc)
+	rsvc, err := r.reconcileService(ctx, svc)
 	if err != nil {
 		return nil, err
 	}
 
 	if duck.DeploymentIsAvailable(&rd.Status, true) {
-		return &services.Status{
+		return &service.Status{
 			IsReady: true,
 			URL: &apis.URL{
 				Scheme: "http",
@@ -96,19 +99,20 @@ func (k *KubeFlavor) Reconcile(ctx context.Context, owner kmeta.OwnerRefable, ar
 		}, nil
 	}
 
-	return &services.Status{
+	return &service.Status{
 		IsReady: false,
 		Reason:  "DeploymentUnavailable",
 		Message: fmt.Sprintf("The Deployment %q is unavailable", rd.Name),
 	}, nil
 }
 
-func (k *KubeFlavor) GetStatus(ctx context.Context, owner kmeta.OwnerRefable, svcMeta metav1.ObjectMeta) (*services.Status, error) {
-	existing, err := k.ServiceLister.Services(svcMeta.Namespace).Get(svcMeta.Name)
+// GetStatus returns the status of a k8s service.
+func (r *ServiceReconciler) GetStatus(ctx context.Context, svcMeta metav1.ObjectMeta) (*service.Status, error) {
+	existing, err := r.ServiceLister.Services(svcMeta.Namespace).Get(svcMeta.Name)
 	if err != nil {
 		return nil, err
 	}
-	return &services.Status{
+	return &service.Status{
 		IsReady: true,
 		URL: &apis.URL{
 			Scheme: "http",
@@ -117,10 +121,10 @@ func (k *KubeFlavor) GetStatus(ctx context.Context, owner kmeta.OwnerRefable, sv
 	}, nil
 }
 
-func fillDefaults(args *services.Args, owner kmeta.OwnerRefable) {
+func fillDefaults(args *service.Args, owner metav1.OwnerReference) {
 	// Make sure the service metadata has proper owner reference.
-	args.ServiceMeta.OwnerReferences = append(args.ServiceMeta.OwnerReferences, *kmeta.NewControllerRef(owner))
-	args.DeployMeta.OwnerReferences = append(args.DeployMeta.OwnerReferences, *kmeta.NewControllerRef(owner))
+	args.ServiceMeta.OwnerReferences = append(args.ServiceMeta.OwnerReferences, owner)
+	args.DeployMeta.OwnerReferences = append(args.DeployMeta.OwnerReferences, owner)
 	args.PodSpec.Containers[0].Ports[0].Name = "http"
 	userPort := args.PodSpec.Containers[0].Ports[0].ContainerPort
 
@@ -136,10 +140,10 @@ func fillDefaults(args *services.Args, owner kmeta.OwnerRefable) {
 	}
 }
 
-func (k *KubeFlavor) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
-	existing, err := k.DeploymentLister.Deployments(d.Namespace).Get(d.Name)
+func (r *ServiceReconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
+	existing, err := r.DeploymentLister.Deployments(d.Namespace).Get(d.Name)
 	if apierrors.IsNotFound(err) {
-		existing, err = k.KubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
+		existing, err = r.KubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create deployment: %w", err)
 		}
@@ -152,7 +156,7 @@ func (k *KubeFlavor) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 		// Don't modify the informers copy.
 		desired := existing.DeepCopy()
 		desired.Spec = d.Spec
-		existing, err = k.KubeClientSet.AppsV1().Deployments(existing.Namespace).Update(desired)
+		existing, err = r.KubeClientSet.AppsV1().Deployments(existing.Namespace).Update(desired)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update deployment: %w", err)
 		}
@@ -161,10 +165,10 @@ func (k *KubeFlavor) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 }
 
 // reconcileService reconciles the K8s Service 'svc'.
-func (k *KubeFlavor) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
-	existing, err := k.ServiceLister.Services(svc.Namespace).Get(svc.Name)
+func (r *ServiceReconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
+	existing, err := r.ServiceLister.Services(svc.Namespace).Get(svc.Name)
 	if apierrors.IsNotFound(err) {
-		existing, err = k.KubeClientSet.CoreV1().Services(svc.Namespace).Create(svc)
+		existing, err = r.KubeClientSet.CoreV1().Services(svc.Namespace).Create(svc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create service: %w", err)
 		}
@@ -180,7 +184,7 @@ func (k *KubeFlavor) reconcileService(ctx context.Context, svc *corev1.Service) 
 		// Don't modify the informers copy.
 		desired := existing.DeepCopy()
 		desired.Spec = svc.Spec
-		existing, err = k.KubeClientSet.CoreV1().Services(existing.Namespace).Update(desired)
+		existing, err = r.KubeClientSet.CoreV1().Services(existing.Namespace).Update(desired)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update service: %w", err)
 		}

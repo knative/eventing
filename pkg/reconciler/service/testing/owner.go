@@ -14,25 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package fake
+package testing
 
 import (
-	"context"
-
-	"knative.dev/eventing/pkg/client/injection/serving/informers/v1/service"
-	"knative.dev/pkg/controller"
-	"knative.dev/pkg/injection"
-	fake "knative.dev/serving/pkg/client/injection/informers/factory/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var Get = service.Get
-
-func init() {
-	injection.Fake.RegisterInformer(withInformer)
-}
-
-func withInformer(ctx context.Context) (context.Context, controller.Informer) {
-	f := fake.Get(ctx)
-	inf := service.NewEmptyableServiceInformer(f.Serving().V1().Services())
-	return context.WithValue(ctx, service.Key{}, inf), inf
+func MakeOwnerReference() metav1.OwnerReference {
+	trueVal := true
+	return metav1.OwnerReference{
+		APIVersion:         "test.example.com/v1",
+		Kind:               "owner",
+		Name:               "owner",
+		BlockOwnerDeletion: &trueVal,
+		Controller:         &trueVal,
+	}
 }

@@ -34,15 +34,15 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/utils/services"
+	"knative.dev/eventing/pkg/reconciler/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 
 	servinginformer "knative.dev/eventing/pkg/client/injection/serving/informers/v1/service"
-	kubeservice "knative.dev/eventing/pkg/reconciler/utils/services/kube"
-	servingservice "knative.dev/eventing/pkg/reconciler/utils/services/serving"
+	kubeservice "knative.dev/eventing/pkg/reconciler/service/kube"
+	servingservice "knative.dev/eventing/pkg/reconciler/service/serving"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
@@ -83,18 +83,18 @@ func NewController(
 	serviceInformer := serviceinformer.Get(ctx)
 	servingInformer := servinginformer.Get(ctx)
 
-	if env.ResourceFlavor == services.ServingFlavor && servingInformer.IsEmpty() {
-		log.Fatalf(`BROKER_RESOURCE_FLAVOR is set to %q but %v was not available`, services.ServingFlavor, servingv1.SchemeGroupVersion)
+	if env.ResourceFlavor == service.ServingFlavor && servingInformer.IsEmpty() {
+		log.Fatalf(`BROKER_RESOURCE_FLAVOR is set to %q but %v was not available`, service.ServingFlavor, servingv1.SchemeGroupVersion)
 	}
 
-	var sf services.ServiceFlavor
-	if env.ResourceFlavor == services.ServingFlavor {
-		sf = &servingservice.ServingFlavor{
+	var svcReconciler service.Reconciler
+	if env.ResourceFlavor == service.ServingFlavor {
+		svcReconciler = &servingservice.ServiceReconciler{
 			ServingClientSet: servingclient.Get(ctx),
 			ServingLister:    servingInformer.GetInternal().Lister(),
 		}
 	} else {
-		sf = &kubeservice.KubeFlavor{
+		svcReconciler = &kubeservice.ServiceReconciler{
 			KubeClientSet:    kubeclient.Get(ctx),
 			DeploymentLister: deploymentInformer.Lister(),
 			ServiceLister:    serviceInformer.Lister(),
@@ -107,7 +107,7 @@ func NewController(
 		subscriptionLister: subscriptionInformer.Lister(),
 		brokerLister:       brokerInformer.Lister(),
 		namespaceLister:    namespaceInformer.Lister(),
-		services:           sf,
+		svcReconciler:      svcReconciler,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 

@@ -50,11 +50,11 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
+	"knative.dev/eventing/pkg/reconciler/service"
+	kubeservice "knative.dev/eventing/pkg/reconciler/service/kube"
+	servingservice "knative.dev/eventing/pkg/reconciler/service/serving"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/reconciler/trigger/resources"
-	"knative.dev/eventing/pkg/reconciler/utils/services"
-	kubeservice "knative.dev/eventing/pkg/reconciler/utils/services/kube"
-	servingservice "knative.dev/eventing/pkg/reconciler/utils/services/serving"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -145,8 +145,8 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
-	svcFunc := func(ctx context.Context, listers *Listers) services.ServiceFlavor {
-		return &kubeservice.KubeFlavor{
+	svcFunc := func(ctx context.Context, listers *Listers) service.Reconciler {
+		return &kubeservice.ServiceReconciler{
 			KubeClientSet:    kubeclient.Get(ctx),
 			DeploymentLister: listers.GetDeploymentLister(),
 			ServiceLister:    listers.GetK8sServiceLister(),
@@ -156,8 +156,8 @@ func TestAllCases(t *testing.T) {
 }
 
 func TestAllCasesWithServingServiceBroker(t *testing.T) {
-	svcFunc := func(ctx context.Context, listers *Listers) services.ServiceFlavor {
-		return &servingservice.ServingFlavor{
+	svcFunc := func(ctx context.Context, listers *Listers) service.Reconciler {
+		return &servingservice.ServiceReconciler{
 			ServingClientSet: servingclient.Get(ctx),
 			ServingLister:    listers.GetServingServiceLister(),
 		}
@@ -165,7 +165,7 @@ func TestAllCasesWithServingServiceBroker(t *testing.T) {
 	testAllCases(t, makeBrokerFilterServingService(), svcFunc)
 }
 
-func testAllCases(t *testing.T, brokerFilterSvc runtime.Object, svcFunc func(context.Context, *Listers) services.ServiceFlavor) {
+func testAllCases(t *testing.T, brokerFilterSvc runtime.Object, svcFunc func(context.Context, *Listers) service.Reconciler) {
 	triggerKey := testNS + "/" + triggerName
 	table := TableTest{
 		{
@@ -1034,7 +1034,7 @@ func testAllCases(t *testing.T, brokerFilterSvc runtime.Object, svcFunc func(con
 			addressableTracker: duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			kresourceTracker:   duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
-			services:           svcFunc(ctx, listers),
+			svcReconciler:      svcFunc(ctx, listers),
 		}
 	},
 		false,

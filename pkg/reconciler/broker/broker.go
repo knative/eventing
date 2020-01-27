@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/kmeta"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -41,7 +42,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
-	"knative.dev/eventing/pkg/reconciler/utils/services"
+	"knative.dev/eventing/pkg/reconciler/service"
 )
 
 const (
@@ -57,13 +58,13 @@ const (
 type Reconciler struct {
 	*reconciler.Base
 
+	svcReconciler service.Reconciler
+
 	// listers index properties about resources
 	brokerLister       eventinglisters.BrokerLister
 	subscriptionLister messaginglisters.SubscriptionLister
 
 	channelableTracker duck.ListableTracker
-
-	services services.ServiceFlavor
 
 	ingressImage              string
 	ingressServiceAccountName string
@@ -256,23 +257,23 @@ func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker)
 	return b, err
 }
 
-func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*services.Status, error) {
+func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*service.Status, error) {
 	svcArgs := resources.MakeFilterServiceArgs(&resources.FilterArgs{
 		Broker:             b,
 		Image:              r.filterImage,
 		ServiceAccountName: r.filterServiceAccountName,
 	})
-	return r.services.Reconcile(ctx, b, *svcArgs)
+	return r.svcReconciler.Reconcile(ctx, *kmeta.NewControllerRef(b), *svcArgs)
 }
 
-func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*services.Status, error) {
+func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*service.Status, error) {
 	svcArgs := resources.MakeIngressServiceArgs(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
 		ChannelAddress:     c.Status.Address.GetURL().Host,
 	})
-	return r.services.Reconcile(ctx, b, *svcArgs)
+	return r.svcReconciler.Reconcile(ctx, *kmeta.NewControllerRef(b), *svcArgs)
 }
 
 func newTriggerChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {

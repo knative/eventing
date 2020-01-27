@@ -109,6 +109,12 @@ func WithServingServiceContainer(name, image string, liveness *corev1.Probe, rea
 	}
 }
 
+func WithServingServicePodSpec(podSpec corev1.PodSpec) ServingServiceOption {
+	return func(svc *servingv1.Service) {
+		svc.Spec.Template.Spec.Containers[0] = podSpec.Containers[0]
+	}
+}
+
 func WithServingServiceReady() ServingServiceOption {
 	return func(svc *servingv1.Service) {
 		svc.Status.Conditions = []apis.Condition{
