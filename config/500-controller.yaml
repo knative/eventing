@@ -58,6 +58,8 @@ spec:
             value: eventing-broker-filter
           - name: BROKER_IMAGE_PULL_SECRET_NAME
             value:
+          # Uncomment the following to use knative service for
+          # broker components.
           # - name: BROKER_RESOURCE_FLAVOR
           #   value: knative
         ports:

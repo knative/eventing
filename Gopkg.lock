@@ -1658,6 +1658,7 @@
     "knative.dev/serving/pkg/client/injection/client",
     "knative.dev/serving/pkg/client/injection/client/fake",
     "knative.dev/serving/pkg/client/injection/informers/factory",
+    "knative.dev/serving/pkg/client/injection/informers/factory/fake",
     "knative.dev/serving/pkg/client/injection/informers/serving/v1/service/fake",
     "knative.dev/serving/pkg/client/listers/serving/v1",
     "knative.dev/test-infra/scripts",
