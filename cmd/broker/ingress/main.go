@@ -71,8 +71,10 @@ type envConfig struct {
 	Broker        string `envconfig:"BROKER" required:"true"`
 	Channel       string `envconfig:"CHANNEL" required:"true"`
 	Namespace     string `envconfig:"NAMESPACE" required:"true"`
-	PodName       string `split_words:"true" required:"true"`
 	ContainerName string `split_words:"true" required:"true"`
+
+	// TODO: change this environment variable to something like "PodGroupName".
+	PodName string `split_words:"true" required:"true"`
 }
 
 func main() {
