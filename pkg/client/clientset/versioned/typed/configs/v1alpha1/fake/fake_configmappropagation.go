@@ -34,9 +34,9 @@ type FakeConfigMapPropagations struct {
 	ns   string
 }
 
-var configmappropagationsResource = schema.GroupVersionResource{Group: "configs.knative.dev", Version: "v1alpha1", Resource: "configmappropagations"}
+var configmappropagationsResource = schema.GroupVersionResource{Group: "configs.internal.knative.dev", Version: "v1alpha1", Resource: "configmappropagations"}
 
-var configmappropagationsKind = schema.GroupVersionKind{Group: "configs.knative.dev", Version: "v1alpha1", Kind: "ConfigMapPropagation"}
+var configmappropagationsKind = schema.GroupVersionKind{Group: "configs.internal.knative.dev", Version: "v1alpha1", Kind: "ConfigMapPropagation"}
 
 // Get takes name of the configMapPropagation, and returns the corresponding configMapPropagation object, and an error if there is any.
 func (c *FakeConfigMapPropagations) Get(name string, options v1.GetOptions) (result *v1alpha1.ConfigMapPropagation, err error) {

@@ -98,7 +98,7 @@ rules:
 
   # Configs resources and status we care about.
   - apiGroups:
-      - "configs.knative.dev"
+      - "configs.internal.knative.dev"
     resources:
       - "configmappropagations"
       - "configmappropagations/status"

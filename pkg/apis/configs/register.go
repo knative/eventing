@@ -17,5 +17,5 @@ limitations under the License.
 package configs
 
 const (
-	GroupName = "configs.knative.dev"
+	GroupName = "configs.internal.knative.dev"
 )

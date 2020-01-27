@@ -29,7 +29,7 @@ type ConfigsV1alpha1Interface interface {
 	ConfigMapPropagationsGetter
 }
 
-// ConfigsV1alpha1Client is used to interact with features provided by the configs.knative.dev group.
+// ConfigsV1alpha1Client is used to interact with features provided by the configs.internal.knative.dev group.
 type ConfigsV1alpha1Client struct {
 	restClient rest.Interface
 }

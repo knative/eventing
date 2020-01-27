@@ -59,7 +59,7 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=configs.knative.dev, Version=v1alpha1
+	// Group=configs.internal.knative.dev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("configmappropagations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configs().V1alpha1().ConfigMapPropagations().Informer()}, nil
 
