@@ -96,6 +96,14 @@ rules:
       - "parallels/status"
     verbs: *everything
 
+  # Configs resources and status we care about.
+  - apiGroups:
+      - "configs.knative.dev"
+    resources:
+      - "configmappropagations"
+      - "configmappropagations/status"
+    verbs: *everything
+
   # Messaging resources and finalizers we care about.
   - apiGroups:
       - "messaging.knative.dev"
@@ -114,14 +122,6 @@ rules:
       - "parallels/finalizers"
     verbs:
       - "update"
-
-  # Configs resources and status we care about.
-  - apiGroups:
-      - "configs.knative.dev"
-    resources:
-      - "configmappropagation"
-      - "configmappropagation/status"
-    verbs: *everything
 
   # The subscription controller needs to retrieve and watch CustomResourceDefinitions.
   - apiGroups:
