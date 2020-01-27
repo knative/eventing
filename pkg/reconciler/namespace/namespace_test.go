@@ -23,11 +23,8 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/system"
 
-	"knative.dev/pkg/tracker"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -412,7 +409,6 @@ func TestAllCases(t *testing.T) {
 			brokerLister:         listers.GetBrokerLister(),
 			serviceAccountLister: listers.GetServiceAccountLister(),
 			roleBindingLister:    listers.GetRoleBindingLister(),
-			tracker:              tracker.New(func(types.NamespacedName) {}, 0),
 			brokerPullSecretName: brokerImagePullSecretName,
 		}
 
