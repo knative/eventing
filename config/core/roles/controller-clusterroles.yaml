@@ -51,6 +51,13 @@ rules:
       - "rolebindings"
     verbs: *everything
 
+  # To make use knative serving API.
+  - apiGroups:
+      - serving.knative.dev
+    resources:
+      - services
+    verbs: *everything
+
   # Our own resources and statuses we care about.
   - apiGroups:
       - "eventing.knative.dev"
