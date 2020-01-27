@@ -24,7 +24,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
 
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
@@ -70,7 +69,6 @@ type Reconciler struct {
 	serviceAccountLister corev1listers.ServiceAccountLister
 	roleBindingLister    rbacv1listers.RoleBindingLister
 	brokerLister         eventinglisters.BrokerLister
-	tracker              tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -129,14 +127,8 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		return fmt.Errorf("broker filter: %v", err)
 	}
 
-	b, err := r.reconcileBroker(ctx, ns)
-	if err != nil {
+	if _, err := r.reconcileBroker(ctx, ns); err != nil {
 		return fmt.Errorf("broker: %v", err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the Broker changes.
-	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), ns); err != nil {
-		return fmt.Errorf("track broker: %v", err)
 	}
 
 	return nil
