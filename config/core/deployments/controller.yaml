@@ -37,6 +37,11 @@ spec:
         terminationMessagePolicy: FallbackToLogsOnError
         image: knative.dev/eventing/cmd/controller
 
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+
         env:
           - name: SYSTEM_NAMESPACE
             valueFrom:
@@ -48,6 +53,7 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
+          # Broker
           - name: BROKER_INGRESS_IMAGE
             value: knative.dev/eventing/cmd/broker/ingress
           - name: BROKER_INGRESS_SERVICE_ACCOUNT
@@ -58,6 +64,15 @@ spec:
             value: eventing-broker-filter
           - name: BROKER_IMAGE_PULL_SECRET_NAME
             value:
+          # Legacy CronJobSource
+          - name: CRONJOB_RA_IMAGE
+            value: knative.dev/eventing/cmd/cronjob_receive_adapter
+          # PingSource
+          - name: PING_IMAGE
+            value: knative.dev/eventing/cmd/ping
+          # APIServerSource
+          - name: APISERVER_RA_IMAGE
+            value: knative.dev/eventing/cmd/apiserver_receive_adapter
 
         securityContext:
           allowPrivilegeEscalation: false
