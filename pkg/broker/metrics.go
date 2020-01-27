@@ -28,11 +28,11 @@ const (
 	// LabelUniqueName is the label for the unique name per stats_reporter instance.
 	LabelUniqueName = "unique_name"
 
-	// LabelPodName is the label for the immutable name of the pod.
-	LabelPodName = "pod_name"
+	// LabelContainerName is the label for the immutable name of the container.
+	LabelContainerName = "container_name"
 )
 
 var (
-	PodTagKey    = tag.MustNewKey(LabelPodName)
-	UniqueTagKey = tag.MustNewKey(LabelUniqueName)
+	ContainerTagKey = tag.MustNewKey(LabelContainerName)
+	UniqueTagKey    = tag.MustNewKey(LabelUniqueName)
 )

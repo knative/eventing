@@ -35,15 +35,15 @@ func TestStatsReporter(t *testing.T) {
 		filterType: "testeventtype",
 	}
 
-	r := NewStatsReporter("testpod", "testcontainer")
+	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName: "testns",
 		metricskey.LabelTriggerName:   "testtrigger",
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelFilterType:    "testeventtype",
-		broker.LabelUniqueName:        "testcontainer",
-		broker.LabelPodName:           "testpod",
+		broker.LabelContainerName:     "testcontainer",
+		broker.LabelUniqueName:        "testpod",
 	}
 
 	wantAllTags := map[string]string{}
@@ -91,7 +91,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		filterType: "",
 	}
 
-	r := NewStatsReporter("testpod", "testcontainer")
+	r := NewStatsReporter("testcontainer", "testpod")
 
 	wantTags := map[string]string{
 		metricskey.LabelNamespaceName:     "testns",
@@ -100,8 +100,8 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		metricskey.LabelFilterType:        anyValue,
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
-		broker.LabelUniqueName:            "testcontainer",
-		broker.LabelPodName:               "testpod",
+		broker.LabelContainerName:         "testcontainer",
+		broker.LabelUniqueName:            "testpod",
 	}
 
 	// test ReportEventCount
