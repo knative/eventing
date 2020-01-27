@@ -44,7 +44,7 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
 		broker.LabelPodName:               "testpod",
-		broker.LabelContainerName:         "testcontainer",
+		broker.LabelUniqueName:            "testcontainer",
 	}
 
 	// test ReportEventCount

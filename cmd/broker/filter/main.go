@@ -21,6 +21,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
@@ -54,10 +55,9 @@ const (
 )
 
 type envConfig struct {
-	Broker        string `envconfig:"BROKER" required:"true"`
-	Namespace     string `envconfig:"NAMESPACE" required:"true"`
-	PodName       string `split_words:"true" required:"true"`
-	ContainerName string `split_words:"true" required:"true"`
+	Broker    string `envconfig:"BROKER" required:"true"`
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
+	PodName   string `split_words:"true" required:"true"`
 }
 
 func main() {
@@ -124,7 +124,7 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	reporter := filter.NewStatsReporter(env.PodName, env.ContainerName)
+	reporter := filter.NewStatsReporter(env.PodName, env.PodName+"-"+uuid.New().String())
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.

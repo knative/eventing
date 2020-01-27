@@ -42,7 +42,7 @@ func TestStatsReporter(t *testing.T) {
 		metricskey.LabelTriggerName:   "testtrigger",
 		metricskey.LabelBrokerName:    "testbroker",
 		metricskey.LabelFilterType:    "testeventtype",
-		broker.LabelContainerName:     "testcontainer",
+		broker.LabelUniqueName:        "testcontainer",
 		broker.LabelPodName:           "testpod",
 	}
 
@@ -100,7 +100,7 @@ func TestReporterEmptySourceAndTypeFilter(t *testing.T) {
 		metricskey.LabelFilterType:        anyValue,
 		metricskey.LabelResponseCode:      "202",
 		metricskey.LabelResponseCodeClass: "2xx",
-		broker.LabelContainerName:         "testcontainer",
+		broker.LabelUniqueName:            "testcontainer",
 		broker.LabelPodName:               "testpod",
 	}
 
