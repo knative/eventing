@@ -121,7 +121,7 @@ roleRef:
 
 ---
 
-apiVersion: configs.knative.dev/v1alpha1
+apiVersion: configs.internal.knative.dev/v1alpha1
 kind: ConfigMapPropagation
 metadata:
   name: eventing
