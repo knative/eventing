@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
@@ -34,11 +35,17 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
+	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
+	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
@@ -100,6 +107,7 @@ var (
 func init() {
 	// Add types to scheme
 	_ = v1alpha1.AddToScheme(scheme.Scheme)
+	_ = duckv1alpha1.AddToScheme(scheme.Scheme)
 }
 
 func TestReconcile(t *testing.T) {
@@ -565,9 +573,14 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
+		ctx = v1a1addr.WithDuck(ctx)
+		ctx = v1b1addr.WithDuck(ctx)
+		ctx = v1addr.WithDuck(ctx)
+		ctx = conditions.WithDuck(ctx)
 		return &Reconciler{
 			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:        listers.GetSubscriptionLister(),
+			triggerLister:             listers.GetTriggerLister(),
 			brokerLister:              listers.GetBrokerLister(),
 			serviceLister:             listers.GetK8sServiceLister(),
 			deploymentLister:          listers.GetDeploymentLister(),
@@ -576,6 +589,8 @@ func TestReconcile(t *testing.T) {
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
 			channelableTracker:        duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			addressableTracker:        duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
+			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
 	},
 		false,

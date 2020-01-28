@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -37,6 +38,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/resolver"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -50,13 +52,28 @@ import (
 )
 
 const (
-	// Name of the corev1.Events emitted from the reconciliation process.
+	// Name of the corev1.Events emitted from the Broker reconciliation process.
 	brokerReadinessChanged          = "BrokerReadinessChanged"
 	brokerReconcileError            = "BrokerReconcileError"
 	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
 	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
 	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
 	ingressSubscriptionGetFailed    = "IngressSubscriptionGetFailed"
+
+	// Name of the corev1.Events emitted from the Trigger reconciliation process.
+	triggerReconciled         = "TriggerReconciled"
+	triggerReadinessChanged   = "TriggerReadinessChanged"
+	triggerReconcileFailed    = "TriggerReconcileFailed"
+	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
+	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed  = "SubscriptionCreateFailed"
+	subscriptionGetFailed     = "SubscriptionGetFailed"
+	triggerChannelFailed      = "TriggerChannelFailed"
+	triggerServiceFailed      = "TriggerServiceFailed"
+
+	// Label used to specify which Broker provides the implementation.
+	brokerLabel = "eventing.knative.dev/broker.class"
+	brokerName  = "KnativeEventingChannelBroker"
 )
 
 type Reconciler struct {
@@ -67,6 +84,7 @@ type Reconciler struct {
 	serviceLister      corev1listers.ServiceLister
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister messaginglisters.SubscriptionLister
+	triggerLister      eventinglisters.TriggerLister
 
 	channelableTracker duck.ListableTracker
 
@@ -74,10 +92,16 @@ type Reconciler struct {
 	ingressServiceAccountName string
 	filterImage               string
 	filterServiceAccountName  string
+
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
+	addressableTracker duck.ListableTracker
+	uriResolver        *resolver.URIResolver
 }
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
+
+var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
 // ReconcilerArgs are the arguments needed to create a broker.Reconciler.
 type ReconcilerArgs struct {
@@ -236,6 +260,14 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 	})
 
+	triggers, err := r.reconcileTriggers(ctx, b)
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem reconciling triggers", zap.Error(err))
+		return err
+	}
+	for _, t := range triggers {
+		logging.FromContext(ctx).Error("RECONCILED: ", zap.String("trigger", t.Name))
+	}
 	return nil
 }
 
@@ -414,4 +446,42 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	expected := resources.MakeIngressService(b)
 	return r.reconcileService(ctx, expected)
+}
+
+// reconcileTriggers reconciles the Triggers that are pointed to this broker
+func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) ([]*v1alpha1.Trigger, error) {
+
+	// TODO: Figure out the labels stuff... If webhook does it, we can filter like this...
+	// Find all the Triggers that have been labeled as belonging to me
+	/*
+		triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.SelectorFromSet(brokerLabels(b.Name)))
+	*/
+	triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.Everything())
+	if err != nil {
+		return []*v1alpha1.Trigger{}, err
+	}
+	for _, t := range triggers {
+		if t.Spec.Broker == b.Name {
+			r.Logger.Error("RECONCILING:", zap.String("name", t.Name))
+			trigger := t.DeepCopy()
+			tErr := r.reconcileTrigger(ctx, b, trigger)
+			if tErr != nil {
+				r.Logger.Error("RECONCILING TRIGGER FAILED:", zap.String("name", t.Name), zap.Error(err))
+				return []*v1alpha1.Trigger{}, tErr
+			}
+			trigger.Status.ObservedGeneration = t.Generation
+			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
+				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
+				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				return []*v1alpha1.Trigger{}, updateStatusErr
+			}
+		}
+	}
+	return triggers, nil
+}
+
+func brokerLabels(name string) map[string]string {
+	return map[string]string{
+		brokerLabel: brokerName,
+	}
 }
