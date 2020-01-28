@@ -95,12 +95,12 @@ func TestAllCases(t *testing.T) {
 	)
 	secret := resources.MakeSecret(brokerImagePullSecretName)
 	broker := resources.MakeBroker(namespace)
-	saIngress := resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName)
-	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, namespace, testNS, resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
-	rbIngressConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.IngressServiceAccountName, testNS), namespace, system.Namespace(), resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.ConfigClusterRoleName)
-	saFilter := resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName)
-	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, namespace, testNS, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
-	rbFilterConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.FilterServiceAccountName, testNS), namespace, system.Namespace(), resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.ConfigClusterRoleName)
+	saIngress := resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName)
+	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
+	rbIngressConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.IngressServiceAccountName, testNS), namespace, system.Namespace(), resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName), resources.ConfigClusterRoleName)
+	saFilter := resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName)
+	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
+	rbFilterConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.FilterServiceAccountName, testNS), namespace, system.Namespace(), resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName), resources.ConfigClusterRoleName)
 
 	table := TableTest{{
 		Name: "bad workqueue key",

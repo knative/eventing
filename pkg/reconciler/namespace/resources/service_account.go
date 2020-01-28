@@ -22,10 +22,13 @@ import (
 )
 
 // MakeServiceAccount creates a ServiceAccount object for the Namespace 'ns'.
-func MakeServiceAccount(namespace, name string) *corev1.ServiceAccount {
+func MakeServiceAccount(namespace *corev1.Namespace, name string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(namespace.GetObjectMeta(), namespace.GroupVersionKind()),
+			},
+			Namespace: namespace.Name,
 			Name:      name,
 			Labels:    OwnedLabels(),
 		},

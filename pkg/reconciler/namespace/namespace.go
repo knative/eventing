@@ -138,7 +138,7 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 // Namespace 'ns'.
 func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName, configClusterRoleName string) error {
 
-	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
+	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns, saName))
 	if err != nil {
 		return fmt.Errorf("service account '%s': %v", saName, err)
 	}
