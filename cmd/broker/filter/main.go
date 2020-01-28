@@ -30,6 +30,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
@@ -58,8 +59,8 @@ type envConfig struct {
 	Broker    string `envconfig:"BROKER" required:"true"`
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
 	// TODO: change this environment variable to something like "PodGroupName".
-	PodName       string `split_words:"true" required:"true"`
-	ContainerName string `split_words:"true" required:"true"`
+	PodName       string `envconfig:"POD_NAME" required:"true"`
+	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
 }
 
 func main() {
@@ -126,7 +127,7 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	reporter := filter.NewStatsReporter(env.ContainerName, env.PodName+"-"+uuid.New().String())
+	reporter := filter.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
