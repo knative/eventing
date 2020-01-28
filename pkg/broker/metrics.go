@@ -25,14 +25,14 @@ const (
 	// The format is an RFC3339 time in string format. For example: 2019-08-26T23:38:17.834384404Z.
 	EventArrivalTime = "knativearrivaltime"
 
+	// LabelUniqueName is the label for the unique name per stats_reporter instance.
+	LabelUniqueName = "unique_name"
+
 	// LabelContainerName is the label for the immutable name of the container.
 	LabelContainerName = "container_name"
-
-	// LabelPodName is the label for the immutable name of the pod.
-	LabelPodName = "pod_name"
 )
 
 var (
-	PodTagKey       = tag.MustNewKey(LabelPodName)
 	ContainerTagKey = tag.MustNewKey(LabelContainerName)
+	UniqueTagKey    = tag.MustNewKey(LabelUniqueName)
 )

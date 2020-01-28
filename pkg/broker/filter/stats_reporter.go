@@ -96,15 +96,15 @@ var emptyContext = context.Background()
 
 // reporter holds cached metric objects to report filter metrics.
 type reporter struct {
-	pod       string
-	container string
+	container  string
+	uniqueName string
 }
 
 // NewStatsReporter creates a reporter that collects and reports filter metrics.
-func NewStatsReporter(pod, container string) StatsReporter {
+func NewStatsReporter(container, uniqueName string) StatsReporter {
 	return &reporter{
-		pod:       pod,
-		container: container,
+		container:  container,
+		uniqueName: uniqueName,
 	}
 }
 
@@ -115,19 +115,19 @@ func register() {
 			Description: eventCountM.Description(),
 			Measure:     eventCountM,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.PodTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
 			Description: dispatchTimeInMsecM.Description(),
 			Measure:     dispatchTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.PodTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, responseCodeKey, responseCodeClassKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 		&view.View{
 			Description: processingTimeInMsecM.Description(),
 			Measure:     processingTimeInMsecM,
 			Aggregation: view.Distribution(metrics.Buckets125(1, 10000)...), // 1, 2, 5, 10, 20, 50, 100, 1000, 5000, 10000
-			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, broker.PodTagKey, broker.ContainerTagKey},
+			TagKeys:     []tag.Key{namespaceKey, triggerKey, brokerKey, triggerFilterTypeKey, broker.UniqueTagKey, broker.ContainerTagKey},
 		},
 	)
 	if err != nil {
@@ -176,8 +176,8 @@ func (r *reporter) generateTag(args *ReportArgs, tags ...tag.Mutator) (context.C
 	// Note that filterType and filterSource can be empty strings, so they need a special treatment.
 	ctx, err := tag.New(
 		emptyContext,
-		tag.Insert(broker.PodTagKey, r.pod),
 		tag.Insert(broker.ContainerTagKey, r.container),
+		tag.Insert(broker.UniqueTagKey, r.uniqueName),
 		tag.Insert(namespaceKey, args.ns),
 		tag.Insert(triggerKey, args.trigger),
 		tag.Insert(brokerKey, args.broker),
