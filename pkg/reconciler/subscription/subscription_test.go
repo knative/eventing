@@ -19,11 +19,13 @@ package subscription
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -118,6 +120,7 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -737,7 +740,7 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			Name: "subscription, two subscribers for a channel",
+			Name: "subscription, two subscribers for a channel, with retry",
 			Objects: []runtime.Object{
 				NewSubscription("a-"+subscriptionName, testNS,
 					WithSubscriptionUID("a-"+subscriptionUID),
@@ -779,6 +782,17 @@ func TestAllCases(t *testing.T) {
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
 				),
+			}, {
+				Object: NewSubscription("a-"+subscriptionName, testNS,
+					WithSubscriptionUID("a-"+subscriptionUID),
+					WithSubscriptionChannel(channelGVK, channelName),
+					WithSubscriptionFinalizers("subscription-controller"),
+					WithSubscriptionSubscriberRef(serviceGVK, serviceName),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURIWithPath),
+				),
 			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
@@ -786,6 +800,15 @@ func TestAllCases(t *testing.T) {
 					{UID: "b-" + subscriptionUID, SubscriberURI: serviceURIWithPath},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["subscription, two subscribers for a channel, with retry"] || !action.Matches("update", "subscriptions") {
+						return false, nil, nil
+					}
+					retryAttempted["subscription, two subscribers for a channel, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
 			},
 		}, {
 			Name: "subscription deleted",

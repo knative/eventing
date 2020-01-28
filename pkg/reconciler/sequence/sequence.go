@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/tracker"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -103,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// in the status correctly.
 	sequence.Status.ObservedGeneration = original.Generation
 
-	if _, updateStatusErr := r.updateStatus(ctx, sequence); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, sequence); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Sequence status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(sequence, corev1.EventTypeWarning, updateStatusFailed, "Failed to update sequence status: %s", key)
 		return updateStatusErr
@@ -178,22 +179,26 @@ func (r *Reconciler) reconcile(ctx context.Context, s *v1alpha1.Sequence) error 
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Sequence) (*v1alpha1.Sequence, error) {
-	p, err := r.sequenceLister.Sequences(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.Sequence) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.FlowsV1alpha1().Sequences(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+		}
 
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(p.Status, desired.Status) {
-		return p, nil
-	}
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
 
-	// Don't modify the informers copy.
-	existing := p.DeepCopy()
-	existing.Status = desired.Status
-
-	return r.EventingClientSet.FlowsV1alpha1().Sequences(desired.Namespace).UpdateStatus(existing)
+		existing.Status = desired.Status
+		_, err = r.EventingClientSet.FlowsV1alpha1().Sequences(desired.Namespace).UpdateStatus(existing)
+		return err
+	})
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, s *v1alpha1.Sequence, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {

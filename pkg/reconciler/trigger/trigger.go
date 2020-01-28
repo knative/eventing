@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
@@ -123,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// in the status correctly.
 	trigger.Status.ObservedGeneration = original.Generation
 
-	if _, updateStatusErr := r.updateStatus(ctx, trigger); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, trigger); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 		return updateStatusErr
@@ -286,33 +287,35 @@ func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1alph
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Trigger) (*v1alpha1.Trigger, error) {
-	trigger, err := r.triggerLister.Triggers(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	if reflect.DeepEqual(trigger.Status, desired.Status) {
-		return trigger, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !trigger.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := trigger.DeepCopy()
-	existing.Status = desired.Status
-
-	trig, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(trig.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Trigger %q became ready after %v", trigger.Name, duration)
-		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReadinessChanged, fmt.Sprintf("Trigger %q became ready", trigger.Name))
-		if err := r.StatsReporter.ReportReady("Trigger", trigger.Namespace, trigger.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Trigger, %v", err)
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.Trigger) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return trig, err
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		existing.Status = desired.Status
+		trig, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(trig.ObjectMeta.CreationTimestamp.Time)
+			r.Logger.Infof("Trigger %q became ready after %v", existing.Name, duration)
+			r.Recorder.Event(existing, corev1.EventTypeNormal, triggerReadinessChanged, fmt.Sprintf("Trigger %q became ready", existing.Name))
+			if err := r.StatsReporter.ReportReady("Trigger", existing.Namespace, existing.Name, duration); err != nil {
+				logging.FromContext(ctx).Sugar().Infof("failed to record ready for Trigger, %v", err)
+			}
+		}
+
+		return err
+	})
 }
 
 // labelNamespace will label namespace with knative-eventing-injection=enabled

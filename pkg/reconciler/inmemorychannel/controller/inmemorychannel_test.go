@@ -18,11 +18,13 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -73,6 +75,7 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	imcKey := testNS + "/" + imcName
 
 	subscribers := []eventingduckv1alpha1.SubscriberSpec{{
@@ -251,7 +254,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: there are no endpoints ready for Dispatcher service"),
 			},
 		}, {
-			Name: "Works, creates new channel",
+			Name: "Works, creates new channel, with retry",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				makeReadyDeployment(),
@@ -275,9 +278,29 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress),
 				),
+			}, {
+				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
+					reconciletesting.WithInitInMemoryChannelConditions,
+					reconciletesting.WithInMemoryChannelDeploymentReady(),
+					reconciletesting.WithInMemoryChannelGeneration(imcGeneration),
+					reconciletesting.WithInMemoryChannelStatusObservedGeneration(imcGeneration),
+					reconciletesting.WithInMemoryChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelEndpointsReady(),
+					reconciletesting.WithInMemoryChannelChannelServiceReady(),
+					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress),
+				),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["Works, creates new channel, with retry"] || !action.Matches("update", "inmemorychannels") {
+						return false, nil, nil
+					}
+					retryAttempted["Works, creates new channel, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
 			},
 		}, {
 			Name: "Works, channel exists",

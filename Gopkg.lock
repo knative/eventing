@@ -99,6 +99,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:45c41cd27a8d986998680bfc86da0bbff5fa4f90d0f446c00636c8b099028ffe"
+  name = "github.com/blang/semver"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
+  version = "v3.6.1"
+
+[[projects]]
   digest = "1:8f5acd4d4462b5136af644d25101f0968a7a94ee90fcb2059cec5b7cc42e0b20"
   name = "github.com/census-instrumentation/opencensus-proto"
   packages = [
@@ -1297,7 +1305,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3d714b9e9535b4c878a16fff8c2ba5195df8c94d554a1bcff2e9f804350f4a5a"
+  digest = "1:5acceb9ddfc654a91e633bb00531fc719fcaedda25d621162385ba5c2badc849"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1364,6 +1372,7 @@
     "network",
     "profiling",
     "ptr",
+    "reconciler",
     "reconciler/testing",
     "resolver",
     "signals",
@@ -1401,7 +1410,7 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "b51ee347cbd2c26c1af45177d427ffb62b008b39"
+  revision = "2fbb9db15cbb7971ad2b1f4266a437f5dcc33a51"
 
 [[projects]]
   branch = "master"
@@ -1565,6 +1574,7 @@
     "knative.dev/pkg/metrics/testing",
     "knative.dev/pkg/profiling",
     "knative.dev/pkg/ptr",
+    "knative.dev/pkg/reconciler",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/resolver",
     "knative.dev/pkg/signals",

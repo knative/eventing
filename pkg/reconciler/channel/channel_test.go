@@ -19,10 +19,12 @@ package channel
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,7 +76,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
-
+	retryAttempted := make(map[string]bool)
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -212,7 +214,7 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			Name: "Updating subscribers statuses",
+			Name: "Updating subscribers statuses, with retry",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewChannel(channelName, testNS,
@@ -241,9 +243,27 @@ func TestReconcile(t *testing.T) {
 					WithBackingChannelReady,
 					WithChannelAddress(backingChannelHostname),
 					WithChannelSubscriberStatuses(subscriberStatuses())),
+			}, {
+				Object: NewChannel(channelName, testNS,
+					WithChannelTemplate(channelCRD()),
+					WithInitChannelConditions,
+					WithChannelSubscribers(subscribers()),
+					WithBackingChannelObjRef(backingChannelObjRef()),
+					WithBackingChannelReady,
+					WithChannelAddress(backingChannelHostname),
+					WithChannelSubscriberStatuses(subscriberStatuses())),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["Updating subscribers statuses, with retry"] || !action.Matches("update", "channels") {
+						return false, nil, nil
+					}
+					retryAttempted["Updating subscribers statuses, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
 			},
 		},
 	}

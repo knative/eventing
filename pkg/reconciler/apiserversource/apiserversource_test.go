@@ -18,12 +18,14 @@ package apiserversource
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -94,6 +96,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	table := TableTest{
 		{
 			Name: "missing sink",
@@ -174,7 +177,7 @@ func TestReconcile(t *testing.T) {
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{
-			Name: "valid",
+			Name: "valid, with retry",
 			Objects: []runtime.Object{
 				NewApiServerSource(sourceName, testNS,
 					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
@@ -221,13 +224,41 @@ func TestReconcile(t *testing.T) {
 					WithApiServerSourceEventTypes,
 					WithApiServerSourceStatusObservedGeneration(generation),
 				),
+			}, {
+				Object: NewApiServerSource(sourceName, testNS,
+					WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+						Resources: []sourcesv1alpha1.ApiServerResource{
+							{
+								APIVersion: "",
+								Kind:       "Namespace",
+							},
+						},
+						Sink: &sinkDest,
+					}),
+					WithApiServerSourceUID(sourceUID),
+					WithApiServerSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitApiServerSourceConditions,
+					WithApiServerSourceDeployed,
+					WithApiServerSourceSink(sinkURI),
+					WithApiServerSourceSufficientPermissions,
+					WithApiServerSourceEventTypes,
+					WithApiServerSourceStatusObservedGeneration(generation),
+				),
 			}},
 			WantCreates: []runtime.Object{
 				makeSubjectAccessReview("namespaces", "get", "default"),
 				makeSubjectAccessReview("namespaces", "list", "default"),
 				makeSubjectAccessReview("namespaces", "watch", "default"),
 			},
-			WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+			WithReactors: []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true),
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["valid, with retry"] || !action.Matches("update", "apiserversources") {
+						return false, nil, nil
+					}
+					retryAttempted["valid, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				}},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 		},
 		{

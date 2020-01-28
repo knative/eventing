@@ -99,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(source, corev1.EventTypeNormal, sourceReconciled, `ContainerSource reconciled: "%s/%s"`, source.Namespace, source.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, source.DeepCopy()); updateStatusErr != nil {
+	if _, updateStatusErr := r.updateStatus(ctx, source); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the ContainerSource", zap.Error(err))
 		r.Recorder.Eventf(source, corev1.EventTypeWarning, sourceUpdateStatusFailed, "Failed to update ContainerSource's status: %v", err)
 		return updateStatusErr

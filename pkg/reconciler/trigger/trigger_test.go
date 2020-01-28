@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	"knative.dev/pkg/resolver"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -138,6 +140,7 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	triggerKey := testNS + "/" + triggerName
 	table := TableTest{
 		{
@@ -370,7 +373,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "Trigger being deleted",
+			Name: "Trigger being deleted, with retry",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
@@ -384,7 +387,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
 			},
 		}, {
-			Name: "No Broker Trigger Channel",
+			Name: "No Broker Trigger Channel, with retry",
 			Key:  triggerKey,
 			Objects: []runtime.Object{
 				makeReadyBrokerNoTriggerChannel(),
@@ -407,7 +410,24 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
 				),
+			}, {
+				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
+					reconciletesting.WithTriggerUID(triggerUID),
+					reconciletesting.WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
+					reconciletesting.WithInitTriggerConditions,
+					reconciletesting.WithTriggerBrokerReady(),
+				),
 			}},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["No Broker Trigger Channel, with retry"] || !action.Matches("update", "triggers") {
+						return false, nil, nil
+					}
+					retryAttempted["No Broker Trigger Channel, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
+			},
 		}, {
 			Name: "No Broker Filter Service",
 			Key:  triggerKey,

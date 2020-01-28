@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -119,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// in the status correctly.
 	subscription.Status.ObservedGeneration = original.Generation
 
-	if _, updateStatusErr := r.updateStatus(ctx, subscription); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, subscription); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the Subscription", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(subscription, corev1.EventTypeWarning, subscriptionUpdateStatusFailed, "Failed to update Subscription's status: %v", updateStatusErr)
 		return updateStatusErr
@@ -368,34 +369,36 @@ func isNilOrEmptyDestination(destination *duckv1.Destination) bool {
 	return destination == nil || equality.Semantic.DeepEqual(destination, &duckv1.Destination{})
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
-	subscription, err := r.subscriptionLister.Subscriptions(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(subscription.Status, desired.Status) {
-		return subscription, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !subscription.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := subscription.DeepCopy()
-	existing.Status = desired.Status
-
-	sub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(sub.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Subscription %q became ready after %v", subscription.Name, duration)
-		r.Recorder.Event(subscription, corev1.EventTypeNormal, subscriptionReadinessChanged, fmt.Sprintf("Subscription %q became ready", subscription.Name))
-		if err := r.StatsReporter.ReportReady("Subscription", subscription.Namespace, subscription.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Subscription, %v", err)
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.Subscription) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return sub, err
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		existing.Status = desired.Status
+		sub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(sub.ObjectMeta.CreationTimestamp.Time)
+			r.Logger.Infof("Subscription %q became ready after %v", existing.Name, duration)
+			r.Recorder.Event(existing, corev1.EventTypeNormal, subscriptionReadinessChanged, fmt.Sprintf("Subscription %q became ready", existing.Name))
+			if err := r.StatsReporter.ReportReady("Subscription", existing.Namespace, existing.Name, duration); err != nil {
+				logging.FromContext(ctx).Sugar().Infof("failed to record ready for Subscription, %v", err)
+			}
+		}
+
+		return err
+	})
 }
 
 func (r *Reconciler) ensureFinalizer(sub *v1alpha1.Subscription) error {

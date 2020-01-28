@@ -18,6 +18,7 @@ package legacycronjobsource
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -28,6 +29,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,6 +43,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/legacycronjobsource/resources"
 	"knative.dev/eventing/pkg/utils"
@@ -106,6 +109,7 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -185,7 +189,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 		}, {
-			Name: "valid",
+			Name: "valid, with retry",
 			Objects: []runtime.Object{
 				NewCronJobSource(sourceName, testNS,
 					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
@@ -225,7 +229,34 @@ func TestAllCases(t *testing.T) {
 					WithCronJobSourceEventType,
 					WithCronJobSourceStatusObservedGeneration(generation),
 				),
+			}, {
+				Object: NewCronJobSource(sourceName, testNS,
+					WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithCronJobSourceUID(sourceUID),
+					WithCronJobSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitCronJobSourceConditions,
+					WithValidCronJobSourceSchedule,
+					WithValidCronJobSourceResources,
+					WithCronJobSourceDeployed,
+					WithCronJobSourceSink(sinkURI),
+					WithCronJobSourceEventType,
+					WithCronJobSourceStatusObservedGeneration(generation),
+				),
 			}},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["valid, with retry"] || !action.Matches("update", "cronjobsources") {
+						return false, nil, nil
+					}
+					retryAttempted["valid, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
+			},
 		}, {
 			Name: "valid with sink URI",
 			Objects: []runtime.Object{

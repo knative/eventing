@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/tracker"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -104,7 +105,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// in the status correctly.
 	parallel.Status.ObservedGeneration = original.Generation
 
-	if _, updateStatusErr := r.updateStatus(ctx, parallel); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, parallel); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Parallel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update parallel status: %s", key)
 		return updateStatusErr
@@ -191,22 +192,26 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Parallel) (*v1alpha1.Parallel, error) {
-	p, err := r.parallelLister.Parallels(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.Parallel) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.FlowsV1alpha1().Parallels(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+		}
 
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(p.Status, desired.Status) {
-		return p, nil
-	}
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
 
-	// Don't modify the informers copy.
-	existing := p.DeepCopy()
-	existing.Status = desired.Status
-
-	return r.EventingClientSet.FlowsV1alpha1().Parallels(desired.Namespace).UpdateStatus(existing)
+		existing.Status = desired.Status
+		_, err = r.EventingClientSet.FlowsV1alpha1().Parallels(desired.Namespace).UpdateStatus(existing)
+		return err
+	})
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {

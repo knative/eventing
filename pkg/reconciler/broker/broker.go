@@ -37,6 +37,7 @@ import (
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -125,7 +126,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// in the status correctly.
 	broker.Status.ObservedGeneration = original.Generation
 
-	if _, updateStatusErr := r.updateStatus(ctx, broker); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, broker); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", updateStatusErr)
 		return updateStatusErr
@@ -239,34 +240,36 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker) (*v1alpha1.Broker, error) {
-	broker, err := r.brokerLister.Brokers(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(broker.Status, desired.Status) {
-		return broker, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !broker.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := broker.DeepCopy()
-	existing.Status = desired.Status
-
-	b, err := r.EventingClientSet.EventingV1alpha1().Brokers(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(b.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("Broker %q became ready after %v", broker.Name, duration)
-		r.Recorder.Event(broker, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker %q became ready", broker.Name))
-		if err := r.StatsReporter.ReportReady("Broker", broker.Namespace, broker.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Broker, %v", err)
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.Broker) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.EventingV1alpha1().Brokers(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return b, err
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		existing.Status = desired.Status
+		b, err := r.EventingClientSet.EventingV1alpha1().Brokers(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(b.ObjectMeta.CreationTimestamp.Time)
+			logging.FromContext(ctx).Sugar().Infof("Broker %q became ready after %v", existing.Name, duration)
+			r.Recorder.Event(existing, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker %q became ready", existing.Name))
+			if err := r.StatsReporter.ReportReady("Broker", existing.Namespace, existing.Name, duration); err != nil {
+				logging.FromContext(ctx).Sugar().Infof("failed to record ready for Broker, %v", err)
+			}
+		}
+
+		return err
+	})
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.

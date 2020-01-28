@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -128,7 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// in the status correctly.
 	channel.Status.ObservedGeneration = original.Generation
 
-	if _, updateStatusErr := r.updateStatus(ctx, channel); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Error("Failed to update InMemoryChannel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update InMemoryChannel's status: %v", err)
 		return updateStatusErr
@@ -277,28 +278,34 @@ func (r *Reconciler) createSubscribableStatus(subscribable *eventingduck.Subscri
 	}
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.InMemoryChannel) (*v1alpha1.InMemoryChannel, error) {
-	imc, err := r.inmemorychannelLister.InMemoryChannels(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.InMemoryChannel) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+		}
 
-	if reflect.DeepEqual(imc.Status, desired.Status) {
-		return imc, nil
-	}
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
 
-	becomesReady := desired.Status.IsReady() && !imc.Status.IsReady()
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
 
-	// Don't modify the informers copy.
-	existing := imc.DeepCopy()
-	existing.Status = desired.Status
+		// Don't modify the informers copy.
+		existing := existing.DeepCopy()
+		existing.Status = desired.Status
 
-	new, err := r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("InMemoryChannel %q became ready after %v", imc.Name, duration)
-		r.StatsReporter.ReportReady("InMemoryChannel", imc.Namespace, imc.Name, duration)
-	}
+		new, err := r.EventingClientSet.MessagingV1alpha1().InMemoryChannels(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(new.ObjectMeta.CreationTimestamp.Time)
+			r.Logger.Infof("InMemoryChannel %q became ready after %v", existing.Name, duration)
+			r.StatsReporter.ReportReady("InMemoryChannel", existing.Namespace, existing.Name, duration)
+		}
 
-	return new, err
+		return err
+	})
 }

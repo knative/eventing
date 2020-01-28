@@ -18,6 +18,7 @@ package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -25,6 +26,7 @@ import (
 	"knative.dev/pkg/system"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -103,6 +105,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -522,7 +525,7 @@ func TestReconcile(t *testing.T) {
 			WantErr: true,
 		},
 		{
-			Name: "Successful Reconciliation",
+			Name: "Successful Reconciliation, with retry",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
@@ -555,9 +558,25 @@ func TestReconcile(t *testing.T) {
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
 				),
+			}, {
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithBrokerReady,
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+				),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["Successful Reconciliation, with retry"] || !action.Matches("update", "brokers") {
+						return false, nil, nil
+					}
+					retryAttempted["Successful Reconciliation, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
 			},
 		},
 	}

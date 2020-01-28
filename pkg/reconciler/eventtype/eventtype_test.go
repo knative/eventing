@@ -18,6 +18,7 @@ package eventtype
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -26,6 +27,7 @@ import (
 	"knative.dev/pkg/tracker"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -58,6 +60,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -153,7 +156,7 @@ func TestReconcile(t *testing.T) {
 			}},
 		},
 		{
-			Name: "Successful reconcile, became ready",
+			Name: "Successful reconcile, became ready, with retry",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewEventType(eventTypeName, testNS,
@@ -173,9 +176,26 @@ func TestReconcile(t *testing.T) {
 					WithEventTypeBrokerExists,
 					WithEventTypeBrokerReady,
 				),
+			}, {
+				Object: NewEventType(eventTypeName, testNS,
+					WithEventTypeType(eventTypeType),
+					WithEventTypeSource(eventTypeSource),
+					WithEventTypeBroker(eventTypeBroker),
+					WithEventTypeBrokerExists,
+					WithEventTypeBrokerReady,
+				),
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, eventTypeReadinessChanged, "EventType %q became ready", eventTypeName),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["Successful reconcile, became ready, with retry"] || !action.Matches("update", "eventtypes") {
+						return false, nil, nil
+					}
+					retryAttempted["Successful reconcile, became ready, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
 			},
 		},
 	}

@@ -18,10 +18,12 @@ package parallel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,6 +64,7 @@ func init() {
 }
 
 func TestAllBranches(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	pKey := testNS + "/" + parallelName
 	imc := &eventingduck.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
@@ -144,7 +147,7 @@ func TestAllBranches(t *testing.T) {
 					}})),
 			}},
 		}, {
-			Name: "single branch, with filter",
+			Name: "single branch, with filter, with retry",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewFlowsParallel(parallelName, testNS,
@@ -181,7 +184,30 @@ func TestAllBranches(t *testing.T) {
 						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
 						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
 					}})),
+			}, {
+				Object: reconciletesting.NewFlowsParallel(parallelName, testNS,
+					reconciletesting.WithInitFlowsParallelConditions,
+					reconciletesting.WithFlowsParallelChannelTemplateSpec(imc),
+					reconciletesting.WithFlowsParallelBranches([]v1alpha1.ParallelBranch{{Filter: createFilter(0), Subscriber: createSubscriber(0)}}),
+					reconciletesting.WithFlowsParallelChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithFlowsParallelAddressableNotReady("emptyAddress", "addressable is nil"),
+					reconciletesting.WithFlowsParallelSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithFlowsParallelIngressChannelStatus(createParallelChannelStatus(parallelName, corev1.ConditionFalse)),
+					reconciletesting.WithFlowsParallelBranchStatuses([]v1alpha1.ParallelBranchStatus{{
+						FilterSubscriptionStatus: createParallelFilterSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+						FilterChannelStatus:      createParallelBranchChannelStatus(parallelName, 0, corev1.ConditionFalse),
+						SubscriptionStatus:       createParallelSubscriptionStatus(parallelName, 0, corev1.ConditionFalse),
+					}})),
 			}},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["single branch, with filter, with retry"] || !action.Matches("update", "parallels") {
+						return false, nil, nil
+					}
+					retryAttempted["single branch, with filter, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
+			},
 		}, {
 			Name: "single branch, no filter, with global reply",
 			Key:  pKey,

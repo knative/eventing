@@ -44,6 +44,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	"knative.dev/pkg/apis"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 )
 
@@ -114,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(src, corev1.EventTypeNormal, pingReconciled, `PingSource reconciled: "%s/%s"`, src.Namespace, src.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, src.DeepCopy()); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, src); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the PingSource", zap.Error(err))
 		r.Recorder.Eventf(src, corev1.EventTypeWarning, pingUpdateStatusFailed, "Failed to update PingSource's status: %v", err)
 		return updateStatusErr
@@ -320,34 +321,36 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.PingS
 	return current, nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.PingSource) (*v1alpha1.PingSource, error) {
-	src, err := r.pingLister.PingSources(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(src.Status, desired.Status) {
-		return src, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !src.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := src.DeepCopy()
-	existing.Status = desired.Status
-
-	cj, err := r.EventingClientSet.SourcesV1alpha1().PingSources(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Info("PingSource became ready after", zap.Duration("duration", duration))
-		r.Recorder.Event(src, corev1.EventTypeNormal, pingReadinessChanged, fmt.Sprintf("PingSource %q became ready", src.Name))
-		if recorderErr := r.StatsReporter.ReportReady("PingSource", src.Namespace, src.Name, duration); recorderErr != nil {
-			logging.FromContext(ctx).Error("Failed to record ready for PingSource", zap.Error(recorderErr))
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.PingSource) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.SourcesV1alpha1().PingSources(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return cj, err
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		existing.Status = desired.Status
+		cj, err := r.EventingClientSet.SourcesV1alpha1().PingSources(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
+			logging.FromContext(ctx).Info("PingSource became ready after", zap.Duration("duration", duration))
+			r.Recorder.Event(existing, corev1.EventTypeNormal, pingReadinessChanged, fmt.Sprintf("PingSource %q became ready", existing.Name))
+			if recorderErr := r.StatsReporter.ReportReady("PingSource", existing.Namespace, existing.Name, duration); recorderErr != nil {
+				logging.FromContext(ctx).Error("Failed to record ready for PingSource", zap.Error(recorderErr))
+			}
+		}
+
+		return err
+	})
 }
 
 // TODO determine how to push the updated logging config to existing data plane Pods.

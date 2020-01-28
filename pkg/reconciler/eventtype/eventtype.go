@@ -30,11 +30,13 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 const (
@@ -92,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		logging.FromContext(ctx).Debug("EventType reconciled")
 	}
 
-	if _, err = r.updateStatus(ctx, eventType); err != nil {
+	if err = r.updateStatus(ctx, original, eventType); err != nil {
 		logging.FromContext(ctx).Warn("Failed to update the EventType status", zap.Error(err))
 		r.Recorder.Eventf(eventType, corev1.EventTypeWarning, eventTypeUpdateStatusFailed, "Failed to update Broker's status: %v", err)
 		return err
@@ -139,32 +141,34 @@ func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 }
 
 // updateStatus updates the EventType's status.
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.EventType) (*v1alpha1.EventType, error) {
-	eventType, err := r.eventTypeLister.EventTypes(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.EventType) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.EventingV1alpha1().EventTypes(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+		}
 
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(eventType.Status, desired.Status) {
-		return eventType, nil
-	}
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
 
-	becomesReady := desired.Status.IsReady() && !eventType.Status.IsReady()
+		existing.Status = desired.Status
+		et, err := r.EventingClientSet.EventingV1alpha1().EventTypes(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(et.ObjectMeta.CreationTimestamp.Time)
+			logging.FromContext(ctx).Sugar().Infof("EventType %q became ready after %v", existing.Name, duration)
+			r.Recorder.Event(existing, corev1.EventTypeNormal, eventTypeReadinessChanged, fmt.Sprintf("EventType %q became ready", existing.Name))
+			//r.StatsReporter.ReportServiceReady(existing.Namespace, existing.Name, duration) // TODO: stats
+		}
 
-	// Don't modify the informers copy.
-	existing := eventType.DeepCopy()
-	existing.Status = desired.Status
-
-	et, err := r.EventingClientSet.EventingV1alpha1().EventTypes(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(et.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("EventType %q became ready after %v", eventType.Name, duration)
-		r.Recorder.Event(eventType, corev1.EventTypeNormal, eventTypeReadinessChanged, fmt.Sprintf("EventType %q became ready", eventType.Name))
-		//r.StatsReporter.ReportServiceReady(eventType.Namespace, eventType.Name, duration) // TODO: stats
-	}
-
-	return et, err
+		return err
+	})
 }
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.

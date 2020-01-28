@@ -18,10 +18,12 @@ package sequence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -105,6 +107,7 @@ func createDestination(stepNumber int) duckv1.Destination {
 }
 
 func TestAllCases(t *testing.T) {
+	retryAttempted := make(map[string]bool)
 	pKey := testNS + "/" + sequenceName
 	imc := &eventingduckv1alpha1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
@@ -134,7 +137,7 @@ func TestAllCases(t *testing.T) {
 			//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
 			//			},
 		}, {
-			Name: "deleting",
+			Name: "deleting, with retry",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewFlowsSequence(sequenceName, testNS,
@@ -145,7 +148,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "Reconciled", "Sequence reconciled"),
 			},
 		}, {
-			Name: "singlestep",
+			Name: "singlestep, with retry",
 			Key:  pKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewFlowsSequence(sequenceName, testNS,
@@ -194,7 +197,50 @@ func TestAllCases(t *testing.T) {
 							},
 						},
 					})),
+			}, {
+				Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
+					reconciletesting.WithInitFlowsSequenceConditions,
+					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}),
+					reconciletesting.WithFlowsSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
+					reconciletesting.WithFlowsSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
+					reconciletesting.WithFlowsSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
+					reconciletesting.WithFlowsSequenceChannelStatuses([]v1alpha1.SequenceChannelStatus{
+						{
+							Channel: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "inmemorychannel",
+								Name:       resources.SequenceChannelName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+							ReadyCondition: apis.Condition{
+								Type:    apis.ConditionReady,
+								Status:  corev1.ConditionFalse,
+								Reason:  "NotAddressable",
+								Message: "Channel is not addressable",
+							},
+						},
+					}),
+					reconciletesting.WithFlowsSequenceSubscriptionStatuses([]v1alpha1.SequenceSubscriptionStatus{
+						{
+							Subscription: corev1.ObjectReference{
+								APIVersion: "messaging.knative.dev/v1alpha1",
+								Kind:       "Subscription",
+								Name:       resources.SequenceSubscriptionName(sequenceName, 0),
+								Namespace:  testNS,
+							},
+						},
+					})),
 			}},
+			WithReactors: []clientgotesting.ReactionFunc{
+				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+					if retryAttempted["singlestep, with retry"] || !action.Matches("update", "sequences") {
+						return false, nil, nil
+					}
+					retryAttempted["singlestep, with retry"] = true
+					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
+				},
+			},
 		}, {
 			Name: "singlestepwithreply",
 			Key:  pKey,

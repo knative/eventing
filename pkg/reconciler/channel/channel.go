@@ -42,6 +42,7 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 const (
@@ -99,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(channel, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", key)
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, channel.DeepCopy()); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, channel); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Error updating Channel status", zap.Error(updateStatusErr))
 		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %s", key)
 		return updateStatusErr
@@ -158,35 +159,37 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 	return nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel) (*v1alpha1.Channel, error) {
-	channel, err := r.channelLister.Channels(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(channel.Status, desired.Status) {
-		return channel, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !channel.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := channel.DeepCopy()
-	existing.Status = desired.Status
-
-	c, err := r.EventingClientSet.MessagingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
-
-	if err == nil && becomesReady {
-		duration := time.Since(c.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("Channel %q became ready after %v", channel.Name, duration)
-		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReadinessChanged, fmt.Sprintf("Channel %q became ready", channel.Name))
-		if err := r.StatsReporter.ReportReady("Channel", channel.Namespace, channel.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Channel, %v", err)
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.Channel) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.EventingClientSet.MessagingV1alpha1().Channels(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return c, err
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		existing.Status = desired.Status
+		c, err := r.EventingClientSet.MessagingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
+
+		if err == nil && becomesReady {
+			duration := time.Since(c.ObjectMeta.CreationTimestamp.Time)
+			logging.FromContext(ctx).Sugar().Infof("Channel %q became ready after %v", existing.Name, duration)
+			r.Recorder.Event(existing, corev1.EventTypeNormal, channelReadinessChanged, fmt.Sprintf("Channel %q became ready", existing.Name))
+			if err := r.StatsReporter.ReportReady("Channel", existing.Namespace, existing.Name, duration); err != nil {
+				logging.FromContext(ctx).Sugar().Infof("failed to record ready for Channel, %v", err)
+			}
+		}
+
+		return err
+	})
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.

@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -134,7 +135,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(apiserversource, corev1.EventTypeNormal, apiserversourceReconciled, `ApiServerSource reconciled: "%s/%s"`, apiserversource.Namespace, apiserversource.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, apiserversource.DeepCopy()); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, apiserversource); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the ApiServerSource", zap.Error(err))
 		r.Recorder.Eventf(apiserversource, corev1.EventTypeWarning, apiserversourceUpdateStatusFailed, "Failed to update ApiServerSource's status: %v", err)
 		return updateStatusErr
@@ -394,34 +395,40 @@ func (r *Reconciler) getLabelSelector(src *v1alpha1.ApiServerSource) labels.Sele
 	return labels.SelectorFromSet(resources.Labels(src.Name))
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServerSource) (*v1alpha1.ApiServerSource, error) {
-	apiserversource, err := r.apiserversourceLister.ApiServerSources(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(apiserversource.Status, desired.Status) {
-		return apiserversource, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !apiserversource.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := apiserversource.DeepCopy()
-	existing.Status = desired.Status
-
-	cj, err := r.LegacyClientSet.SourcesV1alpha1().ApiServerSources(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Info("ApiServerSource became ready after", zap.Duration("duration", duration))
-		r.Recorder.Event(apiserversource, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", apiserversource.Name))
-		if err := r.StatsReporter.ReportReady("ApiServerSource", apiserversource.Namespace, apiserversource.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.ApiServerSource) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.LegacyClientSet.SourcesV1alpha1().ApiServerSources(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return cj, err
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		// Don't modify the informers copy.
+		existing := existing.DeepCopy()
+		existing.Status = desired.Status
+
+		cj, err := r.LegacyClientSet.SourcesV1alpha1().ApiServerSources(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
+			logging.FromContext(ctx).Info("ApiServerSource became ready after", zap.Duration("duration", duration))
+			r.Recorder.Event(existing, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", existing.Name))
+			if err := r.StatsReporter.ReportReady("ApiServerSource", existing.Namespace, existing.Name, duration); err != nil {
+				logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)
+			}
+		}
+
+		return err
+	})
 }
 
 // TODO determine how to push the updated logging config to existing data plane Pods.

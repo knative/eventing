@@ -37,6 +37,7 @@ import (
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
@@ -114,7 +115,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		r.Recorder.Eventf(cronjob, corev1.EventTypeNormal, cronJobReconciled, `CronJobSource reconciled: "%s/%s"`, cronjob.Namespace, cronjob.Name)
 	}
 
-	if _, updateStatusErr := r.updateStatus(ctx, cronjob.DeepCopy()); updateStatusErr != nil {
+	if updateStatusErr := r.updateStatus(ctx, original, cronjob); updateStatusErr != nil {
 		logging.FromContext(ctx).Warn("Failed to update the CronJobSource", zap.Error(err))
 		r.Recorder.Eventf(cronjob, corev1.EventTypeWarning, cronJobUpdateStatusFailed, "Failed to update CronJobSource's status: %v", err)
 		return updateStatusErr
@@ -332,34 +333,36 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.CronJ
 	return current, nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.CronJobSource) (*v1alpha1.CronJobSource, error) {
-	cronjob, err := r.cronjobLister.CronJobSources(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(cronjob.Status, desired.Status) {
-		return cronjob, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !cronjob.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := cronjob.DeepCopy()
-	existing.Status = desired.Status
-
-	cj, err := r.LegacyClientSet.SourcesV1alpha1().CronJobSources(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Info("CronJobSource became ready after", zap.Duration("duration", duration))
-		r.Recorder.Event(cronjob, corev1.EventTypeNormal, cronJobReadinessChanged, fmt.Sprintf("CronJobSource %q became ready", cronjob.Name))
-		if recorderErr := r.StatsReporter.ReportReady("CronJobSource", cronjob.Namespace, cronjob.Name, duration); recorderErr != nil {
-			logging.FromContext(ctx).Error("Failed to record ready for CronJobSource", zap.Error(recorderErr))
+func (r *Reconciler) updateStatus(ctx context.Context, original, desired *v1alpha1.CronJobSource) error {
+	existing := original.DeepCopy()
+	return pkgreconciler.RetryUpdateConflicts(func(attempts int) (err error) {
+		// The first iteration tries to use the informer's state, subsequent attempts fetch the latest state via API.
+		if attempts > 0 {
+			existing, err = r.LegacyClientSet.SourcesV1alpha1().CronJobSources(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	return cj, err
+		// If there's nothing to update, just return.
+		if reflect.DeepEqual(existing.Status, desired.Status) {
+			return nil
+		}
+		becomesReady := desired.Status.IsReady() && !existing.Status.IsReady()
+
+		existing.Status = desired.Status
+		cj, err := r.LegacyClientSet.SourcesV1alpha1().CronJobSources(desired.Namespace).UpdateStatus(existing)
+		if err == nil && becomesReady {
+			duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
+			logging.FromContext(ctx).Info("CronJobSource became ready after", zap.Duration("duration", duration))
+			r.Recorder.Event(existing, corev1.EventTypeNormal, cronJobReadinessChanged, fmt.Sprintf("CronJobSource %q became ready", existing.Name))
+			if recorderErr := r.StatsReporter.ReportReady("CronJobSource", existing.Namespace, existing.Name, duration); recorderErr != nil {
+				logging.FromContext(ctx).Error("Failed to record ready for CronJobSource", zap.Error(recorderErr))
+			}
+		}
+
+		return err
+	})
 }
 
 // TODO determine how to push the updated logging config to existing data plane Pods.
