@@ -125,6 +125,18 @@ func TestMakeFilterDeployment(t *testing.T) {
                 "value": "happy"
               },
               {
+                "name": "MAX_IDLE_CONNS",
+                "value": "1000"
+              },
+              {
+                "name": "MAX_IDLE_CONNS_PER_HOST",
+                "value": "100"
+              },
+              {
+                "name": "METRICS_PORT",
+                "value": "9092"
+              },
+              {
                 "name": "METRICS_DOMAIN",
                 "value": "knative.dev/internal/eventing"
               }

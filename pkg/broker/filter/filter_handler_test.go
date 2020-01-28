@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	"knative.dev/eventing/pkg/broker/config"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
@@ -337,10 +338,7 @@ func TestReceiver(t *testing.T) {
 				correctURI = append(correctURI, trig)
 			}
 			reporter := &mockReporter{}
-			r, err := NewHandler(
-				zap.NewNop(),
-				getFakeTriggerLister(correctURI),
-				reporter)
+			r, err := NewHandler(zap.NewNop(), getFakeTriggerLister(correctURI), reporter, config.DefaultBrokerConfig.FilterConfig)
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")

@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/eventing/pkg/kncloudevents"
 	knconfigmap "knative.dev/pkg/configmap"
 )
 
@@ -68,6 +69,15 @@ var DefaultBrokerConfig = BrokerConfig{
 			InitialDelaySeconds: 5,
 			PeriodSeconds:       2,
 		},
+		ConnectionArgs: kncloudevents.ConnectionArgs{
+			// Defaults for the underlying HTTP Client transport. These would enable better connection reuse.
+			// Set them on a 10:1 ratio, but this would actually depend on the Triggers' subscribers and the workload itself.
+			// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+			// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+			MaxIdleConns:        1000,
+			MaxIdleConnsPerHost: 100,
+		},
+		MetricsPort: 9092,
 	},
 }
 
@@ -80,6 +90,8 @@ type IngressConfig struct {
 type FilterConfig struct {
 	LivenessProbe  corev1.Probe
 	ReadinessProbe corev1.Probe
+	kncloudevents.ConnectionArgs
+	MetricsPort int
 }
 
 // BrokerConfig is the in memory representation of the broker configmap.

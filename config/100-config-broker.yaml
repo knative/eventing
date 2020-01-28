@@ -48,5 +48,8 @@ data:
         },
         "initialDelaySeconds":5,
         "periodSeconds":2
-      }
+      },
+      "maxIdleConns":1000,
+      "maxIdleConnsPerHost":100,
+      "metricsPort": 9092
     }

@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"knative.dev/eventing/pkg/broker/config"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"log"
 	"time"
 
@@ -49,15 +51,17 @@ var (
 )
 
 const (
-	defaultMetricsPort = 9092
 	component          = "broker_filter"
 )
 
 type envConfig struct {
-	Broker        string `envconfig:"BROKER" required:"true"`
-	Namespace     string `envconfig:"NAMESPACE" required:"true"`
-	PodName       string `split_words:"true" required:"true"`
-	ContainerName string `split_words:"true" required:"true"`
+	Broker              string `envconfig:"BROKER" required:"true"`
+	Namespace           string `envconfig:"NAMESPACE" required:"true"`
+	PodName             string `split_words:"true" required:"true"`
+	ContainerName       string `split_words:"true" required:"true"`
+	MaxIdleConns        int    `split_words:"true" default:"1000"`
+	MaxIdleConnsPerHost int    `split_words:"true" default:"100"`
+	MetricsPort         int    `split_words:"true" default:"9092"`
 }
 
 func main() {
@@ -94,6 +98,7 @@ func main() {
 	if err := envconfig.Process("", &env); err != nil {
 		logger.Fatal("Failed to process env var", zap.Error(err))
 	}
+	log.Printf("Applying envConfig: %+v", env)
 
 	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
 	eventingFactory := eventinginformers.NewSharedInformerFactoryWithOptions(eventingClient,
@@ -106,7 +111,7 @@ func main() {
 	// Watch the observability config map and dynamically update metrics exporter.
 	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(metrics.ExporterOptions{
 		Component:      component,
-		PrometheusPort: defaultMetricsPort,
+		PrometheusPort: env.MetricsPort,
 	}, sl)
 	if err != nil {
 		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
@@ -126,9 +131,15 @@ func main() {
 
 	reporter := filter.NewStatsReporter(env.PodName, env.ContainerName)
 
+	c := config.FilterConfig{
+		ConnectionArgs: kncloudevents.ConnectionArgs{
+			MaxIdleConns:        env.MaxIdleConns,
+			MaxIdleConnsPerHost: env.MaxIdleConnsPerHost,
+		},
+	}
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister().Triggers(env.Namespace), reporter)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister().Triggers(env.Namespace), reporter, c)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

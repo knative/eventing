@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"strconv"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
@@ -98,6 +99,18 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 								{
 									Name:  "BROKER",
 									Value: args.Broker.Name,
+								},
+								{
+									Name:  "MAX_IDLE_CONNS",
+									Value: strconv.Itoa(args.MaxIdleConns),
+								},
+								{
+									Name:  "MAX_IDLE_CONNS_PER_HOST",
+									Value: strconv.Itoa(args.MaxIdleConnsPerHost),
+								},
+								{
+									Name:  "METRICS_PORT",
+									Value: strconv.Itoa(args.MetricsPort),
 								},
 								// Used for StackDriver only.
 								{

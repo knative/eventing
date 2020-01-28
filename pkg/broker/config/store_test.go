@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -62,6 +63,11 @@ var wantFromFullConfigMap = BrokerConfig{
 			InitialDelaySeconds: 50,
 			PeriodSeconds:       20,
 		},
+		ConnectionArgs: kncloudevents.ConnectionArgs{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 1,
+		},
+		MetricsPort: 10,
 	},
 }
 
@@ -101,6 +107,11 @@ var wantFromPartialConfigMap = BrokerConfig{
 			InitialDelaySeconds: 5,
 			PeriodSeconds:       2,
 		},
+		ConnectionArgs: kncloudevents.ConnectionArgs{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 1,
+		},
+		MetricsPort: 10,
 	},
 }
 
