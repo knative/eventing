@@ -79,10 +79,12 @@ func setupBrokerTracing(
 	tc TracingTestCase,
 ) (tracinghelper.TestSpanTree, string) {
 	const (
-		etTransformer = "transformer"
-		etLogger      = "logger"
+		etTransformer  = "transformer"
+		etLogger       = "logger"
+		defaultCMPName = "eventing"
 	)
 	// Create the Broker.
+	client.CreateConfigMapPropagationOrFail(defaultCMPName)
 	client.CreateRBACResourcesForBrokers()
 	broker := client.CreateBrokerOrFail("br", resources.WithChannelTemplateForBroker(channel))
 

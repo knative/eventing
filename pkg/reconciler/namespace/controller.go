@@ -26,6 +26,7 @@ import (
 
 	"knative.dev/eventing/pkg/reconciler"
 
+	"knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
@@ -56,6 +57,7 @@ func NewController(
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
 	brokerInformer := broker.Get(ctx)
+	configMapPropagationInformer := configmappropagation.Get(ctx)
 
 	r := &Reconciler{
 		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -86,6 +88,9 @@ func NewController(
 	))
 	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
 		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
+	))
+	configMapPropagationInformer.Informer().AddEventHandler(controller.HandleAll(
+		controller.EnsureTypeMeta(r.tracker.OnChanged, configMapPropagationGVK),
 	))
 
 	return impl

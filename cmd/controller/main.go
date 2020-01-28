@@ -25,6 +25,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/channel"
+	"knative.dev/eventing/pkg/reconciler/configmappropagation"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
 	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
@@ -51,6 +52,7 @@ func main() {
 
 		// Flows
 		parallel.NewController,
+		configmappropagation.NewController,
 		sequence.NewController,
 
 		// Sources

@@ -28,6 +28,7 @@ import (
 
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
+	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 
 	"go.uber.org/zap"
@@ -36,6 +37,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
@@ -47,17 +49,19 @@ const (
 	namespaceReconcileFailure = "NamespaceReconcileFailure"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	brokerCreated             = "BrokerCreated"
-	serviceAccountCreated     = "BrokerServiceAccountCreated"
-	serviceAccountRBACCreated = "BrokerServiceAccountRBACCreated"
-	secretCopied              = "SecretCopied"
-	secretCopyFailure         = "SecretCopyFailure"
+	configMapPropagationCreated = "ConfigMapPropagationCreated"
+	brokerCreated               = "BrokerCreated"
+	serviceAccountCreated       = "BrokerServiceAccountCreated"
+	serviceAccountRBACCreated   = "BrokerServiceAccountRBACCreated"
+	secretCopied                = "SecretCopied"
+	secretCopyFailure           = "SecretCopyFailure"
 )
 
 var (
-	serviceAccountGVK = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
-	roleBindingGVK    = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
-	brokerGVK         = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+	serviceAccountGVK       = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
+	roleBindingGVK          = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
+	brokerGVK               = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+	configMapPropagationGVK = configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation")
 )
 
 type Reconciler struct {
@@ -66,11 +70,12 @@ type Reconciler struct {
 	brokerPullSecretName string
 
 	// listers index properties about resources
-	namespaceLister      corev1listers.NamespaceLister
-	serviceAccountLister corev1listers.ServiceAccountLister
-	roleBindingLister    rbacv1listers.RoleBindingLister
-	brokerLister         eventinglisters.BrokerLister
-	tracker              tracker.Interface
+	namespaceLister            corev1listers.NamespaceLister
+	serviceAccountLister       corev1listers.ServiceAccountLister
+	roleBindingLister          rbacv1listers.RoleBindingLister
+	brokerLister               eventinglisters.BrokerLister
+	configMapPropagationLister configslisters.ConfigMapPropagationLister
+	tracker                    tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -121,62 +126,80 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 	if ns.DeletionTimestamp != nil {
 		return nil
 	}
-	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.IngressServiceAccountName, resources.IngressRoleBindingName, resources.IngressClusterRoleName, resources.ConfigClusterRoleName); err != nil {
-		return fmt.Errorf("broker ingress: %v", err)
+
+	cmp, err := r.reconcileConfigMapPropagation(ctx, ns)
+	if err != nil {
+		return fmt.Errorf("configMapPropagation: %w", err)
 	}
 
-	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.FilterServiceAccountName, resources.FilterRoleBindingName, resources.FilterClusterRoleName, resources.ConfigClusterRoleName); err != nil {
-		return fmt.Errorf("broker filter: %v", err)
+	// Tell tracker to reconcile this namespace whenever the ConfigMapPropagation changes.
+	if err = r.tracker.Track(utils.ObjectRef(cmp, configMapPropagationGVK), ns); err != nil {
+		return fmt.Errorf("track configMapPropagation: %w", err)
+	}
+
+	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.IngressServiceAccountName, resources.IngressRoleBindingName, resources.IngressClusterRoleName); err != nil {
+		return fmt.Errorf("broker ingress: %w", err)
+	}
+
+	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.FilterServiceAccountName, resources.FilterRoleBindingName, resources.FilterClusterRoleName); err != nil {
+		return fmt.Errorf("broker filter: %w", err)
 	}
 
 	b, err := r.reconcileBroker(ctx, ns)
 	if err != nil {
-		return fmt.Errorf("broker: %v", err)
+		return fmt.Errorf("broker: %w", err)
 	}
 
 	// Tell tracker to reconcile this namespace whenever the Broker changes.
 	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), ns); err != nil {
-		return fmt.Errorf("track broker: %v", err)
+		return fmt.Errorf("track broker: %w", err)
 	}
 
 	return nil
 }
 
+// reconcileConfigMapPropagation reconciles the default ConfigMapPropagation for the Namespace 'ns'.
+func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *corev1.Namespace) (*configsv1alpha1.ConfigMapPropagation, error) {
+	current, err := r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Get(resources.DefaultConfigMapPropagationName, metav1.GetOptions{})
+
+	// If the resource doesn't exist, we'll create it.
+	if k8serrors.IsNotFound(err) {
+		cmp := resources.MakeConfigMapPropagation(ns.Name)
+		cmp, err = r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Create(cmp)
+		if err != nil {
+			return nil, err
+		}
+		r.Recorder.Event(ns, corev1.EventTypeNormal, configMapPropagationCreated,
+			"Default ConfigMapPropagation: "+cmp.Name+" created")
+		return cmp, nil
+	} else if err != nil {
+		return nil, err
+	}
+	// Don't update anything that is already present.
+	return current, nil
+}
+
 // reconcileServiceAccountAndRoleBinding reconciles the service account and role binding for
 // Namespace 'ns'.
-func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName, configClusterRoleName string) error {
-
+func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName string) error {
 	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
 	if err != nil {
-		return fmt.Errorf("service account '%s': %v", saName, err)
+		return fmt.Errorf("service account '%s': %w", saName, err)
 	}
 
 	// Tell tracker to reconcile this namespace whenever the Service Account changes.
 	if err = r.tracker.Track(utils.ObjectRef(sa, serviceAccountGVK), ns); err != nil {
-		return fmt.Errorf("track service account '%s': %v", sa.Name, err)
+		return fmt.Errorf("track service account '%s': %w", sa.Name, err)
 	}
 
 	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
 	if err != nil {
-		return fmt.Errorf("role binding '%s': %v", rbName, err)
+		return fmt.Errorf("role binding '%s': %w", rbName, err)
 	}
 
 	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
 	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
-		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
-	}
-
-	// Reconcile the RoleBinding allowing read access to the shared configmaps.
-	// Note this RoleBinding is created in the system namespace and points to a
-	// subject in the Broker's namespace.
-	rb, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(resources.ConfigRoleBindingName(sa.Name, ns.Name), system.Namespace(), sa, configClusterRoleName))
-	if err != nil {
-		return fmt.Errorf("role binding '%s': %v", rbName, err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
-	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
-		return fmt.Errorf("track role binding '%s': %v", rb.Name, err)
+		return fmt.Errorf("track role binding '%s': %w", rb.Name, err)
 	}
 
 	// If the Broker pull secret has not been specified, then nothing to copy.
@@ -194,8 +217,8 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
 			r.Recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
-				fmt.Sprintf("Error copying secret %s/%s => %s/%s : %s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err))
-			return fmt.Errorf("Error copying secret %s/%s => %s/%s : %s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err)
+				fmt.Sprintf("Error copying secret %s/%s => %s/%s : %v", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err))
+			return fmt.Errorf("Error copying secret %s/%s => %s/%s : %w", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err)
 		} else {
 			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Secret copied into namespace %s/%s => %s/%s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name))
