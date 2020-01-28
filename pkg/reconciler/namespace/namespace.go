@@ -228,7 +228,7 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		b := resources.MakeBroker(ns.Name)
+		b := resources.MakeBroker(ns)
 		b, err = r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Create(b)
 		if err != nil {
 			return nil, err

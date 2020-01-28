@@ -91,7 +91,9 @@ func TestAllCases(t *testing.T) {
 
 	// Object
 	secret := resources.MakeSecret(brokerImagePullSecretName)
-	broker := resources.MakeBroker(testNS)
+	broker := resources.MakeBroker(NewNamespace(testNS,
+		WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+	))
 	saIngress := resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName)
 	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, testNS, resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
 	rbIngressConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.IngressServiceAccountName, testNS), system.Namespace(), resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.ConfigClusterRoleName)
@@ -201,7 +203,9 @@ func TestAllCases(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
-			resources.MakeBroker(testNS),
+			resources.MakeBroker(NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			)),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
