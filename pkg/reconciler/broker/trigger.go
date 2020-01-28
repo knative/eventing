@@ -116,10 +116,10 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 		Path:   path.Generate(t),
 	}
-	logging.FromContext(ctx).Info("VAIKAS BROKER METADATA", zap.String("APIVERSION", b.TypeMeta.APIVersion), zap.String("KIND", b.TypeMeta.Kind))
+	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not
+	// filled in. So instead of b.TypeMeta.Kind and b.TypeMeta.APIVersion, we have to
+	// do it this way.
 	brokerObjRef := &corev1.ObjectReference{
-		//		Kind:       b.TypeMeta.Kind,
-		//		APIVersion: b.TypeMeta.APIVersion,
 		Kind:       brokerGVK.Kind,
 		APIVersion: brokerGVK.GroupVersion().String(),
 		Name:       b.Name,

@@ -72,8 +72,8 @@ const (
 	triggerServiceFailed      = "TriggerServiceFailed"
 
 	// Label used to specify which Broker provides the implementation.
-	brokerLabel = "eventing.knative.dev/broker.class"
-	brokerName  = "KnativeEventingChannelBroker"
+	brokerAnnotationKey   = "eventing.knative.dev/broker.class"
+	brokerAnnotationValue = "KnativeEventingChannelBroker"
 )
 
 type Reconciler struct {
@@ -127,11 +127,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
+		// DO NOT SUBMIT
+		// TODO: Do not return, if Broker was removed, need to update the Triggers...
 		return nil
 	} else if err != nil {
 		return err
 	}
 
+	// Check the annotation to make sure it should be handled by me and if not, do nothing.
+	if original.GetAnnotations()[brokerAnnotationKey] != brokerAnnotationValue {
+		logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", original.Name))
+		return nil
+	}
 	// Don't modify the informers copy
 	broker := original.DeepCopy()
 
@@ -482,6 +489,6 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) 
 
 func brokerLabels(name string) map[string]string {
 	return map[string]string{
-		brokerLabel: brokerName,
+		brokerAnnotationKey: brokerAnnotationValue,
 	}
 }
