@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"strconv"
 
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/system"
@@ -106,6 +107,22 @@ func MakeIngress(args *IngressArgs) *appsv1.Deployment {
 								{
 									Name:  "BROKER",
 									Value: args.Broker.Name,
+								},
+								{
+									Name:  "MAX_IDLE_CONNS",
+									Value: strconv.Itoa(args.MaxIdleConns),
+								},
+								{
+									Name:  "MAX_IDLE_CONNS_PER_HOST",
+									Value: strconv.Itoa(args.MaxIdleConnsPerHost),
+								},
+								{
+									Name:  "TTL",
+									Value: strconv.FormatInt(int64(args.TTL), 10),
+								},
+								{
+									Name:  "METRICS_PORT",
+									Value: strconv.Itoa(args.MetricsPort),
 								},
 								// Used for StackDriver only.
 								{

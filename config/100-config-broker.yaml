@@ -29,7 +29,11 @@ data:
         },
         "initialDelaySeconds":5,
         "periodSeconds":2
-      }
+      },
+      "maxIdleConns":1000,
+      "maxIdleConnsPerHost":1000,
+      "ttl": 255,
+      "metricsPort": 9092
     }
   filter-config: |
     {

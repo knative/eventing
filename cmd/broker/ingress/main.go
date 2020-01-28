@@ -52,26 +52,20 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 )
 
-// TODO make these constants configurable (either as env variables, config map, or part of broker spec).
-//  Issue: https://github.com/knative/eventing/issues/1777
 const (
-	// Constants for the underlying HTTP Client transport. These would enable better connection reuse.
-	// Purposely set them to be equal, as the ingress only connects to its channel.
-	// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
-	// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
-	defaultMaxIdleConnections              = 1000
-	defaultMaxIdleConnectionsPerHost       = 1000
-	defaultTTL                       int32 = 255
-	defaultMetricsPort                     = 9092
-	component                              = "broker_ingress"
+	component = "broker_ingress"
 )
 
 type envConfig struct {
-	Broker        string `envconfig:"BROKER" required:"true"`
-	Channel       string `envconfig:"CHANNEL" required:"true"`
-	Namespace     string `envconfig:"NAMESPACE" required:"true"`
-	PodName       string `split_words:"true" required:"true"`
-	ContainerName string `split_words:"true" required:"true"`
+	Broker              string `envconfig:"BROKER" required:"true"`
+	Channel             string `envconfig:"CHANNEL" required:"true"`
+	Namespace           string `envconfig:"NAMESPACE" required:"true"`
+	PodName             string `split_words:"true" required:"true"`
+	ContainerName       string `split_words:"true" required:"true"`
+	MetricsPort         int    `split_words:"true" default:"9092"`
+	TTL                 int32  `envconfig:"TTL" default:"255"`
+	MaxIdleConns        int    `split_words:"true" default:"1000"`
+	MaxIdleConnsPerHost int    `split_words:"true" default:"1000"`
 }
 
 func main() {
@@ -111,6 +105,7 @@ func main() {
 	if err := envconfig.Process("", &env); err != nil {
 		logger.Fatal("Failed to process env var", zap.Error(err))
 	}
+	log.Printf("Applying envConfig: %+v", env)
 
 	channelURI := &url.URL{
 		Scheme: "http",
@@ -123,7 +118,7 @@ func main() {
 	// Watch the observability config map and dynamically update metrics exporter.
 	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(metrics.ExporterOptions{
 		Component:      component,
-		PrometheusPort: defaultMetricsPort,
+		PrometheusPort: env.MetricsPort,
 	}, sl)
 	if err != nil {
 		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
@@ -153,8 +148,8 @@ func main() {
 	})
 
 	connectionArgs := kncloudevents.ConnectionArgs{
-		MaxIdleConns:        defaultMaxIdleConnections,
-		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+		MaxIdleConns:        env.MaxIdleConns,
+		MaxIdleConnsPerHost: env.MaxIdleConnsPerHost,
 	}
 	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(
 		httpTransport,
@@ -172,7 +167,7 @@ func main() {
 		BrokerName: env.Broker,
 		Namespace:  env.Namespace,
 		Reporter:   reporter,
-		Defaulter:  broker.TTLDefaulter(logger, defaultTTL),
+		Defaulter:  broker.TTLDefaulter(logger, env.TTL),
 	}
 
 	// configMapWatcher does not block, so start it first.

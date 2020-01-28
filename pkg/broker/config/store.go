@@ -47,6 +47,16 @@ var DefaultBrokerConfig = BrokerConfig{
 			InitialDelaySeconds: 5,
 			PeriodSeconds:       2,
 		},
+		ConnectionArgs: kncloudevents.ConnectionArgs{
+			// Defaults for the underlying HTTP Client transport. These would enable better connection reuse.
+			// Purposely set them to be equal, as the ingress only connects to its channel.
+			// These are magic numbers, partly set based on empirical evidence running performance workloads, and partly
+			// based on what serving is doing. See https://github.com/knative/serving/blob/master/pkg/network/transports.go.
+			MaxIdleConns:        1000,
+			MaxIdleConnsPerHost: 1000,
+		},
+		TTL: 255,
+		MetricsPort: 9092,
 	},
 	FilterConfig: FilterConfig{
 		LivenessProbe: corev1.Probe{
@@ -84,6 +94,9 @@ var DefaultBrokerConfig = BrokerConfig{
 // IngressConfig holds the configuration parameters for the broker ingress.
 type IngressConfig struct {
 	LivenessProbe corev1.Probe
+	kncloudevents.ConnectionArgs
+	TTL         int32
+	MetricsPort int
 }
 
 // FilterConfig holds the configuration parameters for the broker filter.

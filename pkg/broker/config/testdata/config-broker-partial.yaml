@@ -32,7 +32,11 @@ data:
         },
         "initialDelaySeconds":50,
         "periodSeconds":20
-      }
+      },
+      "maxIdleConns":10,
+      "maxIdleConnsPerHost":10,
+      "ttl": 10,
+      "metricsPort": 10
     }
   filter-config: | # The readiness probe is intentionally left blank to test that default values are applied.
     {
