@@ -143,7 +143,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		return fmt.Errorf("service account '%s': %v", saName, err)
 	}
 
-	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
+	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns, ns.Name, sa, clusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %v", rbName, err)
 	}
@@ -151,7 +151,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 	// Reconcile the RoleBinding allowing read access to the shared configmaps.
 	// Note this RoleBinding is created in the system namespace and points to a
 	// subject in the Broker's namespace.
-	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(resources.ConfigRoleBindingName(sa.Name, ns.Name), system.Namespace(), sa, configClusterRoleName))
+	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(resources.ConfigRoleBindingName(sa.Name, ns.Name), ns, system.Namespace(), sa, configClusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %v", rbName, err)
 	}
