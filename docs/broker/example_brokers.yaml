@@ -17,7 +17,6 @@
 ---
 
 # By not specifying a spec, the default Channel for the namespace will be used.
-# This will change with the 0.8.0 version, since CCP is being removed than
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Broker
 metadata:
