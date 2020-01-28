@@ -23,6 +23,7 @@ source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 declare -A COMPONENTS
 COMPONENTS=(
   ["eventing-core.yaml"]="config"
+  ["eventing-crds.yaml"]="config/core/resources"
   ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
 )
 readonly COMPONENTS
