@@ -26,22 +26,31 @@ import (
 
 func TestDeliverySpecValidation(t *testing.T) {
 	invalidString := "invalid time"
+	bop := BackoffPolicyExponential
 	tests := []struct {
 		name string
-		spec DeliverySpec
+		spec *DeliverySpec
 		want *apis.FieldError
 	}{{
+		name: "nil is valid",
+		spec: nil,
+		want: nil,
+	}, {
 		name: "invalid time format",
-		spec: DeliverySpec{BackoffDelay: &invalidString},
+		spec: &DeliverySpec{BackoffDelay: &invalidString},
 		want: func() *apis.FieldError {
 			return apis.ErrInvalidValue(invalidString, "backoffDelay")
 		}(),
 	}, {
 		name: "invalid deadLetterSink",
-		spec: DeliverySpec{DeadLetterSink: &duckv1.Destination{}},
+		spec: &DeliverySpec{DeadLetterSink: &duckv1.Destination{}},
 		want: func() *apis.FieldError {
 			return apis.ErrGeneric("expected at least one, got none", "ref", "uri").ViaField("deadLetterSink")
 		}(),
+	}, {
+		name: "valid backoffPolicy",
+		spec: &DeliverySpec{BackoffPolicy: &bop},
+		want: nil,
 	}}
 
 	for _, test := range tests {

@@ -78,7 +78,16 @@ func (b *Broker) CheckImmutableFields(ctx context.Context, original *Broker) *ap
 	}
 
 	// Make sure you can't change the class annotation.
-	if diff, err := kmp.ShortDiff(original.GetAnnotations()[brokerClassAnnotationKey], b.GetAnnotations()[brokerClassAnnotationKey]); err != nil {
+	diff, err := kmp.ShortDiff(original.GetAnnotations()[brokerClassAnnotationKey], b.GetAnnotations()[brokerClassAnnotationKey])
+
+	if err != nil {
+		return &apis.FieldError{
+			Message: "couldn't diff the Broker objects",
+			Details: err.Error(),
+		}
+	}
+
+	if diff != "" {
 		return &apis.FieldError{
 			Message: "Immutable fields changed (-old +new)",
 			Paths:   []string{"annotations"},
