@@ -28,6 +28,10 @@ type FakeEventingV1beta1 struct {
 	*testing.Fake
 }
 
+func (c *FakeEventingV1beta1) EventTypes(namespace string) v1beta1.EventTypeInterface {
+	return &FakeEventTypes{c, namespace}
+}
+
 func (c *FakeEventingV1beta1) Triggers(namespace string) v1beta1.TriggerInterface {
 	return &FakeTriggers{c, namespace}
 }
