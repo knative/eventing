@@ -19,10 +19,11 @@ package configmappropagation
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
