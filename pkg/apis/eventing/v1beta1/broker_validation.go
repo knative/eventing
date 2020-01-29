@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	brokerClassAnnotationKey = "eventing.knative.dev/broker.class"
+	BrokerClassAnnotationKey = "eventing.knative.dev/broker.class"
 )
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
@@ -78,7 +78,7 @@ func (b *Broker) CheckImmutableFields(ctx context.Context, original *Broker) *ap
 	}
 
 	// Make sure you can't change the class annotation.
-	diff, err := kmp.ShortDiff(original.GetAnnotations()[brokerClassAnnotationKey], b.GetAnnotations()[brokerClassAnnotationKey])
+	diff, err := kmp.ShortDiff(original.GetAnnotations()[BrokerClassAnnotationKey], b.GetAnnotations()[BrokerClassAnnotationKey])
 
 	if err != nil {
 		return &apis.FieldError{
