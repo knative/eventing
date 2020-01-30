@@ -24,6 +24,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Brokers returns a BrokerInformer.
+	Brokers() BrokerInformer
+	// EventTypes returns a EventTypeInformer.
+	EventTypes() EventTypeInformer
 	// Triggers returns a TriggerInformer.
 	Triggers() TriggerInformer
 }
@@ -37,6 +41,16 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Brokers returns a BrokerInformer.
+func (v *version) Brokers() BrokerInformer {
+	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// EventTypes returns a EventTypeInformer.
+func (v *version) EventTypes() EventTypeInformer {
+	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Triggers returns a TriggerInformer.

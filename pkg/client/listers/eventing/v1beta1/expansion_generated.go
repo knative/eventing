@@ -18,6 +18,22 @@ limitations under the License.
 
 package v1beta1
 
+// BrokerListerExpansion allows custom methods to be added to
+// BrokerLister.
+type BrokerListerExpansion interface{}
+
+// BrokerNamespaceListerExpansion allows custom methods to be added to
+// BrokerNamespaceLister.
+type BrokerNamespaceListerExpansion interface{}
+
+// EventTypeListerExpansion allows custom methods to be added to
+// EventTypeLister.
+type EventTypeListerExpansion interface{}
+
+// EventTypeNamespaceListerExpansion allows custom methods to be added to
+// EventTypeNamespaceLister.
+type EventTypeNamespaceListerExpansion interface{}
+
 // TriggerListerExpansion allows custom methods to be added to
 // TriggerLister.
 type TriggerListerExpansion interface{}
