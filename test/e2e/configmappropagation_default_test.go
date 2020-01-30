@@ -19,7 +19,6 @@ package e2e
 
 import (
 	"testing"
-	"time"
 )
 
 func TestDefaultConfigMapPropagation(t *testing.T) {
@@ -30,6 +29,5 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 	defer tearDown(client)
 
 	client.CreateConfigMapPropagationOrFail(defaultCMP)
-	client.Tracker.WaitForKResourcesReady()
-	client.Tracker.
+	//client.Tracker.WaitForKResourcesReady()
 }
