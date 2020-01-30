@@ -57,7 +57,7 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 
 	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
 		client := lib.Setup(st, true, options...)
-		//defer lib.TearDown(client)
+		defer lib.TearDown(client)
 
 		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
 		client.CreateRBACResourcesForBrokers()
