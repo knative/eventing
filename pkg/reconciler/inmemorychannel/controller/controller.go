@@ -55,7 +55,7 @@ var (
 
 type envConfig struct {
 	Scope string `envconfig:"DISPATCHER_SCOPE" required:"true"`
-	Image string `envconfig:"DISPATCHER_IMAGE" required:"true"`
+	Image string `envconfig:"DISPATCHER_IMAGE"`
 }
 
 // NewController initializes the controller and is called by the generated code.
@@ -81,8 +81,6 @@ func NewController(
 		deploymentLister:        deploymentInformer.Lister(),
 		serviceLister:           serviceInformer.Lister(),
 		endpointsLister:         endpointsInformer.Lister(),
-		serviceAccountLister:    serviceAccountInformer.Lister(),
-		roleBindingLister:       roleBindingInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -91,7 +89,14 @@ func NewController(
 	}
 
 	r.dispatcherScope = env.Scope
-	r.dispatcherImage = env.Image
+	if r.dispatcherScope == "namespace" {
+		r.dispatcherImage = env.Image
+		if r.dispatcherImage == "" {
+			r.Logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
+		}
+		r.serviceAccountLister = serviceAccountInformer.Lister()
+		r.roleBindingLister = roleBindingInformer.Lister()
+	}
 
 	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
 
@@ -114,14 +119,16 @@ func NewController(
 		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
 		Handler:    r,
 	})
-	serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-		Handler:    r,
-	})
-	roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-		Handler:    r,
-	})
+	if env.Scope == "namespace" {
+		serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+			Handler:    r,
+		})
+		roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
+			Handler:    r,
+		})
+	}
 
 	return r.impl
 }

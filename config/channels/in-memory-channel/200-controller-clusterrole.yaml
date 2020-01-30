@@ -40,8 +40,6 @@ rules:
       - "" # Core API group.
     resources:
       - services
-      - serviceaccounts
-
 #    resourceNames:
 #      - imc-dispatcher
     verbs:
@@ -74,9 +72,6 @@ rules:
       - get
       - list
       - watch
-      - create
-      - update
-      - patch
   # For getting the logging config
   - apiGroups:
       - ""
@@ -92,15 +87,4 @@ rules:
       - events
     verbs:
       - create
-      - patch
-  - apiGroups:
-      - "rbac.authorization.k8s.io"
-    resources:
-      - "rolebindings"
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
       - patch

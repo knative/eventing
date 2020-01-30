@@ -15,7 +15,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: imc-controller
+  name: imc-dispatcher
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
@@ -24,35 +24,35 @@ spec:
   selector:
     matchLabels: &labels
       messaging.knative.dev/channel: in-memory-channel
-      messaging.knative.dev/role: controller
+      messaging.knative.dev/role: dispatcher
   template:
     metadata:
       labels: *labels
     spec:
-      serviceAccountName: imc-controller
+      serviceAccountName: imc-dispatcher
       containers:
-      - name: controller
-        image: knative.dev/eventing/cmd/in_memory/channel_controller
-
+      - name: dispatcher
+        image: knative.dev/eventing/cmd/in_memory/channel_dispatcher
         env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
           - name: CONFIG_OBSERVABILITY_NAME
             value: config-observability
           - name: METRICS_DOMAIN
-            value: knative.dev/inmemorychannel-controller
+            value: knative.dev/inmemorychannel-dispatcher
           - name: SYSTEM_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: DISPATCHER_SCOPE
-            value: cluster
-
-        securityContext:
-          allowPrivilegeEscalation: false
-
         ports:
-        - name: metrics
-          containerPort: 9090
-        - name: profiling
-          containerPort: 8008
+          - containerPort: 9090
+            name: metrics
+        resources:
+          # Set resource requests and limits based on the benchmarking results in
+          # https://github.com/knative/eventing/issues/2311#issuecomment-565311345
+          requests:
+            cpu: 1000m
+            memory: 256Mi
+          limits:
+            cpu: 2200m
+            memory: 2048Mi

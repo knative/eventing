@@ -21,11 +21,7 @@ characterics:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 1. Apply the `InMemoryChannel` CRD, Controller, and Dispatcher.
    ```shell
-   ko apply -f config/channels/in-memory-channel/...
-   ```
-1. Optional: to deploy dispatchers in the same namespace as the channel specification, set `DISPATCHER_SCOPE` to `namespace`:
-   ```sh
-    kubectl set env deployment/imc-controller DISPATCHER_SCOPE=namespace -n knative-eventing
+   ko apply -f config/channels/in-memory-channel/
    ```
 1. Create InMemoryChannels
 
