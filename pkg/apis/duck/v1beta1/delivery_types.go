@@ -17,7 +17,11 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -45,6 +49,31 @@ type DeliverySpec struct {
 	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>
 	// +optional
 	BackoffDelay *string `json:"backoffDelay,omitempty"`
+}
+
+func (ds *DeliverySpec) Validate(ctx context.Context) *apis.FieldError {
+	if ds == nil {
+		return nil
+	}
+	var errs *apis.FieldError
+	if dlse := ds.DeadLetterSink.Validate(ctx); dlse != nil {
+		errs = errs.Also(dlse).ViaField("deadLetterSink")
+	}
+	if ds.BackoffPolicy != nil {
+		switch *ds.BackoffPolicy {
+		case BackoffPolicyExponential, BackoffPolicyLinear:
+			// nothing
+		default:
+			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffPolicy, "backoffPolicy"))
+		}
+	}
+	if ds.BackoffDelay != nil {
+		_, te := time.Parse(time.RFC3339, *ds.BackoffDelay)
+		if te != nil {
+			errs = errs.Also(apis.ErrInvalidValue(*ds.BackoffDelay, "backoffDelay"))
+		}
+	}
+	return errs
 }
 
 // BackoffPolicyType is the type for backoff policies
