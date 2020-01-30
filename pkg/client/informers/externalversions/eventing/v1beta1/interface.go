@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// Brokers returns a BrokerInformer.
 	Brokers() BrokerInformer
+	// EventTypes returns a EventTypeInformer.
+	EventTypes() EventTypeInformer
 	// Triggers returns a TriggerInformer.
 	Triggers() TriggerInformer
 }
@@ -44,6 +46,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Brokers returns a BrokerInformer.
 func (v *version) Brokers() BrokerInformer {
 	return &brokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// EventTypes returns a EventTypeInformer.
+func (v *version) EventTypes() EventTypeInformer {
+	return &eventTypeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Triggers returns a TriggerInformer.

@@ -26,6 +26,14 @@ type BrokerListerExpansion interface{}
 // BrokerNamespaceLister.
 type BrokerNamespaceListerExpansion interface{}
 
+// EventTypeListerExpansion allows custom methods to be added to
+// EventTypeLister.
+type EventTypeListerExpansion interface{}
+
+// EventTypeNamespaceListerExpansion allows custom methods to be added to
+// EventTypeNamespaceLister.
+type EventTypeNamespaceListerExpansion interface{}
+
 // TriggerListerExpansion allows custom methods to be added to
 // TriggerLister.
 type TriggerListerExpansion interface{}
