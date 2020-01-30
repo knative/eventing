@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
@@ -76,6 +77,9 @@ func NewController(
 
 	r.Logger.Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+
+	// Tracker is used to notify us the namespace's resources we need to reconcile.
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	// Watch all the resources that this reconciler reconciles.
 	serviceAccountInformer.Informer().AddEventHandler(
