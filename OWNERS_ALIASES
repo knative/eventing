@@ -3,20 +3,18 @@ aliases:
   # Are in addition to the repo level OWNERS.
 
   performance-approvers:
-  - adrcunha
   - chaodaiG
+  - chizhg
   - slinkydeveloper
   performance-reviewers:
-  - adrcunha
   - chaodaiG
+  - chizhg
   - slinkydeveloper
 
   productivity-approvers:
-  - adrcunha
   - chaodaiG
   - chizhg
   productivity-reviewers:
-  - adrcunha
   - chaodaiG
   - chizhg
   - steuhs
