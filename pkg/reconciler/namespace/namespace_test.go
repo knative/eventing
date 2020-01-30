@@ -22,9 +22,11 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -71,12 +73,11 @@ func init() {
 
 func TestAllCases(t *testing.T) {
 	// Events
+	cmpEvent := Eventf(corev1.EventTypeNormal, "ConfigMapPropagationCreated", "Default ConfigMapPropagation: eventing created")
 	saIngressEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "ServiceAccount 'eventing-broker-ingress' created for the Broker")
 	rbIngressEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'test-namespace/eventing-broker-ingress' created for the Broker")
-	rbIngressConfigEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'knative-testing/eventing-broker-ingress-test-namespace' created for the Broker")
 	saFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "ServiceAccount 'eventing-broker-filter' created for the Broker")
 	rbFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'test-namespace/eventing-broker-filter' created for the Broker")
-	rbFilterConfigEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'knative-testing/eventing-broker-filter-test-namespace' created for the Broker")
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
 	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
 	nsEventFailure := Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: broker ingress: Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
@@ -97,10 +98,9 @@ func TestAllCases(t *testing.T) {
 	broker := resources.MakeBroker(namespace)
 	saIngress := resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName)
 	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
-	rbIngressConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.IngressServiceAccountName, testNS), namespace, system.Namespace(), resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName), resources.ConfigClusterRoleName)
 	saFilter := resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName)
 	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
-	rbFilterConfig := resources.MakeRoleBinding(resources.ConfigRoleBindingName(resources.FilterServiceAccountName, testNS), namespace, system.Namespace(), resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName), resources.ConfigClusterRoleName)
+	configMapPropagation := resources.MakeConfigMapPropagation(testNS)
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -146,27 +146,25 @@ func TestAllCases(t *testing.T) {
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
+			cmpEvent,
 			saIngressEvent,
 			rbIngressEvent,
-			rbIngressConfigEvent,
 			secretEventIngress,
 			saFilterEvent,
 			rbFilterEvent,
-			rbFilterConfigEvent,
 			secretEventFilter,
 			brokerEvent,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			broker,
 			secret,
 			saIngress,
 			rbIngress,
-			rbIngressConfig,
 			secret,
 			saFilter,
 			rbFilter,
-			rbFilterConfig,
 			secret,
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -187,16 +185,35 @@ func TestAllCases(t *testing.T) {
 			InduceFailure("create", "secrets"),
 		},
 		WantEvents: []string{
+			cmpEvent,
 			saIngressEvent,
 			rbIngressEvent,
-			rbIngressConfigEvent,
 			secretEventFailure,
 			nsEventFailure,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			saIngress,
 			rbIngress,
-			rbIngressConfig,
+		},
+	}, {
+		Name: "Namespace enabled - configmappropagation fails",
+		Objects: []runtime.Object{
+			NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			),
+		},
+		Key:                     testNS,
+		SkipNamespaceValidation: true,
+		WantErr:                 true,
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "configmappropagations"),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: configMapPropagation: inducing failure for create configmappropagations"),
+		},
+		WantCreates: []runtime.Object{
+			configMapPropagation,
 		},
 	}, {
 		Name: "Namespace enabled, broker exists",
@@ -212,25 +229,23 @@ func TestAllCases(t *testing.T) {
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
+			cmpEvent,
 			saIngressEvent,
 			rbIngressEvent,
-			rbIngressConfigEvent,
 			secretEventIngress,
 			saFilterEvent,
 			rbFilterEvent,
-			rbFilterConfigEvent,
 			secretEventFilter,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			secret,
 			saIngress,
 			rbIngress,
-			rbIngressConfig,
 			secret,
 			saFilter,
 			rbFilter,
-			rbFilterConfig,
 			secret,
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -265,25 +280,23 @@ func TestAllCases(t *testing.T) {
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
+			cmpEvent,
 			rbIngressEvent,
-			rbIngressConfigEvent,
 			secretEventIngress,
 			saFilterEvent,
 			rbFilterEvent,
-			rbFilterConfigEvent,
 			secretEventFilter,
 			brokerEvent,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			broker,
 			secret,
 			rbIngress,
-			rbIngressConfig,
 			secret,
 			saFilter,
 			rbFilter,
-			rbFilterConfig,
 			secret,
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -297,29 +310,28 @@ func TestAllCases(t *testing.T) {
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
 			rbIngress,
-			rbIngressConfig,
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
+			cmpEvent,
 			saIngressEvent,
 			secretEventIngress,
 			saFilterEvent,
 			rbFilterEvent,
-			rbFilterConfigEvent,
 			secretEventFilter,
 			brokerEvent,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			broker,
 			secret,
 			saIngress,
 			secret,
 			saFilter,
 			rbFilter,
-			rbFilterConfig,
 			secret,
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -338,25 +350,23 @@ func TestAllCases(t *testing.T) {
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
+			cmpEvent,
 			saIngressEvent,
 			rbIngressEvent,
-			rbIngressConfigEvent,
 			secretEventIngress,
 			rbFilterEvent,
-			rbFilterConfigEvent,
 			secretEventFilter,
 			brokerEvent,
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			broker,
 			secret,
 			saIngress,
 			rbIngress,
-			rbIngressConfig,
 			secret,
 			rbFilter,
-			rbFilterConfig,
 			secret,
 		},
 		WantPatches: []clientgotesting.PatchActionImpl{
@@ -370,15 +380,14 @@ func TestAllCases(t *testing.T) {
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
 			rbFilter,
-			rbFilterConfig,
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
 		WantErr:                 false,
 		WantEvents: []string{
+			cmpEvent,
 			saIngressEvent,
 			rbIngressEvent,
-			rbIngressConfigEvent,
 			secretEventIngress,
 			saFilterEvent,
 			secretEventFilter,
@@ -386,11 +395,11 @@ func TestAllCases(t *testing.T) {
 			nsEvent,
 		},
 		WantCreates: []runtime.Object{
+			configMapPropagation,
 			broker,
 			secret,
 			saIngress,
 			rbIngress,
-			rbIngressConfig,
 			secret,
 			saFilter,
 			secret,
@@ -409,12 +418,14 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 
 		r := &Reconciler{
-			Base:                 reconciler.NewBase(ctx, controllerAgentName, cmw),
-			namespaceLister:      listers.GetNamespaceLister(),
-			brokerLister:         listers.GetBrokerLister(),
-			serviceAccountLister: listers.GetServiceAccountLister(),
-			roleBindingLister:    listers.GetRoleBindingLister(),
-			brokerPullSecretName: brokerImagePullSecretName,
+			Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
+			namespaceLister:            listers.GetNamespaceLister(),
+			brokerLister:               listers.GetBrokerLister(),
+			serviceAccountLister:       listers.GetServiceAccountLister(),
+			roleBindingLister:          listers.GetRoleBindingLister(),
+			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
+			brokerPullSecretName:       brokerImagePullSecretName,
+			tracker:                    tracker.New(func(types.NamespacedName) {}, 0),
 		}
 
 		// only create secret in required tests

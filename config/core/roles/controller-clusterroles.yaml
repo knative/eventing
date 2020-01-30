@@ -96,6 +96,14 @@ rules:
       - "parallels/status"
     verbs: *everything
 
+  # Configs resources and status we care about.
+  - apiGroups:
+      - "configs.internal.knative.dev"
+    resources:
+      - "configmappropagations"
+      - "configmappropagations/status"
+    verbs: *everything
+
   # Messaging resources and finalizers we care about.
   - apiGroups:
       - "messaging.knative.dev"

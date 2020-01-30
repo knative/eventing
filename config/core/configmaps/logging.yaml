@@ -19,6 +19,8 @@ metadata:
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
+    knative.dev/config-propagation: original
+    knative.dev/config-category: eventing
 data:
   # Common configuration for all Knative codebase
   zap-logger-config: |

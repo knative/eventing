@@ -24,6 +24,7 @@ import (
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
+	configsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/configs/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
@@ -35,6 +36,7 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	ConfigsV1alpha1() configsv1alpha1.ConfigsV1alpha1Interface
 	EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface
 	EventingV1beta1() eventingv1beta1.EventingV1beta1Interface
 	FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface
@@ -48,6 +50,7 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
+	configsV1alpha1   *configsv1alpha1.ConfigsV1alpha1Client
 	eventingV1alpha1  *eventingv1alpha1.EventingV1alpha1Client
 	eventingV1beta1   *eventingv1beta1.EventingV1beta1Client
 	flowsV1alpha1     *flowsv1alpha1.FlowsV1alpha1Client
@@ -55,6 +58,11 @@ type Clientset struct {
 	messagingV1alpha1 *messagingv1alpha1.MessagingV1alpha1Client
 	messagingV1beta1  *messagingv1beta1.MessagingV1beta1Client
 	sourcesV1alpha1   *sourcesv1alpha1.SourcesV1alpha1Client
+}
+
+// ConfigsV1alpha1 retrieves the ConfigsV1alpha1Client
+func (c *Clientset) ConfigsV1alpha1() configsv1alpha1.ConfigsV1alpha1Interface {
+	return c.configsV1alpha1
 }
 
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
@@ -113,6 +121,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
+	cs.configsV1alpha1, err = configsv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.eventingV1alpha1, err = eventingv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -153,6 +165,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
+	cs.configsV1alpha1 = configsv1alpha1.NewForConfigOrDie(c)
 	cs.eventingV1alpha1 = eventingv1alpha1.NewForConfigOrDie(c)
 	cs.eventingV1beta1 = eventingv1beta1.NewForConfigOrDie(c)
 	cs.flowsV1alpha1 = flowsv1alpha1.NewForConfigOrDie(c)
@@ -168,6 +181,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.configsV1alpha1 = configsv1alpha1.New(c)
 	cs.eventingV1alpha1 = eventingv1alpha1.New(c)
 	cs.eventingV1beta1 = eventingv1beta1.New(c)
 	cs.flowsV1alpha1 = flowsv1alpha1.New(c)

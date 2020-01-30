@@ -22,12 +22,21 @@ const (
 	InjectionEnabledLabelValue  = "enabled"
 	InjectionDisabledLabelValue = "disabled"
 	InjectedResourceLabel       = "eventing.knative.dev/namespaceInjected"
+	CmpDefaultLabelKey          = "knative.dev/config-category"
+	CmpDefaultLabelValue        = "eventing"
 )
 
 // OwnedLabels generates the labels present on injected broker resources.
 func OwnedLabels() map[string]string {
 	return map[string]string{
 		InjectedResourceLabel: "true",
+	}
+}
+
+// ConfigMapPropagationOwnedLabels generates the labels present on injected broker resources.
+func ConfigMapPropagationOwnedLabels() map[string]string {
+	return map[string]string{
+		CmpDefaultLabelKey: CmpDefaultLabelValue,
 	}
 }
 

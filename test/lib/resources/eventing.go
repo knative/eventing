@@ -28,9 +28,11 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgTest "knative.dev/pkg/test"
 
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 )
 
 // BrokerOption enables further configuration of a Broker.
@@ -124,6 +126,22 @@ func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption
 func WithDeliveryForBroker(delivery *eventingduckv1alpha1.DeliverySpec) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
 		b.Spec.Delivery = delivery
+	}
+}
+
+// ConfigMapPropagation returns a ConfigMapPropagation
+func ConfigMapPropagation(name, namespace string) *configsv1alpha1.ConfigMapPropagation {
+	return &configsv1alpha1.ConfigMapPropagation{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Spec: configsv1alpha1.ConfigMapPropagationSpec{
+			OriginalNamespace: "knative-eventing",
+			Selector: &metav1.LabelSelector{
+				MatchLabels: resources.ConfigMapPropagationOwnedLabels(),
+			},
+		},
 	}
 }
 
