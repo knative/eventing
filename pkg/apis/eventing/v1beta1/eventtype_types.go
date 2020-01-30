@@ -60,11 +60,11 @@ type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
 	Type string `json:"type"`
 	// Source is a URI, it represents the CloudEvents source.
-	Source string `json:"source"`
+	Source apis.URL `json:"source"`
 	// Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
 	// It may be a JSON schema, a protobuf schema, etc. It is optional.
 	// +optional
-	Schema string `json:"schema,omitempty"`
+	Schema *apis.URL `json:"schema,omitempty"`
 	// Broker refers to the Broker that can provide the EventType.
 	Broker string `json:"broker"`
 	// Description is an optional field used to describe the EventType, in any meaningful way.
