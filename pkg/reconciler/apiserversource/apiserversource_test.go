@@ -96,7 +96,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
-	retryAttempted := make(map[string]bool)
+	retryAttempted := false
 	table := TableTest{
 		{
 			Name: "missing sink",
@@ -253,10 +253,10 @@ func TestReconcile(t *testing.T) {
 			},
 			WithReactors: []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true),
 				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-					if retryAttempted["valid, with retry"] || !action.Matches("update", "apiserversources") {
+					if retryAttempted || !action.Matches("update", "apiserversources") || action.GetSubresource() != "status" {
 						return false, nil, nil
 					}
-					retryAttempted["valid, with retry"] = true
+					retryAttempted = true
 					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
 				}},
 			SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
@@ -891,6 +891,7 @@ func TestReconcile(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		retryAttempted = false
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),

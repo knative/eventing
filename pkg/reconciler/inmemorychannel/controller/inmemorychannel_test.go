@@ -75,7 +75,7 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
-	retryAttempted := make(map[string]bool)
+	retryAttempted := false
 	imcKey := testNS + "/" + imcName
 
 	subscribers := []eventingduckv1alpha1.SubscriberSpec{{
@@ -295,10 +295,10 @@ func TestAllCases(t *testing.T) {
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-					if retryAttempted["Works, creates new channel, with retry"] || !action.Matches("update", "inmemorychannels") {
+					if retryAttempted || !action.Matches("update", "inmemorychannels") || action.GetSubresource() != "status" {
 						return false, nil, nil
 					}
-					retryAttempted["Works, creates new channel, with retry"] = true
+					retryAttempted = true
 					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
 				},
 			},
@@ -409,6 +409,7 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		retryAttempted = false
 		return &Reconciler{
 			Base:                     reconciler.NewBase(ctx, controllerAgentName, cmw),
 			dispatcherNamespace:      testNS,

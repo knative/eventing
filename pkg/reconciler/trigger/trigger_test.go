@@ -140,7 +140,7 @@ func init() {
 }
 
 func TestAllCases(t *testing.T) {
-	retryAttempted := make(map[string]bool)
+	retryAttempted := false
 	triggerKey := testNS + "/" + triggerName
 	table := TableTest{
 		{
@@ -421,10 +421,10 @@ func TestAllCases(t *testing.T) {
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
 				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-					if retryAttempted["No Broker Trigger Channel, with retry"] || !action.Matches("update", "triggers") {
+					if retryAttempted || !action.Matches("update", "triggers") || action.GetSubresource() != "status" {
 						return false, nil, nil
 					}
-					retryAttempted["No Broker Trigger Channel, with retry"] = true
+					retryAttempted = true
 					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
 				},
 			},
@@ -1012,6 +1012,7 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		retryAttempted = false
 		ctx = v1a1addr.WithDuck(ctx)
 		ctx = v1b1addr.WithDuck(ctx)
 		ctx = v1addr.WithDuck(ctx)

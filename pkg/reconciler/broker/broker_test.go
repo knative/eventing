@@ -105,7 +105,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
-	retryAttempted := make(map[string]bool)
+	retryAttempted := false
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -571,10 +571,10 @@ func TestReconcile(t *testing.T) {
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-					if retryAttempted["Successful Reconciliation, with retry"] || !action.Matches("update", "brokers") {
+					if retryAttempted || !action.Matches("update", "brokers") || action.GetSubresource() != "status" {
 						return false, nil, nil
 					}
-					retryAttempted["Successful Reconciliation, with retry"] = true
+					retryAttempted = true
 					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
 				},
 			},
@@ -583,6 +583,7 @@ func TestReconcile(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		retryAttempted = false
 		ctx = channelable.WithDuck(ctx)
 		return &Reconciler{
 			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),

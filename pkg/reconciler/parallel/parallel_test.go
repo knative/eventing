@@ -64,7 +64,7 @@ func init() {
 }
 
 func TestAllBranches(t *testing.T) {
-	retryAttempted := make(map[string]bool)
+	retryAttempted := false
 	pKey := testNS + "/" + parallelName
 	imc := &eventingduck.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
@@ -201,10 +201,10 @@ func TestAllBranches(t *testing.T) {
 			}},
 			WithReactors: []clientgotesting.ReactionFunc{
 				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-					if retryAttempted["single branch, with filter, with retry"] || !action.Matches("update", "parallels") {
+					if retryAttempted || !action.Matches("update", "parallels") || action.GetSubresource() != "status" {
 						return false, nil, nil
 					}
-					retryAttempted["single branch, with filter, with retry"] = true
+					retryAttempted = true
 					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
 				},
 			},
@@ -468,6 +468,7 @@ func TestAllBranches(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		retryAttempted = false
 		ctx = channelable.WithDuck(ctx)
 		return &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),

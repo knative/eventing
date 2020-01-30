@@ -60,7 +60,7 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
-	retryAttempted := make(map[string]bool)
+	retryAttempted := false
 	table := TableTest{
 		{
 			Name: "bad workqueue key",
@@ -190,10 +190,10 @@ func TestReconcile(t *testing.T) {
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
-					if retryAttempted["Successful reconcile, became ready, with retry"] || !action.Matches("update", "eventtypes") {
+					if retryAttempted || !action.Matches("update", "eventtypes") || action.GetSubresource() != "status" {
 						return false, nil, nil
 					}
-					retryAttempted["Successful reconcile, became ready, with retry"] = true
+					retryAttempted = true
 					return true, nil, apierrs.NewConflict(v1alpha1.Resource("foo"), "bar", errors.New("foo"))
 				},
 			},
@@ -202,6 +202,7 @@ func TestReconcile(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		retryAttempted = false
 		return &Reconciler{
 			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 			eventTypeLister: listers.GetEventTypeLister(),
