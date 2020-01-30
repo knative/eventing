@@ -17,7 +17,7 @@
 # --patch "$(cat 100-grafana-dash-eventing.yaml)" -n knative-monitoring
 ---
 data:
-  eventing-dashboard.json: |+
+  eventing-broker-dashboard.json: |+
     {
       "__inputs": [
         {
@@ -1378,7 +1378,8 @@ data:
       "title": "Knative Eventing - Broker/Trigger",
       "uid": "e2WkUxtWz",
       "version": 31
-    },
+    }
+  eventing-source-dashboard.json: |+
     {
       "__inputs": [
         {
