@@ -19,8 +19,9 @@ package tracing
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.opencensus.io/trace"
