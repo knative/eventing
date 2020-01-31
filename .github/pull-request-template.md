@@ -23,7 +23,7 @@ users switching to the new release, for example in case of a breaking change.
 Write as if you are speaking to users, not other Knative contributors. If this
 change has no user-visible impact, no release-note is needed.
 
---> 
+-->
 
 ```release-note
 
