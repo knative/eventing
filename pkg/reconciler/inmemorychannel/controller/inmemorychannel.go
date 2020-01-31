@@ -120,27 +120,27 @@ func FilterWithNamespace(namespace string) func(obj interface{}) bool {
 // these 3 functions only resync channel in the dispatcher namespace
 
 func (r *Reconciler) OnAdd(obj interface{}) {
-	if r.dispatcherScope == scopeCluster {
-		r.impl.GlobalResync(r.inmemorychannelInformer)
-	} else if object, ok := obj.(metav1.Object); ok {
-		r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
-	}
+	//if r.dispatcherScope == scopeCluster {
+	r.impl.GlobalResync(r.inmemorychannelInformer)
+	// } else if object, ok := obj.(metav1.Object); ok {
+	// 	r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
+	// }
 }
 
 func (r *Reconciler) OnUpdate(old, new interface{}) {
-	if r.dispatcherScope == scopeCluster {
-		r.impl.GlobalResync(r.inmemorychannelInformer)
-	} else if object, ok := new.(metav1.Object); ok {
-		r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
-	}
+	//if r.dispatcherScope == scopeCluster {
+	r.impl.GlobalResync(r.inmemorychannelInformer)
+	// } else if object, ok := new.(metav1.Object); ok {
+	// 	r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
+	// }
 }
 
 func (r *Reconciler) OnDelete(obj interface{}) {
-	if r.dispatcherScope == scopeCluster {
-		r.impl.GlobalResync(r.inmemorychannelInformer)
-	} else if object, ok := obj.(metav1.Object); ok {
-		r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
-	}
+	// if r.dispatcherScope == scopeCluster {
+	r.impl.GlobalResync(r.inmemorychannelInformer)
+	// } else if object, ok := obj.(metav1.Object); ok {
+	// 	r.impl.FilteredGlobalResync(FilterWithNamespace(object.GetNamespace()), r.inmemorychannelInformer)
+	// }
 }
 
 // Reconcile compares the actual state with the desired, and attempts to
