@@ -170,6 +170,9 @@ func TestSinkBindingUndo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: "http://localhost:8080",
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 						Containers: []corev1.Container{{
@@ -184,6 +187,9 @@ func TestSinkBindingUndo(t *testing.T) {
 							}, {
 								Name:  "BAZ",
 								Value: "INGA",
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}, {
 							Name:  "sidecar",
@@ -194,6 +200,9 @@ func TestSinkBindingUndo(t *testing.T) {
 							}, {
 								Name:  "BAZ",
 								Value: "INGA",
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 					},
@@ -253,6 +262,8 @@ func TestSinkBindingDo(t *testing.T) {
 		Path:   "/a/path",
 	}
 
+	overrides := duckv1.CloudEventOverrides{Extensions: map[string]string{"foo": "bar"}}
+
 	tests := []struct {
 		name string
 		in   *duckv1.WithPod
@@ -269,6 +280,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: sinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 					},
@@ -285,6 +299,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: sinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 					},
@@ -303,6 +320,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: "the wrong value",
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"wrong":"value"}}`,
 							}},
 						}},
 					},
@@ -319,6 +339,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: sinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 					},
@@ -326,7 +349,7 @@ func TestSinkBindingDo(t *testing.T) {
 			},
 		},
 	}, {
-		name: "lots of uris",
+		name: "lots to add",
 		in: &duckv1.WithPod{
 			Spec: duckv1.WithPodSpec{
 				Template: duckv1.PodSpecable{
@@ -367,6 +390,9 @@ func TestSinkBindingDo(t *testing.T) {
 							Env: []corev1.EnvVar{{
 								Name:  "K_SINK",
 								Value: sinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 						Containers: []corev1.Container{{
@@ -381,6 +407,9 @@ func TestSinkBindingDo(t *testing.T) {
 							}, {
 								Name:  "K_SINK",
 								Value: sinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}, {
 							Name:  "sidecar",
@@ -391,6 +420,9 @@ func TestSinkBindingDo(t *testing.T) {
 							}, {
 								Name:  "K_SINK",
 								Value: sinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: `{"extensions":{"foo":"bar"}}`,
 							}},
 						}},
 					},
@@ -405,7 +437,11 @@ func TestSinkBindingDo(t *testing.T) {
 
 			ctx := WithSinkURI(context.Background(), sinkURI)
 
-			sb := &SinkBinding{}
+			sb := &SinkBinding{Spec: SinkBindingSpec{
+				SourceSpec: duckv1.SourceSpec{
+					CloudEventOverrides: &overrides,
+				},
+			}}
 			sb.Do(ctx, got)
 
 			if !cmp.Equal(got, test.want) {
@@ -439,6 +475,9 @@ func TestSinkBindingDoNoURI(t *testing.T) {
 						Env: []corev1.EnvVar{{
 							Name:  "K_SINK",
 							Value: "this should be removed",
+						}, {
+							Name:  "K_CE_OVERRIDES",
+							Value: `{"extensions":{"tobe":"removed"}}`,
 						}},
 					}},
 				},
