@@ -68,15 +68,19 @@ type PingResourceSpec struct {
 
 // PingSourceSpec defines the desired state of the PingSource.
 type PingSourceSpec struct {
+	// inherits duck/v1 SourceSpec, which currently provides:
+	// * Sink - a reference to an object that will resolve to a domain name or a
+	//   URI directly to use as the sink.
+	// * CloudEventOverrides - defines overrides to control the output format
+	//   and modifications of the event sent to the sink.
+	duckv1.SourceSpec `json:",inline"`
+
 	// Schedule is the cronjob schedule.
 	// +required
 	Schedule string `json:"schedule"`
 
 	// Data is the data posted to the target function.
 	Data string `json:"data,omitempty"`
-
-	// Sink is a reference to an object that will resolve to a uri to use as the sink.
-	Sink *duckv1.Destination `json:"sink,omitempty"`
 
 	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
 	// Adapter Deployment.
@@ -88,14 +92,14 @@ type PingSourceSpec struct {
 
 // PingSourceStatus defines the observed state of PingSource.
 type PingSourceStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
-
-	// SinkURI is the current active sink URI that has been configured for the PingSource.
-	// +optional
-	SinkURI *apis.URL `json:"sinkUri,omitempty"`
+	// inherits duck/v1 SourceStatus, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last
+	//   processed by the controller.
+	// * Conditions - the latest available observations of a resource's current
+	//   state.
+	// * SinkURI - the current active sink URI that has been configured for the
+	//   Source.
+	duckv1.SourceStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

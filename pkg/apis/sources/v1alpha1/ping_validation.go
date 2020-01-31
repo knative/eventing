@@ -35,7 +35,7 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 
-	if cs.Sink == nil {
+	if cs.SourceSpec.Sink.Ref == nil && cs.SourceSpec.Sink.URI == nil {
 		fe := apis.ErrMissingField("sink")
 		errs = errs.Also(fe)
 	} else if fe := cs.Sink.Validate(ctx); fe != nil {

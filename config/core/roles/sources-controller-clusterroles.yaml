@@ -41,6 +41,13 @@ rules:
       - "deployments"
     verbs: *everything
 
+  # Batch admin
+  - apiGroups:
+      - "batch"
+    resources:
+      - "cronjobs"
+    verbs: *everything
+
   # Source resources and statuses we care about.
   - apiGroups:
       - "sources.knative.dev"

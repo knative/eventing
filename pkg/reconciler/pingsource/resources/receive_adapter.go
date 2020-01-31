@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"knative.dev/pkg/apis"
@@ -78,6 +79,11 @@ func MakeReceiveAdapter(args *Args) *v1.Deployment {
 		},
 	}
 
+	ceOverrides, err := json.Marshal(args.Source.Spec.SourceSpec.CloudEventOverrides)
+	if err != nil {
+		ceOverrides = []byte("")
+	}
+
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
@@ -102,42 +108,38 @@ func MakeReceiveAdapter(args *Args) *v1.Deployment {
 						{
 							Name:  "receive-adapter",
 							Image: args.Image,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "metrics",
-									ContainerPort: 9090,
-								}},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "SCHEDULE",
-									Value: args.Source.Spec.Schedule,
-								},
-								{
-									Name:  "DATA",
-									Value: args.Source.Spec.Data,
-								},
-								{
-									Name:  "K_SINK",
-									Value: args.SinkURI.String(),
-								},
-								{
-									Name:  "NAME",
-									Value: args.Source.Name,
-								},
-								{
-									Name:  "NAMESPACE",
-									Value: args.Source.Namespace,
-								}, {
-									Name:  "METRICS_DOMAIN",
-									Value: "knative.dev/eventing",
-								}, {
-									Name:  "K_METRICS_CONFIG",
-									Value: args.MetricsConfig,
-								}, {
-									Name:  "K_LOGGING_CONFIG",
-									Value: args.LoggingConfig,
-								},
-							},
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9090,
+							}},
+							Env: []corev1.EnvVar{{
+								Name:  "SCHEDULE",
+								Value: args.Source.Spec.Schedule,
+							}, {
+								Name:  "DATA",
+								Value: args.Source.Spec.Data,
+							}, {
+								Name:  "K_SINK",
+								Value: args.SinkURI.String(),
+							}, {
+								Name:  "K_CE_OVERRIDES",
+								Value: string(ceOverrides),
+							}, {
+								Name:  "NAME",
+								Value: args.Source.Name,
+							}, {
+								Name:  "NAMESPACE",
+								Value: args.Source.Namespace,
+							}, {
+								Name:  "METRICS_DOMAIN",
+								Value: "knative.dev/eventing",
+							}, {
+								Name:  "K_METRICS_CONFIG",
+								Value: args.MetricsConfig,
+							}, {
+								Name:  "K_LOGGING_CONFIG",
+								Value: args.LoggingConfig,
+							}},
 							Resources: res,
 						},
 					},

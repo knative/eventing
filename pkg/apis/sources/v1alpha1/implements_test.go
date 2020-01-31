@@ -27,8 +27,9 @@ func TestTypesImplements(t *testing.T) {
 		iface    duck.Implementable
 	}{
 		// PingSource
-		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
-		// ContainerSource
+		{instance: &PingSource{}, iface: &duckv1.Conditions{}},
+		{instance: &PingSource{}, iface: &duckv1beta1.Source{}},
+		// ApiServerSource
 		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
 		// SinkBinding
 		{instance: &SinkBinding{}, iface: &duckv1.Conditions{}},

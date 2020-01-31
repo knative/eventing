@@ -88,6 +88,13 @@ spec:
                 uri:
                   type: string
                   description: "the target URI. If ref is provided, this must be relative URI reference."
+            ceOverrides:
+              type: object
+              description: "Defines overrides to control modifications of the event sent to the sink."
+              properties:
+                extensions:
+                  type: object
+                  description: "Extensions specify what attribute are added or overridden on the outbound event. Each `extensions` key-value pair are set on the event as an attribute extension independently."
             resources:
               properties:
                 limits:

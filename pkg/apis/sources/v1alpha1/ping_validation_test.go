@@ -36,11 +36,13 @@ func TestPingSourceValidation(t *testing.T) {
 		name: "valid spec",
 		spec: PingSourceSpec{
 			Schedule: "*/2 * * * *",
-			Sink: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1alpha1",
-					Kind:       "broker",
-					Name:       "default",
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &corev1.ObjectReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
 				},
 			},
 		},
@@ -60,11 +62,13 @@ func TestPingSourceValidation(t *testing.T) {
 		name: "invalid schedule",
 		spec: PingSourceSpec{
 			Schedule: "2",
-			Sink: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1alpha1",
-					Kind:       "broker",
-					Name:       "default",
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &corev1.ObjectReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
 				},
 			},
 		},

@@ -19,6 +19,7 @@ package pingsource
 import (
 	"context"
 	"fmt"
+	"k8s.io/api/batch/v1beta1"
 	"reflect"
 	"time"
 
@@ -53,12 +54,17 @@ var (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	pingReconciled              = "PingSourceReconciled"
-	pingReadinessChanged        = "PingSourceReadinessChanged"
-	pingUpdateStatusFailed      = "PingSourceUpdateStatusFailed"
-	pingSourceDeploymentCreated = "PingSourceDeploymentCreated"
-	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
-	component                   = "pingsource"
+	pingReconciled               = "PingSourceReconciled"
+	pingReadinessChanged         = "PingSourceReadinessChanged"
+	pingUpdateStatusFailed       = "PingSourceUpdateStatusFailed"
+	pingSourceDeploymentCreated  = "PingSourceDeploymentCreated"
+	pingSourceDeploymentUpdated  = "PingSourceDeploymentUpdated"
+	pingSourceSinkBindingCreated = "PingSourceSinkBindingCreated"
+	pingSourceSinkBindingUpdated = "PingSourceSinkBindingUpdated"
+	pingSourceCronJobCreated     = "PingSourceCronJobCreated"
+	pingSourceCronJobUpdated     = "PingSourceCronJobUpdated"
+
+	component = "pingsource"
 )
 
 type Reconciler struct {
@@ -155,6 +161,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.PingSource)
 
 	source.Status.MarkSink(sinkURI)
 
+	// TODO this needs to move into the validation webhook.
 	_, err = cron.ParseStandard(source.Spec.Schedule)
 	if err != nil {
 		source.Status.MarkInvalidSchedule("Invalid", "")
@@ -162,12 +169,25 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.PingSource)
 	}
 	source.Status.MarkSchedule()
 
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
+	// HACK HACK HACK
+	// TODO remove this.
+	v1alpha1.PingSourceCondSet.Manage(&source.Status).MarkTrue(v1alpha1.PingSourceConditionDeployed)
+
+	sb, err := r.createSinkBinding(ctx, source)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
-		return fmt.Errorf("creating receive adapter: %v", err)
+		logging.FromContext(ctx).Error("Unable to create the SinkBinding", zap.Error(err))
+		return fmt.Errorf("creating SinkBinding: %v", err)
 	}
-	source.Status.PropagateDeploymentAvailability(ra)
+	//source.Status.PropagateDeploymentAvailability(ra) <-- TODO update this
+	_ = sb
+
+	cj, err := r.createCronJob(ctx, source)
+	if err != nil {
+		logging.FromContext(ctx).Error("Unable to create the CronJob", zap.Error(err))
+		return fmt.Errorf("creating CronJob: %v", err)
+	}
+	//source.Status.PropagateDeploymentAvailability(ra) <-- TODO update this
+	_ = cj
 
 	_, err = r.reconcileEventType(ctx, source)
 	if err != nil {
@@ -230,6 +250,107 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 	return ra, nil
 }
 
+func (r *Reconciler) createSinkBinding(ctx context.Context, src *v1alpha1.PingSource) (*v1alpha1.SinkBinding, error) {
+	if err := checkResourcesStatus(src); err != nil {
+		return nil, err
+	}
+
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+	}
+
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+	}
+
+	adapterArgs := resources.Args{
+		Image:         r.receiveAdapterImage,
+		Source:        src,
+		Labels:        resources.Labels(src.Name),
+		LoggingConfig: loggingConfig,
+		MetricsConfig: metricsConfig,
+	}
+	expected := resources.MakeSinkBinding(&adapterArgs)
+
+	sb, err := r.EventingClientSet.SourcesV1alpha1().SinkBindings(src.Namespace).Get(expected.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		sb, err = r.EventingClientSet.SourcesV1alpha1().SinkBindings(src.Namespace).Create(expected)
+		if err != nil {
+			r.Recorder.Eventf(src, corev1.EventTypeWarning, pingSourceSinkBindingCreated, "Error creating SinkBinding: %s", err)
+		} else {
+			r.Recorder.Eventf(src, corev1.EventTypeNormal, pingSourceSinkBindingCreated, "SinkBinding created: \"%s/%s\"", sb.Namespace, sb.Name)
+		}
+		return sb, err
+	} else if err != nil {
+		return nil, fmt.Errorf("error getting SinkBinding: %v", err)
+	} else if !metav1.IsControlledBy(sb, src) {
+		return nil, fmt.Errorf("SinkBinding %q is not owned by PingSource %q", sb.Name, src.Name)
+	} else if sinkBindingSpecChanged(sb.Spec, expected.Spec) {
+		sb.Spec = expected.Spec
+		if sb, err = r.EventingClientSet.SourcesV1alpha1().SinkBindings(src.Namespace).Update(sb); err != nil {
+			return sb, err
+		}
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, pingSourceSinkBindingUpdated, "SinkBinding %q updated", sb.Name)
+		return sb, nil
+	} else {
+		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("SinkBinding", sb))
+	}
+	return sb, nil
+}
+
+func (r *Reconciler) createCronJob(ctx context.Context, src *v1alpha1.PingSource) (*v1beta1.CronJob, error) {
+	if err := checkResourcesStatus(src); err != nil {
+		return nil, err
+	}
+
+	loggingConfig, err := pkgLogging.LoggingConfigToJson(r.loggingConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting logging config to JSON", zap.Any("receiveAdapter", err))
+	}
+
+	metricsConfig, err := metrics.MetricsOptionsToJson(r.metricsConfig)
+	if err != nil {
+		logging.FromContext(ctx).Error("error while converting metrics config to JSON", zap.Any("receiveAdapter", err))
+	}
+
+	adapterArgs := resources.Args{
+		Image:         r.receiveAdapterImage,
+		Source:        src,
+		Labels:        resources.Labels(src.Name),
+		LoggingConfig: loggingConfig,
+		MetricsConfig: metricsConfig,
+	}
+	expected := resources.MakeCronJob(&adapterArgs)
+
+	cj, err := r.KubeClientSet.BatchV1beta1().CronJobs(src.Namespace).Get(expected.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		cj, err = r.KubeClientSet.BatchV1beta1().CronJobs(src.Namespace).Create(expected)
+		if err != nil {
+			r.Recorder.Eventf(src, corev1.EventTypeWarning, pingSourceCronJobCreated, "Error creating CronJob: %s", err)
+		} else {
+			r.Recorder.Eventf(src, corev1.EventTypeNormal, pingSourceCronJobCreated, "CronJob created: \"%s/%s\"", cj.Namespace, cj.Name)
+		}
+		return cj, err
+	} else if err != nil {
+		return nil, fmt.Errorf("error getting CronJob: %v", err)
+	} else if !metav1.IsControlledBy(cj, src) {
+		return nil, fmt.Errorf("CronJob %q is not owned by PingSource %q", cj.Name, src.Name)
+	} else if cronJobSpecChanged(cj.Spec, expected.Spec) {
+		cj.Spec = expected.Spec
+		if cj, err = r.KubeClientSet.BatchV1beta1().CronJobs(src.Namespace).Update(cj); err != nil {
+			return cj, err
+		}
+		r.Recorder.Eventf(src, corev1.EventTypeNormal, pingSourceCronJobUpdated, "CronJob %q updated", cj.Name)
+		return cj, nil
+	} else {
+		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("CronJob", cj))
+	}
+	return cj, nil
+}
+
+// TODO: this needs to move into the validation webhook.
 func checkResourcesStatus(src *v1alpha1.PingSource) error {
 	for _, rsrc := range []struct {
 		key   string
@@ -270,6 +391,20 @@ func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 		if !equality.Semantic.DeepEqual(newPodSpec.Containers[i].Env, oldPodSpec.Containers[i].Env) {
 			return true
 		}
+	}
+	return false
+}
+
+func sinkBindingSpecChanged(have v1alpha1.SinkBindingSpec, want v1alpha1.SinkBindingSpec) bool {
+	if !equality.Semantic.DeepDerivative(want, have) {
+		return true
+	}
+	return false
+}
+
+func cronJobSpecChanged(have v1beta1.CronJobSpec, want v1beta1.CronJobSpec) bool {
+	if !equality.Semantic.DeepDerivative(want, have) {
+		return true
 	}
 	return false
 }

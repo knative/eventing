@@ -20,12 +20,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"os"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/adapter"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 )
@@ -33,21 +34,18 @@ import (
 type envConfig struct {
 	adapter.EnvConfig
 
-	// Environment variable container schedule.
-	Schedule string `envconfig:"SCHEDULE" required:"true"`
-
 	// Environment variable containing data.
 	Data string `envconfig:"DATA" required:"true"`
 
 	// Environment variable containing the name of the adapter.
 	Name string `envconfig:"NAME" required:"true"`
+
+	// Environment variable containing the name of the adapter.
+	CEOverrides string `envconfig:"K_CE_OVERRIDES"`
 }
 
 // pingAdapter implements the PingSource adapter to trigger a Sink.
 type pingAdapter struct {
-	// Schedule is a cron format string such as 0 * * * * or @hourly
-	Schedule string
-
 	// Data is the data to be posted to the target.
 	Data string
 
@@ -61,6 +59,9 @@ type pingAdapter struct {
 	Client cloudevents.Client
 
 	Reporter source.StatsReporter
+
+	KCEOverrides        string
+	CloudEventOverrides *duckv1.CloudEventOverrides
 }
 
 const (
@@ -75,26 +76,28 @@ func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClie
 	env := processed.(*envConfig)
 
 	return &pingAdapter{
-		Schedule:  env.Schedule,
-		Data:      env.Data,
-		Name:      env.Name,
-		Namespace: env.Namespace,
-		Reporter:  reporter,
-		Client:    ceClient,
+		Data:         env.Data,
+		Name:         env.Name,
+		Namespace:    env.Namespace,
+		Reporter:     reporter,
+		Client:       ceClient,
+		KCEOverrides: env.CEOverrides,
 	}
 }
 
 func (a *pingAdapter) Start(stopCh <-chan struct{}) error {
-	sched, err := cron.ParseStandard(a.Schedule)
-	if err != nil {
-		return fmt.Errorf("Unparseable schedule %s: %v", a.Schedule, err)
+	if len(a.KCEOverrides) > 0 {
+		overrides := duckv1.CloudEventOverrides{}
+		err := json.Unmarshal([]byte(a.KCEOverrides), &overrides)
+		if err != nil {
+			return fmt.Errorf("Unparseable CloudEvents overrides %s: %v", a.KCEOverrides, err)
+		}
+		a.CloudEventOverrides = &overrides
 	}
 
-	c := cron.New()
-	c.Schedule(sched, cron.FuncJob(a.cronTick))
-	c.Start()
-	<-stopCh
-	c.Stop()
+	a.cronTick()
+
+	os.Exit(0)
 	return nil
 }
 
@@ -102,10 +105,19 @@ func (a *pingAdapter) cronTick() {
 	logger := logging.FromContext(context.TODO())
 
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
-	event.SetType(sourcesv1alpha1.CronJobEventType)
-	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
-	event.SetData(message(a.Data))
+	event.SetType(sourcesv1alpha1.PingSourceEventType)
+	event.SetSource(sourcesv1alpha1.PingSourceSource(a.Namespace, a.Name))
+	if err := event.SetData(message(a.Data)); err != nil {
+		logger.Error("failed to set cloudevents data", zap.Error(err))
+	}
 	event.SetDataContentType(cloudevents.ApplicationJSON)
+
+	if a.CloudEventOverrides != nil && a.CloudEventOverrides.Extensions != nil {
+		for n, v := range a.CloudEventOverrides.Extensions {
+			event.SetExtension(n, v)
+		}
+	}
+
 	reportArgs := &source.ReportArgs{
 		Namespace:     a.Namespace,
 		EventSource:   event.Source(),
