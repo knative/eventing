@@ -40,7 +40,7 @@ type DispatcherArgs struct {
 }
 
 // MakeDispatcher generates the dispatcher deployment for the in-memory channel
-func MakeDispatcher(scope string, args DispatcherArgs) *v1.Deployment {
+func MakeDispatcher(args DispatcherArgs) *v1.Deployment {
 	replicas := int32(1)
 
 	return &v1.Deployment{
@@ -67,7 +67,7 @@ func MakeDispatcher(scope string, args DispatcherArgs) *v1.Deployment {
 						{
 							Name:  "dispatcher",
 							Image: args.Image,
-							Env:   makeEnv(scope, args),
+							Env:   makeEnv(),
 
 							// Set resource requests and limits based on the benchmarking results in
 							//  https://github.com/knative/eventing/issues/2311#issuecomment-565311345
@@ -93,8 +93,8 @@ func MakeDispatcher(scope string, args DispatcherArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv(scope string, args DispatcherArgs) []corev1.EnvVar {
-	vars := []corev1.EnvVar{{
+func makeEnv() []corev1.EnvVar {
+	return []corev1.EnvVar{{
 		Name:  system.NamespaceEnvKey,
 		Value: system.Namespace(),
 	}, {
@@ -106,18 +106,12 @@ func makeEnv(scope string, args DispatcherArgs) []corev1.EnvVar {
 	}, {
 		Name:  "CONFIG_LOGGING_NAME",
 		Value: "config-logging",
-	}}
-
-	if scope == "namespace" {
-		vars = append(vars, corev1.EnvVar{
-			Name: "NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
+	}, {
+		Name: "NAMESPACE",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
+				FieldPath: "metadata.namespace",
 			},
-		})
-	}
-
-	return vars
+		},
+	}}
 }

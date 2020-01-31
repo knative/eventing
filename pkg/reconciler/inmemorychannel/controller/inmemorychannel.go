@@ -203,12 +203,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// For namespace-scope dispatcher, make sure configuration files exist and RBAC is properly configured.
 	d, err := r.reconcileDispatcher(ctx, dispatcherNamespace, imc)
 	if err != nil {
-		if apierrs.IsNotFound(err) {
-			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
-		} else {
-			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
-			imc.Status.MarkDispatcherUnknown("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
-		}
 		return err
 	}
 	imc.Status.PropagateDispatcherStatus(&d.Status)
@@ -218,15 +212,8 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// an existence check. Then below we check the endpoints targeting it.
 	_, err = r.reconcileDispatcherService(ctx, dispatcherNamespace, imc)
 	if err != nil {
-		if apierrs.IsNotFound(err) {
-			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
-		} else {
-			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
-			imc.Status.MarkServiceUnknown("DispatcherServiceGetFailed", "Failed to get dispatcher service")
-		}
 		return err
 	}
-
 	imc.Status.MarkServiceTrue()
 
 	// Get the Dispatcher Service Endpoints and propagate the status to the Channel
@@ -300,26 +287,29 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, dispatcherNamespac
 	d, err := r.deploymentLister.Deployments(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			// Create dispatcher in imc's namespace or system namespace
+			if r.dispatcherScope == scopeNamespace {
+				// Create dispatcher in imc's namespace
+				args := resources.DispatcherArgs{
+					ServiceAccountName:  dispatcherName,
+					DispatcherName:      dispatcherName,
+					DispatcherNamespace: dispatcherNamespace,
+					Image:               r.dispatcherImage,
+				}
+				expected := resources.MakeDispatcher(args)
+				d, err := r.KubeClientSet.AppsV1().Deployments(dispatcherNamespace).Create(expected)
+				msg := "Dispatcher Deployment created"
+				if err != nil {
+					msg = fmt.Sprintf("not created, error: %v", err)
+				}
+				r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherDeploymentCreated, "%s", msg)
+				return d, err
+			}
 
-			args := resources.DispatcherArgs{
-				ServiceAccountName:  dispatcherName,
-				DispatcherName:      dispatcherName,
-				DispatcherNamespace: dispatcherNamespace,
-				Image:               r.dispatcherImage,
-			}
-			expected := resources.MakeDispatcher(r.dispatcherScope, args)
-			d, err := r.KubeClientSet.AppsV1().Deployments(dispatcherNamespace).Create(expected)
-			msg := "Dispatcher Deployment created"
-			if err != nil {
-				msg = fmt.Sprintf("not created, error: %v", err)
-			}
-			r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherDeploymentCreated, "%s", msg)
-			return d, err
+			imc.Status.MarkDispatcherFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
+			imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
 		}
-
-		logging.FromContext(ctx).Error("Unable to get the dispatcher Deployment", zap.Error(err))
-		imc.Status.MarkDispatcherFailed("DispatcherDeploymentGetFailed", "Failed to get dispatcher Deployment")
 		return nil, err
 	}
 	return d, err
@@ -370,18 +360,22 @@ func (r *Reconciler) reconcileDispatcherService(ctx context.Context, dispatcherN
 	svc, err := r.serviceLister.Services(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			expected := resources.MakeDispatcherService(dispatcherName, dispatcherNamespace)
-			svc, err := r.KubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
-			msg := "Dispatcher Service created"
-			if err != nil {
-				msg = fmt.Sprintf("Dispatcher Service not created, error: %v", err)
+			if r.dispatcherScope == scopeNamespace {
+				expected := resources.MakeDispatcherService(dispatcherName, dispatcherNamespace)
+				svc, err := r.KubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
+				msg := "Dispatcher Service created"
+				if err != nil {
+					msg = fmt.Sprintf("Dispatcher Service not created, error: %v", err)
+				}
+				r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherServiceCreated, "%s", msg)
+				return svc, err
 			}
-			r.Recorder.Eventf(imc, corev1.EventTypeNormal, dispatcherServiceCreated, "%s", msg)
-			return svc, err
-		}
 
-		logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
-		imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+			imc.Status.MarkServiceFailed("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")
+		} else {
+			logging.FromContext(ctx).Error("Unable to get the dispatcher service", zap.Error(err))
+			imc.Status.MarkServiceFailed("DispatcherServiceGetFailed", "Failed to get dispatcher service")
+		}
 		return nil, err
 	}
 	return svc, err

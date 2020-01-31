@@ -109,7 +109,7 @@ func TestNewDispatcher(t *testing.T) {
 		},
 	}
 
-	got := MakeDispatcher("namespace", args)
+	got := MakeDispatcher(args)
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected condition (-want, +got) = %v", diff)
