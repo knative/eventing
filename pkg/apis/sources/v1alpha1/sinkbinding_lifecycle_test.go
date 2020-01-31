@@ -168,8 +168,14 @@ func TestSinkBindingUndo(t *testing.T) {
 							Name:  "setup",
 							Image: "busybox",
 							Env: []corev1.EnvVar{{
+								Name:  "FOO",
+								Value: "BAR",
+							}, {
 								Name:  "K_SINK",
 								Value: "http://localhost:8080",
+							}, {
+								Name:  "BAZ",
+								Value: "INGA",
 							}, {
 								Name:  "K_CE_OVERRIDES",
 								Value: `{"extensions":{"foo":"bar"}}`,
@@ -216,7 +222,13 @@ func TestSinkBindingUndo(t *testing.T) {
 						InitContainers: []corev1.Container{{
 							Name:  "setup",
 							Image: "busybox",
-							Env:   []corev1.EnvVar{},
+							Env: []corev1.EnvVar{{
+								Name:  "FOO",
+								Value: "BAR",
+							}, {
+								Name:  "BAZ",
+								Value: "INGA",
+							}},
 						}},
 						Containers: []corev1.Container{{
 							Name:  "blah",
