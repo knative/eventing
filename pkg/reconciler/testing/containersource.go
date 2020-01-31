@@ -92,6 +92,13 @@ func WithSink(sink duckv1.Destination) SinkBindingOption {
 	}
 }
 
+// WithCloudEventOverrides assigns the CloudEventsOverrides of the SinkBinding.
+func WithCloudEventOverrides(overrides duckv1.CloudEventOverrides) SinkBindingOption {
+	return func(sb *sourcesv1alpha1.SinkBinding) {
+		sb.Spec.CloudEventOverrides = &overrides
+	}
+}
+
 // ContainerSourceOption enables further configuration of a ContainerSource.
 type ContainerSourceOption func(*legacysourcesv1alpha1.ContainerSource)
 

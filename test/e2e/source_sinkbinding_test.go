@@ -55,6 +55,8 @@ func TestSinkBindingDeployment(t *testing.T) {
 	loggerPod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
+	extensionSecret := string(uuid.NewUUID())
+
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBinding(
 		sinkBindingName,
@@ -66,6 +68,9 @@ func TestSinkBindingDeployment(t *testing.T) {
 			Namespace:  client.Namespace,
 			Name:       deploymentName,
 		}),
+		eventingtesting.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
+			"sinkbinding": extensionSecret,
+		}}),
 	)
 	client.CreateSinkBindingOrFail(sinkBinding)
 
@@ -113,8 +118,13 @@ func TestSinkBindingDeployment(t *testing.T) {
 
 	// verify the logger service receives the event
 	expectedCount := 2
+	// Look for body.
 	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
+	}
+	// Look for extensions.
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(extensionSecret, expectedCount)); err != nil {
+		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", extensionSecret, expectedCount, loggerPodName, err)
 	}
 }
 
