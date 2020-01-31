@@ -54,7 +54,7 @@ type envConfig struct {
 	// Sink URL where to send heartbeat cloudevents
 	Sink string `envconfig:"K_SINK"`
 
-	// Environment variable containing the name of the adapter.
+	// CEOverrides are the CloudEvents overrides to be applied to the outbound event.
 	CEOverrides string `envconfig:"K_CE_OVERRIDES"`
 
 	// Name of this pod.
