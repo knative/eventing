@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"os"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -25,13 +26,17 @@ import (
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
+	os.Setenv("DISPATCHER_SCOPE", "cluster")
 	c := NewController(ctx, configmap.NewStaticWatcher())
 
 	if c == nil {

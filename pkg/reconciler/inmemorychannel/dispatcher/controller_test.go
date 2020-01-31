@@ -17,6 +17,7 @@ limitations under the License.
 package dispatcher
 
 import (
+	"os"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -29,6 +30,18 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
+	os.Setenv("SCOPE", "cluster")
+	c := NewController(ctx, &configmap.InformedWatcher{})
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}
+
+func TestNewInNamespace(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	os.Setenv("SCOPE", "namespace")
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {

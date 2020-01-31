@@ -86,7 +86,6 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	// 1. Lists the inmemory channels.
 	// 2. Creates a multi-channel-fanout-config.
 	// 3. Calls the inmemory channel dispatcher's updateConfig func with the new multi-channel-fanout-config.
-
 	channels, err := r.inmemorychannelLister.List(labels.Everything())
 	if err != nil {
 		logging.FromContext(ctx).Error("Error listing InMemory channels")

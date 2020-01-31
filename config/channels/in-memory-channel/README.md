@@ -21,7 +21,7 @@ characterics:
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
 1. Apply the `InMemoryChannel` CRD, Controller, and Dispatcher.
    ```shell
-   ko apply -f config/channels/in-memory-channel/...
+   ko apply -f config/channels/in-memory-channel/
    ```
 1. Create InMemoryChannels
 
