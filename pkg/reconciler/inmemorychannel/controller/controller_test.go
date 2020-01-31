@@ -33,22 +33,10 @@ import (
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"
 )
 
-func TestNewCluster(t *testing.T) {
+func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
 	os.Setenv("DISPATCHER_SCOPE", "cluster")
-	os.Setenv("DISPATCHER_IMAGE", "dummy")
-	c := NewController(ctx, configmap.NewStaticWatcher())
-
-	if c == nil {
-		t.Fatal("Expected NewController to return a non-nil value")
-	}
-}
-func TestNewNamespace(t *testing.T) {
-	ctx, _ := SetupFakeContext(t)
-
-	os.Setenv("DISPATCHER_SCOPE", "namespace")
-	os.Setenv("DISPATCHER_IMAGE", "dummy")
 	c := NewController(ctx, configmap.NewStaticWatcher())
 
 	if c == nil {
