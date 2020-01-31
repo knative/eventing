@@ -127,6 +127,10 @@ func main() {
 			}
 		}
 
+		if err := event.SetData(hb); err != nil {
+			log.Printf("failed to set cloudevents data: %s", err.Error())
+		}
+
 		log.Printf("sending cloudevent to %s", sink)
 		if _, _, err := c.Send(context.Background(), event); err != nil {
 			log.Printf("failed to send cloudevent: %s", err.Error())
