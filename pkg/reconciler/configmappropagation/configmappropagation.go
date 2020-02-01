@@ -277,6 +277,13 @@ func (r *Reconciler) reconcileConfigMap(ctx context.Context, cmp *v1alpha1.Confi
 	return errs
 }
 
+////  patchStringValue specifies a patch operation for a uint32.
+//type patchUInt32Value struct {
+//	Op    string `json:"op"`
+//	Path  string `json:"path"`
+//	Value uint32 `json:"value"`
+//}
+
 // createOrUpdateConfigMaps will return error and bool (represents whether a create/update action is successful or not).
 func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation, configMap *corev1.ConfigMap) (error, bool) {
 	expected := resources.MakeConfigMap(resources.ConfigMapArgs{
@@ -299,6 +306,14 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 			//  so that this copy configmap will not be deleted if cmp is deleted.
 			expected = current.DeepCopy()
 			expected.OwnerReferences = nil
+			//payload := []patchUInt32Value{{
+			//	Op:    "remove",
+			//	Path:  "/metadata/ownerReferences/uid/" + string(cmp.UID),
+			//}}
+			//payloadBytes, _ := json.Marshal(payload)
+			//if current, err = r.KubeClientSet.CoreV1().ConfigMaps(expected.Namespace).Patch(current.Name, types.StrategicMergePatchType, payloadBytes); err != nil {
+			//	return fmt.Errorf("error updating ConfigMap in current namespace: %w", err), false
+			//}
 			// It will return false for the create/update action is not successful, due to removed copy label.
 			// But it is not an error for ConfigMapPropagation for not propagating successfully.
 			succeed = false
