@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,6 +118,38 @@ func (client *Client) sendFakeEventWithTracingToAddress(
 	client.CreatePodOrFail(pod)
 	if err := pkgTest.WaitForPodRunning(client.Kube, senderName, namespace); err != nil {
 		return err
+	}
+	return nil
+}
+
+// ConfigMapExists will check if a configmap exists in a specific namespace
+func (client *Client) ConfigMapExists(namespace string, names ...string) error {
+	if names != nil {
+		for _, name := range names {
+			if _, err := client.Kube.Kube.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ConfigMapEqual will check if a copy configmap has the same data as the original data
+func (client *Client) ConfigMapEqual(originalNamespace, cmp string, names ...string) error {
+	if names != nil {
+		for _, name := range names {
+			origianlCM, err := client.Kube.Kube.CoreV1().ConfigMaps(originalNamespace).Get(name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			copyCM, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Get(cmp+"-"+name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(origianlCM.Data, copyCM.Data) {
+				return fmt.Errorf("the data of copy configmap is not equal to original configmap")
+			}
+		}
 	}
 	return nil
 }

@@ -145,6 +145,20 @@ func ConfigMapPropagation(name, namespace string) *configsv1alpha1.ConfigMapProp
 	}
 }
 
+// ConfigMap returns a ConfigMap
+func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				resources.CmpDefaultLabelKey:     resources.CmpDefaultLabelValue,
+				"knative.dev/config-propagation": "original",
+			},
+		},
+		Data: data,
+	}
+}
+
 // Broker returns a Broker.
 func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
 	broker := &eventingv1alpha1.Broker{
