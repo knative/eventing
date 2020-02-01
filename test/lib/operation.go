@@ -123,7 +123,7 @@ func (client *Client) sendFakeEventWithTracingToAddress(
 }
 
 // ConfigMapExists will check if a configmap exists in a specific namespace
-func (client *Client) ConfigMapExists(namespace string, names ...string) error {
+func (client *Client) ConfigMapExist(namespace string, names ...string) error {
 	if names != nil {
 		for _, name := range names {
 			if _, err := client.Kube.Kube.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{}); err != nil {

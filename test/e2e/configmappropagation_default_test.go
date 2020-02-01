@@ -58,7 +58,7 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 	// Check if cmp successfully copies all required configmap
 	client.CreateConfigMapPropagationOrFail(defaultCMP)
 
-	if err := client.ConfigMapExists(client.Namespace, defaultCMP+"-"+testingCM1, defaultCMP+"-"+testingCM2); err != nil {
+	if err := client.ConfigMapExist(client.Namespace, defaultCMP+"-"+testingCM1, defaultCMP+"-"+testingCM2); err != nil {
 		t.Fatalf("Failed to check the existence for all copied configmaps: %v", err)
 	}
 	// Check if copy configmap contains the same data as original configmap
@@ -73,6 +73,7 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 	payloadBytes, _ := json.Marshal(payload)
 
 	// Check if copy configmap will revert after updated
+	// Remove one data key from copy map
 	if _, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Patch(defaultCMP+"-"+testingCM1, types.JSONPatchType, payloadBytes); err != nil {
 		t.Fatalf("Failed to patch copy configmap: %v", err)
 	}
