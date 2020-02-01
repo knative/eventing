@@ -1304,8 +1304,7 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:eb75525bd4eb16133b648d1bbaa90e5eae2c10b42c97ae46b730c923ab799911"
+  digest = "1:7d0498bdb9fd25a6b1e77d54f35ffb6e54dfbbd9d45f7dce462a17edefb0cdbc"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1372,6 +1371,7 @@
     "network",
     "profiling",
     "ptr",
+    "reconciler",
     "reconciler/testing",
     "resolver",
     "signals",
@@ -1409,7 +1409,8 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "446f2e9f2cabb9a8249fad2cb19d92a0f918fae0"
+  revision = "e3705b0e4107b4c4d3871646c12202c22b9aa35e"
+  source = "github.com/n3wscott/pkg"
 
 [[projects]]
   branch = "master"
@@ -1517,6 +1518,7 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/util/flowcontrol",
+    "k8s.io/client-go/util/retry",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "k8s.io/code-generator/cmd/defaulter-gen",
@@ -1573,6 +1575,7 @@
     "knative.dev/pkg/metrics/testing",
     "knative.dev/pkg/profiling",
     "knative.dev/pkg/ptr",
+    "knative.dev/pkg/reconciler",
     "knative.dev/pkg/reconciler/testing",
     "knative.dev/pkg/resolver",
     "knative.dev/pkg/signals",
