@@ -106,9 +106,7 @@ func TestLegacySinkBindingDeployment(t *testing.T) {
 	})
 
 	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	expectedCount := 2
@@ -194,9 +192,7 @@ func TestLegacySinkBindingCronJob(t *testing.T) {
 	})
 
 	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	expectedCount := 2

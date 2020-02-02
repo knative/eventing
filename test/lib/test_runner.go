@@ -109,6 +109,9 @@ func Setup(t *testing.T, runInParallel bool, options ...SetupClientOption) *Clie
 		t.Parallel()
 	}
 
+	// Clean up resources if the test is interrupted in the middle.
+	pkgTest.CleanupOnInterrupt(func() { TearDown(client) }, t.Logf)
+
 	// Run further setups for the client.
 	for _, option := range options {
 		option(client)

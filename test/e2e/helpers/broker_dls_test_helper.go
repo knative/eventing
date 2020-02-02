@@ -61,7 +61,7 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 			resources.WithChannelTemplateForBroker(&channel),
 			resources.WithDeliveryForBroker(delivery))
 
-		client.WaitForResourceReady(brokerName, lib.BrokerTypeMeta)
+		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create trigger to receive the original event, and send to an invalid destination
 		client.CreateTriggerOrFail(
@@ -72,9 +72,7 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the broker
 		eventToSend := cloudevents.New(
@@ -82,10 +80,7 @@ func BrokerDeadLetterSinkTestHelper(t *testing.T,
 			cloudevents.WithSource(eventSource),
 			cloudevents.WithType(eventType),
 		)
-
-		if err := client.SendFakeEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
-		}
+		client.SendFakeEventToAddressableOrFail(senderName, brokerName, lib.BrokerTypeMeta, eventToSend)
 
 		// check if deadlettersink logging service received event
 		if err := client.CheckLog(loggerPodName, lib.CheckerContains(eventBody)); err != nil {

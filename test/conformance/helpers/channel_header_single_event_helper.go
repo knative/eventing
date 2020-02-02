@@ -67,9 +67,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the channel
 		eventID := fmt.Sprintf("%s", uuid.NewUUID())
@@ -80,11 +78,8 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 			cloudevents.WithID(eventID),
 			cloudevents.WithEncoding(encoding),
 		)
-
 		st.Logf("Sending event with tracing headers to %s", senderName)
-		if err := client.SendFakeEventWithTracingToAddressable(senderName, channelName, &channel, event); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
-		}
+		client.SendFakeEventWithTracingToAddressableOrFail(senderName, channelName, &channel, event)
 
 		// verify the logger service receives the event
 		st.Logf("Logging for event with body %s", body)
@@ -93,7 +88,7 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
 
-		//verify that required x-b3-spani and x-b3-traceid are set
+		// verify that required x-b3-spani and x-b3-traceid are set
 		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid", "X-B3-Sampled"}
 		for _, headerName := range requiredHeaderNameList {
 			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)

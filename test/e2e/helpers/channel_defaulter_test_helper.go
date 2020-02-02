@@ -105,9 +105,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 	)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// check if the defaultchannel creates exactly one underlying channel given the spec
 	metaResourceList := resources.NewMetaResourceList(client.Namespace, &expectedChannel)
@@ -125,10 +123,7 @@ func defaultChannelTestHelper(t *testing.T, client *lib.Client, expectedChannel 
 		fmt.Sprintf(`{"msg":%q}`, body),
 		cloudevents.WithSource(senderName),
 	)
-
-	if err := client.SendFakeEventToAddressable(senderName, channelName, lib.ChannelTypeMeta, event); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
-	}
+	client.SendFakeEventToAddressableOrFail(senderName, channelName, lib.ChannelTypeMeta, event)
 
 	// verify the logger service receives the event
 	if err := client.CheckLog(loggerPodName, lib.CheckerContains(body)); err != nil {
