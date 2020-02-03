@@ -123,7 +123,7 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		if len(c.Env) == 0 {
 			continue
 		}
-		env := make([]corev1.EnvVar, 0)
+		env := make([]corev1.EnvVar, 0, len(spec.InitContainers[i].Env))
 		for j, ev := range c.Env {
 			switch ev.Name {
 			case "K_SINK", "K_CE_OVERRIDES":
@@ -138,7 +138,7 @@ func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 		if len(c.Env) == 0 {
 			continue
 		}
-		env := make([]corev1.EnvVar, 0)
+		env := make([]corev1.EnvVar, 0, len(spec.Containers[i].Env))
 		for j, ev := range c.Env {
 			switch ev.Name {
 			case "K_SINK", "K_CE_OVERRIDES":
