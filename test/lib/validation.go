@@ -19,6 +19,7 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -156,4 +157,23 @@ func (client *Client) getContainerName(podName, namespace string) (string, error
 	}
 	containerName := pod.Spec.Containers[0].Name
 	return containerName, nil
+}
+
+// ConfigMapEqual will check if a copy configmap exists and has the same data as the original data
+func (client *Client) CheckConfigMapsEqual(originalNamespace, cmp string, timeout time.Duration, names ...string) error {
+	time.Sleep(timeout)
+	for _, name := range names {
+		origianlCM, err := client.Kube.Kube.CoreV1().ConfigMaps(originalNamespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		copyCM, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Get(cmp+"-"+name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(origianlCM.Data, copyCM.Data) {
+			return fmt.Errorf("the data of copy configmap is not equal to original configmap, %v, %v", origianlCM.Data, copyCM.Data)
+		}
+	}
+	return nil
 }

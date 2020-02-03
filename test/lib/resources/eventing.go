@@ -151,7 +151,9 @@ func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				resources.CmpDefaultLabelKey:     resources.CmpDefaultLabelValue,
+				// Filter label for a configmap being picked to be propagated by current configmappropagation
+				resources.CmpDefaultLabelKey: resources.CmpDefaultLabelValue,
+				// Default label for a configmap being eligible to be propagated
 				"knative.dev/config-propagation": "original",
 			},
 		},
