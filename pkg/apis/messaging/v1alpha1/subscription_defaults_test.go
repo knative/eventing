@@ -38,7 +38,7 @@ func TestSubscriptionDefaultsEmpty(t *testing.T) {
 func TestDefaultSubscriber(t *testing.T) {
 	s := Subscription{ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
 		Spec: SubscriptionSpec{
-			Subscriber: &duckv1.Destination{Ref: &duckv1.KnativeReference{}},
+			Subscriber: &duckv1.Destination{Ref: &duckv1.KReference{}},
 		},
 	}
 	s.SetDefaults(context.Background())
@@ -50,7 +50,7 @@ func TestDefaultSubscriber(t *testing.T) {
 func TestDefaultReply(t *testing.T) {
 	s := Subscription{ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
 		Spec: SubscriptionSpec{
-			Reply: &duckv1.Destination{Ref: &duckv1.KnativeReference{}},
+			Reply: &duckv1.Destination{Ref: &duckv1.KReference{}},
 		},
 	}
 	s.SetDefaults(context.Background())

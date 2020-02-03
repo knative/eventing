@@ -128,7 +128,7 @@ func WithSubscriptionChannel(gvk metav1.GroupVersionKind, name string) Subscript
 func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name, namespace string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Subscriber = &duckv1.Destination{
-			Ref: &duckv1.KnativeReference{
+			Ref: &duckv1.KReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
 				Name:       name,
@@ -183,7 +183,7 @@ func WithSubscriptionReferencesResolvedUnknown(reason, msg string) SubscriptionO
 func WithSubscriptionReply(gvk metav1.GroupVersionKind, name, namespace string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Spec.Reply = &duckv1.Destination{
-			Ref: &duckv1.KnativeReference{
+			Ref: &duckv1.KReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
 				Name:       name,

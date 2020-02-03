@@ -83,7 +83,7 @@ func TestMakeSubscription(t *testing.T) {
 			if ch := sub.Spec.Channel; ch != expectedChannel {
 				t.Errorf("Expected spec.channel %q, actually %q", expectedChannel, ch)
 			}
-			expectedSubscriber := duckv1.KnativeReference{
+			expectedSubscriber := duckv1.KReference{
 				APIVersion: "v1",
 				Kind:       "Service",
 				Name:       svc.Name,

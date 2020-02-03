@@ -135,7 +135,7 @@ func TestParallelSpecValidation(t *testing.T) {
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
 			Reply: &duckv1.Destination{
-				Ref: &duckv1.KnativeReference{
+				Ref: &duckv1.KReference{
 					Namespace:  "namespace",
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "inmemorychannel",

@@ -52,7 +52,7 @@ var (
 		},
 	}
 	validSubscriber = duckv1.Destination{
-		Ref: &duckv1.KnativeReference{
+		Ref: &duckv1.KReference{
 			Namespace:  "namespace",
 			Name:       "subscriber_test",
 			Kind:       "Service",
@@ -60,7 +60,7 @@ var (
 		},
 	}
 	invalidSubscriber = duckv1.Destination{
-		Ref: &duckv1.KnativeReference{
+		Ref: &duckv1.KReference{
 			Namespace:  "namespace",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",

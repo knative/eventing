@@ -69,11 +69,11 @@ func TestSequenceSetDefaults(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
 				Spec: SequenceSpec{
 					Steps: []duckv1.Destination{
-						{Ref: &duckv1.KnativeReference{Name: "first"}},
-						{Ref: &duckv1.KnativeReference{Name: "second"}},
+						{Ref: &duckv1.KReference{Name: "first"}},
+						{Ref: &duckv1.KReference{Name: "second"}},
 					},
 					Reply: &duckv1.Destination{
-						Ref: &duckv1.KnativeReference{Name: "reply"},
+						Ref: &duckv1.KReference{Name: "reply"},
 					},
 				},
 			},
@@ -82,11 +82,11 @@ func TestSequenceSetDefaults(t *testing.T) {
 				Spec: SequenceSpec{
 					ChannelTemplate: defaultChannelTemplate,
 					Steps: []duckv1.Destination{
-						{Ref: &duckv1.KnativeReference{Namespace: testNS, Name: "first"}},
-						{Ref: &duckv1.KnativeReference{Namespace: testNS, Name: "second"}},
+						{Ref: &duckv1.KReference{Namespace: testNS, Name: "first"}},
+						{Ref: &duckv1.KReference{Namespace: testNS, Name: "second"}},
 					},
 					Reply: &duckv1.Destination{
-						Ref: &duckv1.KnativeReference{Namespace: testNS, Name: "reply"},
+						Ref: &duckv1.KReference{Namespace: testNS, Name: "reply"},
 					},
 				},
 			},

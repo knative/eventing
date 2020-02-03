@@ -62,7 +62,7 @@ func NewSubscription(stepNumber int, s *v1alpha1.Sequence) *messagingv1alpha1.Su
 	// last one, we'll use the (optional) reply from the Sequence Spec.
 	if stepNumber < len(s.Spec.Steps)-1 {
 		r.Spec.Reply = &duckv1.Destination{
-			Ref: &duckv1.KnativeReference{
+			Ref: &duckv1.KReference{
 				APIVersion: s.Spec.ChannelTemplate.APIVersion,
 				Kind:       s.Spec.ChannelTemplate.Kind,
 				Name:       SequenceChannelName(s.Name, stepNumber+1),

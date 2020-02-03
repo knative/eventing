@@ -52,8 +52,8 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
 }
 
-func KnativeRefForService(name, namespace string) *duckv1.KnativeReference {
-	return &duckv1.KnativeReference{
+func KnativeRefForService(name, namespace string) *duckv1.KReference {
+	return &duckv1.KReference{
 		Kind:       "Service",
 		APIVersion: "v1",
 		Name:       name,
@@ -77,7 +77,7 @@ func WithReplyForSubscription(name string, typemeta *metav1.TypeMeta) Subscripti
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Reply = &duckv1.Destination{
-				Ref: &duckv1.KnativeReference{
+				Ref: &duckv1.KReference{
 					Kind:       typemeta.Kind,
 					APIVersion: typemeta.APIVersion,
 					Name:       name,

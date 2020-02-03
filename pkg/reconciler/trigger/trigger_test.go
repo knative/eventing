@@ -1034,7 +1034,7 @@ func makeTrigger() *v1alpha1.Trigger {
 				},
 			},
 			Subscriber: duckv1.Destination{
-				Ref: &duckv1.KnativeReference{
+				Ref: &duckv1.KReference{
 					Name:       subscriberName,
 					Namespace:  testNS,
 					Kind:       subscriberKind,

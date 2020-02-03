@@ -50,7 +50,7 @@ func TestSinkBindingDefaulting(t *testing.T) {
 				},
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
-						Ref: &duckv1.KnativeReference{
+						Ref: &duckv1.KReference{
 							APIVersion: "serving.knative.dev/v1",
 							Kind:       "Service",
 							Name:       "gemma",
@@ -76,7 +76,7 @@ func TestSinkBindingDefaulting(t *testing.T) {
 				},
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
-						Ref: &duckv1.KnativeReference{
+						Ref: &duckv1.KReference{
 							APIVersion: "serving.knative.dev/v1",
 							Kind:       "Service",
 							Name:       "gemma",

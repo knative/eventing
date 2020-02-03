@@ -58,26 +58,26 @@ func TestParallelSetDefaults(t *testing.T) {
 					Branches: []ParallelBranch{
 						{
 							Filter: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "firstfilter"},
+								Ref: &duckv1.KReference{Name: "firstfilter"},
 							},
 							Subscriber: duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "firstsub"},
+								Ref: &duckv1.KReference{Name: "firstsub"},
 							},
 							Reply: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "firstreply"},
+								Ref: &duckv1.KReference{Name: "firstreply"},
 							},
 						}, {
 							Filter: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "secondfilter"},
+								Ref: &duckv1.KReference{Name: "secondfilter"},
 							},
 							Subscriber: duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "secondsub"},
+								Ref: &duckv1.KReference{Name: "secondsub"},
 							},
 							Reply: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "secondreply"},
+								Ref: &duckv1.KReference{Name: "secondreply"},
 							},
 						}},
-					Reply: &duckv1.Destination{Ref: &duckv1.KnativeReference{Name: "reply"}}},
+					Reply: &duckv1.Destination{Ref: &duckv1.KReference{Name: "reply"}}},
 			},
 			expected: Parallel{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
@@ -86,26 +86,26 @@ func TestParallelSetDefaults(t *testing.T) {
 					Branches: []ParallelBranch{
 						{
 							Filter: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "firstfilter", Namespace: testNS},
+								Ref: &duckv1.KReference{Name: "firstfilter", Namespace: testNS},
 							},
 							Subscriber: duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "firstsub", Namespace: testNS},
+								Ref: &duckv1.KReference{Name: "firstsub", Namespace: testNS},
 							},
 							Reply: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "firstreply", Namespace: testNS},
+								Ref: &duckv1.KReference{Name: "firstreply", Namespace: testNS},
 							},
 						}, {
 							Filter: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "secondfilter", Namespace: testNS},
+								Ref: &duckv1.KReference{Name: "secondfilter", Namespace: testNS},
 							},
 							Subscriber: duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "secondsub", Namespace: testNS},
+								Ref: &duckv1.KReference{Name: "secondsub", Namespace: testNS},
 							},
 							Reply: &duckv1.Destination{
-								Ref: &duckv1.KnativeReference{Name: "secondreply", Namespace: testNS},
+								Ref: &duckv1.KReference{Name: "secondreply", Namespace: testNS},
 							},
 						}},
-					Reply: &duckv1.Destination{Ref: &duckv1.KnativeReference{Name: "reply", Namespace: testNS}},
+					Reply: &duckv1.Destination{Ref: &duckv1.KReference{Name: "reply", Namespace: testNS}},
 				},
 			},
 		},

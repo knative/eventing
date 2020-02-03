@@ -98,7 +98,7 @@ func TestFlowsSequence(t *testing.T) {
 		channelTypeMeta,
 		resources.WithSubscriberForSubscription(loggerPodName),
 	)
-	replyRef := &duckv1.KnativeReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: channelName, Namespace: client.Namespace}
+	replyRef := &duckv1.KReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: channelName, Namespace: client.Namespace}
 
 	// create the sequence object
 	sequence := eventingtesting.NewFlowsSequence(

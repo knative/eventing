@@ -22,9 +22,9 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// KnativeReference contains enough information to refer to another object.
+// KReference contains enough information to refer to another object.
 // It's a trimmed down version of corev1.ObjectReference.
-type KnativeReference struct {
+type KReference struct {
 	// Kind of the referent.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	Kind string `json:"kind"`
@@ -43,7 +43,7 @@ type KnativeReference struct {
 	APIVersion string `json:"apiVersion"`
 }
 
-func (kr *KnativeReference) Validate(ctx context.Context) *apis.FieldError {
+func (kr *KReference) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if kr == nil {
 		errs = errs.Also(apis.ErrMissingField("name"))
@@ -63,7 +63,7 @@ func (kr *KnativeReference) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func (kr *KnativeReference) SetDefaults(ctx context.Context) {
+func (kr *KReference) SetDefaults(ctx context.Context) {
 	if kr.Namespace == "" {
 		kr.Namespace = apis.ParentMeta(ctx).Namespace
 	}

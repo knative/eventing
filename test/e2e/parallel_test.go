@@ -109,7 +109,7 @@ func TestFlowsParallel(t *testing.T) {
 		parallel := eventingtesting.NewFlowsParallel(tc.name, client.Namespace,
 			eventingtesting.WithFlowsParallelChannelTemplateSpec(channelTemplate),
 			eventingtesting.WithFlowsParallelBranches(parallelBranches),
-			eventingtesting.WithFlowsParallelReply(&duckv1.Destination{Ref: &duckv1.KnativeReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: replyChannelName, Namespace: client.Namespace}}))
+			eventingtesting.WithFlowsParallelReply(&duckv1.Destination{Ref: &duckv1.KReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: replyChannelName, Namespace: client.Namespace}}))
 
 		client.CreateFlowsParallelOrFail(parallel)
 

@@ -60,7 +60,7 @@ func NewSubscription(t *eventingv1alpha1.Trigger, brokerTrigger, brokerRef *core
 				URI: tmpURI,
 			},
 			Reply: &duckv1.Destination{
-				Ref: &duckv1.KnativeReference{
+				Ref: &duckv1.KReference{
 					APIVersion: brokerRef.APIVersion,
 					Kind:       brokerRef.Kind,
 					Name:       brokerRef.Name,

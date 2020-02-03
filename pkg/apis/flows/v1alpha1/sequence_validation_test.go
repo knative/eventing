@@ -47,7 +47,7 @@ func TestSequenceValidation(t *testing.T) {
 
 func makeValidReply(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &duckv1.KnativeReference{
+		Ref: &duckv1.KReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 			Name:       channelName,
@@ -58,7 +58,7 @@ func makeValidReply(channelName string) *duckv1.Destination {
 
 func makeInvalidReply(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &duckv1.KnativeReference{
+		Ref: &duckv1.KReference{
 			Kind:      "inmemorychannel",
 			Name:      channelName,
 			Namespace: "namespace",
@@ -149,7 +149,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 			ChannelTemplate: validChannelTemplate,
 			Steps:           []duckv1.Destination{{URI: subscriberURI}},
 			Reply: &duckv1.Destination{
-				Ref: &duckv1.KnativeReference{
+				Ref: &duckv1.KReference{
 					Namespace:  "namespace",
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "inmemorychannel",

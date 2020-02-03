@@ -65,7 +65,7 @@ var (
 	eventTypeName = fmt.Sprintf("dev.knative.sources.ping-%s", sourceUID)
 
 	sinkDest = duckv1.Destination{
-		Ref: &duckv1.KnativeReference{
+		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Namespace:  testNS,
 			Kind:       "Channel",
@@ -76,7 +76,7 @@ var (
 		URI: apis.HTTP(sinkDNS),
 	}
 	brokerDest = duckv1.Destination{
-		Ref: &duckv1.KnativeReference{
+		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Namespace:  testNS,
 			Kind:       "Broker",

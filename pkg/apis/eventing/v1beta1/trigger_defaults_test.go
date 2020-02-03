@@ -72,7 +72,7 @@ func TestTriggerDefaults(t *testing.T) {
 				Spec: TriggerSpec{
 					Broker: otherBroker,
 					Subscriber: duckv1.Destination{
-						Ref: &duckv1.KnativeReference{
+						Ref: &duckv1.KReference{
 							Name: "foo",
 						},
 					}}},
@@ -85,7 +85,7 @@ func TestTriggerDefaults(t *testing.T) {
 					Broker: otherBroker,
 					Filter: emptyTriggerFilter,
 					Subscriber: duckv1.Destination{
-						Ref: &duckv1.KnativeReference{
+						Ref: &duckv1.KReference{
 							Name:      "foo",
 							Namespace: namespace,
 						},

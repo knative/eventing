@@ -67,7 +67,7 @@ func WithTriggerSubscriberURI(rawurl string) TriggerOption {
 func WithTriggerSubscriberRef(gvk metav1.GroupVersionKind, name, namespace string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{
-			Ref: &duckv1.KnativeReference{
+			Ref: &duckv1.KReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
 				Name:       name,
@@ -81,7 +81,7 @@ func WithTriggerSubscriberRefAndURIReference(gvk metav1.GroupVersionKind, name, 
 	uri, _ := apis.ParseURL(rawuri)
 	return func(t *v1alpha1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{
-			Ref: &duckv1.KnativeReference{
+			Ref: &duckv1.KReference{
 				APIVersion: apiVersion(gvk),
 				Kind:       gvk.Kind,
 				Name:       name,
