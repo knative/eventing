@@ -52,7 +52,7 @@ func channelRef(name string, typemeta *metav1.TypeMeta) *corev1.ObjectReference 
 	return pkgTest.CoreV1ObjectReference(typemeta.Kind, typemeta.APIVersion, name)
 }
 
-func knativeRefForService(name, namespace string) *duckv1.KnativeReference {
+func KnativeRefForService(name, namespace string) *duckv1.KnativeReference {
 	return &duckv1.KnativeReference{
 		Kind:       "Service",
 		APIVersion: "v1",
@@ -66,7 +66,7 @@ func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {
 		if name != "" {
 			s.Spec.Subscriber = &duckv1.Destination{
-				Ref: knativeRefForService(name, ""),
+				Ref: KnativeRefForService(name, ""),
 			}
 		}
 	}
@@ -98,7 +98,7 @@ func WithDeadLetterSinkForSubscription(name string) SubscriptionOption {
 			}
 
 			delivery.DeadLetterSink = &duckv1.Destination{
-				Ref: knativeRefForService(name, s.Namespace),
+				Ref: KnativeRefForService(name, s.Namespace),
 			}
 
 		}
@@ -212,7 +212,7 @@ func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = duckv1.Destination{
-				Ref: knativeRefForService(name, t.Namespace),
+				Ref: KnativeRefForService(name, t.Namespace),
 			}
 		}
 	}
@@ -223,7 +223,7 @@ func WithSubscriberServiceRefForTrigger(name string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		if name != "" {
 			t.Spec.Subscriber = duckv1.Destination{
-				Ref: knativeRefForService(name, t.Namespace),
+				Ref: KnativeRefForService(name, t.Namespace),
 			}
 		}
 	}
@@ -257,7 +257,7 @@ func WithDeadLetterSinkForDelivery(name string) DeliveryOption {
 	return func(delivery *eventingduckv1alpha1.DeliverySpec) {
 		if name != "" {
 			delivery.DeadLetterSink = &duckv1.Destination{
-				Ref: knativeRefForService(name, ""),
+				Ref: KnativeRefForService(name, ""),
 			}
 		}
 	}

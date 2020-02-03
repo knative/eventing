@@ -59,7 +59,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 	sinkBinding := eventingtesting.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
 		eventingtesting.WithSubject(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
@@ -139,7 +139,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 	sinkBinding := eventingtesting.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
 		eventingtesting.WithSubject(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",

@@ -58,7 +58,7 @@ func TestLegacySinkBindingDeployment(t *testing.T) {
 	sinkBinding := eventingtesting.NewLegacySinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithLegacySink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithLegacySink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
 		eventingtesting.WithLegacySubject(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
@@ -138,7 +138,7 @@ func TestLegacySinkBindingCronJob(t *testing.T) {
 	sinkBinding := eventingtesting.NewLegacySinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithLegacySink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithLegacySink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
 		eventingtesting.WithLegacySubject(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
