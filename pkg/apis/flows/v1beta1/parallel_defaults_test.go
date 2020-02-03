@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
 	"context"
@@ -24,14 +24,14 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestParallelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *eventingduckv1alpha1.ChannelTemplateSpec
+		channelTemplate     *messagingv1beta1.ChannelTemplateSpec
 		initial             Parallel
 		expected            Parallel
 	}{
@@ -113,7 +113,7 @@ func TestParallelSetDefaults(t *testing.T) {
 			channelTemplate: defaultChannelTemplate,
 			initial: Parallel{
 				Spec: ParallelSpec{
-					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
@@ -123,7 +123,7 @@ func TestParallelSetDefaults(t *testing.T) {
 			},
 			expected: Parallel{
 				Spec: ParallelSpec{
-					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
@@ -136,10 +136,10 @@ func TestParallelSetDefaults(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if !tc.nilChannelDefaulter {
-				eventingduckv1alpha1.ChannelDefaulterSingleton = &parallelChannelDefaulter{
+				messagingv1beta1.ChannelDefaulterSingleton = &parallelChannelDefaulter{
 					channelTemplate: tc.channelTemplate,
 				}
-				defer func() { eventingduckv1alpha1.ChannelDefaulterSingleton = nil }()
+				defer func() { messagingv1beta1.ChannelDefaulterSingleton = nil }()
 			}
 			tc.initial.SetDefaults(context.TODO())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
@@ -150,9 +150,9 @@ func TestParallelSetDefaults(t *testing.T) {
 }
 
 type parallelChannelDefaulter struct {
-	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec
+	channelTemplate *messagingv1beta1.ChannelTemplateSpec
 }
 
-func (cd *parallelChannelDefaulter) GetDefault(_ string) *eventingduckv1alpha1.ChannelTemplateSpec {
+func (cd *parallelChannelDefaulter) GetDefault(_ string) *messagingv1beta1.ChannelTemplateSpec {
 	return cd.channelTemplate
 }

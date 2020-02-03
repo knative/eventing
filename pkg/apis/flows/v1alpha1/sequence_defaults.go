@@ -20,9 +20,11 @@ import (
 	"context"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/apis"
 )
 
 func (s *Sequence) SetDefaults(ctx context.Context) {
+	withNS := apis.WithinParent(ctx, s.ObjectMeta)
 	if s != nil && s.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
@@ -31,7 +33,16 @@ func (s *Sequence) SetDefaults(ctx context.Context) {
 			s.Spec.ChannelTemplate = channelTemplate
 		}
 	}
-	s.Spec.SetDefaults(ctx)
+	s.Spec.SetDefaults(withNS)
 }
 
-func (ss *SequenceSpec) SetDefaults(ctx context.Context) {}
+func (ss *SequenceSpec) SetDefaults(ctx context.Context) {
+	// Default the namespace for all the steps.
+	for _, s := range ss.Steps {
+		s.SetDefaults(ctx)
+	}
+	// Default the reply
+	if ss.Reply != nil {
+		ss.Reply.SetDefaults(ctx)
+	}
+}

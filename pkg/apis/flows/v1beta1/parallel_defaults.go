@@ -20,18 +20,33 @@ import (
 	"context"
 
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/pkg/apis"
 )
 
-func (s *Parallel) SetDefaults(ctx context.Context) {
-	if s != nil && s.Spec.ChannelTemplate == nil {
+func (p *Parallel) SetDefaults(ctx context.Context) {
+	withNS := apis.WithinParent(ctx, p.ObjectMeta)
+	if p != nil && p.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
 		if cd := messagingv1beta1.ChannelDefaulterSingleton; cd != nil {
-			channelTemplate := cd.GetDefault(s.Namespace)
-			s.Spec.ChannelTemplate = channelTemplate
+			channelTemplate := cd.GetDefault(p.Namespace)
+			p.Spec.ChannelTemplate = channelTemplate
 		}
 	}
-	s.Spec.SetDefaults(ctx)
+	p.Spec.SetDefaults(withNS)
 }
 
-func (ss *ParallelSpec) SetDefaults(ctx context.Context) {}
+func (ps *ParallelSpec) SetDefaults(ctx context.Context) {
+	for _, branch := range ps.Branches {
+		if branch.Filter != nil {
+			branch.Filter.SetDefaults(ctx)
+		}
+		branch.Subscriber.SetDefaults(ctx)
+		if branch.Reply != nil {
+			branch.Reply.SetDefaults(ctx)
+		}
+	}
+	if ps.Reply != nil {
+		ps.Reply.SetDefaults(ctx)
+	}
+}
