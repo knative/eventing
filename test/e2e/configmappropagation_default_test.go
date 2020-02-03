@@ -20,7 +20,6 @@ package e2e
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -48,8 +47,12 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 	// CMP copies all required configmaps from 'eventingNamespace' to current client namespace
 	client.CreateConfigMapPropagationOrFail(defaultCMP)
 
-	// Check if copy configmap exists and contains the same data as original configmap
-	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, 4*time.Second, testingCM1, testingCM2); err != nil {
+	// Check if copy configmaps exist
+	if err := client.CheckConfigMapsExist(client.Namespace, defaultCMP+"-"+testingCM1, defaultCMP+"-"+testingCM2); err != nil {
+		t.Fatalf("Failed to check the existence for all copied configmaps: %v", err)
+	}
+	// Check if copy configmaps contain the same data as original configmap
+	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, testingCM1, testingCM2); err != nil {
 		t.Fatalf("Failed to check copy configamp contains the same data as original configmap: %v", err)
 	}
 
@@ -64,7 +67,7 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 		t.Fatalf("Failed to patch copy configmap: %v", err)
 	}
 	// Check if copy configmap will revert back
-	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, 2*time.Second, testingCM1); err != nil {
+	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, testingCM1); err != nil {
 		t.Fatalf("Failed to check copy configmap will revert back: %v", err)
 	}
 
@@ -73,10 +76,9 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 		t.Fatalf("Failed to patch original configmap: %v", err)
 	}
 	// Check if copy configmap will update after original configmap changes
-	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, 2*time.Second, testingCM1); err != nil {
+	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, testingCM1); err != nil {
 		t.Fatalf("Failed to check if copy configmap will update after original configmap changes: %v", err)
 	}
-	//time.Sleep(time.Minute)
 }
 
 type patchUInt32Value struct {
