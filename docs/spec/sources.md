@@ -185,6 +185,27 @@ validation:
                   on the event as an extension attribute independently."
 ```
 
+### Container Runtime Contract
+
+#### SinkBinding
+
+SinkBinding augments the runtime contract of the subject's containers in the
+following ways:
+
+- `status.sinkUri` (resolved from the `duckv1.SourceSpec`’s Sink) is bound into
+  the subject’s containers as the environment variable `K_SINK`.
+- `spec.ceOverrides` (`duckv1.CloudEventOverrides`) is converted into JSON and
+  is bound into the subject’s containers as the environment variable
+  `K_CE_OVERRIDES`.
+
+The URI that is provided by `K_SINK` is the intended target of CloudEvents
+produced by the subject.
+
+`K_CE_OVERRIDES` augments the outbound CloudEvent sent by the subject.
+
+- `spec.ceOverrides.extensions` is a map of attribute name to value that should
+  be added or overridden on the outbound event.
+
 ### Source Registry
 
 Source CRDs SHOULD use a standard annotation to expose the types of events they
