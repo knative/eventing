@@ -48,10 +48,11 @@ func MakeSubscription(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *core
 				Name:       c.Name,
 			},
 			Subscriber: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
 					APIVersion: "v1",
 					Kind:       "Service",
 					Name:       svc.Name,
+					Namespace:  svc.Namespace,
 				},
 			},
 		},

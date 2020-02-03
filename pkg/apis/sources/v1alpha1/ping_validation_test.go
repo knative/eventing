@@ -23,7 +23,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 )
 
@@ -37,10 +36,11 @@ func TestPingSourceValidation(t *testing.T) {
 		spec: PingSourceSpec{
 			Schedule: "*/2 * * * *",
 			Sink: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
 					Name:       "default",
+					Namespace:  "namespace",
 				},
 			},
 		},
@@ -61,10 +61,11 @@ func TestPingSourceValidation(t *testing.T) {
 		spec: PingSourceSpec{
 			Schedule: "2",
 			Sink: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
 					Name:       "default",
+					Namespace:  "namespace",
 				},
 			},
 		},

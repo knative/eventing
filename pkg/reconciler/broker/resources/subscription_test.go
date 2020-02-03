@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestMakeSubscription(t *testing.T) {
@@ -82,10 +83,11 @@ func TestMakeSubscription(t *testing.T) {
 			if ch := sub.Spec.Channel; ch != expectedChannel {
 				t.Errorf("Expected spec.channel %q, actually %q", expectedChannel, ch)
 			}
-			expectedSubscriber := corev1.ObjectReference{
+			expectedSubscriber := duckv1.KReference{
 				APIVersion: "v1",
 				Kind:       "Service",
 				Name:       svc.Name,
+				Namespace:  svc.Namespace,
 			}
 			if subscriber := *sub.Spec.Subscriber.Ref; subscriber != expectedSubscriber {
 				t.Errorf("Expected spec.subscriber.ref %q, actually %q", expectedSubscriber, subscriber)

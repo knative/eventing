@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -48,19 +47,21 @@ func TestSequenceValidation(t *testing.T) {
 
 func makeValidReply(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 			Name:       channelName,
+			Namespace:  "namespace",
 		},
 	}
 }
 
 func makeInvalidReply(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
-			Kind: "inmemorychannel",
-			Name: channelName,
+		Ref: &duckv1.KReference{
+			Kind:      "inmemorychannel",
+			Name:      channelName,
+			Namespace: "namespace",
 		},
 	}
 }
@@ -148,7 +149,8 @@ func TestSequenceSpecValidation(t *testing.T) {
 			ChannelTemplate: validChannelTemplate,
 			Steps:           []duckv1.Destination{{URI: subscriberURI}},
 			Reply: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
+					Namespace:  "namespace",
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "inmemorychannel",
 				},

@@ -32,7 +32,6 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
 )
 
 func TestFlowsSequence(t *testing.T) {
@@ -73,7 +72,7 @@ func TestFlowsSequence(t *testing.T) {
 		client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 		// create a new step
 		step := duckv1.Destination{
-			Ref: resources.ServiceRef(podName),
+			Ref: resources.KnativeRefForService(podName, client.Namespace),
 		}
 		// add the step into steps
 		steps = append(steps, step)
@@ -99,7 +98,7 @@ func TestFlowsSequence(t *testing.T) {
 		channelTypeMeta,
 		resources.WithSubscriberForSubscription(loggerPodName),
 	)
-	replyRef := pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, channelName)
+	replyRef := &duckv1.KReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: channelName, Namespace: client.Namespace}
 
 	// create the sequence object
 	sequence := eventingtesting.NewFlowsSequence(

@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -136,7 +135,8 @@ func TestParallelSpecValidation(t *testing.T) {
 			ChannelTemplate: validChannelTemplate,
 			Branches:        []ParallelBranch{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
 			Reply: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
+					Namespace:  "namespace",
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "inmemorychannel",
 				},

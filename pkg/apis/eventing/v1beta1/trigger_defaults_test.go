@@ -20,7 +20,9 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -28,6 +30,7 @@ import (
 var (
 	defaultBroker      = "default"
 	otherBroker        = "other_broker"
+	namespace          = "testnamespace"
 	emptyTriggerFilter = &TriggerFilter{}
 	defaultTrigger     = Trigger{
 		ObjectMeta: v1.ObjectMeta{
@@ -60,6 +63,34 @@ func TestTriggerDefaults(t *testing.T) {
 					Labels: map[string]string{brokerLabel: otherBroker},
 				},
 				Spec: TriggerSpec{Broker: otherBroker, Filter: emptyTriggerFilter}},
+		},
+		"subscriber, ns defaulted": {
+			initial: Trigger{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+				},
+				Spec: TriggerSpec{
+					Broker: otherBroker,
+					Subscriber: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name: "foo",
+						},
+					}}},
+			expected: Trigger{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: namespace,
+					Labels:    map[string]string{brokerLabel: otherBroker},
+				},
+				Spec: TriggerSpec{
+					Broker: otherBroker,
+					Filter: emptyTriggerFilter,
+					Subscriber: duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Name:      "foo",
+							Namespace: namespace,
+						},
+					},
+				}},
 		},
 		"nil broker and nil filter": {
 			initial:  Trigger{},

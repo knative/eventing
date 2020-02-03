@@ -55,7 +55,7 @@ func TestPingSource(t *testing.T) {
 		eventingtesting.WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 			Schedule: schedule,
 			Data:     data,
-			Sink:     &duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)},
+			Sink:     &duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)},
 		}),
 	)
 	client.CreatePingSourceOrFail(source)

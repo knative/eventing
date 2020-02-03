@@ -62,10 +62,11 @@ func init() {
 
 func createReplyChannel(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 			Name:       channelName,
+			Namespace:  testNS,
 		},
 	}
 }

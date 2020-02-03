@@ -18,12 +18,21 @@ package v1alpha1
 
 import (
 	"context"
+
+	"knative.dev/pkg/apis"
 )
 
 func (s *Subscription) SetDefaults(ctx context.Context) {
-	s.Spec.SetDefaults(ctx)
+	withNS := apis.WithinParent(ctx, s.ObjectMeta)
+	s.Spec.SetDefaults(withNS)
 }
 
 func (ss *SubscriptionSpec) SetDefaults(ctx context.Context) {
-	// TODO anything?
+	// Default NS to Subscriber and Reply
+	if ss.Subscriber != nil {
+		ss.Subscriber.SetDefaults(ctx)
+	}
+	if ss.Reply != nil {
+		ss.Reply.SetDefaults(ctx)
+	}
 }

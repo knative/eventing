@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	"context"
+
+	"knative.dev/pkg/apis"
 )
 
 // SetDefaults implements apis.Defaultable
@@ -27,8 +29,6 @@ func (fb *SinkBinding) SetDefaults(ctx context.Context) {
 		fb.Spec.Subject.Namespace = fb.Namespace
 	}
 
-	if fb.Spec.Sink.Ref != nil && fb.Spec.Sink.Ref.Namespace == "" {
-		// Default the sink's namespace to our namespace.
-		fb.Spec.Sink.Ref.Namespace = fb.Namespace
-	}
+	withNS := apis.WithinParent(ctx, fb.ObjectMeta)
+	fb.Spec.Sink.SetDefaults(withNS)
 }

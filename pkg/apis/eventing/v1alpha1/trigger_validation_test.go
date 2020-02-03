@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -53,14 +52,16 @@ var (
 		},
 	}
 	validSubscriber = duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
+			Namespace:  "namespace",
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
 	invalidSubscriber = duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
+			Namespace:  "namespace",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},

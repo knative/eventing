@@ -24,7 +24,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
 
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
@@ -77,10 +76,10 @@ func TestFlowsParallel(t *testing.T) {
 
 			parallelBranches[branchNumber] = v1alpha1.ParallelBranch{
 				Filter: &duckv1.Destination{
-					Ref: resources.ServiceRef(filterPodName),
+					Ref: resources.KnativeRefForService(filterPodName, client.Namespace),
 				},
 				Subscriber: duckv1.Destination{
-					Ref: resources.ServiceRef(subPodName),
+					Ref: resources.KnativeRefForService(subPodName, client.Namespace),
 				},
 			}
 		}
@@ -110,7 +109,7 @@ func TestFlowsParallel(t *testing.T) {
 		parallel := eventingtesting.NewFlowsParallel(tc.name, client.Namespace,
 			eventingtesting.WithFlowsParallelChannelTemplateSpec(channelTemplate),
 			eventingtesting.WithFlowsParallelBranches(parallelBranches),
-			eventingtesting.WithFlowsParallelReply(&duckv1.Destination{Ref: pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, replyChannelName)}))
+			eventingtesting.WithFlowsParallelReply(&duckv1.Destination{Ref: &duckv1.KReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: replyChannelName, Namespace: client.Namespace}}))
 
 		client.CreateFlowsParallelOrFail(parallel)
 

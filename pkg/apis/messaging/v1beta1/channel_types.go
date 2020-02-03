@@ -73,7 +73,7 @@ type ChannelStatus struct {
 	// Channel conforms to ChannelableStatus
 	eventingduck.ChannelableStatus `json:",inline"`
 
-	// Channel is an ObjectReference to the Channel CRD backing this Channel.
+	// Channel is an KReference to the Channel CRD backing this Channel.
 	Channel *corev1.ObjectReference `json:"channel,omitempty"`
 }
 

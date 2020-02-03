@@ -65,10 +65,11 @@ func NewFilterSubscription(branchNumber int, p *v1alpha1.Parallel) *messagingv1a
 		}
 	}
 	r.Spec.Reply = &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
 			Kind:       p.Spec.ChannelTemplate.Kind,
 			Name:       ParallelBranchChannelName(p.Name, branchNumber),
+			Namespace:  p.Namespace,
 		},
 	}
 	return r

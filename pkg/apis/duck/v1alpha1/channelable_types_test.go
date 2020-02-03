@@ -63,7 +63,7 @@ func TestChannelablePopulate(t *testing.T) {
 			},
 			Delivery: &DeliverySpec{
 				DeadLetterSink: &duckv1.Destination{
-					Ref: &corev1.ObjectReference{
+					Ref: &duckv1.KReference{
 						Name: "aname",
 					},
 					URI: &apis.URL{

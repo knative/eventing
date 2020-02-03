@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	"context"
+
+	"knative.dev/pkg/apis"
 )
 
 const (
@@ -25,7 +27,8 @@ const (
 )
 
 func (t *Trigger) SetDefaults(ctx context.Context) {
-	t.Spec.SetDefaults(ctx)
+	withNS := apis.WithinParent(ctx, t.ObjectMeta)
+	t.Spec.SetDefaults(withNS)
 	setLabels(t)
 }
 
@@ -37,6 +40,8 @@ func (ts *TriggerSpec) SetDefaults(ctx context.Context) {
 	if ts.Filter == nil {
 		ts.Filter = &TriggerFilter{}
 	}
+	// Default the Subscriber namespace
+	ts.Subscriber.SetDefaults(ctx)
 }
 
 func setLabels(t *Trigger) {

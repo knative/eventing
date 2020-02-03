@@ -454,20 +454,22 @@ func TestAllBranches(t *testing.T) {
 
 func createBranchReplyChannel(caseNumber int) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 			Name:       fmt.Sprintf("%s-case-%d", replyChannelName, caseNumber),
+			Namespace:  testNS,
 		},
 	}
 }
 
 func createReplyChannel(channelName string) *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
 			Name:       channelName,
+			Namespace:  testNS,
 		},
 	}
 }

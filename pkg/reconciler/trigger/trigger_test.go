@@ -648,7 +648,7 @@ func TestAllCases(t *testing.T) {
 				makeSubscriberAddressableAsUnstructured(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					reconciletesting.WithInitTriggerConditions,
 				),
 			},
@@ -659,7 +659,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
@@ -681,7 +681,7 @@ func TestAllCases(t *testing.T) {
 				makeSubscriberAddressableAsUnstructured(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, subscriberURIReference),
+					reconciletesting.WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
 					reconciletesting.WithInitTriggerConditions,
 				),
 			},
@@ -692,7 +692,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, subscriberURIReference),
+					reconciletesting.WithTriggerSubscriberRefAndURIReference(subscriberGVK, subscriberName, testNS, subscriberURIReference),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
@@ -714,7 +714,7 @@ func TestAllCases(t *testing.T) {
 				makeSubscriberKubernetesServiceAsUnstructured(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRef(k8sServiceGVK, subscriberName),
+					reconciletesting.WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
 					reconciletesting.WithInitTriggerConditions,
 				),
 			},
@@ -725,7 +725,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRef(k8sServiceGVK, subscriberName),
+					reconciletesting.WithTriggerSubscriberRef(k8sServiceGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
@@ -746,7 +746,7 @@ func TestAllCases(t *testing.T) {
 				makeBrokerFilterService(),
 				reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					reconciletesting.WithInitTriggerConditions,
 				),
 			},
@@ -757,7 +757,7 @@ func TestAllCases(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewTrigger(triggerName, testNS, brokerName,
 					reconciletesting.WithTriggerUID(triggerUID),
-					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName),
+					reconciletesting.WithTriggerSubscriberRef(subscriberGVK, subscriberName, testNS),
 					// The first reconciliation will initialize the status conditions.
 					reconciletesting.WithInitTriggerConditions,
 					reconciletesting.WithTriggerBrokerReady(),
@@ -1034,8 +1034,9 @@ func makeTrigger() *v1alpha1.Trigger {
 				},
 			},
 			Subscriber: duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
 					Name:       subscriberName,
+					Namespace:  testNS,
 					Kind:       subscriberKind,
 					APIVersion: subscriberAPIVersion,
 				},

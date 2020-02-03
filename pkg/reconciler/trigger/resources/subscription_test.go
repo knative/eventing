@@ -103,7 +103,9 @@ func TestMakeFilterDeployment(t *testing.T) {
     "reply": {
       "ref": {
         "kind": "Aoo",
-        "name": "Caz"
+        "namespace": "Bar",
+        "name": "Caz",
+        "apiVersion": ""
       }
     },
     "delivery": {
