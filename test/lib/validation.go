@@ -194,7 +194,7 @@ func (client *Client) CheckConfigMapsEqual(originalNamespace, cmp string, names 
 				return false, err
 			}
 			if !reflect.DeepEqual(origianlCM.Data, copyCM.Data) {
-				return false, fmt.Errorf("the data of copy configmap is not equal to original configmap")
+				return false, nil
 			}
 		}
 		return true, nil
