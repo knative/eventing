@@ -54,7 +54,16 @@ var (
 
 // SinkBindingSpec holds the desired state of the SinkBinding (from the client).
 type SinkBindingSpec struct {
-	duckv1.SourceSpec        `json:",inline"`
+	// inherits duck/v1 SourceSpec, which currently provides:
+	// * Sink - a reference to an object that will resolve to a domain name or
+	//   a URI directly to use as the sink.
+	// * CloudEventOverrides - defines overrides to control the output format
+	//   and modifications of the event sent to the sink.
+	duckv1.SourceSpec `json:",inline"`
+
+	// inherits duck/v1alpha1 BindingSpec, which currently provides:
+	// * Subject - Subject references the resource(s) whose "runtime contract"
+	//   should be augmented by Binding implementations.
 	duckv1alpha1.BindingSpec `json:",inline"`
 }
 
@@ -66,6 +75,13 @@ const (
 
 // SinkBindingStatus communicates the observed state of the SinkBinding (from the controller).
 type SinkBindingStatus struct {
+	// inherits duck/v1 SourceStatus, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last
+	//   processed by the controller.
+	// * Conditions - the latest available observations of a resource's current
+	//   state.
+	// * SinkURI - the current active sink URI that has been configured for the
+	//   Source.
 	duckv1.SourceStatus `json:",inline"`
 }
 

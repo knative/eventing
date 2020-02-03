@@ -18,9 +18,9 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -36,12 +36,13 @@ type ApiServerSource struct {
 	Status ApiServerSourceStatus `json:"status,omitempty"`
 }
 
+// Check the interfaces that ApiServerSource should be implementing.
 var (
-	// Check that we can create OwnerReferences to an ApiServerSource.
+	_ runtime.Object     = (*ApiServerSource)(nil)
 	_ kmeta.OwnerRefable = (*ApiServerSource)(nil)
-
-	// Check that ApiServerSource can return its spec untyped.
-	_ apis.HasSpec = (*ApiServerSource)(nil)
+	_ apis.Validatable   = (*ApiServerSource)(nil)
+	_ apis.Defaultable   = (*ApiServerSource)(nil)
+	_ apis.HasSpec       = (*ApiServerSource)(nil)
 )
 
 const (
@@ -71,37 +72,42 @@ type ApiServerSourceList struct {
 
 // ApiServerSourceSpec defines the desired state of ApiServerSource
 type ApiServerSourceSpec struct {
-	// Resources is the list of resources to watch
-	Resources []ApiServerResource `json:"resources"`
+	// inherits duck/v1 SourceSpec, which currently provides:
+	// * Sink - a reference to an object that will resolve to a domain name or
+	//   a URI directly to use as the sink.
+	// * CloudEventOverrides - defines overrides to control the output format
+	//   and modifications of the event sent to the sink.
+	duckv1.SourceSpec `json:",inline"`
 
-	// ServiceAccountName is the name of the ServiceAccount to use to run this
-	// source.
+	// WatchResources is the list of resources to watch.
+	WatchResources []ApiServerResource `json:"watch"`
+
+	// ServiceAccountName is the name of the ServiceAccount to use to run the
+	// receive adapter for this source.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Sink is a reference to an object that will resolve to a domain name to use as the sink.
+	// Mode is the mode the receive adapter controller runs under: Reference or Resource.
+	// `Reference` sends only the reference to the resource that had a lifecycle event.
+	// `Resource` send the full resource lifecycle event.
+	// Defaults to `Reference`
 	// +optional
-	Sink *duckv1beta1.Destination `json:"sink,omitempty"`
-
-	// Mode is the mode the receive adapter controller runs under: Ref or Resource.
-	// `Ref` sends only the reference to the resource.
-	// `Resource` send the full resource.
 	Mode string `json:"mode,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource
 type ApiServerSourceStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
-
-	// SinkURI is the current active sink URI that has been configured for the ApiServerSource.
-	// +optional
-	SinkURI string `json:"sinkUri,omitempty"`
+	// inherits duck/v1 SourceStatus, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last
+	//   processed by the controller.
+	// * Conditions - the latest available observations of a resource's current
+	//   state.
+	// * SinkURI - the current active sink URI that has been configured for the
+	//   Source.
+	duckv1.SourceStatus `json:",inline"`
 }
 
-// ApiServerResource defines the resource to watch
+// ApiServerSelectableKinds defines the resource to watch
 type ApiServerResource struct {
 	// API version of the resource to watch.
 	APIVersion string `json:"apiVersion"`
@@ -110,14 +116,34 @@ type ApiServerResource struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	Kind string `json:"kind"`
 
-	// LabelSelector restricts this source to objects with the selected labels
+	// LabelSelector filters this source to objects to those resources pass the
+	// label selector.
 	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
-	LabelSelector metav1.LabelSelector `json:"labelSelector"`
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
 
-	// ControllerSelector restricts this source to objects with a controlling owner reference of the specified kind.
-	// Only apiVersion and kind are used. Both are optional.
-	ControllerSelector metav1.OwnerReference `json:"controllerSelector"`
+	// +optional
+	ResourceOwner ApiServerResourceOwner `json:"owner,omitempty"`
+}
 
-	// If true, send an event referencing the object controlling the resource
-	Controller bool `json:"controller"`
+type ApiServerResourceOwner struct {
+	// RestrictOwner restricts this source to objects with a controlling
+	// owner reference of the specified apiVersion and kind.
+	// +optional
+	RestrictOwner *APIVersionKind `json:"match,omitempty"`
+
+	// WatchOwner - if true, send an event referencing the object controlling
+	// the resource.
+	// +optional
+	WatchOwner bool `json:"watch"`
+}
+
+// APIVersionKind holds the APIVersion and Kind for a Kubernetes resource.
+type APIVersionKind struct {
+	// APIVersion - the API version of the resource to watch.
+	APIVersion string `json:"apiVersion"`
+
+	// Kind of the resource to watch.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+	Kind string `json:"kind"`
 }

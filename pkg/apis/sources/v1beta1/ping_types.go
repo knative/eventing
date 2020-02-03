@@ -38,64 +38,53 @@ type PingSource struct {
 	Status PingSourceStatus `json:"status,omitempty"`
 }
 
-// TODO: Check that PingSource can be validated and can be defaulted.
-
+// Check the interfaces that PingSource should be implementing.
 var (
-	// Check that it is a runtime object.
-	_ runtime.Object = (*PingSource)(nil)
-
-	// Check that we can create OwnerReferences to a PingSource.
+	_ runtime.Object     = (*PingSource)(nil)
 	_ kmeta.OwnerRefable = (*PingSource)(nil)
-
-	// Check that PingSource can return its spec untyped.
-	_ apis.HasSpec = (*PingSource)(nil)
+	_ apis.Validatable   = (*PingSource)(nil)
+	_ apis.Defaultable   = (*PingSource)(nil)
+	_ apis.HasSpec       = (*PingSource)(nil)
 )
-
-type PingRequestsSpec struct {
-	ResourceCPU    string `json:"cpu,omitempty"`
-	ResourceMemory string `json:"memory,omitempty"`
-}
-
-type PingLimitsSpec struct {
-	ResourceCPU    string `json:"cpu,omitempty"`
-	ResourceMemory string `json:"memory,omitempty"`
-}
-
-type PingResourceSpec struct {
-	Requests PingRequestsSpec `json:"requests,omitempty"`
-	Limits   PingLimitsSpec   `json:"limits,omitempty"`
-}
 
 // PingSourceSpec defines the desired state of the PingSource.
 type PingSourceSpec struct {
-	// Schedule is the cronjob schedule.
-	// +required
+	// inherits duck/v1 SourceSpec, which currently provides:
+	// * Sink - a reference to an object that will resolve to a domain name or
+	//   a URI directly to use as the sink.
+	// * CloudEventOverrides - defines overrides to control the output format
+	//   and modifications of the event sent to the sink.
+	duckv1.SourceSpec `json:",inline"`
+
+	// Schedule is the cronjob schedule. Defaults to `* * * * *`.
+	// +optional
 	Schedule string `json:"schedule"`
 
+	// DataContentType defines how ping should mark the content type of data in
+	// the outbound ping event.
+	// +optional
+	DataContentType string `json:"dataContentType,omitempty"`
+
 	// Data is the data posted to the target function.
+	// +optional
 	Data string `json:"data,omitempty"`
 
-	// Sink is a reference to an object that will resolve to a uri to use as the sink.
-	Sink *duckv1.Destination `json:"sink,omitempty"`
-
-	// ServiceAccoutName is the name of the ServiceAccount that will be used to run the Receive
-	// Adapter Deployment.
+	// ServiceAccountName is the name of the ServiceAccount that will be used
+	// to run the each Job to send a Ping. Defaults to `default`.
+	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
-	// Resource limits and Request specifications of the Receive Adapter Deployment
-	Resources PingResourceSpec `json:"resources,omitempty"`
 }
 
 // PingSourceStatus defines the observed state of PingSource.
 type PingSourceStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
-
-	// SinkURI is the current active sink URI that has been configured for the PingSource.
-	// +optional
-	SinkURI *apis.URL `json:"sinkUri,omitempty"`
+	// inherits duck/v1 SourceStatus, which currently provides:
+	// * ObservedGeneration - the 'Generation' of the Service that was last
+	//   processed by the controller.
+	// * Conditions - the latest available observations of a resource's current
+	//   state.
+	// * SinkURI - the current active sink URI that has been configured for the
+	//   Source.
+	duckv1.SourceStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

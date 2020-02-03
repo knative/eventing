@@ -57,6 +57,8 @@ func (s *StringList) Decode(value string) error {
 type envConfig struct {
 	adapter.EnvConfig
 
+	// TODO: This needs to be bundled into a single json string. DO NOT SUBMIT
+
 	Mode            string     `envconfig:"MODE"`
 	ApiVersion      StringList `split_words:"true" required:"true"`
 	Kind            StringList `required:"true"`

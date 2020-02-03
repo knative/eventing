@@ -18,7 +18,6 @@ import (
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestTypesImplements(t *testing.T) {
@@ -27,12 +26,14 @@ func TestTypesImplements(t *testing.T) {
 		iface    duck.Implementable
 	}{
 		// PingSource
-		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
+		{instance: &PingSource{}, iface: &duckv1.Conditions{}},
+		{instance: &PingSource{}, iface: &duckv1.Source{}},
 		// ContainerSource
 		{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
+		{instance: &ApiServerSource{}, iface: &duckv1.Source{}},
 		// SinkBinding
 		{instance: &SinkBinding{}, iface: &duckv1.Conditions{}},
-		{instance: &SinkBinding{}, iface: &duckv1beta1.Source{}},
+		{instance: &SinkBinding{}, iface: &duckv1.Source{}},
 		{instance: &SinkBinding{}, iface: &duckv1alpha1.Binding{}},
 	}
 	for _, tc := range testCases {
