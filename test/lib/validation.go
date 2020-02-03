@@ -160,7 +160,7 @@ func (client *Client) getContainerName(podName, namespace string) (string, error
 	return containerName, nil
 }
 
-// CheckConfigMapsExist will check if copy configmaps exist
+// CheckConfigMapsExist will check if copy configmaps exist.
 func (client *Client) CheckConfigMapsExist(namespace string, names ...string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		for _, name := range names {
@@ -175,7 +175,7 @@ func (client *Client) CheckConfigMapsExist(namespace string, names ...string) er
 	})
 }
 
-// CheckConfigMapsEqual will check if configmaps have the same data as the original one
+// CheckConfigMapsEqual will check if configmaps have the same data as the original one.
 func (client *Client) CheckConfigMapsEqual(originalNamespace, cmp string, names ...string) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		for _, name := range names {

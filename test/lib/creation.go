@@ -114,7 +114,7 @@ func (client *Client) CreateConfigMapPropagationOrFail(name string) *configsv1al
 	return configMapPropagation
 }
 
-// CreateConfigMapOrFail will create a configmap or fail the test if there is an error
+// CreateConfigMapOrFail will create a configmap or fail the test if there is an error.
 func (client *Client) CreateConfigMapOrFail(name, namespace string, data map[string]string) *corev1.ConfigMap {
 	configMap, err := client.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(resources.ConfigMap(name, data))
 	if err != nil {
