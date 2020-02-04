@@ -8,7 +8,8 @@ different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of in the
 the chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
 
 A _channel_ logically receives events on its input domain and forwards them to
-its subscribers. Below is a specification for the generic parts of each
+its subscribers, the _initial event. The channel is able to receive _reply events_
+from a subscriber. Below is a specification for the generic parts of each
 `Channel`.
 
 A typical channel consists of a _Controller_ and a _Dispatcher_ pod.
@@ -166,7 +167,7 @@ Each channel CRD SHOULD have the following fields in `Status`
 
 #### Channel Status
 
-When the channel instance is ready to receive events `status.address.hostname`
+When the channel instance is ready to receive _initial events_ `status.address.hostname`
 and `status.address.url` MUST be populated and `status.addressable` MUST be set
 to `True`.
 
@@ -188,14 +189,14 @@ Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
 The endpoint(s) MUST conform to CloudEvents
 [Version 1.0](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md).
 The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit
-the event with the same version. It MUST support both Binary Content mode and
+the _initial event_ with the same version. It MUST support both Binary Content mode and
 Structured Content mode. The HTTP(S) endpoint MAY be on any port, not just the
 standard 80 and 443. Channels MAY expose other, non-HTTP endpoints in addition
 to HTTP at their discretion (e.g. expose a gRPC endpoint to accept events).
 
 ##### Generic
 
-If a Channel receives an event queueing request and is unable to parse a valid
+If a Channel receives an _initial event_ queueing request and is unable to parse a valid
 CloudEvent, then it MUST reject the request.
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
@@ -206,21 +207,21 @@ The Channel SHOULD sample and write traces to the location specified in
 
 ##### HTTP
 
-Channels MUST reject all HTTP event queueing requests with a method other than
+Channels MUST reject all _initial event_ queueing requests with a method other than
 POST responding with HTTP status code `405 Method Not Supported`. Non-event
 queueing requests (e.g. health checks) are not constrained.
 
-The HTTP event queueing request's URL MUST correspond to a single, unique
+The _initial event_ queueing request's URL MUST correspond to a single, unique
 Channel at any given moment in time. This MAY be done via the host, path, query
 string, or any combination of these. This mapping is handled exclusively by the
 Channel implementation, exposed via the Channel's `status.address`. If an HTTP
 event queueing request's URL does not correspond to an existing Channel, then
 the Channel MUST respond with `404 Not Found`.
 
-The Channel MUST respond with `202 Accepted` if the event queueing request is
+The Channel MUST respond with `202 Accepted` if the _initial event_ queueing request is
 accepted by the server.
 
-If a Channel receives an event queueing request and is unable to parse a valid
+If a Channel receives an _initial event_ queueing request and is unable to parse a valid
 CloudEvent, then it MUST respond with `400 Bad Request`.
 
 #### Output
@@ -231,7 +232,7 @@ the
 Every Channel MUST support sending events via Binary Content Mode HTTP Transport
 Binding.
 
-Channels MUST send events to all subscribers which are marked with a status of
+Channels MUST send _initial events_ to all subscribers which are marked with a status of
 `ready: "True"` in the channel's `status.subscribableStatus.subscribers`. The
 events must be sent to the `subscriberURI` field of
 `spec.subscribable.subscribers`. Each channel implementation will have its own
@@ -243,6 +244,8 @@ attributes, including the data attribute, MUST be received at the subscriber
 identical to how they were received by the Channel. The only exception is the
 [Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md),
 which is expected to change as the span id will be altered at every network hop.
+
+Channels can receive _reply events_ from its subscribers. The guarantees are discussed below.
 
 ##### Retries
 
@@ -256,13 +259,20 @@ not limited to:
 - the time in-between retries
 - the backoff rate
 
+##### Replies
+
+When handling a reply event, the channel must not record the initial delivery as successful until the reply delivery is acknowledged. This guarantees that one of two reply event outcomes can occur:
+
+ - The reply event is delivered successfully
+ - The reply event is not delivered successfully, and the initial event delivery to the consumer will be retried (so the reply event delivery can be attempted again).
+
 #### Metrics
 
 Channels SHOULD expose a variety of metrics, including, but not limited to:
 
-- Number of malformed incoming event queueing events (`400 Bad Request`
+- Number of malformed incoming _initial event_ queueing events (`400 Bad Request`
   responses)
-- Number of accepted incoming event queuing events (`202 Accepted` responses)
+- Number of accepted incoming _initial event_ queuing events (`202 Accepted` responses)
 - Number of egress CloudEvents produced (with the former metric, used to derive
   channel queue size)
 
@@ -274,3 +284,4 @@ disable them if desired.
 - `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
 - `0.13.x release`: Types in the API group `messaging.knative.dev` will be
   promoted from `v1alpha1`to `v1beta1`.
+- `20200204`: added reply section
