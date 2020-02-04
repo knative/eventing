@@ -46,10 +46,9 @@ type KReference struct {
 func (kr *KReference) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 	if kr == nil {
-		errs = errs.Also(apis.ErrMissingField("name"))
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-		errs = errs.Also(apis.ErrMissingField("kind"))
-		return errs
+		return errs.Also(apis.ErrMissingField("name")).
+			Also(apis.ErrMissingField("apiVersion")).
+			Also(apis.ErrMissingField("kind"))
 	}
 	if kr.Name == "" {
 		errs = errs.Also(apis.ErrMissingField("name"))
