@@ -49,9 +49,10 @@ func WithConfigMapLabels(labels metav1.LabelSelector) ConfigMapOption {
 
 func WithConfigMapOwnerReference(ConfigMapPropagation *v1alpha1.ConfigMapPropagation) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
-		cm.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
-			*kmeta.NewControllerRef(ConfigMapPropagation),
+		if cm.ObjectMeta.OwnerReferences == nil {
+			cm.ObjectMeta.OwnerReferences = []metav1.OwnerReference{}
 		}
+		cm.ObjectMeta.OwnerReferences = append(cm.ObjectMeta.OwnerReferences, *kmeta.NewControllerRef(ConfigMapPropagation))
 	}
 }
 
