@@ -113,9 +113,7 @@ func TestFlowsSequence(t *testing.T) {
 	client.CreateFlowsSequenceOrFail(sequence)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// send fake CloudEvent to the Sequence
 	msg := fmt.Sprintf("TestSequence %s", uuid.NewUUID())
@@ -129,14 +127,11 @@ func TestFlowsSequence(t *testing.T) {
 		string(eventDataBytes),
 		cloudevents.WithSource(senderPodName),
 	)
-	if err := client.SendFakeEventToAddressable(
+	client.SendFakeEventToAddressableOrFail(
 		senderPodName,
 		sequenceName,
 		lib.FlowsSequenceTypeMeta,
-		event,
-	); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the sequence %q : %s", sequenceName, err)
-	}
+		event)
 
 	// verify the logger service receives the correct transformed event
 	expectedMsg := msg

@@ -61,9 +61,7 @@ func TestPingSource(t *testing.T) {
 	client.CreatePingSourceOrFail(source)
 
 	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	if err := client.CheckLog(loggerPodName, lib.CheckerContains(data)); err != nil {

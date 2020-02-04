@@ -191,9 +191,7 @@ func setupChannelTracingWithReply(
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// Everything is setup to receive an event. Generate a CloudEvent.
 	senderName := "sender"
@@ -206,13 +204,11 @@ func setupChannelTracingWithReply(
 	)
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
-	sendEvent := client.SendFakeEventToAddressable
+	sendEvent := client.SendFakeEventToAddressableOrFail
 	if tc.IncomingTraceId {
-		sendEvent = client.SendFakeEventWithTracingToAddressable
+		sendEvent = client.SendFakeEventWithTracingToAddressableOrFail
 	}
-	if err := sendEvent(senderName, channelName, channel, event); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
-	}
+	sendEvent(senderName, channelName, channel, event)
 
 	// We expect the following spans:
 	// 0. Artificial root span.

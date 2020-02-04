@@ -45,32 +45,36 @@ func (client *Client) LabelNamespace(labels map[string]string) error {
 	return err
 }
 
-// SendFakeEventToAddressable will send the given event to the given Addressable.
-func (client *Client) SendFakeEventToAddressable(
+// SendFakeEventToAddressableOrFail will send the given event to the given Addressable.
+func (client *Client) SendFakeEventToAddressableOrFail(
 	senderName,
 	addressableName string,
 	typemeta *metav1.TypeMeta,
 	event *cloudevents.CloudEvent,
-) error {
+) {
 	uri, err := client.GetAddressableURI(addressableName, typemeta)
 	if err != nil {
-		return err
+		client.T.Fatalf("Failed to get the URI for %v-%s", typemeta, addressableName)
 	}
-	return client.sendFakeEventToAddress(senderName, uri, event)
+	if err = client.sendFakeEventToAddress(senderName, uri, event); err != nil {
+		client.T.Fatalf("Failed to send event %v to %s: %v", event, uri, err)
+	}
 }
 
-// SendFakeEventWithTracingToAddressable will send the given event with tracing to the given Addressable.
-func (client *Client) SendFakeEventWithTracingToAddressable(
+// SendFakeEventWithTracingToAddressableOrFail will send the given event with tracing to the given Addressable.
+func (client *Client) SendFakeEventWithTracingToAddressableOrFail(
 	senderName,
 	addressableName string,
 	typemeta *metav1.TypeMeta,
 	event *cloudevents.CloudEvent,
-) error {
+) {
 	uri, err := client.GetAddressableURI(addressableName, typemeta)
 	if err != nil {
-		return err
+		client.T.Fatalf("Failed to get the URI for %v-%s", typemeta, addressableName)
 	}
-	return client.sendFakeEventWithTracingToAddress(senderName, uri, event)
+	if err = client.sendFakeEventWithTracingToAddress(senderName, uri, event); err != nil {
+		client.T.Fatalf("Failed to send event %v with tracing to %s: %v", event, uri, err)
+	}
 }
 
 // GetAddressableURI returns the URI of the addressable resource.
@@ -121,36 +125,22 @@ func (client *Client) sendFakeEventWithTracingToAddress(
 	return nil
 }
 
-// WaitForResourceReady waits for the resource to become ready.
+// WaitForResourceReadyOrFail waits for the resource to become ready or fail.
 // To use this function, the given resource must have implemented the Status duck-type.
-func (client *Client) WaitForResourceReady(name string, typemeta *metav1.TypeMeta) error {
+func (client *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMeta) {
 	namespace := client.Namespace
 	metaResource := resources.NewMetaResource(name, namespace, typemeta)
 	if err := duck.WaitForResourceReady(client.Dynamic, metaResource); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (client *Client) WaitForResourceReadyOrFail(name string, typemeta *metav1.TypeMeta) {
-	if err := client.WaitForResourceReady(name, typemeta); err != nil {
 		client.T.Fatalf("Failed to get %v-%s ready: %v", *typemeta, name, err)
 	}
 }
 
-// WaitForResourcesReady waits for resources of the given type in the namespace to become ready.
+// WaitForResourcesReadyOrFail waits for resources of the given type in the namespace to become ready or fail.
 // To use this function, the given resource must have implemented the Status duck-type.
-func (client *Client) WaitForResourcesReady(typemeta *metav1.TypeMeta) error {
+func (client *Client) WaitForResourcesReadyOrFail(typemeta *metav1.TypeMeta) {
 	namespace := client.Namespace
 	metaResourceList := resources.NewMetaResourceList(namespace, typemeta)
 	if err := duck.WaitForResourcesReady(client.Dynamic, metaResourceList); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (client *Client) WaitForResourcesReadyOrFail(typemeta *metav1.TypeMeta) {
-	if err := client.WaitForResourcesReady(typemeta); err != nil {
 		client.T.Fatalf("Failed to get all %v resources ready: %v", *typemeta, err)
 	}
 }

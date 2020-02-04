@@ -146,9 +146,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 
 			// Wait for default broker ready.
-			if err := client.WaitForResourceReady(defaultBrokerName, lib.BrokerTypeMeta); err != nil {
-				t.Fatalf("Error waiting for default broker to become ready: %v", err)
-			}
+			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
 			// Create subscribers.
 			for _, event := range test.eventsToReceive {
@@ -169,9 +167,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 
 			// Wait for all test resources to become ready before sending the events.
-			if err := client.WaitForAllTestResourcesReady(); err != nil {
-				t.Fatalf("Failed to get all test resources ready: %v", err)
-			}
+			client.WaitForAllTestResourcesReadyOrFail()
 
 			// Map to save the expected events per dumper so that we can verify the delivery.
 			expectedEvents := make(map[string][]string)
@@ -190,9 +186,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				)
 				// Create sender pod.
 				senderPodName := name("sender", eventToSend.Type, eventToSend.Source, eventToSend.Extensions)
-				if err := client.SendFakeEventToAddressable(senderPodName, defaultBrokerName, lib.BrokerTypeMeta, cloudEvent); err != nil {
-					t.Fatalf("Error send cloud event to broker: %v", err)
-				}
+				client.SendFakeEventToAddressableOrFail(senderPodName, defaultBrokerName, lib.BrokerTypeMeta, cloudEvent)
 
 				// Check on every dumper whether we should expect this event or not, and add its body
 				// to the expectedEvents/unexpectedEvents maps.

@@ -79,9 +79,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the first channel
 		eventBody := fmt.Sprintf("TestEventTransformation %s", uuid.NewUUID())
@@ -89,9 +87,7 @@ func EventTransformationForSubscriptionTestHelper(t *testing.T,
 			fmt.Sprintf(`{"msg":%q}`, eventBody),
 			cloudevents.WithSource(senderName),
 		)
-		if err := client.SendFakeEventToAddressable(senderName, channelNames[0], &channel, eventToSend); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelNames[0])
-		}
+		client.SendFakeEventToAddressableOrFail(senderName, channelNames[0], &channel, eventToSend)
 
 		// check if the logging service receives the correct number of event messages
 		expectedContentCount := len(subscriptionNames1) * len(subscriptionNames2)

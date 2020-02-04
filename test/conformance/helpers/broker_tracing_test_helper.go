@@ -118,9 +118,7 @@ func setupBrokerTracing(
 	)
 
 	// Wait for all test resources to be ready, so that we can start sending events.
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// Everything is setup to receive an event. Generate a CloudEvent.
 	senderName := "sender"
@@ -134,13 +132,11 @@ func setupBrokerTracing(
 	)
 
 	// Send the CloudEvent (either with or without tracing inside the SendEvents Pod).
-	sendEvent := client.SendFakeEventToAddressable
+	sendEvent := client.SendFakeEventToAddressableOrFail
 	if tc.IncomingTraceId {
-		sendEvent = client.SendFakeEventWithTracingToAddressable
+		sendEvent = client.SendFakeEventWithTracingToAddressableOrFail
 	}
-	if err := sendEvent(senderName, broker.Name, lib.BrokerTypeMeta, event); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the broker %q", broker.Name)
-	}
+	sendEvent(senderName, broker.Name, lib.BrokerTypeMeta, event)
 
 	// TODO Actually determine the cluster's domain, similar to knative.dev/pkg/network/domain.go.
 	domain := "cluster.local"

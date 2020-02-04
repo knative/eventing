@@ -161,9 +161,7 @@ func TestLegacyApiServerSource(t *testing.T) {
 		client.CreateLegacyApiServerSourceOrFail(apiServerSource)
 
 		// wait for all test resources to be ready
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			t.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		helloworldPod := tc.pod(fmt.Sprintf("%s-%s", baseHelloworldPodName, tc.name))
 		client.CreatePodOrFail(helloworldPod)

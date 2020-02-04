@@ -58,7 +58,6 @@ function test_setup() {
   install_test_resources || return 1
 
   # Publish test images.
-  echo ">> Publishing test images"
   $(dirname $0)/upload-test-images.sh e2e || fail_test "Error uploading test images"
 }
 

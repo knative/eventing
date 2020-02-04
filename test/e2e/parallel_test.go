@@ -113,9 +113,7 @@ func TestFlowsParallel(t *testing.T) {
 
 		client.CreateFlowsParallelOrFail(parallel)
 
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			t.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the Parallel
 		msg := fmt.Sprintf("TestFlowParallel %s - ", uuid.NewUUID())
@@ -129,14 +127,11 @@ func TestFlowsParallel(t *testing.T) {
 			string(eventDataBytes),
 			cloudevents.WithSource(senderPodName),
 		)
-		if err := client.SendFakeEventToAddressable(
+		client.SendFakeEventToAddressableOrFail(
 			senderPodName,
 			tc.name,
 			lib.FlowsParallelTypeMeta,
-			event,
-		); err != nil {
-			t.Fatalf("Failed to send fake CloudEvent to the parallel %q : %s", tc.name, err)
-		}
+			event)
 
 		// verify the logger service receives the correct transformed event
 		if err := client.CheckLog(loggerPodName, lib.CheckerContains(tc.expected)); err != nil {
