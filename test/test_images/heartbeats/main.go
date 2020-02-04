@@ -21,11 +21,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 
