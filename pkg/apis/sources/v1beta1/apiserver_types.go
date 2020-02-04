@@ -26,6 +26,7 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:defaulter-gen=true
 
 // ApiServerSource is the Schema for the apiserversources API
 type ApiServerSource struct {
@@ -62,13 +63,6 @@ const (
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ApiServerSourceList contains a list of ApiServerSource
-type ApiServerSourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ApiServerSource `json:"items"`
-}
 
 // ApiServerSourceSpec defines the desired state of ApiServerSource
 type ApiServerSourceSpec struct {
@@ -137,4 +131,13 @@ type GroupVersionResourceKind struct {
 	// Resource of the resource to watch.
 	// +optional
 	Resource *string `json:"resource"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ApiServerSourceList contains a list of ApiServerSource
+type ApiServerSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ApiServerSource `json:"items"`
 }
