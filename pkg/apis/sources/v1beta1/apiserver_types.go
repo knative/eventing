@@ -73,10 +73,10 @@ type ApiServerSourceSpec struct {
 	//   and modifications of the event sent to the sink.
 	duckv1.SourceSpec `json:",inline"`
 
-	// TrackResource is the resource this source will track and send related
+	// Resource is the resource this source will track and send related
 	// lifecycle events from the Kubernetes ApiServer.
-	// +optional
-	TrackResource *GroupVersionResourceKind `json:"resource,omitempty"`
+	// +required
+	Resources []APIVersionKind `json:"resources,omitempty"`
 
 	// LabelSelector filters this source to objects to those resources pass the
 	// label selector.
@@ -84,10 +84,10 @@ type ApiServerSourceSpec struct {
 	// +optional
 	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
 
-	// ResourceOwners is an additional filter to only track resources that are
-	// owned by a subset of controllers.
+	// ResourceOwner is an additional filter to only track resources that are
+	// owned by a specific resource type.
 	// +optional
-	ResourceOwners []GroupVersionResourceKind `json:"ownedBy,omitempty"`
+	ResourceOwner *APIVersionKind `json:"owner,omitempty"`
 
 	// EventMode controls the format of the event.
 	// `Reference` sends a dataref event type for the resource under watch.
@@ -109,28 +109,16 @@ type ApiServerSourceStatus struct {
 	duckv1.SourceStatus `json:",inline"`
 }
 
-// GroupVersionResourceKind holds the the various ways to target resources inside of Kubernetes.
-type GroupVersionResourceKind struct {
+// APIVersionKind is an APIVersion and Kind tuple.
+type APIVersionKind struct {
 	// APIVersion - the API version of the resource to watch.
 	// +optional
 	APIVersion *string `json:"apiVersion"`
-
-	// Group - the API group of the resource to watch.
-	// +optional
-	Group *string `json:"group"`
-
-	// Version - the API version of the resource to watch.
-	// +optional
-	Version *string `json:"version"`
 
 	// Kind of the resource to watch.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	// +optional
 	Kind *string `json:"kind"`
-
-	// Resource of the resource to watch.
-	// +optional
-	Resource *string `json:"resource"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
