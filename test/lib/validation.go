@@ -181,16 +181,12 @@ func (client *Client) CheckConfigMapsEqual(originalNamespace, cmp string, names 
 		for _, name := range names {
 			// Get original configmap
 			origianlCM, err := client.Kube.Kube.CoreV1().ConfigMaps(originalNamespace).Get(name, metav1.GetOptions{})
-			if k8serrors.IsNotFound(err) {
-				return false, nil
-			} else if err != nil {
+			if err != nil {
 				return false, err
 			}
 			// Get copy configmap
 			copyCM, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Get(cmp+"-"+name, metav1.GetOptions{})
-			if k8serrors.IsNotFound(err) {
-				return false, nil
-			} else if err != nil {
+			if err != nil {
 				return false, err
 			}
 			if !reflect.DeepEqual(origianlCM.Data, copyCM.Data) {

@@ -58,10 +58,12 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 		t.Fatalf("Failed to check copy configamp contains the same data as original configmap: %v", err)
 	}
 
-	payload := []patchUInt32Value{{
-		Op:   "remove",
-		Path: "/data/firstdata",
-	}}
+	payload := []struct {
+		Op   string `json:"op"`
+		Path string `json:"path"`
+	}{
+		"remove", "/data/firstdata",
+	}
 	payloadBytes, _ := json.Marshal(payload)
 
 	// Remove one data key from copy configmap testingCM1.
@@ -81,9 +83,4 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 	if err := client.CheckConfigMapsEqual(eventingNamespace, defaultCMP, testingCM1); err != nil {
 		t.Fatalf("Failed to check if copy configmap will update after original configmap changes: %v", err)
 	}
-}
-
-type patchUInt32Value struct {
-	Op   string `json:"op"`
-	Path string `json:"path"`
 }
