@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"knative.dev/pkg/configmap"
 	"reflect"
 	"time"
 
@@ -39,6 +40,7 @@ import (
 	"knative.dev/pkg/controller"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	informerv1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker/config"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -62,16 +64,19 @@ const (
 
 type Reconciler struct {
 	*reconciler.Base
+	impl *controller.Impl
 
 	// listers index properties about resources
 	brokerLister       eventinglisters.BrokerLister
+	brokerInformer     informerv1alpha1.BrokerInformer
 	serviceLister      corev1listers.ServiceLister
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister messaginglisters.SubscriptionLister
 
 	channelableTracker duck.ListableTracker
 
-	configStore               *config.Store
+	// configStores is a map from configmap namespaced name to a corresponding store
+	configStores              map[string]*config.Store
 	ingressImage              string
 	ingressServiceAccountName string
 	filterImage               string
@@ -129,6 +134,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return reconcileErr
 }
 
+func (r *Reconciler) trackConfigMap(ns, cfg string) {
+	key := ns + "/" + cfg
+	if _, ok := r.configStores[key]; ok {
+		// Nothing to do if the configmap is already being tracked.
+		return
+	}
+	
+	// Only enqueue the broker CRs that refers to the given configmap.
+	relevantBroker := func(item interface{}) bool {
+		broker := item.(*v1alpha1.Broker)
+		return broker.Name == ns && broker.Spec.Config == cfg
+	}
+	resyncBrokers := configmap.TypeFilter(config.BrokerConfig{})(func(string, interface{}) {
+		r.impl.FilteredGlobalResync(relevantBroker, r.brokerInformer.Informer())
+	})
+	// Watch for configmap changes and trigger broker reconciliation by enqueuing brokers.
+	configStore := config.NewStore(r.Logger, resyncBrokers)
+	configStore.WatchConfigs(r.Base.ConfigMapWatcher)
+	r.configStores[key] = configStore
+}
+
 func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
@@ -148,6 +174,9 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		// Everything is cleaned up by the garbage collector.
 		return nil
 	}
+
+	// Start tracking this broker's configmap
+	r.trackConfigMap(b.Namespace, b.Spec.Config)
 
 	if b.Spec.ChannelTemplate == nil {
 		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
@@ -269,7 +298,7 @@ func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.
 		Broker:             b,
 		Image:              r.filterImage,
 		ServiceAccountName: r.filterServiceAccountName,
-		FilterConfig:       r.configStore.GetConfig().FilterConfig,
+		FilterConfig:       r.configStores[b.Namespace + "/" + b.Spec.Config].GetConfig().FilterConfig,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }
@@ -401,7 +430,7 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
 		ChannelAddress:     c.Status.Address.GetURL().Host,
-		IngressConfig:      r.configStore.GetConfig().IngressConfig,
+		IngressConfig:      r.configStores[b.Namespace + "/" + b.Spec.Config].GetConfig().IngressConfig,
 	})
 	return r.reconcileDeployment(ctx, expected)
 }

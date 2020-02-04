@@ -29,7 +29,6 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	"knative.dev/eventing/pkg/broker/config"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
@@ -65,13 +64,14 @@ func NewController(
 	}
 
 	deploymentInformer := deploymentinformer.Get(ctx)
-	brokerInformer := brokerinformer.Get(ctx)
+	informer := brokerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
 
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
-		brokerLister:              brokerInformer.Lister(),
+		brokerLister:              informer.Lister(),
+		brokerInformer:            informer,
 		serviceLister:             serviceInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
@@ -82,22 +82,13 @@ func NewController(
 	}
 
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
-
-	// Nothing to filer, enqueue all brokers if configmap updates.
-	noopFilter := func(interface{}) bool { return true }
-	resyncBrokers := configmap.TypeFilter(config.BrokerConfig{})(func(string, interface{}) {
-		impl.FilteredGlobalResync(noopFilter, brokerInformer.Informer())
-	})
-	// Watch for configmap changes and trigger broker reconciliation by enqueuing brokers.
-	configStore := config.NewStore(r.Logger, resyncBrokers)
-	configStore.WatchConfigs(cmw)
-	r.configStore = configStore
+	r.impl = impl
 
 	r.Logger.Info("Setting up event handlers")
 
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	informer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
