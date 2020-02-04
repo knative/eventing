@@ -8,7 +8,7 @@ different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of in the
 the chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
 
 A _channel_ logically receives events on its input domain and forwards them to
-its subscribers, the _initial event. The channel is able to receive _reply events_
+its subscribers, the _initial_ event. The channel is able to receive _reply events_
 from a subscriber. Below is a specification for the generic parts of each
 `Channel`.
 
