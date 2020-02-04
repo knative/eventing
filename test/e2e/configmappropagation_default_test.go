@@ -62,7 +62,7 @@ func TestDefaultConfigMapPropagation(t *testing.T) {
 		Op   string `json:"op"`
 		Path string `json:"path"`
 	}{
-		"remove", "/data/firstdata",
+		{"remove", "/data/firstdata"},
 	}
 	payloadBytes, _ := json.Marshal(payload)
 
