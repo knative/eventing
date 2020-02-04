@@ -2,6 +2,10 @@
 
 [![GoDoc](https://godoc.org/github.com/knative/eventing?status.svg)](https://godoc.org/github.com/knative/eventing)
 [![Go Report Card](https://goreportcard.com/badge/knative/eventing)](https://goreportcard.com/report/knative/eventing)
+[![Releases](https://img.shields.io/github/release-pre/knative/eventing.svg)](https://github.com/knative/eventing/releases)
+[![LICENSE](https://img.shields.io/github/license/knative/eventing.svg)](https://github.com/knative/eventing/blob/master/LICENSE)
+[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://knative.slack.com)
+
 
 This repository contains a work-in-progress eventing system that is designed to
 address a common need for cloud native development:
@@ -28,8 +32,6 @@ For complete Knative Eventing documentation, see
 If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
 [Knative WORKING-GROUPS.md](https://www.knative.dev/contributing/working-groups/#eventing).
-Please read the [roadmap](./docs/planning/roadmap.md) to see what we're working
-on right now and what is planed for upcoming releases.
 
 Interested users should join
 [knative-users](https://groups.google.com/forum/#!forum/knative-users),
