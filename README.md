@@ -32,8 +32,6 @@ For complete Knative Eventing documentation, see
 If you are interested in contributing, see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [DEVELOPMENT.md](./DEVELOPMENT.md) and
 [Knative WORKING-GROUPS.md](https://www.knative.dev/contributing/working-groups/#eventing).
-Please read the [roadmap](./docs/planning/roadmap.md) to see what we're working
-on right now and what is planed for upcoming releases.
 
 Interested users should join
 [knative-users](https://groups.google.com/forum/#!forum/knative-users),
