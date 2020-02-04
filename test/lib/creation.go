@@ -114,6 +114,17 @@ func (client *Client) CreateConfigMapPropagationOrFail(name string) *configsv1al
 	return configMapPropagation
 }
 
+// CreateConfigMapOrFail will create a configmap or fail the test if there is an error.
+func (client *Client) CreateConfigMapOrFail(name, namespace string, data map[string]string) *corev1.ConfigMap {
+	client.T.Logf("Creating configmap %s", name)
+	configMap, err := client.Kube.Kube.CoreV1().ConfigMaps(namespace).Create(resources.ConfigMap(name, data))
+	if err != nil {
+		client.T.Fatalf("Failed to create configmap %s: %v", name, err)
+	}
+	client.Tracker.Add(coreAPIGroup, coreAPIVersion, "configmaps", namespace, name)
+	return configMap
+}
+
 // CreateBrokerOrFail will create a Broker or fail the test if there is an error.
 func (client *Client) CreateBrokerOrFail(name string, options ...resources.BrokerOption) *v1alpha1.Broker {
 	namespace := client.Namespace

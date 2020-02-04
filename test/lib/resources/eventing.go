@@ -142,7 +142,7 @@ func WithDeliveryForBroker(delivery *eventingduckv1alpha1.DeliverySpec) BrokerOp
 	}
 }
 
-// ConfigMapPropagation returns a ConfigMapPropagation
+// ConfigMapPropagation returns a ConfigMapPropagation.
 func ConfigMapPropagation(name, namespace string) *configsv1alpha1.ConfigMapPropagation {
 	return &configsv1alpha1.ConfigMapPropagation{
 		ObjectMeta: metav1.ObjectMeta{
@@ -155,6 +155,22 @@ func ConfigMapPropagation(name, namespace string) *configsv1alpha1.ConfigMapProp
 				MatchLabels: resources.ConfigMapPropagationOwnedLabels(),
 			},
 		},
+	}
+}
+
+// ConfigMap returns a ConfigMap.
+func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				// Filter label for a configmap being picked to be propagated by current configmappropagation.
+				resources.CmpDefaultLabelKey: resources.CmpDefaultLabelValue,
+				// Default label for a configmap being eligible to be propagated.
+				"knative.dev/config-propagation": "original",
+			},
+		},
+		Data: data,
 	}
 }
 
