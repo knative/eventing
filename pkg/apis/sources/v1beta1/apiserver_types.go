@@ -79,20 +79,28 @@ type ApiServerSourceSpec struct {
 	//   and modifications of the event sent to the sink.
 	duckv1.SourceSpec `json:",inline"`
 
-	// WatchResources is the list of resources to watch.
-	WatchResources []ApiServerResource `json:"watch"`
-
-	// ServiceAccountName is the name of the ServiceAccount to use to run the
-	// receive adapter for this source.
+	// TrackResource is the resource this source will track and send related
+	// lifecycle events from the Kubernetes ApiServer.
 	// +optional
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	TrackResource *GroupVersionResourceKind `json:"resource,omitempty"`
 
-	// Mode is the mode the receive adapter controller runs under: Reference or Resource.
-	// `Reference` sends only the reference to the resource that had a lifecycle event.
+	// LabelSelector filters this source to objects to those resources pass the
+	// label selector.
+	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
+
+	// ResourceOwners is an additional filter to only track resources that are
+	// owned by a subset of controllers.
+	// +optional
+	ResourceOwners []GroupVersionResourceKind `json:"ownedBy,omitempty"`
+
+	// EventMode controls the format of the event.
+	// `Reference` sends a dataref event type for the resource under watch.
 	// `Resource` send the full resource lifecycle event.
 	// Defaults to `Reference`
 	// +optional
-	Mode string `json:"mode,omitempty"`
+	EventMode string `json:"mode,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource
@@ -107,43 +115,26 @@ type ApiServerSourceStatus struct {
 	duckv1.SourceStatus `json:",inline"`
 }
 
-// ApiServerSelectableKinds defines the resource to watch
-type ApiServerResource struct {
-	// API version of the resource to watch.
-	APIVersion string `json:"apiVersion"`
-
-	// Kind of the resource to watch.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-	Kind string `json:"kind"`
-
-	// LabelSelector filters this source to objects to those resources pass the
-	// label selector.
-	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
-	// +optional
-	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
-
-	// +optional
-	ResourceOwner ApiServerResourceOwner `json:"owner,omitempty"`
-}
-
-type ApiServerResourceOwner struct {
-	// RestrictOwner restricts this source to objects with a controlling
-	// owner reference of the specified apiVersion and kind.
-	// +optional
-	RestrictOwner *APIVersionKind `json:"match,omitempty"`
-
-	// WatchOwner - if true, send an event referencing the object controlling
-	// the resource.
-	// +optional
-	WatchOwner bool `json:"watch"`
-}
-
-// APIVersionKind holds the APIVersion and Kind for a Kubernetes resource.
-type APIVersionKind struct {
+// GroupVersionResourceKind holds the the various ways to target resources inside of Kubernetes.
+type GroupVersionResourceKind struct {
 	// APIVersion - the API version of the resource to watch.
-	APIVersion string `json:"apiVersion"`
+	// +optional
+	APIVersion *string `json:"apiVersion"`
+
+	// Group - the API group of the resource to watch.
+	// +optional
+	Group *string `json:"group"`
+
+	// Version - the API version of the resource to watch.
+	// +optional
+	Version *string `json:"version"`
 
 	// Kind of the resource to watch.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-	Kind string `json:"kind"`
+	// +optional
+	Kind *string `json:"kind"`
+
+	// Resource of the resource to watch.
+	// +optional
+	Resource *string `json:"resource"`
 }
