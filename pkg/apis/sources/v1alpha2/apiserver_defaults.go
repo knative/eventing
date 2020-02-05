@@ -14,16 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1alpha2
 
 import (
 	"context"
 )
 
-func (s *PingSource) SetDefaults(ctx context.Context) {
+func (s *ApiServerSource) SetDefaults(ctx context.Context) {
 	s.Spec.SetDefaults(ctx)
 }
 
-func (ss *PingSourceSpec) SetDefaults(ctx context.Context) {
+func (ss *ApiServerSourceSpec) SetDefaults(ctx context.Context) {
 	// TODO anything?
 }

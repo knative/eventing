@@ -14,21 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1alpha2
 
 import (
 	"context"
 )
 
-// SetDefaults implements apis.Defaultable
-func (fb *SinkBinding) SetDefaults(ctx context.Context) {
-	if fb.Spec.Subject.Namespace == "" {
-		// Default the subject's namespace to our namespace.
-		fb.Spec.Subject.Namespace = fb.Namespace
-	}
+func (s *PingSource) SetDefaults(ctx context.Context) {
+	s.Spec.SetDefaults(ctx)
+}
 
-	if fb.Spec.Sink.Ref != nil && fb.Spec.Sink.Ref.Namespace == "" {
-		// Default the sink's namespace to our namespace.
-		fb.Spec.Sink.Ref.Namespace = fb.Namespace
-	}
+func (ss *PingSourceSpec) SetDefaults(ctx context.Context) {
+	// TODO anything?
 }

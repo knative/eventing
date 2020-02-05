@@ -14,31 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1alpha2
 
 import (
 	"context"
 	"testing"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
-func TestAPIServerValidation(t *testing.T) {
+func TestPingSourceValidation(t *testing.T) {
 	tests := []struct {
 		name string
-		spec ApiServerSourceSpec
+		spec PingSourceSpec
 		want *apis.FieldError
 	}{{
 		name: "valid spec",
-		spec: ApiServerSourceSpec{
-			Mode: "Resource",
-			Resources: []ApiServerResource{
-				{},
-			},
-			Sink: &duckv1beta1.Destination{
+		spec: PingSourceSpec{
+			Schedule: "*/2 * * * *",
+			Sink: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
@@ -49,11 +47,8 @@ func TestAPIServerValidation(t *testing.T) {
 		want: nil,
 	}, {
 		name: "empty sink",
-		spec: ApiServerSourceSpec{
-			Mode: "Resource",
-			Resources: []ApiServerResource{
-				{},
-			},
+		spec: PingSourceSpec{
+			Schedule: "*/2 * * * *",
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -62,13 +57,10 @@ func TestAPIServerValidation(t *testing.T) {
 			return errs
 		}(),
 	}, {
-		name: "invalid mode",
-		spec: ApiServerSourceSpec{
-			Mode: "Test",
-			Resources: []ApiServerResource{
-				{},
-			},
-			Sink: &duckv1beta1.Destination{
+		name: "invalid schedule",
+		spec: PingSourceSpec{
+			Schedule: "2",
+			Sink: &duckv1.Destination{
 				Ref: &corev1.ObjectReference{
 					APIVersion: "v1alpha1",
 					Kind:       "broker",
@@ -78,10 +70,7 @@ func TestAPIServerValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := &apis.FieldError{
-				Message: "Mode is not valid",
-				Paths:   []string{"mode"},
-			}
+			fe := apis.ErrInvalidValue("2", "schedule")
 			errs = errs.Also(fe)
 			return errs
 		}(),
@@ -91,7 +80,7 @@ func TestAPIServerValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.spec.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("APIServerSourceSpec.Validate (-want, +got) = %v", diff)
+				t.Errorf("ContainerSourceSpec.Validate (-want, +got) = %v", diff)
 			}
 		})
 	}

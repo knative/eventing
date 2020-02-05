@@ -14,30 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1alpha2
 
 import (
 	"context"
-	"testing"
-
-	"knative.dev/pkg/apis"
 )
 
-func TestGetSinkURI(t *testing.T) {
-	ctx := context.Background()
-
-	if uri := GetSinkURI(ctx); uri != nil {
-		t.Errorf("GetSinkURI() = %v, wanted nil", uri)
+// SetDefaults implements apis.Defaultable
+func (fb *SinkBinding) SetDefaults(ctx context.Context) {
+	if fb.Spec.Subject.Namespace == "" {
+		// Default the subject's namespace to our namespace.
+		fb.Spec.Subject.Namespace = fb.Namespace
 	}
 
-	want := &apis.URL{
-		Scheme: "https",
-		Host:   "knobots.io",
-		Path:   "/omg/a/path",
-	}
-	ctx = WithSinkURI(ctx, want)
-
-	if got := GetSinkURI(ctx); got != want {
-		t.Errorf("GetSinkURI() = %v, wanted %v", got, want)
+	if fb.Spec.Sink.Ref != nil && fb.Spec.Sink.Ref.Namespace == "" {
+		// Default the sink's namespace to our namespace.
+		fb.Spec.Sink.Ref.Namespace = fb.Namespace
 	}
 }

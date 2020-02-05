@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1alpha2
 
 import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -28,13 +29,13 @@ import (
 	"knative.dev/pkg/tracker"
 )
 
-func TestSinkBindingValidation(t *testing.T) {
+func TestSinkBindingDefaulting(t *testing.T) {
 	tests := []struct {
 		name string
 		in   *SinkBinding
-		want *apis.FieldError
+		want *SinkBinding
 	}{{
-		name: "missing subject namespace",
+		name: "namespace is defaulted",
 		in: &SinkBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "matt",
@@ -59,9 +60,36 @@ func TestSinkBindingValidation(t *testing.T) {
 				},
 			},
 		},
-		want: apis.ErrMissingField("spec.subject.namespace"),
+		want: &SinkBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "matt",
+				Namespace: "moore",
+			},
+			Spec: SinkBindingSpec{
+				BindingSpec: duckv1alpha1.BindingSpec{
+					Subject: tracker.Reference{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+						Name:       "jeanne",
+						// This is filled in by defaulting.
+						Namespace: "moore",
+					},
+				},
+				SourceSpec: duckv1.SourceSpec{
+					Sink: duckv1.Destination{
+						Ref: &corev1.ObjectReference{
+							APIVersion: "serving.knative.dev/v1",
+							Kind:       "Service",
+							Name:       "gemma",
+							// This is filled in by defaulting.
+							Namespace: "moore",
+						},
+					},
+				},
+			},
+		},
 	}, {
-		name: "invalid subject namespace",
+		name: "no ref, given namespace",
 		in: &SinkBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "matt",
@@ -78,19 +106,15 @@ func TestSinkBindingValidation(t *testing.T) {
 				},
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
-						Ref: &corev1.ObjectReference{
-							APIVersion: "serving.knative.dev/v1",
-							Kind:       "Service",
-							Name:       "gemma",
+						URI: &apis.URL{
+							Scheme: "http",
+							Host:   "moore.dev",
 						},
 					},
 				},
 			},
 		},
-		want: apis.ErrInvalidValue("lorefice", "spec.subject.namespace"),
-	}, {
-		name: "missing sink information",
-		in: &SinkBinding{
+		want: &SinkBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "matt",
 				Namespace: "moore",
@@ -101,53 +125,27 @@ func TestSinkBindingValidation(t *testing.T) {
 						APIVersion: "apps/v1",
 						Kind:       "Deployment",
 						Name:       "jeanne",
-						Namespace:  "moore",
-					},
-				},
-				SourceSpec: duckv1.SourceSpec{
-					Sink: duckv1.Destination{},
-				},
-			},
-		},
-		want: apis.ErrGeneric("expected at least one, got none", "spec.sink.ref", "spec.sink.uri"),
-	}, {
-		name: "bad sink namespace",
-		in: &SinkBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "matt",
-				Namespace: "moore",
-			},
-			Spec: SinkBindingSpec{
-				BindingSpec: duckv1alpha1.BindingSpec{
-					Subject: tracker.Reference{
-						APIVersion: "apps/v1",
-						Kind:       "Deployment",
-						Name:       "jeanne",
-						Namespace:  "moore",
+						Namespace:  "lorefice",
 					},
 				},
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
-						Ref: &corev1.ObjectReference{
-							APIVersion: "serving.knative.dev/v1",
-							Kind:       "Service",
-							Name:       "gemma",
-							Namespace:  "lorefice",
+						URI: &apis.URL{
+							Scheme: "http",
+							Host:   "moore.dev",
 						},
 					},
 				},
 			},
 		},
-		want: apis.ErrInvalidValue("lorefice", "spec.sink.ref.namespace"),
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.in.Validate(context.Background())
-			if (test.want != nil) != (got != nil) {
-				t.Errorf("Validation() = %v, wanted %v", got, test.want)
-			} else if test.want != nil && test.want.Error() != got.Error() {
-				t.Errorf("Validation() = %v, wanted %v", got, test.want)
+			got := test.in
+			got.SetDefaults(context.Background())
+			if !cmp.Equal(test.want, got) {
+				t.Errorf("SetDefaults (-want, +got) = %v", cmp.Diff(test.want, got))
 			}
 		})
 	}

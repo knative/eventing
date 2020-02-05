@@ -14,16 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1alpha2
 
 import (
 	"context"
+	"testing"
+
+	"knative.dev/pkg/apis"
 )
 
-func (s *ApiServerSource) SetDefaults(ctx context.Context) {
-	s.Spec.SetDefaults(ctx)
-}
+func TestGetSinkURI(t *testing.T) {
+	ctx := context.Background()
 
-func (ss *ApiServerSourceSpec) SetDefaults(ctx context.Context) {
-	// TODO anything?
+	if uri := GetSinkURI(ctx); uri != nil {
+		t.Errorf("GetSinkURI() = %v, wanted nil", uri)
+	}
+
+	want := &apis.URL{
+		Scheme: "https",
+		Host:   "knobots.io",
+		Path:   "/omg/a/path",
+	}
+	ctx = WithSinkURI(ctx, want)
+
+	if got := GetSinkURI(ctx); got != want {
+		t.Errorf("GetSinkURI() = %v, wanted %v", got, want)
+	}
 }
