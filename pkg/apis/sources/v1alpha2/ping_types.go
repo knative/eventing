@@ -60,19 +60,11 @@ type PingSourceSpec struct {
 	// +optional
 	Schedule string `json:"schedule"`
 
-	// DataContentType defines how ping should mark the content type of data in
-	// the outbound ping event.
+	// JsonData is json encoded data used as the body of the event posted to
+	// the sink. Default is empty. If set, datacontenttype will also be set
+	// to "application/json".
 	// +optional
-	DataContentType string `json:"dataContentType,omitempty"`
-
-	// Data is the data posted to the target function.
-	// +optional
-	Data string `json:"data,omitempty"`
-
-	// ServiceAccountName is the name of the ServiceAccount that will be used
-	// to run the each Job to send a Ping. Defaults to `default`.
-	// +optional
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	JsonData string `json:"jsonData,omitempty"`
 }
 
 // PingSourceStatus defines the observed state of PingSource.

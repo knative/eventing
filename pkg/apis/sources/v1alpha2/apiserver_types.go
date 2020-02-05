@@ -85,7 +85,8 @@ type ApiServerSourceSpec struct {
 	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
 
 	// ResourceOwner is an additional filter to only track resources that are
-	// owned by a specific resource type.
+	// owned by a specific resource type. If ResourceOwner matches Resources[n]
+	// then Resources[n] is allowed to pass the ResourceOwner filter.
 	// +optional
 	ResourceOwner *APIVersionKind `json:"owner,omitempty"`
 
