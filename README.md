@@ -6,7 +6,6 @@
 [![LICENSE](https://img.shields.io/github/license/knative/eventing.svg)](https://github.com/knative/eventing/blob/master/LICENSE)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://knative.slack.com)
 
-
 This repository contains a work-in-progress eventing system that is designed to
 address a common need for cloud native development:
 
