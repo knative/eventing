@@ -34,6 +34,10 @@ const (
 	traceparentAttribute = "traceparent"
 )
 
+var (
+	traceparent_regexp = regexp.MustCompile("^00-([a-f0-9]{32})-([a-f0-9]{16})-([a-f0-9]{2})$")
+)
+
 // AddTraceparentAttributeFromContext returns a CloudEvent that is identical to the input event,
 // with the traceparent CloudEvents extension attribute added. The value for that attribute is the
 // Span stored in the context.
@@ -85,8 +89,7 @@ func AddSpanFromTraceparentAttribute(ctx context.Context, name string, event clo
 }
 
 func parseTraceparent(tp string) (trace.SpanContext, error) {
-	re := regexp.MustCompile("^00-([a-f0-9]{32})-([a-f0-9]{16})-([a-f0-9]{2})$")
-	m := re.FindStringSubmatch(tp)
+	m := traceparent_regexp.FindStringSubmatch(tp)
 	if len(m) == 0 {
 		return trace.SpanContext{}, fmt.Errorf("could not parse traceparent: %q", tp)
 	}
