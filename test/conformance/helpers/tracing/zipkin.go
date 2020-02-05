@@ -23,6 +23,7 @@ import (
 
 	"knative.dev/pkg/test/zipkin"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
 )
 
@@ -47,10 +48,18 @@ var setTracingConfigOnce = sync.Once{}
 // TODO Do we need a tear down method to revert the config map to its original state?
 func setTracingConfigToZipkin(t *testing.T, client *lib.Client) {
 	setTracingConfigOnce.Do(func() {
-		err := client.Kube.UpdateConfigMap("knative-eventing", "config-tracing", map[string]string{
-			"backend":         "zipkin",
-			"zipkin-endpoint": "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans",
-		})
+		cmi := client.Kube.GetConfigMap("knative-eventing")
+		cm, err := cmi.Get("config-tracing", metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Unable to get the ConfigMap: %v", err)
+		}
+		if _, ok := cm.Data["backend"]; !ok {
+			cm.Data["backend"] = "zipkin"
+		}
+		if _, ok := cm.Data["zipkin-endpoint"]; !ok {
+			cm.Data["zipkin-endpoint"] = "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
+		}
+		_, err = cmi.Update(cm)
 		if err != nil {
 			t.Fatalf("Unable to set the ConfigMap: %v", err)
 		}
