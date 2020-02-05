@@ -30,5 +30,5 @@ func (source *Trigger) ConvertUp(ctx context.Context, sink apis.Convertible) err
 
 // ConvertDown implements apis.Convertible
 func (sink *Trigger) ConvertDown(ctx context.Context, source apis.Convertible) error {
-	return fmt.Errorf("v1 is the highest known version, got: %T", source)
+	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
 }
