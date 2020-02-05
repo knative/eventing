@@ -19,7 +19,6 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -72,7 +71,7 @@ func (ts *TriggerStatus) InitializeConditions() {
 	triggerCondSet.Manage(ts).InitializeConditions()
 }
 
-func (ts *TriggerStatus) PropagateBrokerStatus(bs *eventingv1alpha1.BrokerStatus) {
+func (ts *TriggerStatus) PropagateBrokerStatus(bs *BrokerStatus) {
 	bc := bs.GetTopLevelCondition()
 	if bc == nil {
 		ts.MarkBrokerNotConfigured()

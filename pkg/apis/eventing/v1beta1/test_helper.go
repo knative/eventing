@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -65,12 +64,9 @@ func (testHelper) ReadyChannelStatus() *duckv1alpha1.ChannelableStatus {
 	return cs
 }
 
-func (t testHelper) ReadyBrokerStatus() *eventingv1alpha1.BrokerStatus {
-	bs := &eventingv1alpha1.BrokerStatus{}
-	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
-	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
-	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
+func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
+	bs := &BrokerStatus{}
+	bs.SetAddress(apis.HTTP("example.com"))
 	return bs
 }
 
@@ -86,17 +82,13 @@ func (t testHelper) AvailableDeployment() *v1.Deployment {
 	return d
 }
 
-func (t testHelper) UnknownBrokerStatus() *eventingv1alpha1.BrokerStatus {
-	bs := &eventingv1alpha1.BrokerStatus{}
-	bs.InitializeConditions()
+func (t testHelper) UnknownBrokerStatus() *BrokerStatus {
+	bs := &BrokerStatus{}
 	return bs
 }
 
-func (t testHelper) FalseBrokerStatus() *eventingv1alpha1.BrokerStatus {
-	bs := &eventingv1alpha1.BrokerStatus{}
-	bs.MarkIngressFailed("DeploymentUnavailable", "The Deployment is unavailable.")
-	bs.MarkTriggerChannelFailed("ChannelNotReady", "trigger Channel is not ready: not addressalbe")
-	bs.MarkFilterFailed("DeploymentUnavailable", "The Deployment is unavailable.")
+func (t testHelper) FalseBrokerStatus() *BrokerStatus {
+	bs := &BrokerStatus{}
 	bs.SetAddress(nil)
 	return bs
 }

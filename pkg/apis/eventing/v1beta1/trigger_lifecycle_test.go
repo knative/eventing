@@ -19,7 +19,6 @@ package v1beta1
 import (
 	"testing"
 
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
@@ -234,7 +233,7 @@ func TestTriggerInitializeConditions(t *testing.T) {
 func TestTriggerConditionStatus(t *testing.T) {
 	tests := []struct {
 		name                        string
-		brokerStatus                *eventingv1alpha1.BrokerStatus
+		brokerStatus                *BrokerStatus
 		markKubernetesServiceExists bool
 		markVirtualServiceExists    bool
 		subscriptionCondition       *apis.Condition
