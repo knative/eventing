@@ -33,7 +33,9 @@ func (source *Trigger) ConvertUp(ctx context.Context, obj apis.Convertible) erro
 		sink.Spec.Broker = source.Spec.Broker
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		if source.Spec.Filter != nil {
-			sink.Spec.Filter = &v1beta1.TriggerFilter{}
+			sink.Spec.Filter = &v1beta1.TriggerFilter{
+				Attributes: make(v1beta1.TriggerFilterAttributes, 0),
+			}
 			if source.Spec.Filter.Attributes != nil {
 				for k, v := range *source.Spec.Filter.Attributes {
 					sink.Spec.Filter.Attributes[k] = v
@@ -62,10 +64,12 @@ func (sink *Trigger) ConvertDown(ctx context.Context, obj apis.Convertible) erro
 		sink.Spec.Broker = source.Spec.Broker
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		if source.Spec.Filter != nil {
-			sink.Spec.Filter = &TriggerFilter{}
-			tfa := TriggerFilterAttributes{}
+			attributes := TriggerFilterAttributes{}
 			for k, v := range source.Spec.Filter.Attributes {
-				tfa[k] = v
+				attributes[k] = v
+			}
+			sink.Spec.Filter = &TriggerFilter{
+				Attributes: &attributes,
 			}
 		}
 
