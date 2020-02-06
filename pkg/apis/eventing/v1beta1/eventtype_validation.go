@@ -45,6 +45,7 @@ func (ets *EventTypeSpec) Validate(ctx context.Context) *apis.FieldError {
 		errs = errs.Also(fe)
 	}
 	// TODO validate Schema is a valid URI.
+	// There is no validation of the SchemaData, it is application specific data.
 	return errs
 }
 
