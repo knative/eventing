@@ -298,20 +298,8 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 			//  OwnerReference will be removed when the knative.dev/config-propagation:copy label is not set in copy configmap
 			//  so that this copy configmap will not be deleted if cmp is deleted.
 			expected = current.DeepCopy()
-			// Delete the CMP owner reference, and keep all other owner references (if any)
-			if len(expected.OwnerReferences) > 0 {
-				index := -1
-				for i, owner := range expected.OwnerReferences {
-					if owner.UID == cmp.UID {
-						index = i
-						break
-					}
-				}
-				if index != -1 {
-					expected.OwnerReferences[len(expected.OwnerReferences)-1], expected.OwnerReferences[index] = expected.OwnerReferences[index], expected.OwnerReferences[len(expected.OwnerReferences)-1]
-					expected.OwnerReferences = expected.OwnerReferences[:len(expected.OwnerReferences)-1]
-				}
-			}
+			// Delete the CMP owner reference, and keep all other owner references (if any).
+			expected.OwnerReferences = r.removeOwnerReference(expected.OwnerReferences, cmp.UID)
 			// It will return false for the create/update action is not successful, due to removed copy label.
 			// But it is not an error for ConfigMapPropagation for not propagating successfully.
 			succeed = false
@@ -353,4 +341,15 @@ func (r *Reconciler) contains(name string, list []*corev1.ConfigMap) (*corev1.Co
 		}
 	}
 	return nil, false
+}
+
+// removeOwnerReference removes the target ownerReference and returns a new slice of ownerReferences.
+func (r *Reconciler) removeOwnerReference(ownerReferences []metav1.OwnerReference, uid types.UID) []metav1.OwnerReference {
+	var expected []metav1.OwnerReference
+	for _, owner := range ownerReferences {
+		if owner.UID != uid {
+			expected = append(expected, *owner.DeepCopy())
+		}
+	}
+	return expected
 }

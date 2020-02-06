@@ -405,6 +405,7 @@ func TestAllCase(t *testing.T) {
 				),
 				NewConfigMapPropagation("default", currentNS,
 					WithInitConfigMapPropagationConditions,
+					WithConfigMapPropagationUID("1234"),
 				),
 				NewConfigMap(originalConfigMapName, originalNS,
 					WithConfigMapLabels(originalSelector),
@@ -417,7 +418,7 @@ func TestAllCase(t *testing.T) {
 						WithInitConfigMapPropagationConditions,
 						WithConfigMapPropagationSelector(selector),
 					)),
-					WithConfigMapOwnerReference(NewConfigMapPropagation("additional", currentNS, WithInitConfigMapPropagationConditions)),
+					WithConfigMapOwnerReference(NewConfigMapPropagation("additional", currentNS, WithInitConfigMapPropagationConditions, WithConfigMapPropagationUID("1234"))),
 				),
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -425,7 +426,7 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapLabels(metav1.LabelSelector{
 						MatchLabels: map[string]string{},
 					}),
-					WithConfigMapOwnerReference(NewConfigMapPropagation("additional", currentNS, WithInitConfigMapPropagationConditions)),
+					WithConfigMapOwnerReference(NewConfigMapPropagation("additional", currentNS, WithInitConfigMapPropagationConditions, WithConfigMapPropagationUID("1234"))),
 				),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{

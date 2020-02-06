@@ -21,6 +21,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 )
 
@@ -86,6 +88,12 @@ func WithConfigMapPropagationGeneration(gen int64) ConfigMapPropagationOption {
 func WithConfigMapPropagationStatusObservedGeneration(gen int64) ConfigMapPropagationOption {
 	return func(cmp *v1alpha1.ConfigMapPropagation) {
 		cmp.Status.ObservedGeneration = gen
+	}
+}
+
+func WithConfigMapPropagationUID(uid string) ConfigMapPropagationOption {
+	return func(cmp *v1alpha1.ConfigMapPropagation) {
+		cmp.UID = types.UID(uid)
 	}
 }
 
