@@ -17,16 +17,25 @@ limitations under the License.
 package resources
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/pkg/system"
 )
 
 // MakeConfigMapPropagation creates a default ConfigMapPropagation object for Namespace 'namespace'.
-func MakeConfigMapPropagation(namespace string) *v1alpha1.ConfigMapPropagation {
+func MakeConfigMapPropagation(namespace *corev1.Namespace) *v1alpha1.ConfigMapPropagation {
 	return &v1alpha1.ConfigMapPropagation{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(namespace.GetObjectMeta(), schema.GroupVersionKind{
+					Group:   corev1.SchemeGroupVersion.Group,
+					Version: corev1.SchemeGroupVersion.Version,
+					Kind:    "Namespace",
+				}),
+			},
+			Namespace: namespace.Name,
 			Name:      DefaultConfigMapPropagationName,
 		},
 		Spec: v1alpha1.ConfigMapPropagationSpec{

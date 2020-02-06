@@ -24,7 +24,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
 
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
@@ -75,7 +74,6 @@ type Reconciler struct {
 	roleBindingLister          rbacv1listers.RoleBindingLister
 	brokerLister               eventinglisters.BrokerLister
 	configMapPropagationLister configslisters.ConfigMapPropagationLister
-	tracker                    tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -127,14 +125,8 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		return nil
 	}
 
-	cmp, err := r.reconcileConfigMapPropagation(ctx, ns)
-	if err != nil {
+	if _, err := r.reconcileConfigMapPropagation(ctx, ns); err != nil {
 		return fmt.Errorf("configMapPropagation: %w", err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the ConfigMapPropagation changes.
-	if err = r.tracker.Track(utils.ObjectRef(cmp, configMapPropagationGVK), ns); err != nil {
-		return fmt.Errorf("track configMapPropagation: %w", err)
 	}
 
 	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.IngressServiceAccountName, resources.IngressRoleBindingName, resources.IngressClusterRoleName); err != nil {
@@ -158,7 +150,7 @@ func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *core
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		cmp := resources.MakeConfigMapPropagation(ns.Name)
+		cmp := resources.MakeConfigMapPropagation(ns)
 		cmp, err = r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Create(cmp)
 		if err != nil {
 			return nil, err

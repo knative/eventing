@@ -22,11 +22,9 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -100,7 +98,7 @@ func TestAllCases(t *testing.T) {
 	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
 	saFilter := resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName)
 	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
-	configMapPropagation := resources.MakeConfigMapPropagation(testNS)
+	configMapPropagation := resources.MakeConfigMapPropagation(namespace)
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -425,7 +423,6 @@ func TestAllCases(t *testing.T) {
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
 			brokerPullSecretName:       brokerImagePullSecretName,
-			tracker:                    tracker.New(func(types.NamespacedName) {}, 0),
 		}
 
 		// only create secret in required tests
