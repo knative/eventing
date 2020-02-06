@@ -241,14 +241,15 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 
 	// Report the reconciler event, if any.
 	if reconcileEvent != nil {
-		logger.Errorw("ReconcileKind returned an event", zap.Error(reconcileEvent))
 		var event *{{.reconcilerReconcilerEvent|raw}}
 		if reconciler.EventAs(reconcileEvent, &event) {
+			logger.Infow("ReconcileKind returned an event", zap.Any("event", reconcileEvent))
 			r.Recorder.Eventf(resource, event.EventType, event.Reason, event.Format, event.Args...)
 			return nil
 		} else {
+			logger.Errorw("ReconcileKind returned an error", zap.Error(reconcileEvent))
 			r.Recorder.Event(resource, {{.corev1EventTypeWarning|raw}}, "InternalError", reconcileEvent.Error())
-			return reconcileEvent.Error()
+			return reconcileEvent
 		}
 	}
 	return nil

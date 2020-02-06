@@ -17,7 +17,6 @@
 package v1beta1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -65,11 +64,11 @@ var (
 )
 
 type BrokerSpec struct {
-	// Config is an ObjectReference to the configuration that specifies
+	// Config is a KReference to the configuration that specifies
 	// configuration options for this Broker. For example, this could be
 	// a pointer to a ConfigMap.
 	// +optional
-	Config *corev1.ObjectReference `json:"config,omitempty"`
+	Config *duckv1.KReference `json:"config,omitempty"`
 
 	// Delivery is the delivery specification for Events within the Broker mesh.
 	// This includes things like retries, DLQ, etc.

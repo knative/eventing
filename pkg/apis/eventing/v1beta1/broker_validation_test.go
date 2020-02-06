@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestBrokerImmutableFields(t *testing.T) {
@@ -82,12 +82,11 @@ func TestValidate(t *testing.T) {
 	}{{
 		name: "valid empty",
 		b:    Broker{},
-		want: nil,
 	}, {
 		name: "valid config",
 		b: Broker{
 			Spec: BrokerSpec{
-				Config: &corev1.ObjectReference{
+				Config: &duckv1.KReference{
 					Namespace:  "namespace",
 					Name:       "name",
 					Kind:       "kind",
@@ -95,75 +94,53 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		want: nil,
 	}, {
-		name: "invalid config, missing namespace",
+		name: "valid config, no namespace",
 		b: Broker{
 			Spec: BrokerSpec{
-				Config: &corev1.ObjectReference{
+				Config: &duckv1.KReference{
 					Name:       "name",
 					Kind:       "kind",
 					APIVersion: "apiversion",
 				},
 			},
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.config.namespace")
-			errs = errs.Also(fe)
-			return errs
-		}(),
 	}, {
 		name: "invalid config, missing name",
 		b: Broker{
 			Spec: BrokerSpec{
-				Config: &corev1.ObjectReference{
+				Config: &duckv1.KReference{
 					Namespace:  "namespace",
 					Kind:       "kind",
 					APIVersion: "apiversion",
 				},
 			},
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.config.name")
-			errs = errs.Also(fe)
-			return errs
-		}(),
+		want: apis.ErrMissingField("spec.config.name"),
 	}, {
 		name: "invalid config, missing apiVersion",
 		b: Broker{
 			Spec: BrokerSpec{
-				Config: &corev1.ObjectReference{
+				Config: &duckv1.KReference{
 					Namespace: "namespace",
 					Name:      "name",
 					Kind:      "kind",
 				},
 			},
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.config.apiVersion")
-			errs = errs.Also(fe)
-			return errs
-		}(),
+		want: apis.ErrMissingField("spec.config.apiVersion"),
 	}, {
 		name: "invalid config, missing kind",
 		b: Broker{
 			Spec: BrokerSpec{
-				Config: &corev1.ObjectReference{
+				Config: &duckv1.KReference{
 					Namespace:  "namespace",
 					Name:       "name",
 					APIVersion: "apiversion",
 				},
 			},
 		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.config.kind")
-			errs = errs.Also(fe)
-			return errs
-		}(),
+		want: apis.ErrMissingField("spec.config.kind"),
 	}, {
 		name: "invalid delivery, invalid delay string",
 		b: Broker{
@@ -173,9 +150,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
-		want: func() *apis.FieldError {
-			return apis.ErrInvalidValue(invalidString, "spec.delivery.backoffDelay")
-		}(),
+		want: apis.ErrInvalidValue(invalidString, "spec.delivery.backoffDelay"),
 	}, {}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -196,22 +171,20 @@ func TestValidSpec(t *testing.T) {
 	}{{
 		name: "valid empty",
 		spec: BrokerSpec{},
-		want: nil,
 	}, {
 		name: "valid config",
 		spec: BrokerSpec{
-			Config: &corev1.ObjectReference{
+			Config: &duckv1.KReference{
 				Namespace:  "namespace",
 				Name:       "name",
 				Kind:       "kind",
 				APIVersion: "apiversion",
 			},
 		},
-		want: nil,
 	}, {
 		name: "valid delivery",
 		spec: BrokerSpec{
-			Config: &corev1.ObjectReference{
+			Config: &duckv1.KReference{
 				Namespace:  "namespace",
 				Name:       "name",
 				Kind:       "kind",
@@ -219,7 +192,6 @@ func TestValidSpec(t *testing.T) {
 			},
 			Delivery: &eventingduckv1beta1.DeliverySpec{BackoffPolicy: &bop},
 		},
-		want: nil,
 	}, {}}
 
 	for _, test := range tests {
