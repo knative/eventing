@@ -18,19 +18,18 @@ package v1alpha1
 
 import (
 	"context"
-	"errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestBrokerConversionBadType(t *testing.T) {
@@ -47,7 +46,7 @@ func TestBrokerConversionBadType(t *testing.T) {
 
 func TestBrokerConversion(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
-	versions := []apis.Convertible{&v1beta1.Trigger{}}
+	versions := []apis.Convertible{&v1beta1.Broker{}}
 
 	linear := v1alpha1.BackoffPolicyLinear
 
@@ -55,7 +54,7 @@ func TestBrokerConversion(t *testing.T) {
 		name string
 		in   *Broker
 	}{{
-		name: "simple configuration",
+		name: "full configuration",
 		in: &Broker{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "broker-name",
@@ -103,7 +102,15 @@ func TestBrokerConversion(t *testing.T) {
 						URL: apis.HTTP("address"),
 					},
 				},
-				TriggerChannel:
+				TriggerChannel: &corev1.ObjectReference{
+					Kind:            "k",
+					Namespace:       "ns",
+					Name:            "n",
+					UID:             "uid",
+					APIVersion:      "av",
+					ResourceVersion: "rv",
+					FieldPath:       "fp",
+				},
 			},
 		},
 	}}
@@ -114,13 +121,13 @@ func TestBrokerConversion(t *testing.T) {
 				if err := test.in.ConvertUp(context.Background(), ver); err != nil {
 					t.Errorf("ConvertUp() = %v", err)
 				}
-				got := &Trigger{}
+				got := &Broker{}
 				if err := got.ConvertDown(context.Background(), ver); err != nil {
 					t.Errorf("ConvertDown() = %v", err)
 				}
 				// Since on the way down, we lose the DeprecatedSourceAndType,
 				// convert the in to equivalent out.
-				fixed := fixDeprecated(test.in)
+				fixed := fixBrokerDeprecated(test.in)
 				if diff := cmp.Diff(fixed, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
@@ -129,17 +136,10 @@ func TestBrokerConversion(t *testing.T) {
 	}
 }
 
-// Since DeprecatedSourceAndType is lossy but semanctically equivalent
-// if source,type are present and equivalent in the attributes map,
+// Since v1beta1 to v1alpha1 is lossy but semantically equivalent,
 // fix that so diff works.
-func fixDeprecated(in *Trigger) *Trigger {
-	if in.Spec.Filter != nil && in.Spec.Filter.DeprecatedSourceAndType != nil {
-		// attributes must be nil, can't have both Deprecated / Attributes
-		attributes := TriggerFilterAttributes{}
-		attributes["source"] = in.Spec.Filter.DeprecatedSourceAndType.Source
-		attributes["type"] = in.Spec.Filter.DeprecatedSourceAndType.Type
-		in.Spec.Filter.DeprecatedSourceAndType = nil
-		in.Spec.Filter.Attributes = &attributes
-	}
+func fixBrokerDeprecated(in *Broker) *Broker {
+	in.Spec.ChannelTemplate = nil
+	in.Status.TriggerChannel = nil
 	return in
 }
