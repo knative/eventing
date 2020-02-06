@@ -19,7 +19,6 @@ package v1beta1
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 )
@@ -29,7 +28,8 @@ const (
 )
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
-	return b.Spec.Validate(ctx).ViaField("spec")
+	withNS := apis.WithinParent(ctx, b.ObjectMeta)
+	return b.Spec.Validate(withNS).ViaField("spec")
 }
 
 func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
@@ -37,7 +37,7 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	// Validate the Config
 	if bs.Config != nil {
-		if ce := isValidConfig(bs.Config); ce != nil {
+		if ce := bs.Config.Validate(ctx); ce != nil {
 			errs = errs.Also(ce.ViaField("config"))
 		}
 	}
@@ -47,28 +47,6 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 			errs = errs.Also(de.ViaField("delivery"))
 		}
 	}
-	return errs
-}
-
-func isValidConfig(ref *corev1.ObjectReference) *apis.FieldError {
-	if ref == nil {
-		return nil
-	}
-	// Check the object.
-	var errs *apis.FieldError
-	if ref.Name == "" {
-		errs = errs.Also(apis.ErrMissingField("name"))
-	}
-	if ref.Namespace == "" {
-		errs = errs.Also(apis.ErrMissingField("namespace"))
-	}
-	if ref.APIVersion == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-	}
-	if ref.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-
 	return errs
 }
 
