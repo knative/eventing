@@ -17,11 +17,11 @@
 package v1beta1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -74,7 +74,7 @@ type ChannelStatus struct {
 	eventingduck.ChannelableStatus `json:",inline"`
 
 	// Channel is an KReference to the Channel CRD backing this Channel.
-	Channel *corev1.ObjectReference `json:"channel,omitempty"`
+	Channel *duckv1.KReference `json:"channel,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
