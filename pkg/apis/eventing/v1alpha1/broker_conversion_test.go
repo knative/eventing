@@ -54,6 +54,16 @@ func TestBrokerConversion(t *testing.T) {
 		name string
 		in   *Broker
 	}{{
+		name: "min configuration",
+		in: &Broker{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "broker-name",
+				Namespace:  "broker-ns",
+				Generation: 17,
+			},
+			Spec: BrokerSpec{},
+		},
+	}, {
 		name: "full configuration",
 		in: &Broker{
 			ObjectMeta: metav1.ObjectMeta{
