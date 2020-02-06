@@ -19,6 +19,11 @@ package v1alpha1
 import (
 	"context"
 	"errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
+	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -44,46 +49,48 @@ func TestBrokerConversion(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1beta1.Trigger{}}
 
+	linear := v1alpha1.BackoffPolicyLinear
+
 	tests := []struct {
 		name string
 		in   *Broker
-	}{{name: "simple configuration",
+	}{{
+		name: "simple configuration",
 		in: &Broker{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "broker-name",
 				Namespace:  "broker-ns",
 				Generation: 17,
 			},
-			Spec: TriggerSpec{
-				Broker: "default",
-			},
-			Status: TriggerStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
-				},
-			},
-		},
-	}, {name: "filter rules, deprecated",
-		in: &Trigger{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "trigger-name",
-				Namespace:  "trigger-ns",
-				Generation: 17,
-			},
-			Spec: TriggerSpec{
-				Broker: "default",
-				Filter: &TriggerFilter{
-					DeprecatedSourceAndType: &TriggerFilterSourceAndType{
-						Source: "mysource",
-						Type:   "mytype",
+			Spec: BrokerSpec{
+				ChannelTemplate: &v1alpha1.ChannelTemplateSpec{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "channelKind",
+						APIVersion: "channelAPIVersion",
 					},
 				},
+				Config: &duckv1.KReference{
+					Kind:       "configKind",
+					Namespace:  "configNamespace",
+					Name:       "configName",
+					APIVersion: "configAPIVersion",
+				},
+				Delivery: &v1alpha1.DeliverySpec{
+					DeadLetterSink: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							Kind:       "dlKind",
+							Namespace:  "dlNamespace",
+							Name:       "dlName",
+							APIVersion: "dlAPIVersion",
+						},
+						URI: apis.HTTP("dls"),
+					},
+					Retry:         pointer.Int32Ptr(5),
+					BackoffPolicy: &linear,
+					BackoffDelay:  pointer.StringPtr("5s"),
+				},
 			},
-			Status: TriggerStatus{
+			Status: BrokerStatus{
 				Status: duckv1.Status{
 					ObservedGeneration: 1,
 					Conditions: duckv1.Conditions{{
@@ -91,52 +98,12 @@ func TestBrokerConversion(t *testing.T) {
 						Status: "True",
 					}},
 				},
-			},
-		},
-	}, {name: "filter rules",
-		in: &Trigger{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "trigger-name",
-				Namespace:  "trigger-ns",
-				Generation: 17,
-			},
-			Spec: TriggerSpec{
-				Broker: "default",
-				Filter: &TriggerFilter{
-					Attributes: &TriggerFilterAttributes{"source": "mysource", "type": "mytype"},
+				Address: duckv1alpha1.Addressable{
+					Addressable: duckv1beta1.Addressable{
+						URL: apis.HTTP("address"),
+					},
 				},
-			},
-			Status: TriggerStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
-				},
-			},
-		},
-	}, {name: "filter rules, many",
-		in: &Trigger{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "trigger-name",
-				Namespace:  "trigger-ns",
-				Generation: 17,
-			},
-			Spec: TriggerSpec{
-				Broker: "default",
-				Filter: &TriggerFilter{
-					Attributes: &TriggerFilterAttributes{"source": "mysource", "type": "mytype", "customkey": "customvalue"},
-				},
-			},
-			Status: TriggerStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
-				},
+				TriggerChannel:
 			},
 		},
 	}}
