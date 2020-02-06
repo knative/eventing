@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -89,8 +88,8 @@ const (
 
 // DeliveryStatus contains the Status of an object supporting delivery options.
 type DeliveryStatus struct {
-	// DeadLetterChannel is the reference to the native, platform specific channel
+	// DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
 	// where failed events are sent to.
 	// +optional
-	DeadLetterChannel *corev1.ObjectReference `json:"deadLetterChannel,omitempty"`
+	DeadLetterChannel *duckv1.KReference `json:"deadLetterChannel,omitempty"`
 }
