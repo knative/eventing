@@ -19,6 +19,7 @@ package utils
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -80,7 +81,11 @@ func TestCopySecret(t *testing.T) {
 
 			// set up tgt namespace and service account to copy secret into.
 			tgtNamespaceServiceAccts := tc.corev1Input.ServiceAccounts(tgtNamespace)
-			_, saCreateError := tgtNamespaceServiceAccts.Create(resources.MakeServiceAccount(tgtNamespace, svcAccountName))
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: tgtNamespace,
+				}}
+			_, saCreateError := tgtNamespaceServiceAccts.Create(resources.MakeServiceAccount(namespace, svcAccountName))
 			if saCreateError != nil {
 				t.Errorf("error creating service account resources for test case %s", saCreateError)
 			}

@@ -24,7 +24,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
 
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
@@ -75,7 +74,6 @@ type Reconciler struct {
 	roleBindingLister          rbacv1listers.RoleBindingLister
 	brokerLister               eventinglisters.BrokerLister
 	configMapPropagationLister configslisters.ConfigMapPropagationLister
-	tracker                    tracker.Interface
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -127,14 +125,8 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		return nil
 	}
 
-	cmp, err := r.reconcileConfigMapPropagation(ctx, ns)
-	if err != nil {
+	if _, err := r.reconcileConfigMapPropagation(ctx, ns); err != nil {
 		return fmt.Errorf("configMapPropagation: %w", err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the ConfigMapPropagation changes.
-	if err = r.tracker.Track(utils.ObjectRef(cmp, configMapPropagationGVK), ns); err != nil {
-		return fmt.Errorf("track configMapPropagation: %w", err)
 	}
 
 	if err := r.reconcileServiceAccountAndRoleBindings(ctx, ns, resources.IngressServiceAccountName, resources.IngressRoleBindingName, resources.IngressClusterRoleName); err != nil {
@@ -145,14 +137,8 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 		return fmt.Errorf("broker filter: %w", err)
 	}
 
-	b, err := r.reconcileBroker(ctx, ns)
-	if err != nil {
-		return fmt.Errorf("broker: %w", err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the Broker changes.
-	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), ns); err != nil {
-		return fmt.Errorf("track broker: %w", err)
+	if _, err := r.reconcileBroker(ctx, ns); err != nil {
+		return fmt.Errorf("broker: %v", err)
 	}
 
 	return nil
@@ -164,7 +150,7 @@ func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *core
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		cmp := resources.MakeConfigMapPropagation(ns.Name)
+		cmp := resources.MakeConfigMapPropagation(ns)
 		cmp, err = r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Create(cmp)
 		if err != nil {
 			return nil, err
@@ -182,24 +168,14 @@ func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *core
 // reconcileServiceAccountAndRoleBinding reconciles the service account and role binding for
 // Namespace 'ns'.
 func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context, ns *corev1.Namespace, saName, rbName, clusterRoleName string) error {
-	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns.Name, saName))
+	sa, err := r.reconcileBrokerServiceAccount(ctx, ns, resources.MakeServiceAccount(ns, saName))
 	if err != nil {
 		return fmt.Errorf("service account '%s': %w", saName, err)
 	}
 
-	// Tell tracker to reconcile this namespace whenever the Service Account changes.
-	if err = r.tracker.Track(utils.ObjectRef(sa, serviceAccountGVK), ns); err != nil {
-		return fmt.Errorf("track service account '%s': %w", sa.Name, err)
-	}
-
-	rb, err := r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns.Name, sa, clusterRoleName))
+	_, err = r.reconcileBrokerRBAC(ctx, ns, sa, resources.MakeRoleBinding(rbName, ns, ns.Name, sa, clusterRoleName))
 	if err != nil {
 		return fmt.Errorf("role binding '%s': %w", rbName, err)
-	}
-
-	// Tell tracker to reconcile this namespace whenever the RoleBinding changes.
-	if err = r.tracker.Track(utils.ObjectRef(rb, roleBindingGVK), ns); err != nil {
-		return fmt.Errorf("track role binding '%s': %w", rb.Name, err)
 	}
 
 	// If the Broker pull secret has not been specified, then nothing to copy.
@@ -274,7 +250,7 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		b := resources.MakeBroker(ns.Name)
+		b := resources.MakeBroker(ns)
 		b, err = r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Create(b)
 		if err != nil {
 			return nil, err
