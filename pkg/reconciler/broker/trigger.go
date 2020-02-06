@@ -38,6 +38,19 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 )
 
+const (
+	// Name of the corev1.Events emitted from the Trigger reconciliation process.
+	triggerReconciled         = "TriggerReconciled"
+	triggerReadinessChanged   = "TriggerReadinessChanged"
+	triggerReconcileFailed    = "TriggerReconcileFailed"
+	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
+	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
+	subscriptionCreateFailed  = "SubscriptionCreateFailed"
+	subscriptionGetFailed     = "SubscriptionGetFailed"
+	triggerChannelFailed      = "TriggerChannelFailed"
+	triggerServiceFailed      = "TriggerServiceFailed"
+)
+
 func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger) error {
 	t.Status.InitializeConditions()
 

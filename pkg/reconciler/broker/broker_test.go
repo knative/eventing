@@ -35,11 +35,9 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
-	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
@@ -48,6 +46,9 @@ import (
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
+	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -588,6 +589,7 @@ func TestReconcile(t *testing.T) {
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
 			ingressServiceAccountName: ingressSA,
+			kresourceTracker:          duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),
 			channelableTracker:        duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			addressableTracker:        duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),

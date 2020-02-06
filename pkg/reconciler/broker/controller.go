@@ -36,6 +36,7 @@ import (
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 )
@@ -53,6 +54,7 @@ type envConfig struct {
 	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
 	FilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
 	FilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
+	BrokerClass           string `envconfig:"BROKER_CLASS"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -84,11 +86,13 @@ func NewController(
 		ingressServiceAccountName: env.IngressServiceAccount,
 		filterImage:               env.FilterImage,
 		filterServiceAccountName:  env.FilterServiceAccount,
+		brokerClass:               env.BrokerClass,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 
+	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)

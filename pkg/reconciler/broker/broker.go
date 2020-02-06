@@ -18,6 +18,7 @@ package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -53,27 +54,12 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the Broker reconciliation process.
-	brokerReadinessChanged          = "BrokerReadinessChanged"
-	brokerReconcileError            = "BrokerReconcileError"
-	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
-	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
-	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
-	ingressSubscriptionGetFailed    = "IngressSubscriptionGetFailed"
-
-	// Name of the corev1.Events emitted from the Trigger reconciliation process.
-	triggerReconciled         = "TriggerReconciled"
-	triggerReadinessChanged   = "TriggerReadinessChanged"
-	triggerReconcileFailed    = "TriggerReconcileFailed"
-	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
-	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
-	subscriptionCreateFailed  = "SubscriptionCreateFailed"
-	subscriptionGetFailed     = "SubscriptionGetFailed"
-	triggerChannelFailed      = "TriggerChannelFailed"
-	triggerServiceFailed      = "TriggerServiceFailed"
+	brokerReadinessChanged   = "BrokerReadinessChanged"
+	brokerReconcileError     = "BrokerReconcileError"
+	brokerUpdateStatusFailed = "BrokerUpdateStatusFailed"
 
 	// Label used to specify which Broker provides the implementation.
-	brokerAnnotationKey   = "eventing.knative.dev/broker.class"
-	brokerAnnotationValue = "KnativeEventingChannelBroker"
+	brokerAnnotationKey = "eventing.knative.dev/broker.class"
 )
 
 type Reconciler struct {
@@ -93,9 +79,15 @@ type Reconciler struct {
 	filterImage               string
 	filterServiceAccountName  string
 
+	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
+	kresourceTracker duck.ListableTracker
+
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
 	uriResolver        *resolver.URIResolver
+
+	// If specified, only reconcile brokers with these labels
+	brokerClass string
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -127,17 +119,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	if apierrs.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
-		// DO NOT SUBMIT
-		// TODO: Do not return, if Broker was removed, need to update the Triggers...
-		return nil
+		return r.markTriggersAsNotReady(namespace, name)
 	} else if err != nil {
 		return err
 	}
 
 	// Check the annotation to make sure it should be handled by me and if not, do nothing.
-	if original.GetAnnotations()[brokerAnnotationKey] != brokerAnnotationValue {
-		logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", original.Name))
-		return nil
+	if r.brokerClass != "" {
+		if original.GetAnnotations()[brokerAnnotationKey] != r.brokerClass {
+			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", original.Name))
+			return nil
+		}
 	}
 	// Don't modify the informers copy
 	broker := original.DeepCopy()
@@ -461,7 +453,7 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) 
 	// TODO: Figure out the labels stuff... If webhook does it, we can filter like this...
 	// Find all the Triggers that have been labeled as belonging to me
 	/*
-		triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.SelectorFromSet(brokerLabels(b.Name)))
+		triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.SelectorFromSet(brokerLabels(b.brokerClass)))
 	*/
 	triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.Everything())
 	if err != nil {
@@ -489,6 +481,11 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) 
 
 func brokerLabels(name string) map[string]string {
 	return map[string]string{
-		brokerAnnotationKey: brokerAnnotationValue,
+		brokerAnnotationKey: name,
 	}
+}
+
+func (r *Reconciler) markTriggersAsNotReady(namespace, name string) error {
+	// DO NOT SUBMIT
+	return errors.New("NOT IMPLEMENTED")
 }

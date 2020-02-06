@@ -23,6 +23,7 @@ import (
 	"knative.dev/pkg/injection/sharedmain"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
+	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
@@ -41,6 +42,7 @@ func main() {
 
 		// Eventing
 		subscription.NewController,
+		broker.NewController,
 		eventtype.NewController,
 
 		// Flows
