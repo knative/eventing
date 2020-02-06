@@ -96,10 +96,11 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 				URI: tmpURI,
 			},
 			Reply: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
 					APIVersion: brokerRef.APIVersion,
 					Kind:       brokerRef.Kind,
 					Name:       brokerRef.Name,
+					Namespace:  brokerRef.Namespace,
 				},
 			},
 			Delivery: delivery,
