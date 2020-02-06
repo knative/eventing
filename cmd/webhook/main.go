@@ -40,7 +40,6 @@ import (
 	"knative.dev/pkg/signals"
 	tracingconfig "knative.dev/pkg/tracing/config"
 	"knative.dev/pkg/webhook"
-	"knative.dev/pkg/webhook/certificates"
 	"knative.dev/pkg/webhook/configmaps"
 	"knative.dev/pkg/webhook/psbinding"
 	"knative.dev/pkg/webhook/resourcesemantics"
@@ -205,14 +204,12 @@ func main() {
 	})
 
 	sharedmain.MainWithContext(ctx, logconfig.WebhookName(),
-		certificates.NewController,
 		NewConfigValidationController,
 		NewValidationAdmissionController,
 		NewDefaultingAdmissionController,
 
-		// For each binding we have a controller and a binding webhook.
-		sinkbinding.NewController, NewSinkBindingWebhook,
+		NewSinkBindingWebhook,
 		// TODO(#2312): Remove this after v0.13.
-		legacysinkbinding.NewController, NewLegacySinkBindingWebhook,
+		NewLegacySinkBindingWebhook,
 	)
 }

@@ -21,7 +21,11 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/signals"
+	"knative.dev/pkg/webhook"
+	"knative.dev/pkg/webhook/certificates"
 
+	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/channel"
@@ -30,16 +34,30 @@ import (
 	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
 	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
 	"knative.dev/eventing/pkg/reconciler/legacycronjobsource"
+	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
 	"knative.dev/eventing/pkg/reconciler/namespace"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
+	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 	"knative.dev/eventing/pkg/reconciler/subscription"
 	"knative.dev/eventing/pkg/reconciler/trigger"
 )
 
 func main() {
-	sharedmain.Main("controller",
+	// Set up a signal context with our webhook options; required for
+	// certificate controller.
+	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
+		ServiceName: logconfig.WebhookName(),
+		Port:        8443,
+		// SecretName must match the name of the Secret created in the configuration.
+		SecretName: "eventing-webhook-certs",
+	})
+
+	sharedmain.MainWithContext(ctx, "controller",
+		// Certificates
+		certificates.NewController,
+
 		// Messaging
 		namespace.NewController,
 		channel.NewController,
@@ -54,6 +72,11 @@ func main() {
 		parallel.NewController,
 		configmappropagation.NewController,
 		sequence.NewController,
+
+		// Sink bindings
+		sinkbinding.NewController,
+		// TODO(#2312): Remove this after v0.13.
+		legacysinkbinding.NewController,
 
 		// Sources
 		apiserversource.NewController,
