@@ -38,7 +38,7 @@ func (p *prober) waitForKServiceReady(name, namespace string) error {
 	return duck.WaitForResourceReady(p.client.Dynamic, meta)
 }
 
-func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(*int32) bool) error {
+func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(int32) bool) error {
 	metricName := fmt.Sprintf("waitForKServiceScale/%s/%s", namespace, name)
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
@@ -50,7 +50,7 @@ func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(
 	})
 }
 
-func (p *prober) isScaledTo(satisfyScale func(*int32) bool, un *unstructured.Unstructured, namespace string, err error) (bool, error) {
+func (p *prober) isScaledTo(satisfyScale func(int32) bool, un *unstructured.Unstructured, namespace string, err error) (bool, error) {
 	if k8serrors.IsNotFound(err) {
 		// Return false as we are not done yet.
 		// We swallow the error to keep on polling.
@@ -93,7 +93,7 @@ func (p *prober) isScaledTo(satisfyScale func(*int32) bool, un *unstructured.Uns
 		// Return error to stop the polling.
 		return false, err
 	}
-	return satisfyScale(dep.Spec.Replicas), nil
+	return satisfyScale(dep.Status.ReadyReplicas), nil
 }
 
 func (p *prober) waitForTriggerReady(name, namespace string) error {

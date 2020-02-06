@@ -49,8 +49,8 @@ func (p *prober) deployForwarder() {
 
 	if p.config.Serving.ScaleToZero {
 		waitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
-			return p.waitForKServiceScale(forwarderName, p.client.Namespace, func(scale *int32) bool {
-				return *scale == 0
+			return p.waitForKServiceScale(forwarderName, p.client.Namespace, func(scale int32) bool {
+				return scale == 0
 			})
 		})
 	}
