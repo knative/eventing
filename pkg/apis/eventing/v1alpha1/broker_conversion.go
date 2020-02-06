@@ -57,15 +57,15 @@ func (sink *Broker) ConvertDown(ctx context.Context, obj apis.Convertible) error
 		sink.ObjectMeta = source.ObjectMeta
 		if source.Spec.Delivery != nil {
 			sink.Spec.Delivery = &duckv1alpha1.DeliverySpec{}
-			if err := source.Spec.Delivery.ConvertDown(ctx, sink.Spec.Delivery); err != nil {
+			if err := sink.Spec.Delivery.ConvertDown(ctx, source.Spec.Delivery); err != nil {
 				return err
 			}
 		}
-		sink.Spec.Config = source.Spec.Config
 		sink.Status.Status = source.Status.Status
-		if err := source.Status.Address.ConvertDown(ctx, &sink.Status.Address); err != nil {
+		if err := sink.Status.Address.ConvertDown(ctx, &source.Status.Address); err != nil {
 			return err
 		}
+		sink.Spec.Config = source.Spec.Config
 		return nil
 	default:
 		return fmt.Errorf("Unknown conversion, got: %T", source)
