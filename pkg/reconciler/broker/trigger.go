@@ -108,6 +108,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
 	// DO NOT SUBMIT
+	t.Status.MarkDependencySucceeded()
 	// TODO...
 	/*
 		if err := r.checkDependencyAnnotation(ctx, t); err != nil {
@@ -163,6 +164,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 		logging.FromContext(ctx).Error("Failed to RECONCILE subscription", zap.Error(err))
 		return sub, err
 	}
+
 	return sub, nil
 }
 
