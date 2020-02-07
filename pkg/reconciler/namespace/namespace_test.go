@@ -22,11 +22,9 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/system"
-	"knative.dev/pkg/tracker"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -91,13 +89,16 @@ func TestAllCases(t *testing.T) {
 	filterPatch := createPatch(testNS, "eventing-broker-filter")
 
 	// Object
+	namespace := NewNamespace(testNS,
+		WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+	)
 	secret := resources.MakeSecret(brokerImagePullSecretName)
-	broker := resources.MakeBroker(testNS)
-	saIngress := resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName)
-	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, testNS, resources.MakeServiceAccount(testNS, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
-	saFilter := resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName)
-	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, testNS, resources.MakeServiceAccount(testNS, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
-	configMapPropagation := resources.MakeConfigMapPropagation(testNS)
+	broker := resources.MakeBroker(namespace)
+	saIngress := resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName)
+	rbIngress := resources.MakeRoleBinding(resources.IngressRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.IngressServiceAccountName), resources.IngressClusterRoleName)
+	saFilter := resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName)
+	rbFilter := resources.MakeRoleBinding(resources.FilterRoleBindingName, namespace, testNS, resources.MakeServiceAccount(namespace, resources.FilterServiceAccountName), resources.FilterClusterRoleName)
+	configMapPropagation := resources.MakeConfigMapPropagation(namespace)
 
 	table := TableTest{{
 		Name: "bad workqueue key",
@@ -218,7 +219,9 @@ func TestAllCases(t *testing.T) {
 			NewNamespace(testNS,
 				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
 			),
-			resources.MakeBroker(testNS),
+			resources.MakeBroker(NewNamespace(testNS,
+				WithNamespaceLabeled(resources.InjectionEnabledLabels()),
+			)),
 		},
 		Key:                     testNS,
 		SkipNamespaceValidation: true,
@@ -420,7 +423,6 @@ func TestAllCases(t *testing.T) {
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
 			brokerPullSecretName:       brokerImagePullSecretName,
-			tracker:                    tracker.New(func(types.NamespacedName) {}, 0),
 		}
 
 		// only create secret in required tests

@@ -17,15 +17,24 @@ limitations under the License.
 package resources
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 )
 
 // MakeBroker creates a default Broker object for Namespace 'namespace'.
-func MakeBroker(namespace string) *v1alpha1.Broker {
+func MakeBroker(ns *corev1.Namespace) *v1alpha1.Broker {
 	return &v1alpha1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(ns.GetObjectMeta(), schema.GroupVersionKind{
+					Group:   corev1.SchemeGroupVersion.Group,
+					Version: corev1.SchemeGroupVersion.Version,
+					Kind:    "Namespace",
+				}),
+			},
+			Namespace: ns.Name,
 			Name:      DefaultBrokerName,
 			Labels:    OwnedLabels(),
 		},
