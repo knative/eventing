@@ -18,7 +18,6 @@ package broker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -117,7 +116,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Get the Broker resource with this namespace/name
 	original, err := r.brokerLister.Brokers(namespace).Get(name)
 	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
+		// The broker may no longer exist, in which case we stop processing the broker
+		// but we need to mark all the triggers that belong to this appropriately.
 		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
 		return r.markTriggersAsNotReady(namespace, name)
 	} else if err != nil {
@@ -259,13 +259,10 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 	})
 
-	triggers, err := r.reconcileTriggers(ctx, b)
+	_, err = r.reconcileTriggers(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling triggers", zap.Error(err))
 		return err
-	}
-	for _, t := range triggers {
-		logging.FromContext(ctx).Error("RECONCILED: ", zap.String("trigger", t.Name))
 	}
 	return nil
 }
@@ -461,11 +458,10 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker) 
 	}
 	for _, t := range triggers {
 		if t.Spec.Broker == b.Name {
-			r.Logger.Error("RECONCILING:", zap.String("name", t.Name))
 			trigger := t.DeepCopy()
 			tErr := r.reconcileTrigger(ctx, b, trigger)
 			if tErr != nil {
-				r.Logger.Error("RECONCILING TRIGGER FAILED:", zap.String("name", t.Name), zap.Error(err))
+				r.Logger.Error("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
 				return []*v1alpha1.Trigger{}, tErr
 			}
 			trigger.Status.ObservedGeneration = t.Generation
@@ -486,6 +482,6 @@ func brokerLabels(name string) map[string]string {
 }
 
 func (r *Reconciler) markTriggersAsNotReady(namespace, name string) error {
-	// DO NOT SUBMIT
-	return errors.New("NOT IMPLEMENTED")
+	// TODO: Mark all the triggers as not ready
+	return nil
 }

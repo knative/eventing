@@ -36,6 +36,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -107,14 +108,9 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
-	// DO NOT SUBMIT
-	t.Status.MarkDependencySucceeded()
-	// TODO...
-	/*
-		if err := r.checkDependencyAnnotation(ctx, t); err != nil {
-			return err
-		}
-	*/
+	if err := r.checkDependencyAnnotation(ctx, t); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -221,4 +217,55 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1alpha1.
 	}
 
 	return trig, err
+}
+
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1alpha1.Trigger) error {
+	if dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]; ok {
+		dependencyObjRef, err := v1alpha1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
+		if err != nil {
+			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
+			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
+		}
+		trackKResource := r.kresourceTracker.TrackInNamespace(t)
+		// Trigger and its dependent source are in the same namespace, we already did the validation in the webhook.
+		if err := trackKResource(dependencyObjRef); err != nil {
+			return fmt.Errorf("tracking dependency: %v", err)
+		}
+		if err := r.propagateDependencyReadiness(ctx, t, dependencyObjRef); err != nil {
+			return fmt.Errorf("propagating dependency readiness: %v", err)
+		}
+	} else {
+		t.Status.MarkDependencySucceeded()
+	}
+	return nil
+}
+
+func (r *Reconciler) propagateDependencyReadiness(ctx context.Context, t *v1alpha1.Trigger, dependencyObjRef corev1.ObjectReference) error {
+	lister, err := r.kresourceTracker.ListerFor(dependencyObjRef)
+	if err != nil {
+		t.Status.MarkDependencyUnknown("ListerDoesNotExist", "Failed to retrieve lister: %v", err)
+		return fmt.Errorf("retrieving lister: %v", err)
+	}
+	dependencyObj, err := lister.ByNamespace(t.GetNamespace()).Get(dependencyObjRef.Name)
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			t.Status.MarkDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: %v", err)
+		} else {
+			t.Status.MarkDependencyUnknown("DependencyGetFailed", "Failed to get dependency: %v", err)
+		}
+		return fmt.Errorf("getting the dependency: %v", err)
+	}
+	dependency := dependencyObj.(*duckv1.KResource)
+
+	// The dependency hasn't yet reconciled our latest changes to
+	// its desired state, so its conditions are outdated.
+	if dependency.GetGeneration() != dependency.Status.ObservedGeneration {
+		logging.FromContext(ctx).Info("The ObjectMeta Generation of dependency is not equal to the observedGeneration of status",
+			zap.Any("objectMetaGeneration", dependency.GetGeneration()),
+			zap.Any("statusObservedGeneration", dependency.Status.ObservedGeneration))
+		t.Status.MarkDependencyUnknown("GenerationNotEqual", "The dependency's metadata.generation, %q, is not equal to its status.observedGeneration, %q.", dependency.GetGeneration(), dependency.Status.ObservedGeneration)
+		return nil
+	}
+	t.Status.PropagateDependencyStatus(dependency)
+	return nil
 }
