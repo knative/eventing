@@ -31,7 +31,7 @@ readonly COMPONENTS
 
 declare -A RELEASES
 RELEASES=(
-  ["eventing.yaml"]="eventing-core.yaml in-memory-channel.yaml"
+  ["eventing.yaml"]="eventing-core.yaml channel-broker.yaml in-memory-channel.yaml"
 )
 readonly RELEASES
 
