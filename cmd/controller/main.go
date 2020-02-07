@@ -28,7 +28,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
 	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
 	"knative.dev/eventing/pkg/reconciler/legacycronjobsource"
-	"knative.dev/eventing/pkg/reconciler/namespace"
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
@@ -38,7 +37,6 @@ import (
 func main() {
 	sharedmain.Main("controller",
 		// Messaging
-		namespace.NewController,
 		channel.NewController,
 
 		// Eventing

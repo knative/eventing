@@ -24,12 +24,14 @@ import (
 
 	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/configmappropagation"
+	"knative.dev/eventing/pkg/reconciler/namespace"
 	"knative.dev/eventing/pkg/reconciler/trigger"
 )
 
 func main() {
 	sharedmain.Main("controller",
 		// Eventing
+		namespace.NewController,
 		broker.NewController,
 		trigger.NewController,
 
