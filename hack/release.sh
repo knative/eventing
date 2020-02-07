@@ -22,8 +22,9 @@ source $(dirname $0)/../vendor/knative.dev/test-infra/scripts/release.sh
 # Yaml files to generate, and the source config dir for them.
 declare -A COMPONENTS
 COMPONENTS=(
-  ["eventing-core.yaml"]="config"
+  ["eventing-core.yaml"]="config/core"
   ["eventing-crds.yaml"]="config/core/resources"
+  ["channel-broker.yaml"]="config/brokers/channel-broker"
   ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
 )
 readonly COMPONENTS
@@ -49,7 +50,7 @@ function build_release() {
   for yaml in "${!COMPONENTS[@]}"; do
     local config="${COMPONENTS[${yaml}]}"
     echo "Building Knative Eventing - ${config}"
-    ko resolve ${KO_FLAGS} -f ${config}/ | "${LABEL_YAML_CMD[@]}" > ${yaml}
+    ko resolve ${KO_FLAGS} -R -f ${config}/ | "${LABEL_YAML_CMD[@]}" > ${yaml}
     all_yamls+=(${yaml})
   done
   # Assemble the release

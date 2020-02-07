@@ -15,7 +15,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: eventing-controller
+  name: broker-controller
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
@@ -23,11 +23,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: eventing-controller
+      app: broker-controller
   template:
     metadata:
       labels:
-        app: eventing-controller
+        app: broker-controller
         eventing.knative.dev/release: devel
     spec:
       serviceAccountName: eventing-controller
@@ -35,7 +35,7 @@ spec:
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: knative.dev/eventing/cmd/controller
+        image: knative.dev/eventing/cmd/channel_broker
 
         resources:
           requests:
@@ -53,15 +53,17 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
-          # Legacy CronJobSource
-          - name: CRONJOB_RA_IMAGE
-            value: knative.dev/eventing/cmd/cronjob_receive_adapter
-          # PingSource
-          - name: PING_IMAGE
-            value: knative.dev/eventing/cmd/ping
-          # APIServerSource
-          - name: APISERVER_RA_IMAGE
-            value: knative.dev/eventing/cmd/apiserver_receive_adapter
+          # Broker
+          - name: BROKER_INGRESS_IMAGE
+            value: knative.dev/eventing/cmd/broker/ingress
+          - name: BROKER_INGRESS_SERVICE_ACCOUNT
+            value: eventing-broker-ingress
+          - name: BROKER_FILTER_IMAGE
+            value: knative.dev/eventing/cmd/broker/filter
+          - name: BROKER_FILTER_SERVICE_ACCOUNT
+            value: eventing-broker-filter
+          - name: BROKER_IMAGE_PULL_SECRET_NAME
+            value:
 
         securityContext:
           allowPrivilegeEscalation: false

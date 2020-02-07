@@ -23,9 +23,7 @@ import (
 	"knative.dev/pkg/injection/sharedmain"
 
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
-	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/channel"
-	"knative.dev/eventing/pkg/reconciler/configmappropagation"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
 	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
@@ -35,7 +33,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	"knative.dev/eventing/pkg/reconciler/subscription"
-	"knative.dev/eventing/pkg/reconciler/trigger"
 )
 
 func main() {
@@ -46,13 +43,10 @@ func main() {
 
 		// Eventing
 		subscription.NewController,
-		trigger.NewController,
-		broker.NewController,
 		eventtype.NewController,
 
 		// Flows
 		parallel.NewController,
-		configmappropagation.NewController,
 		sequence.NewController,
 
 		// Sources
