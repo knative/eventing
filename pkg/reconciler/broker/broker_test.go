@@ -49,6 +49,7 @@ import (
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake"
 	. "knative.dev/pkg/reconciler/testing"
 )
 

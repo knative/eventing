@@ -59,6 +59,8 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 		return nil
 	}
 
+	t.Status.PropagateBrokerStatus(&b.Status)
+
 	brokerTrigger := b.Status.TriggerChannel
 	if brokerTrigger == nil {
 		logging.FromContext(ctx).Error("Broker TriggerChannel not populated")
@@ -158,8 +160,8 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 		t.Status.MarkSubscriptionNotOwned(sub)
 		return nil, fmt.Errorf("trigger %q does not own subscription %q", t.Name, sub.Name)
 	} else if sub, err = r.reconcileSubscription(ctx, t, expected, sub); err != nil {
-		// TODO Add logging
-		return nil, err
+		logging.FromContext(ctx).Error("Failed to RECONCILE subscription", zap.Error(err))
+		return sub, err
 	}
 	return sub, nil
 }
