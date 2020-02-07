@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"knative.dev/pkg/configmap"
@@ -33,12 +34,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/utils"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
@@ -68,6 +72,14 @@ const (
 	ingressContainerName = "ingress"
 
 	triggerChannel channelType = "TriggerChannel"
+	triggerName                = "test-trigger"
+	triggerUID                 = "test-trigger-uid"
+
+	subscriberURI     = "http://example.com/subscriber/"
+	subscriberKind    = "Service"
+	subscriberName    = "subscriber-name"
+	subscriberGroup   = "serving.knative.dev"
+	subscriberVersion = "v1"
 
 	brokerGeneration = 79
 )
@@ -104,6 +116,7 @@ var (
 		Version: "v1",
 		Kind:    "Service",
 	}
+	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
 )
 
 func init() {
@@ -570,6 +583,59 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
 			},
 		},
+		{
+			Name: "Successful Reconciliation, with single trigger",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithInitBrokerConditions),
+				createChannel(testNS, triggerChannel, true),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, livenessProbe(), readinessProbe(), envVars(filterContainerName), containerPorts(8080))),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, livenessProbe(), nil, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(8080))),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantCreates: []runtime.Object{
+				makeIngressSubscription(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerReady(),
+					WithTriggerDependencyReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
+					WithTriggerStatusSubscriberURI(subscriberURI)),
+			}, {
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithBrokerReady,
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())))},
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
+			},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -830,5 +896,76 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       fmt.Sprintf("%s-kne-trigger", brokerName),
+	}
+}
+
+func makeIngressSubscription() *messagingv1alpha1.Subscription {
+	return resources.NewSubscription(makeTrigger(), createTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
+}
+
+func makeTrigger() *v1alpha1.Trigger {
+	return &v1alpha1.Trigger{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Trigger",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      triggerName,
+			UID:       triggerUID,
+		},
+		Spec: v1alpha1.TriggerSpec{
+			Broker: brokerName,
+			Filter: &v1alpha1.TriggerFilter{
+				DeprecatedSourceAndType: &v1alpha1.TriggerFilterSourceAndType{
+					Source: "Any",
+					Type:   "Any",
+				},
+			},
+			Subscriber: duckv1.Destination{
+				Ref: &duckv1.KReference{
+					Name:       subscriberName,
+					Namespace:  testNS,
+					Kind:       subscriberKind,
+					APIVersion: subscriberAPIVersion,
+				},
+			},
+		},
+	}
+}
+
+func makeBrokerRef() *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Kind:       "Broker",
+		Namespace:  testNS,
+		Name:       brokerName,
+	}
+}
+func makeServiceURI() *url.URL {
+	return &url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
+		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
+	}
+}
+func makeEmptyDelivery() *eventingduckv1alpha1.DeliverySpec {
+	return nil
+}
+func makeBrokerFilterService() *corev1.Service {
+	return resources.MakeFilterService(makeBroker())
+}
+
+func makeBroker() *v1alpha1.Broker {
+	return &v1alpha1.Broker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "eventing.knative.dev/v1alpha1",
+			Kind:       "Broker",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNS,
+			Name:      brokerName,
+		},
+		Spec: v1alpha1.BrokerSpec{},
 	}
 }
