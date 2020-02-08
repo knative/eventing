@@ -25,7 +25,6 @@ import (
 	"knative.dev/eventing/pkg/reconciler/broker"
 	"knative.dev/eventing/pkg/reconciler/configmappropagation"
 	"knative.dev/eventing/pkg/reconciler/namespace"
-	"knative.dev/eventing/pkg/reconciler/trigger"
 )
 
 func main() {
@@ -33,7 +32,6 @@ func main() {
 		// Eventing
 		namespace.NewController,
 		broker.NewController,
-		trigger.NewController,
 
 		// Utility for sole-tenancy brokers.
 		configmappropagation.NewController,

@@ -491,6 +491,7 @@ func (r *Reconciler) markTriggersAsNotReady(ctx context.Context, namespace, name
 		if t.Spec.Broker == name {
 			// Don't modify informers copy
 			trigger := t.DeepCopy()
+			trigger.Status.InitializeConditions()
 			trigger.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", name)
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
