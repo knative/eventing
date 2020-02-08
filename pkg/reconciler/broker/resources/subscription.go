@@ -18,7 +18,6 @@ package resources
 
 import (
 	"fmt"
-	"net/url"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,13 +69,7 @@ func ingressSubscriptionLabels(brokerName string) map[string]string {
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *url.URL, delivery *duckv1alpha1.DeliverySpec) *messagingv1alpha1.Subscription {
-	// TODO: Figure out once Trigger moves to Destination how this changes.
-	tmpURI, err := apis.ParseURL(uri.String())
-	if err != nil {
-		panic("should NEVER happen")
-	}
-
+func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *duckv1alpha1.DeliverySpec) *messagingv1alpha1.Subscription {
 	return &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,
@@ -93,7 +86,7 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 				Name:       brokerTrigger.Name,
 			},
 			Subscriber: &duckv1.Destination{
-				URI: tmpURI,
+				URI: uri,
 			},
 			Reply: &duckv1.Destination{
 				Ref: &duckv1.KReference{

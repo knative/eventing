@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"reflect"
 	"time"
 
@@ -36,6 +35,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -123,7 +123,7 @@ func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Bro
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
-	uri := &url.URL{
+	uri := &apis.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 		Path:   path.Generate(t),
