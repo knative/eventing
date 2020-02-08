@@ -299,7 +299,7 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 			//  so that this copy configmap will not be deleted if cmp is deleted.
 			expected = current.DeepCopy()
 			// Delete the CMP owner reference, and keep all other owner references (if any).
-			expected.OwnerReferences = r.removeOwnerReference(expected.OwnerReferences, cmp.UID)
+			expected.OwnerReferences = removeOwnerReference(expected.OwnerReferences, cmp.UID)
 			// It will return false for the create/update action is not successful, due to removed copy label.
 			// But it is not an error for ConfigMapPropagation for not propagating successfully.
 			succeed = false
@@ -318,7 +318,7 @@ func (r *Reconciler) createOrUpdateConfigMaps(ctx context.Context, cmp *v1alpha1
 
 // deleteOrKeepConfigMap will return error and bool (represents whether a delete action is successful or not).
 func (r *Reconciler) deleteOrKeepConfigMap(ctx context.Context, cmp *v1alpha1.ConfigMapPropagation, copyConfigMap *corev1.ConfigMap, originalConfigMapName string, originalConfigMapList []*corev1.ConfigMap) (error, bool) {
-	originalConfigMap, contains := r.contains(originalConfigMapName, originalConfigMapList)
+	originalConfigMap, contains := contains(originalConfigMapName, originalConfigMapList)
 	expectedSelector := resources.ExpectedOriginalSelector(cmp.Spec.Selector)
 	if !contains || !expectedSelector.Matches(labels.Set(originalConfigMap.Labels)) {
 		// If Original ConfigMap no longer exists or no longer has the required label, delete copy ConfigMap.
@@ -334,7 +334,7 @@ func (r *Reconciler) deleteOrKeepConfigMap(ctx context.Context, cmp *v1alpha1.Co
 }
 
 // contains returns a configmap object if its name is in a configmaplist.
-func (r *Reconciler) contains(name string, list []*corev1.ConfigMap) (*corev1.ConfigMap, bool) {
+func contains(name string, list []*corev1.ConfigMap) (*corev1.ConfigMap, bool) {
 	for _, configMap := range list {
 		if configMap.Name == name {
 			return configMap, true
@@ -344,11 +344,11 @@ func (r *Reconciler) contains(name string, list []*corev1.ConfigMap) (*corev1.Co
 }
 
 // removeOwnerReference removes the target ownerReference and returns a new slice of ownerReferences.
-func (r *Reconciler) removeOwnerReference(ownerReferences []metav1.OwnerReference, uid types.UID) []metav1.OwnerReference {
+func removeOwnerReference(ownerReferences []metav1.OwnerReference, uid types.UID) []metav1.OwnerReference {
 	var expected []metav1.OwnerReference
 	for _, owner := range ownerReferences {
 		if owner.UID != uid {
-			expected = append(expected, *owner.DeepCopy())
+			expected = append(expected, owner)
 		}
 	}
 	return expected
