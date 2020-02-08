@@ -119,7 +119,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		// The broker may no longer exist, in which case we stop processing the broker
 		// but we need to mark all the triggers that belong to this appropriately.
 		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
-		return r.markTriggersAsNotReady(namespace, name)
+		return r.markTriggersAsNotReady(ctx, namespace, name)
 	} else if err != nil {
 		return err
 	}
@@ -174,8 +174,9 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	// 6. Subscription from the Ingress Channel to the Ingress Service.
 
 	if b.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
+		// Everything is cleaned up by the garbage collector for Broker,
+		// but we need to mark our Triggers as no broker.
+		return r.markTriggersAsNotReady(ctx, b.Namespace, b.Name)
 	}
 
 	if b.Spec.ChannelTemplate == nil {
@@ -481,7 +482,22 @@ func brokerLabels(name string) map[string]string {
 	}
 }
 
-func (r *Reconciler) markTriggersAsNotReady(namespace, name string) error {
-	// TODO: Mark all the triggers as not ready
+func (r *Reconciler) markTriggersAsNotReady(ctx context.Context, namespace, name string) error {
+	triggers, err := r.triggerLister.Triggers(namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+	for _, t := range triggers {
+		if t.Spec.Broker == name {
+			// Don't modify informers copy
+			trigger := t.DeepCopy()
+			trigger.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", name)
+			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
+				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
+				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				return updateStatusErr
+			}
+		}
+	}
 	return nil
 }

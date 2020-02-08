@@ -19,9 +19,9 @@ package broker
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"testing"
 
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
@@ -636,6 +636,40 @@ func TestReconcile(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
 			},
 		},
+		{
+			Name: "Broker missing, marks trigger as not ready due to broker missing",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
+			}},
+		},
+		{
+			Name: "Broker being deleted, marks trigger as not ready due to broker missing",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithInitBrokerConditions,
+					WithBrokerDeletionTimestamp),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
+			}},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -942,8 +976,8 @@ func makeBrokerRef() *corev1.ObjectReference {
 		Name:       brokerName,
 	}
 }
-func makeServiceURI() *url.URL {
-	return &url.URL{
+func makeServiceURI() *apis.URL {
+	return &apis.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
