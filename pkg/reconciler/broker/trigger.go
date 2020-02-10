@@ -135,7 +135,7 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 		t.Status.MarkSubscriptionNotOwned(sub)
 		return nil, fmt.Errorf("trigger %q does not own subscription %q", t.Name, sub.Name)
 	} else if sub, err = r.reconcileSubscription(ctx, t, expected, sub); err != nil {
-		logging.FromContext(ctx).Error("Failed to RECONCILE subscription", zap.Error(err))
+		logging.FromContext(ctx).Error("Failed to reconcile subscription", zap.Error(err))
 		return sub, err
 	}
 

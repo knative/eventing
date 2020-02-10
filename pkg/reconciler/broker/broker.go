@@ -275,7 +275,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	err = r.reconcileTriggers(ctx, b, filterSvc)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling triggers", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to reconcile triggers: %v", err)
 	}
 	return nil
 }
