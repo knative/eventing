@@ -352,7 +352,7 @@ func TestAllCase(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
 			},
 		}, {
-			Name: "Copy ConfigMap no longer has required labels",
+			Name: "Copy ConfigMap no longer has required labels, with only one owner reference",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewConfigMapPropagation(configMapPropagationName, currentNS,
@@ -377,6 +377,56 @@ func TestAllCase(t *testing.T) {
 					WithConfigMapLabels(metav1.LabelSelector{
 						MatchLabels: map[string]string{},
 					}),
+				),
+			}},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewConfigMapPropagation(configMapPropagationName, currentNS,
+					WithInitConfigMapPropagationConditions,
+					WithConfigMapPropagationSelector(selector),
+					WithConfigMapPropagationPropagated,
+					WithInitConfigMapStatus(),
+					WithCopyConfigMapStatus("test-cmp-test-original-cm", "knative-eventing/test-original-cm",
+						"Stop", "True", `copy ConfigMap doesn't have copy label, stop propagating this ConfigMap`),
+				),
+			}},
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, configMapPropagationPropagateSingleConfigMapSucceed,
+					`Stop propagating ConfigMap: test-original-cm`),
+				Eventf(corev1.EventTypeNormal, configMapPropagationReadinessChanged, "ConfigMapPropagation %q became ready", configMapPropagationName),
+			},
+		}, {
+			Name: "Copy ConfigMap no longer has required labels, with multiple owner references",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewConfigMapPropagation(configMapPropagationName, currentNS,
+					WithInitConfigMapPropagationConditions,
+					WithConfigMapPropagationSelector(selector),
+				),
+				NewConfigMapPropagation("default", currentNS,
+					WithInitConfigMapPropagationConditions,
+					WithConfigMapPropagationUID("1234"),
+				),
+				NewConfigMap(originalConfigMapName, originalNS,
+					WithConfigMapLabels(originalSelector),
+				),
+				NewConfigMap(copyConfigMapName, currentNS,
+					WithConfigMapLabels(metav1.LabelSelector{
+						MatchLabels: map[string]string{},
+					}),
+					WithConfigMapOwnerReference(NewConfigMapPropagation(configMapPropagationName, currentNS,
+						WithInitConfigMapPropagationConditions,
+						WithConfigMapPropagationSelector(selector),
+					)),
+					WithConfigMapOwnerReference(NewConfigMapPropagation("additional", currentNS, WithInitConfigMapPropagationConditions, WithConfigMapPropagationUID("1234"))),
+				),
+			},
+			WantUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewConfigMap(copyConfigMapName, currentNS,
+					WithConfigMapLabels(metav1.LabelSelector{
+						MatchLabels: map[string]string{},
+					}),
+					WithConfigMapOwnerReference(NewConfigMapPropagation("additional", currentNS, WithInitConfigMapPropagationConditions, WithConfigMapPropagationUID("1234"))),
 				),
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
