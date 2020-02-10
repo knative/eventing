@@ -151,6 +151,18 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name: "nil channeltemplatespec",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithInitBrokerConditions),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "Broker.Spec.ChannelTemplate is nil"),
+			},
+			WantErr: true,
+		},
+		{
 			Name: "Trigger Channel.Create error",
 			Key:  testKey,
 			Objects: []runtime.Object{

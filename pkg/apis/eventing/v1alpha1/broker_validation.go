@@ -32,7 +32,9 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
 	// Validate the new channelTemplate.
-	if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
+	if bs.ChannelTemplate == nil {
+		errs = errs.Also(apis.ErrMissingField("channelTemplateSpec"))
+	} else if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
 		errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 	}
 
@@ -42,9 +44,6 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 
 func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis.FieldError {
 	var errs *apis.FieldError
-	if dct == nil {
-		return nil
-	}
 	if dct.Kind == "" {
 		errs = errs.Also(apis.ErrMissingField("kind"))
 	}

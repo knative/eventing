@@ -43,7 +43,7 @@ type IngressArgs struct {
 }
 
 // MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
-func MakeIngress(args *IngressArgs) *appsv1.Deployment {
+func MakeIngressDeployment(args *IngressArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,

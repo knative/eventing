@@ -90,9 +90,9 @@ func TestValidSpec(t *testing.T) {
 		spec BrokerSpec
 		want *apis.FieldError
 	}{{
-		name: "valid empty",
+		name: "invalid empty, missing channeltemplatespec",
 		spec: BrokerSpec{},
-		want: nil,
+		want: apis.ErrMissingField("channelTemplateSpec"),
 	}, {
 		name: "valid provider",
 		spec: BrokerSpec{

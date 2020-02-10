@@ -52,7 +52,7 @@ const (
 	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
-func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger) error {
+func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, filterSvc *corev1.Service) error {
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
@@ -64,30 +64,14 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 
 	brokerTrigger := b.Status.TriggerChannel
 	if brokerTrigger == nil {
-		logging.FromContext(ctx).Error("Broker TriggerChannel not populated")
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerChannelFailed, "Broker's Trigger channel not found")
+		// Should not happen because Broker is ready to go if we get here
 		return errors.New("failed to find Broker's Trigger channel")
-	}
-
-	// Get Broker filter service.
-	filterSvc, err := r.getBrokerFilterService(ctx, b)
-	if err != nil {
-		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Error("can not find Broker's Filter service", zap.Error(err))
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Broker's Filter service not found")
-			return errors.New("failed to find Broker's Filter service")
-		}
-		logging.FromContext(ctx).Error("failed to get Broker's Filter service", zap.Error(err))
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, triggerServiceFailed, "Failed to get Broker's Filter service")
-		return err
 	}
 
 	if t.Spec.Subscriber.Ref != nil {
 		// To call URIFromDestination(dest apisv1alpha1.Destination, parent interface{}), dest.Ref must have a Namespace
 		// We will use the Namespace of Trigger as the Namespace of dest.Ref
 		t.Spec.Subscriber.Ref.Namespace = t.GetNamespace()
-		// Since Trigger never allowed ref fields at the subscriber level and
-		// validates that they are absent, we can ignore them here.
 	}
 
 	subscriberURI, err := r.uriResolver.URIFromDestinationV1(t.Spec.Subscriber, b)
@@ -113,12 +97,6 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 	}
 
 	return nil
-}
-
-// getBrokerFilterService returns the K8s service for trigger 't' if exists,
-// otherwise it returns an error.
-func (r *Reconciler) getBrokerFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
-	return r.serviceLister.Services(b.Namespace).Get(fmt.Sprintf("%s-broker-filter", b.Name))
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
