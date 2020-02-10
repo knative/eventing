@@ -88,18 +88,25 @@ and upper bound to show. For example:
 ```
 gnuplot -c test/performance/latency-and-thpt-plot.plg data.csv 0.005 480 520
 ```
+
 ## Profiling
-Most eventing binaries under `cmd` package are bootstrapped by either `sharedmain.Main`
-in `knative.dev/pkg/injection/sharedmain` or `adapter.Main` in `knative.dev/eventing/pkg/adapter`.
-These `Main` helper functions uses the [profiling](https://github.com/knative/pkg/blob/master/profiling/server.go)
-package to enable golang profiling by reading the `profiling.enable` flag in
-the `config-observability` configmap.
+
+Most eventing binaries under `cmd` package are bootstrapped by either
+`sharedmain.Main` in `knative.dev/pkg/injection/sharedmain` or `adapter.Main` in
+`knative.dev/eventing/pkg/adapter`. These `Main` helper functions uses the
+[profiling](https://github.com/knative/pkg/blob/master/profiling/server.go)
+package to enable golang profiling by reading the `profiling.enable` flag in the
+`config-observability` configmap.
 
 To enable profiling,
-1. Add or modify `profiling.enable: "true"` in `config/config-observability.yaml`'s
-`data` field and apply the change. Or use `kubectl edit configmap -n knative-eventing config-observability`.
-2. Port forward into the pod which you want to profile, e.g.,
-`kubectl port-forward <imc-dispatcher-pod> 8008:8008`
-3. Point your browser to `http://localhost:8008/debug/pprof/` and view pprof data.
 
-After you are done, you can disable profiling by setting `profiling.enable: "false"`.
+1. Add or modify `profiling.enable: "true"` in
+   `config/config-observability.yaml`'s `data` field and apply the change. Or
+   use `kubectl edit configmap -n knative-eventing config-observability`.
+2. Port forward into the pod which you want to profile, e.g.,
+   `kubectl port-forward <imc-dispatcher-pod> 8008:8008`
+3. Point your browser to `http://localhost:8008/debug/pprof/` and view pprof
+   data.
+
+After you are done, you can disable profiling by setting
+`profiling.enable: "false"`.
