@@ -121,6 +121,7 @@ metadata:
  labels:
     knative.dev/crd-install: "true"
     messaging.knative.dev/subscribable: "true"
+    duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
   version: v1alpha1
@@ -142,6 +143,7 @@ spec:
 Each channel is _namespaced_ and MUST have the following:
 
 - label of `messaging.knative.dev/subscribable: "true"`
+- label of `duck.knative.dev/addressable: "true"`
 - The category `channel`
 
 #### Spec Requirements
