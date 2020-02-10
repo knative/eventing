@@ -81,7 +81,7 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev", "sources.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev", "sources.knative.dev", "flows.knative.dev"]
     resources: ["*"]
     verbs: ["create", "update", "patch", "delete"]
 ---
@@ -93,6 +93,6 @@ metadata:
     rbac.authorization.k8s.io/aggregate-to-view: "true"
     eventing.knative.dev/release: devel
 rules:
-  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev", "sources.knative.dev"]
+  - apiGroups: ["eventing.knative.dev", "messaging.knative.dev", "sources.eventing.knative.dev", "sources.knative.dev", flows.knative.dev]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
