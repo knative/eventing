@@ -476,6 +476,8 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, 
 			if tErr != nil {
 				r.Logger.Error("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
 				return tErr
+			} else {
+				r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
 			}
 			trigger.Status.ObservedGeneration = t.Generation
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {

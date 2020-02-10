@@ -82,6 +82,8 @@ const (
 	subscriberVersion = "v1"
 
 	brokerGeneration = 79
+
+	dependencyAnnotation = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 )
 
 var (
@@ -672,6 +674,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())))},
 			},
 			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
 				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
 			},
 		}, {
@@ -709,7 +712,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
 			}},
 		}, {
-			Name: "Successful Reconciliation, trigger being deleted",
+			Name: "Trigger being deleted",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				NewTrigger(triggerName, testNS, brokerName,
@@ -722,18 +725,12 @@ func TestReconcile(t *testing.T) {
 					WithTriggerDeleted,
 					WithInitTriggerConditions,
 					WithTriggerSubscriberURI(subscriberURI)),
-			}, {
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(channel()),
-					WithBrokerReady,
-					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())))},
-			},
+			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
 			},
 		}, {
-			Name: "Successful broker Reconciliation, trigger subscription create fails",
+			Name: "Trigger subscription create fails",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				NewTrigger(triggerName, testNS, brokerName,
@@ -743,12 +740,6 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "subscriptions"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(channel()),
-					WithBrokerReady,
-					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
-			}, {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithInitTriggerConditions,
@@ -761,11 +752,10 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
 				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeNormal, "BrokerReadinessChanged", `Broker "test-broker" became ready`),
 			},
 			WantErr: true,
 		}, {
-			Name: "Successful broker Reconciliation, trigger subscription delete fails",
+			Name: "Trigger subscription delete fails",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				NewTrigger(triggerName, testNS, brokerName,
@@ -776,12 +766,6 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("delete", "subscriptions"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(channel()),
-					WithBrokerReady,
-					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
-			}, {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithInitTriggerConditions,
@@ -794,11 +778,10 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionDeleteFailed", "Delete Trigger's subscription failed: inducing failure for delete subscriptions"),
 				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: inducing failure for delete subscriptions"),
-				Eventf(corev1.EventTypeNormal, "BrokerReadinessChanged", `Broker "test-broker" became ready`),
 			},
 			WantErr: true,
 		}, {
-			Name: "Successful broker Reconciliation, trigger subscription create after delete fails",
+			Name: "Trigger subscription create after delete fails",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				NewTrigger(triggerName, testNS, brokerName,
@@ -809,12 +792,6 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "subscriptions"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(channel()),
-					WithBrokerReady,
-					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
-			}, {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithInitTriggerConditions,
@@ -830,11 +807,10 @@ func TestReconcile(t *testing.T) {
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
 				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeNormal, "BrokerReadinessChanged", `Broker "test-broker" became ready`),
 			},
 			WantErr: true,
 		}, {
-			Name: "Successful broker Reconciliation, trigger subscription not owned by Trigger",
+			Name: "Trigger subscription not owned by Trigger",
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				NewTrigger(triggerName, testNS, brokerName,
@@ -842,12 +818,6 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscriberURI(subscriberURI)),
 				makeIngressSubscriptionNotOwnedByTrigger()}...),
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewBroker(brokerName, testNS,
-					WithBrokerChannel(channel()),
-					WithBrokerReady,
-					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
-			}, {
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithInitTriggerConditions,
@@ -856,9 +826,71 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", `Broker reconcile error: failed to reconcile triggers: trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
-				Eventf(corev1.EventTypeNormal, "BrokerReadinessChanged", `Broker "test-broker" became ready`),
 			},
 			WantErr: true,
+		}, {
+			Name: "Trigger subscription update works",
+			Key:  testKey,
+			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+				makeDifferentReadySubscription()}...),
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					// The first reconciliation will initialize the status conditions.
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerSubscriptionNotConfigured(),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerDependencyReady()),
+			}},
+			WantDeletes: []clientgotesting.DeleteActionImpl{{
+				Name: subscriptionName,
+			}},
+			WantCreates: []runtime.Object{
+				makeIngressSubscription(),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
+			},
+			/*
+				}, {
+					Name: "Dependency doesn't exist",
+					Key:  testKey,
+					Objects: allBrokerObjectsReadyPlus([]runtime.Object{
+						makeReadySubscription(),
+						NewTrigger(triggerName, testNS, brokerName,
+							WithTriggerUID(triggerUID),
+							WithTriggerSubscriberURI(subscriberURI),
+							WithInitTriggerConditions,
+							WithDependencyAnnotation(dependencyAnnotation)),
+					}...),
+					WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+						Object: NewTrigger(triggerName, testNS, brokerName,
+							WithTriggerUID(triggerUID),
+							WithTriggerSubscriberURI(subscriberURI),
+							WithDependencyAnnotation(dependencyAnnotation),
+							WithInitTriggerConditions,
+							WithTriggerBrokerReady(),
+							// The first reconciliation will initialize the status conditions.
+							WithInitTriggerConditions,
+							WithTriggerBrokerReady(),
+							WithTriggerSubscriptionNotConfigured(),
+							WithTriggerStatusSubscriberURI(subscriberURI),
+							WithTriggerSubscriberResolvedSucceeded(),
+							WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found")),
+					}},
+					WantErr: true,
+					WantEvents: []string{
+						Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: propagating dependency readiness: getting the dependency: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+					},
+			*/
 		},
 	}
 
@@ -1198,7 +1230,10 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 	brokerObjs := []runtime.Object{
 		NewBroker(brokerName, testNS,
 			WithBrokerChannel(channel()),
-			WithInitBrokerConditions),
+			WithInitBrokerConditions,
+			WithBrokerReady,
+			WithBrokerTriggerChannel(createTriggerChannelRef()),
+			WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
 		createChannel(testNS, triggerChannel, true),
 		NewDeployment(filterDeploymentName, testNS,
 			WithDeploymentOwnerReferences(ownerReferences()),
@@ -1234,4 +1269,10 @@ func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription 
 	sub := makeIngressSubscription()
 	sub.OwnerReferences = []metav1.OwnerReference{}
 	return sub
+}
+
+func makeReadySubscription() *messagingv1alpha1.Subscription {
+	s := makeIngressSubscription()
+	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
+	return s
 }
