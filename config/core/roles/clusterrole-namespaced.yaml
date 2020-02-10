@@ -39,6 +39,18 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  name: knative-flows-namespaced-admin
+  labels:
+    eventing.knative.dev/release: devel
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+rules:
+  - apiGroups: ["flows.knative.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
   name: knative-eventing-sources-namespaced-admin
   labels:
     eventing.knative.dev/release: devel
