@@ -98,11 +98,8 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
 		if apierrs.IsNotFound(err) {
-			logging.FromContext(ctx).Info("BROKER NOT FOUND", zap.String("Namespace", t.Namespace))
 			_, needDefaultBroker := t.GetAnnotations()[v1alpha1.InjectionAnnotation]
-			logging.FromContext(ctx).Info("need default broker", zap.Any("NEED", needDefaultBroker))
 			if t.Spec.Broker == "default" && needDefaultBroker {
-				logging.FromContext(ctx).Info("Labeling namespace", zap.String("Namespace", t.Namespace))
 				if e := r.labelNamespace(ctx, t); e != nil {
 					logging.FromContext(ctx).Error("Unable to label the namespace", zap.Error(e))
 					return e
@@ -110,7 +107,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 			}
 			return nil
 		}
-		logging.FromContext(ctx).Error("SOME OTHER ERROR", zap.Error(err))
 		return err
 	}
 	return nil
@@ -120,7 +116,6 @@ func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
 func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) error {
 	current, err := r.namespaceLister.Get(t.Namespace)
 	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the namespace", zap.Error(err))
 		return err
 	}
 	current = current.DeepCopy()
