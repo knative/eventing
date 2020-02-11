@@ -19,7 +19,6 @@ package apiserversource
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,6 +33,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/utils"
@@ -790,12 +790,10 @@ func TestReconcile(t *testing.T) {
 func makeReceiveAdapter() *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
-			Resources: []sourcesv1alpha1.ApiServerResource{
-				{
-					APIVersion: "",
-					Kind:       "Namespace",
-				},
-			},
+			Resources: []sourcesv1alpha1.ApiServerResource{{
+				APIVersion: "",
+				Kind:       "Namespace",
+			}},
 			Sink: &sinkDest,
 		}),
 		WithApiServerSourceUID(sourceUID),
