@@ -19,7 +19,6 @@ package parallel
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/tools/cache"
 	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
 	"knative.dev/pkg/tracker"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -38,18 +35,20 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 
+	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
-const (
-	reconciled         = "Reconciled"
-	reconcileFailed    = "ReconcileFailed"
-	updateStatusFailed = "UpdateStatusFailed"
-)
+// newReconciledNormal makes a new reconciler event with event type Normal, and
+// reason ParallelReconciled.
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ParallelReconciled", "Parallel reconciled: \"%s/%s\"", namespace, name)
+}
 
 type Reconciler struct {
 	*reconciler.Base
@@ -61,61 +60,12 @@ type Reconciler struct {
 	subscriptionLister messaginglisters.SubscriptionLister
 }
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements parallelreconciler.Interface
+var _ parallelreconciler.Interface = (*Reconciler)(nil)
 
-// Reconcile compares the actual state with the desired, and attempts to
-// reconcile the two. It then updates the Status block of the Parallel resource
-// with the current Status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	logging.FromContext(ctx).Debug("reconciling", zap.String("key", key))
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key", zap.Error(err))
-		return nil
-	}
-
-	// Get the Parallel resource with this namespace/name
-	original, err := r.parallelLister.Parallels(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("Parallel key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy
-	parallel := original.DeepCopy()
-
-	// Reconcile this copy of the Parallel and then write back any status
-	// updates regardless of whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, parallel)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Parallel", zap.Error(reconcileErr))
-		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, reconcileFailed, "Parallel reconciliation failed: %v", reconcileErr)
-	} else {
-		logging.FromContext(ctx).Debug("Successfully reconciled Parallel")
-		r.Recorder.Eventf(parallel, corev1.EventTypeNormal, reconciled, "Parallel reconciled")
-	}
-
-	// Since the reconciler took a crack at this, make sure it's reflected
-	// in the status correctly.
-	parallel.Status.ObservedGeneration = original.Generation
-
-	if _, updateStatusErr := r.updateStatus(ctx, parallel); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Error updating Parallel status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update parallel status: %s", key)
-		return updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1alpha1.Parallel) pkgreconciler.Event {
 	p.Status.InitializeConditions()
+	p.Status.ObservedGeneration = p.Generation
 
 	// Reconciling parallel is pretty straightforward, it does the following things:
 	// 1. Create a channel fronting the whole parallel and one filter channel per branch.
@@ -188,25 +138,7 @@ func (r *Reconciler) reconcile(ctx context.Context, p *v1alpha1.Parallel) error 
 	}
 	p.Status.PropagateSubscriptionStatuses(filterSubs, subs)
 
-	return nil
-}
-
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Parallel) (*v1alpha1.Parallel, error) {
-	p, err := r.parallelLister.Parallels(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(p.Status, desired.Status) {
-		return p, nil
-	}
-
-	// Don't modify the informers copy.
-	existing := p.DeepCopy()
-	existing.Status = desired.Status
-
-	return r.EventingClientSet.FlowsV1alpha1().Parallels(desired.Namespace).UpdateStatus(existing)
+	return newReconciledNormal(p.Namespace, p.Name)
 }
 
 func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, p *v1alpha1.Parallel, channelObjRef corev1.ObjectReference) (*duckv1alpha1.Channelable, error) {

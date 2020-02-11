@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -98,9 +100,6 @@ func TestAllBranches(t *testing.T) {
 					reconciletesting.WithInitFlowsParallelConditions,
 					reconciletesting.WithFlowsParallelDeleted)},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
-			},
 		}, {
 			Name: "single branch, no filter",
 			Key:  pKey,
@@ -114,7 +113,7 @@ func TestAllBranches(t *testing.T) {
 					}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
@@ -155,7 +154,7 @@ func TestAllBranches(t *testing.T) {
 					}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
@@ -195,7 +194,7 @@ func TestAllBranches(t *testing.T) {
 					}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
@@ -238,7 +237,7 @@ func TestAllBranches(t *testing.T) {
 					}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
@@ -281,7 +280,7 @@ func TestAllBranches(t *testing.T) {
 					}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
@@ -341,7 +340,7 @@ func TestAllBranches(t *testing.T) {
 					}))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantCreates: []runtime.Object{
 				createChannel(parallelName),
@@ -407,7 +406,7 @@ func TestAllBranches(t *testing.T) {
 					})))},
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "Parallel reconciled"),
+				Eventf(corev1.EventTypeNormal, "ParallelReconciled", `Parallel reconciled: "test-namespace/test-parallel"`),
 			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{
 				{Name: resources.ParallelBranchChannelName(parallelName, 0)},
@@ -443,12 +442,13 @@ func TestAllBranches(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		return &Reconciler{
+		r := &Reconciler{
 			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			parallelLister:     listers.GetFlowsParallelLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			subscriptionLister: listers.GetSubscriptionLister(),
 		}
+		return parallel.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetFlowsParallelLister(), r.Recorder, r)
 	}, false, logger))
 }
 
