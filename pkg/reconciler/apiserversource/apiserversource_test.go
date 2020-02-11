@@ -775,7 +775,6 @@ func TestReconcile(t *testing.T) {
 		r := &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
-			deploymentLister:      listers.GetDeploymentLister(),
 			eventTypeLister:       listers.GetEventTypeLister(),
 			source:                source,
 			receiveAdapterImage:   image,
