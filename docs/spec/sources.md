@@ -356,5 +356,6 @@ one of the following versions of the specification:
 * [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
 
 Every Source MUST support sending events via _Binary Content Mode_ or _Structured Content Mode_ of the HTTP
-Protocol Binding for CloudEvents. Sources MUST send events to its
-[Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1?tab=doc#Destination).
+Protocol Binding for CloudEvents. Sources MUST send events to its [Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1?tab=doc#Destination).
+
+For more details of the Knative Event delivery, take a look at its [specification](../delivery/README.md).
