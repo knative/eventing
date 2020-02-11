@@ -18,11 +18,8 @@ package pingsource
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"reflect"
-	"time"
-
-	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,19 +28,20 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/pkg/controller"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
 	"knative.dev/pkg/apis"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 )
 
@@ -60,6 +58,17 @@ const (
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 	component                   = "pingsource"
 )
+
+// newReconciledNormal makes a new reconciler event with event type Normal, and
+// reason PingSourceReconciled.
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PingSourceReconciled", "PingSource reconciled: \"%s/%s\"", namespace, name)
+}
+
+func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
+	b, _ := json.Marshal(sink)
+	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "SinkNotFound", "Sink not found: %s", string(b))
+}
 
 type Reconciler struct {
 	*reconciler.Base
@@ -78,53 +87,9 @@ type Reconciler struct {
 }
 
 // Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the PingSource
-// resource with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the PingSource resource with this namespace/name
-	original, err := r.pingLister.PingSources(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("PingSource key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy
-	src := original.DeepCopy()
-
-	// Reconcile this copy of the PingSource and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, src)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling PingSource", zap.Error(err))
-	} else {
-		logging.FromContext(ctx).Debug("PingSource reconciled")
-		r.Recorder.Eventf(src, corev1.EventTypeNormal, pingReconciled, `PingSource reconciled: "%s/%s"`, src.Namespace, src.Name)
-	}
-
-	if _, updateStatusErr := r.updateStatus(ctx, src.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the PingSource", zap.Error(err))
-		r.Recorder.Eventf(src, corev1.EventTypeWarning, pingUpdateStatusFailed, "Failed to update PingSource's status: %v", err)
-		return updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return err
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.PingSource) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -150,16 +115,12 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.PingSource)
 	sinkURI, err := r.sinkResolver.URIFromDestinationV1(*dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
-		return fmt.Errorf("getting sink URI: %v", err)
+		return newWarningSinkNotFound(dest)
 	}
-
 	source.Status.MarkSink(sinkURI)
 
-	_, err = cron.ParseStandard(source.Spec.Schedule)
-	if err != nil {
-		source.Status.MarkInvalidSchedule("Invalid", "")
-		return fmt.Errorf("invalid schedule: %v", err)
-	}
+	// The webhook does not allow for invalid schedules to be posted.
+	// TODO: remove MarkSchedule
 	source.Status.MarkSchedule()
 
 	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
@@ -176,7 +137,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.PingSource)
 	}
 	source.Status.MarkEventType()
 
-	return nil
+	return newReconciledNormal(source.Namespace, source.Name)
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.PingSource, sinkURI *apis.URL) (*appsv1.Deployment, error) {
@@ -318,36 +279,6 @@ func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.PingS
 	}
 	logging.FromContext(ctx).Debug("EventType created", zap.Any("eventType", current))
 	return current, nil
-}
-
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.PingSource) (*v1alpha1.PingSource, error) {
-	src, err := r.pingLister.PingSources(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(src.Status, desired.Status) {
-		return src, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !src.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := src.DeepCopy()
-	existing.Status = desired.Status
-
-	cj, err := r.EventingClientSet.SourcesV1alpha1().PingSources(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Info("PingSource became ready after", zap.Duration("duration", duration))
-		r.Recorder.Event(src, corev1.EventTypeNormal, pingReadinessChanged, fmt.Sprintf("PingSource %q became ready", src.Name))
-		if recorderErr := r.StatsReporter.ReportReady("PingSource", src.Namespace, src.Name, duration); recorderErr != nil {
-			logging.FromContext(ctx).Error("Failed to record ready for PingSource", zap.Error(recorderErr))
-		}
-	}
-
-	return cj, err
 }
 
 // TODO determine how to push the updated logging config to existing data plane Pods.

@@ -19,6 +19,7 @@ package pingsource
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	"testing"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -117,45 +118,6 @@ func TestAllCases(t *testing.T) {
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
 		}, {
-			Name: "invalid schedule",
-			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
-					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
-						Schedule: "invalid schedule",
-						Data:     testData,
-						Sink:     &sinkDest,
-					}),
-					WithPingSourceUID(sourceUID),
-					WithPingSourceObjectMetaGeneration(generation),
-				),
-				NewChannel(sinkName, testNS,
-					WithInitChannelConditions,
-					WithChannelAddress(sinkDNS),
-				),
-			},
-			Key:     testNS + "/" + sourceName,
-			WantErr: true,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "PingSourceUpdateStatusFailed",
-					"Failed to update PingSource's status: invalid schedule: expected exactly 5 fields, found 2: [invalid schedule]"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
-					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
-						Schedule: "invalid schedule",
-						Data:     testData,
-						Sink:     &sinkDest,
-					}),
-					WithPingSourceUID(sourceUID),
-					WithPingSourceObjectMetaGeneration(generation),
-					// Status Update:
-					WithInitPingSourceConditions,
-					WithPingSourceStatusObservedGeneration(generation),
-					WithInvalidPingSourceSchedule,
-					WithPingSourceSink(sinkURI),
-				),
-			}},
-		}, {
 			Name: "missing sink",
 			Objects: []runtime.Object{
 				NewPingSource(sourceName, testNS,
@@ -168,8 +130,7 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceObjectMetaGeneration(generation),
 				),
 			},
-			Key:     testNS + "/" + sourceName,
-			WantErr: true,
+			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSource(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
@@ -185,6 +146,10 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceSinkNotFound,
 				),
 			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "SinkNotFound",
+					`Sink not found: {"ref":{"kind":"Channel","namespace":"testnamespace","name":"testsink","apiVersion":"messaging.knative.dev/v1alpha1"}}`),
+			},
 		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
@@ -206,7 +171,6 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "PingSourceReadinessChanged", `PingSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSource(sourceName, testNS,
@@ -248,7 +212,6 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "PingSourceReadinessChanged", `PingSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSource(sourceName, testNS,
@@ -290,7 +253,6 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "PingSourceReadinessChanged", `PingSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSource(sourceName, testNS,
@@ -346,7 +308,6 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "PingSourceReadinessChanged", `PingSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSource(sourceName, testNS,
@@ -399,7 +360,6 @@ func TestAllCases(t *testing.T) {
 			Key: testNS + "/" + sourceName,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
-				Eventf(corev1.EventTypeNormal, "PingSourceReadinessChanged", `PingSource %q became ready`, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewPingSource(sourceName, testNS,
@@ -539,7 +499,7 @@ func TestAllCases(t *testing.T) {
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
-		return r
+		return pingsource.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetPingSourceLister(), r.Recorder, r)
 	},
 		true,
 		logger,

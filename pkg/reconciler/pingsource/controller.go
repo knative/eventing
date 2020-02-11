@@ -23,7 +23,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
-	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -32,7 +32,8 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource"
-	"knative.dev/eventing/pkg/reconciler"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
+	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 )
 
 const (
@@ -75,7 +76,7 @@ func NewController(
 	}
 	r.receiveAdapterImage = env.Image
 
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := pingsourcereconciler.NewImpl(ctx, r)
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
