@@ -30,14 +30,14 @@ import (
 
 // TODO: PLEASE COPY AND MODIFY THIS FILE AS A STARTING POINT
 
-// NewController creates a Reconciler for ApiServerSource and returns the result of NewImpl.
+// NewController creates a Reconciler for PingSource and returns the result of NewImpl.
 func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
 	logger := logging.FromContext(ctx)
 
-	apiserversourceInformer := pingsource.Get(ctx)
+	pingsourceInformer := pingsource.Get(ctx)
 
 	// TODO: setup additional informers here.
 
@@ -46,7 +46,7 @@ func NewController(
 
 	logger.Info("Setting up event handlers.")
 
-	apiserversourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	pingsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// TODO: add additional informer event handlers here.
 

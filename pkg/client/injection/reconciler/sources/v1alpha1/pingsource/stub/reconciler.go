@@ -30,12 +30,12 @@ import (
 // TODO: PLEASE COPY AND MODIFY THIS FILE AS A STARTING POINT
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
-// reason ApiServerSourceReconciled.
+// reason PingSourceReconciled.
 func newReconciledNormal(namespace, name string) reconciler.Event {
-	return reconciler.NewEvent(v1.EventTypeNormal, "ApiServerSourceReconciled", "ApiServerSource reconciled: \"%s/%s\"", namespace, name)
+	return reconciler.NewEvent(v1.EventTypeNormal, "PingSourceReconciled", "PingSource reconciled: \"%s/%s\"", namespace, name)
 }
 
-// Reconciler implements controller.Reconciler for ApiServerSource resources.
+// Reconciler implements controller.Reconciler for PingSource resources.
 type Reconciler struct {
 	// TODO: add additional requirements here.
 }
@@ -43,13 +43,11 @@ type Reconciler struct {
 // Check that our Reconciler implements Interface
 var _ pingsource.Interface = (*Reconciler)(nil)
 
+// Optionally check that our Reconciler implements Finalizer
+//var _ pingsource.Finalizer = (*Reconciler)(nil)
+
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, o *v1alpha1.ApiServerSource) reconciler.Event {
-	if o.GetDeletionTimestamp() != nil {
-		// Check for a DeletionTimestamp.  If present, elide the normal reconcile logic.
-		// When a controller needs finalizer handling, it would go here.
-		return nil
-	}
+func (r *Reconciler) ReconcileKind(ctx context.Context, o *v1alpha1.PingSource) reconciler.Event {
 	o.Status.InitializeConditions()
 
 	// TODO: add custom reconciliation logic here.
@@ -57,3 +55,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, o *v1alpha1.ApiServerSou
 	o.Status.ObservedGeneration = o.Generation
 	return newReconciledNormal(o.Namespace, o.Name)
 }
+
+// Optionally, use FinalizeKind to add finalizers. FinalizeKind will be called
+// when the resource is deleted.
+//func (r *Reconciler) FinalizeKind(ctx context.Context, o *v1alpha1.PingSource) reconciler.Event {
+//	// TODO: add custom finalization logic here.
+//	return nil
+//}

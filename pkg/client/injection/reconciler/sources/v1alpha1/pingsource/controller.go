@@ -35,14 +35,17 @@ import (
 )
 
 const (
-	defaultControllerAgentName = "apiserversource-controller"
-	defaultFinalizerName       = "apiserversource"
+	defaultControllerAgentName = "pingsource-controller"
+	defaultFinalizerName       = "pingsources.sources.knative.dev"
+	defaultQueueName           = "pingsources"
 )
 
+// NewImpl returns a controller.Impl that handles queuing and feeding work from
+// the queue through an implementation of controller.Reconciler, delegating to
+// the provided Interface and optional Finalizer methods.
 func NewImpl(ctx context.Context, r Interface) *controller.Impl {
 	logger := logging.FromContext(ctx)
-
-	apiserversourceInformer := pingsource.Get(ctx)
+	pingsourceInformer := pingsource.Get(ctx)
 
 	recorder := controller.GetEventRecorder(ctx)
 	if recorder == nil {
@@ -63,16 +66,13 @@ func NewImpl(ctx context.Context, r Interface) *controller.Impl {
 		}()
 	}
 
-	c := &reconcilerImpl{
-		Client:        injectionclient.Get(ctx),
-		Lister:        apiserversourceInformer.Lister(),
-		Recorder:      recorder,
-		FinalizerName: defaultFinalizerName,
-		reconciler:    r,
+	rec := &reconcilerImpl{
+		Client:     injectionclient.Get(ctx),
+		Lister:     pingsourceInformer.Lister(),
+		Recorder:   recorder,
+		reconciler: r,
 	}
-	impl := controller.NewImpl(c, logger, "apiserversources")
-
-	return impl
+	return controller.NewImpl(rec, logger, defaultQueueName)
 }
 
 func init() {
