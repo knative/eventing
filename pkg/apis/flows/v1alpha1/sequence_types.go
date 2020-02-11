@@ -28,6 +28,7 @@ import (
 )
 
 // +genclient
+// +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // Sequence defines a sequence of Subscribers that will be wired in
 // series through Channels and Subscriptions.
