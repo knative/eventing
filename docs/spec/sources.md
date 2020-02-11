@@ -55,7 +55,7 @@ running in the cluster.
 Sources are more useful if they are discoverable. Knative Sources MUST use a
 standardized label to allow controllers and operators the ability to find which
 CRDs are considered to be adhering to the
-[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
+[Source](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
 
 CRDs that are to be understood as a `source` MUST be labeled:
 
@@ -150,8 +150,8 @@ validation:
 ```
 
 Please see
-[SourceStatus](https://godoc.org/github.com/knative/pkg/apis/duck/v1#SourceStatus)
-and [Condition](https://godoc.org/github.com/knative/pkg/apis/#Condition) for
+[SourceStatus](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#SourceStatus)
+and [Condition](https://pkg.go.dev/github.com/knative/pkg/apis/#Condition) for
 more details.
 
 Sources SHOULD provide OpenAPI validation for the `spec` field. At minimum
@@ -287,7 +287,7 @@ rules:
 ## Source Custom Objects
 
 All Source Custom Objects MUST implement the
-[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
+[Source](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
 Additional data in spec and status is explicitly permitted.
 
 ### duck.Spec
@@ -308,9 +308,9 @@ type SourceSpec struct {
 ```
 
 For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
-see [Destination](https://godoc.org/knative.dev/pkg/apis/v1alpha1#Destination),
+see [Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1#Destination),
 and
-[CloudEventOverrides](https://godoc.org/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
+[CloudEventOverrides](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
 ### duck.Status
 
@@ -333,14 +333,14 @@ type SourceStatus struct {
 ```
 
 For a full definition of `Status` and `SinkURI`, please see
-[Status](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Status), and
-[URL](https://godoc.org/knative.dev/pkg/apis#URL).
+[Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
+[URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
 ### EventType Registry
 
 Upon instantiation of a Source Custom Object, a controller (potentially the
 source controller) SHOULD realize the
-[EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
+[EventType(s)](https://pkg.go.dev/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
 this instantiation brings onto the eventing mesh. For a more detailed
 description, please refer to the
 [Event Registry](https://knative.dev/docs/eventing/event-registry/)

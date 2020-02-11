@@ -19,11 +19,11 @@ package v1alpha1
 import (
 	"context"
 	"errors"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
