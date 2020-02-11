@@ -336,6 +336,14 @@ For a full definition of `Status` and `SinkURI`, please see
 [Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
 [URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
+### Event delivery
+
+Sources MUST output CloudEvents. The output MUST be via a binding specified in
+the
+[CloudEvents specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md).
+Every Source MUST support sending events via Binary Content Mode HTTP Transport
+Binding. Sources MUST send events to its sink `Destination`.
+
 ### EventType Registry
 
 Upon instantiation of a Source Custom Object, a controller (potentially the
