@@ -220,13 +220,12 @@ func TestEventTypeConditionStatus(t *testing.T) {
 		markBrokerExists:    &trueValue,
 		brokerStatus:        TestHelper.UnknownBrokerStatus(),
 		wantConditionStatus: corev1.ConditionUnknown,
-	},
-		{
-			name:                "all sad",
-			markBrokerExists:    &falseValue,
-			brokerStatus:        nil,
-			wantConditionStatus: corev1.ConditionFalse,
-		}}
+	}, {
+		name:                "all sad",
+		markBrokerExists:    &falseValue,
+		brokerStatus:        nil,
+		wantConditionStatus: corev1.ConditionFalse,
+	}}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ets := &EventTypeStatus{}

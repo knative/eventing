@@ -19,32 +19,23 @@ package trigger
 import (
 	"context"
 
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
-	"knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 )
 
 const (
 	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Triggers"
+	ReconcilerName = "TriggersNamespaceLabeler"
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "trigger-controller"
+	controllerAgentName = "trigger-namespace-labeler-controller"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -55,44 +46,18 @@ func NewController(
 ) *controller.Impl {
 
 	triggerInformer := trigger.Get(ctx)
-	subscriptionInformer := subscription.Get(ctx)
 	brokerInformer := broker.Get(ctx)
-	serviceInformer := service.Get(ctx)
 	namespaceInformer := namespace.Get(ctx)
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
-		triggerLister:      triggerInformer.Lister(),
-		subscriptionLister: subscriptionInformer.Lister(),
-		brokerLister:       brokerInformer.Lister(),
-		serviceLister:      serviceInformer.Lister(),
-		namespaceLister:    namespaceInformer.Lister(),
+		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
+		triggerLister:   triggerInformer.Lister(),
+		brokerLister:    brokerInformer.Lister(),
+		namespaceLister: namespaceInformer.Lister(),
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
-
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		// Call the tracker's OnChanged method, but we've seen the objects
-		// coming through this path missing TypeMeta, so ensure it is properly
-		// populated.
-		controller.EnsureTypeMeta(
-			r.tracker.OnChanged,
-			v1alpha1.SchemeGroupVersion.WithKind("Broker"),
-		),
-	))
-
-	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
-	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
-
 	return impl
 }
