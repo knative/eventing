@@ -345,3 +345,17 @@ this instantiation brings onto the eventing mesh. For a more detailed
 description, please refer to the
 [Event Registry](https://knative.dev/docs/eventing/event-registry/)
 documentation.
+
+## Source Event delivery
+
+Sources SHOULD produce CloudEvents. The output SHOULD be via the HTTP binding specified in
+one of the following versions of the specification:
+
+* [CloudEvents 0.2 specification](https://github.com/cloudevents/spec/blob/v0.2/http-transport-binding.md)
+* [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
+* [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
+
+Every Source SHOULD support sending events via _Binary Content Mode_ or _Structured Content Mode_ of the HTTP
+Protocol Binding for CloudEvents. Sources SHOULD send events to its [Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1?tab=doc#Destination).
+
+For more details of the Knative Event delivery, take a look at its [specification](../delivery/README.md).
