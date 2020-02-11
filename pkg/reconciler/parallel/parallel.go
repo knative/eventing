@@ -63,56 +63,6 @@ type Reconciler struct {
 // Check that our Reconciler implements parallelreconciler.Interface
 var _ parallelreconciler.Interface = (*Reconciler)(nil)
 
-// Reconcile compares the actual state with the desired, and attempts to
-// reconcile the two. It then updates the Status block of the Parallel resource
-// with the current Status of the resource.
-//func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-//	logging.FromContext(ctx).Debug("reconciling", zap.String("key", key))
-//	// Convert the namespace/name string into a distinct namespace and name
-//	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-//	if err != nil {
-//		logging.FromContext(ctx).Error("invalid resource key", zap.Error(err))
-//		return nil
-//	}
-//
-//	// Get the Parallel resource with this namespace/name
-//	original, err := r.parallelLister.Parallels(namespace).Get(name)
-//	if apierrs.IsNotFound(err) {
-//		// The resource may no longer exist, in which case we stop processing.
-//		logging.FromContext(ctx).Error("Parallel key in work queue no longer exists")
-//		return nil
-//	} else if err != nil {
-//		return err
-//	}
-//
-//	// Don't modify the informers copy
-//	parallel := original.DeepCopy()
-//
-//	// Reconcile this copy of the Parallel and then write back any status
-//	// updates regardless of whether the reconcile error out.
-//	reconcileErr := r.reconcile(ctx, parallel)
-//	if reconcileErr != nil {
-//		logging.FromContext(ctx).Error("Error reconciling Parallel", zap.Error(reconcileErr))
-//		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, reconcileFailed, "Parallel reconciliation failed: %v", reconcileErr)
-//	} else {
-//		logging.FromContext(ctx).Debug("Successfully reconciled Parallel")
-//		r.Recorder.Eventf(parallel, corev1.EventTypeNormal, reconciled, "Parallel reconciled")
-//	}
-//
-//	// Since the reconciler took a crack at this, make sure it's reflected
-//	// in the status correctly.
-//	parallel.Status.ObservedGeneration = original.Generation
-//
-//	if _, updateStatusErr := r.updateStatus(ctx, parallel); updateStatusErr != nil {
-//		logging.FromContext(ctx).Warn("Error updating Parallel status", zap.Error(updateStatusErr))
-//		r.Recorder.Eventf(parallel, corev1.EventTypeWarning, updateStatusFailed, "Failed to update parallel status: %s", key)
-//		return updateStatusErr
-//	}
-//
-//	// Requeue if the resource is not ready:
-//	return reconcileErr
-//}
-
 func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1alpha1.Parallel) pkgreconciler.Event {
 	p.Status.InitializeConditions()
 	p.Status.ObservedGeneration = p.Generation
