@@ -336,14 +336,6 @@ For a full definition of `Status` and `SinkURI`, please see
 [Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
 [URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
-### Event delivery
-
-Sources MUST output CloudEvents. The output MUST be via a binding specified in
-the
-[CloudEvents specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md).
-Every Source MUST support sending events via Binary Content Mode HTTP Transport
-Binding. Sources MUST send events to its sink `Destination`.
-
 ### EventType Registry
 
 Upon instantiation of a Source Custom Object, a controller (potentially the
@@ -353,3 +345,16 @@ this instantiation brings onto the eventing mesh. For a more detailed
 description, please refer to the
 [Event Registry](https://knative.dev/docs/eventing/event-registry/)
 documentation.
+
+## Source Event delivery
+
+Sources MUST output CloudEvents. The output MUST be via the HTTP binding specified in
+one of the following versions of the specification:
+
+* [CloudEvents 0.2 specification](https://github.com/cloudevents/spec/blob/v0.2/http-transport-binding.md)
+* [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
+* [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
+
+Every Source MUST support sending events via _Binary Content Mode_ or _Structured Content Mode_ of the HTTP
+Protocol Binding for CloudEvents. Sources MUST send events to its
+[Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1?tab=doc#Destination).
