@@ -32,6 +32,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	"knative.dev/eventing/pkg/reconciler/subscription"
+	"knative.dev/eventing/pkg/reconciler/trigger"
 )
 
 func main() {
@@ -42,6 +43,8 @@ func main() {
 
 		// Eventing
 		eventtype.NewController,
+		// Trigger namespace labeler for default broker.
+		trigger.NewController,
 
 		// Flows
 		parallel.NewController,

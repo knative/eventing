@@ -742,18 +742,21 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerSubscriberURI(subscriberURI)),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
 			}},
 			WantCreates: []runtime.Object{
 				makeIngressSubscription(),
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: inducing failure for create subscriptions"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for create subscriptions"),
 			},
-			WantErr: true,
 		}, {
 			Name: "Trigger subscription delete fails",
 			Key:  testKey,
@@ -768,18 +771,20 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerSubscriberURI(subscriberURI)),
-			}},
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for delete subscriptions"))},
+			},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: subscriptionName,
 			}},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionDeleteFailed", "Delete Trigger's subscription failed: inducing failure for delete subscriptions"),
-				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: inducing failure for delete subscriptions"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for delete subscriptions"),
 			},
-			WantErr: true,
 		}, {
 			Name: "Trigger subscription create after delete fails",
 			Key:  testKey,
@@ -794,9 +799,12 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerSubscriberURI(subscriberURI)),
+					WithTriggerStatusSubscriberURI(subscriberURI),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerNotSubscribed("NotSubscribed", "inducing failure for create subscriptions")),
 			}},
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: subscriptionName,
@@ -806,9 +814,8 @@ func TestReconcile(t *testing.T) {
 			},
 			WantEvents: []string{
 				Eventf(corev1.EventTypeWarning, "SubscriptionCreateFailed", "Create Trigger's subscription failed: inducing failure for create subscriptions"),
-				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", "Broker reconcile error: failed to reconcile triggers: inducing failure for create subscriptions"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: inducing failure for create subscriptions"),
 			},
-			WantErr: true,
 		}, {
 			Name: "Trigger subscription not owned by Trigger",
 			Key:  testKey,
@@ -819,15 +826,17 @@ func TestReconcile(t *testing.T) {
 				makeIngressSubscriptionNotOwnedByTrigger()}...),
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerSubscriberURI(subscriberURI),
 					WithTriggerUID(triggerUID),
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerSubscriberURI(subscriberURI)),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerNotSubscribed("NotSubscribed", `trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
+					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "BrokerReconcileError", `Broker reconcile error: failed to reconcile triggers: trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", `Trigger reconcile failed: trigger "test-trigger" does not own subscription "test-broker-test-trigger-test-trigger-uid"`),
 			},
-			WantErr: true,
 		}, {
 			Name: "Trigger subscription update works",
 			Key:  testKey,

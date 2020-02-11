@@ -475,7 +475,7 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, 
 			tErr := r.reconcileTrigger(ctx, b, trigger, filterSvc)
 			if tErr != nil {
 				r.Logger.Error("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
-				return tErr
+				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconcile failed: %v", tErr)
 			} else {
 				r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
 			}
@@ -483,7 +483,6 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, 
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
 				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
-				return updateStatusErr
 			}
 		}
 	}
