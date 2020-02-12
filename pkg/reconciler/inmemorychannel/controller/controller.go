@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"github.com/kelseyhightower/envconfig"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
@@ -29,6 +27,7 @@ import (
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/service"
@@ -46,11 +45,6 @@ const (
 
 	// TODO: this should be passed in on the env.
 	dispatcherName = "imc-dispatcher"
-)
-
-var (
-	serviceAccountGVK = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
-	roleBindingGVK    = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
 )
 
 type envConfig struct {
@@ -98,37 +92,55 @@ func NewController(
 		r.roleBindingLister = roleBindingInformer.Lister()
 	}
 
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
 	r.Logger.Info("Setting up event handlers")
-	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
+	inmemorychannelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
 
+	// Call GlobalResync on inmemorychannels.
+	grCh := func(obj interface{}) {
+		impl.GlobalResync(inmemorychannelInformer.Informer())
+	}
+
+	filterFn := ScopedFilter(env.Scope, r.systemNamespace, dispatcherName)
+
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-		Handler:    r,
+		FilterFunc: filterFn,
+		Handler:    controller.HandleAll(grCh),
 	})
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-		Handler:    r,
+		FilterFunc: filterFn,
+		Handler:    controller.HandleAll(grCh),
 	})
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-		Handler:    r,
+		FilterFunc: filterFn,
+		Handler:    controller.HandleAll(grCh),
 	})
 	if env.Scope == "namespace" {
 		serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-			Handler:    r,
+			FilterFunc: filterFn,
+			Handler:    controller.HandleAll(grCh),
 		})
 		roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: r.ScopedFilter(r.systemNamespace, dispatcherName),
-			Handler:    r,
+			FilterFunc: filterFn,
+			Handler:    controller.HandleAll(grCh),
 		})
 	}
 
-	return r.impl
+	return impl
+}
+
+func ScopedFilter(dispatcherScope, namespace, name string) func(obj interface{}) bool {
+	fnn := controller.FilterWithNameAndNamespace(namespace, name)
+	fn := controller.FilterWithName(name)
+	return func(obj interface{}) bool {
+		if dispatcherScope == scopeCluster {
+			return fnn(obj)
+		}
+		return fn(obj)
+	}
 }
