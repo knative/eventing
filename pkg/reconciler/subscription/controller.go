@@ -30,11 +30,10 @@ import (
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Subscriptions"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "subscription-controller"
@@ -55,7 +54,7 @@ func NewController(
 		subscriptionLister:             subscriptionInformer.Lister(),
 		customResourceDefinitionLister: customResourceDefinitionInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := subscriptionreconciler.NewImpl(ctx, r)
 
 	r.Logger.Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
