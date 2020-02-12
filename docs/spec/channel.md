@@ -189,12 +189,13 @@ exclusively communicate using CloudEvents.
 Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
 The endpoint(s) MUST conform to one of the following versions of the specification:
 
-* [CloudEvents 0.2 specification](https://github.com/cloudevents/spec/blob/v0.2/http-transport-binding.md)
 * [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
 * [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
 
+The usage of CloudEvents version `1.0` is RECOMMENDED.
+
 The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit
-the event with the same version. It MUST support both _Binary Content Mode_ or
+the event with the same version. It MUST support both _Binary Content Mode_ and
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
 
 The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.
