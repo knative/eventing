@@ -20,6 +20,9 @@ dispatcher is installed in the same namespace as the channel.
      name: foo
    ```
 
+IMPORTANT: make sure you don't have the [cluster-scoped in-memory channels](../in-memory-channel/README.md)
+configuration deployed in your cluster. Pick one or the other, but not both at the same time!
+
 ### Components
 
 The major components are:
