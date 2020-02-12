@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 	"testing"
+
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"

@@ -216,9 +216,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1alpha1.S
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1alpha1.Subscription) pkgreconciler.Event {
 	// Track the channel using the channelableTracker.
-	// We don't need the explicitly set a channelInformer, as this will dynamically generate one for us.
-	// This code needs to be called before checking the existence of the `channel`, in order to make sure the
+	// We don't need the explicitly set a channelInformer, as this will
+	// dynamically generate one for us. This code needs to be called before
+	// checking the existence of the `channel`, in order to make sure the
 	// subscription controller will reconcile upon a `channel` change.
+	// NOTE: this is required to be in FinalizeKind for the channelable
+	// ducktypes to be registered, as it is dynamic.
 	trackChannelable := r.channelableTracker.TrackInNamespace(subscription)
 	if err := trackChannelable(subscription.Spec.Channel); err != nil {
 		return fmt.Errorf("unable to track changes to spec.channel: %v", err)
