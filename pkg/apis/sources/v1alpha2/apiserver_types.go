@@ -96,6 +96,11 @@ type ApiServerSourceSpec struct {
 	// Defaults to `Reference`
 	// +optional
 	EventMode string `json:"mode,omitempty"`
+
+	// ServiceAccountName is the name of the ServiceAccount to use to run this
+	// source. Defaults to default if not set.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // ApiServerSourceStatus defines the observed state of ApiServerSource
