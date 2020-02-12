@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -44,8 +46,9 @@ import (
 )
 
 const (
-	testNS      = "test-namespace"
-	channelName = "test-channel"
+	testNS              = "test-namespace"
+	channelName         = "test-channel"
+	controllerAgentName = "ch-default-controller"
 )
 
 var (
@@ -75,187 +78,215 @@ func init() {
 
 func TestReconcile(t *testing.T) {
 
-	table := TableTest{
-		{
-			Name: "bad workqueue key",
-			// Make sure Reconcile handles bad keys.
-			Key: "too/many/parts",
-		}, {
-			Name: "key not found",
-			// Make sure Reconcile handles good keys that don't exist.
-			Key: "foo/not-found",
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "foo/not-found",
+	}, {
+		Name: "Channel not found",
+		Key:  testKey,
+	}, {
+		Name: "Channel is being deleted",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelDeleted),
 		},
-		{
-			Name: "Channel not found",
-			Key:  testKey,
+	}, {
+		Name: "Backing Channel.Create error",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions),
 		},
-		{
-			Name: "Channel is being deleted",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithChannelDeleted),
-			},
+		WantCreates: []runtime.Object{
+			createChannelCRD(testNS, channelName, false),
 		},
-		{
-			Name: "Backing Channel.Create error",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions),
-			},
-			WantCreates: []runtime.Object{
-				createChannelCRD(testNS, channelName, false),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewChannel(channelName, testNS,
-					WithInitChannelConditions,
-					WithChannelTemplate(channelCRD()),
-					WithBackingChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
-			}},
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("create", "inmemorychannels"),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: problem reconciling the backing channel: %v", "inducing failure for create inmemorychannels"),
-			},
-			WantErr: true,
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithInitChannelConditions,
+				WithChannelTemplate(channelCRD()),
+				WithBackingChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
+		}},
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("create", "inmemorychannels"),
 		},
-		{
-			Name: "Backing Channel.Patch Subscriptions failed",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithChannelSubscribers(subscribers())),
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, subscribers()),
-			},
-			WithReactors: []clientgotesting.ReactionFunc{
-				InduceFailure("patch", "inmemorychannels"),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithChannelSubscribers(subscribers()),
-					WithBackingChannelObjRef(backingChannelObjRef()),
-					WithBackingChannelFailed("ChannelFailure", "inducing failure for patch inmemorychannels")),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: problem patching subscriptions in the backing channel: %v", "inducing failure for patch inmemorychannels"),
-			},
-			WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "problem reconciling the backing channel: %v", "inducing failure for create inmemorychannels"),
 		},
-		{
-			Name: "Successful reconciliation",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithChannelSubscribers(subscribers())),
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelDeploymentReady(),
-					WithInMemoryChannelServiceReady(),
-					WithInMemoryChannelEndpointsReady(),
-					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(backingChannelHostname)),
-			},
-			WantPatches: []clientgotesting.PatchActionImpl{
-				patchSubscribers(testNS, channelName, subscribers()),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithChannelSubscribers(subscribers()),
-					WithBackingChannelObjRef(backingChannelObjRef()),
-					WithBackingChannelReady,
-					WithChannelAddress(backingChannelHostname)),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
-				Eventf(corev1.EventTypeNormal, channelReadinessChanged, "Channel %q became ready", channelName),
-			},
+		WantErr: true,
+	}, {
+		Name: "Backing Channel.Patch Subscriptions failed",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelSubscribers(subscribers())),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions),
 		},
-		{
-			Name: "Already reconciled",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithBackingChannelObjRef(backingChannelObjRef()),
-					WithChannelSubscribers(subscribers()),
-					WithBackingChannelReady,
-					WithChannelAddress(backingChannelHostname)),
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelDeploymentReady(),
-					WithInMemoryChannelServiceReady(),
-					WithInMemoryChannelEndpointsReady(),
-					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelSubscribers(subscribers()),
-					WithInMemoryChannelAddress(backingChannelHostname)),
-			},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
-			},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchSubscribers(testNS, channelName, subscribers()),
 		},
-		{
-			Name: "Updating subscribers statuses",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithBackingChannelObjRef(backingChannelObjRef()),
-					WithBackingChannelReady,
-					WithChannelAddress(backingChannelHostname),
-					WithChannelSubscribers(subscribers())),
-				NewInMemoryChannel(channelName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelDeploymentReady(),
-					WithInMemoryChannelServiceReady(),
-					WithInMemoryChannelEndpointsReady(),
-					WithInMemoryChannelChannelServiceReady(),
-					WithInMemoryChannelAddress(backingChannelHostname),
-					WithInMemoryChannelSubscribers(subscribers()),
-					WithInMemoryChannelStatusSubscribers(subscriberStatuses())),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewChannel(channelName, testNS,
-					WithChannelTemplate(channelCRD()),
-					WithInitChannelConditions,
-					WithChannelSubscribers(subscribers()),
-					WithBackingChannelObjRef(backingChannelObjRef()),
-					WithBackingChannelReady,
-					WithChannelAddress(backingChannelHostname),
-					WithChannelSubscriberStatuses(subscriberStatuses())),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
-			},
+		WithReactors: []clientgotesting.ReactionFunc{
+			InduceFailure("patch", "inmemorychannels"),
 		},
-	}
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelSubscribers(subscribers()),
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelFailed("ChannelFailure", "inducing failure for patch inmemorychannels")),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", "problem patching subscriptions in the backing channel: %v", "inducing failure for patch inmemorychannels"),
+		},
+		WantErr: true,
+	}, {
+		Name: "Successful reconciliation",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelSubscribers(subscribers())),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelHostname)),
+		},
+		WantPatches: []clientgotesting.PatchActionImpl{
+			patchSubscribers(testNS, channelName, subscribers()),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelSubscribers(subscribers()),
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname)),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
+	}, {
+		Name: "Already reconciled",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelSubscribers(subscribers()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname)),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers(subscribers()),
+				WithInMemoryChannelAddress(backingChannelHostname)),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
+	}, {
+		Name: "Generation Bump",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelSubscribers(subscribers()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelGeneration(42)),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelSubscribers(subscribers()),
+				WithInMemoryChannelAddress(backingChannelHostname)),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelSubscribers(subscribers()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelGeneration(42),
+				// Updates
+				WithChannelObservedGeneration(42)),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
+	}, {
+		Name: "Updating subscribers statuses",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelSubscribers(subscribers())),
+			NewInMemoryChannel(channelName, testNS,
+				WithInitInMemoryChannelConditions,
+				WithInMemoryChannelDeploymentReady(),
+				WithInMemoryChannelServiceReady(),
+				WithInMemoryChannelEndpointsReady(),
+				WithInMemoryChannelChannelServiceReady(),
+				WithInMemoryChannelAddress(backingChannelHostname),
+				WithInMemoryChannelSubscribers(subscribers()),
+				WithInMemoryChannelStatusSubscribers(subscriberStatuses())),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithChannelSubscribers(subscribers()),
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname),
+				WithChannelSubscriberStatuses(subscriberStatuses())),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
+	}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		return &Reconciler{
-			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		base := reconciler.NewBase(ctx, controllerAgentName, cmw)
+		r := &Reconciler{
+			dynamicClientSet:   base.DynamicClientSet,
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 		}
+		return channelreconciler.NewReconciler(ctx, base.Logger, base.EventingClientSet, listers.GetMessagingChannelLister(), base.Recorder, r)
 	},
 		false,
 		logger,
