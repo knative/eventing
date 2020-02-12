@@ -35,14 +35,13 @@ import (
 	"k8s.io/client-go/dynamic"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
 	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
 	"knative.dev/pkg/resolver"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
@@ -50,6 +49,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
 const (
@@ -90,8 +90,9 @@ type Reconciler struct {
 	brokerClass string
 }
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements Interface
+var _ brokerreconciler.Interface = (*Reconciler)(nil)
+var _ brokerreconciler.Finalizer = (*Reconciler)(nil)
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
@@ -103,72 +104,14 @@ type ReconcilerArgs struct {
 	FilterServiceAccountName  string
 }
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Broker resource
-// with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the Broker resource with this namespace/name
-	original, err := r.brokerLister.Brokers(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The broker may no longer exist, in which case we stop processing the broker
-		// but we need to mark all the triggers that belong to this appropriately.
-		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
-		return r.propagateBrokerStatusToTriggers(ctx, namespace, name, nil)
-	} else if err != nil {
-		return err
-	}
-
-	// Check the annotation to make sure it should be handled by me and if not, do nothing.
+func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
 	if r.brokerClass != "" {
-		if original.GetAnnotations()[brokerAnnotationKey] != r.brokerClass {
-			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", original.Name))
+		if b.GetAnnotations()[brokerAnnotationKey] != r.brokerClass {
+			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
 			return nil
 		}
 	}
-	// Don't modify the informers copy
-	broker := original.DeepCopy()
 
-	// Reconcile this copy of the Broker and then write back any status
-	// updates regardless of whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, broker)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(reconcileErr))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", reconcileErr))
-	} else {
-		logging.FromContext(ctx).Debug("Broker reconciled")
-	}
-
-	// Since the reconciler took a crack at this, make sure it's reflected
-	// in the status correctly.
-	broker.Status.ObservedGeneration = original.Generation
-
-	_, updateStatusErr := r.updateStatus(ctx, broker)
-
-	if updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", updateStatusErr)
-	}
-
-	// If we errored out of the Broker reconcile, update the status of all my triggers
-	if reconcileErr != nil {
-		r.propagateBrokerStatusToTriggers(ctx, namespace, name, &broker.Status)
-	}
-
-	if updateStatusErr != nil {
-		return updateStatusErr
-	}
-	// Requeue if the resource is not ready:
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
 
@@ -278,6 +221,10 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		return fmt.Errorf("failed to reconcile triggers: %v", err)
 	}
 	return nil
+}
+
+func (r *Reconciler) FinalizeKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
+	return pkgreconciler.Event{}
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker) (*v1alpha1.Broker, error) {
