@@ -1,7 +1,7 @@
 # Namespace-Scoped In-Memory Channels
 
 Namespace-scoped in-memory channels share the same characteristics as the
-[in-memory channels](../README.md). The only difference is the in-memory
+[in-memory channels](../in-memory-channel/README.md). The only difference is the in-memory
 dispatcher is installed in the same namespace as the channel.
 
 ### Deployment steps:

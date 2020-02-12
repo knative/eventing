@@ -25,5 +25,3 @@ roleRef:
   kind: ClusterRole
   name: imc-controller
   apiGroup: rbac.authorization.k8s.io
-
----
