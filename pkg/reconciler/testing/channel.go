@@ -60,6 +60,17 @@ func WithInitChannelConditions(c *v1alpha1.Channel) {
 	c.Status.InitializeConditions()
 }
 
+func WithChannelGeneration(gen int64) ChannelOption {
+	return func(s *v1alpha1.Channel) {
+		s.Generation = gen
+	}
+}
+func WithChannelObservedGeneration(gen int64) ChannelOption {
+	return func(s *v1alpha1.Channel) {
+		s.Status.ObservedGeneration = gen
+	}
+}
+
 func WithChannelDeleted(c *v1alpha1.Channel) {
 	t := metav1.NewTime(time.Unix(1e9, 0))
 	c.ObjectMeta.SetDeletionTimestamp(&t)
