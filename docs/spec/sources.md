@@ -356,6 +356,8 @@ specified in one of the following versions of the specification:
 - [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
 - [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
 
+The usage of CloudEvents version `1.0` is RECOMMENDED.
+
 Every Source SHOULD support sending events via _Binary Content Mode_ or
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents. Sources
 SHOULD send events to its
