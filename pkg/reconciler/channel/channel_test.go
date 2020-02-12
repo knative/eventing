@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -44,8 +45,9 @@ import (
 )
 
 const (
-	testNS      = "test-namespace"
-	channelName = "test-channel"
+	testNS              = "test-namespace"
+	channelName         = "test-channel"
+	controllerAgentName = "ch-default-controller"
 )
 
 var (
@@ -120,7 +122,7 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: problem reconciling the backing channel: %v", "inducing failure for create inmemorychannels"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "problem reconciling the backing channel: %v", "inducing failure for create inmemorychannels"),
 			},
 			WantErr: true,
 		},
@@ -150,7 +152,7 @@ func TestReconcile(t *testing.T) {
 					WithBackingChannelFailed("ChannelFailure", "inducing failure for patch inmemorychannels")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, channelReconcileError, "Channel reconcile error: problem patching subscriptions in the backing channel: %v", "inducing failure for patch inmemorychannels"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "problem patching subscriptions in the backing channel: %v", "inducing failure for patch inmemorychannels"),
 			},
 			WantErr: true,
 		},
@@ -183,8 +185,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelAddress(backingChannelHostname)),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
-				Eventf(corev1.EventTypeNormal, channelReadinessChanged, "Channel %q became ready", channelName),
+				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 			},
 		},
 		{
@@ -208,7 +209,7 @@ func TestReconcile(t *testing.T) {
 					WithInMemoryChannelAddress(backingChannelHostname)),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
+				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 			},
 		},
 		{
@@ -243,7 +244,7 @@ func TestReconcile(t *testing.T) {
 					WithChannelSubscriberStatuses(subscriberStatuses())),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", testKey),
+				Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 			},
 		},
 	}
@@ -251,11 +252,13 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		return &Reconciler{
-			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		base := reconciler.NewBase(ctx, controllerAgentName, cmw)
+		r := &Reconciler{
+			dynamicClientSet:   base.DynamicClientSet,
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 		}
+		return channelreconciler.NewReconciler(ctx, base.Logger, base.EventingClientSet, listers.GetMessagingChannelLister(), base.Recorder, r)
 	},
 		false,
 		logger,
