@@ -19,8 +19,9 @@ package pingsource
 import (
 	"context"
 	"fmt"
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	"testing"
+
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
