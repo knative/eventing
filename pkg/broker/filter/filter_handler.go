@@ -256,8 +256,8 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 
 	if filterResult == failFilter {
 		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
-		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusExpectationFailed)
+		// We do not count the event. The event will be counted in the broker ingress.
+		// If the filter didn't pass, it means that the event wasn't meant for this Trigger.
 		return nil, nil
 	}
 
