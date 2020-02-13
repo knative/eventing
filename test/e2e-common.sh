@@ -180,7 +180,11 @@ function install_istio {
 function install_knative_serving {
   install_istio
   echo ">> Installing Knative serving"
-  readonly SERVING_YAML="https://github.com/knative/serving/releases/download/${LATEST_RELEASE_VERSION}/serving.yaml"
+  local SERVING_VERSION
+  SERVING_VERSION=$(go run test/scripts/resolve_matching_release.go \
+    'knative/serving' "${LATEST_RELEASE_VERSION}") \
+    || fail_test 'Could not resolve knative serving version'
+  readonly SERVING_YAML="https://github.com/knative/serving/releases/download/${SERVING_VERSION}/serving.yaml"
 
   echo "Knative serving YAML: ${SERVING_YAML}"
   kubectl apply -f "${SERVING_YAML}" || return 1
