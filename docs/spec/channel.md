@@ -187,10 +187,11 @@ exclusively communicate using CloudEvents.
 #### Input
 
 Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
-The endpoint(s) MUST conform to one of the following versions of the specification:
+The endpoint(s) MUST conform to one of the following versions of the
+specification:
 
-* [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
-* [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
+- [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
+- [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
 
 The usage of CloudEvents version `1.0` is RECOMMENDED.
 
@@ -234,14 +235,16 @@ CloudEvent, then it MUST respond with `400 Bad Request`.
 
 #### Output
 
-Channels MUST output CloudEvents. The output MUST match the CloudEvent version of the [Input](#input).
-Channels MUST NOT alter an event that goes through them. All CloudEvent attributes, including the
-data attribute, MUST be received at the subscriber identical to how they were received by the Channel.
-The only exception is the [Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md),
+Channels MUST output CloudEvents. The output MUST match the CloudEvent version
+of the [Input](#input). Channels MUST NOT alter an event that goes through them.
+All CloudEvent attributes, including the data attribute, MUST be received at the
+subscriber identical to how they were received by the Channel. The only
+exception is the
+[Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md),
 which is expected to change as the span id will be altered at every network hop.
 
-Every Channel SHOULD support sending events via _Binary Content Mode_ or _Structured Content Mode_ of the HTTP
-Protocol Binding for CloudEvents.
+Every Channel SHOULD support sending events via _Binary Content Mode_ or
+_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
 
 Channels MUST send events to all subscribers which are marked with a status of
 `ready: "True"` in the channel's `status.subscribableStatus.subscribers`. The
