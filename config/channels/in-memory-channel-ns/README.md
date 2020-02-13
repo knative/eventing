@@ -13,11 +13,13 @@ dispatcher is installed in the same namespace as the channel.
    ```
 1. Create InMemoryChannels
 
-   ```yaml
+   ```sh
+   kubectl apply --filename - << END
    apiVersion: messaging.knative.dev/v1alpha1
    kind: InMemoryChannel
    metadata:
      name: foo
+   END
    ```
 
 IMPORTANT: make sure you don't have the [cluster-scoped in-memory channels](../in-memory-channel/README.md)
