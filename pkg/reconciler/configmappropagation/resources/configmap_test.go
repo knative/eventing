@@ -24,14 +24,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
+	"knative.dev/pkg/kmeta"
 )
 
 func TestMakeConfigMap(t *testing.T) {
-	testCases := map[string]struct {
+	testCases := []struct {
+		name                 string
 		original             *corev1.ConfigMap
 		configmappropagation *configsv1alpha1.ConfigMapPropagation
+		wantName             string
+		wantLabels           map[string]string
 	}{
-		"general configmap": {
+		{
+			name: "normal",
 			original: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "original-config-map",
@@ -43,16 +48,44 @@ func TestMakeConfigMap(t *testing.T) {
 					Namespace: "testing",
 				},
 			},
+			wantName: "cmp-original-config-map",
+			wantLabels: map[string]string{
+				PropagationLabelKey: PropagationLabelValueCopy,
+				CopyLabelKey:        "testing-original-config-map",
+			},
+		}, {
+			name: "long name",
+			original: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "original-config-map-very-very-very-very-very-very-very-long-name",
+				},
+			},
+			configmappropagation: &configsv1alpha1.ConfigMapPropagation{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cmp",
+					Namespace: "testing",
+				},
+			},
+			wantName: kmeta.ChildName("cmp", "-original-config-map-very-very-very-very-very-very-very-long-name"),
+			wantLabels: map[string]string{
+				PropagationLabelKey: PropagationLabelValueCopy,
+				CopyLabelKey:        kmeta.ChildName("testing", "-original-config-map-very-very-very-very-very-very-very-long-name"),
+			},
 		},
 	}
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			configmap := MakeConfigMap(ConfigMapArgs{
 				tc.original, tc.configmappropagation,
 			})
 			// If name and namespace are correct.
-			if name := configmap.Name; name != "cmp-original-config-map" {
-				t.Errorf("want %v, got %v", "cmp-original-config-map", name)
+			if name := configmap.Name; name != tc.wantName {
+				t.Errorf("want %v, got %v", tc.wantName, name)
+			}
+
+			// name cannot be longer than 63 characters.
+			if len(configmap.Name) > 63 {
+				t.Errorf("copy configmap name %q is longer than 63 characters", configmap.Name)
 			}
 
 			if ns := configmap.Namespace; ns != tc.configmappropagation.Namespace {
@@ -65,13 +98,17 @@ func TestMakeConfigMap(t *testing.T) {
 			}
 
 			// If labels are correct.
-			expectedLabels := map[string]string{
-				PropagationLabelKey: PropagationLabelValueCopy,
-				CopyLabelKey:        "testing-original-config-map",
+			if labels := configmap.Labels; !reflect.DeepEqual(labels, tc.wantLabels) {
+				t.Errorf("want %v, got %q", tc.wantLabels, labels)
 			}
-			if labels := configmap.Labels; !reflect.DeepEqual(labels, expectedLabels) {
-				t.Errorf("want %v, got %q", expectedLabels, labels)
+
+			// Label values cannot be longer than 63 characters.
+			for _, v := range configmap.Labels {
+				if len(v) > 63 {
+					t.Errorf("copy configmap label value %q is longer than 63 characters", v)
+				}
 			}
+
 		})
 	}
 }
