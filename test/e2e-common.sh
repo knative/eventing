@@ -94,7 +94,6 @@ function knative_teardown() {
   wait_until_object_does_not_exist namespaces knative-eventing
 
   echo ">> Uninstalling dependencies"
-  # shellcheck disable=SC2068
   for i in ${!UNINSTALL_LIST[@]}; do
     # We uninstall elements in the reverse of the order they were installed.
     local YAML="${UNINSTALL_LIST[$(( ${#array[@]} - $i ))]}"

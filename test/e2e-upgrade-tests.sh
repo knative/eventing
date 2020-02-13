@@ -18,7 +18,6 @@
 
 # Script entry point.
 
-# shellcheck disable=SC1090
 source "$(dirname "$0")/e2e-common.sh"
 
 # Overrides
@@ -38,7 +37,6 @@ function uninstall_test_resources {
   true
 }
 
-# shellcheck disable=SC2068
 initialize $@ --skip-istio-addon
 
 TIMEOUT=${TIMEOUT:-30m}

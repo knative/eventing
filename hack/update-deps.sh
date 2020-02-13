@@ -15,7 +15,6 @@
 # limitations under the License.
 
 readonly ROOT_DIR=$(dirname "$0")/..
-# shellcheck disable=SC1090
 source "${ROOT_DIR}/vendor/knative.dev/test-infra/scripts/library.sh"
 
 set -o errexit
