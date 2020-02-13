@@ -241,7 +241,7 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime:   true,
 			expectedEventProcessingTime: true,
 		},
-		"Dispatch failed - Extension with attribs": {
+		"Wrong Extension with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
 			},
