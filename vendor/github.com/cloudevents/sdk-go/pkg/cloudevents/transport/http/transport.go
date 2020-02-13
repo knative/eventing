@@ -170,7 +170,9 @@ func (t *Transport) Send(ctx context.Context, event cloudevents.Event) (context.
 func (t *Transport) obsSend(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	if t.Client == nil {
 		t.crMu.Lock()
-		t.Client = &http.Client{}
+		if t.Client == nil {
+			t.Client = &http.Client{}
+		}
 		t.crMu.Unlock()
 	}
 

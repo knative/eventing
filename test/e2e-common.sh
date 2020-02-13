@@ -74,7 +74,7 @@ function install_head {
 function install_latest_release {
   header "Installing Knative latest public release"
   local url="https://github.com/knative/eventing/releases/download/${LATEST_RELEASE_VERSION}"
-  local yaml="release.yaml"
+  local yaml="eventing.yaml"
 
   install_knative_eventing \
     "${url}/${yaml}" \
@@ -107,9 +107,8 @@ function knative_teardown() {
 function test_setup() {
   install_test_resources || return 1
 
-  # Publish test images.
-  echo ">> Publishing test images"
-  "$(dirname $0)/upload-test-images.sh" e2e || fail_test "Error uploading test images"
+  echo ">> Publish test images"
+  "$(dirname "$0")/upload-test-images.sh" e2e || fail_test "Error uploading test images"
 }
 
 # Tear down resources used in the eventing tests.

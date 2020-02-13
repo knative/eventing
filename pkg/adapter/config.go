@@ -21,7 +21,11 @@ type EnvConfigConstructor func() EnvConfigAccessor
 // source adapters should support.
 type EnvConfig struct {
 	// SinkURI is the URI messages will be forwarded to.
-	SinkURI string `envconfig:"SINK_URI" required:"true"`
+	// DEPRECATED: use K_SINK
+	SinkURI string `envconfig:"SINK_URI"`
+
+	// Sink is the URI messages will be sent.
+	Sink string `envconfig:"K_SINK"`
 
 	// Environment variable containing the namespace of the adapter.
 	Namespace string `envconfig:"NAMESPACE" required:"true"`
@@ -63,9 +67,12 @@ func (e *EnvConfig) GetLoggingConfigJson() string {
 }
 
 func (e *EnvConfig) GetSinkURI() string {
+	if e.Sink != "" {
+		return e.Sink
+	}
 	return e.SinkURI
 }
 
 func (e *EnvConfig) GetNamespace() string {
-	return e.SinkURI
+	return e.Namespace
 }

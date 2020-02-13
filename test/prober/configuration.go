@@ -82,7 +82,7 @@ func (p *prober) deployTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		fullType := fmt.Sprintf("%v.%v", watholaEventNs, eventType)
-		ref := &corev1.ObjectReference{
+		ref := &duckv1.KReference{
 			Kind:       "Service",
 			Namespace:  p.config.Namespace,
 			Name:       receiverName,

@@ -20,12 +20,14 @@ import (
 	"context"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-	"knative.dev/pkg/tracker"
 
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 
+	"knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount"
@@ -56,6 +58,7 @@ func NewController(
 	serviceAccountInformer := serviceaccount.Get(ctx)
 	roleBindingInformer := rolebinding.Get(ctx)
 	brokerInformer := broker.Get(ctx)
+	configMapPropagationInformer := configmappropagation.Get(ctx)
 
 	r := &Reconciler{
 		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -74,19 +77,26 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
-	// Tracker is used to notify us the namespace's resources we need to reconcile.
-	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
-
 	// Watch all the resources that this reconciler reconciles.
-	serviceAccountInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, serviceAccountGVK),
-	))
-	roleBindingInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, roleBindingGVK),
-	))
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(
-		controller.EnsureTypeMeta(r.tracker.OnChanged, brokerGVK),
-	))
+	serviceAccountInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
+	roleBindingInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
+	brokerInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		})
+	configMapPropagationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
 
 	return impl
 }

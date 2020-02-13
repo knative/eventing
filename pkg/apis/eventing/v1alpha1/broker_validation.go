@@ -32,6 +32,12 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
 
 	// Validate the new channelTemplate.
+	// TODO: As part of https://github.com/knative/eventing/issues/2128
+	// Also make sure this gets rejected. It would break our tests
+	// and assumptions to do this right now.
+	//	if bs.ChannelTemplate == nil {
+	//		errs = errs.Also(apis.ErrMissingField("channelTemplateSpec"))
+	//	} else
 	if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
 		errs = errs.Also(cte.ViaField("channelTemplateSpec"))
 	}
@@ -41,10 +47,10 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 }
 
 func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis.FieldError {
-	var errs *apis.FieldError
 	if dct == nil {
 		return nil
 	}
+	var errs *apis.FieldError
 	if dct.Kind == "" {
 		errs = errs.Also(apis.ErrMissingField("kind"))
 	}

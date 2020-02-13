@@ -88,9 +88,7 @@ func TestContainerSource(t *testing.T) {
 	client.CreateLegacyContainerSourceOrFail(containerSource)
 
 	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	expectedCount := 2

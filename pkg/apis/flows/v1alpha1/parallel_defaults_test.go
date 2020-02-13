@@ -20,10 +20,12 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestParallelSetDefaults(t *testing.T) {
@@ -45,6 +47,65 @@ func TestParallelSetDefaults(t *testing.T) {
 			expected: Parallel{
 				Spec: ParallelSpec{
 					ChannelTemplate: defaultChannelTemplate,
+				},
+			},
+		},
+		"branches namespace defaulted": {
+			channelTemplate: defaultChannelTemplate,
+			initial: Parallel{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
+				Spec: ParallelSpec{
+					Branches: []ParallelBranch{
+						{
+							Filter: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "firstfilter"},
+							},
+							Subscriber: duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "firstsub"},
+							},
+							Reply: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "firstreply"},
+							},
+						}, {
+							Filter: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "secondfilter"},
+							},
+							Subscriber: duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "secondsub"},
+							},
+							Reply: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "secondreply"},
+							},
+						}},
+					Reply: &duckv1.Destination{Ref: &duckv1.KReference{Name: "reply"}}},
+			},
+			expected: Parallel{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
+				Spec: ParallelSpec{
+					ChannelTemplate: defaultChannelTemplate,
+					Branches: []ParallelBranch{
+						{
+							Filter: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "firstfilter", Namespace: testNS},
+							},
+							Subscriber: duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "firstsub", Namespace: testNS},
+							},
+							Reply: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "firstreply", Namespace: testNS},
+							},
+						}, {
+							Filter: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "secondfilter", Namespace: testNS},
+							},
+							Subscriber: duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "secondsub", Namespace: testNS},
+							},
+							Reply: &duckv1.Destination{
+								Ref: &duckv1.KReference{Name: "secondreply", Namespace: testNS},
+							},
+						}},
+					Reply: &duckv1.Destination{Ref: &duckv1.KReference{Name: "reply", Namespace: testNS}},
 				},
 			},
 		},

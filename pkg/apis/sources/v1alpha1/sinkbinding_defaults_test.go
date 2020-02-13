@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -51,7 +50,7 @@ func TestSinkBindingDefaulting(t *testing.T) {
 				},
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
-						Ref: &corev1.ObjectReference{
+						Ref: &duckv1.KReference{
 							APIVersion: "serving.knative.dev/v1",
 							Kind:       "Service",
 							Name:       "gemma",
@@ -77,7 +76,7 @@ func TestSinkBindingDefaulting(t *testing.T) {
 				},
 				SourceSpec: duckv1.SourceSpec{
 					Sink: duckv1.Destination{
-						Ref: &corev1.ObjectReference{
+						Ref: &duckv1.KReference{
 							APIVersion: "serving.knative.dev/v1",
 							Kind:       "Service",
 							Name:       "gemma",

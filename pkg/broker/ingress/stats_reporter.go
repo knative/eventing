@@ -80,15 +80,15 @@ var emptyContext = context.Background()
 
 // Reporter holds cached metric objects to report ingress metrics.
 type reporter struct {
-	pod       string
-	container string
+	container  string
+	uniqueName string
 }
 
 // NewStatsReporter creates a reporter that collects and reports ingress metrics.
-func NewStatsReporter(pod, container string) StatsReporter {
+func NewStatsReporter(container, uniqueName string) StatsReporter {
 	return &reporter{
-		pod:       pod,
-		container: container,
+		container:  container,
+		uniqueName: uniqueName,
 	}
 }
 
@@ -99,8 +99,8 @@ func register() {
 		eventTypeKey,
 		responseCodeKey,
 		responseCodeClassKey,
-		broker.PodTagKey,
-		broker.ContainerTagKey}
+		broker.ContainerTagKey,
+		broker.UniqueTagKey}
 
 	// Create view to see our measurements.
 	err := view.Register(
@@ -146,8 +146,8 @@ func (r *reporter) ReportEventDispatchTime(args *ReportArgs, responseCode int, d
 func (r *reporter) generateTag(args *ReportArgs, responseCode int) (context.Context, error) {
 	return tag.New(
 		emptyContext,
-		tag.Insert(broker.PodTagKey, r.pod),
 		tag.Insert(broker.ContainerTagKey, r.container),
+		tag.Insert(broker.UniqueTagKey, r.uniqueName),
 		tag.Insert(namespaceKey, args.ns),
 		tag.Insert(brokerKey, args.broker),
 		tag.Insert(eventTypeKey, args.eventType),

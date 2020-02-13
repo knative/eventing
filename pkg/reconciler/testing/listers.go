@@ -31,12 +31,14 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	fakeeventingclientset "knative.dev/eventing/pkg/client/clientset/versioned/fake"
+	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	flowslisters "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -144,20 +146,16 @@ func (l *Listers) GetMessagingChannelLister() messaginglisters.ChannelLister {
 	return messaginglisters.NewChannelLister(l.indexerFor(&messagingv1alpha1.Channel{}))
 }
 
-func (l *Listers) GetSequenceLister() messaginglisters.SequenceLister {
-	return messaginglisters.NewSequenceLister(l.indexerFor(&messagingv1alpha1.Sequence{}))
-}
-
-func (l *Listers) GetParallelLister() messaginglisters.ParallelLister {
-	return messaginglisters.NewParallelLister(l.indexerFor(&messagingv1alpha1.Parallel{}))
-}
-
 func (l *Listers) GetFlowsParallelLister() flowslisters.ParallelLister {
 	return flowslisters.NewParallelLister(l.indexerFor(&flowsv1alpha1.Parallel{}))
 }
 
 func (l *Listers) GetApiServerSourceLister() sourcelisters.ApiServerSourceLister {
 	return sourcelisters.NewApiServerSourceLister(l.indexerFor(&sourcesv1alpha1.ApiServerSource{}))
+}
+
+func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
+	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1alpha1.PingSource{}))
 }
 
 func (l *Listers) GetLegacyCronJobSourceLister() legacysourcelisters.CronJobSourceLister {
@@ -206,4 +204,8 @@ func (l *Listers) GetConfigMapLister() corev1listers.ConfigMapLister {
 
 func (l *Listers) GetCustomResourceDefinitionLister() apiextensionsv1beta1listers.CustomResourceDefinitionLister {
 	return apiextensionsv1beta1listers.NewCustomResourceDefinitionLister(l.indexerFor(&apiextensionsv1beta1.CustomResourceDefinition{}))
+}
+
+func (l *Listers) GetConfigMapPropagationLister() configslisters.ConfigMapPropagationLister {
+	return configslisters.NewConfigMapPropagationLister(l.indexerFor(&configsv1alpha1.ConfigMapPropagation{}))
 }

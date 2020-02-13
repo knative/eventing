@@ -25,20 +25,17 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
 
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
-
-	"knative.dev/pkg/logging"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "ApiServerSources"
-
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "apiserver-source-controller"
@@ -65,7 +62,6 @@ func NewController(
 	r := &Reconciler{
 		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 		apiserversourceLister: apiServerSourceInformer.Lister(),
-		deploymentLister:      deploymentInformer.Lister(),
 		eventTypeLister:       eventTypeInformer.Lister(),
 		source:                GetCfgHost(ctx),
 		loggingContext:        ctx,
@@ -77,7 +73,7 @@ func NewController(
 	}
 	r.receiveAdapterImage = env.Image
 
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := apiserversourcereconciler.NewImpl(ctx, r)
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 

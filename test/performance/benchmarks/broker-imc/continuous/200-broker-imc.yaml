@@ -41,7 +41,7 @@ spec:
               image: knative.dev/eventing/test/test_images/performance
               args:
                 - "--roles=sender"
-                - "--sink=http://imc-broker"
+                - "--sink=http://imc-broker.default.svc.cluster.local"
                 - "--aggregator=broker-imc-aggregator:10000"
                 - "--pace=100:10,400:20,800:30,900:60,1000:60,1100:60,1200:60"
               env:

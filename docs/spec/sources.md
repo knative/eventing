@@ -55,7 +55,8 @@ running in the cluster.
 Sources are more useful if they are discoverable. Knative Sources MUST use a
 standardized label to allow controllers and operators the ability to find which
 CRDs are considered to be adhering to the
-[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
+[Source](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Source)
+ducktype.
 
 CRDs that are to be understood as a `source` MUST be labeled:
 
@@ -150,8 +151,8 @@ validation:
 ```
 
 Please see
-[SourceStatus](https://godoc.org/github.com/knative/pkg/apis/duck/v1#SourceStatus)
-and [Condition](https://godoc.org/github.com/knative/pkg/apis/#Condition) for
+[SourceStatus](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#SourceStatus)
+and [Condition](https://pkg.go.dev/github.com/knative/pkg/apis/#Condition) for
 more details.
 
 Sources SHOULD provide OpenAPI validation for the `spec` field. At minimum
@@ -184,6 +185,27 @@ validation:
                   the outbound event. Each `Extensions` key-value pair are set
                   on the event as an extension attribute independently."
 ```
+
+### Container Runtime Contract
+
+#### SinkBinding
+
+SinkBinding augments the runtime contract of the subject's containers in the
+following ways:
+
+- `status.sinkUri` (resolved from the `duckv1.SourceSpec`’s Sink) is bound into
+  the subject’s containers as the environment variable `K_SINK`.
+- `spec.ceOverrides` (`duckv1.CloudEventOverrides`) is converted into JSON and
+  is bound into the subject’s containers as the environment variable
+  `K_CE_OVERRIDES`.
+
+The URI that is provided by `K_SINK` is the intended target of CloudEvents
+produced by the subject.
+
+`K_CE_OVERRIDES` augments the outbound CloudEvent sent by the subject.
+
+- `spec.ceOverrides.extensions` is a map of attribute name to value that should
+  be added or overridden on the outbound event.
 
 ### Source Registry
 
@@ -266,8 +288,8 @@ rules:
 ## Source Custom Objects
 
 All Source Custom Objects MUST implement the
-[Source](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Source) ducktype.
-Additional data in spec and status is explicitly permitted.
+[Source](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Source)
+ducktype. Additional data in spec and status is explicitly permitted.
 
 ### duck.Spec
 
@@ -287,9 +309,9 @@ type SourceSpec struct {
 ```
 
 For a golang structure definition of `Sink` and `CloudEventsOverrides`, please
-see [Destination](https://godoc.org/knative.dev/pkg/apis/v1alpha1#Destination),
+see [Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1#Destination),
 and
-[CloudEventOverrides](https://godoc.org/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
+[CloudEventOverrides](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#CloudEventOverrides).
 
 ### duck.Status
 
@@ -312,15 +334,34 @@ type SourceStatus struct {
 ```
 
 For a full definition of `Status` and `SinkURI`, please see
-[Status](https://godoc.org/github.com/knative/pkg/apis/duck/v1#Status), and
-[URL](https://godoc.org/knative.dev/pkg/apis#URL).
+[Status](https://pkg.go.dev/github.com/knative/pkg/apis/duck/v1#Status), and
+[URL](https://pkg.go.dev/knative.dev/pkg/apis#URL).
 
 ### EventType Registry
 
 Upon instantiation of a Source Custom Object, a controller (potentially the
 source controller) SHOULD realize the
-[EventType(s)](https://godoc.org/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
+[EventType(s)](https://pkg.go.dev/knative.dev/eventing/pkg/apis/eventing/v1alpha1#EventType)
 this instantiation brings onto the eventing mesh. For a more detailed
 description, please refer to the
 [Event Registry](https://knative.dev/docs/eventing/event-registry/)
 documentation.
+
+## Source Event delivery
+
+Sources SHOULD produce CloudEvents. The output SHOULD be via the HTTP binding
+specified in one of the following versions of the specification:
+
+- [CloudEvents 0.2 specification](https://github.com/cloudevents/spec/blob/v0.2/http-transport-binding.md)
+- [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
+- [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
+
+The usage of CloudEvents version `1.0` is RECOMMENDED.
+
+Every Source SHOULD support sending events via _Binary Content Mode_ or
+_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents. Sources
+SHOULD send events to its
+[Destination](https://pkg.go.dev/knative.dev/pkg/apis/v1alpha1?tab=doc#Destination).
+
+For more details of the Knative Event delivery, take a look at its
+[specification](../delivery/README.md).

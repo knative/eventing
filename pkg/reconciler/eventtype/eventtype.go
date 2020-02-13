@@ -18,35 +18,25 @@ package eventtype
 
 import (
 	"context"
-	"fmt"
-	"reflect"
-	"time"
-
-	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/tracker"
-
-	"k8s.io/client-go/tools/cache"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventtypereconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/tracker"
 )
 
-const (
-	// Name of the corev1.Events emitted from the reconciliation process.
-	eventTypeReadinessChanged   = "EventTypeReadinessChanged"
-	eventTypeReconcileFailed    = "EventTypeReconcileFailed"
-	eventTypeUpdateStatusFailed = "EventTypeUpdateStatusFailed"
-)
+// newReconciledNormal makes a new reconciler event with event type Normal, and
+// reason EventTypeReconciled.
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "EventTypeReconciled", "EventType reconciled: \"%s/%s\"", namespace, name)
+}
 
 type Reconciler struct {
-	*reconciler.Base
-
 	// listers index properties about resources
 	eventTypeLister listers.EventTypeLister
 	brokerLister    listers.BrokerLister
@@ -55,67 +45,18 @@ type Reconciler struct {
 
 var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements interface
+var _ eventtypereconciler.Interface = (*Reconciler)(nil)
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the EventType resource
-// with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		r.Logger.Errorf("invalid resource key: %s", key)
-		return nil
-	}
-
-	// Get the EventType resource with this namespace/name
-	original, err := r.eventTypeLister.EventTypes(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Info("eventType key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy
-	eventType := original.DeepCopy()
-
-	// Reconcile this copy of the EventType and then write back any status
-	// updates regardless of whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, eventType)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(err))
-		r.Recorder.Eventf(eventType, corev1.EventTypeWarning, eventTypeReconcileFailed, fmt.Sprintf("EventType reconcile error: %v", reconcileErr))
-	} else {
-		logging.FromContext(ctx).Debug("EventType reconciled")
-	}
-
-	if _, err = r.updateStatus(ctx, eventType); err != nil {
-		logging.FromContext(ctx).Warn("Failed to update the EventType status", zap.Error(err))
-		r.Recorder.Eventf(eventType, corev1.EventTypeWarning, eventTypeUpdateStatusFailed, "Failed to update Broker's status: %v", err)
-		return err
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) error {
+// ReconcileKind implements Interface.ReconcileKind.
+// 1. Verify the Broker exists.
+// 2. Verify the Broker is ready.
+func (r *Reconciler) ReconcileKind(ctx context.Context, et *v1alpha1.EventType) pkgreconciler.Event {
 	et.Status.InitializeConditions()
-
-	// 1. Verify the Broker exists.
-	// 2. Verify the Broker is ready.
-
-	if et.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
+	et.Status.ObservedGeneration = et.Generation
 
 	b, err := r.getBroker(ctx, et)
 	if err != nil {
-
 		if apierrs.IsNotFound(err) {
 			logging.FromContext(ctx).Error("Broker does not exist", zap.Error(err))
 			et.Status.MarkBrokerDoesNotExist()
@@ -127,44 +68,22 @@ func (r *Reconciler) reconcile(ctx context.Context, et *v1alpha1.EventType) erro
 	}
 	et.Status.MarkBrokerExists()
 
+	apiVersion, kind := brokerGVK.ToAPIVersionAndKind()
+	ref := tracker.Reference{
+		APIVersion: apiVersion,
+		Kind:       kind,
+		Namespace:  b.Namespace,
+		Name:       b.Name,
+	}
 	// Tell tracker to reconcile this EventType whenever the Broker changes.
-	if err = r.tracker.Track(utils.ObjectRef(b, brokerGVK), et); err != nil {
+	if err = r.tracker.TrackReference(ref, et); err != nil {
 		logging.FromContext(ctx).Error("Unable to track changes to Broker", zap.Error(err))
 		return err
 	}
 
 	et.Status.PropagateBrokerStatus(&b.Status)
 
-	return nil
-}
-
-// updateStatus updates the EventType's status.
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.EventType) (*v1alpha1.EventType, error) {
-	eventType, err := r.eventTypeLister.EventTypes(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(eventType.Status, desired.Status) {
-		return eventType, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !eventType.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := eventType.DeepCopy()
-	existing.Status = desired.Status
-
-	et, err := r.EventingClientSet.EventingV1alpha1().EventTypes(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(et.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("EventType %q became ready after %v", eventType.Name, duration)
-		r.Recorder.Event(eventType, corev1.EventTypeNormal, eventTypeReadinessChanged, fmt.Sprintf("EventType %q became ready", eventType.Name))
-		//r.StatsReporter.ReportServiceReady(eventType.Namespace, eventType.Name, duration) // TODO: stats
-	}
-
-	return et, err
+	return newReconciledNormal(et.Namespace, et.Name)
 }
 
 // getBroker returns the Broker for EventType 'et' if it exists, otherwise it returns an error.

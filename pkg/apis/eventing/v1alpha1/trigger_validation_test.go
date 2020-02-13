@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -53,14 +52,16 @@ var (
 		},
 	}
 	validSubscriber = duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
+			Namespace:  "namespace",
 			Name:       "subscriber_test",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
 	}
 	invalidSubscriber = duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
+			Namespace:  "namespace",
 			Kind:       "Service",
 			APIVersion: "serving.knative.dev/v1alpha1",
 		},
@@ -73,6 +74,11 @@ var (
 	validInjectionAnnotation   = "enabled"
 	invalidInjectionAnnotation = "disabled"
 	injectionAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", InjectionAnnotation)
+)
+
+const (
+	validLabelNameMaxCharsNotReached = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	invalidLabelNameMaxCharsReached  = validLabelNameMaxCharsNotReached + "b"
 )
 
 func TestTriggerValidation(t *testing.T) {
@@ -91,6 +97,44 @@ func TestTriggerValidation(t *testing.T) {
 			errs = errs.Also(fe)
 			return errs
 		}(),
+	}, {
+		name: "invalid trigger name",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				// ups ... name too long
+				Name:      invalidLabelNameMaxCharsReached,
+				Namespace: "dummy",
+			},
+			Spec: TriggerSpec{
+				Broker:     "test_broker",
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			},
+		},
+		want: &apis.FieldError{
+			Message: "must be no more than 63 characters",
+			Paths:   []string{"metadata.name"},
+			Details: "",
+		},
+	}, {
+		name: "invalid broker name",
+		t: &Trigger{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      validLabelNameMaxCharsNotReached,
+				Namespace: "dummy",
+			},
+			Spec: TriggerSpec{
+				// ups ... name too long
+				Broker:     invalidLabelNameMaxCharsReached,
+				Filter:     validEmptyFilter,
+				Subscriber: validSubscriber,
+			},
+		},
+		want: &apis.FieldError{
+			Message: "must be no more than 63 characters",
+			Paths:   []string{"spec.broker"},
+			Details: "",
+		},
 	}, {
 		name: "invalid dependency annotation, not a corev1.ObjectReference",
 		t: &Trigger{

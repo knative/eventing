@@ -61,6 +61,9 @@ var (
 	// Check that Trigger can return its spec untyped.
 	_ apis.HasSpec = (*Trigger)(nil)
 
+	// Check that Service can be converted to higher versions.
+	_ apis.Convertible = (*Trigger)(nil)
+
 	_ runtime.Object = (*Trigger)(nil)
 
 	// Check that we can create OwnerReferences to a Trigger.

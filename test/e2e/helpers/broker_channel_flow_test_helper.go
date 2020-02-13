@@ -127,9 +127,7 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the broker
 		eventToSend := cloudevents.New(
@@ -137,9 +135,7 @@ func BrokerChannelFlowTestHelper(t *testing.T,
 			cloudevents.WithSource(eventSource1),
 			cloudevents.WithType(eventType1),
 		)
-		if err := client.SendFakeEventToAddressable(senderName, brokerName, lib.BrokerTypeMeta, eventToSend); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the broker %q", brokerName)
-		}
+		client.SendFakeEventToAddressableOrFail(senderName, brokerName, lib.BrokerTypeMeta, eventToSend)
 
 		// check if trigger2's logging service receives both events
 		eventBodies := []string{transformedEventBody, eventBody}

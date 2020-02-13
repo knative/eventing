@@ -20,10 +20,16 @@ import (
 	"context"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+)
+
+const (
+	testNS = "testnamespace"
 )
 
 var (
@@ -54,6 +60,34 @@ func TestSequenceSetDefaults(t *testing.T) {
 			expected: Sequence{
 				Spec: SequenceSpec{
 					ChannelTemplate: defaultChannelTemplate,
+				},
+			},
+		},
+		"steps and reply namespace defaulted": {
+			channelTemplate: defaultChannelTemplate,
+			initial: Sequence{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
+				Spec: SequenceSpec{
+					Steps: []duckv1.Destination{
+						{Ref: &duckv1.KReference{Name: "first"}},
+						{Ref: &duckv1.KReference{Name: "second"}},
+					},
+					Reply: &duckv1.Destination{
+						Ref: &duckv1.KReference{Name: "reply"},
+					},
+				},
+			},
+			expected: Sequence{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
+				Spec: SequenceSpec{
+					ChannelTemplate: defaultChannelTemplate,
+					Steps: []duckv1.Destination{
+						{Ref: &duckv1.KReference{Namespace: testNS, Name: "first"}},
+						{Ref: &duckv1.KReference{Namespace: testNS, Name: "second"}},
+					},
+					Reply: &duckv1.Destination{
+						Ref: &duckv1.KReference{Namespace: testNS, Name: "reply"},
+					},
 				},
 			},
 		},
@@ -89,7 +123,7 @@ func TestSequenceSetDefaults(t *testing.T) {
 				}
 				defer func() { eventingduckv1alpha1.ChannelDefaulterSingleton = nil }()
 			}
-			tc.initial.SetDefaults(context.TODO())
+			tc.initial.SetDefaults(context.Background())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}

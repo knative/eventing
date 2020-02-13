@@ -74,6 +74,7 @@ func TestReceiver(t *testing.T) {
 		tctx                        *cloudevents.HTTPTransportContext
 		event                       *cloudevents.Event
 		requestFails                bool
+		failureStatus               int
 		returnedEvent               *cloudevents.Event
 		expectNewToFail             bool
 		expectedErr                 bool
@@ -256,6 +257,24 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime: true,
 			returnedEvent:             makeDifferentEvent(),
 		},
+		"Error From Trigger": {
+			triggers: []*eventingv1alpha1.Trigger{
+				makeTrigger(makeTriggerFilterWithAttributes("", "")),
+			},
+			tctx: &cloudevents.HTTPTransportContext{
+				Method:     "POST",
+				Host:       host,
+				URI:        validPath,
+				StatusCode: http.StatusTooManyRequests,
+			},
+			requestFails:              true,
+			failureStatus:             http.StatusTooManyRequests,
+			expectedDispatch:          true,
+			expectedEventCount:        true,
+			expectedEventDispatchTime: true,
+			expectedErr:               true,
+			expectedStatus:            http.StatusTooManyRequests,
+		},
 		"Returned Cloud Event with custom headers": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "")),
@@ -296,6 +315,7 @@ func TestReceiver(t *testing.T) {
 
 			fh := fakeHandler{
 				failRequest:   tc.requestFails,
+				failStatus:    tc.failureStatus,
 				returnedEvent: tc.returnedEvent,
 				headers:       tc.expectedHeaders,
 				t:             t,
@@ -417,6 +437,7 @@ func (r *mockReporter) ReportEventProcessingTime(args *ReportArgs, d time.Durati
 
 type fakeHandler struct {
 	failRequest     bool
+	failStatus      int
 	requestReceived bool
 	headers         http.Header
 	returnedEvent   *cloudevents.Event
@@ -436,7 +457,11 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	if h.failRequest {
-		resp.WriteHeader(http.StatusBadRequest)
+		if h.failStatus != 0 {
+			resp.WriteHeader(h.failStatus)
+		} else {
+			resp.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 	if h.returnedEvent == nil {

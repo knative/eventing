@@ -40,6 +40,7 @@ type Sender struct {
 	paceSpecs     []common.PaceSpec
 	msgSize       uint
 	warmupSeconds uint
+	fixedBody     bool
 
 	// EventTimestamp channels
 	sentCh     chan common.EventTimestamp
@@ -56,7 +57,7 @@ type Sender struct {
 	aggregatorClient *pb.AggregatorClient
 }
 
-func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msgSize uint, warmupSeconds uint, paceFlag string) (common.Executor, error) {
+func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msgSize uint, warmupSeconds uint, paceFlag string, fixedBody bool) (common.Executor, error) {
 	pacerSpecs, err := common.ParsePaceSpec(paceFlag)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pace spec: %v", err)
@@ -81,6 +82,7 @@ func NewSender(loadGeneratorFactory LoadGeneratorFactory, aggregAddr string, msg
 		msgSize:       msgSize,
 		warmupSeconds: warmupSeconds,
 		paceSpecs:     pacerSpecs,
+		fixedBody:     fixedBody,
 
 		sentCh:     make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
 		acceptedCh: make(chan common.EventTimestamp, estimatedNumberOfMessagesInsideAChannel),
@@ -132,7 +134,7 @@ func (s *Sender) Run(ctx context.Context) {
 	benchmarkBeginning := time.Now()
 	for i, pace := range s.paceSpecs {
 		log.Printf("Starting pace %d° at %v rps for %v seconds", i+1, pace.Rps, pace.Duration)
-		s.loadGenerator.RunPace(i, pace, s.msgSize)
+		s.loadGenerator.RunPace(i, pace, s.msgSize, s.fixedBody)
 
 		// Wait for flush
 		time.Sleep(common.WaitForFlush)
@@ -171,7 +173,7 @@ func (s *Sender) Run(ctx context.Context) {
 func (s *Sender) warmup(ctx context.Context, warmupSeconds uint) error {
 	log.Println("Starting warmup")
 
-	s.loadGenerator.Warmup(common.PaceSpec{Rps: warmupRps, Duration: time.Duration(warmupSeconds) * time.Second}, s.msgSize)
+	s.loadGenerator.Warmup(common.PaceSpec{Rps: warmupRps, Duration: time.Duration(warmupSeconds) * time.Second}, s.msgSize, s.fixedBody)
 
 	// give the channel some time to drain the events it may still have enqueued
 	time.Sleep(common.WaitAfterWarmup)

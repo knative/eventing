@@ -22,13 +22,14 @@ import (
 
 	"knative.dev/pkg/injection/sharedmain"
 
-	"knative.dev/eventing/pkg/reconciler/broker"
+	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
-	flowsparallel "knative.dev/eventing/pkg/reconciler/flowsparallel"
-	flowssequence "knative.dev/eventing/pkg/reconciler/flowssequence"
-	"knative.dev/eventing/pkg/reconciler/namespace"
+	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
+	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
+	"knative.dev/eventing/pkg/reconciler/legacycronjobsource"
 	"knative.dev/eventing/pkg/reconciler/parallel"
+	"knative.dev/eventing/pkg/reconciler/pingsource"
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	"knative.dev/eventing/pkg/reconciler/subscription"
 	"knative.dev/eventing/pkg/reconciler/trigger"
@@ -36,15 +37,27 @@ import (
 
 func main() {
 	sharedmain.Main("controller",
-		subscription.NewController,
-		namespace.NewController,
+		// Messaging
 		channel.NewController,
-		trigger.NewController,
-		broker.NewController,
+		subscription.NewController,
+
+		// Eventing
 		eventtype.NewController,
-		sequence.NewController,
+		// Trigger namespace labeler for default broker.
+		trigger.NewController,
+
+		// Flows
 		parallel.NewController,
-		flowsparallel.NewController,
-		flowssequence.NewController,
+		sequence.NewController,
+
+		// Sources
+		apiserversource.NewController,
+		pingsource.NewController,
+
+		// Legacy Sources
+		// TODO(#2312): Remove this after v0.13.
+		legacyapiserversource.NewController,
+		legacycontainersource.NewController,
+		legacycronjobsource.NewController,
 	)
 }

@@ -19,22 +19,15 @@ package channel
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/duck"
-
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	channelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Channels"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "ch-default-controller"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
+	"knative.dev/eventing/pkg/duck"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -43,18 +36,18 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-
 	channelInformer := channelinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
-		channelLister: channelInformer.Lister(),
+		dynamicClientSet: dynamicclient.Get(ctx),
+		channelLister:    channelInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := channelreconciler.NewImpl(ctx, r)
 
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
+
 	channelInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	return impl

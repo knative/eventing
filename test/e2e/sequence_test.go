@@ -32,10 +32,9 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	pkgTest "knative.dev/pkg/test"
 )
 
-func TestSequence(t *testing.T) {
+func TestFlowsSequence(t *testing.T) {
 	const (
 		sequenceName  = "e2e-sequence"
 		senderPodName = "e2e-sequence-sender-pod"
@@ -73,7 +72,7 @@ func TestSequence(t *testing.T) {
 		client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 		// create a new step
 		step := duckv1.Destination{
-			Ref: resources.ServiceRef(podName),
+			Ref: resources.KnativeRefForService(podName, client.Namespace),
 		}
 		// add the step into steps
 		steps = append(steps, step)
@@ -99,24 +98,22 @@ func TestSequence(t *testing.T) {
 		channelTypeMeta,
 		resources.WithSubscriberForSubscription(loggerPodName),
 	)
-	replyRef := pkgTest.CoreV1ObjectReference(channelTypeMeta.Kind, channelTypeMeta.APIVersion, channelName)
+	replyRef := &duckv1.KReference{Kind: channelTypeMeta.Kind, APIVersion: channelTypeMeta.APIVersion, Name: channelName, Namespace: client.Namespace}
 
 	// create the sequence object
-	sequence := eventingtesting.NewSequence(
+	sequence := eventingtesting.NewFlowsSequence(
 		sequenceName,
 		client.Namespace,
-		eventingtesting.WithSequenceSteps(steps),
-		eventingtesting.WithSequenceChannelTemplateSpec(channelTemplate),
-		eventingtesting.WithSequenceReply(&duckv1.Destination{Ref: replyRef}),
+		eventingtesting.WithFlowsSequenceSteps(steps),
+		eventingtesting.WithFlowsSequenceChannelTemplateSpec(channelTemplate),
+		eventingtesting.WithFlowsSequenceReply(&duckv1.Destination{Ref: replyRef}),
 	)
 
 	// create Sequence or fail the test if there is an error
-	client.CreateSequenceOrFail(sequence)
+	client.CreateFlowsSequenceOrFail(sequence)
 
 	// wait for all test resources to be ready, so that we can start sending events
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// send fake CloudEvent to the Sequence
 	msg := fmt.Sprintf("TestSequence %s", uuid.NewUUID())
@@ -130,14 +127,11 @@ func TestSequence(t *testing.T) {
 		string(eventDataBytes),
 		cloudevents.WithSource(senderPodName),
 	)
-	if err := client.SendFakeEventToAddressable(
+	client.SendFakeEventToAddressableOrFail(
 		senderPodName,
 		sequenceName,
-		lib.SequenceTypeMeta,
-		event,
-	); err != nil {
-		t.Fatalf("Failed to send fake CloudEvent to the sequence %q", sequenceName)
-	}
+		lib.FlowsSequenceTypeMeta,
+		event)
 
 	// verify the logger service receives the correct transformed event
 	expectedMsg := msg

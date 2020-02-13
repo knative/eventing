@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -84,11 +85,24 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 		return
 	}
 
+	var ceOverrides string
+	if sb.Spec.CloudEventOverrides != nil {
+		if co, err := json.Marshal(sb.Spec.SourceSpec.CloudEventOverrides); err != nil {
+			logging.FromContext(ctx).Error(fmt.Sprintf("Failed to marshal CloudEventOverrides into JSON for %+v, %v", sb, err))
+		} else if len(co) > 0 {
+			ceOverrides = string(co)
+		}
+	}
+
 	spec := ps.Spec.Template.Spec
 	for i := range spec.InitContainers {
 		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
 			Name:  "K_SINK",
 			Value: uri.String(),
+		})
+		spec.InitContainers[i].Env = append(spec.InitContainers[i].Env, corev1.EnvVar{
+			Name:  "K_CE_OVERRIDES",
+			Value: ceOverrides,
 		})
 	}
 	for i := range spec.Containers {
@@ -96,25 +110,43 @@ func (sb *SinkBinding) Do(ctx context.Context, ps *duckv1.WithPod) {
 			Name:  "K_SINK",
 			Value: uri.String(),
 		})
+		spec.Containers[i].Env = append(spec.Containers[i].Env, corev1.EnvVar{
+			Name:  "K_CE_OVERRIDES",
+			Value: ceOverrides,
+		})
 	}
 }
 
 func (sb *SinkBinding) Undo(ctx context.Context, ps *duckv1.WithPod) {
 	spec := ps.Spec.Template.Spec
 	for i, c := range spec.InitContainers {
+		if len(c.Env) == 0 {
+			continue
+		}
+		env := make([]corev1.EnvVar, 0, len(spec.InitContainers[i].Env))
 		for j, ev := range c.Env {
-			if ev.Name == "K_SINK" {
-				spec.InitContainers[i].Env = append(spec.InitContainers[i].Env[:j], spec.InitContainers[i].Env[j+1:]...)
-				break
+			switch ev.Name {
+			case "K_SINK", "K_CE_OVERRIDES":
+				continue
+			default:
+				env = append(env, spec.InitContainers[i].Env[j])
 			}
 		}
+		spec.InitContainers[i].Env = env
 	}
 	for i, c := range spec.Containers {
+		if len(c.Env) == 0 {
+			continue
+		}
+		env := make([]corev1.EnvVar, 0, len(spec.Containers[i].Env))
 		for j, ev := range c.Env {
-			if ev.Name == "K_SINK" {
-				spec.Containers[i].Env = append(spec.Containers[i].Env[:j], spec.Containers[i].Env[j+1:]...)
-				break
+			switch ev.Name {
+			case "K_SINK", "K_CE_OVERRIDES":
+				continue
+			default:
+				env = append(env, spec.Containers[i].Env[j])
 			}
 		}
+		spec.Containers[i].Env = env
 	}
 }

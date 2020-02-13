@@ -55,17 +55,22 @@ func TestSinkBindingDeployment(t *testing.T) {
 	loggerPod := resources.EventLoggerPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
+	extensionSecret := string(uuid.NewUUID())
+
 	// create sink binding
 	sinkBinding := eventingtesting.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
 		eventingtesting.WithSubject(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Namespace:  client.Namespace,
 			Name:       deploymentName,
 		}),
+		eventingtesting.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
+			"sinkbinding": extensionSecret,
+		}}),
 	)
 	client.CreateSinkBindingOrFail(sinkBinding)
 
@@ -107,14 +112,17 @@ func TestSinkBindingDeployment(t *testing.T) {
 	})
 
 	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	expectedCount := 2
+	// Look for body.
 	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(data, expectedCount)); err != nil {
 		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", data, expectedCount, loggerPodName, err)
+	}
+	// Look for extensions.
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsAtLeast(extensionSecret, expectedCount)); err != nil {
+		t.Fatalf("String %q does not appear at least %d times in logs of logger pod %q: %v", extensionSecret, expectedCount, loggerPodName, err)
 	}
 }
 
@@ -139,7 +147,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 	sinkBinding := eventingtesting.NewSinkBinding(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.ServiceRef(loggerPodName)}),
+		eventingtesting.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
 		eventingtesting.WithSubject(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
@@ -195,9 +203,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 	})
 
 	// wait for all test resources to be ready
-	if err := client.WaitForAllTestResourcesReady(); err != nil {
-		t.Fatalf("Failed to get all test resources ready: %v", err)
-	}
+	client.WaitForAllTestResourcesReadyOrFail()
 
 	// verify the logger service receives the event
 	expectedCount := 2

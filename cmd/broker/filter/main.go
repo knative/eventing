@@ -21,21 +21,25 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
+	"knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/broker/filter"
+	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
+	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
+	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
-	"knative.dev/pkg/system"
-
-	"knative.dev/eventing/pkg/broker/filter"
-	"knative.dev/eventing/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/pkg/injection/sharedmain"
 
@@ -49,14 +53,16 @@ var (
 )
 
 const (
-	component = "broker_filter"
+	defaultMetricsPort = 9092
+	component          = "broker_filter"
 )
 
 type envConfig struct {
-	Broker        string `envconfig:"BROKER" required:"true"`
-	Namespace     string `envconfig:"NAMESPACE" required:"true"`
-	PodName       string `split_words:"true" required:"true"`
-	ContainerName string `split_words:"true" required:"true"`
+	Broker    string `envconfig:"BROKER" required:"true"`
+	Namespace string `envconfig:"NAMESPACE" required:"true"`
+	// TODO: change this environment variable to something like "PodGroupName".
+	PodName       string `envconfig:"POD_NAME" required:"true"`
+	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
 }
 
 func main() {
@@ -76,10 +82,18 @@ func main() {
 		log.Fatal("Error building kubeconfig", err)
 	}
 
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Fatal("Failed to process env var", zap.Error(err))
+	}
+
 	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
-	loggingConfig, err := sharedmain.GetLoggingConfig(ctx)
+	loggingConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, logging.ConfigMapName())
+	metricsConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, metrics.ConfigMapName())
+
+	loggingConfig, err := broker.GetLoggingConfig(ctx, env.Namespace, loggingConfigMapName)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
@@ -89,11 +103,6 @@ func main() {
 
 	logger.Info("Starting the Broker Filter")
 
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		logger.Fatal("Failed to process env var", zap.Error(err))
-	}
-
 	eventingClient := eventingv1alpha1.NewForConfigOrDie(cfg)
 	eventingFactory := eventinginformers.NewSharedInformerFactoryWithOptions(eventingClient,
 		controller.GetResyncPeriod(ctx),
@@ -101,22 +110,30 @@ func main() {
 	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, env.Namespace)
 	// Watch the observability config map and dynamically update metrics exporter.
-	configMapWatcher.Watch(metrics.ConfigMapName(), metrics.UpdateExporterFromConfigMap(component, sl))
+	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(metrics.ExporterOptions{
+		Component:      component,
+		PrometheusPort: defaultMetricsPort,
+	}, sl)
+	if err != nil {
+		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
+	}
+	configMapWatcher.Watch(metricsConfigMapName, updateFunc)
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
-	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
+	configMapWatcher.Watch(loggingConfigMapName, logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: env.Broker,
 	})
-	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin,
+		cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, tracingconfig.ConfigName)); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	reporter := filter.NewStatsReporter(env.PodName, env.ContainerName)
+	reporter := filter.NewStatsReporter(env.ContainerName, kmeta.ChildName(env.PodName, uuid.New().String()))
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.

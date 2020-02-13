@@ -22,10 +22,10 @@ import (
 
 type LoadGenerator interface {
 	// This method blocks till the warmup is complete
-	Warmup(pace common.PaceSpec, msgSize uint)
+	Warmup(pace common.PaceSpec, msgSize uint, fixedBody bool)
 
 	// This method blocks till the pace is complete
-	RunPace(i int, pace common.PaceSpec, msgSize uint)
+	RunPace(i int, pace common.PaceSpec, msgSize uint, fixedBody bool)
 	SendGCEvent()
 	SendEndEvent()
 }

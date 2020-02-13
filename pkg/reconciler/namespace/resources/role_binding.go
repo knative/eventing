@@ -20,15 +20,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // MakeRoleBinding creates a RoleBinding object for the Broker's filter
 // service account 'sa' in the Namespace 'ns'.
-func MakeRoleBinding(name string, ns string, sa *corev1.ServiceAccount, clusterRoleName string) *rbacv1.RoleBinding {
+func MakeRoleBinding(name string, ns *corev1.Namespace, nsName string, sa *corev1.ServiceAccount, clusterRoleName string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(ns.GetObjectMeta(), schema.GroupVersionKind{
+					Group:   corev1.SchemeGroupVersion.Group,
+					Version: corev1.SchemeGroupVersion.Version,
+					Kind:    "Namespace",
+				}),
+			},
 			Name:      name,
-			Namespace: ns,
+			Namespace: nsName,
 			Labels:    OwnedLabels(),
 		},
 		RoleRef: rbacv1.RoleRef{

@@ -95,7 +95,7 @@ func (c *Channelable) Populate() {
 	delay := "5s"
 	c.Spec.Delivery = &DeliverySpec{
 		DeadLetterSink: &duckv1.Destination{
-			Ref: &corev1.ObjectReference{
+			Ref: &duckv1.KReference{
 				Name: "aname",
 			},
 			URI: &apis.URL{

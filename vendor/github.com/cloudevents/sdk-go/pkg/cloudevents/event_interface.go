@@ -45,7 +45,8 @@ type EventReader interface {
 }
 
 // EventWriter is the interface for writing through an event onto attributes.
-// If an error is thrown by a sub-component, EventWriter panics.
+// If an error is thrown by a sub-component, EventWriter caches the error
+// internally and exposes errors with a call to event.Validate().
 type EventWriter interface {
 	// Context Attributes
 

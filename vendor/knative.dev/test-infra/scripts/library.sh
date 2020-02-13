@@ -135,8 +135,8 @@ function wait_until_pods_running() {
   local failed_pod=""
   for i in {1..150}; do  # timeout after 5 minutes
     local pods="$(kubectl get pods --no-headers -n $1 2>/dev/null)"
-    # All pods must be running
-    local not_running_pods=$(echo "${pods}" | grep -v Running | grep -v Completed)
+    # All pods must be running (ignore ImagePull error to allow the pod to retry)
+    local not_running_pods=$(echo "${pods}" | grep -v Running | grep -v Completed | grep -v ErrImagePull | grep -v ImagePullBackOff)
     if [[ -n "${pods}" ]] && [[ -z "${not_running_pods}" ]]; then
       # All Pods are running or completed. Verify the containers on each Pod.
       local all_ready=1
@@ -458,7 +458,7 @@ function start_knative_eventing() {
 # Install the stable release Knative/eventing in the current cluster.
 # Parameters: $1 - Knative Eventing version number, e.g. 0.6.0.
 function start_release_knative_eventing() {
-  start_knative_eventing "https://storage.googleapis.com/knative-releases/eventing/previous/v$1/release.yaml"
+  start_knative_eventing "https://storage.googleapis.com/knative-releases/eventing/previous/v$1/eventing.yaml"
 }
 
 # Install the latest stable Knative Eventing in the current cluster.
@@ -597,14 +597,19 @@ function get_canonical_path() {
   echo "$(cd ${path%/*} && echo $PWD/${path##*/})"
 }
 
-# Returns whether the current branch is a release branch.
-function is_release_branch() {
+# Returns the current branch.
+function current_branch() {
   local branch_name=""
   # Get the branch name from Prow's env var, see https://github.com/kubernetes/test-infra/blob/master/prow/jobs.md.
   # Otherwise, try getting the current branch from git.
   (( IS_PROW )) && branch_name="${PULL_BASE_REF:-}"
   [[ -z "${branch_name}" ]] && branch_name="$(git rev-parse --abbrev-ref HEAD)"
-  [[ ${branch_name} =~ ^release-[0-9\.]+$ ]]
+  echo "${branch_name}"
+}
+
+# Returns whether the current branch is a release branch.
+function is_release_branch() {
+  [[ $(current_branch) =~ ^release-[0-9\.]+$ ]]
 }
 
 # Returns the URL to the latest manifest for the given Knative project.
@@ -615,19 +620,23 @@ function get_latest_knative_yaml_source() {
   local yaml_name="$2"
   # If it's a release branch, the yaml source URL should point to a specific version.
   if is_release_branch; then
-    # Get the latest tag name for the current branch, which is likely formatted as v0.5.0
-    local tag_name="$(git describe --tags --abbrev=0)"
-    # The given repo might not have this tag, so we need to find its latest release manifest with the same major&minor version.
-    local major_minor="$(echo ${tag_name} | cut -d. -f1-2)"
-    local yaml_source_path="$(gsutil ls gs://knative-releases/${repo_name}/previous/${major_minor}.*/${yaml_name}.yaml \
+    # Extract the release major&minor version from the branch name.
+    local branch_name="$(current_branch)"
+    local major_minor="${branch_name##release-}"
+    # Find the latest release manifest with the same major&minor version.
+    local yaml_source_path="$(
+      gsutil ls gs://knative-releases/${repo_name}/previous/v${major_minor}.*/${yaml_name}.yaml 2> /dev/null \
       | sort \
       | tail -n 1 \
       | cut -b6-)"
-    echo "https://storage.googleapis.com/${yaml_source_path}"
-  # If it's not a release branch, the yaml source URL should be nightly build.
-  else
-    echo "https://storage.googleapis.com/knative-nightly/${repo_name}/latest/${yaml_name}.yaml"
+    # The version does exist, return it.
+    if [[ -n "${yaml_source_path}" ]]; then
+      echo "https://storage.googleapis.com/${yaml_source_path}"
+      return
+    fi
+    # Otherwise, fall back to nightly.
   fi
+  echo "https://storage.googleapis.com/knative-nightly/${repo_name}/latest/${yaml_name}.yaml"
 }
 
 # Initializations that depend on previous functions.
@@ -638,5 +647,5 @@ readonly REPO_NAME_FORMATTED="Knative $(capitalize ${REPO_NAME//-/ })"
 
 # Public latest nightly or release yaml files.
 readonly KNATIVE_SERVING_RELEASE="$(get_latest_knative_yaml_source "serving" "serving")"
-readonly KNATIVE_EVENTING_RELEASE="$(get_latest_knative_yaml_source "eventing" "release")"
+readonly KNATIVE_EVENTING_RELEASE="$(get_latest_knative_yaml_source "eventing" "eventing")"
 readonly KNATIVE_MONITORING_RELEASE="$(get_latest_knative_yaml_source "serving" "monitoring")"

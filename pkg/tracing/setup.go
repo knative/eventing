@@ -81,14 +81,14 @@ func SetupStaticPublishing(logger *zap.SugaredLogger, serviceName string, cfg *t
 // just ensures that if generated, they are collected appropriately. This is normally done by using
 // tracing.HTTPSpanMiddleware as a middleware HTTP handler. The configuration will be dynamically
 // updated when the ConfigMap is updated.
-func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName string) error {
+func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configmap.InformedWatcher, serviceName, tracingConfigName string) error {
 	oct, err := setupPublishing(serviceName, logger)
 	if err != nil {
 		return err
 	}
 
 	tracerUpdater := func(name string, value interface{}) {
-		if name == tracingconfig.ConfigName {
+		if name == tracingConfigName {
 			cfg := value.(*tracingconfig.Config)
 			logger.Debugw("Updating tracing config", zap.Any("cfg", cfg))
 			err = oct.ApplyConfig(cfg)
@@ -105,7 +105,7 @@ func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configm
 		logger,
 		[]eventingconfigmap.DefaultConstructor{
 			{
-				Default:     enableZeroSamplingCM(configMapWatcher.Namespace),
+				Default:     enableZeroSamplingCM(configMapWatcher.Namespace, tracingConfigName),
 				Constructor: tracingconfig.NewTracingConfigFromConfigMap,
 			},
 		},
@@ -114,10 +114,10 @@ func SetupDynamicPublishing(logger *zap.SugaredLogger, configMapWatcher *configm
 	return nil
 }
 
-func enableZeroSamplingCM(ns string) corev1.ConfigMap {
+func enableZeroSamplingCM(ns string, tracingConfigName string) corev1.ConfigMap {
 	return corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      tracingconfig.ConfigName,
+			Name:      tracingConfigName,
 			Namespace: ns,
 		},
 		Data: map[string]string{

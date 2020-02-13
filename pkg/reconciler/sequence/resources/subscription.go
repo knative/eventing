@@ -23,7 +23,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -31,41 +32,48 @@ func SequenceSubscriptionName(sequenceName string, step int) string {
 	return fmt.Sprintf("%s-kn-sequence-%d", sequenceName, step)
 }
 
-func NewSubscription(stepNumber int, p *v1alpha1.Sequence) *v1alpha1.Subscription {
-	r := &v1alpha1.Subscription{
+func NewSubscription(stepNumber int, s *v1alpha1.Sequence) *messagingv1alpha1.Subscription {
+	r := &messagingv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Subscription",
 			APIVersion: "messaging.knative.dev/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: p.Namespace,
-			Name:      SequenceSubscriptionName(p.Name, stepNumber),
+			Namespace: s.Namespace,
+			Name:      SequenceSubscriptionName(s.Name, stepNumber),
 
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(p),
+				*kmeta.NewControllerRef(s),
 			},
 		},
-		Spec: v1alpha1.SubscriptionSpec{
+		Spec: messagingv1alpha1.SubscriptionSpec{
 			Channel: corev1.ObjectReference{
-				APIVersion: p.Spec.ChannelTemplate.APIVersion,
-				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       SequenceChannelName(p.Name, stepNumber),
+				APIVersion: s.Spec.ChannelTemplate.APIVersion,
+				Kind:       s.Spec.ChannelTemplate.Kind,
+				Name:       SequenceChannelName(s.Name, stepNumber),
 			},
-			Subscriber: &p.Spec.Steps[stepNumber],
+			Subscriber: &duckv1.Destination{
+				Ref: s.Spec.Steps[stepNumber].Ref,
+				URI: s.Spec.Steps[stepNumber].URI,
+			},
 		},
 	}
 	// If it's not the last step, use the next channel as the reply to, if it's the very
 	// last one, we'll use the (optional) reply from the Sequence Spec.
-	if stepNumber < len(p.Spec.Steps)-1 {
+	if stepNumber < len(s.Spec.Steps)-1 {
 		r.Spec.Reply = &duckv1.Destination{
-			Ref: &corev1.ObjectReference{
-				APIVersion: p.Spec.ChannelTemplate.APIVersion,
-				Kind:       p.Spec.ChannelTemplate.Kind,
-				Name:       SequenceChannelName(p.Name, stepNumber+1),
+			Ref: &duckv1.KReference{
+				APIVersion: s.Spec.ChannelTemplate.APIVersion,
+				Kind:       s.Spec.ChannelTemplate.Kind,
+				Name:       SequenceChannelName(s.Name, stepNumber+1),
+				Namespace:  s.Namespace,
 			},
 		}
-	} else if p.Spec.Reply != nil {
-		r.Spec.Reply = p.Spec.Reply
+	} else if s.Spec.Reply != nil {
+		r.Spec.Reply = &duckv1.Destination{
+			Ref: s.Spec.Reply.Ref,
+			URI: s.Spec.Reply.URI,
+		}
 	}
 	return r
 }

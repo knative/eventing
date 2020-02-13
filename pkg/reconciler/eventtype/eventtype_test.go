@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
+
 	"knative.dev/pkg/configmap"
 
 	"knative.dev/pkg/tracker"
@@ -58,136 +60,135 @@ func init() {
 }
 
 func TestReconcile(t *testing.T) {
-	table := TableTest{
-		{
-			Name: "bad workqueue key",
-			// Make sure Reconcile handles bad keys.
-			Key: "too/many/parts",
-		}, {
-			Name: "key not found",
-			// Make sure Reconcile handles good keys that don't exist.
-			Key: "foo/not-found",
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "foo/not-found",
+	}, {
+		Name: "EventType not found",
+		Key:  testKey,
+	}, {
+		Name: "EventType being deleted",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewEventType(eventTypeName, testNS,
+				WithInitEventTypeConditions,
+				WithEventTypeDeletionTimestamp),
 		},
-		{
-			Name: "EventType not found",
-			Key:  testKey,
+	}, {
+		Name: "Broker not found",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+			),
 		},
-		{
-			Name: "EventType being deleted",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewEventType(eventTypeName, testNS,
-					WithInitEventTypeConditions,
-					WithEventTypeDeletionTimestamp),
-			},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+				WithInitEventTypeConditions,
+				WithEventTypeBrokerDoesNotExist,
+			),
+		}},
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "InternalError", `broker.eventing.knative.dev "test-broker" not found`),
 		},
-		{
-			Name: "Broker not found",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-				),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-					WithInitEventTypeConditions,
-					WithEventTypeBrokerDoesNotExist,
-				),
-			}},
-			WantErr: true,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, eventTypeReconcileFailed, "EventType reconcile error: broker.eventing.knative.dev %q not found", eventTypeBroker),
-			},
+	}, {
+		Name: "The status of Broker is False",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+			),
+			NewBroker(eventTypeBroker, testNS,
+				WithInitBrokerConditions,
+				WithIngressFailed("DeploymentFailure", "inducing failure for create deployments"),
+			),
 		},
-		{
-			Name: "The status of Broker is False",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-				),
-				NewBroker(eventTypeBroker, testNS,
-					WithInitBrokerConditions,
-					WithIngressFailed("DeploymentFailure", "inducing failure for create deployments"),
-				),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-					WithEventTypeBrokerExists,
-					WithEventTypeBrokerFailed("DeploymentFailure", "inducing failure for create deployments"),
-				),
-			}},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeBrokerExists,
+				WithEventTypeBrokerFailed("DeploymentFailure", "inducing failure for create deployments"),
+			),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "EventTypeReconciled", `EventType reconciled: "test-namespace/test-eventtype"`),
 		},
-		{
-			Name: "The status of Broker is Unknown",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-				),
-				NewBroker(eventTypeBroker, testNS,
-					WithInitBrokerConditions,
-				),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-					WithEventTypeBrokerExists,
-					WithEventTypeBrokerUnknown("", ""),
-				),
-			}},
+	}, {
+		Name: "The status of Broker is Unknown",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+			),
+			NewBroker(eventTypeBroker, testNS,
+				WithInitBrokerConditions,
+			),
 		},
-		{
-			Name: "Successful reconcile, became ready",
-			Key:  testKey,
-			Objects: []runtime.Object{
-				NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-				),
-				NewBroker(eventTypeBroker, testNS,
-					WithBrokerReady,
-				),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewEventType(eventTypeName, testNS,
-					WithEventTypeType(eventTypeType),
-					WithEventTypeSource(eventTypeSource),
-					WithEventTypeBroker(eventTypeBroker),
-					WithEventTypeBrokerExists,
-					WithEventTypeBrokerReady,
-				),
-			}},
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, eventTypeReadinessChanged, "EventType %q became ready", eventTypeName),
-			},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeBrokerExists,
+				WithEventTypeBrokerUnknown("", ""),
+			),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "EventTypeReconciled", `EventType reconciled: "test-namespace/test-eventtype"`),
 		},
-	}
+	}, {
+		Name: "Successful reconcile, became ready",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+			),
+			NewBroker(eventTypeBroker, testNS,
+				WithBrokerReady,
+			),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewEventType(eventTypeName, testNS,
+				WithEventTypeType(eventTypeType),
+				WithEventTypeSource(eventTypeSource),
+				WithEventTypeBroker(eventTypeBroker),
+				WithEventTypeBrokerExists,
+				WithEventTypeBrokerReady,
+			),
+		}},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "EventTypeReconciled", `EventType reconciled: "test-namespace/test-eventtype"`),
+		},
+	}}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
-			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
+		b := reconciler.NewBase(ctx, controllerAgentName, cmw)
+		r := &Reconciler{
 			eventTypeLister: listers.GetEventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
 			tracker:         tracker.New(func(types.NamespacedName) {}, 0),
 		}
+		return eventtype.NewReconciler(ctx, b.Logger, b.EventingClientSet, listers.GetEventTypeLister(), b.Recorder, r)
 	},
 		false,
 		logger,

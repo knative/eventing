@@ -90,9 +90,11 @@ func TestValidSpec(t *testing.T) {
 		spec BrokerSpec
 		want *apis.FieldError
 	}{{
-		name: "valid empty",
+		/* This test should fail: TODO: https://github.com/knative/eventing/issues/2128
+		name: "invalid empty, missing channeltemplatespec",
 		spec: BrokerSpec{},
-		want: nil,
+		want: apis.ErrMissingField("channelTemplateSpec"),
+		*/
 	}, {
 		name: "valid provider",
 		spec: BrokerSpec{

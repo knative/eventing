@@ -49,11 +49,23 @@ rules:
       - create
       - update
       - patch
-  # For watching the health of the endpoints
+  # For watching the health of the endpoints and serviceaccounts
   - apiGroups:
       - "" # Core API group.
     resources:
       - endpoints
+      - serviceaccounts
+#    resourceNames:
+#      - imc-dispatcher
+    verbs:
+      - get
+      - list
+      - watch
+  # For watching the health of the rolebindings
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - rolebindings
 #    resourceNames:
 #      - imc-dispatcher
     verbs:
@@ -72,7 +84,7 @@ rules:
       - get
       - list
       - watch
-  # For getting the logging config 
+  # For getting the logging config
   - apiGroups:
       - ""
     resources:
@@ -85,6 +97,6 @@ rules:
       - ""
     resources:
       - events
-    verbs: 
+    verbs:
       - create
       - patch

@@ -29,7 +29,7 @@ import (
 
 func handler(event cloudevents.Event) {
 	if err := event.Validate(); err == nil {
-		log.Printf("%s", event.Data.([]byte))
+		log.Printf("%s", event.String())
 	} else {
 		log.Printf("error validating the event: %v", err)
 	}

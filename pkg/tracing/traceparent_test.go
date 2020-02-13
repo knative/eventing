@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"go.opencensus.io/trace"
 )
@@ -71,8 +73,8 @@ func TestAddTraceparentAttributeFromContext(t *testing.T) {
 					t.Fatalf("Unexpected traceparent value. Got %q. Want %q", tp.(string), expected)
 				}
 			} else {
-				if event != eventWithTraceparent {
-					t.Fatalf("Event changed unexpectedly. Got %v. Want %v", eventWithTraceparent, event)
+				if diff := cmp.Diff(event, eventWithTraceparent); diff != "" {
+					t.Fatalf("%s: Event changed unexpectedly (-want, +got) = %v", n, diff)
 				}
 			}
 		})

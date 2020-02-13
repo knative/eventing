@@ -19,10 +19,12 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -156,4 +158,41 @@ func (client *Client) getContainerName(podName, namespace string) (string, error
 	}
 	containerName := pod.Spec.Containers[0].Name
 	return containerName, nil
+}
+
+// CheckConfigMapsExist will check if copy configmaps exist.
+func (client *Client) CheckConfigMapsExist(namespace string, names ...string) error {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		for _, name := range names {
+			_, err := client.Kube.Kube.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+			if k8serrors.IsNotFound(err) {
+				return false, nil
+			} else if err != nil {
+				return false, err
+			}
+		}
+		return true, nil
+	})
+}
+
+// CheckConfigMapsEqual will check if configmaps have the same data as the original one.
+func (client *Client) CheckConfigMapsEqual(originalNamespace, cmp string, names ...string) error {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
+		for _, name := range names {
+			// Get original configmap
+			origianlCM, err := client.Kube.Kube.CoreV1().ConfigMaps(originalNamespace).Get(name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			// Get copy configmap
+			copyCM, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Get(cmp+"-"+name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			if !reflect.DeepEqual(origianlCM.Data, copyCM.Data) {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
 }

@@ -33,10 +33,12 @@ const (
 	channelName       = "subscribedChannel"
 	replyChannelName  = "toChannel"
 	subscriberName    = "subscriber"
+	namespace         = "namespace"
 )
 
 func getValidChannelRef() corev1.ObjectReference {
 	return corev1.ObjectReference{
+		//		Namespace:  namespace,
 		Name:       channelName,
 		Kind:       channelKind,
 		APIVersion: channelAPIVersion,
@@ -45,7 +47,8 @@ func getValidChannelRef() corev1.ObjectReference {
 
 func getValidReply() *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
+			Namespace:  namespace,
 			Name:       replyChannelName,
 			Kind:       channelKind,
 			APIVersion: channelAPIVersion,
@@ -55,7 +58,8 @@ func getValidReply() *duckv1.Destination {
 
 func getValidDestination() *duckv1.Destination {
 	return &duckv1.Destination{
-		Ref: &corev1.ObjectReference{
+		Ref: &duckv1.KReference{
+			Namespace:  namespace,
 			Name:       subscriberName,
 			Kind:       routeKind,
 			APIVersion: routeAPIVersion,
@@ -206,16 +210,14 @@ func TestSubscriptionSpecValidation(t *testing.T) {
 		c: &SubscriptionSpec{
 			Channel: getValidChannelRef(),
 			Subscriber: &duckv1.Destination{
-				Ref: &corev1.ObjectReference{
+				Ref: &duckv1.KReference{
+					Namespace:  namespace,
 					Kind:       channelKind,
 					APIVersion: channelAPIVersion,
 				},
 			},
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("subscriber.ref.name")
-			return fe
-		}(),
+		want: apis.ErrMissingField("subscriber.ref.name"),
 	}}
 
 	for _, test := range tests {

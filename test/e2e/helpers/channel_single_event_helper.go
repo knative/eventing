@@ -58,9 +58,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string,
 		)
 
 		// wait for all test resources to be ready, so that we can start sending events
-		if err := client.WaitForAllTestResourcesReady(); err != nil {
-			st.Fatalf("Failed to get all test resources ready: %v", err)
-		}
+		client.WaitForAllTestResourcesReadyOrFail()
 
 		// send fake CloudEvent to the channel
 		body := fmt.Sprintf("TestSingleEvent %s", uuid.NewUUID())
@@ -69,10 +67,7 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string,
 			cloudevents.WithSource(senderName),
 			cloudevents.WithEncoding(encoding),
 		)
-
-		if err := client.SendFakeEventToAddressable(senderName, channelName, &channel, event); err != nil {
-			st.Fatalf("Failed to send fake CloudEvent to the channel %q", channelName)
-		}
+		client.SendFakeEventToAddressableOrFail(senderName, channelName, &channel, event)
 
 		// verify the logger service receives the event
 		if err := client.CheckLog(loggerPodName, lib.CheckerContains(body)); err != nil {

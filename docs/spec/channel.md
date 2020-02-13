@@ -1,13 +1,15 @@
-# Channel Spec
+# Knative Channel Specification
 
 ## Background
 
-Starting with Version 0.7.0 all the different Channel CRDs (e.g.
-`InMemoryChannel` or `KafkaChannel`) are living in the
-`messaging.knative.dev/v1alpha1` API Group.
+The Knative Eventing project has one generic `Channel` CRD and might ship
+different Channel CRDs implementations (e.g.`InMemoryChannel`) inside of in the
+`messaging.knative.dev/v1beta1` API Group. The generic `Channel` CRD points to
+the chosen _default_ `Channel` implementation, like the `InMemoryChannel`.
 
-A channel logically receives events on its input domain and forwards them to its
-subscribers. Below is a specification for the generic parts of each _Channel_.
+A _channel_ logically receives events on its input domain and forwards them to
+its subscribers. Below is a specification for the generic parts of each
+`Channel`.
 
 A typical channel consists of a _Controller_ and a _Dispatcher_ pod.
 
@@ -30,20 +32,8 @@ The CRD's Kind SHOULD have the suffix `Channel`. The name MAY be just `Channel`.
 
 ### Control Plane
 
-Each Channel implementation is backed by its own CRD (e.g. `InMemoryChannel` or
-`KafkaChannel`). Below is an example for a `KafkaChannel` object:
-
-```
-apiVersion: messaging.knative.dev/v1alpha1
-kind: KafkaChannel
-metadata:
-  name: kafka-channel
-spec:
-  numPartitions: 3
-  replicationFactor: 1
-```
-
-A different example for the `InMemoryChannel`:
+Each Channel implementation is backed by its own CRD, like the
+`InMemoryChannel`. Below is an example for the `InMemoryChannel`:
 
 ```
 apiVersion: messaging.knative.dev/v1alpha1
@@ -53,30 +43,31 @@ metadata:
 ```
 
 Each _Channel Controller_ ensures the required tasks on the backing technology
-are applied. In this case a Kafka topic with the desired configuration is being
-created, backing all messages from the channel.
+are applied.
+
+> NOTE: For instance on a `KafkaChannel` this would mean taking care of creating
+> an Apache Kafka topic and backing all messages from the _Knative Channel_.
 
 #### Aggregated Channelable Manipulator ClusterRole
 
 Every CRD MUST create a corresponding ClusterRole, that will be aggregated into
 the `channelable-manipulator` ClusterRole. This ClusterRole MUST include
 permissions to create, get, list, watch, patch, and update the CRD's custom
-objects and their status. Below is an example for the `KafkaChannel`:
+objects and their status. Below is an example for the `InMemoryChannel`:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kafka-channelable-manipulator
+  name: imc-channelable-manipulator
   labels:
     duck.knative.dev/channelable: "true"
-# Do not use this role directly. These rules will be added to the "channelable-manipulator" role.
 rules:
   - apiGroups:
       - messaging.knative.dev
     resources:
-      - kafkachannels
-      - kafkachannels/status
+      - inmemorychannels
+      - inmemorychannels/status
     verbs:
       - create
       - get
@@ -102,9 +93,7 @@ kind: ClusterRole
 metadata:
   name: imc-addressable-resolver
   labels:
-    eventing.knative.dev/release: devel
     duck.knative.dev/addressable: "true"
-# Do not use this role directly. These rules will be added to the "addressable-resolver" role.
 rules:
   - apiGroups:
       - messaging.knative.dev
@@ -128,24 +117,25 @@ For each channel implementation a `CustomResourceDefinition` is created, like:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
- name: kafkachannels.messaging.knative.dev
+ name: inmemorychannels.messaging.knative.dev
  labels:
     knative.dev/crd-install: "true"
     messaging.knative.dev/subscribable: "true"
+    duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
   version: v1alpha1
   names:
-    kind: KafkaChannel
-    plural: kafkachannels
-    singular: kafkachannel
+    kind: InMemoryChannel
+    plural: inmemorychannels
+    singular: inmemorychannel
     categories:
     - all
     - knative
     - messaging
     - channel
     shortNames:
-    - kc
+    - imc
   scope: Namespaced
 ...
 ```
@@ -153,7 +143,41 @@ spec:
 Each channel is _namespaced_ and MUST have the following:
 
 - label of `messaging.knative.dev/subscribable: "true"`
-- The category `channel`.
+- label of `duck.knative.dev/addressable: "true"`
+- The category `channel`
+
+#### Spec Requirements
+
+Each channel CRD MUST contain an array
+[`spec.subscribable.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/subscribable_types.go)
+
+#### Status Requirements
+
+Each channel CRD MUST have a `status` subresource which contains
+
+- [`address`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/addressable_types.go)
+- [`subscribableStatus.subscribers`](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/subscribable_types.go)
+  (as an array)
+
+Each channel CRD SHOULD have the following fields in `Status`
+
+- [`observedGeneration`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go)
+  MUST be populated if present
+- [`conditions`](https://github.com/knative/pkg/blob/master/apis/duck/v1beta1/status_types.go)
+  (as an array) SHOULD indicate status transitions and error reasons if present
+
+#### Channel Status
+
+When the channel instance is ready to receive events `status.address.hostname`
+and `status.address.url` MUST be populated and `status.addressable` MUST be set
+to `True`.
+
+#### Channel Subscriber Status
+
+Each subscription to a channel is added to the channel
+`status.subscribableStatus.subscribers` automatically. The `ready` field of the
+subscriber identified by its `uid` MUST be set to `True` when the subscription
+is ready to be processed.
 
 ### Data Plane
 
@@ -163,12 +187,21 @@ exclusively communicate using CloudEvents.
 #### Input
 
 Every Channel MUST expose either an HTTP or HTTPS endpoint. It MAY expose both.
-The endpoint(s) MUST conform to
-[HTTP Transport Binding for CloudEvents - Version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md).
-It MUST support both Binary Content mode and Structured Content mode. The
-HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443. Channels
-MAY expose other, non-HTTP endpoints in addition to HTTP at their discretion
-(e.g. expose a gRPC endpoint to accept events).
+The endpoint(s) MUST conform to one of the following versions of the
+specification:
+
+- [CloudEvents 0.3 specification](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md)
+- [CloudEvents 1.0 specification](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md)
+
+The usage of CloudEvents version `1.0` is RECOMMENDED.
+
+The Channel MUST NOT perform an upgrade of the passed in version. It MUST emit
+the event with the same version. It MUST support both _Binary Content Mode_ and
+_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
+
+The HTTP(S) endpoint MAY be on any port, not just the standard 80 and 443.
+Channels MAY expose other, non-HTTP endpoints in addition to HTTP at their
+discretion (e.g. expose a gRPC endpoint to accept events).
 
 ##### Generic
 
@@ -177,9 +210,9 @@ CloudEvent, then it MUST reject the request.
 
 The Channel MUST pass through all tracing information as CloudEvents attributes.
 In particular, it MUST translate any incoming OpenTracing or B3 headers to the
-[Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md).
+[Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 The Channel SHOULD sample and write traces to the location specified in
-[`config-tracing`](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md).
+[`config-tracing`](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 
 ##### HTTP
 
@@ -202,17 +235,23 @@ CloudEvent, then it MUST respond with `400 Bad Request`.
 
 #### Output
 
-Channels MUST output CloudEvents. The output MUST be via a binding specified in
-the
-[CloudEvents specification](https://github.com/cloudevents/spec/tree/v0.3#cloudevents-documents).
-Every Channel MUST support sending events via Binary Content Mode HTTP Transport
-Binding.
-
-Channels MUST NOT alter an event that goes through them. All CloudEvent
-attributes, including the data attribute, MUST be received at the subscriber
-identical to how they were received by the Channel. The only exception is the
-[Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v0.3/extensions/distributed-tracing.md),
+Channels MUST output CloudEvents. The output MUST match the CloudEvent version
+of the [Input](#input). Channels MUST NOT alter an event that goes through them.
+All CloudEvent attributes, including the data attribute, MUST be received at the
+subscriber identical to how they were received by the Channel. The only
+exception is the
+[Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md),
 which is expected to change as the span id will be altered at every network hop.
+
+Every Channel SHOULD support sending events via _Binary Content Mode_ or
+_Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
+
+Channels MUST send events to all subscribers which are marked with a status of
+`ready: "True"` in the channel's `status.subscribableStatus.subscribers`. The
+events must be sent to the `subscriberURI` field of
+`spec.subscribable.subscribers`. Each channel implementation will have its own
+quality of service guarantees (e.g. at least once, at most once, etc) which
+SHOULD be documented.
 
 ##### Retries
 
@@ -238,3 +277,9 @@ Channels SHOULD expose a variety of metrics, including, but not limited to:
 
 Metrics SHOULD be enabled by default, with a configuration parameter included to
 disable them if desired.
+
+## Changelog
+
+- `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
+- `0.13.x release`: Types in the API group `messaging.knative.dev` will be
+  promoted from `v1alpha1`to `v1beta1`.

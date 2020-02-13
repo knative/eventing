@@ -25,12 +25,20 @@ import (
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	configsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/configs/v1alpha1"
+	fakeconfigsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/configs/v1alpha1/fake"
 	eventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1"
 	fakeeventingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1alpha1/fake"
+	eventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1"
+	fakeeventingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/eventing/v1beta1/fake"
 	flowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1"
 	fakeflowsv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1alpha1/fake"
+	flowsv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1beta1"
+	fakeflowsv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/flows/v1beta1/fake"
 	messagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1"
 	fakemessagingv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1alpha1/fake"
+	messagingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1beta1"
+	fakemessagingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1beta1/fake"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
 	fakesourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
 )
@@ -82,9 +90,19 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 
 var _ clientset.Interface = &Clientset{}
 
+// ConfigsV1alpha1 retrieves the ConfigsV1alpha1Client
+func (c *Clientset) ConfigsV1alpha1() configsv1alpha1.ConfigsV1alpha1Interface {
+	return &fakeconfigsv1alpha1.FakeConfigsV1alpha1{Fake: &c.Fake}
+}
+
 // EventingV1alpha1 retrieves the EventingV1alpha1Client
 func (c *Clientset) EventingV1alpha1() eventingv1alpha1.EventingV1alpha1Interface {
 	return &fakeeventingv1alpha1.FakeEventingV1alpha1{Fake: &c.Fake}
+}
+
+// EventingV1beta1 retrieves the EventingV1beta1Client
+func (c *Clientset) EventingV1beta1() eventingv1beta1.EventingV1beta1Interface {
+	return &fakeeventingv1beta1.FakeEventingV1beta1{Fake: &c.Fake}
 }
 
 // FlowsV1alpha1 retrieves the FlowsV1alpha1Client
@@ -92,9 +110,19 @@ func (c *Clientset) FlowsV1alpha1() flowsv1alpha1.FlowsV1alpha1Interface {
 	return &fakeflowsv1alpha1.FakeFlowsV1alpha1{Fake: &c.Fake}
 }
 
+// FlowsV1beta1 retrieves the FlowsV1beta1Client
+func (c *Clientset) FlowsV1beta1() flowsv1beta1.FlowsV1beta1Interface {
+	return &fakeflowsv1beta1.FakeFlowsV1beta1{Fake: &c.Fake}
+}
+
 // MessagingV1alpha1 retrieves the MessagingV1alpha1Client
 func (c *Clientset) MessagingV1alpha1() messagingv1alpha1.MessagingV1alpha1Interface {
 	return &fakemessagingv1alpha1.FakeMessagingV1alpha1{Fake: &c.Fake}
+}
+
+// MessagingV1beta1 retrieves the MessagingV1beta1Client
+func (c *Clientset) MessagingV1beta1() messagingv1beta1.MessagingV1beta1Interface {
+	return &fakemessagingv1beta1.FakeMessagingV1beta1{Fake: &c.Fake}
 }
 
 // SourcesV1alpha1 retrieves the SourcesV1alpha1Client
