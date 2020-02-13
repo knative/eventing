@@ -19,11 +19,11 @@ limitations under the License.
 package eventtype
 
 import (
-	"context"
+	context "context"
 
 	eventtype "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	v1alpha1eventtype "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )

@@ -19,11 +19,11 @@ limitations under the License.
 package channel
 
 import (
-	"context"
+	context "context"
 
 	channel "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 	v1alpha1channel "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )
