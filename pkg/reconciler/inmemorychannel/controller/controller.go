@@ -100,7 +100,6 @@ func NewController(
 	// Set up watches for dispatcher resources we care about, since any changes to these
 	// resources will affect our Channels. So, set up a watch here, that will cause
 	// a global Resync for all the channels to take stock of their health when these change.
-	filterFn := r.ScopedFilter(r.systemNamespace, dispatcherName)
 
 	// Call GlobalResync on inmemorychannels.
 	grCh := func(obj interface{}) {
