@@ -297,9 +297,8 @@ The `spec` field is expected to have the following minimum shape:
 
 ```go
 type SourceSpec struct {
-    // Sink is a reference to an object that will resolve to a domain name or a
-    // URI directly to use as the sink.
-    Sink apisv1alpha1.Destination `json:"sink,omitempty"`
+    // Sink is a reference to an object that will resolve to a uri to use as the sink.
+    Sink duckv1.Destination `json:"sink,omitempty"`
 
     // CloudEventOverrides defines overrides to control the output format and
     // modifications of the event sent to the sink.
