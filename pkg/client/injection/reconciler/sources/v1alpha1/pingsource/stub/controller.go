@@ -19,11 +19,11 @@ limitations under the License.
 package pingsource
 
 import (
-	"context"
+	context "context"
 
 	pingsource "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource"
 	v1alpha1pingsource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )

@@ -19,11 +19,11 @@ limitations under the License.
 package subscription
 
 import (
-	"context"
+	context "context"
 
 	subscription "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	v1alpha1subscription "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )
