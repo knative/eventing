@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
-	"time"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
@@ -54,9 +52,8 @@ import (
 
 const (
 	// Name of the corev1.Events emitted from the Broker reconciliation process.
-	brokerReadinessChanged   = "BrokerReadinessChanged"
-	brokerReconcileError     = "BrokerReconcileError"
-	brokerUpdateStatusFailed = "BrokerUpdateStatusFailed"
+	brokerReconcileError = "BrokerReconcileError"
+	brokerReconciled     = "BrokerReconciled"
 
 	// Label used to specify which Broker provides the implementation.
 	brokerAnnotationKey = "eventing.knative.dev/broker.class"
@@ -104,7 +101,13 @@ type ReconcilerArgs struct {
 	FilterServiceAccountName  string
 }
 
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, brokerReconciled, "Broker reconciled: \"%s/%s\"", namespace, name)
+}
+
 func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
+	// TODO(vaikas): Can we just add this into the controller as part of the filtering
+	// so they won't even get queued into my queue???
 	if r.brokerClass != "" {
 		if b.GetAnnotations()[brokerAnnotationKey] != r.brokerClass {
 			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
@@ -114,6 +117,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
+	b.Status.ObservedGeneration = b.Generation
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
 	// 2. Filter Deployment.
@@ -125,13 +129,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	//     Service. However, Subscriptions only allow us to send replies to Channels, so we need
 	//     this as an intermediary.
 	// 6. Subscription from the Ingress Channel to the Ingress Service.
-
-	if b.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector for Broker,
-		// but we need to mark our Triggers as no broker.
-		return r.propagateBrokerStatusToTriggers(ctx, b.Namespace, b.Name, nil)
-	}
-
 	if b.Spec.ChannelTemplate == nil {
 		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
 			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
@@ -163,18 +160,20 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
-		return err
+		return fmt.Errorf("Failed to reconcile trigger channel: %v", err)
 	}
 
 	if triggerChan.Status.Address == nil {
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
+		// Ok to return nil here, once channel address becomes available, this will get requeued.
 		return nil
 	}
 	if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
 		// We check the trigger Channel's address here because it is needed to create the Ingress Deployment.
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
+		// Ok to return nil here, once channel address becomes available, this will get requeued.
 		return nil
 	}
 	b.Status.TriggerChannel = &triggerChannelObjRef
@@ -224,37 +223,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 }
 
 func (r *Reconciler) FinalizeKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
-	return pkgreconciler.Event{}
-}
-
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker) (*v1alpha1.Broker, error) {
-	broker, err := r.brokerLister.Brokers(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
+	if err := r.propagateBrokerStatusToTriggers(ctx, b.Namespace, b.Name, nil); err != nil {
+		return fmt.Errorf("Trigger reconcile failed: %v", err)
 	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(broker.Status, desired.Status) {
-		return broker, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !broker.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := broker.DeepCopy()
-	existing.Status = desired.Status
-
-	b, err := r.EventingClientSet.EventingV1alpha1().Brokers(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(b.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("Broker %q became ready after %v", broker.Name, duration)
-		r.Recorder.Event(broker, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker %q became ready", broker.Name))
-		if err := r.StatsReporter.ReportReady("Broker", broker.Namespace, broker.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Broker, %v", err)
-		}
-	}
-
-	return b, err
+	return newReconciledNormal(b.Namespace, b.Name)
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.

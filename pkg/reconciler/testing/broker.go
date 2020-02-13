@@ -50,6 +50,18 @@ func WithInitBrokerConditions(b *v1alpha1.Broker) {
 	b.Status.InitializeConditions()
 }
 
+func WithBrokerFinalizers(finalizers ...string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Finalizers = finalizers
+	}
+}
+
+func WithBrokerResourceVersion(rv string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.ResourceVersion = rv
+	}
+}
+
 func WithBrokerGeneration(gen int64) BrokerOption {
 	return func(s *v1alpha1.Broker) {
 		s.Generation = gen
