@@ -3,6 +3,14 @@
 This document synthetizes the
 [error handling design document](https://docs.google.com/document/d/1qRrzGoHJQO-oc5p-yRK8IRfugd-FM_PXyM7lN5kcqks).
 
+## Delivery aspects
+
+Each specification for _Sources_ and _Channels_ define some more fine-grained delivery mechanism around their data plane.
+For details consult the respective specifications.
+
+- [Source Delivery](../spec/sources.md#source-event-delivery)
+- [Channel Delivery](../spec/channel.md#data-plane)
+
 ## Problem
 
 Sending events can fail for a variety of reasons (downstream system is down,
