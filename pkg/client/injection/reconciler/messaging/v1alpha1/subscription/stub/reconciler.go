@@ -19,7 +19,7 @@ limitations under the License.
 package subscription
 
 import (
-	"context"
+	context "context"
 
 	v1 "k8s.io/api/core/v1"
 	v1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
