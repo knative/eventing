@@ -19,11 +19,11 @@ limitations under the License.
 package sequence
 
 import (
-	"context"
+	context "context"
 
 	sequence "knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/sequence"
 	v1alpha1sequence "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )
