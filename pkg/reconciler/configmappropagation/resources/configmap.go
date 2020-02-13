@@ -46,12 +46,14 @@ func MakeConfigMap(args ConfigMapArgs) *corev1.ConfigMap {
 	}
 }
 
+// MakeCopyConfigMapName returns a unique name for a copy ConfigMap owned by the
+// ConfigMapPropagation with the given name.
 func MakeCopyConfigMapName(configMapPropagationName, configMapName string) string {
-	return configMapPropagationName + "-" + configMapName
+	return kmeta.ChildName(configMapPropagationName, "-"+configMapName)
 }
 
-// MakeCopyCOnfigMapLabel uses '-' to separate namespace and configmap name instead of '/',
-// for label values only accept '-', '.', '_'.
+// MakeCopyConfigMapLabel returns a unique label value for a copy ConfigMap to
+// reference its original ConfigMap.
 func MakeCopyConfigMapLabel(configMapPropagationNamespace, configMapName string) string {
-	return configMapPropagationNamespace + "-" + configMapName
+	return kmeta.ChildName(configMapPropagationNamespace, "-"+configMapName)
 }
