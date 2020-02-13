@@ -836,21 +836,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				//Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", "Subscription reconciled: %q", subscriptionName),
 			},
-			//WantUpdates: []clientgotesting.UpdateActionImpl{{
-			//	Object: NewSubscription(subscriptionName, testNS,
-			//		WithSubscriptionUID(subscriptionUID),
-			//		WithSubscriptionChannel(channelGVK, channelName),
-			//		WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-			//		WithSubscriptionReply(channelGVK, replyName, testNS),
-			//		WithInitSubscriptionConditions,
-			//		MarkSubscriptionReady,
-			//		WithSubscriptionFinalizers(finalizerName),
-			//		WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
-			//		WithSubscriptionDeleted,
-			//	),
-			//}},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, nil),
 				patchRemoveFinalizers(testNS, subscriptionName),
