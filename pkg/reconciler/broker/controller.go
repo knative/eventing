@@ -109,6 +109,13 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
+	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
+	// to those triggers change.
+	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
 		func(obj interface{}) {
 			if trigger, ok := obj.(*v1alpha1.Trigger); ok {
