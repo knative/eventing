@@ -31,6 +31,7 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 )
@@ -40,6 +41,9 @@ type BrokerOption func(*eventingv1alpha1.Broker)
 
 // TriggerOption enables further configuration of a Trigger.
 type TriggerOption func(*eventingv1alpha1.Trigger)
+
+// TriggerOptionV1Beta1 enables further configuration of a v1beta1 Trigger.
+type TriggerOptionV1Beta1 func(*eventingv1beta1.Trigger)
 
 // SubscriptionOption enables further configuration of a Subscription.
 type SubscriptionOption func(*messagingv1alpha1.Subscription)
@@ -216,6 +220,21 @@ func WithAttributesTriggerFilter(eventSource, eventType string, extensions map[s
 	}
 }
 
+// WithAttributesTriggerFilter returns an option that adds a TriggerFilter with Attributes for the given Trigger.
+func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extensions map[string]interface{}) TriggerOptionV1Beta1 {
+	attrs := make(map[string]string)
+	attrs["type"] = eventType
+	attrs["source"] = eventSource
+	for k, v := range extensions {
+		attrs[k] = fmt.Sprintf("%v", v)
+	}
+	return func(t *eventingv1beta1.Trigger) {
+		t.Spec.Filter = &eventingv1beta1.TriggerFilter{
+			Attributes: eventingv1beta1.TriggerFilterAttributes(attrs),
+		}
+	}
+}
+
 // WithBroker returns an option that adds a Broker for the given Trigger.
 func WithBroker(brokerName string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
@@ -251,6 +270,17 @@ func WithSubscriberURIForTrigger(uri string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Subscriber = duckv1.Destination{
 			URI: apisURI,
+		}
+	}
+}
+
+// WithSubscriberServiceRefForTriggerV1Beta1 returns an option that adds a Subscriber Knative Service Ref for the given Trigger.
+func WithSubscriberServiceRefForTriggerV1Beta1(name string) TriggerOptionV1Beta1 {
+	return func(t *eventingv1beta1.Trigger) {
+		if name != "" {
+			t.Spec.Subscriber = duckv1.Destination{
+				Ref: KnativeRefForService(name, t.Namespace),
+			}
 		}
 	}
 }
