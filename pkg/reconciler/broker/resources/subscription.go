@@ -76,7 +76,7 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 			Namespace: t.Namespace,
 			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)),
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(b),
+				*kmeta.NewControllerRef(t),
 			},
 			Labels: SubscriptionLabels(t),
 		},
