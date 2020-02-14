@@ -298,6 +298,19 @@ func Trigger(name string, options ...TriggerOption) *eventingv1alpha1.Trigger {
 	return trigger
 }
 
+// TriggerV1Beta1 returns a v1beta1 Trigger.
+func TriggerV1Beta1(name string, options ...TriggerOptionV1Beta1) *eventingv1beta1.Trigger {
+	trigger := &eventingv1beta1.Trigger{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	for _, option := range options {
+		option(trigger)
+	}
+	return trigger
+}
+
 // WithDeadLetterSinkForDelivery returns an options that adds a DeadLetterSink for the given DeliverySpec.
 func WithDeadLetterSinkForDelivery(name string) DeliveryOption {
 	return func(delivery *eventingduckv1alpha1.DeliverySpec) {

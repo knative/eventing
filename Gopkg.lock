@@ -1406,6 +1406,7 @@
     "webhook/configmaps",
     "webhook/psbinding",
     "webhook/resourcesemantics",
+    "webhook/resourcesemantics/conversion",
     "webhook/resourcesemantics/defaulting",
     "webhook/resourcesemantics/validation",
   ]
@@ -1596,6 +1597,7 @@
     "knative.dev/pkg/webhook/configmaps",
     "knative.dev/pkg/webhook/psbinding",
     "knative.dev/pkg/webhook/resourcesemantics",
+    "knative.dev/pkg/webhook/resourcesemantics/conversion",
     "knative.dev/pkg/webhook/resourcesemantics/defaulting",
     "knative.dev/pkg/webhook/resourcesemantics/validation",
     "knative.dev/test-infra/scripts",

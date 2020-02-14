@@ -176,8 +176,8 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				triggerName := name("trigger", event.context.Type, event.context.Source, event.context.Extensions)
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
 				if test.v1beta1 {
-					triggerOption := resources.WithAttributesTriggerFilterV1Beta1(context.Source, context.Type, context.Extensions)
-					client.CreateTriggerOrFail(triggerName,
+					triggerOption := resources.WithAttributesTriggerFilterV1Beta1(event.context.Source, event.context.Type, event.context.Extensions)
+					client.CreateTriggerOrFailV1Beta1(triggerName,
 						resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
 						triggerOption,
 					)
