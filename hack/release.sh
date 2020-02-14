@@ -26,6 +26,7 @@ COMPONENTS=(
   ["eventing-crds.yaml"]="config/core/resources"
   ["channel-broker.yaml"]="config/brokers/channel-broker"
   ["in-memory-channel.yaml"]="config/channels/in-memory-channel"
+  ["in-memory-channel-namespace.yaml"]="config/channels/in-memory-channel-ns"
 )
 readonly COMPONENTS
 

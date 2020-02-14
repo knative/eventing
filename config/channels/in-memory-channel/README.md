@@ -25,11 +25,13 @@ characterics:
    ```
 1. Create InMemoryChannels
 
-   ```yaml
+   ```shell
+   kubectl apply --filename - << END
    apiVersion: messaging.knative.dev/v1alpha1
    kind: InMemoryChannel
    metadata:
      name: foo
+   END
    ```
 
 ### Components
