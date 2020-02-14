@@ -42,3 +42,19 @@ one Dispatcher per namespace.
 ```shell
 kubectl get deployment -n default imc-dispatcher
 ```
+
+### Cleanup
+
+To remove the in-memory channel component, do:
+
+```shell
+kubectl delete -f config/channels/in-memory-channel-ns
+```
+
+To remove the InMemoryChannel Dispatcher deployments, do:
+
+```shell
+kubectl delete deployments imc-dispatcher
+```
+
+in all namespaces you installed channels.
