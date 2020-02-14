@@ -5,8 +5,9 @@ This document synthetizes the
 
 ## Delivery aspects
 
-Each specification for _Sources_ and _Channels_ define some more fine-grained delivery mechanism around their data plane.
-For details consult the respective specifications.
+Each specification for _Sources_ and _Channels_ define some more fine-grained
+delivery mechanism around their data plane. For details consult the respective
+specifications.
 
 - [Source Delivery](../spec/sources.md#source-event-delivery)
 - [Channel Delivery](../spec/channel.md#data-plane)
