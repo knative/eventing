@@ -92,7 +92,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
 
-	if err := r.checkDependencyAnnotation(ctx, t); err != nil {
+	if err := r.checkDependencyAnnotation(ctx, t, b); err != nil {
 		return err
 	}
 
@@ -197,14 +197,14 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1alpha1.
 	return trig, err
 }
 
-func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1alpha1.Trigger) error {
+func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1alpha1.Trigger, b *v1alpha1.Broker) error {
 	if dependencyAnnotation, ok := t.GetAnnotations()[v1alpha1.DependencyAnnotation]; ok {
 		dependencyObjRef, err := v1alpha1.GetObjRefFromDependencyAnnotation(dependencyAnnotation)
 		if err != nil {
 			t.Status.MarkDependencyFailed("ReferenceError", "Unable to unmarshal objectReference from dependency annotation of trigger: %v", err)
 			return fmt.Errorf("getting object ref from dependency annotation %q: %v", dependencyAnnotation, err)
 		}
-		trackKResource := r.kresourceTracker.TrackInNamespace(t)
+		trackKResource := r.kresourceTracker.TrackInNamespace(b)
 		// Trigger and its dependent source are in the same namespace, we already did the validation in the webhook.
 		if err := trackKResource(dependencyObjRef); err != nil {
 			return fmt.Errorf("tracking dependency: %v", err)
