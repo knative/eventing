@@ -33,6 +33,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -78,5 +84,5 @@ spec:
                 description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
                 type: object
   - name: v1beta1
-    served: false
+    served: true
     storage: false

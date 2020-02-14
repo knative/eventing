@@ -32,6 +32,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -104,5 +110,5 @@ spec:
                     type: string
                     description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
   - name: v1beta1
-    served: false
+    served: true
     storage: false
