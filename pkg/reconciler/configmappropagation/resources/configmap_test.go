@@ -34,13 +34,14 @@ func TestMakeConfigMap(t *testing.T) {
 		"general configmap": {
 			original: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "original-config-map",
+					Name:      "original-config-map",
+					Namespace: "system",
 				},
 			},
 			configmappropagation: &configsv1alpha1.ConfigMapPropagation{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "cmp",
-					Namespace: "testing",
+					Namespace: "default",
 				},
 			},
 		},
@@ -67,7 +68,7 @@ func TestMakeConfigMap(t *testing.T) {
 			// If labels are correct.
 			expectedLabels := map[string]string{
 				PropagationLabelKey: PropagationLabelValueCopy,
-				CopyLabelKey:        "testing-original-config-map",
+				CopyLabelKey:        "system-original-config-map",
 			}
 			if labels := configmap.Labels; !reflect.DeepEqual(labels, expectedLabels) {
 				t.Errorf("want %v, got %q", expectedLabels, labels)

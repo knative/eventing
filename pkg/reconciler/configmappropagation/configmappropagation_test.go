@@ -61,7 +61,7 @@ var (
 	copySelector = metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			resources.PropagationLabelKey: resources.PropagationLabelValueCopy,
-			resources.CopyLabelKey:        resources.MakeCopyConfigMapLabel(currentNS, originalConfigMapName),
+			resources.CopyLabelKey:        resources.MakeCopyConfigMapLabel(originalNS, originalConfigMapName),
 		},
 	}
 	copyConfigMapName = resources.MakeCopyConfigMapName(configMapPropagationName, originalConfigMapName)
