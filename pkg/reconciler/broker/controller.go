@@ -35,6 +35,7 @@ import (
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -88,7 +89,7 @@ func NewController(
 		filterServiceAccountName:  env.FilterServiceAccount,
 		brokerClass:               env.BrokerClass,
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := brokerreconciler.NewImpl(ctx, r)
 
 	r.Logger.Info("Setting up event handlers")
 
@@ -110,6 +111,13 @@ func NewController(
 	})
 
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
+	// to those triggers change.
+	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
+		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// Reconcile Broker (which transitively reconciles the triggers), when subscriptions
 	// to those triggers change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),

@@ -39,6 +39,7 @@ import (
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
@@ -98,6 +99,8 @@ const (
 	currentGeneration     = 1
 	outdatedGeneration    = 0
 	triggerGeneration     = 7
+
+	finalizerName = "brokers.eventing.knative.dev"
 )
 
 var (
@@ -151,8 +154,9 @@ var (
 			APIVersion: "eventing.knative.dev/v1alpha1",
 		},
 	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS
+	sinkDNS               = "sink.mynamespace.svc." + utils.GetClusterDomainName()
+	sinkURI               = "http://" + sinkDNS
+	finalizerUpdatedEvent = Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-broker" finalizers`)
 )
 
 func init() {
@@ -183,6 +187,9 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithBrokerDeletionTimestamp),
 			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "BrokerReconciled", `Broker reconciled: "test-namespace/test-broker"`),
+			},
 		}, {
 			Name: "nil channeltemplatespec",
 			Key:  testKey,
@@ -191,8 +198,13 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "Broker.Spec.ChannelTemplate is nil"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "Broker.Spec.ChannelTemplate is nil"),
 			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			// This returns an internal error, so it emits an Error
 			WantErr: true,
 		}, {
 			Name: "Trigger Channel.Create error",
@@ -215,7 +227,11 @@ func TestReconcile(t *testing.T) {
 				InduceFailure("create", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create inmemorychannels"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "Failed to reconcile trigger channel: %v", "inducing failure for create inmemorychannels"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
 			},
 			WantErr: true,
 		}, {
@@ -235,6 +251,12 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+			},
 		}, {
 			Name: "Trigger Channel is not yet Addressable",
 			Key:  testKey,
@@ -250,6 +272,12 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+			},
 		}, {
 			Name: "Filter Deployment.Create error",
 			Key:  testKey,
@@ -278,7 +306,11 @@ func TestReconcile(t *testing.T) {
 					WithFilterFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create deployments"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
 			},
 			WantErr: true,
 		}, {
@@ -314,7 +346,11 @@ func TestReconcile(t *testing.T) {
 					WithDeploymentContainer(filterContainerName, filterImage, livenessProbe(), readinessProbe(), envVars(filterContainerName), containerPorts(8080))),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update deployments"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
 			},
 			WantErr: true,
 		}, {
@@ -349,7 +385,11 @@ func TestReconcile(t *testing.T) {
 					WithFilterFailed("ServiceFailure", "inducing failure for create services")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create services"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
 			},
 			WantErr: true,
 		}, {
@@ -388,9 +428,13 @@ func TestReconcile(t *testing.T) {
 					WithFilterFailed("ServiceFailure", "inducing failure for update services")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update services"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update services"),
 			},
 			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 		}, {
 			Name: "Ingress Deployment.Create error",
 			Key:  testKey,
@@ -430,9 +474,13 @@ func TestReconcile(t *testing.T) {
 					WithIngressFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create deployments"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create deployments"),
 			},
 			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 		}, {
 			Name: "Ingress Deployment.Update error",
 			Key:  testKey,
@@ -480,9 +528,13 @@ func TestReconcile(t *testing.T) {
 					WithIngressFailed("DeploymentFailure", "inducing failure for update deployments")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update deployments"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update deployments"),
 			},
 			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 		}, {
 			Name: "Ingress Service.Create error",
 			Key:  testKey,
@@ -525,9 +577,13 @@ func TestReconcile(t *testing.T) {
 					WithIngressFailed("ServiceFailure", "inducing failure for create services")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for create services"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
 			},
 			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 		}, {
 			Name: "Ingress Service.Update error",
 			Key:  testKey,
@@ -574,9 +630,13 @@ func TestReconcile(t *testing.T) {
 					WithIngressFailed("ServiceFailure", "inducing failure for update services")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerReconcileError, "Broker reconcile error: %v", "inducing failure for update services"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update services"),
 			},
 			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 		}, {
 			Name: "Successful Reconciliation",
 			Key:  testKey,
@@ -613,7 +673,10 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
+				finalizerUpdatedEvent,
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
 			},
 		}, {
 			Name: "Successful Reconciliation, status update fails",
@@ -654,9 +717,13 @@ func TestReconcile(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: inducing failure for update brokers"),
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "UpdateFailed", `Failed to update status for "test-broker": inducing failure for update brokers`),
 			},
 			WantErr: true,
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
 		}, {
 			Name: "Successful Reconciliation, with single trigger",
 			Key:  testKey,
@@ -707,24 +774,47 @@ func TestReconcile(t *testing.T) {
 					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())))},
 			},
 			WantEvents: []string{
+				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-				Eventf(corev1.EventTypeNormal, brokerReadinessChanged, "Broker %q became ready", brokerName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
 			},
 		}, {
-			Name: "Broker missing, marks trigger as not ready due to broker missing",
+			Name: "Fail Reconciliation, with single trigger, trigger status updated",
 			Key:  testKey,
 			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithInitBrokerConditions),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
-					WithTriggerSubscriberURI(subscriberURI)),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerBrokerReady(),
+					WithTriggerDependencyReady(),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
+					WithTriggerStatusSubscriberURI(subscriberURI)),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
 					WithInitTriggerConditions,
-					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
+					WithTriggerDependencyReady(),
+					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
+					WithTriggerBrokerUnknown("", ""),
+					WithTriggerSubscriberResolvedSucceeded(),
+					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeWarning, "InternalError", "Broker.Spec.ChannelTemplate is nil"),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+			WantErr: true,
 		}, {
 			Name: "Broker being deleted, marks trigger as not ready due to broker missing",
 			Key:  testKey,
@@ -732,6 +822,8 @@ func TestReconcile(t *testing.T) {
 				NewBroker(brokerName, testNS,
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
+					WithBrokerFinalizers("brokers.eventing.knative.dev"),
+					WithBrokerResourceVersion(""),
 					WithBrokerDeletionTimestamp),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -744,6 +836,42 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchRemoveFinalizers(testNS, brokerName),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+				Eventf(corev1.EventTypeNormal, "BrokerReconciled", `Broker reconciled: "test-namespace/test-broker"`),
+			},
+		}, {
+			Name: "Broker being deleted, marks trigger as not ready due to broker missing, fails",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithInitBrokerConditions,
+					WithBrokerFinalizers("brokers.eventing.knative.dev"),
+					WithBrokerResourceVersion(""),
+					WithBrokerDeletionTimestamp),
+				NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI)),
+			},
+			WithReactors: []clientgotesting.ReactionFunc{
+				InduceFailure("update", "triggers"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewTrigger(triggerName, testNS, brokerName,
+					WithTriggerUID(triggerUID),
+					WithTriggerSubscriberURI(subscriberURI),
+					WithInitTriggerConditions,
+					WithTriggerBrokerFailed("BrokerDoesNotExist", `Broker "test-broker" does not exist`)),
+			}},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeWarning, "TriggerUpdateStatusFailed", `Failed to update Trigger's status: inducing failure for update triggers`),
+				Eventf(corev1.EventTypeWarning, "InternalError", "Trigger reconcile failed: inducing failure for update triggers"),
+			},
+			WantErr: true,
 		}, {
 			Name: "Trigger being deleted",
 			Key:  testKey,
@@ -1253,7 +1381,7 @@ func TestReconcile(t *testing.T) {
 		ctx = v1b1addr.WithDuck(ctx)
 		ctx = v1addr.WithDuck(ctx)
 		ctx = conditions.WithDuck(ctx)
-		return &Reconciler{
+		r := &Reconciler{
 			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 			subscriptionLister:        listers.GetSubscriptionLister(),
 			triggerLister:             listers.GetTriggerLister(),
@@ -1269,6 +1397,8 @@ func TestReconcile(t *testing.T) {
 			addressableTracker:        duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
+		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r)
+
 	},
 		false,
 		logger,
@@ -1584,6 +1714,8 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithBrokerChannel(channel()),
 			WithInitBrokerConditions,
 			WithBrokerReady,
+			WithBrokerFinalizers("brokers.eventing.knative.dev"),
+			WithBrokerResourceVersion(""),
 			WithBrokerTriggerChannel(createTriggerChannelRef()),
 			WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
 		createChannel(testNS, triggerChannel, true),
@@ -1697,4 +1829,22 @@ func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured 
 			},
 		},
 	}
+}
+
+func patchFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":["` + finalizerName + `"],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
+}
+
+func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionImpl {
+	action := clientgotesting.PatchActionImpl{}
+	action.Name = name
+	action.Namespace = namespace
+	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
+	action.Patch = []byte(patch)
+	return action
 }
