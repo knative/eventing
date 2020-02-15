@@ -219,6 +219,30 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 	}
 }
 
+// This test is for avoiding regressions on the trigger dependency annotation functionality.
+// It will first create a Trigger with the dependency annotation, and then create source.
+// Broker controller should make trigger become ready.
+func TestTriggerDependencyAnnotation(t *testing.T) {
+	const (
+		triggerName             = "trigger-annotation"
+		dependencyAnnotation    = `{"kind":"CronJobSource","name":"test-cronjob-source","apiVersion":"sources.eventing.knative.dev/v1alpha1"}`
+		cronJobSourceName       = "test-cronjob-source"
+		cronJobSourceAPIVersion = "sources.eventing.knative.dev/v1alpha1"
+	)
+	client := setup(t, true)
+	defer tearDown(client)
+
+	// Label namespace so that it creates the default broker.
+	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+		t.Fatalf("Error annotating namespace: %v", err)
+	}
+	// Wait for default broker ready.
+	client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
+
+	// Create triggers.
+	client.CreateTriggerOrFail(triggerName, resources.WithDependencyAnnotaionTrigger(dependencyAnnotation))
+}
+
 func getTriggerFilterOption(deprecatedTriggerFilter bool, context eventContext) resources.TriggerOption {
 	if deprecatedTriggerFilter {
 		return resources.WithDeprecatedSourceAndTypeTriggerFilter(context.Source, context.Type)
