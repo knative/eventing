@@ -59,12 +59,14 @@ spec:
     storage: true
     schema:
       openAPIV3Schema:
+        type: object
         properties:
           spec:
             required:
               - type
               - source
               - broker
+            type: object
             properties:
               type:
                 type: string
