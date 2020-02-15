@@ -56,12 +56,14 @@ spec:
     storage: true
     schema:
       openAPIV3Schema:
+        type: object
         properties:
           spec:
+            type: object
             properties:
               channelTemplate:
-                type: object
                 description: "Channel implementation which dictates the durability guarantees of events. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
+                type: object
                 properties:
                   apiVersion:
                     type: string
@@ -83,6 +85,7 @@ spec:
                     type: array
                     description: "Events received on the channel are forwarded to its subscribers."
                     items:
+                      type: object
                       required:
                         - uid
                       properties:
