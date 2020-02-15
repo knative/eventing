@@ -52,11 +52,13 @@ spec:
     storage: true
     schema:
       openAPIV3Schema:
+        type: object
         properties:
           spec:
             required:
               - branches
               - channelTemplate
+            type: object
             properties:
               branches:
                 type: array
@@ -116,34 +118,15 @@ spec:
                           description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
                     reply:
                       description: "a reference to where the result of the subscriber of this branch gets sent to. If not specified, the result is sent to the Parallel reply."
-                      anyOf:
-                        - type: object
-                          properties:
-                            uri:
-                              type: string
-                              description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
-                              minLength: 1
-                        - type: object
+                      type: object
+                      properties:
+                        ref:
+                          type: object
                           description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                          properties:
-                            ref:
-                              type: object
-                              required:
-                                - apiVersion
-                                - kind
-                                - name
-                              properties:
-                                apiVersion:
-                                  type: string
-                                  minLength: 1
-                                kind:
-                                  type: string
-                                  minLength: 1
-                                name:
-                                  type: string
-                                  minLength: 1
-                        - type: object
-                          description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
                           properties:
                             apiVersion:
                               type: string
@@ -154,6 +137,18 @@ spec:
                             name:
                               type: string
                               minLength: 1
+                        uri:
+                          type: string
+                          description: "the target URI. If ref is provided, this must be relative URI reference."
+                        apiVersion:
+                          type: string
+                          description: "DEPRECATED: use ref.apiVersion"
+                        kind:
+                          type: string
+                          description: "DEPRECATED: use ref.kind"
+                        name:
+                          type: string
+                          description: "DEPRECATED: use ref.name"
               channelTemplate:
                 type: object
                 description: "specifies which Channel to use. If left unspecified, it is set to the default Channel for the namespace (or cluster, in case there are no defaults for the namespace)."
@@ -171,35 +166,14 @@ spec:
                     type: object
               reply:
                 type: object
-                description: "a reference to where the result of a branch subscriber gets sent to when the branch does not have a reply."
-                anyOf:
-                  - type: object
-                    properties:
-                      uri:
-                        type: string
-                        description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
-                        minLength: 1
-                  - type: object
+                properties:
+                  ref:
+                    type: object
                     description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                    properties:
-                      ref:
-                        type: object
-                        required:
-                          - apiVersion
-                          - kind
-                          - name
-                        properties:
-                          apiVersion:
-                            type: string
-                            minLength: 1
-                          kind:
-                            type: string
-                            minLength: 1
-                          name:
-                            type: string
-                            minLength: 1
-                  - type: object
-                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
                     properties:
                       apiVersion:
                         type: string
@@ -210,6 +184,18 @@ spec:
                       name:
                         type: string
                         minLength: 1
+                  uri:
+                    type: string
+                    description: "the target URI. If ref is provided, this must be relative URI reference."
+                  apiVersion:
+                    type: string
+                    description: "DEPRECATED: use ref.apiVersion"
+                  kind:
+                    type: string
+                    description: "DEPRECATED: use ref.kind"
+                  name:
+                    type: string
+                    description: "DEPRECATED: use ref.name"
   - name: v1beta1
     served: false
     storage: false
