@@ -114,7 +114,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 			return nil
 		}
 	}
-	filterSvc, err := r.ReconcileKindAndTriggers(ctx, b)
+	filterSvc, err := r.reconcileKind(ctx, b)
 
 	if b.Status.IsReady() {
 		// So, at this point the Broker is ready and everything should be solid
@@ -133,7 +133,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	return err
 }
 
-func (r *Reconciler) ReconcileKindAndTriggers(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, pkgreconciler.Event) {
+func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, pkgreconciler.Event) {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
 	b.Status.ObservedGeneration = b.Generation

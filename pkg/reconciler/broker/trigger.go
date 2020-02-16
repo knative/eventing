@@ -91,6 +91,11 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 		return err
 	}
 	t.Status.PropagateSubscriptionStatus(&sub.Status)
+	if !sub.Status.IsReady() {
+		logging.FromContext(ctx).Error("Subscription \"%s/%s\" is not ready : %v", t.Namespace, t.Name, sub.Status)
+		r.Recorder.Eventf(t, corev1.EventTypeWarning, "SubscriptionNotReady", "Subscription \"%s/%s\" is not ready yet: %v", t.Namespace, t.Name, sub.Status)
+		return errors.New("Subscription is not ready")
+	}
 
 	if err := r.checkDependencyAnnotation(ctx, t, b); err != nil {
 		return err
