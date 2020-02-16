@@ -21,6 +21,7 @@ metadata:
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
+  preserveUnknownFields: false
   names:
     kind: Trigger
     plural: triggers
