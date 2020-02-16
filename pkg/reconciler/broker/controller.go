@@ -132,5 +132,20 @@ func NewController(
 		},
 	))
 
+	/*
+		// Since changes in the Subscriptions potentially affect all the Triggers
+		// and since Triggers are reconciled via brokers, do a global resync of the
+		// brokers.
+		grCb := func(obj interface{}) {
+			r.Logger.Info("Doing a global resync due to subscription changes")
+			impl.GlobalResync(brokerInformer.Informer())
+		}
+		subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+			// Accept only ActivatorService K8s service objects.
+			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Trigger")),
+			Handler:    controller.HandleAll(grCb),
+		})
+	*/
+
 	return impl
 }
