@@ -22,10 +22,6 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: eventing.knative.dev
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
   names:
     kind: Broker
     plural: brokers
@@ -50,28 +46,37 @@ spec:
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          properties:
-            channelTemplateSpec:
-              type: object
-              description: "Channel implementation which dictates the durability guarantees of events to the Broker. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
-              required:
-                - apiVersion
-                - kind
-              properties:
-                apiVersion:
-                  type: string
-                  description: "API version of the channel implementation."
-                  minLength: 1
-                kind:
-                  type: string
-                  description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
-                  minLength: 1
-                spec:
-                  type: object
-            delivery:
-              description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
-              type: object
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              channelTemplateSpec:
+                type: object
+                description: "Channel implementation which dictates the durability guarantees of events to the Broker. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
+                required:
+                  - apiVersion
+                  - kind
+                properties:
+                  apiVersion:
+                    type: string
+                    description: "API version of the channel implementation."
+                    minLength: 1
+                  kind:
+                    type: string
+                    description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
+                    minLength: 1
+                  spec:
+                    type: object
+              delivery:
+                description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
+                type: object
+  - name: v1beta1
+    served: false
+    storage: false

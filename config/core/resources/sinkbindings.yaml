@@ -36,10 +36,6 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
   additionalPrinterColumns:
   - name: Ready
     type: string
@@ -53,3 +49,11 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1alpha2
+    served: false
+    storage: false
+

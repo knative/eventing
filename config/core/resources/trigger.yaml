@@ -21,10 +21,6 @@ metadata:
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
   names:
     kind: Trigger
     plural: triggers
@@ -52,52 +48,61 @@ spec:
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          required:
-            - subscriber
-          properties:
-            broker:
-              type: string
-              description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
-            filter:
-              type: object
-              properties:
-                sourceAndType:
-                  type: object
-                  properties:
-                    type:
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            required:
+              - subscriber
+            type: object
+            properties:
+              broker:
+                type: string
+                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
+              filter:
+                type: object
+                properties:
+                  sourceAndType:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      source:
+                        type: string
+                  attributes:
+                    type: object
+                    description: "Map of CloudEvents attributes used for filtering events."
+                    additionalProperties:
                       type: string
-                    source:
-                      type: string
-                attributes:
-                  type: object
-                  description: "Map of CloudEvents attributes used for filtering events."
-                  additionalProperties:
+              subscriber:
+                type: object
+                description: "the destination that should receive events."
+                properties:
+                  ref:
+                    type: object
+                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    properties:
+                      apiVersion:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                  uri:
                     type: string
-            subscriber:
-              type: object
-              description: "the destination that should receive events."
-              properties:
-                ref:
-                  type: object
-                  description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                  required:
-                  - apiVersion
-                  - kind
-                  - name
-                  properties:
-                    apiVersion:
-                      type: string
-                      minLength: 1
-                    kind:
-                      type: string
-                      minLength: 1
-                    name:
-                      type: string
-                      minLength: 1
-                uri:
-                  type: string
-                  description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+  - name: v1beta1
+    served: false
+    storage: false
