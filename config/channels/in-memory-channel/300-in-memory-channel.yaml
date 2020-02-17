@@ -22,10 +22,6 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
   names:
     kind: InMemoryChannel
     plural: inmemorychannels
@@ -53,49 +49,61 @@ spec:
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          properties:
-            subscribable:
-              type: object
-              properties:
-                subscribers:
-                  type: array
-                  items:
-                    required:
-                      - uid
-                    properties:
-                      ref:
-                        type: object
-                        required:
-                          - namespace
-                          - name
-                          - uid
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                            minLength: 1
-                          namespace:
-                            type: string
-                            minLength: 1
-                          uid:
-                            type: string
-                            minLength: 1
-                      uid:
-                        type: string
-                        minLength: 1
-                      subscriberURI:
-                        type: string
-                        minLength: 1
-                      replyURI:
-                        type: string
-                        minLength: 1
-                      deliveryURI:
-                        type: string
-
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              subscribable:
+                type: object
+                properties:
+                  subscribers:
+                    type: array
+                    description: "Events received on the channel are forwarded to its subscribers."
+                    items:
+                      type: object
+                      required:
+                        - uid
+                      properties:
+                        ref:
+                          type: object
+                          description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                          required:
+                            - namespace
+                            - name
+                            - uid
+                          properties:
+                            apiVersion:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                              minLength: 1
+                            namespace:
+                              type: string
+                              minLength: 1
+                            uid:
+                              type: string
+                              minLength: 1
+                        uid:
+                          type: string
+                          description: "Used to understand the origin of the subscriber."
+                          minLength: 1
+                        subscriberURI:
+                          type: string
+                          description: "Endpoint for the subscriber."
+                          minLength: 1
+                        replyURI:
+                          type: string
+                          description: "Endpoint for the reply."
+                          minLength: 1
+  - name: v1beta1
+    served: false
+    storage: false
