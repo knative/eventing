@@ -147,4 +147,5 @@ var (
 
 	HTTPTransportContextFrom = http.TransportContextFrom
 	ContextWithHeader        = http.ContextWithHeader
+	SetContextHeaders        = http.SetContextHeaders
 )
