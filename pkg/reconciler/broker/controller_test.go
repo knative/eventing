@@ -20,8 +20,6 @@ import (
 	"os"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
@@ -47,34 +45,5 @@ func TestNew(t *testing.T) {
 
 	if c == nil {
 		t.Fatal("Expected NewController to return a non-nil value")
-	}
-}
-
-func TestLabelExists(t *testing.T) {
-	yes := &messagingv1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "yes",
-			Name:      "yes",
-			Labels: map[string]string{
-				"eventing.knative.dev/broker":  "broker-name",
-				"eventing.knative.dev/trigger": "t-name",
-			},
-		},
-	}
-	no := &messagingv1alpha1.Subscription{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "no",
-			Name:      "no",
-			Labels: map[string]string{
-				"eventing.knative.dev/trigger": "t-name",
-			},
-		},
-	}
-	f := labelExistsFilterFunc("eventing.knative.dev/broker")
-	if !f(yes) {
-		t.Error("Expected true got false")
-	}
-	if f(no) {
-		t.Error("Expected false got true")
 	}
 }

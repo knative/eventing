@@ -22,7 +22,6 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -30,6 +29,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
@@ -121,7 +121,7 @@ func NewController(
 	// Reconcile trigger (by enqueuing the broker specified in the label) when subscriptions
 	// of triggers change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: labelExistsFilterFunc("eventing.knative.dev/broker"),
+		FilterFunc: pkgreconciler.LabelExistsFilterFunc("eventing.knative.dev/broker"),
 		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("" /*any namespace*/, "eventing.knative.dev/broker")),
 	})
 
@@ -134,16 +134,4 @@ func NewController(
 	))
 
 	return impl
-}
-
-// labelExistsFilterFunc creates a FilterFunc only accepting objects which have a given label.
-func labelExistsFilterFunc(label string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		if mo, ok := obj.(metav1.Object); ok {
-			labels := mo.GetLabels()
-			_, ok := labels[label]
-			return ok
-		}
-		return false
-	}
 }
