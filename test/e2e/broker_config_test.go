@@ -24,6 +24,6 @@ import (
 )
 
 // TestBrokerDeadLetterSink tests Broker's DeadLetterSink
-func TestBrokerDeadLetterSink(t *testing.T) {
+func TestBrokerWithConfig(t *testing.T) {
 	helpers.TestBrokerWithConfig(t, channelTestRunner)
 }
