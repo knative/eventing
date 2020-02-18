@@ -21,11 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,8 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -44,6 +41,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -51,8 +49,11 @@ import (
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -1567,7 +1568,7 @@ func createChannel(namespace string, t channelType, ready bool) *unstructured.Un
 	if t == triggerChannel {
 		name = fmt.Sprintf("%s-kne-trigger", brokerName)
 		labels = map[string]interface{}{
-			"eventing.knative.dev/broker":           brokerName,
+			eventing.BrokerLabelKey:                 brokerName,
 			"eventing.knative.dev/brokerEverything": "true",
 		}
 		hostname = triggerChannelHostname
