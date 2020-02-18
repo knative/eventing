@@ -84,6 +84,9 @@ spec:
               delivery:
                 description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
                 type: object
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
     served: true
     storage: false
@@ -121,3 +124,6 @@ spec:
               delivery:
                 description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
                 type: object
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true

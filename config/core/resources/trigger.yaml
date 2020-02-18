@@ -110,6 +110,9 @@ spec:
                   uri:
                     type: string
                     description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
     served: true
     storage: false
@@ -157,3 +160,6 @@ spec:
                   uri:
                     type: string
                     description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
