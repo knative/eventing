@@ -34,10 +34,9 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/resolver"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
@@ -47,16 +46,15 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
+	duckapis "knative.dev/pkg/apis/duck"
 	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
 )
 
 const (
 	// Name of the corev1.Events emitted from the Broker reconciliation process.
 	brokerReconcileError = "BrokerReconcileError"
 	brokerReconciled     = "BrokerReconciled"
-
-	// Label used to specify which Broker provides the implementation.
-	brokerAnnotationKey = "eventing.knative.dev/broker.class"
 )
 
 type Reconciler struct {
@@ -109,12 +107,12 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	// TODO(vaikas): Can we just add this into the controller as part of the filtering
 	// so they won't even get queued into my queue???
 	if r.brokerClass != "" {
-		if b.GetAnnotations()[brokerAnnotationKey] != r.brokerClass {
+		if b.GetAnnotations()[eventing.BrokerClassKey] != r.brokerClass {
 			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
 			return nil
 		}
 	}
-	filterSvc, err := r.ReconcileKindAndTriggers(ctx, b)
+	filterSvc, err := r.reconcileKind(ctx, b)
 
 	if b.Status.IsReady() {
 		// So, at this point the Broker is ready and everything should be solid
@@ -133,7 +131,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	return err
 }
 
-func (r *Reconciler) ReconcileKindAndTriggers(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, pkgreconciler.Event) {
+func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, pkgreconciler.Event) {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
 	b.Status.ObservedGeneration = b.Generation
@@ -315,7 +313,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 // should only be used by Broker and Trigger code.
 func TriggerChannelLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":           brokerName,
+		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }

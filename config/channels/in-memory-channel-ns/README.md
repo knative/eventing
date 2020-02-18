@@ -1,8 +1,8 @@
 # Namespace-Scoped In-Memory Channels
 
 Namespace-scoped in-memory channels share the same characteristics as the
-[in-memory channels](../in-memory-channel/README.md). The only difference is the in-memory
-dispatcher is installed in the same namespace as the channel.
+[in-memory channels](../in-memory-channel/README.md). The only difference is the
+in-memory dispatcher is installed in the same namespace as the channel.
 
 ### Deployment steps:
 
@@ -22,8 +22,10 @@ dispatcher is installed in the same namespace as the channel.
    END
    ```
 
-IMPORTANT: make sure you don't have the [cluster-scoped in-memory channels](../in-memory-channel/README.md)
-configuration deployed in your cluster. Pick one or the other, but not both at the same time!
+IMPORTANT: make sure you don't have the
+[cluster-scoped in-memory channels](../in-memory-channel/README.md)
+configuration deployed in your cluster. Pick one or the other, but not both at
+the same time!
 
 ### Components
 
@@ -36,8 +38,8 @@ The major components are:
 kubectl get deployment -n knative-eventing imc-controller
 ```
 
-The InMemoryChannel Dispatcher receives and distributes all events. There is
-one Dispatcher per namespace.
+The InMemoryChannel Dispatcher receives and distributes all events. There is one
+Dispatcher per namespace.
 
 ```shell
 kubectl get deployment -n default imc-dispatcher

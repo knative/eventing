@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
@@ -139,7 +140,7 @@ func TestNewSubscription(t *testing.T) {
 				BlockOwnerDeletion: &TrueValue,
 			}},
 			Labels: map[string]string{
-				"eventing.knative.dev/broker":  "broker-name",
+				eventing.BrokerLabelKey:        "broker-name",
 				"eventing.knative.dev/trigger": "t-name",
 			},
 		},
