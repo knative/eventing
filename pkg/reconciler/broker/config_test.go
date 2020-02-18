@@ -17,13 +17,14 @@ limitations under the License.
 package broker
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	logtesting "knative.dev/pkg/logging/testing"
-	"testing"
 
 	. "knative.dev/pkg/configmap/testing"
 )

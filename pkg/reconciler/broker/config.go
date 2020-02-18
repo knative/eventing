@@ -19,11 +19,12 @@ package broker
 import (
 	"context"
 	"errors"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"strings"
 )
 
 type Config struct {

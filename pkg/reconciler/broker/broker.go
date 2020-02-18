@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -112,9 +113,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 		}
 	}
 	filterSvc, err := r.reconcileKind(ctx, b)
-	if err != nil {
-		return err
-	}
 
 	if b.Status.IsReady() {
 		// So, at this point the Broker is ready and everything should be solid
@@ -122,7 +120,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 		te := r.reconcileTriggers(ctx, b, filterSvc)
 		if te != nil {
 			logging.FromContext(ctx).Error("Problem reconciling triggers", zap.Error(te))
-			return fmt.Errorf("failed to reconcile triggers: %v", err)
+			return fmt.Errorf("failed to reconcile triggers: %v", te)
 		}
 	} else {
 		// Broker is not ready, but propagate it's status to my triggers.
