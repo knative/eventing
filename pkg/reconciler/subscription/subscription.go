@@ -236,8 +236,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1alpha1.Su
 	} else if err != nil {
 		// TODO: I do not think you can update the status if deleted.
 		//		subscription.Status.MarkReferencesResolvedUnknown(channelReferenceFailed, "Failed to get Spec.Channel as Channelable duck type. %s", err)
-		return nil
-		//		return newChannelWarnEvent("Failed to get Spec.Channel as Channelable duck type. %s", err)
+		return newChannelWarnEvent("Failed to get Spec.Channel as Channelable duck type. %s", err)
 	}
 
 	if err := r.syncPhysicalChannel(ctx, subscription, channel, true); err != nil {
