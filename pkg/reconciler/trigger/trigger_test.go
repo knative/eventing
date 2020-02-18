@@ -19,12 +19,10 @@ package trigger
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
@@ -33,16 +31,10 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
-	brokerresources "knative.dev/eventing/pkg/reconciler/broker/resources"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/pkg/reconciler/trigger/resources"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
@@ -301,26 +293,10 @@ func makeBroker() *v1alpha1.Broker {
 	}
 }
 
-func makeEmptyDelivery() *eventingduckv1alpha1.DeliverySpec {
-	return nil
-}
-
-func makeReadyBrokerNoTriggerChannel() *v1alpha1.Broker {
-	b := makeBroker()
-	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
-	return b
-}
-
 func makeReadyBroker() *v1alpha1.Broker {
 	b := makeBroker()
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
 	b.Status.TriggerChannel = makeTriggerChannelRef()
-	return b
-}
-
-func makeUnknownStatusBroker() *v1alpha1.Broker {
-	b := makeBroker()
-	b.Status = *v1alpha1.TestHelper.UnknownBrokerStatus()
 	return b
 }
 
@@ -336,131 +312,5 @@ func makeTriggerChannelRef() *corev1.ObjectReference {
 		Kind:       "Channel",
 		Namespace:  testNS,
 		Name:       fmt.Sprintf("%s-kn-trigger", brokerName),
-	}
-}
-
-func makeBrokerRef() *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		APIVersion: "eventing.knative.dev/v1alpha1",
-		Kind:       "Broker",
-		Namespace:  testNS,
-		Name:       brokerName,
-	}
-}
-
-func makeSubscriberAddressableAsUnstructured() *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": subscriberAPIVersion,
-			"kind":       subscriberKind,
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      subscriberName,
-			},
-			"status": map[string]interface{}{
-				"address": map[string]interface{}{
-					"url": subscriberURI,
-				},
-			},
-		},
-	}
-}
-
-func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Service",
-			"metadata": map[string]interface{}{
-				"namespace": testNS,
-				"name":      subscriberName,
-			},
-		},
-	}
-}
-
-func makeBrokerFilterService() *corev1.Service {
-	return brokerresources.MakeFilterService(makeBroker())
-}
-
-func makeServiceURI() *url.URL {
-	return &url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
-		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
-	}
-}
-
-func makeIngressSubscription() *messagingv1alpha1.Subscription {
-	return resources.NewSubscription(makeTrigger(), makeTriggerChannelRef(), makeBrokerRef(), makeServiceURI(), makeEmptyDelivery())
-}
-
-func makeIngressSubscriptionNotOwnedByTrigger() *messagingv1alpha1.Subscription {
-	sub := makeIngressSubscription()
-	sub.OwnerReferences = []metav1.OwnerReference{}
-	return sub
-}
-
-// Just so we can test subscription updates
-func makeDifferentReadySubscription() *messagingv1alpha1.Subscription {
-	s := makeIngressSubscription()
-	s.Spec.Subscriber.URI = apis.HTTP("different.example.com")
-	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
-	return s
-}
-
-func makeReadySubscription() *messagingv1alpha1.Subscription {
-	s := makeIngressSubscription()
-	s.Status = *v1alpha1.TestHelper.ReadySubscriptionStatus()
-	return s
-}
-
-func makeFalseStatusSubscription() *messagingv1alpha1.Subscription {
-	s := makeIngressSubscription()
-	s.Status = *v1alpha1.TestHelper.FalseSubscriptionStatus()
-	return s
-}
-
-func makeFalseStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
-	return NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion), WithCronJobSourceSinkNotFound)
-}
-
-func makeUnknownStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
-	cjs := NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion))
-	cjs.Status = *v1alpha1.TestHelper.UnknownCronJobSourceStatus()
-	return cjs
-}
-
-func makeGenerationNotEqualCronJobSource() *sourcesv1alpha1.CronJobSource {
-	c := makeFalseStatusCronJobSource()
-	c.Generation = currentGeneration
-	c.Status.ObservedGeneration = outdatedGeneration
-	return c
-}
-
-func makeReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
-	return NewCronJobSource(cronJobSourceName, testNS,
-		WithCronJobApiVersion(cronJobSourceAPIVersion),
-		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
-			Schedule: testSchedule,
-			Data:     testData,
-			Sink:     &brokerDest,
-		}),
-		WithInitCronJobSourceConditions,
-		WithValidCronJobSourceSchedule,
-		WithValidCronJobSourceResources,
-		WithCronJobSourceDeployed,
-		WithCronJobSourceEventType,
-		WithCronJobSourceSink(sinkURI),
-	)
-}
-
-func getOwnerReference() metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion:         v1alpha1.SchemeGroupVersion.String(),
-		Kind:               "Broker",
-		Name:               brokerName,
-		Controller:         &trueVal,
-		BlockOwnerDeletion: &trueVal,
 	}
 }
