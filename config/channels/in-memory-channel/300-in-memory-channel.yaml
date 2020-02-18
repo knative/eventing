@@ -104,6 +104,9 @@ spec:
                           type: string
                           description: "Endpoint for the reply."
                           minLength: 1
+                        delivery:
+                          description: "Channel delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
+                          type: object
   - name: v1beta1
     served: false
     storage: false
