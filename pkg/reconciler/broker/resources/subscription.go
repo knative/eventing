@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
@@ -62,7 +63,7 @@ func MakeSubscription(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *core
 
 func ingressSubscriptionLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":        brokerName,
+		eventing.BrokerLabelKey:              brokerName,
 		"eventing.knative.dev/brokerIngress": "true",
 	}
 }
@@ -105,7 +106,7 @@ func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.Objec
 // Broker's Channels.
 func SubscriptionLabels(t *v1alpha1.Trigger) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":  t.Spec.Broker,
+		eventing.BrokerLabelKey:        t.Spec.Broker,
 		"eventing.knative.dev/trigger": t.Name,
 	}
 }

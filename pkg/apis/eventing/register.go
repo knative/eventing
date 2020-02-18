@@ -18,4 +18,12 @@ package eventing
 
 const (
 	GroupName = "eventing.knative.dev"
+
+	// BrokerLabelKey is the label key on Triggers and Subscriptions
+	// to indicate to which Broker they belong to.
+	BrokerLabelKey = GroupName + "/broker"
+
+	// BrokerClassKey is the annotation key on Brokers to indicate
+	// which Controller is responsible for them.
+	BrokerClassKey = GroupName + "/broker.class"
 )
