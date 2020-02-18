@@ -94,7 +94,7 @@ func createReceiverFunction(f *Handler) func(context.Context, channel.ChannelRef
 			parentSpan := trace.FromContext(ctx)
 			go func() {
 				// Run async dispatch with background context.
-				trace.NewContext(context.Background(), parentSpan)
+				ctx = trace.NewContext(context.Background(), parentSpan)
 				// Any returned error is already logged in f.dispatch().
 				_ = f.dispatch(ctx, event)
 			}()
