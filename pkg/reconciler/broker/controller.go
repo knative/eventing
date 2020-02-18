@@ -29,6 +29,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
@@ -111,17 +112,17 @@ func NewController(
 	})
 
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
-	// to those triggers change.
+	// that I own are changed.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	// Reconcile Broker (which transitively reconciles the triggers), when subscriptions
-	// to those triggers change.
+	// Reconcile trigger (by enqueuing the broker specified in the label) when subscriptions
+	// of triggers change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+		FilterFunc: pkgreconciler.LabelExistsFilterFunc("eventing.knative.dev/broker"),
+		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("" /*any namespace*/, "eventing.knative.dev/broker")),
 	})
 
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(
