@@ -22,7 +22,6 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
@@ -136,16 +135,4 @@ func NewController(
 	))
 
 	return impl
-}
-
-// labelExistsFilterFunc creates a FilterFunc only accepting objects which have a given label.
-func labelExistsFilterFunc(label string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		if mo, ok := obj.(metav1.Object); ok {
-			labels := mo.GetLabels()
-			_, ok := labels[label]
-			return ok
-		}
-		return false
-	}
 }
