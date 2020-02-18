@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	v1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -36,22 +35,22 @@ func BrokerChannelName(brokerName, channelType string) string {
 // test
 // NewChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec
 // for a given Broker.
-func NewChannel(channelType string, b *v1alpha1.Broker, l map[string]string) (*unstructured.Unstructured, error) {
+func NewChannel(channelType string, owner kmeta.OwnerRefable, channelTemplate *eventingduck.ChannelTemplateSpec, l map[string]string) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
 	template := eventingduck.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       b.Spec.ChannelTemplate.Kind,
-			APIVersion: b.Spec.ChannelTemplate.APIVersion,
+			Kind:       channelTemplate.Kind,
+			APIVersion: channelTemplate.APIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(b),
+				*kmeta.NewControllerRef(owner),
 			},
-			Name:      BrokerChannelName(b.Name, channelType),
-			Namespace: b.Namespace,
+			Name:      BrokerChannelName(owner.GetObjectMeta().GetName(), channelType),
+			Namespace: owner.GetObjectMeta().GetNamespace(),
 			Labels:    l,
 		},
-		Spec: b.Spec.ChannelTemplate.Spec,
+		Spec: channelTemplate.Spec,
 	}
 	raw, err := json.Marshal(template)
 	if err != nil {
