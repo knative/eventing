@@ -21,6 +21,7 @@ metadata:
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
+  preserveUnknownFields: false
   names:
     kind: Trigger
     plural: triggers
@@ -32,6 +33,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -103,6 +110,56 @@ spec:
                   uri:
                     type: string
                     description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
-    served: false
+    served: true
     storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            required:
+              - subscriber
+            type: object
+            properties:
+              broker:
+                type: string
+                description: "Broker that this trigger receives events from. If not specified, will default to 'default'."
+              filter:
+                type: object
+                properties:
+                  attributes:
+                    type: object
+                    description: "Map of CloudEvents attributes used for filtering events."
+                    additionalProperties:
+                      type: string
+              subscriber:
+                type: object
+                description: "the destination that should receive events."
+                properties:
+                  ref:
+                    type: object
+                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    properties:
+                      apiVersion:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        minLength: 1
+                      name:
+                        type: string
+                        minLength: 1
+                  uri:
+                    type: string
+                    description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true

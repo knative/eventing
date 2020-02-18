@@ -89,3 +89,9 @@ rules:
       - "sinkbindings/status"
       - "sinkbindings/finalizers"
     verbs: *everything
+
+  # Necessary for conversion webhook. These are copied from the serving
+  # TODO: Do we really need all these permissions?
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]

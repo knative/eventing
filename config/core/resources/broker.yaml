@@ -22,6 +22,7 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: eventing.knative.dev
+  preserveUnknownFields: false
   names:
     kind: Broker
     plural: brokers
@@ -33,6 +34,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -77,6 +84,48 @@ spec:
               delivery:
                 description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
                 type: object
+                x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
-    served: false
+    served: true
     storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              config:
+                type: object
+                description: "Reference to the configuration for the Broker."
+                required:
+                  - apiVersion
+                  - kind
+                  - name
+                properties:
+                  apiVersion:
+                    type: string
+                    description: "API version of the configuration."
+                    minLength: 1
+                  kind:
+                    type: string
+                    description: "Kind of the configuration."
+                    minLength: 1
+                  name:
+                    type: string
+                    description: "Name of the configuration."
+                    minLength: 1
+                  namespace:
+                    type: string
+                    description: "Namespace of the configuration."
+                    minLength: 1
+              delivery:
+                description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true

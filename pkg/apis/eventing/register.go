@@ -16,6 +16,8 @@ limitations under the License.
 
 package eventing
 
+import "k8s.io/apimachinery/pkg/runtime/schema"
+
 const (
 	GroupName = "eventing.knative.dev"
 
@@ -26,4 +28,17 @@ const (
 	// BrokerClassKey is the annotation key on Brokers to indicate
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"
+)
+
+var (
+	// TriggersResource respresents a Knative Trigger
+	TriggersResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "triggers",
+	}
+	// BrokersResource respresents a Knative Broker
+	BrokersResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "brokers",
+	}
 )
