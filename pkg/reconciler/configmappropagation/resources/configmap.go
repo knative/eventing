@@ -36,7 +36,7 @@ func MakeConfigMap(args ConfigMapArgs) *corev1.ConfigMap {
 			Namespace: args.ConfigMapPropagation.Namespace,
 			Labels: map[string]string{
 				PropagationLabelKey: PropagationLabelValueCopy,
-				CopyLabelKey:        MakeCopyConfigMapLabel(args.ConfigMapPropagation.Namespace, args.Original.Name),
+				CopyLabelKey:        MakeCopyConfigMapLabel(args.Original.Namespace, args.Original.Name),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.ConfigMapPropagation),
@@ -52,6 +52,6 @@ func MakeCopyConfigMapName(configMapPropagationName, configMapName string) strin
 
 // MakeCopyCOnfigMapLabel uses '-' to separate namespace and configmap name instead of '/',
 // for label values only accept '-', '.', '_'.
-func MakeCopyConfigMapLabel(configMapPropagationNamespace, configMapName string) string {
-	return configMapPropagationNamespace + "-" + configMapName
+func MakeCopyConfigMapLabel(originalNamespace, originalName string) string {
+	return originalNamespace + "-" + originalName
 }

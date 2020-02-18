@@ -53,17 +53,6 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
-          # Broker
-          - name: BROKER_INGRESS_IMAGE
-            value: knative.dev/eventing/cmd/broker/ingress
-          - name: BROKER_INGRESS_SERVICE_ACCOUNT
-            value: eventing-broker-ingress
-          - name: BROKER_FILTER_IMAGE
-            value: knative.dev/eventing/cmd/broker/filter
-          - name: BROKER_FILTER_SERVICE_ACCOUNT
-            value: eventing-broker-filter
-          - name: BROKER_IMAGE_PULL_SECRET_NAME
-            value:
           # Legacy CronJobSource
           - name: CRONJOB_RA_IMAGE
             value: knative.dev/eventing/cmd/cronjob_receive_adapter

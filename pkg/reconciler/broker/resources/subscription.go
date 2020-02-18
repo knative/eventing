@@ -21,9 +21,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmeta"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
@@ -61,7 +63,50 @@ func MakeSubscription(b *v1alpha1.Broker, c *duckv1alpha1.Channelable, svc *core
 
 func ingressSubscriptionLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":        brokerName,
+		eventing.BrokerLabelKey:              brokerName,
 		"eventing.knative.dev/brokerIngress": "true",
+	}
+}
+
+// NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
+// replying to brokerIngress.
+func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *duckv1alpha1.DeliverySpec) *messagingv1alpha1.Subscription {
+	return &messagingv1alpha1.Subscription{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: t.Namespace,
+			Name:      utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)),
+			OwnerReferences: []metav1.OwnerReference{
+				*kmeta.NewControllerRef(t),
+			},
+			Labels: SubscriptionLabels(t),
+		},
+		Spec: messagingv1alpha1.SubscriptionSpec{
+			Channel: corev1.ObjectReference{
+				APIVersion: brokerTrigger.APIVersion,
+				Kind:       brokerTrigger.Kind,
+				Name:       brokerTrigger.Name,
+			},
+			Subscriber: &duckv1.Destination{
+				URI: uri,
+			},
+			Reply: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					APIVersion: brokerRef.APIVersion,
+					Kind:       brokerRef.Kind,
+					Name:       brokerRef.Name,
+					Namespace:  brokerRef.Namespace,
+				},
+			},
+			Delivery: delivery,
+		},
+	}
+}
+
+// SubscriptionLabels generates the labels present on the Subscription linking this Trigger to the
+// Broker's Channels.
+func SubscriptionLabels(t *v1alpha1.Trigger) map[string]string {
+	return map[string]string{
+		eventing.BrokerLabelKey:        t.Spec.Broker,
+		"eventing.knative.dev/trigger": t.Name,
 	}
 }

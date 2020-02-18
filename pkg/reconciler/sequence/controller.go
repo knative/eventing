@@ -29,11 +29,10 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/sequence"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
+	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Sequences"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "sequence-controller"
@@ -54,7 +53,7 @@ func NewController(
 		sequenceLister:     sequenceInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := sequencereconciler.NewImpl(ctx, r)
 
 	r.Logger.Info("Setting up event handlers")
 

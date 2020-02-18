@@ -28,23 +28,19 @@ import (
 // reconcilerReconcilerGenerator produces a reconciler struct for the given type.
 type reconcilerReconcilerGenerator struct {
 	generator.DefaultGen
-	outputPackage string
-	imports       namer.ImportTracker
-	filtered      bool
-	clientsetPkg  string
-	listerName    string
-	listerPkg     string
+	outputPackage  string
+	imports        namer.ImportTracker
+	typeToGenerate *types.Type
+	clientsetPkg   string
+	listerName     string
+	listerPkg      string
 }
 
 var _ generator.Generator = (*reconcilerReconcilerGenerator)(nil)
 
 func (g *reconcilerReconcilerGenerator) Filter(c *generator.Context, t *types.Type) bool {
-	// We generate a single client, so return true once.
-	if !g.filtered {
-		g.filtered = true
-		return true
-	}
-	return false
+	// Only process the type for this generator.
+	return t == g.typeToGenerate
 }
 
 func (g *reconcilerReconcilerGenerator) Namers(c *generator.Context) namer.NameSystems {
@@ -74,6 +70,10 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 			Package: "knative.dev/pkg/controller",
 			Name:    "Reconciler",
 		}),
+		"controllerWithEventRecorder": c.Universe.Type(types.Name{
+			Package: "knative.dev/pkg/controller",
+			Name:    "WithEventRecorder",
+		}),
 		"corev1EventSource": c.Universe.Function(types.Name{
 			Package: "k8s.io/api/core/v1",
 			Name:    "EventSource",
@@ -86,8 +86,10 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 			Package: "k8s.io/api/core/v1",
 			Name:    "EventTypeWarning",
 		}),
-		"reconcilerEvent":           c.Universe.Type(types.Name{Package: "knative.dev/pkg/reconciler", Name: "Event"}),
-		"reconcilerReconcilerEvent": c.Universe.Type(types.Name{Package: "knative.dev/pkg/reconciler", Name: "ReconcilerEvent"}),
+		"reconcilerEvent":                c.Universe.Type(types.Name{Package: "knative.dev/pkg/reconciler", Name: "Event"}),
+		"reconcilerReconcilerEvent":      c.Universe.Type(types.Name{Package: "knative.dev/pkg/reconciler", Name: "ReconcilerEvent"}),
+		"reconcilerRetryUpdateConflicts": c.Universe.Function(types.Name{Package: "knative.dev/pkg/reconciler", Name: "RetryUpdateConflicts"}),
+		"reconcilerConfigStore":          c.Universe.Type(types.Name{Name: "ConfigStore", Package: "knative.dev/pkg/reconciler"}),
 		// Deps
 		"clientsetInterface": c.Universe.Type(types.Name{Name: "Interface", Package: g.clientsetPkg}),
 		"resourceLister":     c.Universe.Type(types.Name{Name: g.listerName, Package: g.listerPkg}),
@@ -118,14 +120,25 @@ func (g *reconcilerReconcilerGenerator) GenerateType(c *generator.Context, t *ty
 			Package: "go.uber.org/zap",
 			Name:    "SugaredLogger",
 		}),
+		"setsNewString": c.Universe.Function(types.Name{
+			Package: "k8s.io/apimachinery/pkg/util/sets",
+			Name:    "NewString",
+		}),
+		"controllerOptions": c.Universe.Type(types.Name{
+			Package: "knative.dev/pkg/controller",
+			Name:    "Options",
+		}),
+		"contextContext": c.Universe.Type(types.Name{
+			Package: "context",
+			Name:    "Context",
+		}),
 	}
 
 	sw.Do(reconcilerInterfaceFactory, m)
 	sw.Do(reconcilerNewReconciler, m)
 	sw.Do(reconcilerImplFactory, m)
 	sw.Do(reconcilerStatusFactory, m)
-	// TODO(n3wscott): Follow-up to add support for managing finalizers.
-	// sw.Do(reconcilerFinalizerFactory, m)
+	sw.Do(reconcilerFinalizerFactory, m)
 
 	return sw.Error()
 }
@@ -138,8 +151,20 @@ type Interface interface {
 	// to the objects .Status or .Finalizers will be propagated to the stored
 	// object. It is recommended that implementors do not call any update calls
 	// for the Kind inside of ReconcileKind, it is the responsibility of the calling
-	// controller to propagate those properties.
-	ReconcileKind(ctx context.Context, o *{{.type|raw}}) {{.reconcilerEvent|raw}}
+	// controller to propagate those properties. The resource passed to ReconcileKind
+ 	// will always have an empty deletion timestamp.
+	ReconcileKind(ctx {{.contextContext|raw}}, o *{{.type|raw}}) {{.reconcilerEvent|raw}}
+}
+
+// Finalizer defines the strongly typed interfaces to be implemented by a
+// controller finalizing {{.type|raw}}.
+type Finalizer interface {
+	// FinalizeKind implements custom logic to finalize {{.type|raw}}. Any changes
+	// to the objects .Status or .Finalizers will be ignored. Returning a nil or
+	// Normal type {{.reconcilerEvent|raw}} will allow the finalizer to be deleted on
+	// the resource. The resource passed to FinalizeKind will always have a set
+	// deletion timestamp.
+	FinalizeKind(ctx {{.contextContext|raw}}, o *{{.type|raw}}) {{.reconcilerEvent|raw}}
 }
 
 // reconcilerImpl implements controller.Reconciler for {{.type|raw}} resources.
@@ -154,9 +179,9 @@ type reconcilerImpl struct {
 	// Kubernetes API.
 	Recorder {{.recordEventRecorder|raw}}
 
-	// FinalizerName is the name of the finalizer to use when finalizing the
-	// resource.
-	FinalizerName string
+	// configStore allows for decorating a context with config maps.
+	// +optional
+	configStore {{.reconcilerConfigStore|raw}}
 
 	// reconciler is the implementation of the business logic of the resource.
 	reconciler Interface
@@ -168,21 +193,41 @@ var _ controller.Reconciler = (*reconcilerImpl)(nil)
 `
 
 var reconcilerNewReconciler = `
-func NewReconciler(ctx context.Context, logger *{{.zapSugaredLogger|raw}}, client {{.clientsetInterface|raw}}, lister {{.resourceLister|raw}}, recorder {{.recordEventRecorder|raw}}, r Interface) {{.controllerReconciler|raw}} {
-	return &reconcilerImpl{
+func NewReconciler(ctx {{.contextContext|raw}}, logger *{{.zapSugaredLogger|raw}}, client {{.clientsetInterface|raw}}, lister {{.resourceLister|raw}}, recorder {{.recordEventRecorder|raw}}, r Interface, options ...{{.controllerOptions|raw}} ) {{.controllerReconciler|raw}} {
+	// Check the options function input. It should be 0 or 1.
+	if len(options) > 1 {
+		logger.Fatalf("up to one options struct is supported, found %d", len(options))
+	}
+
+	rec := &reconcilerImpl{
 		Client: client,
 		Lister: lister,
 		Recorder: recorder,
-		FinalizerName: defaultFinalizerName,
 		reconciler:    r,
 	}
+
+	for _, opts := range options {
+		if opts.ConfigStore != nil {
+			rec.configStore = opts.ConfigStore
+		}
+	}
+
+	return rec
 }
 `
 
 var reconcilerImplFactory = `
 // Reconcile implements controller.Reconciler
-func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
+func (r *reconcilerImpl) Reconcile(ctx {{.contextContext|raw}}, key string) error {
 	logger := {{.loggingFromContext|raw}}(ctx)
+
+	// If configStore is set, attach the frozen configuration to the context.
+	if r.configStore != nil {
+		ctx = r.configStore.ToContext(ctx)
+	}
+
+	// Add the recorder to context.
+	ctx = {{.controllerWithEventRecorder|raw}}(ctx, r.Recorder)
 
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := {{.cacheSplitMetaNamespaceKey|raw}}(key)
@@ -190,11 +235,6 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 		logger.Errorf("invalid resource key: %s", key)
 		return nil
 	}
-
-    // TODO(n3wscott): this is needed for serving.
- 	// If our controller has configuration state, we'd "freeze" it and
-	// attach the frozen configuration to the context.
-	//    ctx = r.configStore.ToContext(ctx)
 
 	// Get the resource with this namespace/name.
 	original, err := r.Lister.{{.type|apiGroup}}(namespace).Get(name)
@@ -208,23 +248,31 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	// Don't modify the informers copy.
 	resource := original.DeepCopy()
 
-	// Reconcile this copy of the resource and then write back any status
-	// updates regardless of whether the reconciliation errored out.
-	reconcileEvent := r.reconciler.ReconcileKind(ctx, resource)
+	var reconcileEvent {{.reconcilerEvent|raw}}
+	if resource.GetDeletionTimestamp().IsZero() {
+		// Append the target method to the logger.
+		logger = logger.With(zap.String("targetMethod", "ReconcileKind"))
 
-    // TODO(n3wscott): Follow-up to add support for managing finalizers.
-	// Synchronize the finalizers.
-	//if equality.Semantic.DeepEqual(original.Finalizers, resource.Finalizers) {
-	//	// If we didn't change finalizers then don't call updateFinalizers.
-	//} else if _, updated, fErr := r.updateFinalizers(ctx, resource); fErr != nil {
-	//	logger.Warnw("Failed to update finalizers", zap.Error(fErr))
-	//	r.Recorder.Eventf(resource, {{.corev1EventTypeWarning|raw}}, "UpdateFailed",
-	//		"Failed to update finalizers for %q: %v", resource.Name, fErr)
-	//	return fErr
-	//} else if updated {
-	//	// There was a difference and updateFinalizers said it updated and did not return an error.
-	//	r.Recorder.Eventf(resource, {{.corev1EventTypeNormal|raw}}, "Updated", "Updated %q finalizers", resource.GetName())
-	//}
+		// Set and update the finalizer on resource if r.reconciler
+		// implements Finalizer.
+		if resource, err = r.setFinalizerIfFinalizer(ctx, resource); err != nil {
+			logger.Warnw("Failed to set finalizers", zap.Error(err))
+		}
+
+		// Reconcile this copy of the resource and then write back any status
+		// updates regardless of whether the reconciliation errored out.
+		reconcileEvent = r.reconciler.ReconcileKind(ctx, resource)
+	} else if fin, ok := r.reconciler.(Finalizer); ok {
+		// Append the target method to the logger.
+		logger = logger.With(zap.String("targetMethod", "FinalizeKind"))
+
+		// For finalizing reconcilers, if this resource being marked for deletion
+		// and reconciled cleanly (nil or normal event), remove the finalizer.
+		reconcileEvent = fin.FinalizeKind(ctx, resource)
+		if resource, err = r.clearFinalizer(ctx, resource, reconcileEvent); err != nil {
+			logger.Warnw("Failed to clear finalizers", zap.Error(err))
+		}
+	}
 
 	// Synchronize the status.
 	if equality.Semantic.DeepEqual(original.Status, resource.Status) {
@@ -243,11 +291,11 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	if reconcileEvent != nil {
 		var event *{{.reconcilerReconcilerEvent|raw}}
 		if reconciler.EventAs(reconcileEvent, &event) {
-			logger.Infow("ReconcileKind returned an event", zap.Any("event", reconcileEvent))
+			logger.Infow("returned an event", zap.Any("event", reconcileEvent))
 			r.Recorder.Eventf(resource, event.EventType, event.Reason, event.Format, event.Args...)
 			return nil
 		} else {
-			logger.Errorw("ReconcileKind returned an error", zap.Error(reconcileEvent))
+			logger.Errorw("returned an error", zap.Error(reconcileEvent))
 			r.Recorder.Event(resource, {{.corev1EventTypeWarning|raw}}, "InternalError", reconcileEvent.Error())
 			return reconcileEvent
 		}
@@ -259,7 +307,7 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 var reconcilerStatusFactory = `
 func (r *reconcilerImpl) updateStatus(existing *{{.type|raw}}, desired *{{.type|raw}}) error {
 	existing = existing.DeepCopy()
-	return RetryUpdateConflicts(func(attempts int) (err error) {
+	return {{.reconcilerRetryUpdateConflicts|raw}}(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
 		if attempts > 0 {
 			existing, err = r.Client.{{.type|versionedClientset}}().{{.type|apiGroup}}(desired.Namespace).Get(desired.Name, {{.metav1GetOptions|raw}}{})
@@ -278,27 +326,18 @@ func (r *reconcilerImpl) updateStatus(existing *{{.type|raw}}, desired *{{.type|
 		return err
 	})
 }
-
-
-// TODO: move this to knative.dev/pkg/reconciler
-// RetryUpdateConflicts retries the inner function if it returns conflict errors.
-// This can be used to retry status updates without constantly reenqueuing keys.
-func RetryUpdateConflicts(updater func(int) error) error {
-	attempts := 0
-	return {{.retryRetryOnConflict|raw}}(retry.DefaultRetry, func() error {
-		err := updater(attempts)
-		attempts++
-		return err
-	})
-}
 `
 
 var reconcilerFinalizerFactory = `
-// Update the Finalizers of the resource.
-func (r *reconcilerImpl) updateFinalizers(ctx context.Context, desired *{{.type|raw}}) (*{{.type|raw}}, bool, error) {
-	actual, err := r.Lister.{{.type|apiGroup}}(desired.Namespace).Get(desired.Name)
+// updateFinalizersFiltered will update the Finalizers of the resource.
+// TODO: this method could be generic and sync all finalizers. For now it only
+// updates defaultFinalizerName.
+func (r *reconcilerImpl) updateFinalizersFiltered(ctx {{.contextContext|raw}}, resource *{{.type|raw}}) (*{{.type|raw}}, error) {
+	finalizerName := defaultFinalizerName
+
+	actual, err := r.Lister.{{.type|apiGroup}}(resource.Namespace).Get(resource.Name)
 	if err != nil {
-		return nil, false, err
+		return resource, err
 	}
 
 	// Don't modify the informers copy.
@@ -307,23 +346,23 @@ func (r *reconcilerImpl) updateFinalizers(ctx context.Context, desired *{{.type|
 	var finalizers []string
 
 	// If there's nothing to update, just return.
-	existingFinalizers := sets.NewString(existing.Finalizers...)
-	desiredFinalizers := sets.NewString(desired.Finalizers...)
+	existingFinalizers := {{.setsNewString|raw}}(existing.Finalizers...)
+	desiredFinalizers := {{.setsNewString|raw}}(resource.Finalizers...)
 
-	if desiredFinalizers.Has(r.FinalizerName) {
-		if existingFinalizers.Has(r.FinalizerName) {
+	if desiredFinalizers.Has(finalizerName) {
+		if existingFinalizers.Has(finalizerName) {
 			// Nothing to do.
-			return desired, false, nil
+			return resource, nil
 		}
 		// Add the finalizer.
-		finalizers = append(existing.Finalizers, r.FinalizerName)
+		finalizers = append(existing.Finalizers, finalizerName)
 	} else {
-		if !existingFinalizers.Has(r.FinalizerName) {
+		if !existingFinalizers.Has(finalizerName) {
 			// Nothing to do.
-			return desired, false, nil
+			return resource, nil
 		}
 		// Remove the finalizer.
-		existingFinalizers.Delete(r.FinalizerName)
+		existingFinalizers.Delete(finalizerName)
 		finalizers = existingFinalizers.List()
 	}
 
@@ -336,22 +375,62 @@ func (r *reconcilerImpl) updateFinalizers(ctx context.Context, desired *{{.type|
 
 	patch, err := json.Marshal(mergePatch)
 	if err != nil {
-		return desired, false, err
+		return resource, err
 	}
 
-	update, err := r.Client.{{.type|versionedClientset}}().{{.type|apiGroup}}(desired.Namespace).Patch(existing.Name, types.MergePatchType, patch)
-	return update, true, err
+	resource, err = r.Client.{{.type|versionedClientset}}().{{.type|apiGroup}}(resource.Namespace).Patch(resource.Name, types.MergePatchType, patch)
+	if err != nil {
+		r.Recorder.Eventf(resource, {{.corev1EventTypeWarning|raw}}, "FinalizerUpdateFailed",
+			"Failed to update finalizers for %q: %v", resource.Name, err)
+	} else {
+		r.Recorder.Eventf(resource, {{.corev1EventTypeNormal|raw}}, "FinalizerUpdate",
+			"Updated %q finalizers", resource.GetName())
+	}
+	return resource, err
 }
 
-func (r *reconcilerImpl) setFinalizer(a *{{.type|raw}}) {
-	finalizers := sets.NewString(a.Finalizers...)
-	finalizers.Insert(r.FinalizerName)
-	a.Finalizers = finalizers.List()
+func (r *reconcilerImpl) setFinalizerIfFinalizer(ctx {{.contextContext|raw}}, resource *{{.type|raw}}) (*{{.type|raw}}, error) {
+	if _, ok := r.reconciler.(Finalizer); !ok {
+		return resource, nil
+	}
+
+	finalizers := {{.setsNewString|raw}}(resource.Finalizers...)
+
+	// If this resource is not being deleted, mark the finalizer.
+	if resource.GetDeletionTimestamp().IsZero() {
+		finalizers.Insert(defaultFinalizerName)
+	}
+
+	resource.Finalizers = finalizers.List()
+
+	// Synchronize the finalizers filtered by defaultFinalizerName.
+	return r.updateFinalizersFiltered(ctx, resource)
 }
 
-func (r *reconcilerImpl) unsetFinalizer(a *{{.type|raw}}) {
-	finalizers := sets.NewString(a.Finalizers...)
-	finalizers.Delete(r.FinalizerName)
-	a.Finalizers = finalizers.List()
+func (r *reconcilerImpl) clearFinalizer(ctx {{.contextContext|raw}}, resource *{{.type|raw}}, reconcileEvent {{.reconcilerEvent|raw}}) (*{{.type|raw}}, error) {
+	if _, ok := r.reconciler.(Finalizer); !ok {
+		return resource, nil
+	}
+	if resource.GetDeletionTimestamp().IsZero() {
+		return resource, nil
+	}
+
+	finalizers := {{.setsNewString|raw}}(resource.Finalizers...)
+
+	if reconcileEvent != nil {
+		var event *{{.reconcilerReconcilerEvent|raw}}
+		if reconciler.EventAs(reconcileEvent, &event) {
+			if event.EventType == {{.corev1EventTypeNormal|raw}} {
+				finalizers.Delete(defaultFinalizerName)
+			}
+		}
+	} else {
+		finalizers.Delete(defaultFinalizerName)
+	}
+
+	resource.Finalizers = finalizers.List()
+
+	// Synchronize the finalizers filtered by defaultFinalizerName.
+	return r.updateFinalizersFiltered(ctx, resource)
 }
 `

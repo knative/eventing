@@ -25,7 +25,7 @@ import (
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/adapter"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 )
@@ -102,8 +102,8 @@ func (a *pingAdapter) cronTick() {
 	logger := logging.FromContext(context.TODO())
 
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
-	event.SetType(sourcesv1alpha1.CronJobEventType)
-	event.SetSource(sourcesv1alpha1.CronJobEventSource(a.Namespace, a.Name))
+	event.SetType(sourcesv1alpha1.PingSourceEventType)
+	event.SetSource(sourcesv1alpha1.PingSourceSource(a.Namespace, a.Name))
 	event.SetData(message(a.Data))
 	event.SetDataContentType(cloudevents.ApplicationJSON)
 	reportArgs := &source.ReportArgs{

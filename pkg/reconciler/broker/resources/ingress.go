@@ -19,15 +19,15 @@ package resources
 import (
 	"fmt"
 
-	"knative.dev/pkg/kmeta"
-	"knative.dev/pkg/system"
-
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -43,7 +43,7 @@ type IngressArgs struct {
 }
 
 // MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
-func MakeIngress(args *IngressArgs) *appsv1.Deployment {
+func MakeIngressDeployment(args *IngressArgs) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
@@ -171,7 +171,7 @@ func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
 // Broker.
 func IngressLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":     brokerName,
+		eventing.BrokerLabelKey:           brokerName,
 		"eventing.knative.dev/brokerRole": "ingress",
 	}
 }

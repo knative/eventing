@@ -154,31 +154,31 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("some-other-type", "")),
 			},
-			expectedEventCount: true,
+			expectedEventCount: false,
 		},
 		"Wrong type with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("some-other-type", "")),
 			},
-			expectedEventCount: true,
+			expectedEventCount: false,
 		},
 		"Wrong source": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithDeprecatedSourceAndType("", "some-other-source")),
 			},
-			expectedEventCount: true,
+			expectedEventCount: false,
 		},
 		"Wrong source with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
-			expectedEventCount: true,
+			expectedEventCount: false,
 		},
 		"Wrong extension": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributes("", "some-other-source")),
 			},
-			expectedEventCount: true,
+			expectedEventCount: false,
 		},
 		"Dispatch failed": {
 			triggers: []*eventingv1alpha1.Trigger{
@@ -241,12 +241,12 @@ func TestReceiver(t *testing.T) {
 			expectedEventDispatchTime:   true,
 			expectedEventProcessingTime: true,
 		},
-		"Dispatch failed - Extension with attribs": {
+		"Wrong Extension with attribs": {
 			triggers: []*eventingv1alpha1.Trigger{
 				makeTrigger(makeTriggerFilterWithAttributesAndExtension(eventType, eventSource, "some-other-extension-value")),
 			},
 			event:              makeEventWithExtension(extensionName, extensionValue),
-			expectedEventCount: true,
+			expectedEventCount: false,
 		},
 		"Returned Cloud Event": {
 			triggers: []*eventingv1alpha1.Trigger{

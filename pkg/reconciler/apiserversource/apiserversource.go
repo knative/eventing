@@ -18,9 +18,8 @@ package apiserversource
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"reflect"
-	"time"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,40 +31,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
-	"k8s.io/client-go/tools/cache"
-	pkgLogging "knative.dev/pkg/logging"
-	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/resolver"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
+	pkgLogging "knative.dev/pkg/logging"
+	"knative.dev/pkg/metrics"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
 )
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	apiserversourceReconciled         = "ApiServerSourceReconciled"
-	apiServerSourceReadinessChanged   = "ApiServerSourceReadinessChanged"
-	apiserversourceUpdateStatusFailed = "ApiServerSourceUpdateStatusFailed"
-	apiserversourceDeploymentCreated  = "ApiServerSourceDeploymentCreated"
-	apiserversourceDeploymentUpdated  = "ApiServerSourceDeploymentUpdated"
-
-	// raImageEnvVar is the name of the environment variable that contains the receive adapter's
-	// image. It must be defined.
-	raImageEnvVar = "APISERVER_RA_IMAGE"
+	apiserversourceDeploymentCreated = "ApiServerSourceDeploymentCreated"
+	apiserversourceDeploymentUpdated = "ApiServerSourceDeploymentUpdated"
 
 	component = "apiserversource"
-)
-
-var (
-	deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 )
 
 var apiServerEventTypes = []string{
@@ -77,6 +64,17 @@ var apiServerEventTypes = []string{
 	v1alpha1.ApiServerSourceUpdateRefEventType,
 }
 
+// newReconciledNormal makes a new reconciler event with event type Normal, and
+// reason ApiServerSourceReconciled.
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ApiServerSourceReconciled", "ApiServerSource reconciled: \"%s/%s\"", namespace, name)
+}
+
+func newWarningSinkNotFound(sink *duckv1beta1.Destination) pkgreconciler.Event {
+	b, _ := json.Marshal(sink)
+	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "SinkNotFound", "Sink not found: %s", string(b))
+}
+
 // Reconciler reconciles a ApiServerSource object
 type Reconciler struct {
 	*reconciler.Base
@@ -84,14 +82,8 @@ type Reconciler struct {
 	receiveAdapterImage string
 
 	// listers index properties about resources
-	apiserversourceLister    listers.ApiServerSourceLister
-	deploymentLister         appsv1listers.DeploymentLister
-	eventTypeLister          eventinglisters.EventTypeLister
-	roleLister               rbacv1listers.RoleLister
-	roleBindingLister        rbacv1listers.RoleBindingLister
-	clusterRoleLister        rbacv1listers.ClusterRoleLister
-	clusterRoleBindingLister rbacv1listers.ClusterRoleBindingLister
-	serviceAccountLister     corev1listers.ServiceAccountLister
+	apiserversourceLister listers.ApiServerSourceLister
+	eventTypeLister       eventinglisters.EventTypeLister
 
 	source         string
 	sinkResolver   *resolver.URIResolver
@@ -100,51 +92,9 @@ type Reconciler struct {
 	metricsConfig  *metrics.ExporterOptions
 }
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the ApiServerSource
-// resource with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
+var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
 
-	// Get the ApiServerSource resource with this namespace/name
-	original, err := r.apiserversourceLister.ApiServerSources(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("ApiServerSource key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy
-	apiserversource := original.DeepCopy()
-
-	// Reconcile this copy of the ApiServerSource and then write back any status
-	// updates regardless of whether the reconcile error out.
-	err = r.reconcile(ctx, apiserversource)
-	if err != nil {
-		logging.FromContext(ctx).Warn("Error reconciling ApiServerSource", zap.Error(err))
-	} else {
-		logging.FromContext(ctx).Debug("ApiServerSource reconciled")
-		r.Recorder.Eventf(apiserversource, corev1.EventTypeNormal, apiserversourceReconciled, `ApiServerSource reconciled: "%s/%s"`, apiserversource.Namespace, apiserversource.Name)
-	}
-
-	if _, updateStatusErr := r.updateStatus(ctx, apiserversource.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the ApiServerSource", zap.Error(err))
-		r.Recorder.Eventf(apiserversource, corev1.EventTypeWarning, apiserversourceUpdateStatusFailed, "Failed to update ApiServerSource's status: %v", err)
-		return updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return err
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSource) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ApiServerSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -155,11 +105,6 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	source.Status.ObservedGeneration = source.Generation
 
 	source.Status.InitializeConditions()
-
-	if source.Spec.Sink == nil {
-		source.Status.MarkNoSink("SinkMissing", "")
-		return fmt.Errorf("spec.sink missing")
-	}
 
 	dest := source.Spec.Sink.DeepCopy()
 	if dest.Ref != nil {
@@ -180,7 +125,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
-		return fmt.Errorf("getting sink URI: %v", err)
+		return newWarningSinkNotFound(dest)
 	}
 	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
 		source.Spec.Sink.DeprecatedKind != "" &&
@@ -210,7 +155,7 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha1.ApiServerSo
 	}
 	source.Status.MarkEventTypes()
 
-	return nil
+	return newReconciledNormal(source.Namespace, source.Name)
 }
 
 func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
@@ -390,36 +335,6 @@ func keyFromEventType(eventType *eventingv1alpha1.EventType) string {
 
 func (r *Reconciler) getLabelSelector(src *v1alpha1.ApiServerSource) labels.Selector {
 	return labels.SelectorFromSet(resources.Labels(src.Name))
-}
-
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.ApiServerSource) (*v1alpha1.ApiServerSource, error) {
-	apiserversource, err := r.apiserversourceLister.ApiServerSources(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(apiserversource.Status, desired.Status) {
-		return apiserversource, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !apiserversource.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := apiserversource.DeepCopy()
-	existing.Status = desired.Status
-
-	cj, err := r.EventingClientSet.SourcesV1alpha1().ApiServerSources(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(cj.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Info("ApiServerSource became ready after", zap.Duration("duration", duration))
-		r.Recorder.Event(apiserversource, corev1.EventTypeNormal, apiServerSourceReadinessChanged, fmt.Sprintf("ApiServerSource %q became ready", apiserversource.Name))
-		if err := r.StatsReporter.ReportReady("ApiServerSource", apiserversource.Namespace, apiserversource.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for ApiServerSource, %v", err)
-		}
-	}
-
-	return cj, err
 }
 
 // TODO determine how to push the updated logging config to existing data plane Pods.

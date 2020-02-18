@@ -19,110 +19,56 @@ package channel
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"time"
-
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduck "knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler/channel/resources"
-	"knative.dev/pkg/apis/duck"
-	duckapis "knative.dev/pkg/apis/duck"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
+	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/pkg/controller"
+	"knative.dev/eventing/pkg/reconciler/channel/resources"
+	"knative.dev/pkg/apis/duck"
+	duckapis "knative.dev/pkg/apis/duck"
+	pkgreconciler "knative.dev/pkg/reconciler"
 )
 
-const (
-	channelReadinessChanged   = "ChannelReadinessChanged"
-	channelReconciled         = "ChannelReconciled"
-	channelReconcileError     = "ChannelReconcileError"
-	channelUpdateStatusFailed = "ChannelUpdateStatusFailed"
-)
+// newReconciledNormal makes a new reconciler event with event type Normal, and
+// reason ChannelReconciled.
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: \"%s/%s\"", namespace, name)
+}
 
 type Reconciler struct {
-	*reconciler.Base
-
 	// listers index properties about resources
 	channelLister      listers.ChannelLister
 	channelableTracker eventingduck.ListableTracker
+
+	// dynamicClientSet allows us to configure pluggable Build objects
+	dynamicClientSet dynamic.Interface
 }
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements Interface
+var _ channelreconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the Channel resource with this namespace/name
-	original, err := r.channelLister.Channels(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("Channel key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Delete is a no-op.
-	if original.DeletionTimestamp != nil {
-		return nil
-	}
-
-	// Don't modify the informers copy
-	channel := original.DeepCopy()
-
-	// Reconcile this copy of the Channel and then write back any status
-	// updates regardless of whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, channel)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Channel", zap.Error(reconcileErr))
-		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelReconcileError, fmt.Sprintf("Channel reconcile error: %v", reconcileErr))
-	} else {
-		logging.FromContext(ctx).Debug("Successfully reconciled Channel")
-		r.Recorder.Eventf(channel, corev1.EventTypeNormal, channelReconciled, "Channel reconciled: %s", key)
-	}
-
-	if _, updateStatusErr := r.updateStatus(ctx, channel.DeepCopy()); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Error updating Channel status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(channel, corev1.EventTypeWarning, channelUpdateStatusFailed, "Failed to update channel status: %s", key)
-		return updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
+// ReconcileKind implements Interface.ReconcileKind.
+func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1alpha1.Channel) pkgreconciler.Event {
 	c.Status.InitializeConditions()
+	c.Status.ObservedGeneration = c.Generation
 
 	// 1. Create the backing Channel CRD, if it doesn't exist.
 	// 2. Patch the subscriptions from this Channel into the backing Channel CRD.
 	// 3. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
-	if c.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
-
 	gvr, _ := meta.UnsafeGuessKindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
-	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(c.Namespace)
+	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(c.Namespace)
 	if channelResourceInterface == nil {
 		return fmt.Errorf("unable to create dynamic client for: %+v", c.Spec.ChannelTemplate)
 	}
@@ -153,40 +99,9 @@ func (r *Reconciler) reconcile(ctx context.Context, c *v1alpha1.Channel) error {
 		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
 		return fmt.Errorf("problem patching subscriptions in the backing channel: %v", err)
 	}
-
 	c.Status.PropagateStatuses(&backingChannel.Status)
-	return nil
-}
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Channel) (*v1alpha1.Channel, error) {
-	channel, err := r.channelLister.Channels(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(channel.Status, desired.Status) {
-		return channel, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !channel.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := channel.DeepCopy()
-	existing.Status = desired.Status
-
-	c, err := r.EventingClientSet.MessagingV1alpha1().Channels(desired.Namespace).UpdateStatus(existing)
-
-	if err == nil && becomesReady {
-		duration := time.Since(c.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("Channel %q became ready after %v", channel.Name, duration)
-		r.Recorder.Event(channel, corev1.EventTypeNormal, channelReadinessChanged, fmt.Sprintf("Channel %q became ready", channel.Name))
-		if err := r.StatsReporter.ReportReady("Channel", channel.Namespace, channel.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Channel, %v", err)
-		}
-	}
-
-	return c, err
+	return newReconciledNormal(c.Namespace, c.Name)
 }
 
 // reconcileBackingChannel reconciles Channel's 'c' underlying CRD channel.

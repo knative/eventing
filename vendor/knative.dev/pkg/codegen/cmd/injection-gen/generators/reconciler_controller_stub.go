@@ -29,9 +29,9 @@ import (
 // controller for a custom impl with injection.
 type reconcilerControllerStubGenerator struct {
 	generator.DefaultGen
-	outputPackage string
-	imports       namer.ImportTracker
-	filtered      bool
+	outputPackage  string
+	imports        namer.ImportTracker
+	typeToGenerate *types.Type
 
 	reconcilerPkg       string
 	informerPackagePath string
@@ -40,12 +40,8 @@ type reconcilerControllerStubGenerator struct {
 var _ generator.Generator = (*reconcilerControllerStubGenerator)(nil)
 
 func (g *reconcilerControllerStubGenerator) Filter(c *generator.Context, t *types.Type) bool {
-	// We generate a single client, so return true once.
-	if !g.filtered {
-		g.filtered = true
-		return true
-	}
-	return false
+	// Only process the type for this generator.
+	return t == g.typeToGenerate
 }
 
 func (g *reconcilerControllerStubGenerator) Namers(c *generator.Context) namer.NameSystems {
@@ -79,6 +75,14 @@ func (g *reconcilerControllerStubGenerator) GenerateType(c *generator.Context, t
 			Package: "knative.dev/pkg/logging",
 			Name:    "FromContext",
 		}),
+		"contextContext": c.Universe.Type(types.Name{
+			Package: "context",
+			Name:    "Context",
+		}),
+		"configmapWatcher": c.Universe.Type(types.Name{
+			Package: "knative.dev/pkg/configmap",
+			Name:    "Watcher",
+		}),
 	}
 
 	sw.Do(reconcilerControllerStub, m)
@@ -91,8 +95,8 @@ var reconcilerControllerStub = `
 
 // NewController creates a Reconciler for {{.type|public}} and returns the result of NewImpl.
 func NewController(
-	ctx context.Context,
-	cmw configmap.Watcher,
+	ctx {{.contextContext|raw}},
+	cmw {{.configmapWatcher|raw}},
 ) *{{.controllerImpl|raw}} {
 	logger := {{.loggingFromContext|raw}}(ctx)
 

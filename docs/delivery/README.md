@@ -3,6 +3,15 @@
 This document synthetizes the
 [error handling design document](https://docs.google.com/document/d/1qRrzGoHJQO-oc5p-yRK8IRfugd-FM_PXyM7lN5kcqks).
 
+## Delivery aspects
+
+Each specification for _Sources_ and _Channels_ define some more fine-grained
+delivery mechanism around their data plane. For details consult the respective
+specifications.
+
+- [Source Delivery](../spec/sources.md#source-event-delivery)
+- [Channel Delivery](../spec/channel.md#data-plane)
+
 ## Problem
 
 Sending events can fail for a variety of reasons (downstream system is down,
@@ -75,10 +84,10 @@ type DeliverySpec struct {
 	// DeadLetterSink is the sink receiving events that couldn't be sent to
 	// a destination.
 	// +optional
-	DeadLetterSink *apisv1alpha1.Destination `json:"deadLetterSink,omitempty"`
+	DeadLetterSink *duckv1.Destination `json:"deadLetterSink,omitempty"`
 
 	// Retry is the minimum number of retries the sender should attempt when
-	// sending a event before moving it to the dead letter sink
+	// sending an event before moving it to the dead letter sink
 	// +optional
 	Retry *int32 `json:"retry,omitempty"`
 
@@ -92,7 +101,7 @@ type DeliverySpec struct {
 	// For linear policy, backoff delay is the time interval between retries.
 	// For exponential policy , backoff delay is backoffDelay*2^<numberOfRetries>
 	// +optional
-	BackoffDelay *string
+	BackoffDelay *string `json:"backoffDelay,omitempty"`
 }
 
 // BackoffPolicyType is the type for backoff policies
@@ -119,9 +128,10 @@ their status.
 
 // DeliveryStatus contains the Status of an object supporting delivery options.
 type DeliveryStatus struct {
-	// DeadLetterChannel is the reference to the native, platform specific channel where failed events are sent to.
+	// DeadLetterChannel is a KReference that is the reference to the native, platform specific channel
+	// where failed events are sent to.
 	// +optional
-	DeadLetterChannel *corev1.ObjectReference `json:"deadLetterChannel,omitempty"`
+	DeadLetterChannel *duckv1.KReference `json:"deadLetterChannel,omitempty"`
 }
 ```
 

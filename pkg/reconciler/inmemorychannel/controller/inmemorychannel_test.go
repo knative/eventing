@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -50,11 +52,6 @@ const (
 	imcName               = "test-imc"
 	channelServiceAddress = "test-imc-kn-channel.test-namespace.svc.cluster.local"
 	imageName             = "test-image"
-
-	subscriberAPIVersion = "v1"
-	subscriberKind       = "Service"
-	subscriberName       = "subscriberName"
-	subscriberURI        = "http://example.com/subscriber"
 
 	imcGeneration = 7
 )
@@ -106,16 +103,6 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
-		}, { // TODO: there is a bug in the controller, it will query for ""
-			//			Name: "trigger key not found ",
-			//			Objects: []runtime.Object{
-			//				reconciletesting.NewTrigger(triggerName, testNS),
-			//			},
-			//			Key:     "foo/incomplete",
-			//			WantErr: true,
-			//			WantEvents: []string{
-			//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
-			//			},
 		}, {
 			Name: "deleting",
 			Key:  imcKey,
@@ -124,23 +111,19 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelDeleted)},
 			WantErr: false,
-			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
-			},
 		}, {
 			Name: "deployment does not exist",
 			Key:  imcKey,
 			Objects: []runtime.Object{
 				reconciletesting.NewInMemoryChannel(imcName, testNS),
 			},
-			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelDeploymentFailed("DispatcherDeploymentDoesNotExist", "Dispatcher Deployment does not exist")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: deployment.apps \"imc-dispatcher\" not found"),
+				Eventf(corev1.EventTypeWarning, "DispatcherDeploymentFailed", `Reconciling dispatcher Deployment failed with: deployment.apps "imc-dispatcher" not found`),
 			},
 		}, {
 			Name: "the status of deployment is false",
@@ -165,7 +148,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		}, {
 			Name: "the status of deployment is unknown",
@@ -190,7 +173,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelAddress(channelServiceAddress)),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		}, {
 			Name: "Service does not exist",
@@ -199,7 +182,6 @@ func TestAllCases(t *testing.T) {
 				makeReadyDeployment(),
 				reconciletesting.NewInMemoryChannel(imcName, testNS),
 			},
-			WantErr: true,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
 					reconciletesting.WithInitInMemoryChannelConditions,
@@ -207,7 +189,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelServicetNotReady("DispatcherServiceDoesNotExist", "Dispatcher Service does not exist")),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: service \"imc-dispatcher\" not found"),
+				Eventf(corev1.EventTypeWarning, "DispatcherServiceFailed", `Reconciling dispatcher Service failed: service "imc-dispatcher" not found`),
 			},
 		}, {
 			Name: "Endpoints does not exist",
@@ -227,7 +209,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: endpoints \"imc-dispatcher\" not found"),
+				Eventf(corev1.EventTypeWarning, "InternalError", `endpoints "imc-dispatcher" not found`),
 			},
 		}, {
 			Name: "Endpoints not ready",
@@ -248,7 +230,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: there are no endpoints ready for Dispatcher service"),
+				Eventf(corev1.EventTypeWarning, "InternalError", `there are no endpoints ready for Dispatcher service`),
 			},
 		}, {
 			Name: "Works, creates new channel",
@@ -277,7 +259,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		}, {
 			Name: "Works, channel exists",
@@ -301,7 +283,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		}, {
 			Name: "channel exists, not owned by us",
@@ -324,7 +306,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
+				Eventf(corev1.EventTypeWarning, "InternalError", `inmemorychannel: test-namespace/test-imc does not own Service: "test-imc-kn-channel"`),
 			},
 		}, {
 			Name: "Works, channel exists with subscribers",
@@ -351,7 +333,7 @@ func TestAllCases(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		}, {
 			Name: "channel does not exist, fails to create",
@@ -379,14 +361,14 @@ func TestAllCases(t *testing.T) {
 				makeChannelService(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "ReconcileFailed", "InMemoryChannel reconciliation failed: inducing failure for create services"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
 			},
 		}, {},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			systemNamespace:       testNS,
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
@@ -396,6 +378,7 @@ func TestAllCases(t *testing.T) {
 			serviceLister:           listers.GetServiceLister(),
 			endpointsLister:         listers.GetEndpointsLister(),
 		}
+		return inmemorychannel.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetInMemoryChannelLister(), r.Recorder, r)
 	},
 		false,
 		logger,
@@ -435,7 +418,7 @@ func TestInNamespace(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "DispatcherRoleBindingCreated", "Dispatcher RoleBinding created"),
 				Eventf(corev1.EventTypeNormal, "DispatcherDeploymentCreated", "Dispatcher Deployment created"),
 				Eventf(corev1.EventTypeNormal, "DispatcherServiceCreated", "Dispatcher Service created"),
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		},
 		{
@@ -464,14 +447,14 @@ func TestInNamespace(t *testing.T) {
 				),
 			}},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "Reconciled", "InMemoryChannel reconciled"),
+				Eventf(corev1.EventTypeNormal, "InMemoryChannelReconciled", `InMemoryChannel reconciled: "test-namespace/test-imc"`),
 			},
 		},
 	}
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
+		r := &Reconciler{
 			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 			dispatcherScope:       scopeNamespace,
 			dispatcherImage:       imageName,
@@ -485,6 +468,7 @@ func TestInNamespace(t *testing.T) {
 			serviceAccountLister:    listers.GetServiceAccountLister(),
 			roleBindingLister:       listers.GetRoleBindingLister(),
 		}
+		return inmemorychannel.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetInMemoryChannelLister(), r.Recorder, r)
 	},
 		false,
 		logger,

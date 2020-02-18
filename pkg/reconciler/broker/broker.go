@@ -18,9 +18,8 @@ package broker
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"reflect"
-	"time"
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/apps/v1"
@@ -30,16 +29,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
-	duckapis "knative.dev/pkg/apis/duck"
-	"knative.dev/pkg/controller"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
@@ -47,16 +46,15 @@ import (
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
+	duckapis "knative.dev/pkg/apis/duck"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	"knative.dev/pkg/resolver"
 )
 
 const (
-	// Name of the corev1.Events emitted from the reconciliation process.
-	brokerReadinessChanged          = "BrokerReadinessChanged"
-	brokerReconcileError            = "BrokerReconcileError"
-	brokerUpdateStatusFailed        = "BrokerUpdateStatusFailed"
-	ingressSubscriptionDeleteFailed = "IngressSubscriptionDeleteFailed"
-	ingressSubscriptionCreateFailed = "IngressSubscriptionCreateFailed"
-	ingressSubscriptionGetFailed    = "IngressSubscriptionGetFailed"
+	// Name of the corev1.Events emitted from the Broker reconciliation process.
+	brokerReconcileError = "BrokerReconcileError"
+	brokerReconciled     = "BrokerReconciled"
 )
 
 type Reconciler struct {
@@ -67,6 +65,7 @@ type Reconciler struct {
 	serviceLister      corev1listers.ServiceLister
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister messaginglisters.SubscriptionLister
+	triggerLister      eventinglisters.TriggerLister
 
 	channelableTracker duck.ListableTracker
 
@@ -74,10 +73,23 @@ type Reconciler struct {
 	ingressServiceAccountName string
 	filterImage               string
 	filterServiceAccountName  string
+
+	// Dynamic tracker to track KResources. In particular, it tracks the dependency between Triggers and Sources.
+	kresourceTracker duck.ListableTracker
+
+	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
+	addressableTracker duck.ListableTracker
+	uriResolver        *resolver.URIResolver
+
+	// If specified, only reconcile brokers with these labels
+	brokerClass string
 }
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements Interface
+var _ brokerreconciler.Interface = (*Reconciler)(nil)
+var _ brokerreconciler.Finalizer = (*Reconciler)(nil)
+
+var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 
 // ReconcilerArgs are the arguments needed to create a broker.Reconciler.
 type ReconcilerArgs struct {
@@ -87,57 +99,42 @@ type ReconcilerArgs struct {
 	FilterServiceAccountName  string
 }
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Broker resource
-// with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the Broker resource with this namespace/name
-	original, err := r.brokerLister.Brokers(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Info("broker key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy
-	broker := original.DeepCopy()
-
-	// Reconcile this copy of the Broker and then write back any status
-	// updates regardless of whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, broker)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Warn("Error reconciling Broker", zap.Error(reconcileErr))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerReconcileError, fmt.Sprintf("Broker reconcile error: %v", reconcileErr))
-	} else {
-		logging.FromContext(ctx).Debug("Broker reconciled")
-	}
-
-	// Since the reconciler took a crack at this, make sure it's reflected
-	// in the status correctly.
-	broker.Status.ObservedGeneration = original.Generation
-
-	if _, updateStatusErr := r.updateStatus(ctx, broker); updateStatusErr != nil {
-		logging.FromContext(ctx).Warn("Failed to update the Broker status", zap.Error(updateStatusErr))
-		r.Recorder.Eventf(broker, corev1.EventTypeWarning, brokerUpdateStatusFailed, "Failed to update Broker's status: %v", updateStatusErr)
-		return updateStatusErr
-	}
-
-	// Requeue if the resource is not ready:
-	return reconcileErr
+func newReconciledNormal(namespace, name string) pkgreconciler.Event {
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, brokerReconciled, "Broker reconciled: \"%s/%s\"", namespace, name)
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
+	// TODO(vaikas): Can we just add this into the controller as part of the filtering
+	// so they won't even get queued into my queue???
+	if r.brokerClass != "" {
+		if b.GetAnnotations()[eventing.BrokerClassKey] != r.brokerClass {
+			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
+			return nil
+		}
+	}
+	filterSvc, err := r.reconcileKind(ctx, b)
+
+	if b.Status.IsReady() {
+		// So, at this point the Broker is ready and everything should be solid
+		// for the triggers to act upon, so reconcile them.
+		te := r.reconcileTriggers(ctx, b, filterSvc)
+		if te != nil {
+			logging.FromContext(ctx).Error("Problem reconciling triggers", zap.Error(te))
+			return fmt.Errorf("failed to reconcile triggers: %v", err)
+		}
+	} else {
+		// Broker is not ready, but propagate it's status to my triggers.
+		if te := r.propagateBrokerStatusToTriggers(ctx, b.Namespace, b.Name, &b.Status); te != nil {
+			return fmt.Errorf("Trigger reconcile failed: %v", te)
+		}
+	}
+	return err
+}
+
+func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, pkgreconciler.Event) {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
+	b.Status.ObservedGeneration = b.Generation
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
 	// 2. Filter Deployment.
@@ -149,22 +146,16 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	//     Service. However, Subscriptions only allow us to send replies to Channels, so we need
 	//     this as an intermediary.
 	// 6. Subscription from the Ingress Channel to the Ingress Service.
-
-	if b.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
-
 	if b.Spec.ChannelTemplate == nil {
 		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
 			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
-		return nil
+		return nil, errors.New("Broker.Spec.ChannelTemplate is nil")
 	}
 
 	gvr, _ := meta.UnsafeGuessKindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
 	if channelResourceInterface == nil {
-		return fmt.Errorf("unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
+		return nil, fmt.Errorf("unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
 	}
 
 	track := r.channelableTracker.TrackInNamespace(b)
@@ -178,7 +169,7 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	}
 	// Start tracking the trigger channel.
 	if err := track(triggerChannelObjRef); err != nil {
-		return fmt.Errorf("unable to track changes to the trigger Channel: %v", err)
+		return nil, fmt.Errorf("unable to track changes to the trigger Channel: %v", err)
 	}
 
 	logging.FromContext(ctx).Info("Reconciling the trigger channel")
@@ -186,19 +177,21 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
-		return err
+		return nil, fmt.Errorf("Failed to reconcile trigger channel: %v", err)
 	}
 
 	if triggerChan.Status.Address == nil {
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
-		return nil
+		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
+		return nil, nil
 	}
 	if url := triggerChan.Status.Address.GetURL(); url.Host == "" {
 		// We check the trigger Channel's address here because it is needed to create the Ingress Deployment.
 		logging.FromContext(ctx).Debug("Trigger Channel does not have an address", zap.Any("triggerChan", triggerChan))
 		b.Status.MarkTriggerChannelFailed("NoAddress", "Channel does not have an address.")
-		return nil
+		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
+		return nil, nil
 	}
 	b.Status.TriggerChannel = &triggerChannelObjRef
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
@@ -207,13 +200,13 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
 		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
-		return err
+		return nil, err
 	}
-	_, err = r.reconcileFilterService(ctx, b)
+	filterSvc, err := r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
 		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
-		return err
+		return nil, err
 	}
 	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
 
@@ -221,14 +214,14 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
 		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
-		return err
+		return nil, err
 	}
 
 	svc, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
 		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
-		return err
+		return nil, err
 	}
 	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
 	b.Status.SetAddress(&apis.URL{
@@ -236,37 +229,16 @@ func (r *Reconciler) reconcile(ctx context.Context, b *v1alpha1.Broker) error {
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
 	})
 
-	return nil
+	// So, at this point the Broker is ready and everything should be solid
+	// for the triggers to act upon.
+	return filterSvc, nil
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, desired *v1alpha1.Broker) (*v1alpha1.Broker, error) {
-	broker, err := r.brokerLister.Brokers(desired.Namespace).Get(desired.Name)
-	if err != nil {
-		return nil, err
+func (r *Reconciler) FinalizeKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
+	if err := r.propagateBrokerStatusToTriggers(ctx, b.Namespace, b.Name, nil); err != nil {
+		return fmt.Errorf("Trigger reconcile failed: %v", err)
 	}
-
-	// If there's nothing to update, just return.
-	if reflect.DeepEqual(broker.Status, desired.Status) {
-		return broker, nil
-	}
-
-	becomesReady := desired.Status.IsReady() && !broker.Status.IsReady()
-
-	// Don't modify the informers copy.
-	existing := broker.DeepCopy()
-	existing.Status = desired.Status
-
-	b, err := r.EventingClientSet.EventingV1alpha1().Brokers(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(b.ObjectMeta.CreationTimestamp.Time)
-		logging.FromContext(ctx).Sugar().Infof("Broker %q became ready after %v", broker.Name, duration)
-		r.Recorder.Event(broker, corev1.EventTypeNormal, brokerReadinessChanged, fmt.Sprintf("Broker %q became ready", broker.Name))
-		if err := r.StatsReporter.ReportReady("Broker", broker.Namespace, broker.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Broker, %v", err)
-		}
-	}
-
-	return b, err
+	return newReconciledNormal(b.Namespace, b.Name)
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.
@@ -341,7 +313,7 @@ func (r *Reconciler) reconcileChannel(ctx context.Context, channelResourceInterf
 // should only be used by Broker and Trigger code.
 func TriggerChannelLabels(brokerName string) map[string]string {
 	return map[string]string{
-		"eventing.knative.dev/broker":           brokerName,
+		eventing.BrokerLabelKey:                 brokerName,
 		"eventing.knative.dev/brokerEverything": "true",
 	}
 }
@@ -401,7 +373,7 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 
 // reconcileIngressDeploymentCRD reconciles the Ingress Deployment for a CRD backed channel.
 func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
-	expected := resources.MakeIngress(&resources.IngressArgs{
+	expected := resources.MakeIngressDeployment(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
 		ServiceAccountName: r.ingressServiceAccountName,
@@ -414,4 +386,69 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	expected := resources.MakeIngressService(b)
 	return r.reconcileService(ctx, expected)
+}
+
+// reconcileTriggers reconciles the Triggers that are pointed to this broker
+func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, filterSvc *corev1.Service) error {
+
+	// TODO: Figure out the labels stuff... If webhook does it, we can filter like this...
+	// Find all the Triggers that have been labeled as belonging to me
+	/*
+		triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.SelectorFromSet(brokerLabels(b.brokerClass)))
+	*/
+	triggers, err := r.triggerLister.Triggers(b.Namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+	for _, t := range triggers {
+		if t.Spec.Broker == b.Name {
+			trigger := t.DeepCopy()
+			tErr := r.reconcileTrigger(ctx, b, trigger, filterSvc)
+			if tErr != nil {
+				r.Logger.Error("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
+				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconcile failed: %v", tErr)
+			} else {
+				r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
+			}
+			trigger.Status.ObservedGeneration = t.Generation
+			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
+				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
+				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+			}
+		}
+	}
+	return nil
+}
+
+/* TODO: Enable once we start filtering by classes of brokers
+func brokerLabels(name string) map[string]string {
+	return map[string]string{
+		brokerAnnotationKey: name,
+	}
+}
+*/
+
+func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namespace, name string, bs *v1alpha1.BrokerStatus) error {
+	triggers, err := r.triggerLister.Triggers(namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+	for _, t := range triggers {
+		if t.Spec.Broker == name {
+			// Don't modify informers copy
+			trigger := t.DeepCopy()
+			trigger.Status.InitializeConditions()
+			if bs == nil {
+				trigger.Status.MarkBrokerFailed("BrokerDoesNotExist", "Broker %q does not exist", name)
+			} else {
+				trigger.Status.PropagateBrokerStatus(bs)
+			}
+			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
+				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
+				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				return updateStatusErr
+			}
+		}
+	}
+	return nil
 }

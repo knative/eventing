@@ -28,6 +28,7 @@ import (
 
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -163,6 +164,21 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 	trigger, err := triggers.Create(trigger)
 	if err != nil {
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
+	}
+	client.Tracker.AddObj(trigger)
+	return trigger
+}
+
+// CreateTriggerOrFailV1Beta1 will create a v1beta1 Trigger or fail the test if there is an error.
+func (client *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.TriggerOptionV1Beta1) *v1beta1.Trigger {
+	namespace := client.Namespace
+	trigger := resources.TriggerV1Beta1(name, options...)
+	triggers := client.Eventing.EventingV1beta1().Triggers(namespace)
+	client.T.Logf("Creating v1beta1 trigger %s", name)
+	// update trigger with the new reference
+	trigger, err := triggers.Create(trigger)
+	if err != nil {
+		client.T.Fatalf("Failed to create v1beta1 trigger %q: %v", name, err)
 	}
 	client.Tracker.AddObj(trigger)
 	return trigger

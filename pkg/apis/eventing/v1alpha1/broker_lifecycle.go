@@ -32,14 +32,11 @@ var brokerCondSet = apis.NewLivingConditionSet(
 )
 
 const (
-	BrokerConditionReady                      = apis.ConditionReady
-	BrokerConditionIngress apis.ConditionType = "IngressReady"
-
+	BrokerConditionReady                             = apis.ConditionReady
+	BrokerConditionIngress        apis.ConditionType = "IngressReady"
 	BrokerConditionTriggerChannel apis.ConditionType = "TriggerChannelReady"
-
-	BrokerConditionFilter apis.ConditionType = "FilterReady"
-
-	BrokerConditionAddressable apis.ConditionType = "Addressable"
+	BrokerConditionFilter         apis.ConditionType = "FilterReady"
+	BrokerConditionAddressable    apis.ConditionType = "Addressable"
 )
 
 // GetCondition returns the condition currently associated with the given type, or nil.

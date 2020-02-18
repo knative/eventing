@@ -29,6 +29,7 @@ import (
 )
 
 // +genclient
+// +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Broker collects a pool of events that are consumable using Triggers. Brokers
@@ -70,6 +71,13 @@ type BrokerSpec struct {
 	// are no defaults for the namespace).
 	// +optional
 	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
+
+	// Config is a KReference to the configuration that specifies
+	// configuration options for this Broker. For example, this could be
+	// a pointer to a ConfigMap.
+	// NOTE: this is for backwards compatibility with v1alpha1 <-> v1beta1 conversions.
+	// +optional
+	Config *duckv1.KReference `json:"config,omitempty"`
 
 	// Delivery is the delivery specification to be used internally by the broker to
 	// create subscriptions.
