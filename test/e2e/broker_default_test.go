@@ -26,13 +26,10 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/test/logging"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
-	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
@@ -220,44 +217,6 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			}
 		})
 	}
-}
-
-// This test is for avoiding regressions on the trigger dependency annotation functionality.
-// It will first create a trigger with the dependency annotation, and then create a pingSource.
-// Broker controller should make trigger become ready after pingSource is ready.
-func TestTriggerDependencyAnnotation(t *testing.T) {
-	const (
-		triggerName          = "trigger-annotation"
-		subscriberName       = "subscriber-annotation"
-		dependencyAnnotation = `{"kind":"PingSource","name":"test-ping-source-annotation","apiVersion":"sources.knative.dev/v1alpha1"}`
-		pingSourceName       = "test-ping-source-annotation"
-		schedule             = "*/2 * * * *"
-	)
-	client := setup(t, true)
-	defer tearDown(client)
-
-	// Label namespace so that it creates the default broker.
-	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
-		t.Fatalf("Error annotating namespace: %v", err)
-	}
-	// Wait for default broker ready.
-	client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
-
-	// Create triggers.
-	client.CreateTriggerOrFail(triggerName, resources.WithSubscriberServiceRefForTrigger(subscriberName), resources.WithDependencyAnnotaionTrigger(dependencyAnnotation))
-
-	pingSource := eventingtesting.NewPingSource(
-		pingSourceName,
-		client.Namespace,
-		eventingtesting.WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
-			Sink:     &duckv1.Destination{Ref: resources.KnativeRefForService(defaultBrokerName, client.Namespace)},
-			Schedule: schedule,
-		}),
-	)
-	client.CreatePingSourceOrFail(pingSource)
-
-	// Trigger should become ready after pingSource was created
-	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)
 }
 
 func getTriggerFilterOption(deprecatedTriggerFilter bool, context eventContext) resources.TriggerOption {
