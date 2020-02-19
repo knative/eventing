@@ -20,21 +20,28 @@ import (
 	"context"
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/apis"
 )
 
 func (b *Broker) SetDefaults(ctx context.Context) {
-	// If we haven't configured the new channelTemplate,
-	// then set the default channel to the new channelTemplate.
-	if b != nil && b.Spec.ChannelTemplate == nil {
-		// The singleton may not have been set, if so ignore it and validation will reject the Broker.
-		if cd := eventingduckv1alpha1.ChannelDefaulterSingleton; cd != nil {
-			channelTemplate := cd.GetDefault(b.Namespace)
-			b.Spec.ChannelTemplate = channelTemplate
-		}
-	}
-	b.Spec.SetDefaults(ctx)
+	withNS := apis.WithinParent(ctx, b.ObjectMeta)
+	b.Spec.SetDefaults(withNS)
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	// None
+	if bs.Config == nil {
+		// If we haven't configured the new channelTemplate,
+		// then set the default channel to the new channelTemplate.
+		if bs.ChannelTemplate == nil {
+			// The singleton may not have been set, if so ignore it and validation will reject the Broker.
+			if cd := eventingduckv1alpha1.ChannelDefaulterSingleton; cd != nil {
+				channelTemplate := cd.GetDefault(apis.ParentMeta(ctx).Namespace)
+				bs.ChannelTemplate = channelTemplate
+			}
+		}
+	} else {
+		if bs.Config.Namespace == "" {
+			bs.Config.Namespace = apis.ParentMeta(ctx).Namespace
+		}
+	}
 }

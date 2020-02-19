@@ -40,6 +40,9 @@ import (
 // BrokerOption enables further configuration of a Broker.
 type BrokerOption func(*eventingv1alpha1.Broker)
 
+// BrokerV1Beta1Option enables further configuration of a Broker.
+type BrokerV1Beta1Option func(*eventingv1beta1.Broker)
+
 // TriggerOption enables further configuration of a Trigger.
 type TriggerOption func(*eventingv1alpha1.Trigger)
 
@@ -175,6 +178,13 @@ func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption
 	}
 }
 
+// WithChannelTemplateForBrokerV1Beta1 returns a function that adds a Config to the given Broker.
+func WithChannelTemplateForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		b.Spec.Config = config
+	}
+}
+
 // WithDeliveryForBroker returns a function that adds a Delivery for the given Broker.
 func WithDeliveryForBroker(delivery *eventingduckv1alpha1.DeliverySpec) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
@@ -217,6 +227,19 @@ func ConfigMap(name string, data map[string]string) *corev1.ConfigMap {
 // Broker returns a Broker.
 func Broker(name string, options ...BrokerOption) *eventingv1alpha1.Broker {
 	broker := &eventingv1alpha1.Broker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	for _, option := range options {
+		option(broker)
+	}
+	return broker
+}
+
+// Broker returns a Broker.
+func BrokerV1Beta1(name string, options ...BrokerV1Beta1Option) *eventingv1beta1.Broker {
+	broker := &eventingv1beta1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},

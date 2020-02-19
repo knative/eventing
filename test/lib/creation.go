@@ -36,6 +36,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -154,6 +155,44 @@ func (client *Client) CreateBrokerOrFail(name string, options ...resources.Broke
 	namespace := client.Namespace
 	broker := resources.Broker(name, options...)
 	brokers := client.Eventing.EventingV1alpha1().Brokers(namespace)
+	client.T.Logf("Creating broker %s", name)
+	// update broker with the new reference
+	broker, err := brokers.Create(broker)
+	if err != nil {
+		client.T.Fatalf("Failed to create broker %q: %v", name, err)
+	}
+	client.Tracker.AddObj(broker)
+	return broker
+}
+
+func (client *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMeta) *duckv1.KReference {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: client.Namespace,
+		},
+		Data: map[string]string{
+			"channelTemplateSpec.kind":       channel.Kind,
+			"channelTemplateSpec.apiVersion": channel.APIVersion,
+		},
+	}
+	cm, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Create(cm)
+	if err != nil {
+		client.T.Fatalf("Failed to create broker config %q: %v", name, err)
+	}
+	return &duckv1.KReference{
+		APIVersion: "v1",
+		Kind:       "ConfigMap",
+		Namespace:  client.Namespace,
+		Name:       name,
+	}
+}
+
+// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
+func (client *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.BrokerV1Beta1Option) *v1beta1.Broker {
+	namespace := client.Namespace
+	broker := resources.BrokerV1Beta1(name, options...)
+	brokers := client.Eventing.EventingV1beta1().Brokers(namespace)
 	client.T.Logf("Creating broker %s", name)
 	// update broker with the new reference
 	broker, err := brokers.Create(broker)

@@ -70,6 +70,8 @@ type BrokerSpec struct {
 	// Broker. If left unspecified, it is set to the default Channel CRD for the namespace (or cluster, in case there
 	// are no defaults for the namespace).
 	// +optional
+	// Deprecated: See spec.config to configure aditional broker options.
+	// Unless class is <TBD> for channel based broker implementation.
 	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
 
 	// Config is a KReference to the configuration that specifies

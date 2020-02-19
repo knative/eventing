@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -75,6 +77,29 @@ func TestBrokerSetDefaults(t *testing.T) {
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
 						},
+					},
+				},
+			},
+		},
+		"config already specified": {
+			channelTemplate: defaultChannelTemplate,
+			initial: Broker{
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "k",
+						Namespace:  "ns",
+						Name:       "k",
+						APIVersion: "api",
+					},
+				},
+			},
+			expected: Broker{
+				Spec: BrokerSpec{
+					Config: &duckv1.KReference{
+						Kind:       "k",
+						Namespace:  "ns",
+						Name:       "k",
+						APIVersion: "api",
 					},
 				},
 			},

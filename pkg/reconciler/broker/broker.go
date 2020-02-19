@@ -120,7 +120,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 		te := r.reconcileTriggers(ctx, b, filterSvc)
 		if te != nil {
 			logging.FromContext(ctx).Error("Problem reconciling triggers", zap.Error(te))
-			return fmt.Errorf("failed to reconcile triggers: %v", err)
+			return fmt.Errorf("failed to reconcile triggers: %v", te)
 		}
 	} else {
 		// Broker is not ready, but propagate it's status to my triggers.
@@ -146,34 +146,21 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*co
 	//     Service. However, Subscriptions only allow us to send replies to Channels, so we need
 	//     this as an intermediary.
 	// 6. Subscription from the Ingress Channel to the Ingress Service.
-	if b.Spec.ChannelTemplate == nil {
-		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
-			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
-		return nil, errors.New("Broker.Spec.ChannelTemplate is nil")
-	}
 
-	gvr, _ := meta.UnsafeGuessKindToResource(b.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
-	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
-	if channelResourceInterface == nil {
-		return nil, fmt.Errorf("unable to create dynamic client for: %+v", b.Spec.ChannelTemplate)
-	}
-
-	track := r.channelableTracker.TrackInNamespace(b)
-
-	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
-	triggerChannelObjRef := corev1.ObjectReference{
-		Kind:       b.Spec.ChannelTemplate.Kind,
-		APIVersion: b.Spec.ChannelTemplate.APIVersion,
-		Name:       triggerChannelName,
-		Namespace:  b.Namespace,
-	}
-	// Start tracking the trigger channel.
-	if err := track(triggerChannelObjRef); err != nil {
-		return nil, fmt.Errorf("unable to track changes to the trigger Channel: %v", err)
+	chanMan, err := r.getChannelTemplate(ctx, b)
+	if err != nil {
+		b.Status.MarkTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: %s", err)
+		return nil, err
 	}
 
 	logging.FromContext(ctx).Info("Reconciling the trigger channel")
-	triggerChan, err := r.reconcileTriggerChannel(ctx, channelResourceInterface, triggerChannelObjRef, b)
+	c, err := resources.NewChannel("trigger", b, &chanMan.template, TriggerChannelLabels(b.Name))
+	if err != nil {
+		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel object: %s/%s", chanMan.ref.Namespace, chanMan.ref.Name), zap.Error(err))
+		return nil, err
+	}
+
+	triggerChan, err := r.reconcileChannel(ctx, chanMan.inf, chanMan.ref, c, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling the trigger channel", zap.Error(err))
 		b.Status.MarkTriggerChannelFailed("ChannelFailure", "%v", err)
@@ -193,7 +180,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*co
 		// Ok to return nil for error here, once channel address becomes available, this will get requeued.
 		return nil, nil
 	}
-	b.Status.TriggerChannel = &triggerChannelObjRef
+	b.Status.TriggerChannel = &chanMan.ref
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
 	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
@@ -234,6 +221,76 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*co
 	return filterSvc, nil
 }
 
+type channelTemplate struct {
+	ref      corev1.ObjectReference
+	inf      dynamic.ResourceInterface
+	template duckv1alpha1.ChannelTemplateSpec
+}
+
+func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker) (*channelTemplate, error) {
+	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
+	ref := corev1.ObjectReference{
+		Name:      triggerChannelName,
+		Namespace: b.Namespace,
+	}
+	var template *duckv1alpha1.ChannelTemplateSpec
+
+	if b.Spec.Config != nil {
+		if b.Spec.Config.Kind == "ConfigMap" && b.Spec.Config.APIVersion == "v1" {
+			if b.Spec.Config.Namespace == "" || b.Spec.Config.Name == "" {
+				r.Logger.Error("Broker.Spec.Config name and namespace are required",
+					zap.String("namespace", b.Namespace), zap.String("name", b.Name))
+				return nil, errors.New("Broker.Spec.Config name and namespace are required")
+			}
+			cm, err := r.KubeClientSet.CoreV1().ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			// TODO: there are better ways to do this...
+
+			if config, err := NewConfigFromConfigMapFunc(ctx)(cm); err != nil {
+				return nil, err
+			} else if config != nil {
+				template = &config.DefaultChannelTemplate
+			}
+			r.Logger.Info("Using channel template = ", template)
+		} else {
+			return nil, errors.New("Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]")
+		}
+	} else if b.Spec.ChannelTemplate != nil {
+		template = b.Spec.ChannelTemplate
+	} else {
+		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
+			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
+		return nil, errors.New("Broker.Spec.ChannelTemplate is nil")
+	}
+
+	if template == nil {
+		return nil, errors.New("failed to find channelTemplate")
+	}
+	ref.APIVersion = template.APIVersion
+	ref.Kind = template.Kind
+
+	gvr, _ := meta.UnsafeGuessKindToResource(template.GetObjectKind().GroupVersionKind())
+
+	inf := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
+	if inf == nil {
+		return nil, fmt.Errorf("unable to create dynamic client for: %+v", template)
+	}
+
+	track := r.channelableTracker.TrackInNamespace(b)
+
+	// Start tracking the trigger channel.
+	if err := track(ref); err != nil {
+		return nil, fmt.Errorf("unable to track changes to the trigger Channel: %v", err)
+	}
+	return &channelTemplate{
+		ref:      ref,
+		inf:      inf,
+		template: *template,
+	}, nil
+}
+
 func (r *Reconciler) FinalizeKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
 	if err := r.propagateBrokerStatusToTriggers(ctx, b.Namespace, b.Name, nil); err != nil {
 		return fmt.Errorf("Trigger reconcile failed: %v", err)
@@ -255,19 +312,6 @@ func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.
 func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
 	expected := resources.MakeFilterService(b)
 	return r.reconcileService(ctx, expected)
-}
-
-func newTriggerChannel(b *v1alpha1.Broker) (*unstructured.Unstructured, error) {
-	return resources.NewChannel("trigger", b, TriggerChannelLabels(b.Name))
-}
-
-func (r *Reconciler) reconcileTriggerChannel(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channelObjRef corev1.ObjectReference, b *v1alpha1.Broker) (*duckv1alpha1.Channelable, error) {
-	c, err := newTriggerChannel(b)
-	if err != nil {
-		logging.FromContext(ctx).Error(fmt.Sprintf("Failed to create Trigger Channel object: %s/%s", channelObjRef.Namespace, channelObjRef.Name), zap.Error(err))
-		return nil, err
-	}
-	return r.reconcileChannel(ctx, channelResourceInterface, channelObjRef, c, b)
 }
 
 // reconcileChannel reconciles Broker's 'b' underlying channel.

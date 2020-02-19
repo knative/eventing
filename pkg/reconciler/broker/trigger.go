@@ -101,6 +101,9 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+	if svc == nil {
+		return nil, fmt.Errorf("service for broker is nil")
+	}
 	uri := &apis.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName(svc.Name, svc.Namespace),

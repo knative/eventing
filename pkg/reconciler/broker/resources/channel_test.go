@@ -82,7 +82,7 @@ func TestNewChannel(t *testing.T) {
 				},
 			}
 			labels := map[string]string{"key": "value"}
-			c, err := NewChannel("ingress", b, labels)
+			c, err := NewChannel("ingress", b, b.Spec.ChannelTemplate, labels)
 			if err != nil {
 				if !tc.expectError {
 					t.Fatalf("Unexpected error calling NewChannel: %v", err)
