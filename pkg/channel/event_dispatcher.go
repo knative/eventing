@@ -30,7 +30,6 @@ import (
 	pkgtracing "knative.dev/pkg/tracing"
 
 	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/eventing/pkg/utils"
 )
 
@@ -171,7 +170,7 @@ func (d *EventDispatcher) DispatchEventWithDelivery(ctx context.Context, event c
 func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	d.logger.Debug("Dispatching event", zap.String("event.id", event.ID()), zap.String("url", url.String()))
 	originalTransportCTX := cloudevents.HTTPTransportContextFrom(ctx)
-	sendingCTX := d.generateSendingContext(originalTransportCTX, url, event)
+	sendingCTX := utils.SendingContextFrom(ctx, originalTransportCTX, url)
 
 	replyCTX, reply, err := d.ceClient.Send(sendingCTX, event)
 	if err != nil {
@@ -184,15 +183,6 @@ func (d *EventDispatcher) executeRequest(ctx context.Context, url *url.URL, even
 	return replyCTX, reply, nil
 }
 
-func (d *EventDispatcher) generateSendingContext(originalTransportCTX cehttp.TransportContext, url *url.URL, event cloudevents.Event) context.Context {
-	sctx := utils.ContextFrom(originalTransportCTX, url)
-	sctx, err := tracing.AddSpanFromTraceparentAttribute(sctx, url.Path, event)
-	if err != nil {
-		d.logger.Info("Unable to connect outgoing span", zap.Error(err))
-	}
-	return sctx
-}
-
 func generateReplyContext(rctx context.Context, originalTransportCTX cehttp.TransportContext) (context.Context, error) {
 	// rtctx = Reply transport context
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)
@@ -200,12 +190,12 @@ func generateReplyContext(rctx context.Context, originalTransportCTX cehttp.Tran
 		// Reject non-successful responses.
 		return rctx, fmt.Errorf("unexpected HTTP response, expected 2xx, got %d", rtctx.StatusCode)
 	}
-	headers := utils.PassThroughHeaders(rtctx.Header)
+	rctx = utils.SendingContextFrom(rctx, rtctx, nil)
 	if correlationID, ok := originalTransportCTX.Header[correlationIDHeaderName]; ok {
-		headers[correlationIDHeaderName] = correlationID
+		for _, v := range correlationID {
+			rctx = cloudevents.ContextWithHeader(rctx, correlationIDHeaderName, v)
+		}
 	}
-	rtctx.Header = http.Header(headers)
-	rctx = cehttp.WithTransportContext(rctx, rtctx)
 	return rctx, nil
 }
 

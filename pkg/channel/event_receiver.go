@@ -155,7 +155,7 @@ func (r *EventReceiver) ServeHTTP(ctx context.Context, event cloudevents.Event, 
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
 
-	sctx := utils.ContextFrom(tctx, nil)
+	sctx := utils.ReceivingContextFrom(ctx)
 	AppendHistory(&event, host)
 
 	event = tracing.AddTraceparentAttributeFromContext(ctx, event)
