@@ -235,6 +235,16 @@ func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extension
 	}
 }
 
+// WithDependencyAnnotaionTrigger returns an option that adds a dependency annotation to the given Trigger.
+func WithDependencyAnnotaionTrigger(dependencyAnnotation string) TriggerOption {
+	return func(t *eventingv1alpha1.Trigger) {
+		if t.Annotations == nil {
+			t.Annotations = make(map[string]string)
+		}
+		t.Annotations[eventingv1alpha1.DependencyAnnotation] = dependencyAnnotation
+	}
+}
+
 // WithBroker returns an option that adds a Broker for the given Trigger.
 func WithBroker(brokerName string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
