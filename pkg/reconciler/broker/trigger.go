@@ -33,7 +33,6 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
-	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -52,7 +51,7 @@ const (
 	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
-func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, filterSvc *corev1.Service) error {
+func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, filterSvcURL *apis.URL) error {
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
@@ -84,7 +83,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 	t.Status.SubscriberURI = subscriberURI
 	t.Status.MarkSubscriberResolvedSucceeded()
 
-	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger, filterSvc)
+	sub, err := r.subscribeToBrokerChannel(ctx, b, t, brokerTrigger, filterSvcURL)
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to Subscribe", zap.Error(err))
 		t.Status.MarkNotSubscribed("NotSubscribed", "%v", err)
@@ -100,13 +99,14 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
-	if svc == nil {
-		return nil, fmt.Errorf("service for broker is nil")
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference, filterSvcURL *apis.URL) (*messagingv1alpha1.Subscription, error) {
+	if filterSvcURL == nil {
+		return nil, fmt.Errorf("service URL for broker is nil")
 	}
+
 	uri := &apis.URL{
-		Scheme: "http",
-		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+		Scheme: filterSvcURL.Scheme,
+		Host:   filterSvcURL.Host,
 		Path:   path.Generate(t),
 	}
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not

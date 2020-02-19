@@ -19,14 +19,12 @@ package resources
 import (
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/pkg/kmeta"
+	"knative.dev/eventing/pkg/reconciler/internal/service"
 	"knative.dev/pkg/system"
 )
 
@@ -42,125 +40,78 @@ type IngressArgs struct {
 	ChannelAddress     string
 }
 
-// MakeIngress creates the in-memory representation of the Broker's ingress Deployment.
-func MakeIngressDeployment(args *IngressArgs) *appsv1.Deployment {
-	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
+// MakeIngressServiceArgs creates the in-memory representation of the Broker's ingress service arguments.
+func MakeIngressServiceArgs(args *IngressArgs) *service.Args {
+	return &service.Args{
+		ServiceMeta: metav1.ObjectMeta{
+			Namespace: args.Broker.Namespace,
+			Name:      fmt.Sprintf("%s-broker", args.Broker.Name),
+			Labels:    IngressLabels(args.Broker.Name),
+		},
+		DeployMeta: metav1.ObjectMeta{
 			Namespace: args.Broker.Namespace,
 			Name:      fmt.Sprintf("%s-broker-ingress", args.Broker.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(args.Broker),
-			},
-			Labels: IngressLabels(args.Broker.Name),
+			Labels:    IngressLabels(args.Broker.Name),
 		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: IngressLabels(args.Broker.Name),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: IngressLabels(args.Broker.Name),
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: args.ServiceAccountName,
-					Containers: []corev1.Container{
-						{
-							Image: args.Image,
-							Name:  ingressContainerName,
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       2,
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  system.NamespaceEnvKey,
-									Value: system.Namespace(),
-								},
-								{
-									Name: "NAMESPACE",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
-								},
-								{
-									Name: "POD_NAME",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
-										},
-									},
-								},
-								{
-									Name:  "CONTAINER_NAME",
-									Value: ingressContainerName,
-								},
-								{
-									Name:  "FILTER",
-									Value: "", // TODO Add one.
-								},
-								{
-									Name:  "CHANNEL",
-									Value: args.ChannelAddress,
-								},
-								{
-									Name:  "BROKER",
-									Value: args.Broker.Name,
-								},
-								// Used for StackDriver only.
-								{
-									Name:  "METRICS_DOMAIN",
-									Value: "knative.dev/internal/eventing",
-								},
-							},
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 8080,
-									Name:          "http",
-								},
-								{
-									ContainerPort: 9090,
-									Name:          "metrics",
-								},
+		PodSpec: corev1.PodSpec{
+			ServiceAccountName: args.ServiceAccountName,
+			Containers: []corev1.Container{
+				{
+					Image: args.Image,
+					Name:  ingressContainerName,
+					LivenessProbe: &corev1.Probe{
+						Handler: corev1.Handler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/healthz",
+								// Port should be the same as the container port.
 							},
 						},
+						InitialDelaySeconds: 5,
+						PeriodSeconds:       2,
+						FailureThreshold:    3,
+						TimeoutSeconds:      10,
+						SuccessThreshold:    1,
 					},
-				},
-			},
-		},
-	}
-}
-
-// MakeIngressService creates the in-memory representation of the Broker's ingress Service.
-func MakeIngressService(b *eventingv1alpha1.Broker) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: b.Namespace,
-			// TODO add -ingress to the name to be consistent with the filter service naming.
-			Name:   fmt.Sprintf("%s-broker", b.Name),
-			Labels: IngressLabels(b.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*kmeta.NewControllerRef(b),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: IngressLabels(b.Name),
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.FromInt(8080),
-				},
-				{
-					Name: "http-metrics",
-					Port: 9090,
+					Env: []corev1.EnvVar{
+						{
+							Name:  system.NamespaceEnvKey,
+							Value: system.Namespace(),
+						},
+						{
+							Name:  "NAMESPACE",
+							Value: args.Broker.Namespace,
+						},
+						{
+							Name:  "POD_NAME",
+							Value: fmt.Sprintf("%s-broker-ingress", args.Broker.Name),
+						},
+						{
+							Name:  "CONTAINER_NAME",
+							Value: ingressContainerName,
+						},
+						{
+							Name:  "FILTER",
+							Value: "", // TODO Add one.
+						},
+						{
+							Name:  "CHANNEL",
+							Value: args.ChannelAddress,
+						},
+						{
+							Name:  "BROKER",
+							Value: args.Broker.Name,
+						},
+						// Used for StackDriver only.
+						{
+							Name:  "METRICS_DOMAIN",
+							Value: "knative.dev/internal/eventing",
+						},
+					},
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: 8080,
+						},
+					},
 				},
 			},
 		},

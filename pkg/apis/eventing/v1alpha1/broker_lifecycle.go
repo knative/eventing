@@ -101,6 +101,14 @@ func (bs *BrokerStatus) PropagateFilterDeploymentAvailability(d *appsv1.Deployme
 	}
 }
 
+func (bs *BrokerStatus) MarkIngressReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
+}
+
+func (bs *BrokerStatus) MarkFilterReady() {
+	brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
+}
+
 // SetAddress makes this Broker addressable by setting the hostname. It also
 // sets the BrokerConditionAddressable to true.
 func (bs *BrokerStatus) SetAddress(url *apis.URL) {

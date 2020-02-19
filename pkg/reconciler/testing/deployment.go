@@ -96,3 +96,20 @@ func WithDeploymentAvailable() DeploymentOption {
 		}
 	}
 }
+
+func WithDeploymentPodSpec(podSpec corev1.PodSpec) DeploymentOption {
+	return func(d *appsv1.Deployment) {
+		d.Spec.Template.Spec = podSpec
+	}
+}
+
+func WithDeploymentNotAvailable() DeploymentOption {
+	return func(d *appsv1.Deployment) {
+		d.Status.Conditions = []appsv1.DeploymentCondition{
+			{
+				Type:   appsv1.DeploymentAvailable,
+				Status: corev1.ConditionFalse,
+			},
+		}
+	}
+}

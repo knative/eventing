@@ -40,6 +40,7 @@ import (
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
+	kubeservice "knative.dev/eventing/pkg/reconciler/internal/service/kube"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -49,6 +50,7 @@ import (
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -309,11 +311,11 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithFilterFailed("DeploymentFailure", "inducing failure for create deployments")),
+					WithFilterFailed("ServiceFailure", "failed to create deployment: inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create deployments"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to create deployment: inducing failure for create deployments"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
@@ -342,7 +344,7 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithFilterFailed("DeploymentFailure", "inducing failure for update deployments")),
+					WithFilterFailed("ServiceFailure", "failed to update deployment: inducing failure for update deployments")),
 			}},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewDeployment(filterDeploymentName, testNS,
@@ -353,7 +355,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update deployments"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to update deployment: inducing failure for update deployments"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
@@ -388,11 +390,11 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithFilterFailed("ServiceFailure", "inducing failure for create services")),
+					WithFilterFailed("ServiceFailure", "failed to create service: inducing failure for create services")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to create service: inducing failure for create services"),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
@@ -431,11 +433,11 @@ func TestReconcile(t *testing.T) {
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithFilterFailed("ServiceFailure", "inducing failure for update services")),
+					WithFilterFailed("ServiceFailure", "failed to update service: inducing failure for update services")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update services"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to update service: inducing failure for update services"),
 			},
 			WantErr: true,
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -477,11 +479,11 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithIngressFailed("DeploymentFailure", "inducing failure for create deployments")),
+					WithIngressFailed("ServiceFailure", "failed to create deployment: inducing failure for create deployments")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create deployments"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to create deployment: inducing failure for create deployments"),
 			},
 			WantErr: true,
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -531,11 +533,11 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithIngressFailed("DeploymentFailure", "inducing failure for update deployments")),
+					WithIngressFailed("ServiceFailure", "failed to update deployment: inducing failure for update deployments")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update deployments"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to update deployment: inducing failure for update deployments"),
 			},
 			WantErr: true,
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -580,11 +582,11 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithIngressFailed("ServiceFailure", "inducing failure for create services")),
+					WithIngressFailed("ServiceFailure", "failed to create service: inducing failure for create services")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for create services"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to create service: inducing failure for create services"),
 			},
 			WantErr: true,
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -633,11 +635,11 @@ func TestReconcile(t *testing.T) {
 					WithTriggerChannelReady(),
 					WithFilterDeploymentAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithIngressFailed("ServiceFailure", "inducing failure for update services")),
+					WithIngressFailed("ServiceFailure", "failed to update service: inducing failure for update services")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
-				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update services"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "failed to update service: inducing failure for update services"),
 			},
 			WantErr: true,
 			WantPatches: []clientgotesting.PatchActionImpl{
@@ -1392,12 +1394,15 @@ func TestReconcile(t *testing.T) {
 		ctx = v1addr.WithDuck(ctx)
 		ctx = conditions.WithDuck(ctx)
 		r := &Reconciler{
-			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
+			Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
+			serviceReconciler: &kubeservice.ServiceReconciler{
+				KubeClientSet:    kubeclient.Get(ctx),
+				DeploymentLister: listers.GetDeploymentLister(),
+				ServiceLister:    listers.GetServiceLister(),
+			},
 			subscriptionLister:        listers.GetSubscriptionLister(),
 			triggerLister:             listers.GetTriggerLister(),
 			brokerLister:              listers.GetBrokerLister(),
-			serviceLister:             listers.GetK8sServiceLister(),
-			deploymentLister:          listers.GetDeploymentLister(),
 			filterImage:               filterImage,
 			filterServiceAccountName:  filterSA,
 			ingressImage:              ingressImage,
@@ -1442,6 +1447,9 @@ func livenessProbe() *corev1.Probe {
 		},
 		InitialDelaySeconds: 5,
 		PeriodSeconds:       2,
+		TimeoutSeconds:      10,
+		FailureThreshold:    3,
+		SuccessThreshold:    1,
 	}
 }
 
@@ -1455,6 +1463,9 @@ func readinessProbe() *corev1.Probe {
 		},
 		InitialDelaySeconds: 5,
 		PeriodSeconds:       2,
+		TimeoutSeconds:      10,
+		FailureThreshold:    3,
+		SuccessThreshold:    1,
 	}
 }
 
@@ -1467,20 +1478,12 @@ func envVars(containerName string) []corev1.EnvVar {
 				Value: system.Namespace(),
 			},
 			{
-				Name: "NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
+				Name:  "NAMESPACE",
+				Value: testNS,
 			},
 			{
-				Name: "POD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
-					},
-				},
+				Name:  "POD_NAME",
+				Value: brokerName + "-broker-filter",
 			},
 			{
 				Name:  "CONTAINER_NAME",
@@ -1502,20 +1505,12 @@ func envVars(containerName string) []corev1.EnvVar {
 				Value: system.Namespace(),
 			},
 			{
-				Name: "NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
+				Name:  "NAMESPACE",
+				Value: testNS,
 			},
 			{
-				Name: "POD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
-					},
-				},
+				Name:  "POD_NAME",
+				Value: brokerName + "-broker-ingress",
 			},
 			{
 				Name:  "CONTAINER_NAME",
@@ -1548,10 +1543,6 @@ func containerPorts(httpInternal int32) []corev1.ContainerPort {
 			Name:          "http",
 			ContainerPort: httpInternal,
 		},
-		{
-			Name:          "metrics",
-			ContainerPort: 9090,
-		},
 	}
 }
 
@@ -1561,9 +1552,6 @@ func servicePorts(httpInternal int) []corev1.ServicePort {
 			Name:       "http",
 			Port:       80,
 			TargetPort: intstr.FromInt(httpInternal),
-		}, {
-			Name: "http-metrics",
-			Port: 9090,
 		},
 	}
 	return svcPorts
@@ -1693,7 +1681,7 @@ func makeBrokerRef() *corev1.ObjectReference {
 func makeServiceURI() *apis.URL {
 	return &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.%s", makeBrokerFilterService().Name, testNS, utils.GetClusterDomainName()),
+		Host:   fmt.Sprintf("%s.%s.svc.%s", resources.MakeFilterServiceMeta(makeBroker()).Name, testNS, utils.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
@@ -1701,7 +1689,11 @@ func makeEmptyDelivery() *eventingduckv1alpha1.DeliverySpec {
 	return nil
 }
 func makeBrokerFilterService() *corev1.Service {
-	return resources.MakeFilterService(makeBroker())
+	args := resources.MakeFilterServiceArgs(&resources.FilterArgs{
+		Broker: makeBroker(),
+		Image:  "test-image",
+	})
+	return NewService(args.ServiceMeta.Name, args.ServiceMeta.Namespace)
 }
 
 func makeBroker() *v1alpha1.Broker {

@@ -34,8 +34,10 @@ import (
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
+	kubeservice "knative.dev/eventing/pkg/reconciler/internal/service/kube"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
@@ -79,10 +81,13 @@ func NewController(
 	serviceInformer := serviceinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
+		Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
+		serviceReconciler: &kubeservice.ServiceReconciler{
+			KubeClientSet:    kubeclient.Get(ctx),
+			DeploymentLister: deploymentInformer.Lister(),
+			ServiceLister:    serviceInformer.Lister(),
+		},
 		brokerLister:              brokerInformer.Lister(),
-		serviceLister:             serviceInformer.Lister(),
-		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
 		triggerLister:             triggerInformer.Lister(),
 		ingressImage:              env.IngressImage,
