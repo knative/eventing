@@ -32,7 +32,6 @@ type Config struct {
 }
 
 func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.ConfigMap) (*Config, error) {
-	//logger := logging.FromContext(ctx)
 	return func(configMap *corev1.ConfigMap) (*Config, error) {
 
 		apiVersion, ok := configMap.Data["channelTemplateSpec.apiVersion"]
@@ -60,7 +59,5 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 				Spec: spec,
 			},
 		}, nil
-
-		// apiVersion, kind, spec
 	}
 }

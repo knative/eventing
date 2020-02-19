@@ -149,6 +149,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*co
 
 	chanMan, err := r.getChannelTemplate(ctx, b)
 	if err != nil {
+		b.Status.MarkTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: %s", err)
 		return nil, err
 	}
 
@@ -234,24 +235,28 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker)
 	}
 	var template *duckv1alpha1.ChannelTemplateSpec
 
-	if b.Spec.Config != nil && b.Spec.Config.Kind == "ConfigMap" && b.Spec.Config.APIVersion == "v1" {
-		if b.Spec.Config.Namespace == "" || b.Spec.Config.Name == "" {
-			r.Logger.Error("Broker.Spec.Config name and namespace are required",
-				zap.String("namespace", b.Namespace), zap.String("name", b.Name))
-			return nil, errors.New("Broker.Spec.Config name and namespace are required")
-		}
-		cm, err := r.KubeClientSet.CoreV1().ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		// TODO: there are better ways to do this...
+	if b.Spec.Config != nil {
+		if b.Spec.Config.Kind == "ConfigMap" && b.Spec.Config.APIVersion == "v1" {
+			if b.Spec.Config.Namespace == "" || b.Spec.Config.Name == "" {
+				r.Logger.Error("Broker.Spec.Config name and namespace are required",
+					zap.String("namespace", b.Namespace), zap.String("name", b.Name))
+				return nil, errors.New("Broker.Spec.Config name and namespace are required")
+			}
+			cm, err := r.KubeClientSet.CoreV1().ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			// TODO: there are better ways to do this...
 
-		if config, err := NewConfigFromConfigMapFunc(ctx)(cm); err != nil {
-			return nil, err
-		} else if config != nil {
-			template = &config.DefaultChannelTemplate
+			if config, err := NewConfigFromConfigMapFunc(ctx)(cm); err != nil {
+				return nil, err
+			} else if config != nil {
+				template = &config.DefaultChannelTemplate
+			}
+			r.Logger.Info("Using channel template = ", template)
+		} else {
+			return nil, errors.New("Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]")
 		}
-		r.Logger.Info("Using channel template = ", template)
 	} else if b.Spec.ChannelTemplate != nil {
 		template = b.Spec.ChannelTemplate
 	} else {

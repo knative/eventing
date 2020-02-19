@@ -205,6 +205,11 @@ func TestReconcile(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
 			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithInitBrokerConditions,
+					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil")),
+			}},
 			// This returns an internal error, so it emits an Error
 			WantErr: true,
 		}, {
@@ -804,9 +809,13 @@ func TestReconcile(t *testing.T) {
 					WithInitTriggerConditions,
 					WithTriggerDependencyReady(),
 					WithTriggerSubscribedUnknown("SubscriptionNotConfigured", "Subscription has not yet been reconciled."),
-					WithTriggerBrokerUnknown("", ""),
+					WithTriggerBrokerFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil"),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerStatusSubscriberURI(subscriberURI)),
+			}, {
+				Object: NewBroker(brokerName, testNS,
+					WithInitBrokerConditions,
+					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil")),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
