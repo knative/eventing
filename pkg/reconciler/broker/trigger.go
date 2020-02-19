@@ -148,6 +148,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1alpha1.Trig
 	if equality.Semantic.DeepDerivative(expected.Spec, actual.Spec) {
 		return actual, nil
 	}
+	logging.FromContext(ctx).Info("Differing Subscription", zap.Any("expected", expected.Spec), zap.Any("actual", actual.Spec))
 
 	// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
 	// it and re-create it instead.

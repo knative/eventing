@@ -26,9 +26,9 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	baseeventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	baseeventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -201,8 +201,10 @@ func NewLegacySinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *co
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var (
-		v1alpha1_ = v1alpha1.SchemeGroupVersion.Version
-		v1beta1_  = v1beta1.SchemeGroupVersion.Version
+		eventingv1alpha1_ = baseeventingv1alpha1.SchemeGroupVersion.Version
+		eventingv1beta1_  = baseeventingv1beta1.SchemeGroupVersion.Version
+		//		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
+		//		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -211,22 +213,34 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
-			v1beta1.Kind("Trigger"): {
+			// eventing
+			baseeventingv1beta1.Kind("Trigger"): {
 				DefinitionName: eventing.TriggersResource.String(),
-				HubVersion:     v1alpha1_,
+				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					v1alpha1_: &v1alpha1.Trigger{},
-					v1beta1_:  &v1beta1.Trigger{},
+					eventingv1alpha1_: &baseeventingv1alpha1.Trigger{},
+					eventingv1beta1_:  &baseeventingv1beta1.Trigger{},
 				},
 			},
-			v1beta1.Kind("Broker"): {
+			baseeventingv1beta1.Kind("Broker"): {
 				DefinitionName: eventing.BrokersResource.String(),
-				HubVersion:     v1alpha1_,
+				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					v1alpha1_: &v1alpha1.Broker{},
-					v1beta1_:  &v1beta1.Broker{},
+					eventingv1alpha1_: &baseeventingv1alpha1.Broker{},
+					eventingv1beta1_:  &baseeventingv1beta1.Broker{},
 				},
 			},
+			// messaging
+			/*
+				basemessagingv1beta1.Kind("Subscription"): {
+					DefinitionName: messaging.TriggersResource.String(),
+					HubVersion:     messagingv1alpha1_,
+					Zygotes: map[string]conversion.ConvertibleObject{
+						messagingv1alpha1_: &basemessagingv1alpha1.Subscription{},
+						messagingv1beta1_:  &basemessagingv1beta1.Subscription{},
+					},
+				},
+			*/
 		},
 
 		// A function that infuses the context passed to ConvertUp/ConvertDown/SetDefaults with custom metadata.

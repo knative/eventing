@@ -28,8 +28,16 @@ import (
 	"knative.dev/eventing/test/lib/resources"
 )
 
+type subscriptionVersion string
+
+const (
+	subscriptionV1alpha1 subscriptionVersion = "v1alpha1"
+	subscriptionV1beta1  subscriptionVersion = "v1beta1"
+)
+
 // SingleEventForChannelTestHelper is the helper function for channel_single_event_test
 func SingleEventForChannelTestHelper(t *testing.T, encoding string,
+	subscriptionVersion subscriptionVersion,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption) {
 	channelName := "e2e-singleevent-channel-" + encoding
@@ -50,12 +58,22 @@ func SingleEventForChannelTestHelper(t *testing.T, encoding string,
 		client.CreatePodOrFail(pod, lib.WithService(loggerPodName))
 
 		// create subscription to subscribe the channel, and forward the received events to the logger service
-		client.CreateSubscriptionOrFail(
-			subscriptionName,
-			channelName,
-			&channel,
-			resources.WithSubscriberForSubscription(loggerPodName),
-		)
+		switch subscriptionVersion {
+		case subscriptionV1alpha1:
+			client.CreateSubscriptionOrFail(
+				subscriptionName,
+				channelName,
+				&channel,
+				resources.WithSubscriberForSubscription(loggerPodName),
+			)
+		case subscriptionV1beta1:
+			client.CreateSubscriptionOrFailV1Beta1(
+				subscriptionName,
+				channelName,
+				&channel,
+				resources.WithSubscriberForSubscriptionV1Beta1(loggerPodName),
+			)
+		}
 
 		// wait for all test resources to be ready, so that we can start sending events
 		client.WaitForAllTestResourcesReadyOrFail()
