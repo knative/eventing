@@ -31,9 +31,7 @@ import (
 	baseeventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-	basemessagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	basemessagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
@@ -203,10 +201,10 @@ func NewLegacySinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *co
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var (
-		eventingv1alpha1_  = baseeventingv1alpha1.SchemeGroupVersion.Version
-		eventingv1beta1_   = baseeventingv1beta1.SchemeGroupVersion.Version
-		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
-		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
+		eventingv1alpha1_ = baseeventingv1alpha1.SchemeGroupVersion.Version
+		eventingv1beta1_  = baseeventingv1beta1.SchemeGroupVersion.Version
+		//		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
+		//		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,

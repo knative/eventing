@@ -101,6 +101,9 @@ spec:
                     name:
                       type: string
                       minLength: 1
+                    namespace:
+                      type: string
+                      minLength: 1
             reply:
               type: object
               description: "the destination that (optionally) receive events."
@@ -124,6 +127,9 @@ spec:
                       type: string
                       minLength: 1
                     name:
+                      type: string
+                      minLength: 1
+                    namespace:
                       type: string
                       minLength: 1
             delivery:
