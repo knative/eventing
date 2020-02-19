@@ -45,33 +45,29 @@ var (
 	}
 )
 
-// ContextFrom creates the context to use when sending a Cloud Event with cloudevents.Client. It
+// SendingContextFrom creates the context to use when sending a Cloud Event with cloudevents.Client. It
 // sets the target if specified, and attaches a filtered set of headers from the initial request.
-func ContextFrom(tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
+func SendingContextFrom(ctx context.Context, tctx cloudevents.HTTPTransportContext, targetURI *url.URL) context.Context {
 	// Get the allowed set of headers.
 	h := PassThroughHeaders(tctx.Header)
-	// Override the headers.
-	tctx.Header = h
-	// Create the sending context with the overridden transport context.
-	// TODO use the current context here instead of context.Background. Issue: https://github.com/knative/eventing/issues/1953
-	//  The reason we are using context.Background is that there is no easy way in the sdk to override
-	//  headers, and they will all be passed through. Also note that the sdk does not use the headers from
-	//  the transport context to set the request headers.
-	//  Further, in the case of replies, the sdk creates the reply context based on the sending context,
-	//  thus it ends up adding more headers to the sending context.
-	sendingCTX := cehttp.WithTransportContext(context.Background(), tctx)
-
-	for n, v := range h {
-		for _, iv := range v {
-			sendingCTX = cloudevents.ContextWithHeader(sendingCTX, n, iv)
-		}
-	}
+	ctx = cloudevents.SetContextHeaders(ctx, h)
 
 	if targetURI != nil {
-		sendingCTX = cloudevents.ContextWithTarget(sendingCTX, targetURI.String())
+		ctx = cloudevents.ContextWithTarget(ctx, targetURI.String())
 	}
 
-	return sendingCTX
+	return ctx
+}
+
+// ReceivingContextFrom filters the transport context headers using
+// PassThroughHeaders after receiving an event using
+// cloudevents.Client
+func ReceivingContextFrom(ctx context.Context) context.Context {
+	tctx := cloudevents.HTTPTransportContextFrom(ctx)
+	// Get the allowed set of headers.
+	h := PassThroughHeaders(tctx.Header)
+	tctx.Header = h
+	return cehttp.WithTransportContext(ctx, tctx)
 }
 
 // PassThroughHeaders extracts the headers from headers that are in the `forwardHeaders` set

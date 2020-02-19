@@ -180,6 +180,11 @@ func HeaderFrom(ctx context.Context) http.Header {
 	return ch
 }
 
+// SetContextHeader sets the context's headers replacing any headers currently in context.
+func SetContextHeaders(ctx context.Context, headers http.Header) context.Context {
+	return context.WithValue(ctx, headerKey, headers)
+}
+
 // Opaque key type used to store long poll target.
 type longPollTargetKeyType struct{}
 
