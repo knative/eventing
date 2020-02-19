@@ -23,6 +23,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	v1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	apis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -474,6 +475,11 @@ func (in *SubscriberSpec) DeepCopyInto(out *SubscriberSpec) {
 	if in.DeadLetterSinkURI != nil {
 		in, out := &in.DeadLetterSinkURI, &out.DeadLetterSinkURI
 		*out = new(apis.URL)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Delivery != nil {
+		in, out := &in.Delivery, &out.Delivery
+		*out = new(v1beta1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
 	return
