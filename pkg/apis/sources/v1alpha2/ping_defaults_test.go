@@ -28,16 +28,29 @@ func TestPingSourceSetDefaults(t *testing.T) {
 		expected PingSource
 	}{
 		"nil": {
-			expected: PingSource{},
+			expected: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: defaultSchedule,
+				},
+			},
 		},
 		"empty": {
-			expected: PingSource{},
-		},
-		"default schedule": {
 			initial: PingSource{},
 			expected: PingSource{
 				Spec: PingSourceSpec{
-					Schedule: "",
+					Schedule: defaultSchedule,
+				},
+			},
+		},
+		"with schedule": {
+			initial: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "1 2 3 4 5",
+				},
+			},
+			expected: PingSource{
+				Spec: PingSourceSpec{
+					Schedule: "1 2 3 4 5",
 				},
 			},
 		},

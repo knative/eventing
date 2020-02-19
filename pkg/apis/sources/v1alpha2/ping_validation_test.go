@@ -52,10 +52,7 @@ func TestPingSourceValidation(t *testing.T) {
 			Schedule: "*/2 * * * *",
 		},
 		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("sink")
-			errs = errs.Also(fe)
-			return errs
+			return apis.ErrGeneric("expected at least one, got none", "ref", "uri").ViaField("sink")
 		}(),
 	}, {
 		name: "invalid schedule",
