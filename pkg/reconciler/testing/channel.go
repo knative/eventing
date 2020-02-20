@@ -114,14 +114,6 @@ func WithChannelAddress(hostname string) ChannelOption {
 	}
 }
 
-func WithChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) ChannelOption {
-	return func(c *v1alpha1.Channel) {
-		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
-			Subscribers: subscribers,
-		}
-	}
-}
-
 func WithChannelReadySubscriber(uid string) ChannelOption {
 	return WithChannelReadySubscriberAndGeneration(uid, 0)
 }

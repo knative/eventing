@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/pkg/kmp"
@@ -43,14 +42,8 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if cs.Subscribable != nil {
-		for i, subscriber := range cs.Subscribable.Subscribers {
-			if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
-				fe := apis.ErrMissingField("replyURI", "subscriberURI")
-				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
-			}
-		}
+	if cs.Subscribable != nil && len(cs.Subscribable.Subscribers) > 0 {
+		errs = errs.Also(apis.ErrDisallowedFields("subscribers").ViaField("subscribable"))
 	}
 
 	return errs
