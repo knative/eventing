@@ -116,32 +116,6 @@ func init() {
 	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
 }
 
-func subscribers() []eventingduck.SubscriberSpec {
-	return []eventingduck.SubscriberSpec{{
-		UID:           subscriptionUID,
-		Generation:    0,
-		SubscriberURI: apis.HTTP("call1"),
-		ReplyURI:      apis.HTTP("sink2"),
-	}, {
-		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		Generation:    1,
-		SubscriberURI: apis.HTTP("call2"),
-		ReplyURI:      apis.HTTP("sink2"),
-	}}
-}
-
-func subscriberStatuses() []eventingduck.SubscriberStatus {
-	return []eventingduck.SubscriberStatus{{
-		UID:                subscriptionUID,
-		ObservedGeneration: 0,
-		Ready:              "True",
-	}, {
-		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
-		ObservedGeneration: 1,
-		Ready:              "True",
-	}}
-}
-
 func TestAllCases(t *testing.T) {
 	table := TableTest{
 		{
@@ -180,8 +154,26 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelReady(channelDNS),
-					WithInMemoryChannelSubscribers(subscribers()),
-					WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{{
+						UID:           subscriptionUID,
+						Generation:    0,
+						SubscriberURI: subscriberURI,
+						ReplyURI:      replyURI,
+					}, {
+						UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						Generation:    1,
+						SubscriberURI: apis.HTTP("call2"),
+						ReplyURI:      apis.HTTP("sink2"),
+					}}),
+					WithInMemoryChannelStatusSubscribers([]eventingduck.SubscriberStatus{{
+						UID:                subscriptionUID,
+						ObservedGeneration: 0,
+						Ready:              "True",
+					}, {
+						UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+						ObservedGeneration: 1,
+						Ready:              "True",
+					}}),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
