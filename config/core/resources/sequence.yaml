@@ -94,10 +94,6 @@ spec:
                     uri:
                       type: string
                       description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
-                    delivery:
-                      description: "Step delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
               channelTemplate:
                 type: object
                 description: "specifies which Channel to use. If left unspecified, it is set to the default Channel for the namespace (or cluster, in case there are no defaults for the namespace)."
@@ -230,15 +226,6 @@ spec:
                   uri:
                     type: string
                     description: "the target URI. If ref is provided, this must be relative URI reference."
-                  apiVersion:
-                    type: string
-                    description: "DEPRECATED: use ref.apiVersion"
-                  kind:
-                    type: string
-                    description: "DEPRECATED: use ref.kind"
-                  name:
-                    type: string
-                    description: "DEPRECATED: use ref.name"
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true

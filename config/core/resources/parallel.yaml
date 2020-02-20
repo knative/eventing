@@ -194,15 +194,6 @@ spec:
                   uri:
                     type: string
                     description: "the target URI. If ref is provided, this must be relative URI reference."
-                  apiVersion:
-                    type: string
-                    description: "DEPRECATED: use ref.apiVersion"
-                  kind:
-                    type: string
-                    description: "DEPRECATED: use ref.kind"
-                  name:
-                    type: string
-                    description: "DEPRECATED: use ref.name"
           status:
             type: object
             x-kubernetes-preserve-unknown-fields: true
