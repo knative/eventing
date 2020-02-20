@@ -27,6 +27,7 @@ import (
 	"knative.dev/pkg/resolver"
 
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 )
@@ -45,10 +46,12 @@ func NewController(
 ) *controller.Impl {
 
 	subscriptionInformer := subscription.Get(ctx)
+	channelInformer := channel.Get(ctx)
 
 	r := &Reconciler{
 		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 		subscriptionLister: subscriptionInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r)
 

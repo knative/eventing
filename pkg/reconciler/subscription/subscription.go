@@ -18,7 +18,6 @@ package subscription
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sort"
@@ -72,6 +71,7 @@ type Reconciler struct {
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
+	channelLister       listers.ChannelLister
 	channelableTracker  eventingduck.ListableTracker
 	destinationResolver *resolver.URIResolver
 }
@@ -98,7 +98,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1alpha1.S
 	}
 
 	// Everything that was supposed to be resolved was, so flip the status bit on that.
-	subscription.Status.MarkReferencesNotResolved("Resolving", "Subscription resolution interrupted.")
+	subscription.Status.MarkReferencesResolvedUnknown("Resolving", "Subscription resolution interrupted.")
 
 	if err := r.resolveSubscriber(ctx, subscription); err != nil {
 		return err
@@ -313,16 +313,11 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 	// Test to see if the channel is special.
 	// NOTE: do not test for version.
 	if channelGVK.Group == gvk.Group && channelGVK.Kind == gvk.Kind {
-		b, err := json.Marshal(obj)
+		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
-			logging.FromContext(ctx).Error("failed to marshal Channel", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
 			return nil, err
 		}
-		channel := &v1alpha1.Channel{}
-		if err := json.Unmarshal(b, channel); err != nil {
-			logging.FromContext(ctx).Error("failed to unmarshal Channel", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
-			return nil, err
-		}
+
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
 			logging.FromContext(ctx).Warn("channel not ready", zap.Any("channel", sub.Spec.Channel))
 			return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "ChannelNotReady", "Channel is not ready")

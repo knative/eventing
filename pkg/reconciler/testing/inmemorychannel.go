@@ -18,6 +18,7 @@ package testing
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -133,6 +134,23 @@ func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
 		imc.Status.SetAddress(&apis.URL{
 			Scheme: "http",
 			Host:   a,
+		})
+	}
+}
+
+func WithInMemoryChannelReadySubscriber(uid string) InMemoryChannelOption {
+	return WithInMemoryChannelReadySubscriberAndGeneration(uid, 0)
+}
+
+func WithInMemoryChannelReadySubscriberAndGeneration(uid string, observedGeneration int64) InMemoryChannelOption {
+	return func(c *v1alpha1.InMemoryChannel) {
+		if c.Status.GetSubscribableTypeStatus() == nil { // Both the SubscribableStatus fields are nil
+			c.Status.SetSubscribableTypeStatus(duckv1alpha1.SubscribableStatus{})
+		}
+		c.Status.SubscribableTypeStatus.AddSubscriberToSubscribableStatus(duckv1alpha1.SubscriberStatus{
+			UID:                types.UID(uid),
+			ObservedGeneration: observedGeneration,
+			Ready:              corev1.ConditionTrue,
 		})
 	}
 }

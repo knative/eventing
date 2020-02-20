@@ -168,6 +168,14 @@ func MarkSubscriptionReady(s *v1alpha1.Subscription) {
 	s.Status.MarkAddedToChannel()
 }
 
+func MarkAddedToChannel(s *v1alpha1.Subscription) {
+	s.Status.MarkAddedToChannel()
+}
+
+func MarkReferencesResolved(s *v1alpha1.Subscription) {
+	s.Status.MarkReferencesResolved()
+}
+
 func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Status.MarkReferencesNotResolved(reason, msg)
