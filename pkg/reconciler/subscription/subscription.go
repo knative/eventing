@@ -261,7 +261,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 		// If there is a change in resolved URI, log it.
 		if subscription.Status.PhysicalSubscription.DeadLetterSinkURI == nil || subscription.Status.PhysicalSubscription.DeadLetterSinkURI.String() != deadLetterSink.String() {
 			logging.FromContext(ctx).Debug("Resolved deadLetterSink", zap.String("deadLetterSinkURI", deadLetterSink.String()))
-			subscription.Status.PhysicalSubscription.ReplyURI = deadLetterSink
+			subscription.Status.PhysicalSubscription.DeadLetterSinkURI = deadLetterSink
 		}
 	} else {
 		subscription.Status.PhysicalSubscription.DeadLetterSinkURI = nil
