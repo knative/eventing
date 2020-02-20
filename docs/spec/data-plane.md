@@ -54,7 +54,7 @@ Some sources of events (such as Knative sources, brokers or channels) MAY suppor
 CloudEvents received by Sink MAY have
 [Distributed Tracing Extension Attribute](https://github.com/cloudevents/spec/blob/v1.0/extensions/distributed-tracing.md).
 
-## Data plane contract for Sources 
+## Data plane contract for Sources
 
 See [Source Delivery specification](../spec/sources.md#source-event-delivery) for details.
 
