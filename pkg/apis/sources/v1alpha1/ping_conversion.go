@@ -19,10 +19,11 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"reflect"
 )
 
 // ConvertUp implements apis.Convertible.

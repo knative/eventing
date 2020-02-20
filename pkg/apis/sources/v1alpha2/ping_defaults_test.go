@@ -18,8 +18,9 @@ package v1alpha2
 
 import (
 	"context"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestPingSourceSetDefaults(t *testing.T) {
