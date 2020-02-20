@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -87,7 +86,7 @@ type SequenceStep struct {
 	// This includes things like retries, DLQ, etc.
 	// Needed for Roundtripping v1alpha1 <-> v1beta1.
 	// +optional
-	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
+	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 type SequenceChannelStatus struct {
