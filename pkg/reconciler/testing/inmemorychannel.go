@@ -105,7 +105,7 @@ func WithInMemoryChannelServiceReady() InMemoryChannelOption {
 	}
 }
 
-func WithInMemoryChannelChannelServicetNotReady(reason, message string) InMemoryChannelOption {
+func WithInMemoryChannelChannelServiceNotReady(reason, message string) InMemoryChannelOption {
 	return func(imc *v1alpha1.InMemoryChannel) {
 		imc.Status.MarkChannelServiceFailed(reason, message)
 	}
@@ -135,6 +135,18 @@ func WithInMemoryChannelAddress(a string) InMemoryChannelOption {
 			Scheme: "http",
 			Host:   a,
 		})
+	}
+}
+
+func WithInMemoryChannelReady(host string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		imc.Status.SetAddress(&apis.URL{
+			Scheme: "http",
+			Host:   host,
+		})
+		imc.Status.MarkChannelServiceTrue()
+		imc.Status.MarkEndpointsTrue()
+		imc.Status.MarkServiceTrue()
 	}
 }
 

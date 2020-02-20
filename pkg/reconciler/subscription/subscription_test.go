@@ -116,6 +116,32 @@ func init() {
 	_ = apiextensionsv1beta1.AddToScheme(scheme.Scheme)
 }
 
+func subscribers() []eventingduck.SubscriberSpec {
+	return []eventingduck.SubscriberSpec{{
+		UID:           subscriptionUID,
+		Generation:    0,
+		SubscriberURI: apis.HTTP("call1"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}, {
+		UID:           "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		Generation:    1,
+		SubscriberURI: apis.HTTP("call2"),
+		ReplyURI:      apis.HTTP("sink2"),
+	}}
+}
+
+func subscriberStatuses() []eventingduck.SubscriberStatus {
+	return []eventingduck.SubscriberStatus{{
+		UID:                subscriptionUID,
+		ObservedGeneration: 0,
+		Ready:              "True",
+	}, {
+		UID:                "34c5aec8-deb6-11e8-9f32-f2801f1b9fd1",
+		ObservedGeneration: 1,
+		Ready:              "True",
+	}}
+}
+
 func TestAllCases(t *testing.T) {
 	table := TableTest{
 		{
@@ -126,6 +152,57 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
+		}, {
+			Name: "subscription goes ready",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+				),
+				// Subscriber
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				// Reply
+				NewInMemoryChannel(replyName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(replyDNS),
+				),
+				// Channel
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReady(channelDNS),
+					WithInMemoryChannelSubscribers(subscribers()),
+					WithInMemoryChannelStatusSubscribers(subscriberStatuses()),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "SubscriptionReconciled", `Subscription reconciled: "testnamespace/testsubscription"`),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionPhysicalSubscriptionReply(replyURI),
+					// - Status Update -
+					MarkSubscriptionReady,
+				),
+			}},
 		}, {
 			Name: "subscription, but channel does not exist",
 			Objects: []runtime.Object{
@@ -344,7 +421,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -387,7 +464,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -429,7 +506,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -475,7 +552,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -506,9 +583,9 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
-					WithSubscriptionPhysicalSubscriptionReply(replyURI),
 				),
 				NewUnstructured(subscriberGVK, subscriberName, testNS,
 					WithUnstructuredAddressable(subscriberDNS),
@@ -525,8 +602,7 @@ func TestAllCases(t *testing.T) {
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -535,6 +611,7 @@ func TestAllCases(t *testing.T) {
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
 					WithInitSubscriptionConditions,
+					WithSubscriptionFinalizers(finalizerName),
 					MarkSubscriptionReady,
 					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
 					WithSubscriptionStatusObservedGeneration(subscriptionGeneration),
@@ -544,7 +621,6 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, Generation: subscriptionGeneration, SubscriberURI: subscriberURI},
 				}),
-				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {
 			Name: "subscription, valid remove subscriber",
@@ -576,7 +652,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -615,7 +691,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription(subscriptionName, testNS,
@@ -664,7 +740,7 @@ func TestAllCases(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", "a-"+subscriptionName),
-				Eventf(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channelName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewSubscription("a-"+subscriptionName, testNS,
@@ -681,7 +757,6 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: "a-" + subscriptionUID, SubscriberURI: serviceURIWithPath},
-					{UID: "b-" + subscriptionUID, SubscriberURI: serviceURIWithPath},
 				}),
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
