@@ -19,7 +19,6 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -386,26 +385,6 @@ func (r *Reconciler) syncPhysicalChannel(ctx context.Context, sub *v1alpha1.Subs
 	} else {
 		return patched, nil
 	}
-}
-
-func (r *Reconciler) createSubscribable(subs []v1alpha1.Subscription) *eventingduckv1alpha1.Subscribable {
-	rv := &eventingduckv1alpha1.Subscribable{}
-	// Strictly order the subscriptions, so that simple ordering changes do not cause re-reconciles.
-	sort.Slice(subs, func(i, j int) bool {
-		return subs[i].UID < subs[j].UID
-	})
-	for _, sub := range subs {
-		if sub.Status.AreReferencesResolved() && sub.DeletionTimestamp == nil {
-			rv.Subscribers = append(rv.Subscribers, eventingduckv1alpha1.SubscriberSpec{
-				UID:               sub.UID,
-				Generation:        sub.Generation,
-				SubscriberURI:     sub.Status.PhysicalSubscription.SubscriberURI,
-				ReplyURI:          sub.Status.PhysicalSubscription.ReplyURI,
-				DeadLetterSinkURI: sub.Status.PhysicalSubscription.DeadLetterSinkURI,
-			})
-		}
-	}
-	return rv
 }
 
 func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, channel *eventingduckv1alpha1.Channelable, sub *v1alpha1.Subscription) (bool, error) {
