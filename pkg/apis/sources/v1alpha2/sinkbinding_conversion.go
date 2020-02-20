@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2020 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,17 +18,17 @@ package v1alpha2
 
 import (
 	"context"
-	"testing"
+	"fmt"
+
+	"knative.dev/pkg/apis"
 )
 
-func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
+// ConvertUp implements apis.Convertible
+func (source *SinkBinding) ConvertUp(ctx context.Context, sink apis.Convertible) error {
+	return fmt.Errorf("v1alpha2 is the highest known version, got: %T", sink)
+}
 
-	if err := good.ConvertUp(context.Background(), bad); err == nil {
-		t.Errorf("ConvertUp() = %#v, wanted error", bad)
-	}
-
-	if err := good.ConvertDown(context.Background(), bad); err == nil {
-		t.Errorf("ConvertDown() = %#v, wanted error", good)
-	}
+// ConvertDown implements apis.Convertible
+func (sink *SinkBinding) ConvertDown(ctx context.Context, source apis.Convertible) error {
+	return fmt.Errorf("v1alpha2 is the highest known version, got: %T", source)
 }

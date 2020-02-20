@@ -21,8 +21,8 @@ import (
 	"testing"
 )
 
-func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
+func TestSinkBindingConversionBadType(t *testing.T) {
+	good, bad := &SinkBinding{}, &SinkBinding{}
 
 	if err := good.ConvertUp(context.Background(), bad); err == nil {
 		t.Errorf("ConvertUp() = %#v, wanted error", bad)

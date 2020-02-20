@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"knative.dev/eventing/pkg/apis/sources"
 
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 
@@ -32,7 +33,9 @@ import (
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	basesourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	basesourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
@@ -205,6 +208,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		eventingv1beta1_  = baseeventingv1beta1.SchemeGroupVersion.Version
 		//		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
 		//		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
+		sourcesv1alpha1_ = basesourcesv1alpha1.SchemeGroupVersion.Version
+		sourcesv1alpha2_ = basesourcesv1alpha2.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -241,6 +246,31 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					},
 				},
 			*/
+			// Sources
+			//baseeventingv1beta1.Kind("ApiServerSource"): {
+			//	DefinitionName: sources.ApiServerSourceResource.String(),
+			//	HubVersion:     sourcesv1alpha1_,
+			//	Zygotes: map[string]conversion.ConvertibleObject{
+			//		sourcesv1alpha1_: &basesourcesv1alpha1.ApiServerSource{},
+			//		sourcesv1alpha2_: &basesourcesv1alpha2.ApiServerSource{},
+			//	},
+			//},
+			baseeventingv1beta1.Kind("PingSource"): {
+				DefinitionName: sources.PingSourceResource.String(),
+				HubVersion:     sourcesv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					sourcesv1alpha1_: &basesourcesv1alpha1.PingSource{},
+					sourcesv1alpha2_: &basesourcesv1alpha2.PingSource{},
+				},
+			},
+			baseeventingv1beta1.Kind("SinkBinding"): {
+				DefinitionName: sources.SinkBindingResource.String(),
+				HubVersion:     sourcesv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					sourcesv1alpha1_: &basesourcesv1alpha1.SinkBinding{},
+					sourcesv1alpha2_: &basesourcesv1alpha2.SinkBinding{},
+				},
+			},
 		},
 
 		// A function that infuses the context passed to ConvertUp/ConvertDown/SetDefaults with custom metadata.
