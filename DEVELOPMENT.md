@@ -17,7 +17,7 @@ Also take a look at:
 Once you meet these requirements, you can
 [start the eventing-controller](#starting-eventing-controller).
 
-Before submitting a PR, see also [CONTRIBUTING.md](./CONTRIBUTING.md).
+Before submitting a PR, see also [contribution guidelines](./CONTRIBUTING.md).
 
 ### Requirements
 
@@ -159,6 +159,10 @@ Or you can [clean it up completely](#clean-up) and start again.
 
 Running tests as you make changes to the code-base is pretty simple. See
 [the test docs](./test/README.md).
+
+## Contributing
+
+Please check [contribution guidelines](./CONTRIBUTING.md).
 
 ## Clean up
 
