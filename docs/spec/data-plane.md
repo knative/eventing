@@ -43,7 +43,7 @@ A Sink MAY support `Batched Content Mode` but that mode is not used in Knative E
 
 ### Retries
 
-Sinks shoudl expect that retries and accept possibility that duplicate events may be delivered.
+Sinks should expect that retries and accept possibility that duplicate events may be delivered.
 
 ### Error handling
 
