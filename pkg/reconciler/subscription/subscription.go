@@ -19,7 +19,6 @@ package subscription
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sort"
 
 	"go.uber.org/zap"
@@ -28,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/resolver"
@@ -124,7 +124,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1alpha1.S
 	// No sync was needed. Time to check the status of the channel to see if the subscription
 	// made it to the channel.status.
 
-	ss, err := r.getSubStatusByChannel(subscription, channel)
+	ss, err := r.getSubStatusByChannel(subscription, channel) // THIS NEEDS TO BE UPDATED
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to get subscription status.", zap.Error(err))
 		subscription.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
@@ -162,8 +162,12 @@ func (r Reconciler) syncChannel(ctx context.Context, channel *eventingduckv1alph
 			sub.Status.MarkNotAddedToChannel(physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 			return pkgreconciler.NewEvent(corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
 		}
-		sub.Status.MarkAddedToChannel()
-		return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was added to channel.")
+		if isActive {
+			sub.Status.MarkAddedToChannel()
+			return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was synchronized to channel %q", channel.Name)
+		} else {
+			return pkgreconciler.NewEvent(corev1.EventTypeNormal, "PhysicalChannelSync", "Subscription was removed from channel %q", channel.Name)
+		}
 	}
 	if isActive {
 		sub.Status.MarkAddedToChannel()
