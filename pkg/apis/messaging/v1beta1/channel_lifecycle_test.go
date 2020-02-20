@@ -275,6 +275,12 @@ func TestChannelSetAddressable(t *testing.T) {
 							{
 								Type:   ChannelConditionAddressable,
 								Status: corev1.ConditionTrue,
+							}, {
+								// Note: Ready is here because when the condition
+								// is marked True, duck automatically sets Ready to
+								// Unknown because of missing ChannelConditionBackingChannelReady.
+								Type:   ChannelConditionReady,
+								Status: corev1.ConditionUnknown,
 							}},
 					},
 				},
