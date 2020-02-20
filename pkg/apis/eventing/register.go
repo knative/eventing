@@ -41,4 +41,9 @@ var (
 		Group:    GroupName,
 		Resource: "brokers",
 	}
+	// EventTypesResource respresents a Knative EventType
+	EventTypesResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "eventtypes",
+	}
 )

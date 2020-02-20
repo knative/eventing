@@ -233,6 +233,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					eventingv1beta1_:  &baseeventingv1beta1.Broker{},
 				},
 			},
+			baseeventingv1beta1.Kind("EventType"): {
+				DefinitionName: eventing.EventTypesResource.String(),
+				HubVersion:     eventingv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					eventingv1alpha1_: &baseeventingv1alpha1.EventType{},
+					eventingv1beta1_:  &baseeventingv1beta1.EventType{},
+				},
+			},
 			// messaging
 			basemessagingv1beta1.Kind("Channel"): {
 				DefinitionName: messaging.ChannelsResource.String(),
