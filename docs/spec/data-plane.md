@@ -24,7 +24,7 @@ POST responding with HTTP status code `405 Method Not Supported`. Non-event requ
 The URL used by a Sink MUST correspond to a single, unique
 endpoint at any given moment in time. This MAY be done via the host, path, query
 string, or any combination of these. This mapping is handled exclusively by the
-[Addressable control-plane](./interfaces.md#control-plane) exposed via the `status.address.url`. 
+[Addressable control-plane](./interfaces.md#control-plane) exposed via the `status.address.url`.
 
 If an HTTP request's URL does not correspond to an existing endpoint, then
 the Sink MUST respond with `404 Not Found`.
