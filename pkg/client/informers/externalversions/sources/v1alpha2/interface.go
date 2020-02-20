@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// PingSources returns a PingSourceInformer.
 	PingSources() PingSourceInformer
+	// SinkBindings returns a SinkBindingInformer.
+	SinkBindings() SinkBindingInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // PingSources returns a PingSourceInformer.
 func (v *version) PingSources() PingSourceInformer {
 	return &pingSourceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// SinkBindings returns a SinkBindingInformer.
+func (v *version) SinkBindings() SinkBindingInformer {
+	return &sinkBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

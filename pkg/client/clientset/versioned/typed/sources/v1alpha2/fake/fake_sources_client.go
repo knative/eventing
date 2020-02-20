@@ -32,6 +32,10 @@ func (c *FakeSourcesV1alpha2) PingSources(namespace string) v1alpha2.PingSourceI
 	return &FakePingSources{c, namespace}
 }
 
+func (c *FakeSourcesV1alpha2) SinkBindings(namespace string) v1alpha2.SinkBindingInterface {
+	return &FakeSinkBindings{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeSourcesV1alpha2) RESTClient() rest.Interface {

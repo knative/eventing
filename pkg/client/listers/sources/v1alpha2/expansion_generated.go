@@ -25,3 +25,11 @@ type PingSourceListerExpansion interface{}
 // PingSourceNamespaceListerExpansion allows custom methods to be added to
 // PingSourceNamespaceLister.
 type PingSourceNamespaceListerExpansion interface{}
+
+// SinkBindingListerExpansion allows custom methods to be added to
+// SinkBindingLister.
+type SinkBindingListerExpansion interface{}
+
+// SinkBindingNamespaceListerExpansion allows custom methods to be added to
+// SinkBindingNamespaceLister.
+type SinkBindingNamespaceListerExpansion interface{}
