@@ -242,10 +242,6 @@ func (r conditionsImpl) ClearCondition(t ConditionType) error {
 // MarkTrue sets the status of t to true, and then marks the happy condition to
 // true if all other dependents are also true.
 func (r conditionsImpl) MarkTrue(t ConditionType) {
-	// Save the original status of t.
-	org := r.GetCondition(t).DeepCopy()
-	orgTL := r.GetTopLevelCondition().DeepCopy()
-
 	// Set the specified condition.
 	r.SetCondition(Condition{
 		Type:     t,
