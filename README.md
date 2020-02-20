@@ -1,6 +1,6 @@
 # Knative Eventing
 
-[![GoDoc](https://pkg.go.dev/github.com/knative/eventing?status.svg)](https://pkg.go.dev/github.com/knative/eventing)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/knative/eventing)
 [![Go Report Card](https://goreportcard.com/badge/knative/eventing)](https://goreportcard.com/report/knative/eventing)
 [![Releases](https://img.shields.io/github/release-pre/knative/eventing.svg)](https://github.com/knative/eventing/releases)
 [![LICENSE](https://img.shields.io/github/license/knative/eventing.svg)](https://github.com/knative/eventing/blob/master/LICENSE)
