@@ -231,23 +231,20 @@ func TestChannelSetAddressable(t *testing.T) {
 		"nil url": {
 			want: &ChannelStatus{
 				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{
-							Type:   ChannelConditionAddressable,
-							Status: corev1.ConditionFalse,
-						},
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionFalse,
+					}, {
 						// Note that Ready is here because when the condition is marked False, duck
 						// automatically sets Ready to false.
-						{
-							Type:   ChannelConditionReady,
-							Status: corev1.ConditionFalse,
-						},
-					},
+						Type:   ChannelConditionReady,
+						Status: corev1.ConditionFalse,
+					}},
 				},
 				AddressStatus: duckv1alpha1.AddressStatus{Address: &duckv1alpha1.Addressable{}},
 			},
 		},
-		"has domain": {
+		"has domain - unknown": {
 			address: &duckv1alpha1.Addressable{
 				Addressable: duckv1beta1.Addressable{
 					URL: &apis.URL{
@@ -270,11 +267,16 @@ func TestChannelSetAddressable(t *testing.T) {
 					},
 				},
 				Status: duckv1.Status{
-					Conditions: []apis.Condition{
-						{
-							Type:   ChannelConditionAddressable,
-							Status: corev1.ConditionTrue,
-						}},
+					Conditions: []apis.Condition{{
+						Type:   ChannelConditionAddressable,
+						Status: corev1.ConditionTrue,
+					}, {
+						// Note: Ready is here because when the condition
+						// is marked True, duck automatically sets Ready to
+						// Unknown because of missing ChannelConditionBackingChannelReady.
+						Type:   ChannelConditionReady,
+						Status: corev1.ConditionUnknown,
+					}},
 				},
 			},
 		},
