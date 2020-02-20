@@ -134,15 +134,15 @@ func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, chann
 		return pkgreconciler.NewEvent(corev1.EventTypeWarning, subscriptionNotMarkedReadyByChannel, err.Error())
 	}
 
-	// TODO: switch
-	subStatus := ss.Ready
-	if subStatus == corev1.ConditionTrue {
+	switch ss.Ready {
+	case corev1.ConditionTrue:
 		sub.Status.MarkChannelReady()
-	} else if subStatus == corev1.ConditionUnknown {
+	case corev1.ConditionUnknown:
 		sub.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Subscription marked by Channel as Unknown")
-	} else if subStatus == corev1.ConditionFalse {
+	case corev1.ConditionFalse:
 		sub.Status.MarkChannelFailed(subscriptionNotMarkedReadyByChannel, "Subscription marked by Channel as False")
 	}
+
 	return nil
 }
 
