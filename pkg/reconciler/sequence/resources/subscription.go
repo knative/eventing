@@ -53,8 +53,8 @@ func NewSubscription(stepNumber int, s *v1alpha1.Sequence) *messagingv1alpha1.Su
 				Name:       SequenceChannelName(s.Name, stepNumber),
 			},
 			Subscriber: &duckv1.Destination{
-				Ref: s.Spec.Steps[stepNumber].Ref,
-				URI: s.Spec.Steps[stepNumber].URI,
+				Ref: s.Spec.Steps[stepNumber].Subscriber.Ref,
+				URI: s.Spec.Steps[stepNumber].Subscriber.URI,
 			},
 		},
 	}
