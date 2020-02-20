@@ -139,14 +139,13 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 				if err := test.in.ConvertUp(context.Background(), ver); err != nil {
 					t.Errorf("ConvertUp() = %v", err)
 				}
+
 				got := &PingSource{}
+
 				if err := got.ConvertDown(context.Background(), ver); err != nil {
 					t.Errorf("ConvertDown() = %v", err)
 				}
-				// Since on the way down, we lose the DeprecatedSourceAndType,
-				// convert the in to equivalent out.
-				fixed := fixDeprecated(test.in)
-				if diff := cmp.Diff(fixed, got); diff != "" {
+				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
 			})
@@ -262,20 +261,4 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Since DeprecatedSourceAndType is lossy but semanctically equivalent
-// if source,type are present and equivalent in the attributes map,
-// fix that so diff works.
-func fixDeprecated(in *PingSource) *PingSource {
-	// TODO: not sure yet if I need this.
-	//if in.Spec.Filter != nil && in.Spec.Filter.DeprecatedSourceAndType != nil {
-	//	// attributes must be nil, can't have both Deprecated / Attributes
-	//	attributes := PingSourceFilterAttributes{}
-	//	attributes["source"] = in.Spec.Filter.DeprecatedSourceAndType.Source
-	//	attributes["type"] = in.Spec.Filter.DeprecatedSourceAndType.Type
-	//	in.Spec.Filter.DeprecatedSourceAndType = nil
-	//	in.Spec.Filter.Attributes = &attributes
-	//}
-	return in
 }
