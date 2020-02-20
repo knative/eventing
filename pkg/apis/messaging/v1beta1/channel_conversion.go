@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,23 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package messaging
+package v1beta1
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
+import (
+	"context"
+	"fmt"
 
-const (
-	GroupName = "messaging.knative.dev"
+	"knative.dev/pkg/apis"
 )
 
-var (
-	// SubscriptionssResource respresents a Knative Subscription
-	SubscriptionsResource = schema.GroupResource{
-		Group:    GroupName,
-		Resource: "subscriptions",
-	}
-	// ChannelsResource respresents a Knative Channel
-	ChannelsResource = schema.GroupResource{
-		Group:    GroupName,
-		Resource: "channels",
-	}
-)
+// ConvertUp implements apis.Convertible
+func (source *Channel) ConvertUp(ctx context.Context, sink apis.Convertible) error {
+	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+}
+
+// ConvertDown implements apis.Convertible
+func (sink *Channel) ConvertDown(ctx context.Context, source apis.Convertible) error {
+	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+}

@@ -30,6 +30,6 @@ source $(dirname $0)/e2e-common.sh
 
 initialize $@ --skip-istio-addon
 
-go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel || fail_test
 
 success

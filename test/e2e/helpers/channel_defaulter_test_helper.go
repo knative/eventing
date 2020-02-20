@@ -173,11 +173,21 @@ func setClusterDefaultChannel(config *defaultchannel.Config, channel metav1.Type
 	if config.ClusterDefault == nil {
 		config.ClusterDefault = &eventingduck.ChannelTemplateSpec{}
 	}
+	// If we're testing with Channel, we can't default to ourselves, or badness will
+	// happen. We're going to try to create Channels that are ourselves.
+	if channel.Kind == "Channel" {
+		channel.Kind = "InMemoryChannel"
+	}
 	config.ClusterDefault.TypeMeta = channel
 }
 
 // setNamespaceDefaultChannel will set the default channel for namespace-wide
 func setNamespaceDefaultChannel(config *defaultchannel.Config, namespace string, channel metav1.TypeMeta) {
+	// If we're testing with Channel, we can't default to ourselves, or badness will
+	// happen. We're going to try to create Channels that are ourselves.
+	if channel.Kind == "Channel" {
+		channel.Kind = "InMemoryChannel"
+	}
 	if config.NamespaceDefaults == nil {
 		config.NamespaceDefaults = make(map[string]*eventingduck.ChannelTemplateSpec, 1)
 	}

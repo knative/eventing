@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -31,20 +30,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// TODO: Replace dummy some other messaging object once they
-// implement apis.Convertible
-type dummy struct{}
-
-func (*dummy) ConvertUp(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
-func (*dummy) ConvertDown(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
 func TestSubscriptionConversionBadType(t *testing.T) {
-	good, bad := &Subscription{}, &dummy{}
+	good, bad := &Subscription{}, &Channel{}
 
 	if err := good.ConvertUp(context.Background(), bad); err == nil {
 		t.Errorf("ConvertUp() = %#v, wanted error", bad)
