@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -66,7 +67,7 @@ var (
 type SequenceSpec struct {
 	// Steps is the list of Destinations (processors / functions) that will be called in the order
 	// provided.
-	Steps []duckv1.Destination `json:"steps"`
+	Steps []SequenceStep `json:"steps"`
 
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
@@ -76,6 +77,17 @@ type SequenceSpec struct {
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
 	// +optional
 	Reply *duckv1.Destination `json:"reply,omitempty"`
+}
+
+type SequenceStep struct {
+	// Subscriber receiving the step event
+	Subscriber duckv1.Destination `json:",inline"`
+
+	// Delivery is the delivery specification for events to the subscriber
+	// This includes things like retries, DLQ, etc.
+	// Needed for Roundtripping v1alpha1 <-> v1beta1.
+	// +optional
+	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 type SequenceChannelStatus struct {

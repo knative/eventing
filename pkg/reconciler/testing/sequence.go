@@ -72,7 +72,7 @@ func WithFlowsSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTempl
 	}
 }
 
-func WithFlowsSequenceSteps(steps []duckv1.Destination) FlowsSequenceOption {
+func WithFlowsSequenceSteps(steps []v1alpha1.SequenceStep) FlowsSequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.Steps = steps
 	}
