@@ -127,7 +127,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1alpha1.Su
 }
 
 func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, channel *eventingduckv1alpha1.Channelable, sub *v1alpha1.Subscription) pkgreconciler.Event {
-	ss, err := r.getSubStatusByChannel(sub, channel) // THIS NEEDS TO BE UPDATED
+	ss, err := r.getSubStatus(sub, channel)
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to get subscription status.", zap.Error(err))
 		sub.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
@@ -270,7 +270,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 	return nil
 }
 
-func (r *Reconciler) getSubStatusByChannel(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) (eventingduckv1alpha1.SubscriberStatus, error) {
+func (r *Reconciler) getSubStatus(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.Channelable) (eventingduckv1alpha1.SubscriberStatus, error) {
 	subscribableStatus := channel.Status.GetSubscribableTypeStatus()
 
 	if subscribableStatus == nil {
@@ -318,6 +318,10 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1alpha1.Sub
 	return obj, err
 }
 
+// getChannel fetches the Channel as specified by the Subscriptions spec.Channel
+// and verifies it's a channelable (so that we can operate on it via patches).
+// If the Channel is a channels.messaging type (hence, it's only a factory for
+// underlying channels), fetch and validate the "backing" channel.
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription) (*eventingduckv1alpha1.Channelable, pkgreconciler.Event) {
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
@@ -327,17 +331,22 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	// Test to see if the channel is special.
-	// NOTE: do not test for version.
+	// Test to see if the channel is Channel.messaging because it is going
+	// to have a "backing" channel that is what we need to actually operate on
+	// as well as keep track of.
 	if channelGVK.Group == gvk.Group && channelGVK.Kind == gvk.Kind {
+		// Because the above (trackAndFetchChannel) gives us back a Channelable
+		// the status of it will not have the extra bits we need (namely, pointer
+		// and status of the actual "backing" channel), we fetch it using typed
+		// lister so that we get those bits.
 		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
 			return nil, err
 		}
 
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
-			logging.FromContext(ctx).Warn("channel not ready", zap.Any("channel", sub.Spec.Channel))
-			return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "ChannelNotReady", "Channel is not ready")
+			logging.FromContext(ctx).Warn("backing channel not ready", zap.Any("channel", sub.Spec.Channel))
+			return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "ChannelNotReady", "Backing channel is not ready")
 		}
 
 		obj, err = r.trackAndFetchChannel(ctx, sub, *channel.Status.Channel)
@@ -346,7 +355,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 		}
 	}
 
-	// Now ch is supppose to be a Channelable.
+	// Now obj is suppposed to be a Channelable, so check it.
 	ch, ok := obj.(*eventingduckv1alpha1.Channelable)
 	if !ok {
 		logging.FromContext(ctx).Error("Failed to convert to Channelable Object", zap.Any("channel", sub.Spec.Channel), zap.Error(err))
@@ -411,7 +420,8 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 		return false, err
 	}
 	// If there is nothing to patch, we are good, just return.
-	if len(patch) == 2 {
+	// Empty patch is {}, hence we check for that.
+	if len(patch) <= 2 {
 		return false, nil
 	}
 
