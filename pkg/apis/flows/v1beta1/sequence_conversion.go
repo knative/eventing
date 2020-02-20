@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,24 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"context"
+	"fmt"
+
 	"knative.dev/pkg/apis"
 )
 
-var (
-	defaultChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
-		TypeMeta: v1.TypeMeta{
-			APIVersion: SchemeGroupVersion.String(),
-			Kind:       "InMemoryChannel",
-		},
-	}
+// ConvertUp implements apis.Convertible
+func (source *Sequence) ConvertUp(ctx context.Context, sink apis.Convertible) error {
+	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
+}
 
-	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-		apis.Condition{},
-		"LastTransitionTime", "Message", "Reason", "Severity")
-)
+// ConvertDown implements apis.Convertible
+func (sink *Sequence) ConvertDown(ctx context.Context, source apis.Convertible) error {
+	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
+}

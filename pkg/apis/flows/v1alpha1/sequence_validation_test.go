@@ -23,9 +23,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 func TestSequenceValidation(t *testing.T) {
@@ -68,7 +69,7 @@ func makeInvalidReply(channelName string) *duckv1.Destination {
 
 func TestSequenceSpecValidation(t *testing.T) {
 	subscriberURI := apis.HTTP("example.com")
-	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
+	validChannelTemplate := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
@@ -107,7 +108,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &SequenceSpec{
-			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
 			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
@@ -117,7 +118,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &SequenceSpec{
-			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
 			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {

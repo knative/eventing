@@ -21,8 +21,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -66,7 +66,7 @@ func WithFlowsSequenceDeleted(p *v1alpha1.Sequence) {
 	p.ObjectMeta.SetDeletionTimestamp(&deleteTime)
 }
 
-func WithFlowsSequenceChannelTemplateSpec(cts *eventingduckv1alpha1.ChannelTemplateSpec) FlowsSequenceOption {
+func WithFlowsSequenceChannelTemplateSpec(cts *messagingv1beta1.ChannelTemplateSpec) FlowsSequenceOption {
 	return func(p *v1alpha1.Sequence) {
 		p.Spec.ChannelTemplate = cts
 	}

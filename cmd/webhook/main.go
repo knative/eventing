@@ -29,7 +29,10 @@ import (
 	baseeventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	baseeventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/apis/flows"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	baseflowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
+	baseflowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	basemessagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -208,6 +211,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		eventingv1beta1_   = baseeventingv1beta1.SchemeGroupVersion.Version
 		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
 		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
+		flowsv1alpha1_     = baseflowsv1alpha1.SchemeGroupVersion.Version
+		flowsv1beta1_      = baseflowsv1beta1.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -256,6 +261,21 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					messagingv1alpha1_: &basemessagingv1alpha1.InMemoryChannel{},
 					messagingv1beta1_:  &basemessagingv1beta1.InMemoryChannel{},
+			// flows
+			baseflowsv1beta1.Kind("Sequence"): {
+				DefinitionName: flows.SequenceResource.String(),
+				HubVersion:     flowsv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					flowsv1alpha1_: &baseflowsv1alpha1.Sequence{},
+					flowsv1beta1_:  &baseflowsv1beta1.Sequence{},
+				},
+			},
+			baseflowsv1beta1.Kind("Parallel"): {
+				DefinitionName: flows.ParallelResource.String(),
+				HubVersion:     flowsv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					flowsv1alpha1_: &baseflowsv1alpha1.Sequence{},
+					flowsv1beta1_:  &baseflowsv1beta1.Sequence{},
 				},
 			},
 		},

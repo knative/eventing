@@ -40,8 +40,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -109,7 +109,7 @@ func createDestination(stepNumber int) duckv1.Destination {
 
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + sequenceName
-	imc := &eventingduckv1alpha1.ChannelTemplateSpec{
+	imc := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",

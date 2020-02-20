@@ -23,9 +23,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 func TestParallelValidation(t *testing.T) {
@@ -47,7 +48,7 @@ func TestParallelValidation(t *testing.T) {
 
 func TestParallelSpecValidation(t *testing.T) {
 	subscriberURI := apis.HTTP("example.com")
-	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
+	validChannelTemplate := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
@@ -89,7 +90,7 @@ func TestParallelSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &ParallelSpec{
-			ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{Kind: "mykind"},
 				Spec:     &runtime.RawExtension{}},
 			Branches: []ParallelBranch{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
@@ -101,7 +102,7 @@ func TestParallelSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &ParallelSpec{
-			ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"},
 				Spec:     &runtime.RawExtension{}},
 			Branches: []ParallelBranch{{Subscriber: duckv1.Destination{URI: subscriberURI}}},

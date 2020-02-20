@@ -21,6 +21,7 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: flows.knative.dev
+  preserveUnknownFields: false
   names:
     kind: Parallel
     plural: parallels
@@ -33,6 +34,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -196,6 +203,9 @@ spec:
                   name:
                     type: string
                     description: "DEPRECATED: use ref.name"
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
-    served: false
+    served: true
     storage: false

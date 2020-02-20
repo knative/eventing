@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,24 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/pkg/apis"
+	"context"
+	"testing"
 )
 
-var (
-	defaultChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
-		TypeMeta: v1.TypeMeta{
-			APIVersion: SchemeGroupVersion.String(),
-			Kind:       "InMemoryChannel",
-		},
+func TestSequenceConversionBadType(t *testing.T) {
+	good, bad := &Sequence{}, &Sequence{}
+
+	if err := good.ConvertUp(context.Background(), bad); err == nil {
+		t.Errorf("ConvertUp() = %#v, wanted error", bad)
 	}
 
-	ignoreAllButTypeAndStatus = cmpopts.IgnoreFields(
-		apis.Condition{},
-		"LastTransitionTime", "Message", "Reason", "Severity")
-)
+	if err := good.ConvertDown(context.Background(), bad); err == nil {
+		t.Errorf("ConvertDown() = %#v, wanted error", good)
+	}
+}
