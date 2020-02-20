@@ -107,6 +107,19 @@ var (
 		Version: "v1alpha1",
 		Kind:    "InMemoryChannel",
 	}
+
+	coreChannelGVK = metav1.GroupVersionKind{
+		Group:   "messaging.knative.dev",
+		Version: "v1alpha1",
+		Kind:    "Channel",
+	}
+
+	imcRef = corev1.ObjectReference{
+		APIVersion: "messaging.knative.dev/v1alpha1",
+		Kind:       "InMemoryChannel",
+		Namespace:  testNS,
+		Name:       channelName,
+	}
 )
 
 func init() {
@@ -432,6 +445,96 @@ func TestAllCases(t *testing.T) {
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI},
 				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+backing channel+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&imcRef),
+					WithBackingChannelReady,
+					WithChannelAddress("example.com"),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
+					WithInMemoryChannelReady("example.com"),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+backing channel not ready+subscriber",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewChannel(channelName, testNS,
+					WithInitChannelConditions,
+					WithBackingChannelObjRef(&imcRef),
+					WithBackingChannelReady,
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
+					WithInMemoryChannelReady("example.com"),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeWarning, "ChannelReferenceFailed", "Failed to get Spec.Channel as Channelable duck type. Backing channel is not ready"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(coreChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesResolvedUnknown("ChannelReferenceFailed", "Failed to get Spec.Channel as Channelable duck type. Backing channel is not ready"),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, subscriptionName),
 			},
 		}, {

@@ -323,6 +323,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1alpha1.Sub
 // If the Channel is a channels.messaging type (hence, it's only a factory for
 // underlying channels), fetch and validate the "backing" channel.
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription) (*eventingduckv1alpha1.Channelable, pkgreconciler.Event) {
+	logging.FromContext(ctx).Warn("GETTING channel", zap.Any("channel", sub.Spec.Channel))
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
 	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
@@ -335,6 +336,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
 	if channelGVK.Group == gvk.Group && channelGVK.Kind == gvk.Kind {
+		logging.FromContext(ctx).Warn("fetching backing channel", zap.Any("channel", sub.Spec.Channel))
 		// Because the above (trackAndFetchChannel) gives us back a Channelable
 		// the status of it will not have the extra bits we need (namely, pointer
 		// and status of the actual "backing" channel), we fetch it using typed
@@ -345,7 +347,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 		}
 
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
-			logging.FromContext(ctx).Warn("backing channel not ready", zap.Any("channel", sub.Spec.Channel))
+			logging.FromContext(ctx).Warn("backing channel not ready", zap.Any("channel", sub.Spec.Channel), zap.Any("backing channel", channel))
 			return nil, pkgreconciler.NewEvent(corev1.EventTypeWarning, "ChannelNotReady", "Backing channel is not ready")
 		}
 

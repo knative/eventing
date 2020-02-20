@@ -170,6 +170,31 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 		},
 	}, {
+		Name: "Backing channel created",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname)),
+		},
+		WantCreates: []runtime.Object{
+			createChannel(testNS, channelName, false),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelNoAddress(),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+		}},
+	}, {
 		Name: "Generation Bump",
 		Key:  testKey,
 		Objects: []runtime.Object{
@@ -325,5 +350,61 @@ func backingChannelObjRef() *corev1.ObjectReference {
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       channelName,
+	}
+}
+
+func createChannel(namespace, name string, ready bool) *unstructured.Unstructured {
+	var hostname string
+	var url string
+	if ready {
+		return &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "messaging.knative.dev/v1alpha1",
+				"kind":       "InMemoryChannel",
+				"metadata": map[string]interface{}{
+					"creationTimestamp": nil,
+					"namespace":         namespace,
+					"name":              name,
+					"ownerReferences": []interface{}{
+						map[string]interface{}{
+							"apiVersion":         "messaging.knative.dev/v1alpha1",
+							"blockOwnerDeletion": true,
+							"controller":         true,
+							"kind":               "Channel",
+							"name":               name,
+							"uid":                "",
+						},
+					},
+				},
+				"status": map[string]interface{}{
+					"address": map[string]interface{}{
+						"hostname": hostname,
+						"url":      url,
+					},
+				},
+			},
+		}
+	}
+
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "messaging.knative.dev/v1alpha1",
+			"kind":       "InMemoryChannel",
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         namespace,
+				"name":              name,
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "messaging.knative.dev/v1alpha1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "Channel",
+						"name":               name,
+						"uid":                "",
+					},
+				},
+			},
+		},
 	}
 }
