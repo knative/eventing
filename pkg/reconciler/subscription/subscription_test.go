@@ -53,6 +53,7 @@ const (
 	replyName      = "reply"
 	channelName    = "origin"
 	serviceName    = "service"
+	dlcName        = "dlc"
 
 	subscriptionUID        = subscriptionName + "-abc-123"
 	subscriptionName       = "testsubscription"
@@ -76,6 +77,10 @@ var (
 	serviceDNS         = serviceName + "." + testNS + ".svc." + utils.GetClusterDomainName()
 	serviceURI         = apis.HTTP(serviceDNS)
 	serviceURIWithPath = &apis.URL{Scheme: "http", Host: serviceDNS, Path: "/"}
+
+	dlcDNS         = "dlc.mynamespace.svc." + utils.GetClusterDomainName()
+	dlcURI         = apis.HTTP(dlcDNS)
+	dlcURIWithPath = &apis.URL{Scheme: "http", Host: dlcDNS, Path: "/"}
 
 	subscriberGVK = metav1.GroupVersionKind{
 		Group:   "eventing.knative.dev",
@@ -444,6 +449,92 @@ func TestAllCases(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
 					{UID: subscriptionUID, SubscriberURI: subscriberURI},
+				}),
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+subscriber+missing delivery",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeWarning, "DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: failed to get ref &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:dlc,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: subscribers.eventing.knative.dev \"dlc\" not found"),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					WithSubscriptionReferencesNotResolved("DeadLetterSinkResolveFailed", "Failed to resolve spec.delivery.deadLetterSink: failed to get ref &ObjectReference{Kind:Subscriber,Namespace:testnamespace,Name:dlc,UID:,APIVersion:eventing.knative.dev/v1alpha1,ResourceVersion:,FieldPath:,}: subscribers.eventing.knative.dev \"dlc\" not found"),
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, subscriptionName),
+			},
+		}, {
+			Name: "subscription, valid channel+subscriber+delivery",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+				NewUnstructured(subscriberGVK, dlcName, testNS,
+					WithUnstructuredAddressable(dlcDNS),
+				),
+				NewInMemoryChannel(channelName, testNS,
+					WithInitInMemoryChannelConditions,
+					WithInMemoryChannelAddress(channelDNS),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
+				),
+			},
+			Key:     testNS + "/" + subscriptionName,
+			WantErr: false,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberSync", "Subscription was synchronized to channel %q", channelName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionDeliveryRef(subscriberGVK, dlcName, testNS),
+					// The first reconciliation will initialize the status conditions.
+					WithInitSubscriptionConditions,
+					MarkReferencesResolved,
+					MarkAddedToChannel,
+					WithSubscriptionPhysicalSubscriptionSubscriber(subscriberURI),
+					WithSubscriptionDeadLetterSinkURI(dlcURI),
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, DeadLetterSinkURI: dlcURI, SubscriberURI: subscriberURI},
 				}),
 				patchFinalizers(testNS, subscriptionName),
 			},
