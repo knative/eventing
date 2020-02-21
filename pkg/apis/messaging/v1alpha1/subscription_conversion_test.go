@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -46,7 +46,7 @@ func TestSubscriptionConversion(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1beta1.Subscription{}}
 
-	linear := v1alpha1.BackoffPolicyLinear
+	linear := duckv1beta1.BackoffPolicyLinear
 
 	tests := []struct {
 		name string
@@ -76,7 +76,7 @@ func TestSubscriptionConversion(t *testing.T) {
 					Name:       "channelName",
 					APIVersion: "channelAPIVersion",
 				},
-				Delivery: &v1alpha1.DeliverySpec{
+				Delivery: &duckv1beta1.DeliverySpec{
 					DeadLetterSink: &duckv1.Destination{
 						Ref: &duckv1.KReference{
 							Kind:       "dlKind",

@@ -43,8 +43,8 @@ func (source *Channel) ConvertUp(ctx context.Context, obj apis.Convertible) erro
 	}
 }
 
-// ConvertChannelTemplateSpecUp converts an incoming source (duckv1alpha1.ChannelTemplateSpec
-func ConvertChannelTemplateSpecUp(ctx context.Context, source *duckv1alpha1.ChannelTemplateSpec) *v1beta1.ChannelTemplateSpec {
+// ConvertChannelTemplateSpecUp converts an incoming source (v1beta1.ChannelTemplateSpec
+func ConvertChannelTemplateSpecUp(ctx context.Context, source *v1beta1.ChannelTemplateSpec) *v1beta1.ChannelTemplateSpec {
 	if source == nil {
 		return nil
 	}
@@ -186,11 +186,11 @@ func (sink *ChannelStatus) ConvertDown(ctx context.Context, source v1beta1.Chann
 
 // ConvertChannelTemplateSpecDown converts an incoming source (duckv1beta1.ChannelTemplateSpec)
 // to v1alpha1.ChannelTemplateSpec
-func ConvertChannelTemplateSpecDown(ctx context.Context, source *v1beta1.ChannelTemplateSpec) *duckv1alpha1.ChannelTemplateSpec {
+func ConvertChannelTemplateSpecDown(ctx context.Context, source *v1beta1.ChannelTemplateSpec) *v1beta1.ChannelTemplateSpec {
 	if source == nil {
 		return nil
 	}
-	return &duckv1alpha1.ChannelTemplateSpec{
+	return &v1beta1.ChannelTemplateSpec{
 		TypeMeta: source.TypeMeta,
 		Spec:     source.Spec,
 	}

@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	clientgotesting "k8s.io/client-go/testing"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
@@ -1697,7 +1697,7 @@ func makeServiceURI() *apis.URL {
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
-func makeEmptyDelivery() *eventingduckv1alpha1.DeliverySpec {
+func makeEmptyDelivery() *eventingduckv1beta1.DeliverySpec {
 	return nil
 }
 func makeBrokerFilterService() *corev1.Service {

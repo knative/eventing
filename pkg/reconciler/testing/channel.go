@@ -28,6 +28,7 @@ import (
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duck "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck/v1beta1"
@@ -78,7 +79,7 @@ func WithChannelDeleted(c *v1alpha1.Channel) {
 
 func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+		c.Spec.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: typeMeta,
 		}
 	}

@@ -21,7 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -72,7 +73,7 @@ type BrokerSpec struct {
 	// +optional
 	// Deprecated: See spec.config to configure aditional broker options.
 	// Unless class is <TBD> for channel based broker implementation.
-	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
+	ChannelTemplate *messagingv1beta1.ChannelTemplateSpec `json:"channelTemplateSpec,omitempty"`
 
 	// Config is a KReference to the configuration that specifies
 	// configuration options for this Broker. For example, this could be
@@ -84,7 +85,7 @@ type BrokerSpec struct {
 	// Delivery is the delivery specification to be used internally by the broker to
 	// create subscriptions.
 	// +optional
-	Delivery *eventingduckv1alpha1.DeliverySpec `json:"delivery,omitempty"`
+	Delivery *eventingduckv1beta1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // BrokerStatus represents the current state of a Broker.

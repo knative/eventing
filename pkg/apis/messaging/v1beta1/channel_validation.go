@@ -36,7 +36,7 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 		// The Channel defaulter is expected to set this, not the users.
 		errs = errs.Also(apis.ErrMissingField("channelTemplate"))
 	} else {
-		if cte := isValidChannelTemplate(cs.ChannelTemplate); cte != nil {
+		if cte := IsValidChannelTemplate(cs.ChannelTemplate); cte != nil {
 			errs = errs.Also(cte.ViaField("channelTemplate"))
 		}
 	}
@@ -47,7 +47,7 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	return errs
 }
 
-func isValidChannelTemplate(ct *ChannelTemplateSpec) *apis.FieldError {
+func IsValidChannelTemplate(ct *ChannelTemplateSpec) *apis.FieldError {
 	var errs *apis.FieldError
 	if ct.Kind == "" {
 		errs = errs.Also(apis.ErrMissingField("kind"))

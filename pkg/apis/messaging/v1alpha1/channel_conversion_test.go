@@ -79,7 +79,7 @@ func TestChannelConversion(t *testing.T) {
 				Generation: 17,
 			},
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "channelKind",
 						APIVersion: "channelAPIVersion",

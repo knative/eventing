@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
@@ -141,7 +141,7 @@ func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name, namespace 
 
 func WithSubscriptionDeliveryRef(gvk metav1.GroupVersionKind, name, namespace string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
-		s.Spec.Delivery = &eventingduckv1alpha1.DeliverySpec{
+		s.Spec.Delivery = &duckv1beta1.DeliverySpec{
 			DeadLetterSink: &duckv1.Destination{
 				Ref: &duckv1.KReference{
 					APIVersion: apiVersion(gvk),

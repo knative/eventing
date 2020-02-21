@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"context"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmp"
 )
@@ -38,25 +38,13 @@ func (bs *BrokerSpec) Validate(ctx context.Context) *apis.FieldError {
 	//	if bs.ChannelTemplate == nil {
 	//		errs = errs.Also(apis.ErrMissingField("channelTemplateSpec"))
 	//	} else
-	if cte := isValidChannelTemplate(bs.ChannelTemplate); cte != nil {
-		errs = errs.Also(cte.ViaField("channelTemplateSpec"))
+	if bs.ChannelTemplate != nil {
+		if cte := messagingv1beta1.IsValidChannelTemplate(bs.ChannelTemplate); cte != nil {
+			errs = errs.Also(cte.ViaField("channelTemplateSpec"))
+		}
 	}
 
 	// TODO validate that the channelTemplate only specifies the channel and arguments.
-	return errs
-}
-
-func isValidChannelTemplate(dct *eventingduckv1alpha1.ChannelTemplateSpec) *apis.FieldError {
-	if dct == nil {
-		return nil
-	}
-	var errs *apis.FieldError
-	if dct.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-	if dct.APIVersion == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-	}
 	return errs
 }
 
