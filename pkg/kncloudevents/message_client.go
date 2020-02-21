@@ -24,8 +24,7 @@ import (
 	"time"
 
 	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
-	"knative.dev/pkg/tracing"
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
 )
 
 const (
@@ -45,7 +44,7 @@ func NewHttpMessageSender(connectionArgs *ConnectionArgs, target string) (*HttpM
 	client := &nethttp.Client{
 		Transport: &ochttp.Transport{
 			Base:        base,
-			Propagation: &b3.HTTPFormat{},
+			Propagation: &tracecontext.HTTPFormat{},
 		},
 	}
 
@@ -89,8 +88,11 @@ func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethtt
 	recv.handler = nethttp.NewServeMux()
 
 	recv.server = &nethttp.Server{
-		Addr:    recv.listener.Addr().String(),
-		Handler: tracing.HTTPSpanMiddleware(handler),
+		Addr: recv.listener.Addr().String(),
+		Handler: &ochttp.Handler{
+			Propagation: &tracecontext.HTTPFormat{},
+			Handler:     handler,
+		},
 	}
 
 	errChan := make(chan error, 1)

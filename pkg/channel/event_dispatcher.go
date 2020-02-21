@@ -24,10 +24,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v1"
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
-	pkgtracing "knative.dev/pkg/tracing"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/utils"
@@ -65,8 +63,6 @@ type DeliveryOptions struct {
 // EventDispatcher is the 'real' Dispatcher used everywhere except unit tests.
 var _ Dispatcher = &EventDispatcher{}
 
-var propagation = &b3.HTTPFormat{}
-
 // EventDispatcher dispatches events to a destination over HTTP.
 type EventDispatcher struct {
 	ceClient         cloudevents.Client
@@ -83,17 +79,18 @@ func NewEventDispatcher(logger *zap.Logger) *EventDispatcher {
 
 // NewEventDispatcherFromConfig creates a new event dispatcher based on config.
 func NewEventDispatcherFromConfig(logger *zap.Logger, config EventDispatcherConfig) *EventDispatcher {
-	httpTransport, err := cloudevents.NewHTTPTransport(
-		cloudevents.WithBinaryEncoding(),
-		cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
-	if err != nil {
-		logger.Fatal("Unable to create CE transport", zap.Error(err))
-	}
 	cArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        config.MaxIdleConns,
 		MaxIdleConnsPerHost: config.MaxIdleConnsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, &cArgs)
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithHTTPTransport(cArgs.NewDefaultHTTPTransport()),
+	)
+	if err != nil {
+		logger.Fatal("Unable to create CE transport", zap.Error(err))
+	}
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
