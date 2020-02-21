@@ -4,6 +4,10 @@
 
 Developers using Knative Eventing need to know what is supported for delivery to user provided components that receive events. Knative Eventing defines contract for data plane components and we have listed them here.
 
+## Conformance
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC2119.
+
 ## Data plane contract for Sinks
 
 A **Sink** is an [_addressable_](./interfaces.md#addressable) resource that takes responsibility for the event. A Sink could be a consumer of events, or middleware. A Sink MUST be able to receive CloudEvents over HTTP and HTTPS.
