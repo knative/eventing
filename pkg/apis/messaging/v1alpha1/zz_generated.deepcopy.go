@@ -214,6 +214,11 @@ func (in *InMemoryChannelSpec) DeepCopyInto(out *InMemoryChannelSpec) {
 		*out = new(duckv1alpha1.Subscribable)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Delivery != nil {
+		in, out := &in.Delivery, &out.Delivery
+		*out = new(v1beta1.DeliverySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
