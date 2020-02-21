@@ -165,7 +165,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
 			// Test if namespace reconciler would recreate broker once it was deleted
-			if err := client.Eventing.EventingV1beta1().Brokers(client.namespace).Delete(defaultBrokerName); err != nil {
+			if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(defaultBrokerName); err != nil {
 				t.Fatalf("Can't delete broker: %v in namespace: ", defaultBrokerName, client.Namespace)
 			}
 			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
