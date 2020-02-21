@@ -21,15 +21,29 @@ import (
 	"fmt"
 
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 )
 
 func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
-	return imc.Spec.Validate(ctx).ViaField("spec")
+	errs := imc.Spec.Validate(ctx).ViaField("spec")
+
+	// Validate annotations
+	if imc.Annotations != nil {
+		if scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]; ok {
+			if scope != "namespace" && scope != "cluster" {
+				iv := apis.ErrInvalidValue(scope, "")
+				iv.Details = "expected either 'cluster' or 'namespace'"
+				errs = errs.Also(iv.ViaFieldKey("annotations", eventing.ScopeAnnotationKey).ViaField("metadata"))
+			}
+		}
+	}
+
+	return errs
 }
 
 func (imcs *InMemoryChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	var errs *apis.FieldError
-
 	for i, subscriber := range imcs.SubscribableSpec.Subscribers {
 		if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
 			fe := apis.ErrMissingField("replyURI", "subscriberURI")

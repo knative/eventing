@@ -19,8 +19,11 @@ package v1beta1
 import (
 	"testing"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
+
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/eventing"
 )
 
 func TestInMemoryChannelValidation(t *testing.T) {
@@ -82,6 +85,21 @@ func TestInMemoryChannelValidation(t *testing.T) {
 			fe.Details = "expected at least one of, got none"
 			errs = errs.Also(fe)
 			return errs
+		}(),
+	}, {
+		name: "invalid scope annotation",
+		cr: &InMemoryChannel{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					eventing.ScopeAnnotationKey: "notvalid",
+				},
+			},
+			Spec: InMemoryChannelSpec{},
+		},
+		want: func() *apis.FieldError {
+			fe := apis.ErrInvalidValue("notvalid", "metadata.annotations.[eventing.knative.dev/scope]")
+			fe.Details = "expected either 'cluster' or 'namespace'"
+			return fe
 		}(),
 	}}
 

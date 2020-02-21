@@ -18,13 +18,15 @@ package testing
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/types"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
 )
@@ -172,4 +174,11 @@ func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1alpha1.Subs
 		imc.Status.SetSubscribableTypeStatus(duckv1alpha1.SubscribableStatus{
 			Subscribers: subscriberStatuses})
 	}
+}
+
+func WithInMemoryNamespaceAnnotation(imc *v1alpha1.InMemoryChannel) {
+	if imc.Annotations == nil {
+		imc.Annotations = make(map[string]string)
+	}
+	imc.Annotations[eventing.ScopeAnnotationKey] = "namespace"
 }

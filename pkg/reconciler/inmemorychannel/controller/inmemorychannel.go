@@ -51,8 +51,8 @@ const (
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
 
-	scopeNamespace = "namespace"
 	scopeCluster   = "cluster"
+	scopeNamespace = "namespace"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -82,7 +82,6 @@ type Reconciler struct {
 
 	systemNamespace         string
 	dispatcherImage         string
-	dispatcherScope         string
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 	deploymentLister        appsv1listers.DeploymentLister
@@ -95,17 +94,6 @@ type Reconciler struct {
 // Check that our Reconciler implements Interface
 var _ inmemorychannelreconciler.Interface = (*Reconciler)(nil)
 
-// FilterWithNamespace makes it simple to create FilterFunc's for use with
-// cache.FilteringResourceEventHandler that filter based on a namespace
-func FilterWithNamespace(namespace string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		if object, ok := obj.(metav1.Object); ok {
-			return namespace == object.GetNamespace()
-		}
-		return false
-	}
-}
-
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryChannel) pkgreconciler.Event {
 	imc.Status.InitializeConditions()
 	imc.Status.ObservedGeneration = imc.Generation
@@ -116,14 +104,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
 
+	scope, ok := imc.Annotations["eventing.knative.dev/scope"]
+	if !ok {
+		scope = "cluster"
+	}
+
 	dispatcherNamespace := r.systemNamespace
-	if r.dispatcherScope == scopeNamespace {
+	if scope == scopeNamespace {
 		dispatcherNamespace = imc.Namespace
 	}
 
 	// Make sure the dispatcher deployment exists and propagate the status to the Channel
 	// For namespace-scope dispatcher, make sure configuration files exist and RBAC is properly configured.
-	d, err := r.reconcileDispatcher(ctx, dispatcherNamespace, imc)
+	d, err := r.reconcileDispatcher(ctx, scope, dispatcherNamespace, imc)
 	if err != nil {
 		return err
 	}
@@ -132,7 +125,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	// Make sure the dispatcher service exists and propagate the status to the Channel in case it does not exist.
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
-	_, err = r.reconcileDispatcherService(ctx, dispatcherNamespace, imc)
+	_, err = r.reconcileDispatcherService(ctx, scope, dispatcherNamespace, imc)
 	if err != nil {
 		return err
 	}
@@ -180,8 +173,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	return newReconciledNormal(imc.Namespace, imc.Name)
 }
 
-func (r *Reconciler) reconcileDispatcher(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
-	if r.dispatcherScope == scopeNamespace {
+func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
+	if scope == scopeNamespace {
 		// Configure RBAC in namespace to access the configmaps
 		// For cluster-deployed dispatcher, RBAC policies are already there.
 
@@ -209,7 +202,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, dispatcherNamespac
 	d, err := r.deploymentLister.Deployments(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if r.dispatcherScope == scopeNamespace {
+			if scope == scopeNamespace {
 				// Create dispatcher in imc's namespace
 				args := resources.DispatcherArgs{
 					ServiceAccountName:  dispatcherName,
@@ -275,11 +268,11 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns s
 	return rb, nil
 }
 
-func (r *Reconciler) reconcileDispatcherService(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
 	svc, err := r.serviceLister.Services(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if r.dispatcherScope == scopeNamespace {
+			if scope == scopeNamespace {
 				expected := resources.MakeDispatcherService(dispatcherName, dispatcherNamespace)
 				svc, err := r.KubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
 				if err != nil {
