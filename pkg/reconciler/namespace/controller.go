@@ -20,11 +20,11 @@ import (
 	"context"
 
 	"github.com/kelseyhightower/envconfig"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation"
@@ -80,21 +80,21 @@ func NewController(
 	// Watch all the resources that this reconciler reconciles.
 	serviceAccountInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
-			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			FilterFunc: controller.FilterGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace")),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 	roleBindingInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
-			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			FilterFunc: controller.FilterGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace")),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 	brokerInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
-			FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+			FilterFunc: controller.FilterGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace")),
 			Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 		})
 	configMapPropagationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Namespace")),
+		FilterFunc: controller.FilterGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
