@@ -99,7 +99,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "missing channeltemplatespec",
 		ts: &SequenceSpec{
-			Steps: []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps: []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -109,7 +109,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &SequenceSpec{
 			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -119,7 +119,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &SequenceSpec{
 			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
@@ -129,7 +129,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -138,7 +138,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with valid reply",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -148,7 +148,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with invalid missing name",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 			Reply: &duckv1.Destination{
 				Ref: &duckv1.KReference{
 					Namespace:  "namespace",
@@ -165,7 +165,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with invalid reply",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {

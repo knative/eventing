@@ -168,7 +168,7 @@ func TestInMemoryChannelConversion(t *testing.T) {
 	}
 }
 
-// Test v1alpha1 -> v1beta1 -> v1alpha1
+// Test v1beta1 -> v1alpha1 -> v1beta1
 func TestInMemoryChannelConversionWithV1Beta1(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&InMemoryChannel{}}
