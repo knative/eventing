@@ -73,7 +73,7 @@ func TestFlowsSequence(t *testing.T) {
 		client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 		// create a new step
 		step := v1alpha1.SequenceStep{
-			Subscriber: duckv1.Destination{
+			Destination: duckv1.Destination{
 				Ref: resources.KnativeRefForService(podName, client.Namespace),
 			}}
 		// add the step into steps
