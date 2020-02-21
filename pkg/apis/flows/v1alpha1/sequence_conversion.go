@@ -35,8 +35,8 @@ func (source *Sequence) ConvertUp(ctx context.Context, obj apis.Convertible) err
 		sink.Spec.Steps = make([]v1beta1.SequenceStep, len(source.Spec.Steps))
 		for i, s := range source.Spec.Steps {
 			sink.Spec.Steps[i] = v1beta1.SequenceStep{
-				Subscriber: s.Subscriber,
-				Delivery:   s.Delivery,
+				Destination: s.Destination,
+				Delivery:    s.Delivery,
 			}
 		}
 
@@ -82,8 +82,8 @@ func (sink *Sequence) ConvertDown(ctx context.Context, obj apis.Convertible) err
 		sink.Spec.Steps = make([]SequenceStep, len(source.Spec.Steps))
 		for i, s := range source.Spec.Steps {
 			sink.Spec.Steps[i] = SequenceStep{
-				Subscriber: s.Subscriber,
-				Delivery:   s.Delivery,
+				Destination: s.Destination,
+				Delivery:    s.Delivery,
 			}
 		}
 		sink.Spec.ChannelTemplate = source.Spec.ChannelTemplate

@@ -80,7 +80,7 @@ type SequenceSpec struct {
 
 type SequenceStep struct {
 	// Subscriber receiving the step event
-	Subscriber duckv1.Destination `json:",inline"`
+	duckv1.Destination `json:",inline"`
 
 	// Delivery is the delivery specification for events to the subscriber
 	// This includes things like retries, DLQ, etc.
