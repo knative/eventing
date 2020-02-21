@@ -19,8 +19,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	appsv1 "k8s.io/api/apps/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,8 +32,6 @@ import (
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	"sync"
-	"time"
 )
 
 func (p *prober) waitForKServiceReady(name, namespace string) error {
@@ -120,28 +121,25 @@ type awaitRoutine func() error
 var waits []*namedAwait
 
 func awaitAll(log *zap.SugaredLogger) {
-	var wg sync.WaitGroup
-	wg.Add(len(waits))
-	thrown := false
+	var g errgroup.Group
 	for _, w := range waits {
-		go func(w *namedAwait) {
+		w := w // https://golang.org/doc/faq#closures_and_goroutines
+		g.Go(func() error {
 			log.Infof("Wait for %s", w.name)
 			before := time.Now()
 			err := w.routine()
 			took := time.Now().Sub(before)
 			if err != nil {
-				thrown = true
 				log.Errorf("Error while waiting for %s: %v", w.name, err)
 			} else {
 				log.Infof("Successful wait for %s, took %v to complete", w.name, took)
 			}
-			wg.Done()
-		}(w)
+			return err
+		})
 	}
 	waits = nil
-	wg.Wait()
-
-	if thrown {
+	// Wait for all waits to complete.
+	if err := g.Wait(); err != nil {
 		panic(errors.New("there ware errors on waiting"))
 	}
 }
