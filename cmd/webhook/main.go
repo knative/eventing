@@ -25,17 +25,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	baseeventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	baseeventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/apis/flows"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
-	basemessagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	basemessagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
@@ -101,7 +99,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	// above and fetched off of context by the api code.  See knative/serving's logic
 	// around config-defaults for an example of this.
 	chDefaulter := defaultchannel.New(logger.Desugar())
-	basemessagingv1beta1.ChannelDefaulterSingleton = chDefaulter
+	messagingv1beta1.ChannelDefaulterSingleton = chDefaulter
 	cmw.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	return defaulting.NewAdmissionController(ctx,
@@ -205,10 +203,10 @@ func NewLegacySinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *co
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var (
-		eventingv1alpha1_  = baseeventingv1alpha1.SchemeGroupVersion.Version
-		eventingv1beta1_   = baseeventingv1beta1.SchemeGroupVersion.Version
-		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
-		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
+		eventingv1alpha1_  = eventingv1alpha1.SchemeGroupVersion.Version
+		eventingv1beta1_   = eventingv1beta1.SchemeGroupVersion.Version
+		messagingv1alpha1_ = messagingv1alpha1.SchemeGroupVersion.Version
+		messagingv1beta1_  = messagingv1beta1.SchemeGroupVersion.Version
 		flowsv1alpha1_     = flowsv1alpha1.SchemeGroupVersion.Version
 		flowsv1beta1_      = flowsv1beta1.SchemeGroupVersion.Version
 	)
@@ -220,45 +218,45 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			// eventing
-			baseeventingv1beta1.Kind("Trigger"): {
+			eventingv1beta1.Kind("Trigger"): {
 				DefinitionName: eventing.TriggersResource.String(),
 				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1alpha1_: &baseeventingv1alpha1.Trigger{},
-					eventingv1beta1_:  &baseeventingv1beta1.Trigger{},
+					eventingv1alpha1_: &eventingv1alpha1.Trigger{},
+					eventingv1beta1_:  &eventingv1beta1.Trigger{},
 				},
 			},
-			baseeventingv1beta1.Kind("Broker"): {
+			eventingv1beta1.Kind("Broker"): {
 				DefinitionName: eventing.BrokersResource.String(),
 				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1alpha1_: &baseeventingv1alpha1.Broker{},
-					eventingv1beta1_:  &baseeventingv1beta1.Broker{},
+					eventingv1alpha1_: &eventingv1alpha1.Broker{},
+					eventingv1beta1_:  &eventingv1beta1.Broker{},
 				},
 			},
-			baseeventingv1beta1.Kind("EventType"): {
+			eventingv1beta1.Kind("EventType"): {
 				DefinitionName: eventing.EventTypesResource.String(),
 				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1alpha1_: &baseeventingv1alpha1.EventType{},
-					eventingv1beta1_:  &baseeventingv1beta1.EventType{},
+					eventingv1alpha1_: &eventingv1alpha1.EventType{},
+					eventingv1beta1_:  &eventingv1beta1.EventType{},
 				},
 			},
 			// messaging
-			basemessagingv1beta1.Kind("Channel"): {
+			messagingv1beta1.Kind("Channel"): {
 				DefinitionName: messaging.ChannelsResource.String(),
 				HubVersion:     messagingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1alpha1_: &basemessagingv1alpha1.Channel{},
-					messagingv1beta1_:  &basemessagingv1beta1.Channel{},
+					messagingv1alpha1_: &messagingv1alpha1.Channel{},
+					messagingv1beta1_:  &messagingv1beta1.Channel{},
 				},
 			},
-			basemessagingv1beta1.Kind("InMemoryChannel"): {
+			messagingv1beta1.Kind("InMemoryChannel"): {
 				DefinitionName: messaging.InMemoryChannelsResource.String(),
 				HubVersion:     messagingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					messagingv1alpha1_: &basemessagingv1alpha1.InMemoryChannel{},
-					messagingv1beta1_:  &basemessagingv1beta1.InMemoryChannel{},
+					messagingv1alpha1_: &messagingv1alpha1.InMemoryChannel{},
+					messagingv1beta1_:  &messagingv1beta1.InMemoryChannel{},
 				},
 			},
 			// flows
