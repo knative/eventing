@@ -21,11 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // +genclient
@@ -72,7 +73,7 @@ type SequenceSpec struct {
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
 	// +optional
-	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate,omitempty"`
+	ChannelTemplate *messagingv1beta1.ChannelTemplateSpec `json:"channelTemplate,omitempty"`
 
 	// Reply is a Reference to where the result of the last Subscriber gets sent to.
 	// +optional
@@ -81,7 +82,7 @@ type SequenceSpec struct {
 
 type SequenceStep struct {
 	// Subscriber receiving the step event
-	Subscriber duckv1.Destination `json:",inline"`
+	duckv1.Destination `json:",inline"`
 
 	// Delivery is the delivery specification for events to the subscriber
 	// This includes things like retries, DLQ, etc.

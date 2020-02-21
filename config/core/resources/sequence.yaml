@@ -21,6 +21,15 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: flows.knative.dev
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      # this is a work around so we don't need to flush out the
+      # schema for each version at this time
+      #
+      # see issue: https://github.com/knative/serving/issues/912
+      x-kubernetes-preserve-unknown-fields: true
   names:
     kind: Sequence
     plural: sequences
@@ -33,6 +42,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -50,90 +65,6 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            required:
-              - steps
-              - channelTemplate
-            type: object
-            properties:
-              steps:
-                type: array
-                description: "the list of Destinations (processors / functions) that will be called in the order provided."
-                items:
-                  type: object
-                  description: "a processor / function in the Sequence."
-                  properties:
-                    ref:
-                      type: object
-                      description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                      required:
-                        - apiVersion
-                        - kind
-                        - name
-                      properties:
-                        apiVersion:
-                          type: string
-                          minLength: 1
-                        kind:
-                          type: string
-                          minLength: 1
-                        name:
-                          type: string
-                          minLength: 1
-                    uri:
-                      type: string
-                      description: "the target URI or, if ref is provided, a relative URI reference that will be combined with ref to produce a target URI."
-              channelTemplate:
-                type: object
-                description: "specifies which Channel to use. If left unspecified, it is set to the default Channel for the namespace (or cluster, in case there are no defaults for the namespace)."
-                required:
-                  - apiVersion
-                  - kind
-                properties:
-                  apiVersion:
-                    type: string
-                    minLength: 1
-                  kind:
-                    type: string
-                    minLength: 1
-                  spec:
-                    type: object
-              reply:
-                type: object
-                properties:
-                  ref:
-                    type: object
-                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                    required:
-                    - apiVersion
-                    - kind
-                    - name
-                    properties:
-                      apiVersion:
-                        type: string
-                        minLength: 1
-                      kind:
-                        type: string
-                        minLength: 1
-                      name:
-                        type: string
-                        minLength: 1
-                  uri:
-                    type: string
-                    description: "the target URI. If ref is provided, this must be relative URI reference."
-                  apiVersion:
-                    type: string
-                    description: "DEPRECATED: use ref.apiVersion"
-                  kind:
-                    type: string
-                    description: "DEPRECATED: use ref.kind"
-                  name:
-                    type: string
-                    description: "DEPRECATED: use ref.name"
   - name: v1beta1
-    served: false
+    served: true
     storage: false

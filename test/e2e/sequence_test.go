@@ -28,8 +28,8 @@ import (
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -73,7 +73,7 @@ func TestFlowsSequence(t *testing.T) {
 		client.CreatePodOrFail(stepperPod, lib.WithService(podName))
 		// create a new step
 		step := v1alpha1.SequenceStep{
-			Subscriber: duckv1.Destination{
+			Destination: duckv1.Destination{
 				Ref: resources.KnativeRefForService(podName, client.Namespace),
 			}}
 		// add the step into steps
@@ -81,7 +81,7 @@ func TestFlowsSequence(t *testing.T) {
 	}
 
 	// create channelTemplate for the Sequence
-	channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
+	channelTemplate := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: *(channelTypeMeta),
 	}
 

@@ -20,12 +20,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/google/go-cmp/cmp"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	defaultTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+	defaultTemplate = &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
 			Kind:       "InMemoryChannel",
@@ -44,7 +44,7 @@ var (
 func TestSequenceSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *eventingduckv1alpha1.ChannelTemplateSpec
+		channelTemplate     *messagingv1beta1.ChannelTemplateSpec
 		initial             Sequence
 		expected            Sequence
 	}{
@@ -69,8 +69,8 @@ func TestSequenceSetDefaults(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
 				Spec: SequenceSpec{
 					Steps: []SequenceStep{
-						{Subscriber: duckv1.Destination{Ref: &duckv1.KReference{Name: "first"}}},
-						{Subscriber: duckv1.Destination{Ref: &duckv1.KReference{Name: "second"}}},
+						{Destination: duckv1.Destination{Ref: &duckv1.KReference{Name: "first"}}},
+						{Destination: duckv1.Destination{Ref: &duckv1.KReference{Name: "second"}}},
 					},
 					Reply: &duckv1.Destination{
 						Ref: &duckv1.KReference{Name: "reply"},
@@ -82,8 +82,8 @@ func TestSequenceSetDefaults(t *testing.T) {
 				Spec: SequenceSpec{
 					ChannelTemplate: defaultChannelTemplate,
 					Steps: []SequenceStep{
-						{Subscriber: duckv1.Destination{Ref: &duckv1.KReference{Namespace: testNS, Name: "first"}}},
-						{Subscriber: duckv1.Destination{Ref: &duckv1.KReference{Namespace: testNS, Name: "second"}}},
+						{Destination: duckv1.Destination{Ref: &duckv1.KReference{Namespace: testNS, Name: "first"}}},
+						{Destination: duckv1.Destination{Ref: &duckv1.KReference{Namespace: testNS, Name: "second"}}},
 					},
 					Reply: &duckv1.Destination{
 						Ref: &duckv1.KReference{Namespace: testNS, Name: "reply"},
@@ -95,7 +95,7 @@ func TestSequenceSetDefaults(t *testing.T) {
 			channelTemplate: defaultChannelTemplate,
 			initial: Sequence{
 				Spec: SequenceSpec{
-					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
@@ -105,7 +105,7 @@ func TestSequenceSetDefaults(t *testing.T) {
 			},
 			expected: Sequence{
 				Spec: SequenceSpec{
-					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
@@ -118,10 +118,10 @@ func TestSequenceSetDefaults(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if !tc.nilChannelDefaulter {
-				eventingduckv1alpha1.ChannelDefaulterSingleton = &sequenceChannelDefaulter{
+				messagingv1beta1.ChannelDefaulterSingleton = &sequenceChannelDefaulter{
 					channelTemplate: tc.channelTemplate,
 				}
-				defer func() { eventingduckv1alpha1.ChannelDefaulterSingleton = nil }()
+				defer func() { messagingv1beta1.ChannelDefaulterSingleton = nil }()
 			}
 			tc.initial.SetDefaults(context.Background())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
@@ -132,9 +132,9 @@ func TestSequenceSetDefaults(t *testing.T) {
 }
 
 type sequenceChannelDefaulter struct {
-	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec
+	channelTemplate *messagingv1beta1.ChannelTemplateSpec
 }
 
-func (cd *sequenceChannelDefaulter) GetDefault(_ string) *eventingduckv1alpha1.ChannelTemplateSpec {
+func (cd *sequenceChannelDefaulter) GetDefault(_ string) *messagingv1beta1.ChannelTemplateSpec {
 	return cd.channelTemplate
 }

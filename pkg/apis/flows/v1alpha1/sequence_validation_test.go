@@ -23,9 +23,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 func TestSequenceValidation(t *testing.T) {
@@ -68,7 +69,7 @@ func makeInvalidReply(channelName string) *duckv1.Destination {
 
 func TestSequenceSpecValidation(t *testing.T) {
 	subscriberURI := apis.HTTP("example.com")
-	validChannelTemplate := &eventingduck.ChannelTemplateSpec{
+	validChannelTemplate := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "mykind",
 			APIVersion: "myapiversion",
@@ -98,7 +99,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "missing channeltemplatespec",
 		ts: &SequenceSpec{
-			Steps: []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps: []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate")
@@ -107,8 +108,8 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing APIVersion",
 		ts: &SequenceSpec{
-			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}, Spec: &runtime.RawExtension{}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.apiVersion")
@@ -117,8 +118,8 @@ func TestSequenceSpecValidation(t *testing.T) {
 	}, {
 		name: "invalid channeltemplatespec missing Kind",
 		ts: &SequenceSpec{
-			ChannelTemplate: &eventingduck.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}, Spec: &runtime.RawExtension{}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			fe := apis.ErrMissingField("channelTemplate.kind")
@@ -128,7 +129,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 		},
 		want: func() *apis.FieldError {
 			return nil
@@ -137,7 +138,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with valid reply",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 			Reply:           makeValidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {
@@ -147,7 +148,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with invalid missing name",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 			Reply: &duckv1.Destination{
 				Ref: &duckv1.KReference{
 					Namespace:  "namespace",
@@ -164,7 +165,7 @@ func TestSequenceSpecValidation(t *testing.T) {
 		name: "valid sequence with invalid reply",
 		ts: &SequenceSpec{
 			ChannelTemplate: validChannelTemplate,
-			Steps:           []SequenceStep{{Subscriber: duckv1.Destination{URI: subscriberURI}}},
+			Steps:           []SequenceStep{{Destination: duckv1.Destination{URI: subscriberURI}}},
 			Reply:           makeInvalidReply("reply-channel"),
 		},
 		want: func() *apis.FieldError {

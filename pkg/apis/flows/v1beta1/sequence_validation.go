@@ -60,7 +60,7 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 }
 
 func (ss *SequenceStep) Validate(ctx context.Context) *apis.FieldError {
-	errs := ss.Subscriber.Validate(ctx)
+	errs := ss.Destination.Validate(ctx)
 
 	if ss.Delivery != nil {
 		if de := ss.Delivery.Validate(ctx); de != nil {
