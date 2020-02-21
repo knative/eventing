@@ -24,7 +24,7 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 const (
@@ -43,10 +43,10 @@ const (
 type Config struct {
 	// NamespaceDefaultChannels are the default Channels CRDs for each namespace. namespace is the
 	// key, the value is the default ChannelTemplate to use.
-	NamespaceDefaults map[string]*eventingduckv1alpha1.ChannelTemplateSpec `json:"namespaceDefaults,omitempty"`
+	NamespaceDefaults map[string]*messagingv1beta1.ChannelTemplateSpec `json:"namespaceDefaults,omitempty"`
 	// ClusterDefaultChannel is the default Channel CRD for all namespaces that are not in
 	// NamespaceDefaultChannels.
-	ClusterDefault *eventingduckv1alpha1.ChannelTemplateSpec `json:"clusterDefault,omitempty"`
+	ClusterDefault *messagingv1beta1.ChannelTemplateSpec `json:"clusterDefault,omitempty"`
 }
 
 // ChannelDefaulter adds a default Channel CRD to Channels that do not have any
@@ -58,7 +58,7 @@ type ChannelDefaulter struct {
 	logger *zap.Logger
 }
 
-var _ eventingduckv1alpha1.ChannelDefaulter = &ChannelDefaulter{}
+var _ messagingv1beta1.ChannelDefaulter = &ChannelDefaulter{}
 
 // New creates a new ChannelDefaulter. The caller is expected to set this as the global singleton.
 //
@@ -119,7 +119,7 @@ func (cd *ChannelDefaulter) getConfig() *Config {
 
 // GetDefault determines the default Channel CRD and arguments for the provided namespace. If there is no default
 // for the provided namespace, then use the cluster default.
-func (cd *ChannelDefaulter) GetDefault(namespace string) *eventingduckv1alpha1.ChannelTemplateSpec {
+func (cd *ChannelDefaulter) GetDefault(namespace string) *messagingv1beta1.ChannelTemplateSpec {
 	// Because we are treating this as a singleton, be tolerant to it having not been setup at all.
 	if cd == nil {
 		return nil
@@ -133,7 +133,7 @@ func (cd *ChannelDefaulter) GetDefault(namespace string) *eventingduckv1alpha1.C
 	return channelTemplate
 }
 
-func getDefaultChannelTemplate(config *Config, namespace string) *eventingduckv1alpha1.ChannelTemplateSpec {
+func getDefaultChannelTemplate(config *Config, namespace string) *messagingv1beta1.ChannelTemplateSpec {
 	if template, ok := config.NamespaceDefaults[namespace]; ok {
 		return template
 	}

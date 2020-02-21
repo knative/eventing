@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/defaultchannel"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
@@ -171,7 +172,7 @@ func updateDefaultChannelCM(client *lib.Client, updateConfig func(config *defaul
 // setClusterDefaultChannel will set the default channel for cluster-wide
 func setClusterDefaultChannel(config *defaultchannel.Config, channel metav1.TypeMeta) {
 	if config.ClusterDefault == nil {
-		config.ClusterDefault = &eventingduck.ChannelTemplateSpec{}
+		config.ClusterDefault = &messagingv1beta1.ChannelTemplateSpec{}
 	}
 	// If we're testing with Channel, we can't default to ourselves, or badness will
 	// happen. We're going to try to create Channels that are ourselves.
@@ -189,13 +190,13 @@ func setNamespaceDefaultChannel(config *defaultchannel.Config, namespace string,
 		channel.Kind = "InMemoryChannel"
 	}
 	if config.NamespaceDefaults == nil {
-		config.NamespaceDefaults = make(map[string]*eventingduck.ChannelTemplateSpec, 1)
+		config.NamespaceDefaults = make(map[string]*messagingv1beta1.ChannelTemplateSpec, 1)
 	}
 	namespaceDefaults := config.NamespaceDefaults
 	if spec, exists := namespaceDefaults[namespace]; exists {
 		spec.TypeMeta = channel
 	} else {
-		spec = &eventingduck.ChannelTemplateSpec{
+		spec = &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: channel,
 		}
 		namespaceDefaults[namespace] = spec
