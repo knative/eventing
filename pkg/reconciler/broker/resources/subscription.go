@@ -25,6 +25,7 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -70,7 +71,7 @@ func ingressSubscriptionLabels(brokerName string) map[string]string {
 
 // NewSubscription returns a placeholder subscription for trigger 't', from brokerTrigger to 'uri'
 // replying to brokerIngress.
-func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *duckv1alpha1.DeliverySpec) *messagingv1alpha1.Subscription {
+func NewSubscription(t *v1alpha1.Trigger, brokerTrigger, brokerRef *corev1.ObjectReference, uri *apis.URL, delivery *duckv1beta1.DeliverySpec) *messagingv1alpha1.Subscription {
 	return &messagingv1alpha1.Subscription{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: t.Namespace,

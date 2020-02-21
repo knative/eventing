@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	baseeventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -102,7 +101,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	// above and fetched off of context by the api code.  See knative/serving's logic
 	// around config-defaults for an example of this.
 	chDefaulter := defaultchannel.New(logger.Desugar())
-	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
+	basemessagingv1beta1.ChannelDefaulterSingleton = chDefaulter
 	cmw.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	return defaulting.NewAdmissionController(ctx,

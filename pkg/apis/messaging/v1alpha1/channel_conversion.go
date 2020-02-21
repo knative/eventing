@@ -43,22 +43,9 @@ func (source *Channel) ConvertUp(ctx context.Context, obj apis.Convertible) erro
 	}
 }
 
-// ConvertChannelTemplateSpecUp converts an incoming source (duckv1alpha1.ChannelTemplateSpec
-func ConvertChannelTemplateSpecUp(ctx context.Context, source *duckv1alpha1.ChannelTemplateSpec) *v1beta1.ChannelTemplateSpec {
-	if source == nil {
-		return nil
-	}
-	return &v1beta1.ChannelTemplateSpec{
-		TypeMeta: source.TypeMeta,
-		Spec:     source.Spec,
-	}
-}
-
 // ConvertUp helps implement apis.Convertible
 func (source *ChannelSpec) ConvertUp(ctx context.Context, sink *v1beta1.ChannelSpec) error {
-	if source.ChannelTemplate != nil {
-		sink.ChannelTemplate = ConvertChannelTemplateSpecUp(ctx, source.ChannelTemplate)
-	}
+	sink.ChannelTemplate = source.ChannelTemplate
 	sink.ChannelableSpec.Delivery = source.Delivery
 	if source.Subscribable != nil {
 		sink.ChannelableSpec.Subscribers = make([]duckv1beta1.SubscriberSpec, len(source.Subscribable.Subscribers))
@@ -131,9 +118,7 @@ func (sink *Channel) ConvertDown(ctx context.Context, obj apis.Convertible) erro
 
 // ConvertDown helps implement apis.Convertible
 func (sink *ChannelSpec) ConvertDown(ctx context.Context, source v1beta1.ChannelSpec) {
-	if source.ChannelTemplate != nil {
-		sink.ChannelTemplate = ConvertChannelTemplateSpecDown(ctx, source.ChannelTemplate)
-	}
+	sink.ChannelTemplate = source.ChannelTemplate
 	sink.Delivery = source.ChannelableSpec.Delivery
 	if len(source.ChannelableSpec.Subscribers) > 0 {
 		sink.Subscribable = &eventingduck.Subscribable{
@@ -182,16 +167,4 @@ func (sink *ChannelStatus) ConvertDown(ctx context.Context, source v1beta1.Chann
 		}
 	}
 	return nil
-}
-
-// ConvertChannelTemplateSpecDown converts an incoming source (duckv1beta1.ChannelTemplateSpec)
-// to v1alpha1.ChannelTemplateSpec
-func ConvertChannelTemplateSpecDown(ctx context.Context, source *v1beta1.ChannelTemplateSpec) *duckv1alpha1.ChannelTemplateSpec {
-	if source == nil {
-		return nil
-	}
-	return &duckv1alpha1.ChannelTemplateSpec{
-		TypeMeta: source.TypeMeta,
-		Spec:     source.Spec,
-	}
 }

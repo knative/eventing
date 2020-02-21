@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/pkg/apis"
 )
@@ -33,12 +31,7 @@ func (source *Broker) ConvertUp(ctx context.Context, obj apis.Convertible) error
 	case *v1beta1.Broker:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Config = source.Spec.Config
-		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1beta1.DeliverySpec{}
-			if err := source.Spec.Delivery.ConvertUp(ctx, sink.Spec.Delivery); err != nil {
-				return err
-			}
-		}
+		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Status.Status = source.Status.Status
 		if err := source.Status.Address.ConvertUp(ctx, &sink.Status.Address); err != nil {
 			return err
@@ -56,12 +49,7 @@ func (sink *Broker) ConvertDown(ctx context.Context, obj apis.Convertible) error
 	switch source := obj.(type) {
 	case *v1beta1.Broker:
 		sink.ObjectMeta = source.ObjectMeta
-		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1alpha1.DeliverySpec{}
-			if err := sink.Spec.Delivery.ConvertDown(ctx, source.Spec.Delivery); err != nil {
-				return err
-			}
-		}
+		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Status.Status = source.Status.Status
 		if err := sink.Status.Address.ConvertDown(ctx, &source.Status.Address); err != nil {
 			return err

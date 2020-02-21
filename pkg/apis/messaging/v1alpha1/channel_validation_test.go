@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
@@ -39,7 +40,7 @@ func TestChannelValidation(t *testing.T) {
 		name: "channel template with no kind",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						APIVersion: SchemeGroupVersion.String(),
 					},
@@ -50,7 +51,7 @@ func TestChannelValidation(t *testing.T) {
 		name: "channel template with no apiVersion",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind: "InMemoryChannel",
 					},
@@ -61,7 +62,7 @@ func TestChannelValidation(t *testing.T) {
 		name: "invalid subscribers array, not allowed",
 		cr: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -108,7 +109,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (no change)",
 		current: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -121,7 +122,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		},
 		original: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -137,7 +138,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "new nil is ok",
 		current: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -154,7 +155,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "bad (channelTemplate change)",
 		current: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "OtherChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -167,7 +168,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		},
 		original: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -190,7 +191,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		name: "good (subscribable change)",
 		current: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),
@@ -206,7 +207,7 @@ func TestChannelImmutableFields(t *testing.T) {
 		},
 		original: &Channel{
 			Spec: ChannelSpec{
-				ChannelTemplate: &eventingduck.ChannelTemplateSpec{
+				ChannelTemplate: &v1beta1.ChannelTemplateSpec{
 					TypeMeta: v1.TypeMeta{
 						Kind:       "InMemoryChannel",
 						APIVersion: SchemeGroupVersion.String(),

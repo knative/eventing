@@ -24,8 +24,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -48,7 +49,7 @@ func TestBrokerConversion(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1beta1.Broker{}}
 
-	linear := v1alpha1.BackoffPolicyLinear
+	linear := eventingduckv1beta1.BackoffPolicyLinear
 
 	tests := []struct {
 		name string
@@ -72,7 +73,7 @@ func TestBrokerConversion(t *testing.T) {
 				Generation: 17,
 			},
 			Spec: BrokerSpec{
-				ChannelTemplate: &v1alpha1.ChannelTemplateSpec{
+				ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "channelKind",
 						APIVersion: "channelAPIVersion",
@@ -84,7 +85,7 @@ func TestBrokerConversion(t *testing.T) {
 					Name:       "configName",
 					APIVersion: "configAPIVersion",
 				},
-				Delivery: &v1alpha1.DeliverySpec{
+				Delivery: &eventingduckv1beta1.DeliverySpec{
 					DeadLetterSink: &duckv1.Destination{
 						Ref: &duckv1.KReference{
 							Kind:       "dlKind",

@@ -38,6 +38,7 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -224,7 +225,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*co
 type channelTemplate struct {
 	ref      corev1.ObjectReference
 	inf      dynamic.ResourceInterface
-	template duckv1alpha1.ChannelTemplateSpec
+	template messagingv1beta1.ChannelTemplateSpec
 }
 
 func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker) (*channelTemplate, error) {
@@ -233,7 +234,7 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker)
 		Name:      triggerChannelName,
 		Namespace: b.Namespace,
 	}
-	var template *duckv1alpha1.ChannelTemplateSpec
+	var template *messagingv1beta1.ChannelTemplateSpec
 
 	if b.Spec.Config != nil {
 		if b.Spec.Config.Kind == "ConfigMap" && b.Spec.Config.APIVersion == "v1" {

@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -122,7 +123,7 @@ func TestNewSubscription(t *testing.T) {
 		Kind:       "broker-kind",
 		APIVersion: "broker-apiVersion",
 	}
-	delivery := &duckv1alpha1.DeliverySpec{
+	delivery := &duckv1beta1.DeliverySpec{
 		DeadLetterSink: &duckv1.Destination{
 			URI: apis.HTTP("dlc.example.com"),
 		},
@@ -161,7 +162,7 @@ func TestNewSubscription(t *testing.T) {
 					APIVersion: "broker-apiVersion",
 				},
 			},
-			Delivery: &duckv1alpha1.DeliverySpec{
+			Delivery: &duckv1beta1.DeliverySpec{
 				DeadLetterSink: &duckv1.Destination{
 					URI: apis.HTTP("dlc.example.com"),
 				},

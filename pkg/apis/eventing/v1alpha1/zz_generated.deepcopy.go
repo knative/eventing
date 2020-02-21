@@ -23,7 +23,8 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	v1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	apis "knative.dev/pkg/apis"
 	v1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -94,7 +95,7 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 	*out = *in
 	if in.ChannelTemplate != nil {
 		in, out := &in.ChannelTemplate, &out.ChannelTemplate
-		*out = new(duckv1alpha1.ChannelTemplateSpec)
+		*out = new(v1beta1.ChannelTemplateSpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Config != nil {
@@ -104,7 +105,7 @@ func (in *BrokerSpec) DeepCopyInto(out *BrokerSpec) {
 	}
 	if in.Delivery != nil {
 		in, out := &in.Delivery, &out.Delivery
-		*out = new(duckv1alpha1.DeliverySpec)
+		*out = new(duckv1beta1.DeliverySpec)
 		(*in).DeepCopyInto(*out)
 	}
 	return

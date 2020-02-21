@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/duck/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -68,7 +69,7 @@ type ChannelSpec struct {
 
 	// ChannelTemplate specifies which Channel CRD to use to create the CRD Channel backing this Channel.
 	// This is immutable after creation. Normally this is set by the Channel defaulter, not directly by the user.
-	ChannelTemplate *eventingduck.ChannelTemplateSpec `json:"channelTemplate"`
+	ChannelTemplate *messagingv1beta1.ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Channel conforms to Duck type Subscribable.
 	Subscribable *eventingduck.Subscribable `json:"subscribable,omitempty"`
