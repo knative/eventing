@@ -250,6 +250,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					messagingv1beta1_:  &basemessagingv1beta1.Channel{},
 				},
 			},
+			basemessagingv1beta1.Kind("InMemoryChannel"): {
+				DefinitionName: messaging.InMemoryChannelsResource.String(),
+				HubVersion:     messagingv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					messagingv1alpha1_: &basemessagingv1alpha1.InMemoryChannel{},
+					messagingv1beta1_:  &basemessagingv1beta1.InMemoryChannel{},
+				},
+			},
 		},
 
 		// A function that infuses the context passed to ConvertUp/ConvertDown/SetDefaults with custom metadata.

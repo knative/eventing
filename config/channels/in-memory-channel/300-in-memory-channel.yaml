@@ -22,10 +22,15 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      # this is a work around so we don't need to flush out the
+      # schema for each version at this time
+      #
+      # see issue: https://github.com/knative/serving/issues/912
+      x-kubernetes-preserve-unknown-fields: true
   names:
     kind: InMemoryChannel
     plural: inmemorychannels
@@ -40,6 +45,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -53,49 +64,10 @@ spec:
     - name: Age
       type: date
       JSONPath: .metadata.creationTimestamp
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          properties:
-            subscribable:
-              type: object
-              properties:
-                subscribers:
-                  type: array
-                  items:
-                    required:
-                      - uid
-                    properties:
-                      ref:
-                        type: object
-                        required:
-                          - namespace
-                          - name
-                          - uid
-                        properties:
-                          apiVersion:
-                            type: string
-                          kind:
-                            type: string
-                          name:
-                            type: string
-                            minLength: 1
-                          namespace:
-                            type: string
-                            minLength: 1
-                          uid:
-                            type: string
-                            minLength: 1
-                      uid:
-                        type: string
-                        minLength: 1
-                      subscriberURI:
-                        type: string
-                        minLength: 1
-                      replyURI:
-                        type: string
-                        minLength: 1
-                      deliveryURI:
-                        type: string
-
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1beta1
+    served: true
+    storage: false

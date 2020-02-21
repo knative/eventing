@@ -33,4 +33,9 @@ var (
 		Group:    GroupName,
 		Resource: "channels",
 	}
+	// InMemoryChannelsResource respresents a Knative Channel
+	InMemoryChannelsResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "inmemorychannels",
+	}
 )
