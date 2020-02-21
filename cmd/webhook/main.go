@@ -260,6 +260,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				Zygotes: map[string]conversion.ConvertibleObject{
 					messagingv1alpha1_: &basemessagingv1alpha1.InMemoryChannel{},
 					messagingv1beta1_:  &basemessagingv1beta1.InMemoryChannel{},
+				},
+			},
 			// flows
 			flowsv1beta1.Kind("Sequence"): {
 				DefinitionName: flows.SequenceResource.String(),
