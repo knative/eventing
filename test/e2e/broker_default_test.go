@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/logging"
 
@@ -164,9 +165,9 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			// Wait for default broker ready.
 			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
-			// Test if namespace reconciler would recreate broker once it was deleted
-			if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(defaultBrokerName); err != nil {
-				t.Fatalf("Can't delete broker: %v in namespace: ", defaultBrokerName, client.Namespace)
+			// Test if namespace reconciler would recreate broker once broker was deleted.
+			if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(defaultBrokerName, &metav1.DeleteOptions{}); err != nil {
+				t.Fatalf("Can't delete default broker in namespace: %v", client.Namespace)
 			}
 			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
