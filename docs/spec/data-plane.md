@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Developers using Knative eventing need to know what is supported for delivery to user provided components that receive events. Knative Eventing defines contract for data plane components and we have listed them here.
+Developers using Knative Eventing need to know what is supported for delivery to user provided components that receive events. Knative Eventing defines contract for data plane components and we have listed them here.
 
 ## Data plane contract for Sinks
 
@@ -12,9 +12,9 @@ A **Sink** MAY be [_callable_](./interfaces.md#callable) resource that represent
 
 Almost every component in Knative Eventing may be a Sink providing composability.
 
-Every Sink MUST support HTTP Protocol Binding for CloudEvents [version 1.0](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md) and [version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md).
+Every Sink MUST support HTTP Protocol Binding for CloudEvents [version 1.0](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md) and [version 0.3](https://github.com/cloudevents/spec/blob/v0.3/http-transport-binding.md) with restrictions and extensions specified below.
 
-### Details of HTTP Support
+### HTTP Support
 
 This section adds restrictions on [requirements in HTTP Protocol Binding for CloudEvents](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md#12-relation-to-http).
 
