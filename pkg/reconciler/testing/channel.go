@@ -90,6 +90,12 @@ func WithBackingChannelFailed(reason, msg string) ChannelOption {
 	}
 }
 
+func WithBackingChannelUnknown(reason, msg string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.MarkBackingChannelUnknown(reason, msg)
+	}
+}
+
 func WithBackingChannelReady(c *v1alpha1.Channel) {
 	c.Status.MarkBackingChannelReady()
 }
@@ -97,6 +103,12 @@ func WithBackingChannelReady(c *v1alpha1.Channel) {
 func WithBackingChannelObjRef(objRef *v1.ObjectReference) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.Channel = objRef
+	}
+}
+
+func WithChannelNoAddress() ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.SetAddress(nil)
 	}
 }
 
@@ -111,14 +123,6 @@ func WithChannelAddress(hostname string) ChannelOption {
 			},
 		}
 		c.Status.SetAddress(address)
-	}
-}
-
-func WithChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) ChannelOption {
-	return func(c *v1alpha1.Channel) {
-		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
-			Subscribers: subscribers,
-		}
 	}
 }
 

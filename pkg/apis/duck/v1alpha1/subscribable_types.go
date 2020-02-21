@@ -129,7 +129,6 @@ var (
 // Having this function here makes it convinient to read the default value at runtime.
 func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
 	return s.SubscribableStatus
-
 }
 
 // SetSubscribableTypeStatus method sets the SubscribableStatus Values in th SubscribableTypeStatus structs

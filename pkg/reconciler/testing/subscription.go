@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/pkg/apis"
@@ -138,6 +139,21 @@ func WithSubscriptionSubscriberRef(gvk metav1.GroupVersionKind, name, namespace 
 	}
 }
 
+func WithSubscriptionDeliveryRef(gvk metav1.GroupVersionKind, name, namespace string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Spec.Delivery = &eventingduckv1alpha1.DeliverySpec{
+			DeadLetterSink: &duckv1.Destination{
+				Ref: &duckv1.KReference{
+					APIVersion: apiVersion(gvk),
+					Kind:       gvk.Kind,
+					Name:       name,
+					Namespace:  namespace,
+				},
+			},
+		}
+	}
+}
+
 func WithSubscriptionPhysicalSubscriptionSubscriber(uri *apis.URL) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		if uri == nil {
@@ -156,6 +172,15 @@ func WithSubscriptionPhysicalSubscriptionReply(uri *apis.URL) SubscriptionOption
 	}
 }
 
+func WithSubscriptionDeadLetterSinkURI(uri *apis.URL) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		if uri == nil {
+			panic(errors.New("nil URI"))
+		}
+		s.Status.PhysicalSubscription.DeadLetterSinkURI = uri
+	}
+}
+
 func WithSubscriptionFinalizers(finalizers ...string) SubscriptionOption {
 	return func(s *v1alpha1.Subscription) {
 		s.Finalizers = finalizers
@@ -166,6 +191,14 @@ func MarkSubscriptionReady(s *v1alpha1.Subscription) {
 	s.Status.MarkChannelReady()
 	s.Status.MarkReferencesResolved()
 	s.Status.MarkAddedToChannel()
+}
+
+func MarkAddedToChannel(s *v1alpha1.Subscription) {
+	s.Status.MarkAddedToChannel()
+}
+
+func MarkReferencesResolved(s *v1alpha1.Subscription) {
+	s.Status.MarkReferencesResolved()
 }
 
 func WithSubscriptionReferencesNotResolved(reason, msg string) SubscriptionOption {
