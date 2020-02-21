@@ -24,8 +24,8 @@ import (
 	"knative.dev/pkg/kmeta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	v1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // SequenceChannelName creates a name for the Channel fronting a specific step.
@@ -37,7 +37,7 @@ func SequenceChannelName(sequenceName string, step int) string {
 // for a given sequence.
 func NewChannel(name string, p *v1alpha1.Sequence) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := eventingduck.ChannelTemplateSpecInternal{
+	template := messagingv1beta1.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       p.Spec.ChannelTemplate.Kind,
 			APIVersion: p.Spec.ChannelTemplate.APIVersion,
