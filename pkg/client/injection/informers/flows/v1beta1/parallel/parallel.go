@@ -19,7 +19,7 @@ limitations under the License.
 package parallel
 
 import (
-	"context"
+	context "context"
 
 	v1beta1 "knative.dev/eventing/pkg/client/informers/externalversions/flows/v1beta1"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"

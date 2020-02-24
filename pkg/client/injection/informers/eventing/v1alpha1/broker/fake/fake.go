@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	"context"
+	context "context"
 
 	broker "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"
