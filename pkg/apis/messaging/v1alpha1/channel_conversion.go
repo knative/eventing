@@ -30,21 +30,21 @@ import (
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-// ConvertUp implements apis.Convertible
+// ConvertTo implements apis.Convertible
 // Converts source (from v1alpha1.Channel) into v1beta1.Channel
-func (source *Channel) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *Channel) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.Channel:
 		sink.ObjectMeta = source.ObjectMeta
-		source.Status.ConvertUp(ctx, &sink.Status)
-		return source.Spec.ConvertUp(ctx, &sink.Spec)
+		source.Status.ConvertTo(ctx, &sink.Status)
+		return source.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 }
 
-// ConvertUp helps implement apis.Convertible
-func (source *ChannelSpec) ConvertUp(ctx context.Context, sink *v1beta1.ChannelSpec) error {
+// ConvertTo helps implement apis.Convertible
+func (source *ChannelSpec) ConvertTo(ctx context.Context, sink *v1beta1.ChannelSpec) error {
 	sink.ChannelTemplate = source.ChannelTemplate
 	sink.ChannelableSpec.Delivery = source.Delivery
 	if source.Subscribable != nil {
@@ -73,12 +73,12 @@ func (source *ChannelSpec) ConvertUp(ctx context.Context, sink *v1beta1.ChannelS
 	return nil
 }
 
-// ConvertUp helps implement apis.Convertible
-func (source *ChannelStatus) ConvertUp(ctx context.Context, sink *v1beta1.ChannelStatus) {
+// ConvertTo helps implement apis.Convertible
+func (source *ChannelStatus) ConvertTo(ctx context.Context, sink *v1beta1.ChannelStatus) {
 	source.Status.ConvertTo(ctx, &sink.Status)
 	if source.AddressStatus.Address != nil {
 		sink.AddressStatus.Address = &duckv1.Addressable{}
-		source.AddressStatus.Address.ConvertUp(ctx, sink.AddressStatus.Address)
+		source.AddressStatus.Address.ConvertTo(ctx, sink.AddressStatus.Address)
 	}
 	if source.SubscribableTypeStatus.SubscribableStatus != nil &&
 		len(source.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
@@ -102,22 +102,22 @@ func (source *ChannelStatus) ConvertUp(ctx context.Context, sink *v1beta1.Channe
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj v1beta1.Channel into v1alpha1.Channel
-func (sink *Channel) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *Channel) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.Channel:
 		sink.ObjectMeta = source.ObjectMeta
-		sink.Status.ConvertDown(ctx, source.Status)
-		sink.Spec.ConvertDown(ctx, source.Spec)
+		sink.Status.ConvertFrom(ctx, source.Status)
+		sink.Spec.ConvertFrom(ctx, source.Spec)
 		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
 }
 
-// ConvertDown helps implement apis.Convertible
-func (sink *ChannelSpec) ConvertDown(ctx context.Context, source v1beta1.ChannelSpec) {
+// ConvertFrom helps implement apis.Convertible
+func (sink *ChannelSpec) ConvertFrom(ctx context.Context, source v1beta1.ChannelSpec) {
 	sink.ChannelTemplate = source.ChannelTemplate
 	sink.Delivery = source.ChannelableSpec.Delivery
 	if len(source.ChannelableSpec.Subscribers) > 0 {
@@ -136,12 +136,12 @@ func (sink *ChannelSpec) ConvertDown(ctx context.Context, source v1beta1.Channel
 	}
 }
 
-// ConvertDown helps implement apis.Convertible
-func (sink *ChannelStatus) ConvertDown(ctx context.Context, source v1beta1.ChannelStatus) error {
+// ConvertFrom helps implement apis.Convertible
+func (sink *ChannelStatus) ConvertFrom(ctx context.Context, source v1beta1.ChannelStatus) error {
 	source.Status.ConvertTo(ctx, &sink.Status)
 	if source.AddressStatus.Address != nil {
 		sink.AddressStatus.Address = &pkgduckv1alpha1.Addressable{}
-		if err := sink.AddressStatus.Address.ConvertDown(ctx, source.AddressStatus.Address); err != nil {
+		if err := sink.AddressStatus.Address.ConvertFrom(ctx, source.AddressStatus.Address); err != nil {
 			return err
 		}
 	}

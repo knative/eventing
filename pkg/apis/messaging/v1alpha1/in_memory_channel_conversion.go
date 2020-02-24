@@ -29,21 +29,21 @@ import (
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 )
 
-// ConvertUp implements apis.Convertible
+// ConvertTo implements apis.Convertible
 // Converts source (from v1alpha1.InMemoryChannel) into v1beta1.InMemoryChannel
-func (source *InMemoryChannel) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *InMemoryChannel) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.InMemoryChannel:
 		sink.ObjectMeta = source.ObjectMeta
-		source.Status.ConvertUp(ctx, &sink.Status)
-		return source.Spec.ConvertUp(ctx, &sink.Spec)
+		source.Status.ConvertTo(ctx, &sink.Status)
+		return source.Spec.ConvertTo(ctx, &sink.Spec)
 	default:
 		return fmt.Errorf("unknown version, got: %T", sink)
 	}
 }
 
-// ConvertUp helps implement apis.Convertible
-func (source *InMemoryChannelSpec) ConvertUp(ctx context.Context, sink *v1beta1.InMemoryChannelSpec) error {
+// ConvertTo helps implement apis.Convertible
+func (source *InMemoryChannelSpec) ConvertTo(ctx context.Context, sink *v1beta1.InMemoryChannelSpec) error {
 	sink.Delivery = source.Delivery
 	if source.Subscribable != nil {
 		sink.Subscribers = make([]duckv1beta1.SubscriberSpec, len(source.Subscribable.Subscribers))
@@ -71,12 +71,12 @@ func (source *InMemoryChannelSpec) ConvertUp(ctx context.Context, sink *v1beta1.
 	return nil
 }
 
-// ConvertUp helps implement apis.Convertible
-func (source *InMemoryChannelStatus) ConvertUp(ctx context.Context, sink *v1beta1.InMemoryChannelStatus) {
+// ConvertTo helps implement apis.Convertible
+func (source *InMemoryChannelStatus) ConvertTo(ctx context.Context, sink *v1beta1.InMemoryChannelStatus) {
 	source.Status.ConvertTo(ctx, &sink.Status)
 	if source.AddressStatus.Address != nil {
 		sink.AddressStatus.Address = &duckv1.Addressable{}
-		source.AddressStatus.Address.ConvertUp(ctx, sink.AddressStatus.Address)
+		source.AddressStatus.Address.ConvertTo(ctx, sink.AddressStatus.Address)
 	}
 	if source.SubscribableTypeStatus.SubscribableStatus != nil &&
 		len(source.SubscribableTypeStatus.SubscribableStatus.Subscribers) > 0 {
@@ -92,22 +92,22 @@ func (source *InMemoryChannelStatus) ConvertUp(ctx context.Context, sink *v1beta
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj v1beta1.InMemoryChannel into v1alpha1.InMemoryChannel
-func (sink *InMemoryChannel) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *InMemoryChannel) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.InMemoryChannel:
 		sink.ObjectMeta = source.ObjectMeta
-		sink.Status.ConvertDown(ctx, source.Status)
-		sink.Spec.ConvertDown(ctx, source.Spec)
+		sink.Status.ConvertFrom(ctx, source.Status)
+		sink.Spec.ConvertFrom(ctx, source.Spec)
 		return nil
 	default:
 		return fmt.Errorf("unknown version, got: %T", source)
 	}
 }
 
-// ConvertDown helps implement apis.Convertible
-func (sink *InMemoryChannelSpec) ConvertDown(ctx context.Context, source v1beta1.InMemoryChannelSpec) {
+// ConvertFrom helps implement apis.Convertible
+func (sink *InMemoryChannelSpec) ConvertFrom(ctx context.Context, source v1beta1.InMemoryChannelSpec) {
 	sink.Delivery = source.Delivery
 	if len(source.Subscribers) > 0 {
 		sink.Subscribable = &eventingduck.Subscribable{
@@ -125,12 +125,12 @@ func (sink *InMemoryChannelSpec) ConvertDown(ctx context.Context, source v1beta1
 	}
 }
 
-// ConvertDown helps implement apis.Convertible
-func (sink *InMemoryChannelStatus) ConvertDown(ctx context.Context, source v1beta1.InMemoryChannelStatus) error {
+// ConvertFrom helps implement apis.Convertible
+func (sink *InMemoryChannelStatus) ConvertFrom(ctx context.Context, source v1beta1.InMemoryChannelStatus) error {
 	source.Status.ConvertTo(ctx, &sink.Status)
 	if source.AddressStatus.Address != nil {
 		sink.AddressStatus.Address = &pkgduckv1alpha1.Addressable{}
-		if err := sink.AddressStatus.Address.ConvertDown(ctx, source.AddressStatus.Address); err != nil {
+		if err := sink.AddressStatus.Address.ConvertFrom(ctx, source.AddressStatus.Address); err != nil {
 			return err
 		}
 	}

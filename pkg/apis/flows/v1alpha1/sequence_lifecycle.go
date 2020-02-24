@@ -160,11 +160,11 @@ func (ss *SequenceStatus) setAddress(address *pkgduckv1alpha1.Addressable) {
 
 	if address.URL != nil || address.Hostname != "" {
 		// But, first, convert it to V1, since Channel Status
-		// is using v1alpha1 Address. Note that ConvertUp does
+		// is using v1alpha1 Address. Note that ConvertTo does
 		// not do anything with the passed in Context, so
 		// just make one up here.
 		v1Address := pkgduckv1.Addressable{}
-		if err := address.ConvertUp(context.TODO(), &v1Address); err != nil {
+		if err := address.ConvertTo(context.TODO(), &v1Address); err != nil {
 			pCondSet.Manage(ss).MarkFalse(SequenceConditionAddressable, "emptyAddress", "unable to convert channel address up to v1")
 			return
 		}
