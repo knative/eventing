@@ -19,6 +19,7 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -344,6 +345,12 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 		channel, err := r.channelLister.Channels(sub.Namespace).Get(sub.Spec.Channel.Name)
 		if err != nil {
 			return nil, err
+		}
+
+		realz, err := r.EventingClientSet.MessagingV1alpha1().Channels(sub.Namespace).Get(sub.Spec.Channel.Name, metav1.GetOptions{})
+
+		if diff := cmp.Diff(realz, channel); diff != "" {
+			logging.FromContext(ctx).Error("Unexpected difference (-want, +got): %v", zap.String("diff", diff))
 		}
 
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
