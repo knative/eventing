@@ -90,8 +90,8 @@ func TestNewDispatcher(t *testing.T) {
 							}},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
+									corev1.ResourceCPU:    resource.MustParse("125m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("2200m"),

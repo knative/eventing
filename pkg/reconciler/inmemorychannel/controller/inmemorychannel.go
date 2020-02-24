@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
@@ -297,16 +298,19 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
 	// We may change this name later, so we have to ensure we use proper addressable when resolving these.
-	svc, err := r.serviceLister.Services(imc.Namespace).Get(resources.CreateChannelServiceName(imc.Name))
+	expected, err := resources.NewK8sService(imc, resources.ExternalService(dispatcherNamespace, dispatcherName))
+	if err != nil {
+		logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+		return nil, err
+	}
+
+	channelSvcName := resources.CreateChannelServiceName(imc.Name)
+
+	svc, err := r.serviceLister.Services(imc.Namespace).Get(channelSvcName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			svc, err = resources.NewK8sService(imc, resources.ExternalService(dispatcherNamespace, dispatcherName))
-			if err != nil {
-				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
-				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
-				return nil, err
-			}
-			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(svc)
+			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(expected)
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
 				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
@@ -317,6 +321,16 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 		logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
 		imc.Status.MarkChannelServiceUnknown("ChannelServiceGetFailed", fmt.Sprintf("Unable to get the channel service: %s", err))
 		return nil, err
+	} else if !equality.Semantic.DeepEqual(svc.Spec, expected.Spec) {
+		svc = svc.DeepCopy()
+		svc.Spec = expected.Spec
+
+		svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Update(svc)
+		if err != nil {
+			logging.FromContext(ctx).Error("failed to update the channel service", zap.Error(err))
+			imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+			return nil, err
+		}
 	}
 
 	// Check to make sure that our IMC owns this service and if not, complain.
