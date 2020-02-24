@@ -60,6 +60,8 @@ spec:
           value: knative.dev/eventing
         - name: WEBHOOK_NAME
           value: eventing-webhook
+        - name: SINK_BINDING_OPT_OUT_SELECTOR
+          value: "false"
 
         securityContext:
           allowPrivilegeEscalation: false
