@@ -19,7 +19,7 @@ limitations under the License.
 package sequence
 
 import (
-	"context"
+	context "context"
 
 	v1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/flows/v1alpha1"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"

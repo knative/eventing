@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	"context"
+	context "context"
 
 	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"
 	pingsource "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource"
