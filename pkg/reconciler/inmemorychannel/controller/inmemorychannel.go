@@ -36,6 +36,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -105,7 +106,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
 
-	scope, ok := imc.Annotations["eventing.knative.dev/scope"]
+	scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
 		scope = "cluster"
 	}
