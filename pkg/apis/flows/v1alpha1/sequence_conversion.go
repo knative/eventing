@@ -25,9 +25,9 @@ import (
 	"knative.dev/eventing/pkg/apis/flows/v1beta1"
 )
 
-// ConvertUp implements apis.Convertible
+// ConvertTo implements apis.Convertible
 // Converts obj from v1alpha1.Sequence into v1beta1.Sequence
-func (source *Sequence) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *Sequence) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.Sequence:
 		sink.ObjectMeta = source.ObjectMeta
@@ -72,9 +72,9 @@ func (source *Sequence) ConvertUp(ctx context.Context, obj apis.Convertible) err
 	}
 }
 
-// ConvertDown implements apis.Convertible
+// ConvertFrom implements apis.Convertible
 // Converts obj from v1beta1.Sequence into v1alpha1.Sequence
-func (sink *Sequence) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *Sequence) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.Sequence:
 		sink.ObjectMeta = source.ObjectMeta

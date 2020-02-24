@@ -24,16 +24,16 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible.
+// ConvertTo implements apis.Convertible.
 // Converts source (from v1alpha1.Broker) into v1beta1.Broker
-func (source *Broker) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *Broker) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.Broker:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Config = source.Spec.Config
 		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Status.Status = source.Status.Status
-		if err := source.Status.Address.ConvertUp(ctx, &sink.Status.Address); err != nil {
+		if err := source.Status.Address.ConvertTo(ctx, &sink.Status.Address); err != nil {
 			return err
 		}
 		return nil
@@ -43,15 +43,15 @@ func (source *Broker) ConvertUp(ctx context.Context, obj apis.Convertible) error
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj from v1beta1.Broker into v1alpha1.Broker
-func (sink *Broker) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *Broker) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.Broker:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Status.Status = source.Status.Status
-		if err := sink.Status.Address.ConvertDown(ctx, &source.Status.Address); err != nil {
+		if err := sink.Status.Address.ConvertFrom(ctx, &source.Status.Address); err != nil {
 			return err
 		}
 		sink.Spec.Config = source.Spec.Config

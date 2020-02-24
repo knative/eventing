@@ -25,9 +25,9 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible.
+// ConvertTo implements apis.Convertible.
 // Converts source (from v1alpha1.EventType) into v1beta1.EventType
-func (source *EventType) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *EventType) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.EventType:
 		b, err := json.Marshal(source)
@@ -41,9 +41,9 @@ func (source *EventType) ConvertUp(ctx context.Context, obj apis.Convertible) er
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj from v1beta1.EventType into v1alpha1.EventType
-func (sink *EventType) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *EventType) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.EventType:
 		b, err := json.Marshal(source)
