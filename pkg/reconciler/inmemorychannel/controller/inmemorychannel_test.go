@@ -392,7 +392,7 @@ func TestInNamespace(t *testing.T) {
 			Name: "Works, creates new service account, role binding, dispatcher deployment and service and channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryNamespaceAnnotation),
+				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeReadyEndpoints(),
 			},
@@ -406,7 +406,7 @@ func TestInNamespace(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInMemoryNamespaceAnnotation,
+					reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace),
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),
@@ -426,7 +426,7 @@ func TestInNamespace(t *testing.T) {
 			Name: "Works, existing service account, role binding, dispatcher deployment and service, new channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryNamespaceAnnotation),
+				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace)),
 				makeServiceAccount(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", reconciletesting.NewInMemoryChannel(imcName, "knative-testing")),
@@ -440,7 +440,7 @@ func TestInNamespace(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInMemoryNamespaceAnnotation,
+					reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace),
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),

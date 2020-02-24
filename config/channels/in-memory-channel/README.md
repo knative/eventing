@@ -62,7 +62,7 @@ kubectl apply --filename - << END
 apiVersion: messaging.knative.dev/v1alpha1
 kind: InMemoryChannel
 metadata:
-  name: foo
+  name: foo-ns
   namespace: default
   annotations:
     eventing.knative.dev/scope: namespace

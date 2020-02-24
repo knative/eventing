@@ -176,9 +176,11 @@ func WithInMemoryChannelStatusSubscribers(subscriberStatuses []duckv1alpha1.Subs
 	}
 }
 
-func WithInMemoryNamespaceAnnotation(imc *v1alpha1.InMemoryChannel) {
-	if imc.Annotations == nil {
-		imc.Annotations = make(map[string]string)
+func WithInMemoryScopeAnnotation(value string) InMemoryChannelOption {
+	return func(imc *v1alpha1.InMemoryChannel) {
+		if imc.Annotations == nil {
+			imc.Annotations = make(map[string]string)
+		}
+		imc.Annotations[eventing.ScopeAnnotationKey] = value
 	}
-	imc.Annotations[eventing.ScopeAnnotationKey] = "namespace"
 }
