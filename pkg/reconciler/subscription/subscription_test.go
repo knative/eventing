@@ -1034,6 +1034,7 @@ func TestAllCases(t *testing.T) {
 			channelLister:       listers.GetMessagingChannelLister(),
 			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			tracker:             &FakeTracker{},
 		}
 		return subscription.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetSubscriptionLister(), r.Recorder, r)
 	}, false, logger))
