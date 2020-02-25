@@ -24,11 +24,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 type Config struct {
-	DefaultChannelTemplate duckv1alpha1.ChannelTemplateSpec
+	DefaultChannelTemplate messagingv1beta1.ChannelTemplateSpec
 }
 
 func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.ConfigMap) (*Config, error) {
@@ -51,7 +51,7 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 		}
 
 		return &Config{
-			DefaultChannelTemplate: duckv1alpha1.ChannelTemplateSpec{
+			DefaultChannelTemplate: messagingv1beta1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: apiVersion,
 					Kind:       kind,

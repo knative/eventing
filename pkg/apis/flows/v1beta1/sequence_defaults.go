@@ -46,3 +46,9 @@ func (ss *SequenceSpec) SetDefaults(ctx context.Context) {
 		ss.Reply.SetDefaults(ctx)
 	}
 }
+
+func (ss *SequenceStep) SetDefaults(ctx context.Context) {
+	ss.Destination.SetDefaults(ctx)
+
+	// No delivery defaults.
+}

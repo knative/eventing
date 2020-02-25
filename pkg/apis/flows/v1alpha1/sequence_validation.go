@@ -58,3 +58,9 @@ func (ps *SequenceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 	return errs
 }
+
+func (ss *SequenceStep) Validate(ctx context.Context) *apis.FieldError {
+	errs := ss.Destination.Validate(ctx)
+
+	return errs
+}

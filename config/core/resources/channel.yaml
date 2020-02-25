@@ -23,6 +23,7 @@ metadata:
     duck.knative.dev/addressable: "true"
 spec:
   group: messaging.knative.dev
+  preserveUnknownFields: false
   names:
     kind: Channel
     plural: channels
@@ -37,6 +38,12 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -86,12 +93,14 @@ spec:
                     description: "Events received on the channel are forwarded to its subscribers."
                     items:
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                       required:
                         - uid
                       properties:
                         ref:
                           type: object
                           description: "a reference to a Kubernetes object from which to retrieve the target URI."
+                          x-kubernetes-preserve-unknown-fields: true
                           required:
                             - namespace
                             - name
@@ -122,6 +131,19 @@ spec:
                           type: string
                           description: "Endpoint for the reply."
                           minLength: 1
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
-    served: false
+    served: true
     storage: false
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true

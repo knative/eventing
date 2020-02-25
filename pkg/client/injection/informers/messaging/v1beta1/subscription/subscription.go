@@ -19,7 +19,7 @@ limitations under the License.
 package subscription
 
 import (
-	"context"
+	context "context"
 
 	v1beta1 "knative.dev/eventing/pkg/client/informers/externalversions/messaging/v1beta1"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"

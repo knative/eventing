@@ -40,8 +40,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -109,7 +109,7 @@ func createDestination(stepNumber int) duckv1.Destination {
 
 func TestAllCases(t *testing.T) {
 	pKey := testNS + "/" + sequenceName
-	imc := &eventingduckv1alpha1.ChannelTemplateSpec{
+	imc := &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "messaging.knative.dev/v1alpha1",
 			Kind:       "inmemorychannel",
@@ -140,20 +140,23 @@ func TestAllCases(t *testing.T) {
 			reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}))},
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}))},
 		WantErr: false,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
 		},
 		WantCreates: []runtime.Object{
 			createChannel(sequenceName, 0),
-			resources.NewSubscription(0, reconciletesting.NewFlowsSequence(sequenceName, testNS, reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc), reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}))),
+			resources.NewSubscription(0,
+				reconciletesting.NewFlowsSequence(sequenceName, testNS,
+					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}))),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}),
 				reconciletesting.WithFlowsSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				reconciletesting.WithFlowsSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				reconciletesting.WithFlowsSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -192,7 +195,7 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}))},
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}))},
 		WantErr: false,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
@@ -202,13 +205,13 @@ func TestAllCases(t *testing.T) {
 			resources.NewSubscription(0, reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}))),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}))),
 		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
 				reconciletesting.WithFlowsSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				reconciletesting.WithFlowsSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
@@ -248,10 +251,10 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceGeneration(sequenceGeneration),
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{
-					createDestination(0),
-					createDestination(1),
-					createDestination(2)}))},
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}}))},
 		WantErr: false,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
@@ -260,20 +263,33 @@ func TestAllCases(t *testing.T) {
 			createChannel(sequenceName, 0),
 			createChannel(sequenceName, 1),
 			createChannel(sequenceName, 2),
-			resources.NewSubscription(0, reconciletesting.NewFlowsSequence(sequenceName, testNS, reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc), reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
-			resources.NewSubscription(1, reconciletesting.NewFlowsSequence(sequenceName, testNS, reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc), reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
-			resources.NewSubscription(2, reconciletesting.NewFlowsSequence(sequenceName, testNS, reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc), reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)})))},
+			resources.NewSubscription(0,
+				reconciletesting.NewFlowsSequence(sequenceName, testNS,
+					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+						{Destination: createDestination(0)},
+						{Destination: createDestination(1)},
+						{Destination: createDestination(2)}}))),
+			resources.NewSubscription(1,
+				reconciletesting.NewFlowsSequence(sequenceName, testNS,
+					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+						{Destination: createDestination(0)}, {Destination: createDestination(1)}, {Destination: createDestination(2)}}))),
+			resources.NewSubscription(2,
+				reconciletesting.NewFlowsSequence(sequenceName, testNS,
+					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+						{Destination: createDestination(0)}, {Destination: createDestination(1)}, {Destination: createDestination(2)}})))},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceGeneration(sequenceGeneration),
 				reconciletesting.WithFlowsSequenceStatusObservedGeneration(sequenceGeneration),
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{
-					createDestination(0),
-					createDestination(1),
-					createDestination(2),
-				}),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}}),
 				reconciletesting.WithFlowsSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				reconciletesting.WithFlowsSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				reconciletesting.WithFlowsSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -356,10 +372,10 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{
-					createDestination(0),
-					createDestination(1),
-					createDestination(2)}))},
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}}))},
 		WantErr: false,
 		WantEvents: []string{
 			Eventf(corev1.EventTypeNormal, "SequenceReconciled", `Sequence reconciled: "test-namespace/test-sequence"`),
@@ -371,25 +387,33 @@ func TestAllCases(t *testing.T) {
 			resources.NewSubscription(0, reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}}))),
 			resources.NewSubscription(1, reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)}))),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}}))),
 			resources.NewSubscription(2, reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0), createDestination(1), createDestination(2)})))},
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}})))},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
 				reconciletesting.WithInitFlowsSequenceConditions,
 				reconciletesting.WithFlowsSequenceReply(createReplyChannel(replyChannelName)),
 				reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-				reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{
-					createDestination(0),
-					createDestination(1),
-					createDestination(2),
-				}),
+				reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{
+					{Destination: createDestination(0)},
+					{Destination: createDestination(1)},
+					{Destination: createDestination(2)}}),
 				reconciletesting.WithFlowsSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 				reconciletesting.WithFlowsSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 				reconciletesting.WithFlowsSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),
@@ -472,11 +496,11 @@ func TestAllCases(t *testing.T) {
 				reconciletesting.NewFlowsSequence(sequenceName, testNS,
 					reconciletesting.WithInitFlowsSequenceConditions,
 					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(1)})),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(1)}})),
 				createChannel(sequenceName, 0),
 				resources.NewSubscription(0, reconciletesting.NewFlowsSequence(sequenceName, testNS,
 					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(0)}))),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(0)}}))),
 			},
 			WantErr: false,
 			WantEvents: []string{
@@ -488,13 +512,13 @@ func TestAllCases(t *testing.T) {
 			WantCreates: []runtime.Object{
 				resources.NewSubscription(0, reconciletesting.NewFlowsSequence(sequenceName, testNS,
 					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(1)}))),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(1)}}))),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewFlowsSequence(sequenceName, testNS,
 					reconciletesting.WithInitFlowsSequenceConditions,
 					reconciletesting.WithFlowsSequenceChannelTemplateSpec(imc),
-					reconciletesting.WithFlowsSequenceSteps([]duckv1.Destination{createDestination(1)}),
+					reconciletesting.WithFlowsSequenceSteps([]v1alpha1.SequenceStep{{Destination: createDestination(1)}}),
 					reconciletesting.WithFlowsSequenceChannelsNotReady("ChannelsNotReady", "Channels are not ready yet, or there are none"),
 					reconciletesting.WithFlowsSequenceAddressableNotReady("emptyAddress", "addressable is nil"),
 					reconciletesting.WithFlowsSequenceSubscriptionsNotReady("SubscriptionsNotReady", "Subscriptions are not ready yet, or there are none"),

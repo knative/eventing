@@ -24,9 +24,9 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible.
+// ConvertTo implements apis.Convertible.
 // Converts source (from v1alpha1.Trigger) into v1beta1.Trigger
-func (source *Trigger) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *Trigger) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.Trigger:
 		sink.ObjectMeta = source.ObjectMeta
@@ -55,9 +55,9 @@ func (source *Trigger) ConvertUp(ctx context.Context, obj apis.Convertible) erro
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj from v1beta1.Trigger into v1alpha1.Trigger
-func (sink *Trigger) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *Trigger) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.Trigger:
 		sink.ObjectMeta = source.ObjectMeta

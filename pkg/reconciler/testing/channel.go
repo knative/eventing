@@ -28,6 +28,7 @@ import (
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duck "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis/duck/v1beta1"
@@ -78,7 +79,7 @@ func WithChannelDeleted(c *v1alpha1.Channel) {
 
 func WithChannelTemplate(typeMeta metav1.TypeMeta) ChannelOption {
 	return func(c *v1alpha1.Channel) {
-		c.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+		c.Spec.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: typeMeta,
 		}
 	}
@@ -90,6 +91,12 @@ func WithBackingChannelFailed(reason, msg string) ChannelOption {
 	}
 }
 
+func WithBackingChannelUnknown(reason, msg string) ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.MarkBackingChannelUnknown(reason, msg)
+	}
+}
+
 func WithBackingChannelReady(c *v1alpha1.Channel) {
 	c.Status.MarkBackingChannelReady()
 }
@@ -97,6 +104,12 @@ func WithBackingChannelReady(c *v1alpha1.Channel) {
 func WithBackingChannelObjRef(objRef *v1.ObjectReference) ChannelOption {
 	return func(c *v1alpha1.Channel) {
 		c.Status.Channel = objRef
+	}
+}
+
+func WithChannelNoAddress() ChannelOption {
+	return func(c *v1alpha1.Channel) {
+		c.Status.SetAddress(nil)
 	}
 }
 
@@ -111,14 +124,6 @@ func WithChannelAddress(hostname string) ChannelOption {
 			},
 		}
 		c.Status.SetAddress(address)
-	}
-}
-
-func WithChannelSubscribers(subscribers []eventingduckv1alpha1.SubscriberSpec) ChannelOption {
-	return func(c *v1alpha1.Channel) {
-		c.Spec.Subscribable = &eventingduckv1alpha1.Subscribable{
-			Subscribers: subscribers,
-		}
 	}
 }
 

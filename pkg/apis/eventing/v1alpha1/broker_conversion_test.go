@@ -24,8 +24,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -35,12 +36,12 @@ import (
 func TestBrokerConversionBadType(t *testing.T) {
 	good, bad := &Broker{}, &dummy{}
 
-	if err := good.ConvertUp(context.Background(), bad); err == nil {
-		t.Errorf("ConvertUp() = %#v, wanted error", bad)
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
 	}
 
-	if err := good.ConvertDown(context.Background(), bad); err == nil {
-		t.Errorf("ConvertDown() = %#v, wanted error", good)
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
 	}
 }
 
@@ -48,7 +49,7 @@ func TestBrokerConversion(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1beta1.Broker{}}
 
-	linear := v1alpha1.BackoffPolicyLinear
+	linear := eventingduckv1beta1.BackoffPolicyLinear
 
 	tests := []struct {
 		name string
@@ -72,7 +73,7 @@ func TestBrokerConversion(t *testing.T) {
 				Generation: 17,
 			},
 			Spec: BrokerSpec{
-				ChannelTemplate: &v1alpha1.ChannelTemplateSpec{
+				ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "channelKind",
 						APIVersion: "channelAPIVersion",
@@ -84,7 +85,7 @@ func TestBrokerConversion(t *testing.T) {
 					Name:       "configName",
 					APIVersion: "configAPIVersion",
 				},
-				Delivery: &v1alpha1.DeliverySpec{
+				Delivery: &eventingduckv1beta1.DeliverySpec{
 					DeadLetterSink: &duckv1.Destination{
 						Ref: &duckv1.KReference{
 							Kind:       "dlKind",
@@ -128,12 +129,12 @@ func TestBrokerConversion(t *testing.T) {
 		for _, version := range versions {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
-				if err := test.in.ConvertUp(context.Background(), ver); err != nil {
-					t.Errorf("ConvertUp() = %v", err)
+				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
+					t.Errorf("ConvertTo() = %v", err)
 				}
 				got := &Broker{}
-				if err := got.ConvertDown(context.Background(), ver); err != nil {
-					t.Errorf("ConvertDown() = %v", err)
+				if err := got.ConvertFrom(context.Background(), ver); err != nil {
+					t.Errorf("ConvertFrom() = %v", err)
 				}
 				// Since on the way down, we lose the DeprecatedSourceAndType,
 				// convert the in to equivalent out.

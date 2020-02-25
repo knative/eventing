@@ -18,40 +18,27 @@ package v1alpha1
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// TODO: Replace dummy some other messaging object once they
-// implement apis.Convertible
-type dummy struct{}
-
-func (*dummy) ConvertUp(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
-func (*dummy) ConvertDown(ctx context.Context, obj apis.Convertible) error {
-	return errors.New("Won't go")
-}
-
 func TestSubscriptionConversionBadType(t *testing.T) {
-	good, bad := &Subscription{}, &dummy{}
+	good, bad := &Subscription{}, &Channel{}
 
-	if err := good.ConvertUp(context.Background(), bad); err == nil {
-		t.Errorf("ConvertUp() = %#v, wanted error", bad)
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
 	}
 
-	if err := good.ConvertDown(context.Background(), bad); err == nil {
-		t.Errorf("ConvertDown() = %#v, wanted error", good)
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
 	}
 }
 
@@ -59,7 +46,7 @@ func TestSubscriptionConversion(t *testing.T) {
 	// Just one for now, just adding the for loop for ease of future changes.
 	versions := []apis.Convertible{&v1beta1.Subscription{}}
 
-	linear := v1alpha1.BackoffPolicyLinear
+	linear := duckv1beta1.BackoffPolicyLinear
 
 	tests := []struct {
 		name string
@@ -89,7 +76,7 @@ func TestSubscriptionConversion(t *testing.T) {
 					Name:       "channelName",
 					APIVersion: "channelAPIVersion",
 				},
-				Delivery: &v1alpha1.DeliverySpec{
+				Delivery: &duckv1beta1.DeliverySpec{
 					DeadLetterSink: &duckv1.Destination{
 						Ref: &duckv1.KReference{
 							Kind:       "dlKind",
@@ -124,12 +111,12 @@ func TestSubscriptionConversion(t *testing.T) {
 		for _, version := range versions {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
-				if err := test.in.ConvertUp(context.Background(), ver); err != nil {
-					t.Errorf("ConvertUp() = %v", err)
+				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
+					t.Errorf("ConvertTo() = %v", err)
 				}
 				got := &Subscription{}
-				if err := got.ConvertDown(context.Background(), ver); err != nil {
-					t.Errorf("ConvertDown() = %v", err)
+				if err := got.ConvertFrom(context.Background(), ver); err != nil {
+					t.Errorf("ConvertFrom() = %v", err)
 				}
 				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)

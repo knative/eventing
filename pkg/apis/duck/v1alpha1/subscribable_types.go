@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/apis/duck"
+
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 )
 
 // +genduck
@@ -57,6 +59,8 @@ type SubscriberSpec struct {
 	ReplyURI *apis.URL `json:"replyURI,omitempty"`
 	// +optional
 	DeadLetterSinkURI *apis.URL `json:"deadLetterSink,omitempty"`
+	// +optional
+	Delivery *duckv1beta1.DeliverySpec `json:"delivery,omitempty"`
 }
 
 // SubscribableStatus is the schema for the subscribable's status portion of the status
@@ -125,7 +129,6 @@ var (
 // Having this function here makes it convinient to read the default value at runtime.
 func (s *SubscribableTypeStatus) GetSubscribableTypeStatus() *SubscribableStatus {
 	return s.SubscribableStatus
-
 }
 
 // SetSubscribableTypeStatus method sets the SubscribableStatus Values in th SubscribableTypeStatus structs

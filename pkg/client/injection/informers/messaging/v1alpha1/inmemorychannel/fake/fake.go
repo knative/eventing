@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	"context"
+	context "context"
 
 	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"
 	inmemorychannel "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"

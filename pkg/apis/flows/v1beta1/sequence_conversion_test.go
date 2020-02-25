@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,27 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package testing
+package v1beta1
 
 import (
-	"fmt"
-	"time"
+	"context"
+	"testing"
 )
 
-// FakeStatsReporter is a fake implementation of StatsReporter
-type FakeStatsReporter struct {
-	servicesReady map[string]int
-}
+func TestSequenceConversionBadType(t *testing.T) {
+	good, bad := &Sequence{}, &Sequence{}
 
-func (r *FakeStatsReporter) ReportServiceReady(namespace, service string, d time.Duration) error {
-	key := fmt.Sprintf("%s/%s", namespace, service)
-	if r.servicesReady == nil {
-		r.servicesReady = make(map[string]int)
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
 	}
-	r.servicesReady[key]++
-	return nil
-}
 
-func (r *FakeStatsReporter) GetServiceReadyStats() map[string]int {
-	return r.servicesReady
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	}
 }

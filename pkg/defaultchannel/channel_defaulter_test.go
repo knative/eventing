@@ -26,13 +26,13 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 var (
 	config = &Config{
-		ClusterDefault: &eventingduckv1alpha1.ChannelTemplateSpec{
+		ClusterDefault: &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: v1.TypeMeta{
 				APIVersion: messagingv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "InMemoryChannel",
@@ -43,13 +43,13 @@ var (
 	configYaml string
 
 	configWithNamespace = &Config{
-		ClusterDefault: &eventingduckv1alpha1.ChannelTemplateSpec{
+		ClusterDefault: &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: v1.TypeMeta{
 				APIVersion: messagingv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "InMemoryChannel",
 			},
 		},
-		NamespaceDefaults: map[string]*eventingduckv1alpha1.ChannelTemplateSpec{
+		NamespaceDefaults: map[string]*messagingv1beta1.ChannelTemplateSpec{
 			"testNamespace": {
 				TypeMeta: v1.TypeMeta{
 					APIVersion: messagingv1alpha1.SchemeGroupVersion.String(),
@@ -70,7 +70,7 @@ func TestChannelDefaulter_GetDefault(t *testing.T) {
 	testCases := map[string]struct {
 		config                  *Config
 		channel                 *messagingv1alpha1.Channel
-		expectedChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec
+		expectedChannelTemplate *messagingv1beta1.ChannelTemplateSpec
 	}{
 		"no default set": {
 			channel:                 &messagingv1alpha1.Channel{},
@@ -108,9 +108,9 @@ func TestChannelDefaulter_GetDefault(t *testing.T) {
 func TestChannelDefaulter_UpdateConfigMap(t *testing.T) {
 	testCases := map[string]struct {
 		initialConfig        *corev1.ConfigMap
-		expectedAfterInitial *eventingduckv1alpha1.ChannelTemplateSpec
+		expectedAfterInitial *messagingv1beta1.ChannelTemplateSpec
 		updatedConfig        *corev1.ConfigMap
-		expectedAfterUpdate  *eventingduckv1alpha1.ChannelTemplateSpec
+		expectedAfterUpdate  *messagingv1beta1.ChannelTemplateSpec
 	}{
 		"nil config map": {
 			expectedAfterInitial: nil,

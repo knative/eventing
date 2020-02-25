@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
@@ -41,12 +41,12 @@ func TestBrokerSpecValidation(t *testing.T) {
 func TestBrokerImmutableFields(t *testing.T) {
 	original := &Broker{
 		Spec: BrokerSpec{
-			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-kind"}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-kind"}},
 		},
 	}
 	current := &Broker{
 		Spec: BrokerSpec{
-			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-other-kind"}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "my-other-kind"}},
 		},
 	}
 
@@ -66,7 +66,7 @@ func TestBrokerImmutableFields(t *testing.T) {
 			wantErr: &apis.FieldError{
 				Message: "Immutable fields changed (-old +new)",
 				Paths:   []string{"spec", "channelTemplate"},
-				Details: `{*v1alpha1.ChannelTemplateSpec}.TypeMeta.Kind:
+				Details: `{*v1beta1.ChannelTemplateSpec}.TypeMeta.Kind:
 	-: "my-kind"
 	+: "my-other-kind"
 `,
@@ -98,7 +98,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "valid provider",
 		spec: BrokerSpec{
-			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion", Kind: "mykind"},
 			},
 		},
@@ -106,7 +106,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "invalid templatespec, missing kind",
 		spec: BrokerSpec{
-			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{APIVersion: "myapiversion"}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -117,7 +117,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "invalid templatespec, missing apiVersion",
 		spec: BrokerSpec{
-			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind"}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -128,7 +128,7 @@ func TestValidSpec(t *testing.T) {
 	}, {
 		name: "valid templatespec",
 		spec: BrokerSpec{
-			ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind", APIVersion: "myapiversion"}},
+			ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{TypeMeta: metav1.TypeMeta{Kind: "mykind", APIVersion: "myapiversion"}},
 		},
 		want: nil,
 	}}

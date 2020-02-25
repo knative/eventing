@@ -23,22 +23,22 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible
-func (source *DeliverySpec) ConvertUp(ctx context.Context, sink apis.Convertible) error {
+// ConvertTo implements apis.Convertible
+func (source *DeliverySpec) ConvertTo(ctx context.Context, sink apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
 }
 
-// ConvertDown implements apis.Convertible
-func (sink *DeliverySpec) ConvertDown(ctx context.Context, source apis.Convertible) error {
+// ConvertFrom implements apis.Convertible
+func (sink *DeliverySpec) ConvertFrom(ctx context.Context, source apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
 }
 
-// ConvertUp implements apis.Convertible
-func (source *DeliveryStatus) ConvertUp(ctx context.Context, sink apis.Convertible) error {
+// ConvertTo implements apis.Convertible
+func (source *DeliveryStatus) ConvertTo(ctx context.Context, sink apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
 }
 
-// ConvertDown implements apis.Convertible
-func (sink *DeliveryStatus) ConvertDown(ctx context.Context, source apis.Convertible) error {
+// ConvertFrom implements apis.Convertible
+func (sink *DeliveryStatus) ConvertFrom(ctx context.Context, source apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
 }

@@ -24,11 +24,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 var (
-	defaultChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+	defaultChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
 			Kind:       "InMemoryChannel",
@@ -39,7 +39,7 @@ var (
 func TestBrokerSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *eventingduckv1alpha1.ChannelTemplateSpec
+		channelTemplate     *messagingv1beta1.ChannelTemplateSpec
 		initial             Broker
 		expected            Broker
 	}{
@@ -62,7 +62,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			channelTemplate: defaultChannelTemplate,
 			initial: Broker{
 				Spec: BrokerSpec{
-					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
@@ -72,7 +72,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 			},
 			expected: Broker{
 				Spec: BrokerSpec{
-					ChannelTemplate: &eventingduckv1alpha1.ChannelTemplateSpec{
+					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
 							APIVersion: SchemeGroupVersion.String(),
 							Kind:       "OtherChannel",
@@ -108,10 +108,10 @@ func TestBrokerSetDefaults(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			if !tc.nilChannelDefaulter {
-				eventingduckv1alpha1.ChannelDefaulterSingleton = &brokerChannelDefaulter{
+				messagingv1beta1.ChannelDefaulterSingleton = &brokerChannelDefaulter{
 					channelTemplate: tc.channelTemplate,
 				}
-				defer func() { eventingduckv1alpha1.ChannelDefaulterSingleton = nil }()
+				defer func() { messagingv1beta1.ChannelDefaulterSingleton = nil }()
 			}
 			tc.initial.SetDefaults(context.TODO())
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
@@ -122,9 +122,9 @@ func TestBrokerSetDefaults(t *testing.T) {
 }
 
 type brokerChannelDefaulter struct {
-	channelTemplate *eventingduckv1alpha1.ChannelTemplateSpec
+	channelTemplate *messagingv1beta1.ChannelTemplateSpec
 }
 
-func (cd *brokerChannelDefaulter) GetDefault(_ string) *eventingduckv1alpha1.ChannelTemplateSpec {
+func (cd *brokerChannelDefaulter) GetDefault(_ string) *messagingv1beta1.ChannelTemplateSpec {
 	return cd.channelTemplate
 }

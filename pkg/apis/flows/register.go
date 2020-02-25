@@ -16,6 +16,21 @@ limitations under the License.
 
 package flows
 
+import "k8s.io/apimachinery/pkg/runtime/schema"
+
 const (
 	GroupName = "flows.knative.dev"
+)
+
+var (
+	// SequenceResource represents a Knative Sequence
+	SequenceResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "sequences",
+	}
+	// ParallelResource represents a Knative Parallel
+	ParallelResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "parallels",
+	}
 )

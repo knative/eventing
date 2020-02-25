@@ -119,7 +119,13 @@ func (t *listableTracker) TrackInNamespace(obj metav1.Object) Track {
 		if err := t.ensureTracking(ref); err != nil {
 			return err
 		}
-		return t.tracker.Track(ref, obj)
+
+		return t.tracker.TrackReference(tracker.Reference{
+			APIVersion: ref.APIVersion,
+			Kind:       ref.Kind,
+			Namespace:  obj.GetNamespace(),
+			Name:       ref.Name,
+		}, obj)
 	}
 }
 

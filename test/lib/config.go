@@ -31,10 +31,17 @@ var InMemoryChannelTypeMeta = metav1.TypeMeta{
 	Kind:       resources.InMemoryChannelKind,
 }
 
+// MessagingChannelTypeMeta is the metav1.TypeMeta for messaging.Channel.
+var MessagingChannelTypeMeta = metav1.TypeMeta{
+	APIVersion: resources.MessagingAPIVersion,
+	Kind:       resources.ChannelKind,
+}
+
 // ChannelFeatureMap saves the channel-features mapping.
 // Each pair means the channel support the list of features.
 var ChannelFeatureMap = map[metav1.TypeMeta][]Feature{
-	InMemoryChannelTypeMeta: {FeatureBasic},
+	InMemoryChannelTypeMeta:  {FeatureBasic},
+	MessagingChannelTypeMeta: {FeatureBasic},
 }
 
 // Feature is the feature supported by the channel.

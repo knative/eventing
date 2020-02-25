@@ -21,10 +21,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
+
+	messagingduckv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // +genclient
@@ -70,7 +71,7 @@ type ParallelSpec struct {
 	// ChannelTemplate specifies which Channel CRD to use. If left unspecified, it is set to the default Channel CRD
 	// for the namespace (or cluster, in case there are no defaults for the namespace).
 	// +optional
-	ChannelTemplate *eventingduckv1alpha1.ChannelTemplateSpec `json:"channelTemplate"`
+	ChannelTemplate *messagingduckv1beta1.ChannelTemplateSpec `json:"channelTemplate"`
 
 	// Reply is a Reference to where the result of a case Subscriber gets sent to
 	// when the case does not have a Reply

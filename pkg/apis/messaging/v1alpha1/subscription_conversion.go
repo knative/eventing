@@ -20,25 +20,18 @@ import (
 	"context"
 	"fmt"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible.
+// ConvertTo implements apis.Convertible.
 // Converts source (from v1alpha1.Subscription) into v1beta1.Subscription
-func (source *Subscription) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *Subscription) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.Subscription:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Channel = source.Spec.Channel
-		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1beta1.DeliverySpec{}
-			if err := source.Spec.Delivery.ConvertUp(ctx, sink.Spec.Delivery); err != nil {
-				return err
-			}
-		}
+		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		sink.Spec.Reply = source.Spec.Reply
 
@@ -53,19 +46,14 @@ func (source *Subscription) ConvertUp(ctx context.Context, obj apis.Convertible)
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj from v1beta1.Subscription into v1alpha1.Subscription
-func (sink *Subscription) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *Subscription) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.Subscription:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Channel = source.Spec.Channel
-		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1alpha1.DeliverySpec{}
-			if err := sink.Spec.Delivery.ConvertDown(ctx, source.Spec.Delivery); err != nil {
-				return err
-			}
-		}
+		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Spec.Subscriber = source.Spec.Subscriber
 		sink.Spec.Reply = source.Spec.Reply
 

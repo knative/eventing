@@ -29,8 +29,8 @@ import (
 	"knative.dev/eventing/test/lib/cloudevents"
 	"knative.dev/eventing/test/lib/resources"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
@@ -84,7 +84,7 @@ func TestFlowsParallel(t *testing.T) {
 			}
 		}
 
-		channelTemplate := &eventingduckv1alpha1.ChannelTemplateSpec{
+		channelTemplate := &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: *(channelTypeMeta),
 		}
 

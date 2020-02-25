@@ -87,5 +87,5 @@ spec:
                 type: string
                 description: "Describes the EventType, in any meaningful way."
   - name: v1beta1
-    served: false
+    served: true
     storage: false
