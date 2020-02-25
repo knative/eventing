@@ -36,6 +36,6 @@ var (
 	// SinkBindingResource respresents a Knative Eventing Sources SinkBinding
 	SinkBindingResource = schema.GroupResource{
 		Group:    GroupName,
-		Resource: "sinkbingings",
+		Resource: "sinkbindings",
 	}
 )

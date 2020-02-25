@@ -34,7 +34,7 @@ func TestSinkBindingGetGroupVersionKind(t *testing.T) {
 	r := &SinkBinding{}
 	want := schema.GroupVersionKind{
 		Group:   "sources.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1alpha2",
 		Kind:    "SinkBinding",
 	}
 	if got := r.GetGroupVersionKind(); got != want {
