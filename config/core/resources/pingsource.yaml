@@ -40,6 +40,21 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      # this is a work around so we don't need to flesh out the
+      # schema for each version at this time
+      #
+      # see issue: https://github.com/knative/serving/issues/912
+      x-kubernetes-preserve-unknown-fields: true
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -57,88 +72,6 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
-    schema:
-      openAPIV3Schema:
-        properties:
-          spec:
-            properties:
-              data:
-                type: string
-              schedule:
-                type: string
-              serviceAccountName:
-                type: string
-              sink:
-                type: object
-                description: "the destination that should receive events."
-                properties:
-                  ref:
-                    type: object
-                    description: "a reference to a Kubernetes object from which to retrieve the target URI."
-                    required:
-                      - apiVersion
-                      - kind
-                      - name
-                    properties:
-                      apiVersion:
-                        type: string
-                        minLength: 1
-                      kind:
-                        type: string
-                        minLength: 1
-                      name:
-                        type: string
-                        minLength: 1
-                  uri:
-                    type: string
-                    description: "the target URI. If ref is provided, this must be relative URI reference."
-              resources:
-                properties:
-                  limits:
-                    properties:
-                      cpu:
-                        type: string
-                      memory:
-                        type: string
-                    type: object
-                  requests:
-                    properties:
-                      cpu:
-                        type: string
-                      memory:
-                        type: string
-                    type: object
-                type: object
-            required:
-            - schedule
-            type: object
-          status:
-            properties:
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      # we use a string in the stored object but a wrapper object
-                      # at runtime.
-                      type: string
-                    message:
-                      type: string
-                    reason:
-                      type: string
-                    severity:
-                      type: string
-                    status:
-                      type: string
-                    type:
-                      type: string
-                  required:
-                  - type
-                  - status
-                  type: object
-                type: array
-              sinkUri:
-                type: string
-            type: object
   - name: v1alpha2
     served: false
     storage: false

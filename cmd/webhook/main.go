@@ -19,22 +19,9 @@ package main
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/reconciler/sinkbinding"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/pkg/apis/flows"
-	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
-	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-	"knative.dev/eventing/pkg/apis/messaging"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
@@ -52,6 +39,22 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/conversion"
 	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
+
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/apis/flows"
+	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
+	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
 
 var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
@@ -74,6 +77,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group sources.knative.dev.
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha1.PingSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 
 	// For group sources.eventing.knative.dev.
@@ -217,6 +221,8 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		messagingv1beta1_  = messagingv1beta1.SchemeGroupVersion.Version
 		flowsv1alpha1_     = flowsv1alpha1.SchemeGroupVersion.Version
 		flowsv1beta1_      = flowsv1beta1.SchemeGroupVersion.Version
+		sourcesv1alpha1_   = sourcesv1alpha1.SchemeGroupVersion.Version
+		sourcesv1alpha2_   = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -284,6 +290,31 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					flowsv1beta1_:  &flowsv1beta1.Parallel{},
 				},
 			},
+			// Sources
+			//baseeventingv1beta1.Kind("ApiServerSource"): {
+			//	DefinitionName: sources.ApiServerSourceResource.String(),
+			//	HubVersion:     sourcesv1alpha1_,
+			//	Zygotes: map[string]conversion.ConvertibleObject{
+			//		sourcesv1alpha1_: &basesourcesv1alpha1.ApiServerSource{},
+			//		sourcesv1alpha2_: &basesourcesv1alpha2.ApiServerSource{},
+			//	},
+			//},
+			sourcesv1alpha2.Kind("PingSource"): {
+				DefinitionName: sources.PingSourceResource.String(),
+				HubVersion:     sourcesv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					sourcesv1alpha1_: &sourcesv1alpha1.PingSource{},
+					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
+				},
+			},
+			//baseeventingv1beta1.Kind("SinkBinding"): {
+			//	DefinitionName: sources.SinkBindingResource.String(),
+			//	HubVersion:     sourcesv1alpha1_,
+			//	Zygotes: map[string]conversion.ConvertibleObject{
+			//		sourcesv1alpha1_: &basesourcesv1alpha1.SinkBinding{},
+			//		sourcesv1alpha2_: &basesourcesv1alpha2.SinkBinding{},
+			//	},
+			//},
 		},
 
 		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.

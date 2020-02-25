@@ -31,6 +31,7 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	v1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -114,6 +115,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().PingSources().Informer()}, nil
 	case sourcesv1alpha1.SchemeGroupVersion.WithResource("sinkbindings"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha1().SinkBindings().Informer()}, nil
+
+		// Group=sources.knative.dev, Version=v1alpha2
+	case v1alpha2.SchemeGroupVersion.WithResource("pingsources"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sources().V1alpha2().PingSources().Informer()}, nil
 
 	}
 
