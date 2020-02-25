@@ -19,7 +19,7 @@ characterics:
 ### Deployment steps:
 
 1. Setup [Knative Eventing](../../../DEVELOPMENT.md).
-1. Apply the `InMemoryChannel` CRD, Controller, and Dispatcher.
+1. Apply the `InMemoryChannel` CRD, Controller, and cluster-scoped Dispatcher.
    ```shell
    ko apply -f config/channels/in-memory-channel/
    ```
@@ -50,4 +50,21 @@ single Dispatcher for all in-memory Channels.
 
 ```shell
 kubectl get deployment -n knative-eventing imc-dispatcher
+```
+
+### Namespace Dispatchers
+
+By default events are received and dispatched by a single cluster-scoped dispatcher components. You can also specify whether events should be received and dispatched by the dispatcher in the same namespace as the channel definition by adding the
+`eventing.knative.dev/scope: namespace` annotation. For instance:
+
+```shell
+kubectl apply --filename - << END
+apiVersion: messaging.knative.dev/v1alpha1
+kind: InMemoryChannel
+metadata:
+  name: foo-ns
+  namespace: default
+  annotations:
+    eventing.knative.dev/scope: namespace
+END
 ```

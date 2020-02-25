@@ -21,15 +21,20 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"k8s.io/client-go/tools/cache"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
+	pkgreconciler "knative.dev/pkg/reconciler"
+	tracingconfig "knative.dev/pkg/tracing/config"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/swappable"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/tracing"
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/controller"
-	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
 const (
@@ -97,7 +102,11 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 
 	// Watch for inmemory channels.
-	r.inmemorychannelInformer.AddEventHandler(controller.HandleAll(r.impl.Enqueue))
+	r.inmemorychannelInformer.AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
+			Handler:    controller.HandleAll(r.impl.Enqueue),
+		})
 
 	// Start the dispatcher.
 	go func() {
@@ -108,4 +117,11 @@ func NewController(
 	}()
 
 	return r.impl
+}
+
+func filterWithAnnotation(namespaced bool) func(obj interface{}) bool {
+	if namespaced {
+		return pkgreconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, "namespace", false)
+	}
+	return pkgreconciler.AnnotationFilterFunc(eventing.ScopeAnnotationKey, "cluster", true)
 }

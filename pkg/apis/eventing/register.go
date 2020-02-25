@@ -28,20 +28,25 @@ const (
 	// BrokerClassKey is the annotation key on Brokers to indicate
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"
+
+	// ScopeAnnotationKey is the annotation key to indicate
+	// the scope of the component handling a given resource.
+	// Valid values are: cluster, namespace, resource.
+	ScopeAnnotationKey = GroupName + "/scope"
 )
 
 var (
-	// TriggersResource respresents a Knative Trigger
+	// TriggersResource represents a Knative Trigger
 	TriggersResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "triggers",
 	}
-	// BrokersResource respresents a Knative Broker
+	// BrokersResource represents a Knative Broker
 	BrokersResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "brokers",
 	}
-	// EventTypesResource respresents a Knative EventType
+	// EventTypesResource represents a Knative EventType
 	EventTypesResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "eventtypes",
