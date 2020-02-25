@@ -23,17 +23,17 @@ const (
 )
 
 var (
-	// SubscriptionssResource respresents a Knative Subscription
+	// SubscriptionssResource represents a Knative Subscription
 	SubscriptionsResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "subscriptions",
 	}
-	// ChannelsResource respresents a Knative Channel
+	// ChannelsResource represents a Knative Channel
 	ChannelsResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "channels",
 	}
-	// InMemoryChannelsResource respresents a Knative Channel
+	// InMemoryChannelsResource represents a Knative Channel
 	InMemoryChannelsResource = schema.GroupResource{
 		Group:    GroupName,
 		Resource: "inmemorychannels",
