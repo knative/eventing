@@ -26,9 +26,9 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-// ConvertUp implements apis.Convertible.
+// ConvertTo implements apis.Convertible.
 // Converts source (from v1alpha1.PingSource) into v1alpha2.PingSource
-func (source *PingSource) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1alpha2.PingSource:
 		sink.ObjectMeta = source.ObjectMeta
@@ -58,9 +58,9 @@ func (source *PingSource) ConvertUp(ctx context.Context, obj apis.Convertible) e
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj from v1alpha2.PingSource into v1alpha1.PingSource
-func (sink *PingSource) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1alpha2.PingSource:
 		sink.ObjectMeta = source.ObjectMeta
