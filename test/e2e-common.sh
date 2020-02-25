@@ -55,6 +55,19 @@ function knative_teardown() {
 
 # Setup resources common to all eventing tests.
 function test_setup() {
+  echo ">> Setting up logging..."
+
+  # Install kail if needed.
+  if ! which kail > /dev/null; then
+    bash <( curl -sfL https://raw.githubusercontent.com/boz/kail/master/godownloader.sh) -b "$GOPATH/bin"
+  fi
+
+  # Capture all logs.
+  kail > ${ARTIFACTS}/k8s.log.txt &
+  local kail_pid=$!
+  # Clean up kail so it doesn't interfere with job shutting down
+  add_trap "kill $kail_pid || true" EXIT
+
   install_test_resources || return 1
 
   # Publish test images.
