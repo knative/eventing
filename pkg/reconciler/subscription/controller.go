@@ -18,9 +18,6 @@ package subscription
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
@@ -64,14 +61,6 @@ func NewController(
 	// Subscription needs to reconcile again.
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.destinationResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
-
-	channelInformer.Informer().AddEventHandler(controller.HandleAll(
-		func(obj interface{}) {
-			if trigger, ok := obj.(*v1alpha1.Trigger); ok {
-				impl.EnqueueKey(types.NamespacedName{Namespace: trigger.Namespace, Name: trigger.Spec.Broker})
-			}
-		},
-	))
 
 	return impl
 }

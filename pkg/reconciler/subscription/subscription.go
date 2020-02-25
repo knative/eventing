@@ -337,6 +337,9 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 	// to have a "backing" channel that is what we need to actually operate on
 	// as well as keep track of.
 	if channelGVK.Group == gvk.Group && channelGVK.Kind == gvk.Kind {
+
+		r.trackAndFetchChannel()
+
 		logging.FromContext(ctx).Warn("fetching backing channel", zap.Any("channel", sub.Spec.Channel))
 		// Because the above (trackAndFetchChannel) gives us back a Channelable
 		// the status of it will not have the extra bits we need (namely, pointer
@@ -350,7 +353,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 		realz, err := r.EventingClientSet.MessagingV1alpha1().Channels(sub.Namespace).Get(sub.Spec.Channel.Name, metav1.GetOptions{})
 
 		if diff := cmp.Diff(realz, channel); diff != "" {
-			logging.FromContext(ctx).Error("Unexpected difference (-want, +got): %v", zap.String("diff", diff))
+			logging.FromContext(ctx).Error("Unexpected difference (-want, +got):", zap.String("diff", diff))
 		}
 
 		if !channel.Status.IsReady() || channel.Status.Channel == nil {
