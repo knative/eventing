@@ -34,12 +34,12 @@ import (
 func TestSinkBindingConversionBadType(t *testing.T) {
 	good, bad := &SinkBinding{}, &dummy{}
 
-	if err := good.ConvertUp(context.Background(), bad); err == nil {
-		t.Errorf("ConvertUp() = %#v, wanted error", bad)
+	if err := good.ConvertTo(context.Background(), bad); err == nil {
+		t.Errorf("ConvertTo() = %#v, wanted error", bad)
 	}
 
-	if err := good.ConvertDown(context.Background(), bad); err == nil {
-		t.Errorf("ConvertDown() = %#v, wanted error", good)
+	if err := good.ConvertFrom(context.Background(), bad); err == nil {
+		t.Errorf("ConvertFrom() = %#v, wanted error", good)
 	}
 }
 
@@ -156,14 +156,14 @@ func TestSinkBindingConversionRoundTripUp(t *testing.T) {
 		for _, version := range versions {
 			t.Run(test.name, func(t *testing.T) {
 				ver := version
-				if err := test.in.ConvertUp(context.Background(), ver); err != nil {
-					t.Errorf("ConvertUp() = %v", err)
+				if err := test.in.ConvertTo(context.Background(), ver); err != nil {
+					t.Errorf("ConvertTo() = %v", err)
 				}
 
 				got := &SinkBinding{}
 
-				if err := got.ConvertDown(context.Background(), ver); err != nil {
-					t.Errorf("ConvertDown() = %v", err)
+				if err := got.ConvertFrom(context.Background(), ver); err != nil {
+					t.Errorf("ConvertFrom() = %v", err)
 				}
 				if diff := cmp.Diff(test.in, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
@@ -273,14 +273,14 @@ func TestSinkBindingConversionRoundTripDown(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			down := &SinkBinding{}
-			if err := down.ConvertDown(context.Background(), test.in); err != nil {
-				t.Errorf("ConvertUp() = %v", err)
+			if err := down.ConvertFrom(context.Background(), test.in); err != nil {
+				t.Errorf("ConvertTo() = %v", err)
 			}
 
 			got := (reflect.New(reflect.TypeOf(test.in).Elem()).Interface()).(apis.Convertible)
 
-			if err := down.ConvertUp(context.Background(), got); err != nil {
-				t.Errorf("ConvertDown() = %v", err)
+			if err := down.ConvertTo(context.Background(), got); err != nil {
+				t.Errorf("ConvertFrom() = %v", err)
 			}
 			if diff := cmp.Diff(test.in, got); diff != "" {
 				t.Errorf("roundtrip (-want, +got) = %v", diff)
