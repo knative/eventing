@@ -59,11 +59,17 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
 	eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
 	eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"): &eventingv1alpha1.EventType{},
+	eventingv1beta1.SchemeGroupVersion.WithKind("Broker"):     &eventingv1beta1.Broker{},
+	eventingv1beta1.SchemeGroupVersion.WithKind("Trigger"):    &eventingv1beta1.Trigger{},
+	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"):  &eventingv1beta1.EventType{},
 
 	// For group messaging.knative.dev.
 	messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
 	messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
 	messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
+	messagingv1beta1.SchemeGroupVersion.WithKind("InMemoryChannel"):  &messagingv1beta1.InMemoryChannel{},
+	messagingv1beta1.SchemeGroupVersion.WithKind("Channel"):          &messagingv1beta1.Channel{},
+	messagingv1beta1.SchemeGroupVersion.WithKind("Subscription"):     &messagingv1beta1.Subscription{},
 
 	// For group sources.knative.dev.
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
@@ -80,6 +86,8 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group flows.knative.dev
 	flowsv1alpha1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1alpha1.Parallel{},
 	flowsv1alpha1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1alpha1.Sequence{},
+	flowsv1beta1.SchemeGroupVersion.WithKind("Parallel"):  &flowsv1beta1.Parallel{},
+	flowsv1beta1.SchemeGroupVersion.WithKind("Sequence"):  &flowsv1beta1.Sequence{},
 
 	// For group configs.knative.dev
 	configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation"): &configsv1alpha1.ConfigMapPropagation{},
