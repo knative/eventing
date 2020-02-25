@@ -19,14 +19,14 @@ package v1alpha1
 import (
 	"context"
 
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	v1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 func (c *Channel) SetDefaults(ctx context.Context) {
 	if c != nil && c.Spec.ChannelTemplate == nil {
 		// The singleton may not have been set, if so ignore it and validation will reject the
 		// Channel.
-		if cd := eventingduckv1alpha1.ChannelDefaulterSingleton; cd != nil {
+		if cd := v1beta1.ChannelDefaulterSingleton; cd != nil {
 			channelTemplate := cd.GetDefault(c.Namespace)
 			c.Spec.ChannelTemplate = channelTemplate
 		}

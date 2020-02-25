@@ -20,27 +20,20 @@ import (
 	"context"
 	"fmt"
 
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible.
+// ConvertTo implements apis.Convertible.
 // Converts source (from v1alpha1.Broker) into v1beta1.Broker
-func (source *Broker) ConvertUp(ctx context.Context, obj apis.Convertible) error {
+func (source *Broker) ConvertTo(ctx context.Context, obj apis.Convertible) error {
 	switch sink := obj.(type) {
 	case *v1beta1.Broker:
 		sink.ObjectMeta = source.ObjectMeta
 		sink.Spec.Config = source.Spec.Config
-		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1beta1.DeliverySpec{}
-			if err := source.Spec.Delivery.ConvertUp(ctx, sink.Spec.Delivery); err != nil {
-				return err
-			}
-		}
+		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Status.Status = source.Status.Status
-		if err := source.Status.Address.ConvertUp(ctx, &sink.Status.Address); err != nil {
+		if err := source.Status.Address.ConvertTo(ctx, &sink.Status.Address); err != nil {
 			return err
 		}
 		return nil
@@ -50,20 +43,15 @@ func (source *Broker) ConvertUp(ctx context.Context, obj apis.Convertible) error
 	}
 }
 
-// ConvertDown implements apis.Convertible.
+// ConvertFrom implements apis.Convertible.
 // Converts obj from v1beta1.Broker into v1alpha1.Broker
-func (sink *Broker) ConvertDown(ctx context.Context, obj apis.Convertible) error {
+func (sink *Broker) ConvertFrom(ctx context.Context, obj apis.Convertible) error {
 	switch source := obj.(type) {
 	case *v1beta1.Broker:
 		sink.ObjectMeta = source.ObjectMeta
-		if source.Spec.Delivery != nil {
-			sink.Spec.Delivery = &duckv1alpha1.DeliverySpec{}
-			if err := sink.Spec.Delivery.ConvertDown(ctx, source.Spec.Delivery); err != nil {
-				return err
-			}
-		}
+		sink.Spec.Delivery = source.Spec.Delivery
 		sink.Status.Status = source.Status.Status
-		if err := sink.Status.Address.ConvertDown(ctx, &source.Status.Address); err != nil {
+		if err := sink.Status.Address.ConvertFrom(ctx, &source.Status.Address); err != nil {
 			return err
 		}
 		sink.Spec.Config = source.Spec.Config

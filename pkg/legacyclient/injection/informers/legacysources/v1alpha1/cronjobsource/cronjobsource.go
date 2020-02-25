@@ -19,7 +19,7 @@ limitations under the License.
 package cronjobsource
 
 import (
-	"context"
+	context "context"
 
 	v1alpha1 "knative.dev/eventing/pkg/legacyclient/informers/externalversions/legacysources/v1alpha1"
 	factory "knative.dev/eventing/pkg/legacyclient/injection/informers/factory"

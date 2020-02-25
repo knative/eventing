@@ -21,16 +21,16 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-
-	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/tracker"
 
-	crd "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
-
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
+	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -47,12 +47,12 @@ func NewController(
 ) *controller.Impl {
 
 	subscriptionInformer := subscription.Get(ctx)
-	customResourceDefinitionInformer := crd.Get(ctx)
+	channelInformer := channel.Get(ctx)
 
 	r := &Reconciler{
-		Base:                           reconciler.NewBase(ctx, controllerAgentName, cmw),
-		subscriptionLister:             subscriptionInformer.Lister(),
-		customResourceDefinitionLister: customResourceDefinitionInformer.Lister(),
+		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		subscriptionLister: subscriptionInformer.Lister(),
+		channelLister:      channelInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r)
 
@@ -63,6 +63,18 @@ func NewController(
 	// Subscription needs to reconcile again.
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.destinationResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
+
+	// Track changes to Channels.
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	channelInformer.Informer().AddEventHandler(controller.HandleAll(
+		// Call the tracker's OnChanged method, but we've seen the objects
+		// coming through this path missing TypeMeta, so ensure it is properly
+		// populated.
+		controller.EnsureTypeMeta(
+			r.tracker.OnChanged,
+			messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"),
+		),
+	))
 
 	return impl
 }

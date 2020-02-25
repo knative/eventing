@@ -19,7 +19,7 @@ limitations under the License.
 package factory
 
 import (
-	"context"
+	context "context"
 
 	externalversions "knative.dev/eventing/pkg/client/informers/externalversions"
 	client "knative.dev/eventing/pkg/client/injection/client"

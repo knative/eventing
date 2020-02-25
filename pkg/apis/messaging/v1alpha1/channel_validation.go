@@ -18,12 +18,11 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/pkg/kmp"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
@@ -37,33 +36,14 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 	if cs.ChannelTemplate == nil {
 		// The Channel defaulter is expected to set this, not the users.
 		errs = errs.Also(apis.ErrMissingField("channelTemplate"))
-	} else {
-		if cte := isValidChannelTemplate(cs.ChannelTemplate); cte != nil {
-			errs = errs.Also(cte.ViaField("channelTemplate"))
-		}
+	} else if cte := v1beta1.IsValidChannelTemplate(cs.ChannelTemplate); cte != nil {
+		errs = errs.Also(cte.ViaField("channelTemplate"))
 	}
 
-	if cs.Subscribable != nil {
-		for i, subscriber := range cs.Subscribable.Subscribers {
-			if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
-				fe := apis.ErrMissingField("replyURI", "subscriberURI")
-				fe.Details = "expected at least one of, got none"
-				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
-			}
-		}
+	if cs.Subscribable != nil && len(cs.Subscribable.Subscribers) > 0 {
+		errs = errs.Also(apis.ErrDisallowedFields("subscribers").ViaField("subscribable"))
 	}
 
-	return errs
-}
-
-func isValidChannelTemplate(ct *eventingduck.ChannelTemplateSpec) *apis.FieldError {
-	var errs *apis.FieldError
-	if ct.Kind == "" {
-		errs = errs.Also(apis.ErrMissingField("kind"))
-	}
-	if ct.APIVersion == "" {
-		errs = errs.Also(apis.ErrMissingField("apiVersion"))
-	}
 	return errs
 }
 

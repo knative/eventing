@@ -34,10 +34,7 @@ func TestChannelValidation(t *testing.T) {
 		cr: &Channel{
 			Spec: ChannelSpec{},
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelTemplate")
-			return fe
-		}(),
+		want: apis.ErrMissingField("spec.channelTemplate"),
 	}, {
 		name: "channel template with no kind",
 		cr: &Channel{
@@ -48,10 +45,7 @@ func TestChannelValidation(t *testing.T) {
 					},
 				}},
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelTemplate.kind")
-			return fe
-		}(),
+		want: apis.ErrMissingField("spec.channelTemplate.kind"),
 	}, {
 		name: "channel template with no apiVersion",
 		cr: &Channel{
@@ -62,12 +56,9 @@ func TestChannelValidation(t *testing.T) {
 					},
 				}},
 		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.channelTemplate.apiVersion")
-			return fe
-		}(),
+		want: apis.ErrMissingField("spec.channelTemplate.apiVersion"),
 	}, {
-		name: "valid subscribers array",
+		name: "invalid subscribers array, not allowed",
 		cr: &Channel{
 			Spec: ChannelSpec{
 				ChannelTemplate: &ChannelTemplateSpec{
@@ -84,33 +75,9 @@ func TestChannelValidation(t *testing.T) {
 						}},
 					}},
 			}},
-		want: nil,
+		want: apis.ErrDisallowedFields("spec.subscribable.subscribers"),
 	}, {
-		name: "empty subscriber at index 1",
-		cr: &Channel{
-			Spec: ChannelSpec{
-				ChannelTemplate: &ChannelTemplateSpec{
-					TypeMeta: v1.TypeMeta{
-						Kind:       "InMemoryChannel",
-						APIVersion: SchemeGroupVersion.String(),
-					},
-				},
-				ChannelableSpec: eventingduck.ChannelableSpec{
-					SubscribableSpec: eventingduck.SubscribableSpec{
-						Subscribers: []eventingduck.SubscriberSpec{{
-							SubscriberURI: apis.HTTP("subscriberendpoint"),
-							ReplyURI:      apis.HTTP("replyendpoint"),
-						}, {}},
-					}},
-			},
-		},
-		want: func() *apis.FieldError {
-			fe := apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
-			fe.Details = "expected at least one of, got none"
-			return fe
-		}(),
-	}, {
-		name: "nil channelTemplate and empty subscriber at index 1",
+		name: "nil channelTemplate and disallowed at index 1",
 		cr: &Channel{
 			Spec: ChannelSpec{
 				ChannelableSpec: eventingduck.ChannelableSpec{
@@ -124,38 +91,8 @@ func TestChannelValidation(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.channelTemplate")
-			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
-			fe.Details = "expected at least one of, got none"
-			errs = errs.Also(fe)
-			return errs
-		}(),
-	}, {
-		name: "2 empty subscribers",
-		cr: &Channel{
-			Spec: ChannelSpec{
-				ChannelTemplate: &ChannelTemplateSpec{
-					TypeMeta: v1.TypeMeta{
-						Kind:       "InMemoryChannel",
-						APIVersion: SchemeGroupVersion.String(),
-					},
-				},
-				ChannelableSpec: eventingduck.ChannelableSpec{
-					SubscribableSpec: eventingduck.SubscribableSpec{
-						Subscribers: []eventingduck.SubscriberSpec{{}, {}},
-					},
-				},
-			},
-		},
-		want: func() *apis.FieldError {
-			var errs *apis.FieldError
-			fe := apis.ErrMissingField("spec.subscribable.subscriber[0].replyURI", "spec.subscribable.subscriber[0].subscriberURI")
-			fe.Details = "expected at least one of, got none"
-			errs = errs.Also(fe)
-			fe = apis.ErrMissingField("spec.subscribable.subscriber[1].replyURI", "spec.subscribable.subscriber[1].subscriberURI")
-			fe.Details = "expected at least one of, got none"
-			errs = errs.Also(fe)
+			errs = errs.Also(apis.ErrMissingField("spec.channelTemplate"))
+			errs = errs.Also(apis.ErrDisallowedFields("spec.subscribable.subscribers"))
 			return errs
 		}(),
 	}}

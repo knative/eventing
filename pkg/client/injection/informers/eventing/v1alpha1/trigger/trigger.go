@@ -19,7 +19,7 @@ limitations under the License.
 package trigger
 
 import (
-	"context"
+	context "context"
 
 	v1alpha1 "knative.dev/eventing/pkg/client/informers/externalversions/eventing/v1alpha1"
 	factory "knative.dev/eventing/pkg/client/injection/informers/factory"

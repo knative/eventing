@@ -20,22 +20,8 @@ import (
 	"context"
 	"knative.dev/eventing/pkg/apis/sources"
 
-	"knative.dev/eventing/pkg/reconciler/sinkbinding"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing"
-	baseeventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	baseeventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
-	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	basesourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	basesourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
@@ -53,6 +39,22 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/conversion"
 	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
+
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
+	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	"knative.dev/eventing/pkg/apis/flows"
+	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
+	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/messaging"
+	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/apis/sources"
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
 
 var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
@@ -69,6 +71,7 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group sources.knative.dev.
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha1.PingSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 
 	// For group sources.eventing.knative.dev.
@@ -100,7 +103,7 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	// above and fetched off of context by the api code.  See knative/serving's logic
 	// around config-defaults for an example of this.
 	chDefaulter := defaultchannel.New(logger.Desugar())
-	eventingduckv1alpha1.ChannelDefaulterSingleton = chDefaulter
+	messagingv1beta1.ChannelDefaulterSingleton = chDefaulter
 	cmw.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	return defaulting.NewAdmissionController(ctx,
@@ -204,12 +207,14 @@ func NewLegacySinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *co
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	var (
-		eventingv1alpha1_ = baseeventingv1alpha1.SchemeGroupVersion.Version
-		eventingv1beta1_  = baseeventingv1beta1.SchemeGroupVersion.Version
-		//		messagingv1alpha1_ = basemessagingv1alpha1.SchemeGroupVersion.Version
-		//		messagingv1beta1_  = basemessagingv1beta1.SchemeGroupVersion.Version
-		sourcesv1alpha1_ = basesourcesv1alpha1.SchemeGroupVersion.Version
-		sourcesv1alpha2_ = basesourcesv1alpha2.SchemeGroupVersion.Version
+		eventingv1alpha1_  = eventingv1alpha1.SchemeGroupVersion.Version
+		eventingv1beta1_   = eventingv1beta1.SchemeGroupVersion.Version
+		messagingv1alpha1_ = messagingv1alpha1.SchemeGroupVersion.Version
+		messagingv1beta1_  = messagingv1beta1.SchemeGroupVersion.Version
+		flowsv1alpha1_     = flowsv1alpha1.SchemeGroupVersion.Version
+		flowsv1beta1_      = flowsv1beta1.SchemeGroupVersion.Version
+		sourcesv1alpha1_   = sourcesv1alpha1.SchemeGroupVersion.Version
+		sourcesv1alpha2_   = sourcesv1alpha2.SchemeGroupVersion.Version
 	)
 
 	return conversion.NewConversionController(ctx,
@@ -219,61 +224,85 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		// Specify the types of custom resource definitions that should be converted
 		map[schema.GroupKind]conversion.GroupKindConversion{
 			// eventing
-			baseeventingv1beta1.Kind("Trigger"): {
+			eventingv1beta1.Kind("Trigger"): {
 				DefinitionName: eventing.TriggersResource.String(),
 				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1alpha1_: &baseeventingv1alpha1.Trigger{},
-					eventingv1beta1_:  &baseeventingv1beta1.Trigger{},
+					eventingv1alpha1_: &eventingv1alpha1.Trigger{},
+					eventingv1beta1_:  &eventingv1beta1.Trigger{},
 				},
 			},
-			baseeventingv1beta1.Kind("Broker"): {
+			eventingv1beta1.Kind("Broker"): {
 				DefinitionName: eventing.BrokersResource.String(),
 				HubVersion:     eventingv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					eventingv1alpha1_: &baseeventingv1alpha1.Broker{},
-					eventingv1beta1_:  &baseeventingv1beta1.Broker{},
+					eventingv1alpha1_: &eventingv1alpha1.Broker{},
+					eventingv1beta1_:  &eventingv1beta1.Broker{},
+				},
+			},
+			eventingv1beta1.Kind("EventType"): {
+				DefinitionName: eventing.EventTypesResource.String(),
+				HubVersion:     eventingv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					eventingv1alpha1_: &eventingv1alpha1.EventType{},
+					eventingv1beta1_:  &eventingv1beta1.EventType{},
 				},
 			},
 			// messaging
-			/*
-				basemessagingv1beta1.Kind("Subscription"): {
-					DefinitionName: messaging.TriggersResource.String(),
-					HubVersion:     messagingv1alpha1_,
-					Zygotes: map[string]conversion.ConvertibleObject{
-						messagingv1alpha1_: &basemessagingv1alpha1.Subscription{},
-						messagingv1beta1_:  &basemessagingv1beta1.Subscription{},
-					},
+			messagingv1beta1.Kind("Channel"): {
+				DefinitionName: messaging.ChannelsResource.String(),
+				HubVersion:     messagingv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					messagingv1alpha1_: &messagingv1alpha1.Channel{},
+					messagingv1beta1_:  &messagingv1beta1.Channel{},
 				},
-			*/
+			},
+			messagingv1beta1.Kind("InMemoryChannel"): {
+				DefinitionName: messaging.InMemoryChannelsResource.String(),
+				HubVersion:     messagingv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					messagingv1alpha1_: &messagingv1alpha1.InMemoryChannel{},
+					messagingv1beta1_:  &messagingv1beta1.InMemoryChannel{},
+				},
+			},
+			// flows
+			flowsv1beta1.Kind("Sequence"): {
+				DefinitionName: flows.SequenceResource.String(),
+				HubVersion:     flowsv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					flowsv1alpha1_: &flowsv1alpha1.Sequence{},
+					flowsv1beta1_:  &flowsv1beta1.Sequence{},
+				},
+			},
+			flowsv1beta1.Kind("Parallel"): {
+				DefinitionName: flows.ParallelResource.String(),
+				HubVersion:     flowsv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					flowsv1alpha1_: &flowsv1alpha1.Parallel{},
+					flowsv1beta1_:  &flowsv1beta1.Parallel{},
+				},
+			},
 			// Sources
-			//baseeventingv1beta1.Kind("ApiServerSource"): {
-			//	DefinitionName: sources.ApiServerSourceResource.String(),
-			//	HubVersion:     sourcesv1alpha1_,
-			//	Zygotes: map[string]conversion.ConvertibleObject{
-			//		sourcesv1alpha1_: &basesourcesv1alpha1.ApiServerSource{},
-			//		sourcesv1alpha2_: &basesourcesv1alpha2.ApiServerSource{},
-			//	},
-			//},
-			baseeventingv1beta1.Kind("PingSource"): {
+			// TODO: ApiServerSource
+			sourcesv1alpha2.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
 				HubVersion:     sourcesv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &basesourcesv1alpha1.PingSource{},
-					sourcesv1alpha2_: &basesourcesv1alpha2.PingSource{},
+					sourcesv1alpha1_: &sourcesv1alpha1.PingSource{},
+					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
 				},
 			},
-			baseeventingv1beta1.Kind("SinkBinding"): {
+			sourcesv1alpha2.Kind("SinkBinding"): {
 				DefinitionName: sources.SinkBindingResource.String(),
 				HubVersion:     sourcesv1alpha1_,
 				Zygotes: map[string]conversion.ConvertibleObject{
-					sourcesv1alpha1_: &basesourcesv1alpha1.SinkBinding{},
-					sourcesv1alpha2_: &basesourcesv1alpha2.SinkBinding{},
+					sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
+					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
 				},
 			},
 		},
 
-		// A function that infuses the context passed to ConvertUp/ConvertDown/SetDefaults with custom metadata.
+		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.
 		func(ctx context.Context) context.Context {
 			return ctx
 		},
@@ -289,7 +318,7 @@ func main() {
 		SecretName: "eventing-webhook-certs",
 	})
 
-	sharedmain.MainWithContext(ctx, logconfig.WebhookName(),
+	sharedmain.WebhookMainWithContext(ctx, logconfig.WebhookName(),
 		certificates.NewController,
 		NewConfigValidationController,
 		NewValidationAdmissionController,

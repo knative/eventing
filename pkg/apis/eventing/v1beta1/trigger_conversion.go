@@ -23,12 +23,12 @@ import (
 	"knative.dev/pkg/apis"
 )
 
-// ConvertUp implements apis.Convertible
-func (source *Trigger) ConvertUp(ctx context.Context, sink apis.Convertible) error {
+// ConvertTo implements apis.Convertible
+func (source *Trigger) ConvertTo(ctx context.Context, sink apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", sink)
 }
 
-// ConvertDown implements apis.Convertible
-func (sink *Trigger) ConvertDown(ctx context.Context, source apis.Convertible) error {
+// ConvertFrom implements apis.Convertible
+func (sink *Trigger) ConvertFrom(ctx context.Context, source apis.Convertible) error {
 	return fmt.Errorf("v1beta1 is the highest known version, got: %T", source)
 }

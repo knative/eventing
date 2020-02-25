@@ -18,7 +18,6 @@ package v1beta1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"knative.dev/pkg/apis"
@@ -37,23 +36,18 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 		// The Channel defaulter is expected to set this, not the users.
 		errs = errs.Also(apis.ErrMissingField("channelTemplate"))
 	} else {
-		if cte := isValidChannelTemplate(cs.ChannelTemplate); cte != nil {
+		if cte := IsValidChannelTemplate(cs.ChannelTemplate); cte != nil {
 			errs = errs.Also(cte.ViaField("channelTemplate"))
 		}
 	}
 
-	for i, subscriber := range cs.SubscribableSpec.Subscribers {
-		if subscriber.ReplyURI == nil && subscriber.SubscriberURI == nil {
-			fe := apis.ErrMissingField("replyURI", "subscriberURI")
-			fe.Details = "expected at least one of, got none"
-			errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
-		}
+	if len(cs.SubscribableSpec.Subscribers) > 0 {
+		errs = errs.Also(apis.ErrDisallowedFields("subscribers").ViaField("subscribable"))
 	}
-
 	return errs
 }
 
-func isValidChannelTemplate(ct *ChannelTemplateSpec) *apis.FieldError {
+func IsValidChannelTemplate(ct *ChannelTemplateSpec) *apis.FieldError {
 	var errs *apis.FieldError
 	if ct.Kind == "" {
 		errs = errs.Also(apis.ErrMissingField("kind"))

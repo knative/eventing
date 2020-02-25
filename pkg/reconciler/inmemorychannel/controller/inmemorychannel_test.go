@@ -302,7 +302,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelDeploymentReady(),
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),
-					reconciletesting.WithInMemoryChannelChannelServicetNotReady("ChannelServiceFailed", "Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
+					reconciletesting.WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", "Channel Service failed: inmemorychannel: test-namespace/test-imc does not own Service: \"test-imc-kn-channel\""),
 				),
 			}},
 			WantEvents: []string{
@@ -354,7 +354,7 @@ func TestAllCases(t *testing.T) {
 					reconciletesting.WithInMemoryChannelDeploymentReady(),
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),
-					reconciletesting.WithInMemoryChannelChannelServicetNotReady("ChannelServiceFailed", "Channel Service failed: inducing failure for create services"),
+					reconciletesting.WithInMemoryChannelChannelServiceNotReady("ChannelServiceFailed", "Channel Service failed: inducing failure for create services"),
 				),
 			}},
 			WantCreates: []runtime.Object{

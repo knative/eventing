@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	logtesting "knative.dev/pkg/logging/testing"
 
 	. "knative.dev/pkg/configmap/testing"
@@ -47,7 +47,7 @@ func TestOurConfig(t *testing.T) {
 		name: "Example config",
 		fail: false,
 		want: &Config{
-			DefaultChannelTemplate: duckv1alpha1.ChannelTemplateSpec{
+			DefaultChannelTemplate: messagingv1beta1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "messaging.knative.dev/v1alpha1",
 					Kind:       "InMemoryChannel",
@@ -58,7 +58,7 @@ func TestOurConfig(t *testing.T) {
 	}, {
 		name: "With values",
 		want: &Config{
-			DefaultChannelTemplate: duckv1alpha1.ChannelTemplateSpec{
+			DefaultChannelTemplate: messagingv1beta1.ChannelTemplateSpec{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "Foo/v1",
 					Kind:       "Bar",
