@@ -61,7 +61,12 @@ func (r *SinkReconciler) GetSinkURI(sinkObjRef *corev1.ObjectReference, source i
 		return "", fmt.Errorf("sink ref is nil")
 	}
 
-	if err := r.tracker.Track(*sinkObjRef, source); err != nil {
+	if err := r.tracker.TrackReference(tracker.Reference{
+		APIVersion: sinkObjRef.APIVersion,
+		Kind:       sinkObjRef.Kind,
+		Namespace:  sinkObjRef.Namespace,
+		Name:       sinkObjRef.Name,
+	}, source); err != nil {
 		return "", fmt.Errorf("Error tracking sink '%+v' for source %q: %+v", sinkObjRef, sourceDesc, err)
 	}
 
