@@ -340,6 +340,15 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 	// as well as keep track of.
 	if channelGVK.Group == gvk.Group && channelGVK.Kind == gvk.Kind {
 		// Track changes on Channel.
+		// Ref: https://github.com/knative/eventing/issues/2641
+		// NOTE: There is a race condition with using the channelableTracker
+		// for Channel when mixed with the usage of channelLister. The
+		// channelableTracker has a different cache than the channelLister,
+		// when channelLister.Channels is called because the channelableTracker
+		// caused an enqueue, the Channels cache my not have had time to
+		// re-sync therefore we have to track Channels using a tracker linked
+		// to the cache we intend to use to pull the Channel from. This linkage
+		// is setup in NewController for r.tracker.
 		apiVersion, kind := gvk.ToAPIVersionAndKind()
 		if err := r.tracker.TrackReference(tracker.Reference{
 			APIVersion: apiVersion,
