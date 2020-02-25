@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,6 +28,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
@@ -174,43 +176,49 @@ func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *
 	)
 }
 
-func NewSinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
+	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+		sbresolver := sinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
 
-	return psbinding.NewAdmissionController(ctx,
+		return psbinding.NewAdmissionController(ctx,
 
-		// Name of the resource webhook.
-		"sinkbindings.webhook.sources.knative.dev",
+			// Name of the resource webhook.
+			"sinkbindings.webhook.sources.knative.dev",
 
-		// The path on which to serve the webhook.
-		"/sinkbindings",
+			// The path on which to serve the webhook.
+			"/sinkbindings",
 
-		// How to get all the Bindables for configuring the mutating webhook.
-		sinkbinding.ListAll,
+			// How to get all the Bindables for configuring the mutating webhook.
+			sinkbinding.ListAll,
 
-		// How to setup the context prior to invoking Do/Undo.
-		sbresolver,
-	)
+			// How to setup the context prior to invoking Do/Undo.
+			sbresolver,
+			opts...,
+		)
+	}
 }
 
 // TODO(#2312): Remove this after v0.13.
-func NewLegacySinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-	sbresolver := legacysinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
+func NewLegacySinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
+	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+		sbresolver := legacysinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
 
-	return psbinding.NewAdmissionController(ctx,
+		return psbinding.NewAdmissionController(ctx,
 
-		// Name of the resource webhook.
-		"legacysinkbindings.webhook.sources.knative.dev",
+			// Name of the resource webhook.
+			"legacysinkbindings.webhook.sources.knative.dev",
 
-		// The path on which to serve the webhook.
-		"/legacysinkbindings",
+			// The path on which to serve the webhook.
+			"/legacysinkbindings",
 
-		// How to get all the Bindables for configuring the mutating webhook.
-		legacysinkbinding.ListAll,
+			// How to get all the Bindables for configuring the mutating webhook.
+			legacysinkbinding.ListAll,
 
-		// How to setup the context prior to invoking Do/Undo.
-		sbresolver,
-	)
+			// How to setup the context prior to invoking Do/Undo.
+			sbresolver,
+			opts...,
+		)
+	}
 }
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
@@ -325,6 +333,10 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 }
 
 func main() {
+	sbSelector := psbinding.WithSelector(psbinding.ExclusionSelector)
+	if os.Getenv("SINK_BINDING_OPT_OUT_SELECTOR") == "true" {
+		sbSelector = psbinding.WithSelector(psbinding.InclusionSelector)
+	}
 	// Set up a signal context with our webhook options
 	ctx := webhook.WithOptions(signals.NewContext(), webhook.Options{
 		ServiceName: logconfig.WebhookName(),
@@ -341,8 +353,8 @@ func main() {
 		NewConversionController,
 
 		// For each binding we have a controller and a binding webhook.
-		sinkbinding.NewController, NewSinkBindingWebhook,
+		sinkbinding.NewController, NewSinkBindingWebhook(sbSelector),
 		// TODO(#2312): Remove this after v0.13.
-		legacysinkbinding.NewController, NewLegacySinkBindingWebhook,
+		legacysinkbinding.NewController, NewLegacySinkBindingWebhook(sbSelector),
 	)
 }
