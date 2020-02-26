@@ -62,6 +62,6 @@ data:
     # leader election is enabled. Valid values are:
     #
     # - controller
-    # - inmemorychannel_dispatcher
-    # - inmemorychannel_controller
+    # - inmemorychannel-dispatcher
+    # - inmemorychannel-controller
     enabledComponents: "controller"

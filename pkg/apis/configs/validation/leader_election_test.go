@@ -46,7 +46,7 @@ func okData() map[string]string {
 		"leaseDuration":     "15s",
 		"renewDeadline":     "10s",
 		"retryPeriod":       "2s",
-		"enabledComponents": "controller",
+		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller",
 	}
 }
 

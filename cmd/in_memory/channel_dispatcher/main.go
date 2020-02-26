@@ -36,7 +36,7 @@ func main() {
 		ctx = injection.WithNamespaceScope(ctx, ns)
 	}
 
-	sharedmain.MainWithContext(ctx, "inmemorychannel_dispatcher",
+	sharedmain.MainWithContext(ctx, "inmemorychannel-dispatcher",
 		inmemorychannel.NewController,
 	)
 }

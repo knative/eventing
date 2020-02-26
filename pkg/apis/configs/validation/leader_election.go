@@ -27,8 +27,8 @@ import (
 var (
 	validComponents = sets.NewString(
 		"controller",
-		"inmemorychannel_dispatcher",
-		"inmemorychannel_controller",
+		"inmemorychannel-dispatcher",
+		"inmemorychannel-controller",
 	)
 )
 
