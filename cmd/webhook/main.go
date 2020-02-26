@@ -61,26 +61,33 @@ import (
 
 var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	// For group eventing.knative.dev.
+	// v1alpha1
 	eventingv1alpha1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1alpha1.Broker{},
 	eventingv1alpha1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1alpha1.Trigger{},
 	eventingv1alpha1.SchemeGroupVersion.WithKind("EventType"): &eventingv1alpha1.EventType{},
-	eventingv1beta1.SchemeGroupVersion.WithKind("Broker"):     &eventingv1beta1.Broker{},
-	eventingv1beta1.SchemeGroupVersion.WithKind("Trigger"):    &eventingv1beta1.Trigger{},
-	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"):  &eventingv1beta1.EventType{},
+	// v1beta1
+	eventingv1beta1.SchemeGroupVersion.WithKind("Broker"):    &eventingv1beta1.Broker{},
+	eventingv1beta1.SchemeGroupVersion.WithKind("Trigger"):   &eventingv1beta1.Trigger{},
+	eventingv1beta1.SchemeGroupVersion.WithKind("EventType"): &eventingv1beta1.EventType{},
 
 	// For group messaging.knative.dev.
+	// v1alpha1
 	messagingv1alpha1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1alpha1.InMemoryChannel{},
 	messagingv1alpha1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1alpha1.Channel{},
 	messagingv1alpha1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1alpha1.Subscription{},
-	messagingv1beta1.SchemeGroupVersion.WithKind("InMemoryChannel"):  &messagingv1beta1.InMemoryChannel{},
-	messagingv1beta1.SchemeGroupVersion.WithKind("Channel"):          &messagingv1beta1.Channel{},
-	messagingv1beta1.SchemeGroupVersion.WithKind("Subscription"):     &messagingv1beta1.Subscription{},
+	// v1beta1
+	messagingv1beta1.SchemeGroupVersion.WithKind("InMemoryChannel"): &messagingv1beta1.InMemoryChannel{},
+	messagingv1beta1.SchemeGroupVersion.WithKind("Channel"):         &messagingv1beta1.Channel{},
+	messagingv1beta1.SchemeGroupVersion.WithKind("Subscription"):    &messagingv1beta1.Subscription{},
 
 	// For group sources.knative.dev.
+	// v1alpha1
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha1.ApiServerSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha1.PingSource{},
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
+	// v1alpha2
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):  &sourcesv1alpha2.PingSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"): &sourcesv1alpha2.SinkBinding{},
 
 	// For group sources.eventing.knative.dev.
 	// TODO(#2312): Remove this after v0.13.
@@ -90,10 +97,12 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &legacysourcesv1alpha1.CronJobSource{},
 
 	// For group flows.knative.dev
+	// v1alpha1
 	flowsv1alpha1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1alpha1.Parallel{},
 	flowsv1alpha1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1alpha1.Sequence{},
-	flowsv1beta1.SchemeGroupVersion.WithKind("Parallel"):  &flowsv1beta1.Parallel{},
-	flowsv1beta1.SchemeGroupVersion.WithKind("Sequence"):  &flowsv1beta1.Sequence{},
+	// v1beta1
+	flowsv1beta1.SchemeGroupVersion.WithKind("Parallel"): &flowsv1beta1.Parallel{},
+	flowsv1beta1.SchemeGroupVersion.WithKind("Sequence"): &flowsv1beta1.Sequence{},
 
 	// For group configs.knative.dev
 	configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation"): &configsv1alpha1.ConfigMapPropagation{},
@@ -299,14 +308,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				},
 			},
 			// Sources
-			//baseeventingv1beta1.Kind("ApiServerSource"): {
-			//	DefinitionName: sources.ApiServerSourceResource.String(),
-			//	HubVersion:     sourcesv1alpha1_,
-			//	Zygotes: map[string]conversion.ConvertibleObject{
-			//		sourcesv1alpha1_: &basesourcesv1alpha1.ApiServerSource{},
-			//		sourcesv1alpha2_: &basesourcesv1alpha2.ApiServerSource{},
-			//	},
-			//},
+			// TODO: ApiServerSource
 			sourcesv1alpha2.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
 				HubVersion:     sourcesv1alpha1_,
@@ -315,14 +317,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 					sourcesv1alpha2_: &sourcesv1alpha2.PingSource{},
 				},
 			},
-			//baseeventingv1beta1.Kind("SinkBinding"): {
-			//	DefinitionName: sources.SinkBindingResource.String(),
-			//	HubVersion:     sourcesv1alpha1_,
-			//	Zygotes: map[string]conversion.ConvertibleObject{
-			//		sourcesv1alpha1_: &basesourcesv1alpha1.SinkBinding{},
-			//		sourcesv1alpha2_: &basesourcesv1alpha2.SinkBinding{},
-			//	},
-			//},
+			sourcesv1alpha2.Kind("SinkBinding"): {
+				DefinitionName: sources.SinkBindingResource.String(),
+				HubVersion:     sourcesv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					sourcesv1alpha1_: &sourcesv1alpha1.SinkBinding{},
+					sourcesv1alpha2_: &sourcesv1alpha2.SinkBinding{},
+				},
+			},
 		},
 
 		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.

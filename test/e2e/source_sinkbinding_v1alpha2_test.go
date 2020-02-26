@@ -1,7 +1,7 @@
 // +build e2e
 
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -38,7 +38,7 @@ import (
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
-func TestSinkBindingDeployment(t *testing.T) {
+func TestSinkBindingV1Alpha2Deployment(t *testing.T) {
 	const (
 		sinkBindingName = "e2e-sink-binding"
 		deploymentName  = "e2e-sink-binding-deployment"
@@ -58,21 +58,21 @@ func TestSinkBindingDeployment(t *testing.T) {
 	extensionSecret := string(uuid.NewUUID())
 
 	// create sink binding
-	sinkBinding := eventingtesting.NewSinkBinding(
+	sinkBinding := eventingtesting.NewSinkBindingV1Alpha2(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
-		eventingtesting.WithSubject(tracker.Reference{
+		eventingtesting.WithSinkV1A2(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
+		eventingtesting.WithSubjectV1A2(tracker.Reference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Namespace:  client.Namespace,
 			Name:       deploymentName,
 		}),
-		eventingtesting.WithCloudEventOverrides(duckv1.CloudEventOverrides{Extensions: map[string]string{
+		eventingtesting.WithCloudEventOverridesV1A2(duckv1.CloudEventOverrides{Extensions: map[string]string{
 			"sinkbinding": extensionSecret,
 		}}),
 	)
-	client.CreateSinkBindingOrFail(sinkBinding)
+	client.CreateSinkBindingV1Alpha2OrFail(sinkBinding)
 
 	data := fmt.Sprintf("TestSinkBindingDeployment%s", uuid.NewUUID())
 	client.CreateDeploymentOrFail(&appsv1.Deployment{
@@ -126,7 +126,7 @@ func TestSinkBindingDeployment(t *testing.T) {
 	}
 }
 
-func TestSinkBindingCronJob(t *testing.T) {
+func TestSinkBindingV1Alpha2CronJob(t *testing.T) {
 	const (
 		sinkBindingName = "e2e-sink-binding"
 		deploymentName  = "e2e-sink-binding-cronjob"
@@ -144,11 +144,11 @@ func TestSinkBindingCronJob(t *testing.T) {
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// create sink binding
-	sinkBinding := eventingtesting.NewSinkBinding(
+	sinkBinding := eventingtesting.NewSinkBindingV1Alpha2(
 		sinkBindingName,
 		client.Namespace,
-		eventingtesting.WithSink(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
-		eventingtesting.WithSubject(tracker.Reference{
+		eventingtesting.WithSinkV1A2(duckv1.Destination{Ref: resources.KnativeRefForService(loggerPodName, client.Namespace)}),
+		eventingtesting.WithSubjectV1A2(tracker.Reference{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
 			Namespace:  client.Namespace,
@@ -159,7 +159,7 @@ func TestSinkBindingCronJob(t *testing.T) {
 			},
 		}),
 	)
-	client.CreateSinkBindingOrFail(sinkBinding)
+	client.CreateSinkBindingV1Alpha2OrFail(sinkBinding)
 
 	data := fmt.Sprintf("TestSinkBindingCronJob%s", uuid.NewUUID())
 	client.CreateCronJobOrFail(&batchv1beta1.CronJob{

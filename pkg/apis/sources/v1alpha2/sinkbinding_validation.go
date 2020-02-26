@@ -18,17 +18,21 @@ package v1alpha2
 
 import (
 	"context"
-	"testing"
+
+	"knative.dev/pkg/apis"
 )
 
-func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
-
-	if err := good.ConvertTo(context.Background(), bad); err == nil {
-		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+// Validate implements apis.Validatable
+func (fb *SinkBinding) Validate(ctx context.Context) *apis.FieldError {
+	err := fb.Spec.Validate(ctx).ViaField("spec")
+	if fb.Spec.Subject.Namespace != "" && fb.Namespace != fb.Spec.Subject.Namespace {
+		err = err.Also(apis.ErrInvalidValue(fb.Spec.Subject.Namespace, "spec.subject.namespace"))
 	}
+	return err
+}
 
-	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = %#v, wanted error", good)
-	}
+// Validate implements apis.Validatable
+func (fbs *SinkBindingSpec) Validate(ctx context.Context) *apis.FieldError {
+	return fbs.Subject.Validate(ctx).ViaField("subject").Also(
+		fbs.Sink.Validate(ctx).ViaField("sink"))
 }

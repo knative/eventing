@@ -62,8 +62,8 @@ func TestKnownTypes(t *testing.T) {
 	for _, name := range []string{
 		//"ApiServerSource",
 		//"ApiServerSourceList",
-		//"SinkBinding",
-		//"SinkBindingList",
+		"SinkBinding",
+		"SinkBindingList",
 		"PingSource",
 		"PingSourceList",
 	} {

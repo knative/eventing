@@ -18,17 +18,17 @@ package v1alpha2
 
 import (
 	"context"
-	"testing"
+
+	"knative.dev/pkg/apis"
 )
 
-func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
-
-	if err := good.ConvertTo(context.Background(), bad); err == nil {
-		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+// SetDefaults implements apis.Defaultable
+func (fb *SinkBinding) SetDefaults(ctx context.Context) {
+	if fb.Spec.Subject.Namespace == "" {
+		// Default the subject's namespace to our namespace.
+		fb.Spec.Subject.Namespace = fb.Namespace
 	}
 
-	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = %#v, wanted error", good)
-	}
+	withNS := apis.WithinParent(ctx, fb.ObjectMeta)
+	fb.Spec.Sink.SetDefaults(withNS)
 }

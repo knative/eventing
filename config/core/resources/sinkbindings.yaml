@@ -36,6 +36,21 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      # this is a work around so we don't need to flesh out the
+      # schema for each version at this time
+      #
+      # see issue: https://github.com/knative/serving/issues/912
+      x-kubernetes-preserve-unknown-fields: true
+  conversion:
+    strategy: Webhook
+    webhookClientConfig:
+      service:
+        name: eventing-webhook
+        namespace: knative-eventing
   additionalPrinterColumns:
   - name: Ready
     type: string
@@ -54,6 +69,6 @@ spec:
     served: true
     storage: true
   - name: v1alpha2
-    served: false
+    served: true
     storage: false
 

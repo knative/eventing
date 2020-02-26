@@ -19,16 +19,25 @@ package v1alpha2
 import (
 	"context"
 	"testing"
+
+	"knative.dev/pkg/apis"
 )
 
-func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
+func TestGetSinkURI(t *testing.T) {
+	ctx := context.Background()
 
-	if err := good.ConvertTo(context.Background(), bad); err == nil {
-		t.Errorf("ConvertTo() = %#v, wanted error", bad)
+	if uri := GetSinkURI(ctx); uri != nil {
+		t.Errorf("GetSinkURI() = %v, wanted nil", uri)
 	}
 
-	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+	want := &apis.URL{
+		Scheme: "https",
+		Host:   "knobots.io",
+		Path:   "/omg/a/path",
+	}
+	ctx = WithSinkURI(ctx, want)
+
+	if got := GetSinkURI(ctx); got != want {
+		t.Errorf("GetSinkURI() = %v, wanted %v", got, want)
 	}
 }

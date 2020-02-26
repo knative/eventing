@@ -18,17 +18,26 @@ package v1alpha2
 
 import (
 	"context"
-	"testing"
+
+	"knative.dev/pkg/apis"
 )
 
-func TestPingSourceConversionBadType(t *testing.T) {
-	good, bad := &PingSource{}, &PingSource{}
+// sinkURIKey is used as the key for associating information
+// with a context.Context.
+type sinkURIKey struct{}
 
-	if err := good.ConvertTo(context.Background(), bad); err == nil {
-		t.Errorf("ConvertTo() = %#v, wanted error", bad)
-	}
+// WithSinkURI notes on the context for binding that the resolved SinkURI
+// is the provided apis.URL.
+func WithSinkURI(ctx context.Context, uri *apis.URL) context.Context {
+	return context.WithValue(ctx, sinkURIKey{}, uri)
+}
 
-	if err := good.ConvertFrom(context.Background(), bad); err == nil {
-		t.Errorf("ConvertFrom() = %#v, wanted error", good)
+// GetSinkURI accesses the apis.URL for the Sink URI that has been associated
+// with this context.
+func GetSinkURI(ctx context.Context) *apis.URL {
+	value := ctx.Value(sinkURIKey{})
+	if value == nil {
+		return nil
 	}
+	return value.(*apis.URL)
 }

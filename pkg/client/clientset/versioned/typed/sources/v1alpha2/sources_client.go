@@ -27,6 +27,7 @@ import (
 type SourcesV1alpha2Interface interface {
 	RESTClient() rest.Interface
 	PingSourcesGetter
+	SinkBindingsGetter
 }
 
 // SourcesV1alpha2Client is used to interact with features provided by the sources.knative.dev group.
@@ -36,6 +37,10 @@ type SourcesV1alpha2Client struct {
 
 func (c *SourcesV1alpha2Client) PingSources(namespace string) PingSourceInterface {
 	return newPingSources(c, namespace)
+}
+
+func (c *SourcesV1alpha2Client) SinkBindings(namespace string) SinkBindingInterface {
+	return newSinkBindings(c, namespace)
 }
 
 // NewForConfig creates a new SourcesV1alpha2Client for the given config.
