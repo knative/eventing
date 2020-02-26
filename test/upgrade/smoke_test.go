@@ -16,9 +16,10 @@
 package upgrade
 
 import (
+	"testing"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 	"knative.dev/eventing/test/e2e/helpers"
-	"testing"
 )
 
 func runSmokeTest(t *testing.T) {

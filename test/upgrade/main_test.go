@@ -16,10 +16,11 @@
 package upgrade
 
 import (
-	"knative.dev/eventing/test"
-	"knative.dev/eventing/test/lib"
 	"os"
 	"testing"
+
+	"knative.dev/eventing/test"
+	"knative.dev/eventing/test/lib"
 )
 
 var setup = lib.Setup

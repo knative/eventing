@@ -18,12 +18,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rogpeppe/go-internal/semver"
 	"io/ioutil"
-	"knative.dev/eventing/test/lib"
 	"net/http"
 	"os"
 	"sort"
+
+	"github.com/rogpeppe/go-internal/semver"
+	"github.com/wavesoftware/go-ensure"
 )
 
 var (
@@ -61,14 +62,14 @@ type Tag struct {
 func resolveMatchingRelease(repo, version string) string {
 	endpoint := fmt.Sprintf("%s/repos/%s/tags", ApiGateway, repo)
 	resp, err := http.Get(endpoint)
-	lib.NoError(err)
+	ensure.NoError(err)
 	defer func() {
 		err := resp.Body.Close()
-		lib.NoError(err)
+		ensure.NoError(err)
 	}()
 	body, err := ioutil.ReadAll(resp.Body)
 	var tags []Tag
-	lib.NoError(json.Unmarshal(body, &tags))
+	ensure.NoError(json.Unmarshal(body, &tags))
 
 	versions := slurpVersions(tags)
 	matching := filterMatchingVersions(version, versions, true)

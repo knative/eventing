@@ -553,6 +553,14 @@
   version = "v12.7.0"
 
 [[projects]]
+  digest = "1:4d3c27cb343a081ef080e6a6d8aae270c3bdd5b04cfb22e36568a1dae5eee655"
+  name = "github.com/wavesoftware/go-ensure"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "3824fe95969c1376f10cf2fe855f56abb69c1b84"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:b7d98c64e9467a8e5e67509031cd6baee81fba090ba2c3d30df1ff3d02d1d035"
   name = "go.opencensus.io"
   packages = [
@@ -1458,6 +1466,7 @@
     "github.com/rogpeppe/fastuuid",
     "github.com/rogpeppe/go-internal/semver",
     "github.com/tsenart/vegeta/lib",
+    "github.com/wavesoftware/go-ensure",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/stats",

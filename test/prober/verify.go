@@ -20,13 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
 	"math/rand"
 	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/wavesoftware/go-ensure"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *prober) Verify() ([]error, int) {
@@ -76,7 +77,7 @@ var addressTypeToPriorities = map[corev1.NodeAddressType]int{
 
 func (p *prober) figureOutClusterHostname() string {
 	nodes, err := p.client.Kube.Kube.CoreV1().Nodes().List(metav1.ListOptions{})
-	lib.NoError(err)
+	ensure.NoError(err)
 	if len(nodes.Items) == 1 {
 		node := nodes.Items[0]
 		return p.nodeExternalAddress(node)
@@ -122,21 +123,21 @@ func (p *prober) fetchReceiverReport(hostname string) *Report {
 	u := fmt.Sprintf("http://%s:%d/report", hostname, receiverNodePort)
 	p.log.Infof("Fetching receiver report at: %v", u)
 	resp, err := http.Get(u)
-	lib.NoError(err)
+	ensure.NoError(err)
 	if resp.StatusCode != 200 {
 		var b strings.Builder
-		lib.NoError(resp.Header.Write(&b))
+		ensure.NoError(resp.Header.Write(&b))
 		headers := b.String()
 		panic(fmt.Errorf("could not get receiver report at %v, "+
 			"status code: %v, headers: %v", u, resp.StatusCode, headers))
 	}
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(resp.Body)
-	lib.NoError(err)
-	lib.NoError(resp.Body.Close())
+	ensure.NoError(err)
+	ensure.NoError(resp.Body.Close())
 	jsonBytes := buf.Bytes()
 	var report Report
-	lib.NoError(json.Unmarshal(jsonBytes, &report))
+	ensure.NoError(json.Unmarshal(jsonBytes, &report))
 	return &report
 }
 

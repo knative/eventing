@@ -17,9 +17,10 @@ package prober
 
 import (
 	"fmt"
+
+	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/test/lib"
 )
 
 var senderName = "wathola-sender"
@@ -59,7 +60,7 @@ func (p *prober) deploySender() {
 	}
 	_, err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).
 		Create(pod)
-	lib.NoError(err)
+	ensure.NoError(err)
 
 	waitFor(fmt.Sprintf("sender pod be ready: %v", senderName), func() error {
 		return p.waitForPodReady(senderName, p.client.Namespace)
@@ -71,5 +72,5 @@ func (p *prober) removeSender() {
 
 	err := p.client.Kube.Kube.CoreV1().Pods(p.client.Namespace).
 		Delete(senderName, &metav1.DeleteOptions{})
-	lib.NoError(err)
+	ensure.NoError(err)
 }

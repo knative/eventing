@@ -16,8 +16,9 @@
 package main
 
 import (
-	"github.com/rogpeppe/go-internal/semver"
 	"testing"
+
+	"github.com/rogpeppe/go-internal/semver"
 )
 
 func TestResolveMatchingRelease(t *testing.T) {

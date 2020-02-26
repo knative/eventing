@@ -18,13 +18,14 @@
 package upgrade
 
 import (
-	"go.uber.org/zap"
 	"io/ioutil"
-	"knative.dev/eventing/test/lib"
-	"knative.dev/eventing/test/prober"
 	"os"
 	"syscall"
 	"testing"
+
+	"github.com/wavesoftware/go-ensure"
+	"go.uber.org/zap"
+	"knative.dev/eventing/test/prober"
 )
 
 const (
@@ -53,7 +54,7 @@ func TestProbe(t *testing.T) {
 	// inline with other logs instead of buffered until the end.
 	log := createLogger()
 	probe := prober.RunEventProber(log, client, config)
-	lib.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
+	ensure.NoError(ioutil.WriteFile(ready, []byte(readyMessage), 0666))
 	defer prober.AssertEventProber(t, probe)
 
 	log.Infof("Waiting for file: %v as a signal that "+
@@ -64,7 +65,7 @@ func TestProbe(t *testing.T) {
 
 func createLogger() *zap.SugaredLogger {
 	log, err := zap.NewDevelopment()
-	lib.NoError(err)
+	ensure.NoError(err)
 	return log.Sugar()
 }
 
@@ -73,7 +74,7 @@ func ensureTempFilesAreCleaned() {
 	for _, filename := range filenames {
 		_, err := os.Stat(filename)
 		if err == nil {
-			lib.NoError(os.Remove(filename))
+			ensure.NoError(os.Remove(filename))
 		}
 	}
 }

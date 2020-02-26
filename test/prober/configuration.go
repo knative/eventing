@@ -19,14 +19,15 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/test/lib"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"path"
 	"runtime"
 	"text/template"
+
+	"github.com/wavesoftware/go-ensure"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -50,13 +51,13 @@ func (p *prober) deployConfiguration() {
 func (p *prober) annotateNamespace() {
 	ns, err := p.client.Kube.Kube.CoreV1().Namespaces().
 		Get(p.client.Namespace, metav1.GetOptions{})
-	lib.NoError(err)
+	ensure.NoError(err)
 	ns.Labels = map[string]string{
 		"knative-eventing-injection": "enabled",
 	}
 	_, err = p.client.Kube.Kube.CoreV1().Namespaces().
 		Update(ns)
-	lib.NoError(err)
+	ensure.NoError(err)
 }
 
 func (p *prober) deploySecret() {
@@ -75,7 +76,7 @@ func (p *prober) deploySecret() {
 	}
 	_, err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
 		Create(secret)
-	lib.NoError(err)
+	ensure.NoError(err)
 }
 
 func (p *prober) deployTriggers() {
@@ -111,7 +112,7 @@ func (p *prober) deployTriggers() {
 		p.log.Infof("Deploying trigger: %v", name)
 		_, err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Create(trigger)
-		lib.NoError(err)
+		ensure.NoError(err)
 		waitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
 			return p.waitForTriggerReady(name, p.config.Namespace)
 		})
@@ -127,7 +128,7 @@ func (p *prober) removeSecret() {
 	p.log.Infof("Removing secret: %v", configName)
 	err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
 		Delete(configName, &metav1.DeleteOptions{})
-	lib.NoError(err)
+	ensure.NoError(err)
 }
 
 func (p *prober) removeTriggers() {
@@ -136,7 +137,7 @@ func (p *prober) removeTriggers() {
 		p.log.Infof("Removing trigger: %v", name)
 		err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Delete(name, &metav1.DeleteOptions{})
-		lib.NoError(err)
+		ensure.NoError(err)
 	}
 }
 
@@ -144,10 +145,10 @@ func (p *prober) compileTemplate(templateName string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	templateFilepath := path.Join(path.Dir(filename), templateName)
 	templateBytes, err := ioutil.ReadFile(templateFilepath)
-	lib.NoError(err)
+	ensure.NoError(err)
 	tmpl, err := template.New(templateName).Parse(string(templateBytes))
-	lib.NoError(err)
+	ensure.NoError(err)
 	var buff bytes.Buffer
-	lib.NoError(tmpl.Execute(&buff, p.config))
+	ensure.NoError(tmpl.Execute(&buff, p.config))
 	return buff.String()
 }
