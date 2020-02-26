@@ -74,7 +74,6 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 	const (
 		sourceName = "e2e-ping-source"
 		// Every 1 minute starting from now
-		schedule = "*/1 * * * *"
 
 		loggerPodName = "e2e-ping-source-logger-pod"
 	)
@@ -92,7 +91,6 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 		sourceName,
 		client.Namespace,
 		eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
-			Schedule: schedule,
 			JsonData: data,
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
