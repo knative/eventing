@@ -31,7 +31,6 @@ import (
 const (
 	// DefaultConfigName is the name of config map for the default
 	// configs that brokers should use
-	//	DefaultsConfigName = "config-br-defaults"
 	DefaultsConfigName = "config-br-defaults"
 
 	// BrokerDefaultsKey is the name of the key that's used for finding

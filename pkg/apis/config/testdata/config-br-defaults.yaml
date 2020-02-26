@@ -15,7 +15,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: config-defaults
+  name: config-br-defaults
   namespace: knative-eventing
   labels:
     eventing.knative.dev/release: devel
@@ -27,17 +27,6 @@ data:
     #    EXAMPLE CONFIGURATION     #
     #                              #
     ################################
-    default-ch-config: |
-      clusterDefault:
-        apiVersion: messaging.knative.dev/v1alpha1
-        kind: InMemoryChannel
-      namespaceDefaults:
-        some-namespace:
-          apiVersion: messaging.knative.dev/v1alpha1
-          kind: KafkaChannel
-          spec:
-              numPartitions: 3
-              replicationFactor: 1
     default-br-config: |
       clusterDefault:
         apiVersion: v1

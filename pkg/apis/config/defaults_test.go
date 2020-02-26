@@ -43,6 +43,28 @@ func TestDefaultsConfigurationFromFile(t *testing.T) {
 	}
 }
 
+func TestGetBrokerConfig(t *testing.T) {
+	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)
+	defaults, err := NewDefaultsConfigFromConfigMap(example)
+	if err != nil {
+		t.Errorf("NewDefaultsConfigFromConfigMap(example) = %v", err)
+	}
+	c, err := defaults.GetBrokerConfig("rando")
+	if err != nil {
+		t.Errorf("GetBrokerConfig Failed = %v", err)
+	}
+	if c.Name != "somename" {
+		t.Errorf("GetBrokerConfig Failed, wanted somename, got: %s", c.Name)
+	}
+	c, err = defaults.GetBrokerConfig("some-namespace")
+	if err != nil {
+		t.Errorf("GetBrokerConfig Failed = %v", err)
+	}
+	if c.Name != "someothername" {
+		t.Errorf("GetBrokerConfig Failed, wanted someothername, got: %s", c.Name)
+	}
+}
+
 func TestDefaultsConfiguration(t *testing.T) {
 	configTests := []struct {
 		name         string
