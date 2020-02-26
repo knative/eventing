@@ -33,3 +33,15 @@ rules:
       - "delete"
       - "patch"
       - "watch"
+  - apiGroups:
+      - "configs.internal.knative.dev"
+    resources:
+      - "configmappropagations/finalizers"
+    verbs:
+      - "update"
+  - apiGroups:
+      - ""
+    resources:
+      - "namespaces/finalizers"
+    verbs:
+      - "update"
