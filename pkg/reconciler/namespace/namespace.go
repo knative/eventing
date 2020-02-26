@@ -38,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
@@ -245,13 +246,13 @@ func (r *Reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespa
 }
 
 // reconcileBroker reconciles the default Broker for the Namespace 'ns'.
-func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) (*v1alpha1.Broker, error) {
-	current, err := r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Get(resources.DefaultBrokerName, metav1.GetOptions{})
+func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) (*v1beta1.Broker, error) {
+	current, err := r.EventingClientSet.EventingV1beta1().Brokers(ns.Name).Get(resources.DefaultBrokerName, metav1.GetOptions{})
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
 		b := resources.MakeBroker(ns)
-		b, err = r.EventingClientSet.EventingV1alpha1().Brokers(ns.Name).Create(b)
+		b, err = r.EventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(b)
 		if err != nil {
 			return nil, err
 		}

@@ -16,29 +16,20 @@ limitations under the License.
 
 package v1beta1
 
-import (
-	"context"
-	"fmt"
+import "context"
 
-	"knative.dev/eventing/pkg/apis/config"
-	"knative.dev/pkg/apis"
-)
+// brokerDefaultKey is used as the key for associating information
+// with a context.Context.
+type brokerDefaultKey struct{}
 
-func (b *Broker) SetDefaults(ctx context.Context) {
-	// TODO(vaikas): Set the default class annotation if not specified
-	withNS := apis.WithinParent(ctx, b.ObjectMeta)
-	b.Spec.SetDefaults(withNS)
+// WithDefaultBrokerConfigs adds the default Broker configurations
+// to the current context.
+func WithDefaultBrokerConfigs(ctx context.Context) context.Context {
+	return context.WithValue(ctx, brokerDefaultKey{}, struct{}{})
 }
 
-func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	if bs.Config != nil {
-		return
-	}
-
-	cfg := config.FromContextOrDefaults(ctx)
-	fmt.Printf("GOT CONTEXT AS: %+v", cfg)
-	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
-	if err != nil {
-		bs.Config = c
-	}
+// HasDefaultBrokerConfigs checks to see whether the given context has
+// been marked as having broker defaults.
+func HasDefaultBrokerConfigs(ctx context.Context) bool {
+	return ctx.Value(brokerDefaultKey{}) != nil
 }
