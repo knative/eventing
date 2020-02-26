@@ -42,6 +42,7 @@ import (
 	"knative.dev/pkg/webhook/resourcesemantics/defaulting"
 	"knative.dev/pkg/webhook/resourcesemantics/validation"
 
+	defaultconfig "knative.dev/eventing/pkg/apis/config"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -109,11 +110,15 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 }
 
 func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// Decorate contexts with the current state of the config.
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+
 	logger := logging.FromContext(ctx)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return ctx
+		return store.ToContext(ctx)
 	}
 
 	// Watch the default-ch-webhook ConfigMap and dynamically update the default
@@ -145,6 +150,15 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 }
 
 func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// Decorate contexts with the current state of the config.
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+
+	// Decorate contexts with the current state of the config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return store.ToContext(ctx)
+	}
+
 	return validation.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
@@ -157,10 +171,7 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
-		func(ctx context.Context) context.Context {
-			// return v1.WithUpgradeViaDefaulting(store.ToContext(ctx))
-			return ctx
-		},
+		ctxFunc,
 
 		// Whether to disallow unknown fields.
 		true,
@@ -231,6 +242,14 @@ func NewLegacySinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.C
 }
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// Decorate contexts with the current state of the config.
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+	// Decorate contexts with the current state of the config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return store.ToContext(ctx)
+	}
+
 	var (
 		eventingv1alpha1_  = eventingv1alpha1.SchemeGroupVersion.Version
 		eventingv1beta1_   = eventingv1beta1.SchemeGroupVersion.Version
@@ -328,9 +347,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		},
 
 		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.
-		func(ctx context.Context) context.Context {
-			return ctx
-		},
+		ctxFunc,
 	)
 }
 

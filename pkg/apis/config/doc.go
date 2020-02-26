@@ -14,29 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+// +k8s:deepcopy-gen=package
 
-import (
-	"context"
-
-	"knative.dev/eventing/pkg/apis/config"
-	"knative.dev/pkg/apis"
-)
-
-func (b *Broker) SetDefaults(ctx context.Context) {
-	// TODO(vaikas): Set the default class annotation if not specified
-	withNS := apis.WithinParent(ctx, b.ObjectMeta)
-	b.Spec.SetDefaults(withNS)
-}
-
-func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	if bs.Config != nil {
-		return
-	}
-
-	cfg := config.FromContextOrDefaults(ctx)
-	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
-	if err == nil {
-		bs.Config = c
-	}
-}
+// Package config holds the typed objects that define the schemas for
+// ConfigMap objects that pertain to our API objects.
+package config
