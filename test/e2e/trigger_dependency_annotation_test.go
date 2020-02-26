@@ -66,7 +66,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	)
 
 	data := fmt.Sprintf("Test trigger-annotation %s", uuid.NewUUID())
-	pingSource := eventingtesting.NewPingSource(
+	pingSource := eventingtesting.NewPingSourceV1Alpha1(
 		pingSourceName,
 		client.Namespace,
 		eventingtesting.WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
@@ -75,7 +75,7 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 			Sink:     &duckv1.Destination{Ref: resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace)},
 		}),
 	)
-	client.CreatePingSourceOrFail(pingSource)
+	client.CreatePingSourceV1Alpha1OrFail(pingSource)
 
 	// Trigger should become ready after pingSource was created
 	client.WaitForResourceReadyOrFail(triggerName, lib.TriggerTypeMeta)

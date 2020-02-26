@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -320,10 +321,21 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
-// CreatePingSourceOrFail will create an PingSource
-func (client *Client) CreatePingSourceOrFail(pingSource *sourcesv1alpha1.PingSource) {
+// CreatePingSourceV1Alpha1OrFail will create an PingSource
+func (client *Client) CreatePingSourceV1Alpha1OrFail(pingSource *sourcesv1alpha1.PingSource) {
 	client.T.Logf("Creating pingsource %+v", pingSource)
 	pingInterface := client.Eventing.SourcesV1alpha1().PingSources(client.Namespace)
+	_, err := pingInterface.Create(pingSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
+	}
+	client.Tracker.AddObj(pingSource)
+}
+
+// CreatePingSourceV1Alpha2OrFail will create an PingSource
+func (client *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.PingSource) {
+	client.T.Logf("Creating pingsource %+v", pingSource)
+	pingInterface := client.Eventing.SourcesV1alpha2().PingSources(client.Namespace)
 	_, err := pingInterface.Create(pingSource)
 	if err != nil {
 		client.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
