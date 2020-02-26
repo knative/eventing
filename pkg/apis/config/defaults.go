@@ -51,6 +51,8 @@ func NewDefaultsConfigFromMap(data map[string]string) (*Defaults, error) {
 	if err := parseEntry(value, &nc); err != nil {
 		return nil, fmt.Errorf("Failed to parse the entry: %s", err)
 	}
+	fmt.Printf("GOT DEFAULTS AS: %+v %#v", nc, nc)
+	fmt.Printf("GOT DEFAULTS AS: %+v %#v", nc.ClusterDefault, nc.ClusterDefault)
 	return nc, nil
 }
 
@@ -83,14 +85,18 @@ type Defaults struct {
 // return an error.
 func (d *Defaults) GetBrokerConfig(ns string) (*duckv1.KReference, error) {
 	if d == nil {
+		fmt.Printf("GETBROKERCONFIG DEFAULTS NIL")
 		return nil, errors.New("Defaults are nil")
 	}
 	value, present := d.NamespaceDefaultsConfig[ns]
 	if present {
+		fmt.Printf("GETBROKERCONFIG FOUND VALUE: %+v", value)
 		return value, nil
 	}
 	if d.ClusterDefault != nil {
+		fmt.Printf("GETBROKERCONFIG FOUND CLUSTERDEFAULT: %+v", value)
 		return d.ClusterDefault, nil
 	}
+	fmt.Printf("GETBROKERCONFIG SHIT:")
 	return nil, errors.New("Defaults for Broker Configurations have not been set up.")
 }

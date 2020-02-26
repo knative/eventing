@@ -26,6 +26,7 @@ import (
 
 func (b *Broker) SetDefaults(ctx context.Context) {
 	// TODO(vaikas): Set the default class annotation if not specified
+	fmt.Printf("GOT CONTEXT AS: %+v %#v", ctx, ctx)
 	withNS := apis.WithinParent(ctx, b.ObjectMeta)
 	b.Spec.SetDefaults(withNS)
 }
@@ -36,7 +37,8 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 	}
 
 	cfg := config.FromContextOrDefaults(ctx)
-	fmt.Printf("GOT CONTEXT AS: %+v", cfg)
+	fmt.Printf("GOT CONFIG AS: %+v", cfg)
+	fmt.Printf("GOT CONTEXT AS: %+v %#v", ctx, ctx)
 	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
 	if err != nil {
 		bs.Config = c

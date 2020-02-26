@@ -18,6 +18,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 
 	"knative.dev/pkg/configmap"
 )
@@ -43,9 +44,12 @@ func FromContext(ctx context.Context) *Config {
 // returns a Config populated with the defaults for each of the Config fields.
 func FromContextOrDefaults(ctx context.Context) *Config {
 	if cfg := FromContext(ctx); cfg != nil {
+		fmt.Printf("GETTING CONTEXT, FOUND IT AS: %+v %#v", cfg, cfg)
 		return cfg
 	}
+	fmt.Printf("GETTING CONTEXT, NOT FOUND, FETCHING FROM CONFIGMAP")
 	defaults, _ := NewDefaultsConfigFromMap(map[string]string{})
+	fmt.Printf("GETTING CONTEXT, RETURNING DEFAULTS: %+v", defaults)
 	return &Config{
 		Defaults: defaults,
 	}

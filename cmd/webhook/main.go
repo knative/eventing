@@ -44,7 +44,6 @@ import (
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/apis/flows"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
@@ -105,11 +104,12 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store.WatchConfigs(cmw)
 
 	logger := logging.FromContext(ctx)
-	logger.Infof("GOT STORE AS: %+v", store.Defaults)
+	logger.Infof("GOT STORE AS: %+v %#v", store, store)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return v1beta1.WithDefaultBrokerConfigs(store.ToContext(ctx))
+		//		return v1beta1.WithDefaultBrokerConfigs(store.ToContext(ctx))
+		return store.ToContext(ctx)
 	}
 
 	// Watch the default-ch-webhook ConfigMap and dynamically update the default
@@ -145,6 +145,11 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
 
+	// Decorate contexts with the current state of the config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return store.ToContext(ctx)
+	}
+
 	return validation.NewAdmissionController(ctx,
 
 		// Name of the resource webhook.
@@ -157,10 +162,7 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 		ourTypes,
 
 		// A function that infuses the context passed to Validate/SetDefaults with custom metadata.
-		func(ctx context.Context) context.Context {
-			// return v1.WithUpgradeViaDefaulting(store.ToContext(ctx))
-			return ctx
-		},
+		ctxFunc,
 
 		// Whether to disallow unknown fields.
 		true,
