@@ -1593,6 +1593,7 @@
     "knative.dev/pkg/test/helpers",
     "knative.dev/pkg/test/logging",
     "knative.dev/pkg/test/mako",
+    "knative.dev/pkg/test/monitoring",
     "knative.dev/pkg/test/zipkin",
     "knative.dev/pkg/testutils/clustermanager/perf-tests",
     "knative.dev/pkg/tracing",
