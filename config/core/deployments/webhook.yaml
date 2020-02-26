@@ -60,8 +60,15 @@ spec:
           value: knative.dev/eventing
         - name: WEBHOOK_NAME
           value: eventing-webhook
-        - name: SINK_BINDING_OPT_OUT_SELECTOR
-          value: "false"
+          # SINK_BINDING_SELECTION_MODE specifies the NamespaceSelector and ObjectSelector
+          # for the sinkbinding webhook.
+          # If `inclusion` is selected, namespaces/objects labled as `bindings.knative.dev/include:true`
+          # will be considered by the sinkbinding webhook;
+          # If `exclusion` is selected, namespaces/objects labled as `bindings.knative.dev/exclude:true`
+          # will NOT be considered by the sinkbinding webhook.
+          # The default is `exclusion`.
+        - name: SINK_BINDING_SELECTION_MODE
+          value: "exclusion"
 
         securityContext:
           allowPrivilegeEscalation: false

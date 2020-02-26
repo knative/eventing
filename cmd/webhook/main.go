@@ -336,7 +336,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 
 func main() {
 	sbSelector := psbinding.WithSelector(psbinding.ExclusionSelector)
-	if os.Getenv("SINK_BINDING_OPT_OUT_SELECTOR") == "true" {
+	if os.Getenv("SINK_BINDING_SELECTION_MODE") == "inclusion" {
 		sbSelector = psbinding.WithSelector(psbinding.InclusionSelector)
 	}
 	// Set up a signal context with our webhook options
