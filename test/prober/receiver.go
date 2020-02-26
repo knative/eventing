@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/pkg/test"
 )
 
 var (
@@ -87,7 +88,7 @@ func (p *prober) deployReceiverPod() {
 	ensure.NoError(err)
 
 	waitFor(fmt.Sprintf("receiver be ready: %v", receiverName), func() error {
-		return p.waitForPodReady(receiverName, p.client.Namespace)
+		return test.WaitForPodRunning(p.client.Kube, receiverName, p.client.Namespace)
 	})
 }
 

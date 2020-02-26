@@ -97,15 +97,6 @@ func (p *prober) waitForTriggerReady(name, namespace string) error {
 	return duck.WaitForResourceReady(p.client.Dynamic, meta)
 }
 
-func (p *prober) waitForPodReady(name, namespace string) error {
-	podType := &metav1.TypeMeta{
-		Kind:       "Pod",
-		APIVersion: "v1",
-	}
-	meta := resources.NewMetaResource(name, namespace, podType)
-	return duck.WaitForResourceReady(p.client.Dynamic, meta)
-}
-
 type namedAwait struct {
 	name    string
 	routine awaitRoutine

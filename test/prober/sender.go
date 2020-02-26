@@ -21,6 +21,7 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/test"
 )
 
 var senderName = "wathola-sender"
@@ -63,7 +64,7 @@ func (p *prober) deploySender() {
 	ensure.NoError(err)
 
 	waitFor(fmt.Sprintf("sender pod be ready: %v", senderName), func() error {
-		return p.waitForPodReady(senderName, p.client.Namespace)
+		return test.WaitForPodRunning(p.client.Kube, senderName, p.client.Namespace)
 	})
 }
 
