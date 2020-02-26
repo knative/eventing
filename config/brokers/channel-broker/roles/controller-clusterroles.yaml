@@ -33,3 +33,9 @@ rules:
       - "delete"
       - "patch"
       - "watch"
+  - apiGroups:
+      - ""
+    resources:
+      - "namespaces/finalizers"
+    verbs:
+      - "update"
