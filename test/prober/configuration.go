@@ -44,7 +44,7 @@ var (
 
 func (p *prober) deployConfiguration() {
 	p.annotateNamespace()
-	p.deploySecret()
+	p.deployConfigMap()
 	p.deployTriggers()
 }
 
@@ -60,21 +60,20 @@ func (p *prober) annotateNamespace() {
 	ensure.NoError(err)
 }
 
-func (p *prober) deploySecret() {
+func (p *prober) deployConfigMap() {
 	name := configName
-	p.log.Infof("Deploying secret: %v", name)
+	p.log.Infof("Deploying config map: %v", name)
 
 	configData := p.compileTemplate(configFilename)
 	data := make(map[string]string, 0)
 	data[configFilename] = configData
-	secret := &corev1.Secret{
+	secret := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		StringData: data,
-		Type:       "Opaque",
+		Data: data,
 	}
-	_, err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
+	_, err := p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).
 		Create(secret)
 	ensure.NoError(err)
 }
@@ -120,13 +119,13 @@ func (p *prober) deployTriggers() {
 }
 
 func (p *prober) removeConfiguration() {
-	p.removeSecret()
+	p.removeConfigMap()
 	p.removeTriggers()
 }
 
-func (p *prober) removeSecret() {
-	p.log.Infof("Removing secret: %v", configName)
-	err := p.client.Kube.Kube.CoreV1().Secrets(p.config.Namespace).
+func (p *prober) removeConfigMap() {
+	p.log.Infof("Removing config map: %v", configName)
+	err := p.client.Kube.Kube.CoreV1().ConfigMaps(p.config.Namespace).
 		Delete(configName, &metav1.DeleteOptions{})
 	ensure.NoError(err)
 }

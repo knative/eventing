@@ -38,8 +38,8 @@ func (p *prober) deploySender() {
 				{
 					Name: configName,
 					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: configName,
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: configName},
 						},
 					},
 				},

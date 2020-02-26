@@ -94,8 +94,8 @@ func forwarderKService(name, namespace string) *unstructured.Unstructured {
 					}},
 					"volumes": []map[string]interface{}{{
 						"name": configName,
-						"secret": map[string]interface{}{
-							"secretName": configName,
+						"configMap": map[string]interface{}{
+							"name": configName,
 						},
 					}},
 				},
