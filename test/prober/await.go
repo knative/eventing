@@ -16,12 +16,10 @@
 package prober
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
 
-	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,10 +39,6 @@ func (p *prober) waitForKServiceReady(name, namespace string) error {
 }
 
 func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(int32) bool) error {
-	metricName := fmt.Sprintf("waitForKServiceScale/%s/%s", namespace, name)
-	_, span := trace.StartSpan(context.Background(), metricName)
-	defer span.End()
-
 	return wait.PollImmediate(await.Interval, await.Timeout, func() (bool, error) {
 		serving := p.client.Dynamic.Resource(servicesCR).Namespace(namespace)
 		unstruct, err := serving.Get(name, metav1.GetOptions{})
