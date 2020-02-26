@@ -26,6 +26,7 @@ import (
 
 type SourcesV1alpha2Interface interface {
 	RESTClient() rest.Interface
+	ApiServerSourcesGetter
 	PingSourcesGetter
 	SinkBindingsGetter
 }
@@ -33,6 +34,10 @@ type SourcesV1alpha2Interface interface {
 // SourcesV1alpha2Client is used to interact with features provided by the sources.knative.dev group.
 type SourcesV1alpha2Client struct {
 	restClient rest.Interface
+}
+
+func (c *SourcesV1alpha2Client) ApiServerSources(namespace string) ApiServerSourceInterface {
+	return newApiServerSources(c, namespace)
 }
 
 func (c *SourcesV1alpha2Client) PingSources(namespace string) PingSourceInterface {

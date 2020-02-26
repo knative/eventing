@@ -62,8 +62,6 @@ const (
 	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // ApiServerSourceSpec defines the desired state of ApiServerSource
 type ApiServerSourceSpec struct {
 	// inherits duck/v1 SourceSpec, which currently provides:

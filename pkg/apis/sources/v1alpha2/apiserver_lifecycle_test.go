@@ -46,7 +46,7 @@ func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
 	r := &ApiServerSource{}
 	want := schema.GroupVersionKind{
 		Group:   "sources.knative.dev",
-		Version: "v1alpha1",
+		Version: "v1alpha2",
 		Kind:    "ApiServerSource",
 	}
 	if got := r.GetGroupVersionKind(); got != want {
@@ -55,6 +55,8 @@ func TestApiServerSourceGetGroupVersionKind(t *testing.T) {
 }
 
 func TestApiServerSourceStatusIsReady(t *testing.T) {
+	sink, _ := apis.ParseURL("uri://example")
+
 	tests := []struct {
 		name string
 		s    *ApiServerSourceStatus
@@ -85,7 +87,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			return s
 		}(),
 		want: false,
@@ -112,7 +114,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
@@ -123,7 +125,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
@@ -135,7 +137,7 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			s.MarkNoSufficientPermissions("areason", "amessage")
 			return s
 		}(),
@@ -153,6 +155,8 @@ func TestApiServerSourceStatusIsReady(t *testing.T) {
 }
 
 func TestApiServerSourceStatusGetCondition(t *testing.T) {
+	sink, _ := apis.ParseURL("uri://example")
+
 	tests := []struct {
 		name      string
 		s         *ApiServerSourceStatus
@@ -193,7 +197,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			return s
 		}(),
 		condQuery: ApiServerConditionReady,
@@ -206,7 +210,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			return s
@@ -221,7 +225,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("uri://example")
+			s.MarkSink(sink)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
@@ -237,7 +241,7 @@ func TestApiServerSourceStatusGetCondition(t *testing.T) {
 		s: func() *ApiServerSourceStatus {
 			s := &ApiServerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink("")
+			s.MarkSink(nil)
 			s.MarkSufficientPermissions()
 			s.PropagateDeploymentAvailability(availableDeployment)
 			s.MarkEventTypes()
@@ -268,7 +272,7 @@ func TestApiServerSourceGetters(t *testing.T) {
 	r := &ApiServerSource{
 		Spec: ApiServerSourceSpec{
 			ServiceAccountName: "test",
-			Mode:               "test",
+			EventMode:          "test",
 		},
 	}
 	if got, want := r.GetUntypedSpec(), r.Spec; !reflect.DeepEqual(got, want) {

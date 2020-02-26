@@ -18,12 +18,11 @@ package v1alpha2
 
 import (
 	"context"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 )
 
 func TestAPIServerValidation(t *testing.T) {
@@ -34,15 +33,17 @@ func TestAPIServerValidation(t *testing.T) {
 	}{{
 		name: "valid spec",
 		spec: ApiServerSourceSpec{
-			Mode: "Resource",
-			Resources: []ApiServerResource{
+			EventMode: "Resource",
+			Resources: []APIVersionKind{
 				{},
 			},
-			Sink: &duckv1beta1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1alpha1",
-					Kind:       "broker",
-					Name:       "default",
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
 				},
 			},
 		},
@@ -50,39 +51,36 @@ func TestAPIServerValidation(t *testing.T) {
 	}, {
 		name: "empty sink",
 		spec: ApiServerSourceSpec{
-			Mode: "Resource",
-			Resources: []ApiServerResource{
+			EventMode: "Resource",
+			Resources: []APIVersionKind{
 				{},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("sink")
-			errs = errs.Also(fe)
+			errs = errs.Also(apis.ErrGeneric("expected at least one, got none", "ref", "uri").ViaField("sink"))
 			return errs
 		}(),
 	}, {
 		name: "invalid mode",
 		spec: ApiServerSourceSpec{
-			Mode: "Test",
-			Resources: []ApiServerResource{
+			EventMode: "Test",
+			Resources: []APIVersionKind{
 				{},
 			},
-			Sink: &duckv1beta1.Destination{
-				Ref: &corev1.ObjectReference{
-					APIVersion: "v1alpha1",
-					Kind:       "broker",
-					Name:       "default",
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
 				},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := &apis.FieldError{
-				Message: "Mode is not valid",
-				Paths:   []string{"mode"},
-			}
-			errs = errs.Also(fe)
+			errs = errs.Also(apis.ErrInvalidValue("Test", "mode"))
 			return errs
 		}(),
 	}}

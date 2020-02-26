@@ -61,15 +61,6 @@ const (
 	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ApiServerSourceList contains a list of ApiServerSource
-type ApiServerSourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ApiServerSource `json:"items"`
-}
-
 // ApiServerSourceSpec defines the desired state of ApiServerSource
 type ApiServerSourceSpec struct {
 	// Resources is the list of resources to watch
@@ -126,4 +117,13 @@ type ApiServerResource struct {
 
 	// If true, send an event referencing the object controlling the resource
 	Controller bool `json:"controller"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ApiServerSourceList contains a list of ApiServerSource
+type ApiServerSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ApiServerSource `json:"items"`
 }

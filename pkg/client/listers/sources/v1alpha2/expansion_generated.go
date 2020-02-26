@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha2
 
+// ApiServerSourceListerExpansion allows custom methods to be added to
+// ApiServerSourceLister.
+type ApiServerSourceListerExpansion interface{}
+
+// ApiServerSourceNamespaceListerExpansion allows custom methods to be added to
+// ApiServerSourceNamespaceLister.
+type ApiServerSourceNamespaceListerExpansion interface{}
+
 // PingSourceListerExpansion allows custom methods to be added to
 // PingSourceLister.
 type PingSourceListerExpansion interface{}
