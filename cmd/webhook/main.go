@@ -104,11 +104,9 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store.WatchConfigs(cmw)
 
 	logger := logging.FromContext(ctx)
-	logger.Infof("GOT STORE AS: %+v %#v", store, store)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		//		return v1beta1.WithDefaultBrokerConfigs(store.ToContext(ctx))
 		return store.ToContext(ctx)
 	}
 
@@ -227,6 +225,14 @@ func NewLegacySinkBindingWebhook(ctx context.Context, cmw configmap.Watcher) *co
 }
 
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
+	// Decorate contexts with the current state of the config.
+	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
+	store.WatchConfigs(cmw)
+	// Decorate contexts with the current state of the config.
+	ctxFunc := func(ctx context.Context) context.Context {
+		return store.ToContext(ctx)
+	}
+
 	var (
 		eventingv1alpha1_  = eventingv1alpha1.SchemeGroupVersion.Version
 		eventingv1beta1_   = eventingv1beta1.SchemeGroupVersion.Version
@@ -331,9 +337,7 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 		},
 
 		// A function that infuses the context passed to ConvertTo/ConvertFrom/SetDefaults with custom metadata.
-		func(ctx context.Context) context.Context {
-			return ctx
-		},
+		ctxFunc,
 	)
 }
 
