@@ -33,7 +33,7 @@ func okConfig() *kle.Config {
 		LeaseDuration:     15 * time.Second,
 		RenewDeadline:     10 * time.Second,
 		RetryPeriod:       2 * time.Second,
-		EnabledComponents: sets.NewString("controller"),
+		EnabledComponents: sets.NewString("controller", "inmemorychannel-dispatcher", "inmemorychannel-controller", "broker-controller"),
 	}
 }
 
@@ -46,7 +46,7 @@ func okData() map[string]string {
 		"leaseDuration":     "15s",
 		"renewDeadline":     "10s",
 		"retryPeriod":       "2s",
-		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller",
+		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller,broker-controller",
 	}
 }
 
@@ -69,7 +69,7 @@ func TestValidateLeaderElectionConfig(t *testing.T) {
 				data["enabledComponents"] = "controller,frobulator"
 				return data
 			}(),
-			err: errors.New(`invalid enabledComponent "frobulator": valid values are ["controller" "inmemorychannel_controller" "inmemorychannel_dispatcher"]`),
+			err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher"]`),
 		},
 	}
 

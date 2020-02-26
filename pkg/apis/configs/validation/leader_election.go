@@ -27,6 +27,7 @@ import (
 var (
 	validComponents = sets.NewString(
 		"controller",
+		"broker-controller",
 		"inmemorychannel-dispatcher",
 		"inmemorychannel-controller",
 	)
