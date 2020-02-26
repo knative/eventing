@@ -88,3 +88,8 @@ rules:
     verbs:
       - create
       - patch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs: *everything
