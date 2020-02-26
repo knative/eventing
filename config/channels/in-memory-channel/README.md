@@ -54,8 +54,10 @@ kubectl get deployment -n knative-eventing imc-dispatcher
 
 ### Namespace Dispatchers
 
-By default events are received and dispatched by a single cluster-scoped dispatcher components. You can also specify whether events should be received and dispatched by the dispatcher in the same namespace as the channel definition by adding the
-`eventing.knative.dev/scope: namespace` annotation. For instance:
+By default events are received and dispatched by a single cluster-scoped
+dispatcher components. You can also specify whether events should be received
+and dispatched by the dispatcher in the same namespace as the channel definition
+by adding the `eventing.knative.dev/scope: namespace` annotation. For instance:
 
 ```shell
 kubectl apply --filename - << END
