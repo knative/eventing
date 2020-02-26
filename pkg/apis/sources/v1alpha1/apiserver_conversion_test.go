@@ -181,7 +181,8 @@ func TestApiServerSourceConversionRoundTripUp(t *testing.T) {
 				if err := got.ConvertFrom(context.Background(), ver); err != nil {
 					t.Errorf("ConvertFrom() = %v", err)
 				}
-				if diff := cmp.Diff(test.in, got); diff != "" {
+				fixed := fixApiServerSourceDeprecated(test.in)
+				if diff := cmp.Diff(fixed, got); diff != "" {
 					t.Errorf("roundtrip (-want, +got) = %v", diff)
 				}
 			})
@@ -295,4 +296,20 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Since v1alpha1 to v1alpha2 is lossy.
+func fixApiServerSourceDeprecated(in *ApiServerSource) *ApiServerSource {
+	for i, _ := range in.Spec.Resources {
+		in.Spec.Resources[i].Controller = false
+		in.Spec.Resources[i].LabelSelector = metav1.LabelSelector{}
+		in.Spec.Resources[i].ControllerSelector = metav1.OwnerReference{}
+	}
+	if in.Spec.Sink != nil {
+		in.Spec.Sink.DeprecatedAPIVersion = ""
+		in.Spec.Sink.DeprecatedKind = ""
+		in.Spec.Sink.DeprecatedName = ""
+		in.Spec.Sink.DeprecatedNamespace = ""
+	}
+	return in
 }

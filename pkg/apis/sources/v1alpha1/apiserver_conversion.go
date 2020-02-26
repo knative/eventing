@@ -85,6 +85,8 @@ func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 			sink.Spec.CloudEventOverrides = source.Spec.CloudEventOverrides.DeepCopy()
 		}
 
+		sink.Spec.ServiceAccountName = source.Spec.ServiceAccountName
+
 		// Status
 		source.Status.SourceStatus.DeepCopyInto(&sink.Status.SourceStatus)
 		return nil
@@ -123,7 +125,7 @@ func (sink *ApiServerSource) ConvertFrom(ctx context.Context, obj apis.Convertib
 				APIVersion: source.Spec.Sink.Ref.APIVersion,
 			}
 		}
-		if sink.Spec.Sink != nil && reflect.DeepEqual(*sink.Spec.Sink, duckv1.Destination{}) {
+		if sink.Spec.Sink != nil && reflect.DeepEqual(*sink.Spec.Sink, duckv1beta1.Destination{}) {
 			sink.Spec.Sink = nil
 		}
 
@@ -149,6 +151,8 @@ func (sink *ApiServerSource) ConvertFrom(ctx context.Context, obj apis.Convertib
 		if source.Spec.ResourceOwner != nil {
 			sink.Spec.ResourceOwner = source.Spec.ResourceOwner
 		}
+
+		sink.Spec.ServiceAccountName = source.Spec.ServiceAccountName
 
 		// Status
 		source.Status.SourceStatus.DeepCopyInto(&sink.Status.SourceStatus)
