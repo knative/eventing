@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
@@ -80,6 +81,18 @@ type ApiServerSourceSpec struct {
 	// +optional
 	CloudEventOverrides *duckv1.CloudEventOverrides `json:"ceOverrides,omitempty"`
 
+	// LabelSelector filters this source to objects to those resources pass the
+	// label selector.
+	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
+
+	// ResourceOwner is an additional filter to only track resources that are
+	// owned by a specific resource type. If ResourceOwner matches Resources[n]
+	// then Resources[n] is allowed to pass the ResourceOwner filter.
+	// +optional
+	ResourceOwner *v1alpha2.APIVersionKind `json:"owner,omitempty"`
+
 	// Mode is the mode the receive adapter controller runs under: Ref or Resource.
 	// `Ref` sends only the reference to the resource.
 	// `Resource` send the full resource.
@@ -109,13 +122,19 @@ type ApiServerResource struct {
 
 	// LabelSelector restricts this source to objects with the selected labels
 	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+	// Deprecated: Per-resource label selectors will no longer be supported in
+	// v1alpha2, please use Spec.LabelSelector.
 	LabelSelector metav1.LabelSelector `json:"labelSelector"`
 
 	// ControllerSelector restricts this source to objects with a controlling owner reference of the specified kind.
 	// Only apiVersion and kind are used. Both are optional.
+	// Deprecated: Per-resource owner refs will no longer be supported in
+	// v1alpha2, please use Spec.Owner as a GKV.
 	ControllerSelector metav1.OwnerReference `json:"controllerSelector"`
 
 	// If true, send an event referencing the object controlling the resource
+	// Deprecated: Per-resource controller flag will no longer be supported in
+	// v1alpha2, please use Spec.Owner as a GKV.
 	Controller bool `json:"controller"`
 }
 
