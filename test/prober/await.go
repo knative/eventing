@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/await"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -44,7 +45,7 @@ func (p *prober) waitForKServiceScale(name, namespace string, satisfyScale func(
 	_, span := trace.StartSpan(context.Background(), metricName)
 	defer span.End()
 
-	return wait.PollImmediate(duck.Interval, duck.Timeout, func() (bool, error) {
+	return wait.PollImmediate(await.Interval, await.Timeout, func() (bool, error) {
 		serving := p.client.Dynamic.Resource(servicesCR).Namespace(namespace)
 		unstruct, err := serving.Get(name, metav1.GetOptions{})
 		return p.isScaledTo(satisfyScale, unstruct, namespace, err)
