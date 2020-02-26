@@ -121,7 +121,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "missing sink",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -133,7 +133,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -154,7 +154,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -174,7 +174,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -195,7 +195,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid with sink URI",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -215,7 +215,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -236,7 +236,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid with event type creation",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -256,7 +256,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -285,7 +285,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid with event type deletion and creation",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -311,7 +311,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -343,7 +343,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid, existing ra",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -363,7 +363,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -384,7 +384,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid, no change",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -407,7 +407,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -431,7 +431,7 @@ func TestAllCases(t *testing.T) {
 		}, {
 			Name: "valid with event type deletion",
 			Objects: []runtime.Object{
-				NewPingSource(sourceName, testNS,
+				NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -461,7 +461,7 @@ func TestAllCases(t *testing.T) {
 			},
 			Key: testNS + "/" + sourceName,
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: NewPingSource(sourceName, testNS,
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
 					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 						Schedule: testSchedule,
 						Data:     testData,
@@ -514,7 +514,7 @@ func makeAvailableReceiveAdapter(dest duckv1.Destination) *appsv1.Deployment {
 }
 
 func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
-	source := NewPingSource(sourceName, testNS,
+	source := NewPingSourceV1Alpha1(sourceName, testNS,
 		WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
 			Schedule: testSchedule,
 			Data:     testData,
