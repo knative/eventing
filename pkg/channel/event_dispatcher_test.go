@@ -521,6 +521,9 @@ func TestDispatchMessage(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			if n == "destination and reply - dest returns empty body" {
+				t.Fatal("Intentional fail this test")
+			}
 			destHandler := &fakeHandler{
 				t:        t,
 				response: tc.fakeResponse,
