@@ -16,10 +16,11 @@
 package prober
 
 import (
-	"go.uber.org/zap"
-	"knative.dev/eventing/test/lib"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
+	"knative.dev/eventing/test/lib"
 )
 
 var (
@@ -38,6 +39,9 @@ type Prober interface {
 	// Finish send finished event
 	Finish()
 
+	// ReportError will reports found errors in proper way
+	ReportError(t *testing.T, err error)
+
 	// deploy a prober to a cluster
 	deploy()
 	// remove a prober from cluster
@@ -46,10 +50,11 @@ type Prober interface {
 
 // Config represents a configuration for prober
 type Config struct {
-	Namespace     string
-	Interval      time.Duration
-	Serving       ServingConfig
-	FinishedSleep time.Duration
+	Namespace           string
+	Interval            time.Duration
+	Serving             ServingConfig
+	FinishedSleep       time.Duration
+	FailOnMissingEvents bool
 }
 
 type ServingConfig struct {
@@ -59,9 +64,10 @@ type ServingConfig struct {
 
 func NewConfig(namespace string) *Config {
 	return &Config{
-		Namespace:     namespace,
-		Interval:      Interval,
-		FinishedSleep: 5 * time.Second,
+		Namespace:           namespace,
+		Interval:            Interval,
+		FinishedSleep:       5 * time.Second,
+		FailOnMissingEvents: true,
 		Serving: ServingConfig{
 			Use:         true,
 			ScaleToZero: true,
@@ -89,7 +95,7 @@ func AssertEventProber(t *testing.T, prober Prober) {
 		t.Logf("There ware %v errors. Listing them below.", len(errors))
 	}
 	for _, err := range errors {
-		t.Error(err)
+		prober.ReportError(t, err)
 	}
 
 	prober.remove()
@@ -99,6 +105,14 @@ type prober struct {
 	log    *zap.SugaredLogger
 	client *lib.Client
 	config *Config
+}
+
+func (p *prober) ReportError(t *testing.T, err error) {
+	if p.config.FailOnMissingEvents {
+		t.Error(err)
+	} else {
+		p.log.Warn(err)
+	}
 }
 
 func (p *prober) deploy() {
