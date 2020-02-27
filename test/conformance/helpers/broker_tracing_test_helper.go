@@ -89,7 +89,7 @@ func setupBrokerTracing(
 	client.CreateRBACResourcesForBrokers()
 	broker := client.CreateBrokerOrFail("br", resources.WithChannelTemplateForBroker(channel))
 
-	// Create a logger (EventDetails) Pod and a K8s Service that points to it.
+	// Create a logger (EventRecord) Pod and a K8s Service that points to it.
 	logPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 

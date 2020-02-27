@@ -98,10 +98,11 @@ type eventGetter struct {
 	forwardPID int
 }
 
-// Creates a forwarded port to the specified recordevetns pod and waits until
+// Creates a forwarded port to the specified recordevents pod and waits until
 // it can successfully talk to the REST API.  Times out after 4 minutes
 func newEventGetter(podName string, client *Client, logf logging.FormatLogger) (eventGetterInterface, error) {
-	egi := &eventGetter{podName: podName, podNamespace: client.Namespace, kubeClientset: client.Kube.Kube, podPort: RecordEventsPort, logf: logf}
+	egi := &eventGetter{podName: podName, podNamespace: client.Namespace,
+		kubeClientset: client.Kube.Kube, podPort: RecordEventsPort, logf: logf}
 	err := egi.forwardPort()
 	if err != nil {
 		return nil, err
@@ -118,11 +119,13 @@ func newEventGetter(podName string, client *Client, logf logging.FormatLogger) (
 // returns a pod list for compatibility with the monitoring.PortForward
 // interface
 func (eg *eventGetter) getRunningPodInfo(podName, namespace string) (*v1.PodList, error) {
-	pods, err := eg.kubeClientset.CoreV1().Pods(namespace).List(metav1.ListOptions{FieldSelector: fmt.Sprintf("metadata.name=%s", podName)})
+	pods, err := eg.kubeClientset.CoreV1().Pods(namespace).List(
+		metav1.ListOptions{FieldSelector: fmt.Sprintf("metadata.name=%s", podName)})
 	if err == nil && len(pods.Items) != 1 {
 		err = fmt.Errorf("no %s Pod found on the cluster", podName)
 	} else if pods.Items[0].Status.Phase != corev1.PodRunning {
-		err = fmt.Errorf("pod %s in state %s, wanted Running", podName, pods.Items[0].Status.Phase)
+		err = fmt.Errorf("pod %s in state %s, wanted Running", podName,
+			pods.Items[0].Status.Phase)
 	}
 
 	return pods, err
@@ -161,7 +164,7 @@ func (eg *eventGetter) forwardPort() error {
 		return true, nil
 	})
 	if internalErr != nil {
-		return fmt.Errorf("timeout forwarding port: %s", internalErr)
+		return fmt.Errorf("timeout forwarding port: %v", internalErr)
 	}
 	return nil
 }
@@ -173,23 +176,23 @@ func (eg *eventGetter) forwardPort() error {
 func (eg *eventGetter) getMinMax() (minRet int, maxRet int, errRet error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%d%s", eg.host, eg.port, GetMinMaxPath))
 	if err != nil {
-		return -1, -1, fmt.Errorf("http get error: %s", err)
+		return -1, -1, fmt.Errorf("http get error: %v", err)
 	}
 	defer resp.Body.Close()
 	bodyContents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return -1, -1, fmt.Errorf("Error reading response body %w", err)
+		return -1, -1, fmt.Errorf("error reading response body %w", err)
 	}
 	if resp.StatusCode != 200 {
-		return -1, -1, fmt.Errorf("Error %d reading GetMinMax response", resp.StatusCode)
+		return -1, -1, fmt.Errorf("error %d reading GetMinMax response", resp.StatusCode)
 	}
 	minMaxResponse := MinMaxResponse{}
 	err = json.Unmarshal(bodyContents, &minMaxResponse)
 	if err != nil {
-		return -1, -1, fmt.Errorf("Error unmarshalling response %w", err)
+		return -1, -1, fmt.Errorf("error unmarshalling response %w", err)
 	}
 	if minMaxResponse.MinAvail == 0 || minMaxResponse.MaxSeen == 0 {
-		return -1, -1, fmt.Errorf("Invalid decoded json: %+v", minMaxResponse)
+		return -1, -1, fmt.Errorf("invalid decoded json: %+v", minMaxResponse)
 	}
 
 	return minMaxResponse.MinAvail, minMaxResponse.MaxSeen, nil
@@ -201,23 +204,23 @@ func (eg *eventGetter) getMinMax() (minRet int, maxRet int, errRet error) {
 func (eg *eventGetter) getEntry(seqno int) (EventInfo, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%d%s/%d", eg.host, eg.port, GetEntryPath, seqno))
 	if err != nil {
-		return EventInfo{}, fmt.Errorf("http get err %s", err)
+		return EventInfo{}, fmt.Errorf("http get err %v", err)
 	}
 	defer resp.Body.Close()
 	bodyContents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return EventInfo{}, fmt.Errorf("Error reading response body %w", err)
+		return EventInfo{}, fmt.Errorf("error reading response body %w", err)
 	}
 	if resp.StatusCode != 200 {
-		return EventInfo{}, fmt.Errorf("Error %d reading GetEntry response", resp.StatusCode)
+		return EventInfo{}, fmt.Errorf("error %d reading GetEntry response", resp.StatusCode)
 	}
 	entryResponse := EventInfo{}
 	err = json.Unmarshal(bodyContents, &entryResponse)
 	if err != nil {
-		return EventInfo{}, fmt.Errorf("Error unmarshalling response %w", err)
+		return EventInfo{}, fmt.Errorf("error unmarshalling response %w", err)
 	}
 	if len(entryResponse.ValidationError) == 0 && entryResponse.Event == nil {
-		return EventInfo{}, fmt.Errorf("Invalid decoded json: %+v", entryResponse)
+		return EventInfo{}, fmt.Errorf("invalid decoded json: %+v", entryResponse)
 	}
 
 	return entryResponse, nil
@@ -229,15 +232,15 @@ func (eg *eventGetter) getEntry(seqno int) (EventInfo, error) {
 func (eg *eventGetter) trimThrough(seqno int) error {
 	resp, err := http.Post(fmt.Sprintf("http://%s:%d%s/%d", eg.host, eg.port, TrimThroughPath, seqno), "", nil)
 	if err != nil {
-		return fmt.Errorf("http post err %s", err)
+		return fmt.Errorf("http post err %v", err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Error reading response body %w", err)
+		return fmt.Errorf("error reading response body %w", err)
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Error %d reading TrimThrough response: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("error %d reading TrimThrough response: %s", resp.StatusCode, string(body))
 	}
 
 	return nil
@@ -263,7 +266,7 @@ func (eg *eventGetter) waitTillUp() error {
 		return true, nil
 	})
 	if internalErr != nil {
-		return fmt.Errorf("timeout waiting for recordevents pod to come up: %s", internalErr)
+		return fmt.Errorf("timeout waiting for recordevents pod to come up: %v", internalErr)
 	}
 	return nil
 }

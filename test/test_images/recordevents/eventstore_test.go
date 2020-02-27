@@ -29,7 +29,7 @@ import (
 func helperGetEvInfo(es *eventStore, entry int) (*lib.EventInfo, error) {
 	evInfoBytes, err := es.GetEventInfoBytes(entry)
 	if err != nil {
-		return nil, fmt.Errorf("error calling get on item %d: %s", entry, err)
+		return nil, fmt.Errorf("error calling get on item %d: %v", entry, err)
 	}
 	if len(evInfoBytes) == 0 {
 		return nil, fmt.Errorf("empty info bytes")
@@ -38,7 +38,7 @@ func helperGetEvInfo(es *eventStore, entry int) (*lib.EventInfo, error) {
 	var evInfo lib.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling stored JSON: %s", err)
+		return nil, fmt.Errorf("error unmarshalling stored JSON: %v", err)
 	}
 	return &evInfo, nil
 }
@@ -67,7 +67,7 @@ func TestAddGetMany(t *testing.T) {
 	for i := 1; i <= count; i++ {
 		evInfo, err := helperGetEvInfo(es, i)
 		if err != nil {
-			t.Fatalf("count %d error: %s", count, err)
+			t.Fatalf("Count %d error: %v", count, err)
 		}
 
 		if evInfo.Event == nil {
@@ -135,12 +135,12 @@ func TestAddGetSingleValid(t *testing.T) {
 
 	evInfoBytes, err := es.GetEventInfoBytes(minAvail)
 	if err != nil {
-		t.Fatalf("Error calling get: %s", err)
+		t.Fatalf("Error calling get: %v", err)
 	}
 	var evInfo lib.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
-		t.Fatalf("Error unmarshalling stored JSON: %s", err)
+		t.Fatalf("Error unmarshalling stored JSON: %v", err)
 	}
 
 	if evInfo.Event == nil {
@@ -189,12 +189,12 @@ func TestAddGetSingleInvalid(t *testing.T) {
 
 	evInfoBytes, err := es.GetEventInfoBytes(minAvail)
 	if err != nil {
-		t.Fatalf("Error calling get: %s", err)
+		t.Fatalf("Error calling get: %v", err)
 	}
 	var evInfo lib.EventInfo
 	err = json.Unmarshal(evInfoBytes, &evInfo)
 	if err != nil {
-		t.Fatalf("Error unmarshalling stored JSON: %s", err)
+		t.Fatalf("Error unmarshalling stored JSON: %v", err)
 	}
 	if evInfo.Event != nil {
 		t.Fatalf("Unexpected event info: %+v", evInfo)
@@ -236,7 +236,7 @@ func TestTrim(t *testing.T) {
 		helperFillCount(es, count)
 		err := es.TrimThrough(testVal)
 		if err != nil {
-			t.Fatalf("Unexpected error trimming to %d: %s", testVal, err)
+			t.Fatalf("Unexpected error trimming to %d: %v", testVal, err)
 		}
 		minAvail, maxSeen := es.MinMax()
 		if testVal == count {
@@ -252,7 +252,7 @@ func TestTrim(t *testing.T) {
 		if minAvail <= maxSeen {
 			evInfo, err := helperGetEvInfo(es, minAvail)
 			if err != nil {
-				t.Fatalf("Couldn't get min avail %d, trim %d error: %s", minAvail, testVal, err)
+				t.Fatalf("Couldn't get min avail %d, trim %d error: %v", minAvail, testVal, err)
 			}
 			seenID := evInfo.Event.ID()
 			expectedID := strconv.FormatInt(int64(minAvail-1), 10)
@@ -267,12 +267,15 @@ func TestTrim(t *testing.T) {
 		es.StoreEvent(ce, nil)
 		addedMinAvail, addedMaxSeen := es.MinMax()
 		if addedMaxSeen != maxSeen+1 {
-			t.Fatalf("Add after trim resulted in bad maxSeen: expected %d, saw %d for trim %d", maxSeen, addedMaxSeen, testVal)
+			t.Fatalf("Add after trim resulted in bad maxSeen: expected %d, saw %d for trim %d",
+				maxSeen, addedMaxSeen, testVal)
 		}
 		if minAvail == -1 && addedMinAvail != addedMaxSeen {
-			t.Errorf("Add after full trim resulted in bad minAvail: expected %d, saw %d for trim %d", addedMaxSeen, addedMinAvail, testVal)
+			t.Errorf("Add after full trim resulted in bad minAvail: expected %d, saw %d for trim %d",
+				addedMaxSeen, addedMinAvail, testVal)
 		} else if minAvail != -1 && minAvail != addedMinAvail {
-			t.Errorf("Add after partial trim resulted in bad minAvail: expected %d, saw %d for trim %d", minAvail, addedMinAvail, testVal)
+			t.Errorf("Add after partial trim resulted in bad minAvail: expected %d, saw %d for trim %d",
+				minAvail, addedMinAvail, testVal)
 
 		}
 

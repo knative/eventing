@@ -121,15 +121,16 @@ func tracingTest(
 // assertEventMatch verifies that recorder pod contains at least one event that
 // matches mustMatch. It is used to show that the expected event was sent to
 // the logger Pod.  It returns a list of the matching events.
-func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string, mustMatch lib.EventMatchFunc) []lib.EventInfo {
+func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
+	mustMatch lib.EventMatchFunc) []lib.EventInfo {
 	targetTracker, err := client.NewEventInfoStore(recorderPodName, t.Logf)
 	if err != nil {
-		t.Fatalf("pod tracker failed: %s", err)
+		t.Fatalf("Pod tracker failed: %v", err)
 	}
 	defer targetTracker.Cleanup()
 	matches, err := targetTracker.WaitAtLeastNMatch(lib.ValidEvFunc(mustMatch), 1)
 	if err != nil {
-		t.Fatalf("expected messages not found: %s", err)
+		t.Fatalf("Expected messages not found: %v", err)
 	}
 	return matches
 }
@@ -143,7 +144,8 @@ func getTraceIDHeader(t *testing.T, evInfos []lib.EventInfo) string {
 			traceID, found := evInfos[i].HTTPHeaders["X-B3-Traceid"]
 			if found {
 				if len(traceID) != 1 {
-					t.Fatalf("Unexpected length %d for traceid list: %v", len(traceID), traceID)
+					t.Fatalf("Unexpected length %d for traceid list: %v",
+						len(traceID), traceID)
 				}
 				return strings.TrimSpace(traceID[0])
 			}
@@ -157,8 +159,8 @@ func getTraceIDHeader(t *testing.T, evInfos []lib.EventInfo) string {
 // SendEvents (Pod) -> Channel -> Subscription -> K8s Service -> Mutate (Pod)
 //                                                                   v
 // LogEvents (Pod) <- K8s Service <- Subscription  <- Channel <- (Reply) Subscription
-// It returns the expected trace tree and a string that is expected to be sent by the SendEvents Pod
-// and should be present in the LogEvents Pod logs.
+// It returns the expected trace tree and a match function that is expected to be sent
+// by the SendEvents Pod and should be present in the RecordEvents list of events.
 func setupChannelTracingWithReply(
 	t *testing.T,
 	channel *metav1.TypeMeta,

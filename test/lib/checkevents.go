@@ -59,7 +59,8 @@ type eventGetterInterface interface {
 
 // Internal function to create an event store.  This is called directly by unit tests of
 // this module.
-func newTestableEventInfoStore(egi eventGetterInterface, retryInterval time.Duration, timeout time.Duration) *EventInfoStore {
+func newTestableEventInfoStore(egi eventGetterInterface, retryInterval time.Duration,
+	timeout time.Duration) *EventInfoStore {
 	if timeout == -1 {
 		timeout = timeoutEvRetry
 	}
@@ -96,8 +97,7 @@ func (ei *EventInfoStore) start() {
 				ei.getter.cleanup()
 				return
 			case replyCh := <-ei.doRefresh:
-				err := ei.doRetrieveData()
-				replyCh <- err
+				replyCh <- ei.doRetrieveData()
 			}
 		}
 	}()
@@ -108,7 +108,7 @@ func (ei *EventInfoStore) start() {
 func (ei *EventInfoStore) doRetrieveData() error {
 	min, max, err := ei.getter.getMinMax()
 	if err != nil {
-		return fmt.Errorf("error getting MinMax %s", err)
+		return fmt.Errorf("error getting MinMax %v", err)
 	}
 	ei.lock.Lock()
 	curMin := ei.firstID
@@ -128,7 +128,7 @@ func (ei *EventInfoStore) doRetrieveData() error {
 	for i := min; i <= max; i++ {
 		e, err := ei.getter.getEntry(i)
 		if err != nil {
-			return fmt.Errorf("error alling GetEntry of %d %s", i, err)
+			return fmt.Errorf("error calling getEntry of %d %v", i, err)
 		}
 
 		newEvents = append(newEvents, e)
@@ -172,14 +172,14 @@ func (ei *EventInfoStore) refreshData() ([]EventInfo, error) {
 // is primarily to ease debugging in failure printouts.  The provided function is
 // guaranteed to be called exactly once on each EventInfo from the pod.
 func (ei *EventInfoStore) Find(f EventInfoMatchFunc) ([]EventInfo, SearchedInfo, error) {
-	maxLastEvents := 5
+	const maxLastEvents = 5
 	allMatch := []EventInfo{}
 	sInfo := SearchedInfo{}
 	lastEvents := []EventInfo{}
 
 	allEvents, err := ei.refreshData()
 	if err != nil {
-		return nil, sInfo, fmt.Errorf("error getting events %s", err)
+		return nil, sInfo, fmt.Errorf("error getting events %v", err)
 	}
 	for i := range allEvents {
 		if f(allEvents[i]) {
@@ -208,7 +208,6 @@ func ValidEvFunc(evf EventMatchFunc) EventInfoMatchFunc {
 			return evf(*ei.Event)
 		}
 	}
-
 }
 
 // Wait a long time (currently 4 minutes) until the provided function matches at least
@@ -221,12 +220,13 @@ func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]Even
 	wait.PollImmediate(ei.retryInterval, ei.timeout, func() (bool, error) {
 		allMatch, sInfo, err := ei.Find(f)
 		if err != nil {
-			internalErr = fmt.Errorf("FAIL MATCHING: unexpected error during find: %s", err)
+			internalErr = fmt.Errorf("FAIL MATCHING: unexpected error during find: %v", err)
 			return false, nil
 		}
 		count := len(allMatch)
 		if count < n {
-			internalErr = fmt.Errorf("FAIL MATCHING: saw %d/%d matching events. recent events: (%s)", count, n, &sInfo)
+			internalErr = fmt.Errorf("FAIL MATCHING: saw %d/%d matching events. recent events: (%s)",
+				count, n, &sInfo)
 			return false, nil
 		}
 		matchRet = allMatch

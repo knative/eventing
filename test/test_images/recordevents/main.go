@@ -58,7 +58,7 @@ func (er *eventRecorder) handleMinMax(w http.ResponseWriter, r *http.Request) {
 	}
 	respBytes, err := json.Marshal(minMax)
 	if err != nil {
-		panic(fmt.Errorf("Internal error: json marshal shouldn't fail: (%s) (%+v)", err, minMax))
+		log.Panicf("Internal error: json marshal shouldn't fail: (%v) (%+v)", err, minMax)
 	}
 
 	w.Header().Set("Content-Type", "text/json")
@@ -124,16 +124,16 @@ func (er *eventRecorder) handler(ctx context.Context, event cloudevents.Event) {
 
 	// Print interesting headers and full events for debugging
 	header := tx.Header
-	headerNameList := []string{"X-B3-Sampled", "X-B3-Traceid", "X-B3-Spanid", "X-B3-ParentSpanId", "X-Custom-Header"}
+	headerNameList := lib.InterestingHeaders()
 	for _, headerName := range headerNameList {
 		if headerValue := header.Get(headerName); headerValue != "" {
-			fmt.Printf("Header %s: %s\n", headerName, headerValue)
+			log.Printf("Header %s: %s\n", headerName, headerValue)
 		}
 	}
 	if err := event.Validate(); err == nil {
-		fmt.Printf("eventdetails:\n%s", event.String())
+		log.Printf("eventdetails:\n%s", event.String())
 	} else {
-		fmt.Printf("error validating the event: %v", err)
+		log.Printf("error validating the event: %v", err)
 	}
 }
 
@@ -147,8 +147,8 @@ func main() {
 	}
 	c, err := kncloudevents.NewDefaultClient()
 	if err != nil {
-		log.Fatalf("failed to create client, %v", err)
+		log.Fatalf("Failed to create client, %v", err)
 	}
 
-	log.Fatalf("failed to start receiver: %s", c.StartReceiver(context.Background(), er.handler))
+	log.Fatalf("Failed to start receiver: %s", c.StartReceiver(context.Background(), er.handler))
 }

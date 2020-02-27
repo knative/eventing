@@ -86,20 +86,19 @@ func (es *eventStore) StoreEvent(event cloudevents.Event, httpHeaders map[string
 		}
 		evInfoBytes, err = json.Marshal(&evInfo)
 		if err != nil {
-			panic(fmt.Errorf("Unexpected marshal error (%s) (%+v)", err, evInfo))
+			panic(fmt.Errorf("Unexpected marshal error (%v) (%+v)", err, evInfo))
 		}
 	}
 
 	es.evBlocksLock.Lock()
+	// Add a new block if we're out of space
+	es.checkAppendBlock()
 
 	evBlock := es.evBlocks[len(es.evBlocks)-1]
 	if evBlock.firstOffsetFree < evBlockSize {
 		evBlock.evInfoBytes[evBlock.firstOffsetFree] = evInfoBytes
 		evBlock.firstOffsetFree++
 	}
-
-	// We always keep at least one free entry
-	es.checkAppendBlock()
 
 	es.evBlocksLock.Unlock()
 }

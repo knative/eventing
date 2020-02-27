@@ -112,12 +112,13 @@ func makeEvents() []EventInfo {
 
 func checkEvIDEqual(t *testing.T, seen []EventInfo, expected []EventInfo) {
 	if len(seen) != len(expected) {
-		t.Fatalf("seen ev list length %d does not match expected %d", len(seen), len(expected))
+		t.Fatalf("Seen ev list length %d does not match expected %d", len(seen), len(expected))
 
 	}
 	for i := range seen {
 		if seen[i].Event.ID() != expected[i].Event.ID() {
-			t.Fatalf("Id entry %d mismatch: seen %s != expected %s", i, seen[i].Event.ID(), expected[i].Event.ID())
+			t.Fatalf("Id entry %d mismatch: seen %s != expected %s",
+				i, seen[i].Event.ID(), expected[i].Event.ID())
 		}
 	}
 }
@@ -138,7 +139,7 @@ func TestSequentialAndTrim(t *testing.T) {
 	ei := newTestableEventInfoStore(deg, -1, -1)
 	allData, _, err := ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	min, _, _ := deg.getMinMax()
@@ -151,7 +152,7 @@ func TestSequentialAndTrim(t *testing.T) {
 
 	allData, _, err = ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:19])
 	ei.Cleanup()
@@ -166,14 +167,14 @@ func TestOverlap(t *testing.T) {
 	ei := newTestableEventInfoStore(deg, -1, -1)
 	allData, _, err := ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[6:19]
 	deg.setEv(7, subEv)
 	allData, _, err = ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:19])
 	ei.Cleanup()
@@ -188,7 +189,7 @@ func TestGap(t *testing.T) {
 	ei := newTestableEventInfoStore(deg, -1, -1)
 	allData, _, err := ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = totalEv[11:19]
@@ -209,14 +210,14 @@ func TestSequentialNoOp(t *testing.T) {
 	ei := newTestableEventInfoStore(deg, -1, -1)
 	allData, _, err := ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	subEv = []EventInfo{}
 	deg.setEv(11, subEv)
 	allData, _, err = ei.Find(func(EventInfo) bool { return true })
 	if err != nil {
-		t.Fatalf("Unexpected error from find: %s", err)
+		t.Fatalf("Unexpected error from find: %v", err)
 	}
 	checkEvIDEqual(t, allData, expectedFull[:10])
 	ei.Cleanup()
@@ -245,7 +246,7 @@ func TestWaitForN(t *testing.T) {
 
 	wg.Wait()
 	if waitErr != nil {
-		t.Fatalf("Unexpected error from find: %s", waitErr)
+		t.Fatalf("Unexpected error from find: %v", waitErr)
 	}
 	if len(allMatch) != 2 {
 		t.Fatalf("Unexpected match length: %d != %d", len(allMatch), 2)
