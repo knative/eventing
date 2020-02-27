@@ -28,7 +28,7 @@ import (
 )
 
 func main() {
-	sharedmain.Main("controller",
+	sharedmain.Main("broker-controller",
 		// Eventing
 		namespace.NewController,
 		broker.NewController,

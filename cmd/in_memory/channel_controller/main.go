@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	sharedmain.Main("inmemorychannel_controller",
+	sharedmain.Main("inmemorychannel-controller",
 		inmemorychannel.NewController,
 	)
 }
