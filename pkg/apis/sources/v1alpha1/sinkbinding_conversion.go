@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 )

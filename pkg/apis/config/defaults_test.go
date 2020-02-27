@@ -86,13 +86,13 @@ func TestDefaultsConfiguration(t *testing.T) {
 		wantErr: false,
 		wantDefaults: &Defaults{
 			NamespaceDefaultsConfig: map[string]*duckv1.KReference{
-				"some-namespace": &duckv1.KReference{
+				"some-namespace": {
 					APIVersion: "v1",
 					Kind:       "ConfigMap",
 					Name:       "someothername",
 					Namespace:  "someothernamespace",
 				},
-				"some-namespace-too": &duckv1.KReference{
+				"some-namespace-too": {
 					APIVersion: "v1",
 					Kind:       "ConfigMap",
 					Name:       "someothernametoo",
@@ -164,13 +164,13 @@ func TestDefaultsConfiguration(t *testing.T) {
 		wantErr: false,
 		wantDefaults: &Defaults{
 			NamespaceDefaultsConfig: map[string]*duckv1.KReference{
-				"some-namespace": &duckv1.KReference{
+				"some-namespace": {
 					APIVersion: "v1",
 					Kind:       "ConfigMap",
 					Name:       "someothername",
 					Namespace:  "someothernamespace",
 				},
-				"some-namespace-too": &duckv1.KReference{
+				"some-namespace-too": {
 					APIVersion: "v1",
 					Kind:       "ConfigMap",
 					Name:       "someothernametoo",

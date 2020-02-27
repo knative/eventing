@@ -19,8 +19,9 @@ package e2e
 
 import (
 	"fmt"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"testing"
+
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 
