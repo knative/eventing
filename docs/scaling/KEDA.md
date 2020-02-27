@@ -7,7 +7,7 @@ provides scaling of any container in Kubernetes based on the number of events ne
 
 ## Using KEDA scaling in Knative Eventing
 
-Supported event sources (and other components in future) may indicate that they support Knative Eventing scaling with KEDA. 
+Supported event sources (and other components in future) may indicate that they support Knative Eventing scaling with KEDA.
 
 To enable using KEDA scalign add Knative Eventing scaling class:
 
