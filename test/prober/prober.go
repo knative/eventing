@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -130,10 +131,10 @@ func (p *prober) deploy() {
 	if p.config.Serving.Use {
 		p.deployForwarder()
 	}
-	awaitAll(p.log)
+	ensure.NoError(lib.AwaitForAll(p.log))
 
 	p.deploySender()
-	awaitAll(p.log)
+	ensure.NoError(lib.AwaitForAll(p.log))
 	// allow sender to send at least some events, 2 sec wait
 	time.Sleep(2 * time.Second)
 	p.log.Infof("Prober is now sending events with interval of %v in "+

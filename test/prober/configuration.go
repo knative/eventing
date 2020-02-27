@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -113,7 +114,7 @@ func (p *prober) deployTriggers() {
 		_, err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
 			Create(trigger)
 		ensure.NoError(err)
-		waitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
+		lib.WaitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
 			return p.waitForTriggerReady(name, p.config.Namespace)
 		})
 	}

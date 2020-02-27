@@ -21,6 +21,7 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
 )
@@ -37,12 +38,12 @@ func (p *prober) deployForwarder() {
 	ensure.NoError(err)
 
 	sc := p.servingClient()
-	waitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
+	lib.WaitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
 		return duck.WaitForKServiceReady(sc, forwarderName, p.client.Namespace)
 	})
 
 	if p.config.Serving.ScaleToZero {
-		waitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
+		lib.WaitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
 			return duck.WaitForKServiceScales(sc, forwarderName, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
