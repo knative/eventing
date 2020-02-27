@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
@@ -35,6 +36,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -51,8 +53,8 @@ const (
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
 
-	scopeNamespace = "namespace"
 	scopeCluster   = "cluster"
+	scopeNamespace = "namespace"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -82,7 +84,6 @@ type Reconciler struct {
 
 	systemNamespace         string
 	dispatcherImage         string
-	dispatcherScope         string
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 	deploymentLister        appsv1listers.DeploymentLister
@@ -95,17 +96,6 @@ type Reconciler struct {
 // Check that our Reconciler implements Interface
 var _ inmemorychannelreconciler.Interface = (*Reconciler)(nil)
 
-// FilterWithNamespace makes it simple to create FilterFunc's for use with
-// cache.FilteringResourceEventHandler that filter based on a namespace
-func FilterWithNamespace(namespace string) func(obj interface{}) bool {
-	return func(obj interface{}) bool {
-		if object, ok := obj.(metav1.Object); ok {
-			return namespace == object.GetNamespace()
-		}
-		return false
-	}
-}
-
 func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryChannel) pkgreconciler.Event {
 	imc.Status.InitializeConditions()
 	imc.Status.ObservedGeneration = imc.Generation
@@ -116,14 +106,19 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	// 3. Dispatcher endpoints to ensure that there's something backing the Service.
 	// 4. k8s service representing the channel that will use ExternalName to point to the Dispatcher k8s service
 
+	scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]
+	if !ok {
+		scope = "cluster"
+	}
+
 	dispatcherNamespace := r.systemNamespace
-	if r.dispatcherScope == scopeNamespace {
+	if scope == scopeNamespace {
 		dispatcherNamespace = imc.Namespace
 	}
 
 	// Make sure the dispatcher deployment exists and propagate the status to the Channel
 	// For namespace-scope dispatcher, make sure configuration files exist and RBAC is properly configured.
-	d, err := r.reconcileDispatcher(ctx, dispatcherNamespace, imc)
+	d, err := r.reconcileDispatcher(ctx, scope, dispatcherNamespace, imc)
 	if err != nil {
 		return err
 	}
@@ -132,7 +127,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	// Make sure the dispatcher service exists and propagate the status to the Channel in case it does not exist.
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
-	_, err = r.reconcileDispatcherService(ctx, dispatcherNamespace, imc)
+	_, err = r.reconcileDispatcherService(ctx, scope, dispatcherNamespace, imc)
 	if err != nil {
 		return err
 	}
@@ -180,8 +175,8 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 	return newReconciledNormal(imc.Namespace, imc.Name)
 }
 
-func (r *Reconciler) reconcileDispatcher(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
-	if r.dispatcherScope == scopeNamespace {
+func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
+	if scope == scopeNamespace {
 		// Configure RBAC in namespace to access the configmaps
 		// For cluster-deployed dispatcher, RBAC policies are already there.
 
@@ -209,7 +204,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, dispatcherNamespac
 	d, err := r.deploymentLister.Deployments(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if r.dispatcherScope == scopeNamespace {
+			if scope == scopeNamespace {
 				// Create dispatcher in imc's namespace
 				args := resources.DispatcherArgs{
 					ServiceAccountName:  dispatcherName,
@@ -275,11 +270,11 @@ func (r *Reconciler) reconcileRoleBinding(ctx context.Context, name string, ns s
 	return rb, nil
 }
 
-func (r *Reconciler) reconcileDispatcherService(ctx context.Context, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
+func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*corev1.Service, error) {
 	svc, err := r.serviceLister.Services(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if r.dispatcherScope == scopeNamespace {
+			if scope == scopeNamespace {
 				expected := resources.MakeDispatcherService(dispatcherName, dispatcherNamespace)
 				svc, err := r.KubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
 				if err != nil {
@@ -304,16 +299,19 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 	// We don't do anything with the service because it's status contains nothing useful, so just do
 	// an existence check. Then below we check the endpoints targeting it.
 	// We may change this name later, so we have to ensure we use proper addressable when resolving these.
-	svc, err := r.serviceLister.Services(imc.Namespace).Get(resources.CreateChannelServiceName(imc.Name))
+	expected, err := resources.NewK8sService(imc, resources.ExternalService(dispatcherNamespace, dispatcherName))
+	if err != nil {
+		logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
+		imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+		return nil, err
+	}
+
+	channelSvcName := resources.CreateChannelServiceName(imc.Name)
+
+	svc, err := r.serviceLister.Services(imc.Namespace).Get(channelSvcName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			svc, err = resources.NewK8sService(imc, resources.ExternalService(dispatcherNamespace, dispatcherName))
-			if err != nil {
-				logging.FromContext(ctx).Error("failed to create the channel service object", zap.Error(err))
-				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
-				return nil, err
-			}
-			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(svc)
+			svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Create(expected)
 			if err != nil {
 				logging.FromContext(ctx).Error("failed to create the channel service", zap.Error(err))
 				imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
@@ -324,6 +322,16 @@ func (r *Reconciler) reconcileChannelService(ctx context.Context, dispatcherName
 		logging.FromContext(ctx).Error("Unable to get the channel service", zap.Error(err))
 		imc.Status.MarkChannelServiceUnknown("ChannelServiceGetFailed", fmt.Sprintf("Unable to get the channel service: %s", err))
 		return nil, err
+	} else if !equality.Semantic.DeepEqual(svc.Spec, expected.Spec) {
+		svc = svc.DeepCopy()
+		svc.Spec = expected.Spec
+
+		svc, err = r.KubeClientSet.CoreV1().Services(imc.Namespace).Update(svc)
+		if err != nil {
+			logging.FromContext(ctx).Error("failed to update the channel service", zap.Error(err))
+			imc.Status.MarkChannelServiceFailed("ChannelServiceFailed", fmt.Sprintf("Channel Service failed: %s", err))
+			return nil, err
+		}
 	}
 
 	// Check to make sure that our IMC owns this service and if not, complain.

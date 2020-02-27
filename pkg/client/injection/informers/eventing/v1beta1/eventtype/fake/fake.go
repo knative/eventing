@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	"context"
+	context "context"
 
 	eventtype "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/eventtype"
 	fake "knative.dev/eventing/pkg/client/injection/informers/factory/fake"

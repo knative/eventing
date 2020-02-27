@@ -22,11 +22,9 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -35,7 +33,6 @@ import (
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/channel/resources"
-	"knative.dev/pkg/apis/duck"
 	duckapis "knative.dev/pkg/apis/duck"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
@@ -64,8 +61,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1alpha1.Channel) pkg
 	c.Status.ObservedGeneration = c.Generation
 
 	// 1. Create the backing Channel CRD, if it doesn't exist.
-	// 2. Patch the subscriptions from this Channel into the backing Channel CRD.
-	// 3. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
+	// 2. Propagate the backing Channel CRD Status, Address, and SubscribableStatus into this Channel.
 
 	gvr, _ := meta.UnsafeGuessKindToResource(c.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
 	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(c.Namespace)
@@ -93,12 +89,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, c *v1alpha1.Channel) pkg
 	}
 
 	c.Status.Channel = &backingChannelObjRef
-
-	err = r.patchBackingChannelSubscriptions(ctx, channelResourceInterface, c, backingChannel)
-	if err != nil {
-		c.Status.MarkBackingChannelFailed("ChannelFailure", "%v", err)
-		return fmt.Errorf("problem patching subscriptions in the backing channel: %v", err)
-	}
 	c.Status.PropagateStatuses(&backingChannel.Status)
 
 	return newReconciledNormal(c.Namespace, c.Name)
@@ -146,28 +136,4 @@ func (r *Reconciler) reconcileBackingChannel(ctx context.Context, channelResourc
 		return nil, err
 	}
 	return channelable, nil
-}
-
-func (r *Reconciler) patchBackingChannelSubscriptions(ctx context.Context, channelResourceInterface dynamic.ResourceInterface, channel *v1alpha1.Channel, backingChannel *duckv1alpha1.Channelable) error {
-	if equality.Semantic.DeepEqual(channel.Spec.Subscribable, backingChannel.Spec.Subscribable) {
-		logging.FromContext(ctx).Debug("Subscribable in sync, no need to patch")
-		return nil
-	}
-
-	after := backingChannel.DeepCopy()
-	after.Spec.Subscribable = channel.Spec.Subscribable
-
-	patch, err := duck.CreateMergePatch(backingChannel, after)
-
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to create mergePatch", zap.Error(err))
-		return err
-	}
-	patched, err := channelResourceInterface.Patch(backingChannel.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
-	if err != nil {
-		logging.FromContext(ctx).Warn("Failed to patch the Channel", zap.Error(err), zap.Any("patch", patch))
-		return err
-	}
-	logging.FromContext(ctx).Debug("Patched resource", zap.Any("patched", patched))
-	return nil
 }

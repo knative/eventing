@@ -342,24 +342,21 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 			want: &InMemoryChannelStatus{
 				ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
 					Status: duckv1.Status{
-						Conditions: []apis.Condition{
-							{
-								Type:   InMemoryChannelConditionAddressable,
-								Status: corev1.ConditionFalse,
-							},
+						Conditions: []apis.Condition{{
+							Type:   InMemoryChannelConditionAddressable,
+							Status: corev1.ConditionFalse,
+						}, {
 							// Note that Ready is here because when the condition is marked False, duck
 							// automatically sets Ready to false.
-							{
-								Type:   InMemoryChannelConditionReady,
-								Status: corev1.ConditionFalse,
-							},
-						},
+							Type:   InMemoryChannelConditionReady,
+							Status: corev1.ConditionFalse,
+						}},
 					},
 					AddressStatus: duckv1.AddressStatus{Address: &duckv1.Addressable{}},
 				},
 			},
 		},
-		"has domain": {
+		"has domain - unknown": {
 			url: &apis.URL{Scheme: "http", Host: "test-domain"},
 			want: &InMemoryChannelStatus{
 				ChannelableStatus: eventingduckv1beta1.ChannelableStatus{
@@ -375,6 +372,12 @@ func TestInMemoryChannelStatus_SetAddressable(t *testing.T) {
 						Conditions: []apis.Condition{{
 							Type:   InMemoryChannelConditionAddressable,
 							Status: corev1.ConditionTrue,
+						}, {
+							// Note: Ready is here because when the condition
+							// is marked True, duck automatically sets Ready to
+							// Unknown because of missing ChannelConditionBackingChannelReady.
+							Type:   InMemoryChannelConditionReady,
+							Status: corev1.ConditionUnknown,
 						}},
 					},
 				},

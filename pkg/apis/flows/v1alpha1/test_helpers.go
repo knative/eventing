@@ -19,12 +19,12 @@ package v1alpha1
 import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
 var (
-	defaultChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+	defaultChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
 			Kind:       "InMemoryChannel",

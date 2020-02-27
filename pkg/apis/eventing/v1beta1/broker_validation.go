@@ -28,7 +28,7 @@ const (
 )
 
 func (b *Broker) Validate(ctx context.Context) *apis.FieldError {
-	withNS := apis.WithinParent(ctx, b.ObjectMeta)
+	withNS := apis.AllowDifferentNamespace(apis.WithinParent(ctx, b.ObjectMeta))
 	return b.Spec.Validate(withNS).ViaField("spec")
 }
 

@@ -22,8 +22,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
 
@@ -50,6 +50,18 @@ func WithInitBrokerConditions(b *v1alpha1.Broker) {
 	b.Status.InitializeConditions()
 }
 
+func WithBrokerFinalizers(finalizers ...string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Finalizers = finalizers
+	}
+}
+
+func WithBrokerResourceVersion(rv string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.ResourceVersion = rv
+	}
+}
+
 func WithBrokerGeneration(gen int64) BrokerOption {
 	return func(s *v1alpha1.Broker) {
 		s.Generation = gen
@@ -70,7 +82,7 @@ func WithBrokerDeletionTimestamp(b *v1alpha1.Broker) {
 // WithBrokerChannel sets the Broker's ChannelTemplateSpec to the specified CRD.
 func WithBrokerChannel(crdType metav1.TypeMeta) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		b.Spec.ChannelTemplate = &eventingduckv1alpha1.ChannelTemplateSpec{
+		b.Spec.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: crdType,
 		}
 	}

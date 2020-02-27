@@ -41,6 +41,8 @@ import (
 	fakemessagingv1beta1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/messaging/v1beta1/fake"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1"
 	fakesourcesv1alpha1 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha1/fake"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha2"
+	fakesourcesv1alpha2 "knative.dev/eventing/pkg/client/clientset/versioned/typed/sources/v1alpha2/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -128,4 +130,9 @@ func (c *Clientset) MessagingV1beta1() messagingv1beta1.MessagingV1beta1Interfac
 // SourcesV1alpha1 retrieves the SourcesV1alpha1Client
 func (c *Clientset) SourcesV1alpha1() sourcesv1alpha1.SourcesV1alpha1Interface {
 	return &fakesourcesv1alpha1.FakeSourcesV1alpha1{Fake: &c.Fake}
+}
+
+// SourcesV1alpha2 retrieves the SourcesV1alpha2Client
+func (c *Clientset) SourcesV1alpha2() sourcesv1alpha2.SourcesV1alpha2Interface {
+	return &fakesourcesv1alpha2.FakeSourcesV1alpha2{Fake: &c.Fake}
 }

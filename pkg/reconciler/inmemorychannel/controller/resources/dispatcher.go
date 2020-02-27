@@ -69,12 +69,12 @@ func MakeDispatcher(args DispatcherArgs) *v1.Deployment {
 							Image: args.Image,
 							Env:   makeEnv(),
 
-							// Set resource requests and limits based on the benchmarking results in
-							//  https://github.com/knative/eventing/issues/2311#issuecomment-565311345
+							// Set low resource requests and limits.
+							// This should be configurable.
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
+									corev1.ResourceCPU:    resource.MustParse("125m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("2200m"),

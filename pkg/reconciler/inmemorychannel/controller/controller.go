@@ -48,8 +48,7 @@ const (
 )
 
 type envConfig struct {
-	Scope string `envconfig:"DISPATCHER_SCOPE" required:"true"`
-	Image string `envconfig:"DISPATCHER_IMAGE"`
+	Image string `envconfig:"DISPATCHER_IMAGE" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code.
@@ -75,6 +74,8 @@ func NewController(
 		deploymentLister:        deploymentInformer.Lister(),
 		serviceLister:           serviceInformer.Lister(),
 		endpointsLister:         endpointsInformer.Lister(),
+		serviceAccountLister:    serviceAccountInformer.Lister(),
+		roleBindingLister:       roleBindingInformer.Lister(),
 	}
 
 	env := &envConfig{}
@@ -82,15 +83,11 @@ func NewController(
 		r.Logger.Panicf("unable to process in-memory channel's required environment variables: %v", err)
 	}
 
-	r.dispatcherScope = env.Scope
-	if r.dispatcherScope == "namespace" {
-		r.dispatcherImage = env.Image
-		if r.dispatcherImage == "" {
-			r.Logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
-		}
-		r.serviceAccountLister = serviceAccountInformer.Lister()
-		r.roleBindingLister = roleBindingInformer.Lister()
+	if env.Image == "" {
+		r.Logger.Panic("unable to process in-memory channel's required environment variables (missing DISPATCHER_IMAGE)")
 	}
+
+	r.dispatcherImage = env.Image
 
 	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
@@ -106,41 +103,26 @@ func NewController(
 		impl.GlobalResync(inmemorychannelInformer.Informer())
 	}
 
-	filterFn := ScopedFilter(env.Scope, r.systemNamespace, dispatcherName)
-
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: filterFn,
+		FilterFunc: controller.FilterWithName(dispatcherName),
 		Handler:    controller.HandleAll(grCh),
 	})
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: filterFn,
+		FilterFunc: controller.FilterWithName(dispatcherName),
 		Handler:    controller.HandleAll(grCh),
 	})
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: filterFn,
+		FilterFunc: controller.FilterWithName(dispatcherName),
 		Handler:    controller.HandleAll(grCh),
 	})
-	if env.Scope == "namespace" {
-		serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: filterFn,
-			Handler:    controller.HandleAll(grCh),
-		})
-		roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: filterFn,
-			Handler:    controller.HandleAll(grCh),
-		})
-	}
+	serviceAccountInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithName(dispatcherName),
+		Handler:    controller.HandleAll(grCh),
+	})
+	roleBindingInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithName(dispatcherName),
+		Handler:    controller.HandleAll(grCh),
+	})
 
 	return impl
-}
-
-func ScopedFilter(dispatcherScope, namespace, name string) func(obj interface{}) bool {
-	fnn := controller.FilterWithNameAndNamespace(namespace, name)
-	fn := controller.FilterWithName(name)
-	return func(obj interface{}) bool {
-		if dispatcherScope == scopeCluster {
-			return fnn(obj)
-		}
-		return fn(obj)
-	}
 }

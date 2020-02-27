@@ -18,7 +18,6 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -123,42 +122,12 @@ func TestReconcile(t *testing.T) {
 		},
 		WantErr: true,
 	}, {
-		Name: "Backing Channel.Patch Subscriptions failed",
-		Key:  testKey,
-		Objects: []runtime.Object{
-			NewChannel(channelName, testNS,
-				WithChannelTemplate(channelCRD()),
-				WithInitChannelConditions,
-				WithChannelSubscribers(subscribers())),
-			NewInMemoryChannel(channelName, testNS,
-				WithInitInMemoryChannelConditions),
-		},
-		WantPatches: []clientgotesting.PatchActionImpl{
-			patchSubscribers(testNS, channelName, subscribers()),
-		},
-		WithReactors: []clientgotesting.ReactionFunc{
-			InduceFailure("patch", "inmemorychannels"),
-		},
-		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: NewChannel(channelName, testNS,
-				WithChannelTemplate(channelCRD()),
-				WithInitChannelConditions,
-				WithChannelSubscribers(subscribers()),
-				WithBackingChannelObjRef(backingChannelObjRef()),
-				WithBackingChannelFailed("ChannelFailure", "inducing failure for patch inmemorychannels")),
-		}},
-		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "InternalError", "problem patching subscriptions in the backing channel: %v", "inducing failure for patch inmemorychannels"),
-		},
-		WantErr: true,
-	}, {
 		Name: "Successful reconciliation",
 		Key:  testKey,
 		Objects: []runtime.Object{
 			NewChannel(channelName, testNS,
 				WithChannelTemplate(channelCRD()),
-				WithInitChannelConditions,
-				WithChannelSubscribers(subscribers())),
+				WithInitChannelConditions),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -167,14 +136,10 @@ func TestReconcile(t *testing.T) {
 				WithInMemoryChannelChannelServiceReady(),
 				WithInMemoryChannelAddress(backingChannelHostname)),
 		},
-		WantPatches: []clientgotesting.PatchActionImpl{
-			patchSubscribers(testNS, channelName, subscribers()),
-		},
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewChannel(channelName, testNS,
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
-				WithChannelSubscribers(subscribers()),
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname)),
@@ -190,7 +155,6 @@ func TestReconcile(t *testing.T) {
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
-				WithChannelSubscribers(subscribers()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname)),
 			NewInMemoryChannel(channelName, testNS,
@@ -206,6 +170,31 @@ func TestReconcile(t *testing.T) {
 			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
 		},
 	}, {
+		Name: "Backing channel created",
+		Key:  testKey,
+		Objects: []runtime.Object{
+			NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithBackingChannelReady,
+				WithChannelAddress(backingChannelHostname)),
+		},
+		WantCreates: []runtime.Object{
+			createChannel(testNS, channelName, false),
+		},
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, "ChannelReconciled", "Channel reconciled: %q", testKey),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewChannel(channelName, testNS,
+				WithChannelTemplate(channelCRD()),
+				WithInitChannelConditions,
+				WithBackingChannelObjRef(backingChannelObjRef()),
+				WithChannelNoAddress(),
+				WithBackingChannelUnknown("BackingChannelNotConfigured", "BackingChannel has not yet been reconciled.")),
+		}},
+	}, {
 		Name: "Generation Bump",
 		Key:  testKey,
 		Objects: []runtime.Object{
@@ -213,7 +202,6 @@ func TestReconcile(t *testing.T) {
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
-				WithChannelSubscribers(subscribers()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
 				WithChannelGeneration(42)),
@@ -231,7 +219,6 @@ func TestReconcile(t *testing.T) {
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
-				WithChannelSubscribers(subscribers()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
 				WithChannelGeneration(42),
@@ -250,8 +237,7 @@ func TestReconcile(t *testing.T) {
 				WithInitChannelConditions,
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
-				WithChannelAddress(backingChannelHostname),
-				WithChannelSubscribers(subscribers())),
+				WithChannelAddress(backingChannelHostname)),
 			NewInMemoryChannel(channelName, testNS,
 				WithInitInMemoryChannelConditions,
 				WithInMemoryChannelDeploymentReady(),
@@ -266,7 +252,6 @@ func TestReconcile(t *testing.T) {
 			Object: NewChannel(channelName, testNS,
 				WithChannelTemplate(channelCRD()),
 				WithInitChannelConditions,
-				WithChannelSubscribers(subscribers()),
 				WithBackingChannelObjRef(backingChannelObjRef()),
 				WithBackingChannelReady,
 				WithChannelAddress(backingChannelHostname),
@@ -326,36 +311,6 @@ func subscriberStatuses() []eventingduckv1alpha1.SubscriberStatus {
 	}}
 }
 
-func patchSubscribers(namespace, name string, subscribers []eventingduckv1alpha1.SubscriberSpec) clientgotesting.PatchActionImpl {
-	action := clientgotesting.PatchActionImpl{}
-	action.Name = name
-	action.Namespace = namespace
-
-	var spec string
-	if subscribers != nil {
-		b, err := json.Marshal(subscribers)
-		if err != nil {
-			return action
-		}
-		ss := make([]map[string]interface{}, 0)
-		err = json.Unmarshal(b, &ss)
-		if err != nil {
-			return action
-		}
-		subs, err := json.Marshal(ss)
-		if err != nil {
-			return action
-		}
-		spec = fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
-	} else {
-		spec = `{"subscribable":{}}`
-	}
-
-	patch := `{"spec":` + spec + `}`
-	action.Patch = []byte(patch)
-	return action
-}
-
 func createChannelCRD(namespace, name string, ready bool) *unstructured.Unstructured {
 	unstructured := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -395,5 +350,61 @@ func backingChannelObjRef() *corev1.ObjectReference {
 		Kind:       "InMemoryChannel",
 		Namespace:  testNS,
 		Name:       channelName,
+	}
+}
+
+func createChannel(namespace, name string, ready bool) *unstructured.Unstructured {
+	var hostname string
+	var url string
+	if ready {
+		return &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "messaging.knative.dev/v1alpha1",
+				"kind":       "InMemoryChannel",
+				"metadata": map[string]interface{}{
+					"creationTimestamp": nil,
+					"namespace":         namespace,
+					"name":              name,
+					"ownerReferences": []interface{}{
+						map[string]interface{}{
+							"apiVersion":         "messaging.knative.dev/v1alpha1",
+							"blockOwnerDeletion": true,
+							"controller":         true,
+							"kind":               "Channel",
+							"name":               name,
+							"uid":                "",
+						},
+					},
+				},
+				"status": map[string]interface{}{
+					"address": map[string]interface{}{
+						"hostname": hostname,
+						"url":      url,
+					},
+				},
+			},
+		}
+	}
+
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "messaging.knative.dev/v1alpha1",
+			"kind":       "InMemoryChannel",
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         namespace,
+				"name":              name,
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         "messaging.knative.dev/v1alpha1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "Channel",
+						"name":               name,
+						"uid":                "",
+					},
+				},
+			},
+		},
 	}
 }

@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	"context"
+	context "context"
 
 	fake "knative.dev/eventing/pkg/legacyclient/injection/informers/factory/fake"
 	apiserversource "knative.dev/eventing/pkg/legacyclient/injection/informers/legacysources/v1alpha1/apiserversource"

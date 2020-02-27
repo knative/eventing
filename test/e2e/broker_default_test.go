@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/logging"
 
@@ -79,6 +80,7 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 		// to set in the subscriber and services pod
 		eventsToSend            []eventContext // These are the event context attributes and extension attributes that will be send.
 		deprecatedTriggerFilter bool           //TriggerFilter with DeprecatedSourceAndType or not
+		v1beta1                 bool           // Use v1beta1 trigger
 	}{
 		{
 			name: "test default broker with many deprecated triggers",
@@ -110,8 +112,23 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 				{Type: eventType2, Source: eventSource2},
 			},
 			deprecatedTriggerFilter: false,
-		},
-		{
+		}, {
+			name: "test default broker with many attribute triggers using v1beta1 trigger",
+			eventsToReceive: []eventReceiver{
+				{eventContext{Type: any, Source: any}, newSelector()},
+				{eventContext{Type: eventType1, Source: any}, newSelector()},
+				{eventContext{Type: any, Source: eventSource1}, newSelector()},
+				{eventContext{Type: eventType1, Source: eventSource1}, newSelector()},
+			},
+			eventsToSend: []eventContext{
+				{Type: eventType1, Source: eventSource1},
+				{Type: eventType1, Source: eventSource2},
+				{Type: eventType2, Source: eventSource1},
+				{Type: eventType2, Source: eventSource2},
+			},
+			deprecatedTriggerFilter: false,
+			v1beta1:                 true,
+		}, {
 			name: "test default broker with many attribute and extension triggers",
 			eventsToReceive: []eventReceiver{
 				{eventContext{Type: any, Source: any, Extensions: map[string]interface{}{extensionName1: extensionValue1}}, newSelector()},
@@ -148,6 +165,12 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			// Wait for default broker ready.
 			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
 
+			// Test if namespace reconciler would recreate broker once broker was deleted.
+			if err := client.Eventing.EventingV1beta1().Brokers(client.Namespace).Delete(defaultBrokerName, &metav1.DeleteOptions{}); err != nil {
+				t.Fatalf("Can't delete default broker in namespace: %v", client.Namespace)
+			}
+			client.WaitForResourceReadyOrFail(defaultBrokerName, lib.BrokerTypeMeta)
+
 			// Create subscribers.
 			for _, event := range test.eventsToReceive {
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
@@ -159,11 +182,19 @@ func TestDefaultBrokerWithManyTriggers(t *testing.T) {
 			for _, event := range test.eventsToReceive {
 				triggerName := name("trigger", event.context.Type, event.context.Source, event.context.Extensions)
 				subscriberName := name("dumper", event.context.Type, event.context.Source, event.context.Extensions)
-				triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, event.context)
-				client.CreateTriggerOrFail(triggerName,
-					resources.WithSubscriberServiceRefForTrigger(subscriberName),
-					triggerOption,
-				)
+				if test.v1beta1 {
+					triggerOption := resources.WithAttributesTriggerFilterV1Beta1(event.context.Source, event.context.Type, event.context.Extensions)
+					client.CreateTriggerOrFailV1Beta1(triggerName,
+						resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
+						triggerOption,
+					)
+				} else {
+					triggerOption := getTriggerFilterOption(test.deprecatedTriggerFilter, event.context)
+					client.CreateTriggerOrFail(triggerName,
+						resources.WithSubscriberServiceRefForTrigger(subscriberName),
+						triggerOption,
+					)
+				}
 			}
 
 			// Wait for all test resources to become ready before sending the events.

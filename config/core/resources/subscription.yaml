@@ -20,10 +20,7 @@ metadata:
     knative.dev/crd-install: "true"
 spec:
   group: messaging.knative.dev
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
+  preserveUnknownFields: false
   names:
     kind: Subscription
     plural: subscriptions
@@ -37,6 +34,13 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  conversion:
+    strategy: None
+#    strategy: Webhook
+#    webhookClientConfig:
+#      service:
+#        name: eventing-webhook
+#        namespace: knative-eventing
   additionalPrinterColumns:
     - name: Ready
       type: string
@@ -49,10 +53,12 @@ spec:
       JSONPath: .metadata.creationTimestamp
   validation:
     openAPIV3Schema:
+      type: object
       properties:
         spec:
           required:
             - channel
+          type: object
           properties:
             channel:
               type: object
@@ -95,6 +101,9 @@ spec:
                     name:
                       type: string
                       minLength: 1
+                    namespace:
+                      type: string
+                      minLength: 1
             reply:
               type: object
               description: "the destination that (optionally) receive events."
@@ -120,3 +129,20 @@ spec:
                     name:
                       type: string
                       minLength: 1
+                    namespace:
+                      type: string
+                      minLength: 1
+            delivery:
+              description: "Subscription delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+        status:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  - name: v1beta1
+    served: true
+    storage: false

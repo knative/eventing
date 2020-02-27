@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -28,6 +29,7 @@ import (
 
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -35,6 +37,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // TODO(chizhg): break this file into multiple files when it grows too large.
@@ -85,6 +88,24 @@ func (client *Client) CreateSubscriptionOrFail(
 	subscription := resources.Subscription(name, channelName, channelTypeMeta, options...)
 	subscriptions := client.Eventing.MessagingV1alpha1().Subscriptions(namespace)
 	client.T.Logf("Creating subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
+	// update subscription with the new reference
+	subscription, err := subscriptions.Create(subscription)
+	if err != nil {
+		client.T.Fatalf("Failed to create subscription %q: %v", name, err)
+	}
+	client.Tracker.AddObj(subscription)
+}
+
+// CreateSubscriptionOrFailV1Beta1 will create a Subscription or fail the test if there is an error.
+func (client *Client) CreateSubscriptionOrFailV1Beta1(
+	name, channelName string,
+	channelTypeMeta *metav1.TypeMeta,
+	options ...resources.SubscriptionOptionV1Beta1,
+) {
+	namespace := client.Namespace
+	subscription := resources.SubscriptionV1Beta1(name, channelName, channelTypeMeta, options...)
+	subscriptions := client.Eventing.MessagingV1beta1().Subscriptions(namespace)
+	client.T.Logf("Creating v1beta1 subscription %s for channel %+v-%s", name, channelTypeMeta, channelName)
 	// update subscription with the new reference
 	subscription, err := subscriptions.Create(subscription)
 	if err != nil {
@@ -145,6 +166,44 @@ func (client *Client) CreateBrokerOrFail(name string, options ...resources.Broke
 	return broker
 }
 
+func (client *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.TypeMeta) *duckv1.KReference {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: client.Namespace,
+		},
+		Data: map[string]string{
+			"channelTemplateSpec.kind":       channel.Kind,
+			"channelTemplateSpec.apiVersion": channel.APIVersion,
+		},
+	}
+	cm, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Create(cm)
+	if err != nil {
+		client.T.Fatalf("Failed to create broker config %q: %v", name, err)
+	}
+	return &duckv1.KReference{
+		APIVersion: "v1",
+		Kind:       "ConfigMap",
+		Namespace:  client.Namespace,
+		Name:       name,
+	}
+}
+
+// CreateBrokerOrFail will create a Broker or fail the test if there is an error.
+func (client *Client) CreateBrokerV1Beta1OrFail(name string, options ...resources.BrokerV1Beta1Option) *v1beta1.Broker {
+	namespace := client.Namespace
+	broker := resources.BrokerV1Beta1(name, options...)
+	brokers := client.Eventing.EventingV1beta1().Brokers(namespace)
+	client.T.Logf("Creating broker %s", name)
+	// update broker with the new reference
+	broker, err := brokers.Create(broker)
+	if err != nil {
+		client.T.Fatalf("Failed to create broker %q: %v", name, err)
+	}
+	client.Tracker.AddObj(broker)
+	return broker
+}
+
 // CreateBrokersOrFail will create a list of Brokers.
 func (client *Client) CreateBrokersOrFail(names []string, channelTypeMeta *metav1.TypeMeta) {
 	client.T.Logf("Creating brokers %v", names)
@@ -163,6 +222,21 @@ func (client *Client) CreateTriggerOrFail(name string, options ...resources.Trig
 	trigger, err := triggers.Create(trigger)
 	if err != nil {
 		client.T.Fatalf("Failed to create trigger %q: %v", name, err)
+	}
+	client.Tracker.AddObj(trigger)
+	return trigger
+}
+
+// CreateTriggerOrFailV1Beta1 will create a v1beta1 Trigger or fail the test if there is an error.
+func (client *Client) CreateTriggerOrFailV1Beta1(name string, options ...resources.TriggerOptionV1Beta1) *v1beta1.Trigger {
+	namespace := client.Namespace
+	trigger := resources.TriggerV1Beta1(name, options...)
+	triggers := client.Eventing.EventingV1beta1().Triggers(namespace)
+	client.T.Logf("Creating v1beta1 trigger %s", name)
+	// update trigger with the new reference
+	trigger, err := triggers.Create(trigger)
+	if err != nil {
+		client.T.Fatalf("Failed to create v1beta1 trigger %q: %v", name, err)
 	}
 	client.Tracker.AddObj(trigger)
 	return trigger
@@ -214,10 +288,21 @@ func (client *Client) CreateLegacyContainerSourceOrFail(containerSource *legacys
 	client.Tracker.AddObj(containerSource)
 }
 
-// CreateSinkBindingOrFail will create a SinkBinding or fail the test if there is an error.
-func (client *Client) CreateSinkBindingOrFail(sb *sourcesv1alpha1.SinkBinding) {
+// CreateSinkBindingV1Alpha1OrFail will create a SinkBinding or fail the test if there is an error.
+func (client *Client) CreateSinkBindingV1Alpha1OrFail(sb *sourcesv1alpha1.SinkBinding) {
 	client.T.Logf("Creating sinkbinding %+v", sb)
 	sbInterface := client.Eventing.SourcesV1alpha1().SinkBindings(client.Namespace)
+	_, err := sbInterface.Create(sb)
+	if err != nil {
+		client.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
+	}
+	client.Tracker.AddObj(sb)
+}
+
+// CreateSinkBindingV1Alpha2OrFail will create a SinkBinding or fail the test if there is an error.
+func (client *Client) CreateSinkBindingV1Alpha2OrFail(sb *sourcesv1alpha2.SinkBinding) {
+	client.T.Logf("Creating sinkbinding %+v", sb)
+	sbInterface := client.Eventing.SourcesV1alpha2().SinkBindings(client.Namespace)
 	_, err := sbInterface.Create(sb)
 	if err != nil {
 		client.T.Fatalf("Failed to create sinkbinding %q: %v", sb.Name, err)
@@ -247,10 +332,21 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
-// CreatePingSourceOrFail will create an PingSource
-func (client *Client) CreatePingSourceOrFail(pingSource *sourcesv1alpha1.PingSource) {
+// CreatePingSourceV1Alpha1OrFail will create an PingSource
+func (client *Client) CreatePingSourceV1Alpha1OrFail(pingSource *sourcesv1alpha1.PingSource) {
 	client.T.Logf("Creating pingsource %+v", pingSource)
 	pingInterface := client.Eventing.SourcesV1alpha1().PingSources(client.Namespace)
+	_, err := pingInterface.Create(pingSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)
+	}
+	client.Tracker.AddObj(pingSource)
+}
+
+// CreatePingSourceV1Alpha2OrFail will create an PingSource
+func (client *Client) CreatePingSourceV1Alpha2OrFail(pingSource *sourcesv1alpha2.PingSource) {
+	client.T.Logf("Creating pingsource %+v", pingSource)
+	pingInterface := client.Eventing.SourcesV1alpha2().PingSources(client.Namespace)
 	_, err := pingInterface.Create(pingSource)
 	if err != nil {
 		client.T.Fatalf("Failed to create pingsource %q: %v", pingSource.Name, err)

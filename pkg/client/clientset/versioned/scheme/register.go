@@ -32,6 +32,7 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
 var Scheme = runtime.NewScheme()
@@ -46,6 +47,7 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	messagingv1alpha1.AddToScheme,
 	messagingv1beta1.AddToScheme,
 	sourcesv1alpha1.AddToScheme,
+	sourcesv1alpha2.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

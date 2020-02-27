@@ -16,6 +16,26 @@ limitations under the License.
 
 package sources
 
+import "k8s.io/apimachinery/pkg/runtime/schema"
+
 const (
 	GroupName = "sources.knative.dev"
+)
+
+var (
+	// ApiServerSourceResource respresents a Knative Eventing Sources ApiServerSource
+	ApiServerSourceResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "apiserversources",
+	}
+	// PingSourceResource respresents a Knative Eventing Sources PingSource
+	PingSourceResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "pingsources",
+	}
+	// SinkBindingResource respresents a Knative Eventing Sources SinkBinding
+	SinkBindingResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "sinkbindings",
+	}
 )

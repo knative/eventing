@@ -36,7 +36,7 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	os.Setenv("DISPATCHER_SCOPE", "cluster")
+	os.Setenv("DISPATCHER_IMAGE", "animage")
 	c := NewController(ctx, configmap.NewStaticWatcher())
 
 	if c == nil {

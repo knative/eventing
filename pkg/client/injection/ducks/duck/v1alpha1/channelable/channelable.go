@@ -19,7 +19,7 @@ limitations under the License.
 package channelable
 
 import (
-	"context"
+	context "context"
 
 	v1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	duck "knative.dev/pkg/apis/duck"

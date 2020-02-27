@@ -30,7 +30,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 // CreateGenericChannelObject create a generic channel object with the dynamic client and channel's meta data.
@@ -53,7 +53,7 @@ func CreateGenericChannelObject(
 // newChannel returns an unstructured.Unstructured based on the ChannelTemplateSpec for a given meta resource.
 func newChannel(obj *resources.MetaResource) (*unstructured.Unstructured, error) {
 	// Set the name of the resource we're creating as well as the namespace, etc.
-	template := eventingduck.ChannelTemplateSpecInternal{
+	template := messagingv1beta1.ChannelTemplateSpecInternal{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       obj.Kind,
 			APIVersion: obj.APIVersion,
@@ -62,7 +62,7 @@ func newChannel(obj *resources.MetaResource) (*unstructured.Unstructured, error)
 			Name:      obj.Name,
 			Namespace: obj.Namespace,
 		},
-		Spec: eventingduck.ChannelTemplateSpec{
+		Spec: messagingv1beta1.ChannelTemplateSpec{
 			TypeMeta: obj.TypeMeta,
 		}.Spec,
 	}

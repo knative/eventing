@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	"context"
+	context "context"
 
 	externalversions "knative.dev/eventing/pkg/legacyclient/informers/externalversions"
 	fake "knative.dev/eventing/pkg/legacyclient/injection/client/fake"

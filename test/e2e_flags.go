@@ -26,9 +26,6 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgTest "knative.dev/pkg/test"
-	testLogging "knative.dev/pkg/test/logging"
-
 	"knative.dev/eventing/test/lib"
 )
 
@@ -86,8 +83,6 @@ func InitializeEventingFlags() {
 	if f.Channels == nil || len(f.Channels) == 0 {
 		f.Channels = []metav1.TypeMeta{lib.DefaultChannel}
 	}
-
-	testLogging.InitializeLogger(pkgTest.Flags.LogVerbose)
 
 	EventingFlags = &f
 }

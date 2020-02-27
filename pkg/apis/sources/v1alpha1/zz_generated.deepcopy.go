@@ -270,6 +270,11 @@ func (in *PingSourceSpec) DeepCopyInto(out *PingSourceSpec) {
 		*out = new(v1.Destination)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CloudEventOverrides != nil {
+		in, out := &in.CloudEventOverrides, &out.CloudEventOverrides
+		*out = new(v1.CloudEventOverrides)
+		(*in).DeepCopyInto(*out)
+	}
 	out.Resources = in.Resources
 	return
 }

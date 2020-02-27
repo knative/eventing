@@ -27,6 +27,7 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
@@ -90,7 +91,10 @@ func NewHandler(logger *zap.Logger, config Config) (*Handler, error) {
 func createReceiverFunction(f *Handler) func(context.Context, channel.ChannelReference, cloudevents.Event) error {
 	return func(ctx context.Context, _ channel.ChannelReference, event cloudevents.Event) error {
 		if f.config.AsyncHandler {
+			parentSpan := trace.FromContext(ctx)
 			go func() {
+				// Run async dispatch with background context.
+				ctx = trace.NewContext(context.Background(), parentSpan)
 				// Any returned error is already logged in f.dispatch().
 				_ = f.dispatch(ctx, event)
 			}()

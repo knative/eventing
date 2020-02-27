@@ -19,11 +19,11 @@ limitations under the License.
 package apiserversource
 
 import (
-	"context"
+	context "context"
 
 	apiserversource "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
 	v1alpha1apiserversource "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )

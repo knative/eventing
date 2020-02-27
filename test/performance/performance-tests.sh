@@ -53,7 +53,8 @@ function update_benchmark() {
   kubectl patch configmap config-mako -n "${TEST_NAMESPACE}" -p '{"data":{"environment":"prod"}}' || abort "failed to patch config-mako configmap"
 
   echo ">> Updating benchmark $1"
-  ko delete -f "${benchmark_path}"/${TEST_CONFIG_VARIANT} --ignore-not-found=true
+  # TODO(chizhg): remove --wait=false once https://github.com/knative/eventing/issues/2633 is fixed
+  ko delete -f "${benchmark_path}"/${TEST_CONFIG_VARIANT} --ignore-not-found=true --wait=false
   ko apply -f "${benchmark_path}"/${TEST_CONFIG_VARIANT} || abort "failed to apply benchmark $1"
 }
 

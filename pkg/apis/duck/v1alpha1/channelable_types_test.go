@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/apis/duck/v1alpha1"
@@ -42,7 +43,7 @@ func TestChannelablePopulate(t *testing.T) {
 	got := &Channelable{}
 
 	retry := int32(5)
-	linear := BackoffPolicyLinear
+	linear := eventingduckv1beta1.BackoffPolicyLinear
 	delay := "5s"
 	want := &Channelable{
 		Spec: ChannelableSpec{
@@ -61,7 +62,7 @@ func TestChannelablePopulate(t *testing.T) {
 					}},
 				},
 			},
-			Delivery: &DeliverySpec{
+			Delivery: &eventingduckv1beta1.DeliverySpec{
 				DeadLetterSink: &duckv1.Destination{
 					Ref: &duckv1.KReference{
 						Name: "aname",

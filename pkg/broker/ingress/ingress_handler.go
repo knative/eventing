@@ -25,7 +25,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
-	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/utils"
@@ -110,10 +109,7 @@ func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cl
 	}
 
 	start := time.Now()
-	sendingCTX := utils.ContextFrom(tctx, h.ChannelURI)
-	// Due to an issue in utils.ContextFrom, we don't retain the original trace context from ctx, so
-	// bring it in manually.
-	sendingCTX = trace.NewContext(sendingCTX, trace.FromContext(ctx))
+	sendingCTX := utils.SendingContextFrom(ctx, tctx, h.ChannelURI)
 
 	rctx, _, err := h.CeClient.Send(sendingCTX, event)
 	rtctx := cloudevents.HTTPTransportContextFrom(rctx)

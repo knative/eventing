@@ -19,11 +19,11 @@ limitations under the License.
 package parallel
 
 import (
-	"context"
+	context "context"
 
 	parallel "knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/parallel"
 	v1alpha1parallel "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
-	"knative.dev/pkg/configmap"
+	configmap "knative.dev/pkg/configmap"
 	controller "knative.dev/pkg/controller"
 	logging "knative.dev/pkg/logging"
 )

@@ -26,6 +26,7 @@ func runSmokeTest(t *testing.T) {
 	helpers.SingleEventForChannelTestHelper(
 		t,
 		cloudevents.Binary,
+		helpers.SubscriptionV1alpha1,
 		channelTestRunner,
 	)
 }

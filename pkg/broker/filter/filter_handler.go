@@ -25,7 +25,6 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
@@ -256,8 +255,8 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 
 	if filterResult == failFilter {
 		r.logger.Debug("Event did not pass filter", zap.Any("triggerRef", trigger))
-		// Record the event count.
-		r.reporter.ReportEventCount(reportArgs, http.StatusExpectationFailed)
+		// We do not count the event. The event will be counted in the broker ingress.
+		// If the filter didn't pass, it means that the event wasn't meant for this Trigger.
 		return nil, nil
 	}
 
@@ -271,10 +270,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 		}
 	}
 
-	sendingCTX := utils.ContextFrom(tctx, subscriberURI.URL())
-	// Due to an issue in utils.ContextFrom, we don't retain the original trace context from ctx, so
-	// bring it in manually.
-	sendingCTX = trace.NewContext(sendingCTX, trace.FromContext(ctx))
+	sendingCTX := utils.SendingContextFrom(ctx, tctx, subscriberURI.URL())
 
 	start := time.Now()
 	rctx, replyEvent, err := r.ceClient.Send(sendingCTX, *event)
