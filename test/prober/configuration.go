@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
@@ -89,7 +90,7 @@ func (p *prober) deployTriggers() {
 			APIVersion: "v1",
 		}
 		if p.config.Serving.Use {
-			ref.APIVersion = servicesCR.GroupVersion().String()
+			ref.APIVersion = resources.KServicesGVR.GroupVersion().String()
 			ref.Name = forwarderName
 		}
 		trigger := &v1alpha1.Trigger{

@@ -13,13 +13,11 @@
  * limitations under the License.
  */
 
-package await
+package duck
 
 import "time"
 
 const (
-	// Interval is used for polling in checking resource states
-	Interval = 1 * time.Second
-	// Timeout is used for polling in checking resource states
-	Timeout = 4 * time.Minute
+	interval = 1 * time.Second
+	timeout  = 4 * time.Minute
 )

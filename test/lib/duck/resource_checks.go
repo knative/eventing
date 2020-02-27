@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"knative.dev/eventing/test/lib/await"
 	"knative.dev/pkg/apis"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
@@ -35,7 +34,7 @@ import (
 // every interval until isResourceReady returns `true` indicating
 // it is done, returns an error or timeout.
 func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaResource) error {
-	return wait.PollImmediate(await.Interval, await.Timeout, func() (bool, error) {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		untyped, err := GetGenericObject(dynamicClient, obj, &duckv1beta1.KResource{})
 		return isResourceReady(untyped, err)
 	})
@@ -43,7 +42,7 @@ func WaitForResourceReady(dynamicClient dynamic.Interface, obj *resources.MetaRe
 
 // WaitForResourcesReady waits until all the specified resources in the given namespace are ready.
 func WaitForResourcesReady(dynamicClient dynamic.Interface, objList *resources.MetaResourceList) error {
-	return wait.PollImmediate(await.Interval, await.Timeout, func() (bool, error) {
+	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		untypeds, err := GetGenericObjectList(dynamicClient, objList, &duckv1beta1.KResource{})
 		for _, untyped := range untypeds {
 			if isReady, err := isResourceReady(untyped, err); !isReady {

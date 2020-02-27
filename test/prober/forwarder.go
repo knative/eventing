@@ -21,36 +21,29 @@ import (
 	"github.com/wavesoftware/go-ensure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"knative.dev/eventing/test/lib/duck"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 var (
-	servicesCR = schema.GroupVersionResource{
-		Group:    "serving.knative.dev",
-		Version:  "v1alpha1",
-		Resource: "services",
-	}
-	servingType = metav1.TypeMeta{
-		Kind:       "Service",
-		APIVersion: servicesCR.GroupVersion().String(),
-	}
 	forwarderName = "wathola-forwarder"
 )
 
 func (p *prober) deployForwarder() {
 	p.log.Infof("Deploy forwarder knative service: %v", forwarderName)
-	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
+	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	service := forwarderKService(forwarderName, p.client.Namespace)
 	_, err := serving.Create(service, metav1.CreateOptions{})
 	ensure.NoError(err)
 
+	sc := p.servingClient()
 	waitFor(fmt.Sprintf("forwarder ksvc be ready: %v", forwarderName), func() error {
-		return p.waitForKServiceReady(forwarderName, p.client.Namespace)
+		return duck.WaitForKServiceReady(sc, forwarderName, p.client.Namespace)
 	})
 
 	if p.config.Serving.ScaleToZero {
 		waitFor(fmt.Sprintf("forwarder scales to zero: %v", forwarderName), func() error {
-			return p.waitForKServiceScale(forwarderName, p.client.Namespace, func(scale int32) bool {
+			return duck.WaitForKServiceScales(sc, forwarderName, p.client.Namespace, func(scale int) bool {
 				return scale == 0
 			})
 		})
@@ -59,15 +52,15 @@ func (p *prober) deployForwarder() {
 
 func (p *prober) removeForwarder() {
 	p.log.Infof("Remove forwarder knative service: %v", forwarderName)
-	serving := p.client.Dynamic.Resource(servicesCR).Namespace(p.client.Namespace)
+	serving := p.client.Dynamic.Resource(resources.KServicesGVR).Namespace(p.client.Namespace)
 	err := serving.Delete(forwarderName, &metav1.DeleteOptions{})
 	ensure.NoError(err)
 }
 
 func forwarderKService(name, namespace string) *unstructured.Unstructured {
 	obj := map[string]interface{}{
-		"apiVersion": servingType.APIVersion,
-		"kind":       servingType.Kind,
+		"apiVersion": resources.KServiceType.APIVersion,
+		"kind":       resources.KServiceType.Kind,
 		"metadata": map[string]interface{}{
 			"name":      name,
 			"namespace": namespace,

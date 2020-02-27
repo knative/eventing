@@ -21,6 +21,7 @@ import (
 
 	"go.uber.org/zap"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/resources"
 )
 
 var (
@@ -105,6 +106,13 @@ type prober struct {
 	log    *zap.SugaredLogger
 	client *lib.Client
 	config *Config
+}
+
+func (p *prober) servingClient() resources.ServingClient {
+	return resources.ServingClient{
+		Kube:    p.client.Kube,
+		Dynamic: p.client.Dynamic,
+	}
 }
 
 func (p *prober) ReportError(t *testing.T, err error) {
