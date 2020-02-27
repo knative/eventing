@@ -28,8 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/lib"
+	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -84,38 +84,28 @@ func (p *prober) deployTriggers() {
 	for _, eventType := range eventTypes {
 		name := fmt.Sprintf("wathola-trigger-%v", eventType)
 		fullType := fmt.Sprintf("%v.%v", watholaEventNs, eventType)
-		ref := &duckv1.KReference{
-			Kind:       "Service",
-			Namespace:  p.config.Namespace,
-			Name:       receiverName,
-			APIVersion: "v1",
-		}
+		subscriberOption := resources.WithSubscriberServiceRefForTrigger(receiverName)
 		if p.config.Serving.Use {
-			ref.APIVersion = resources.KServicesGVR.GroupVersion().String()
-			ref.Name = forwarderName
+			subscriberOption = resources.WithSubscriberKServiceRefForTrigger(forwarderName)
 		}
-		trigger := &v1alpha1.Trigger{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-			Spec: v1alpha1.TriggerSpec{
-				Broker: "default",
-				Filter: &v1alpha1.TriggerFilter{
-					Attributes: &v1alpha1.TriggerFilterAttributes{
-						"type": fullType,
-					},
-				},
-				Subscriber: duckv1.Destination{
-					Ref: ref,
-				},
-			},
-		}
+		trigger := resources.Trigger(
+			name,
+			resources.WithBroker("default"),
+			resources.WithAttributesTriggerFilter(
+				v1alpha1.TriggerAnyFilter,
+				fullType,
+				map[string]interface{}{},
+			),
+			subscriberOption,
+		)
+		triggers := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace)
 		p.log.Infof("Deploying trigger: %v", name)
-		_, err := p.client.Eventing.EventingV1alpha1().Triggers(p.config.Namespace).
-			Create(trigger)
+		// update trigger with the new reference
+		_, err := triggers.Create(trigger)
 		ensure.NoError(err)
 		lib.WaitFor(fmt.Sprintf("trigger be ready: %v", name), func() error {
-			return p.waitForTriggerReady(name, p.config.Namespace)
+			meta := resources.NewMetaResource(name, p.config.Namespace, lib.TriggerTypeMeta)
+			return duck.WaitForResourceReady(p.client.Dynamic, meta)
 		})
 	}
 }
