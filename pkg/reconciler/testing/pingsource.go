@@ -18,8 +18,9 @@ package testing
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"time"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	"knative.dev/pkg/apis"
 

@@ -18,6 +18,7 @@ package lib
 
 import (
 	"fmt"
+
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	appsv1 "k8s.io/api/apps/v1"
