@@ -23,8 +23,9 @@ source "$(dirname "$0")/e2e-common.sh"
 # Overrides
 
 function knative_setup {
-  install_knative_serving
-  install_latest_release
+  install_istio || fail_test 'Installing Istio failed'
+  install_knative_serving || fail_test 'Installing Knative Serving failed'
+  install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
 }
 
 function install_test_resources {
@@ -54,14 +55,14 @@ echo "Prober PID is ${PROBER_PID}"
 wait_for_file /tmp/prober-ready || fail_test
 
 header "Performing upgrade to HEAD"
-install_head || return $?
-install_channel_crds || return $?
+install_head || fail_test 'Installing HEAD version of eventing failed'
+install_channel_crds || fail_test 'Installing HEAD channel CRDs failed'
 
 header "Running postupgrade tests"
 go_test_e2e -tags=postupgrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test
 
 header "Performing downgrade to latest release"
-install_latest_release
+install_latest_release || fail_test 'Installing latest release of Knative Eventing failed'
 
 header "Running postdowngrade tests"
 go_test_e2e -tags=postdowngrade -timeout="${TIMEOUT}" ./test/upgrade || fail_test

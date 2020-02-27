@@ -38,3 +38,23 @@ func TestResolveMatchingReleaseOurAhead(t *testing.T) {
 		t.Errorf("resolved invalid version: %s", resolved)
 	}
 }
+
+func TestResolveIstioRelease(t *testing.T) {
+	candidate := "v1.4.0"
+	repo := "istio/istio"
+	resolved := resolveMatchingRelease(repo, candidate)
+
+	if semver.Compare(resolved, "v1.4.0") < 0 || semver.Compare(resolved, "v1.5.0") >= 0{
+		t.Errorf("resolved invalid version: %s", resolved)
+	}
+}
+
+func TestResolveIstioReleaseWithoutV(t *testing.T) {
+	candidate := "1.4.0"
+	repo := "istio/istio"
+	resolved := resolveMatchingRelease(repo, candidate)
+
+	if semver.Compare(resolved, "v1.4.0") < 0 || semver.Compare(resolved, "v1.5.0") >= 0{
+		t.Errorf("resolved invalid version: %s", resolved)
+	}
+}

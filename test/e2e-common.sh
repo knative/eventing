@@ -42,9 +42,8 @@ UNINSTALL_LIST=()
 # Install Knative Eventing in the current cluster, and waits for it to be ready.
 # If no parameters are passed, installs the current source-based build.
 # Parameters: $1 - Knative Eventing YAML file
-#             $2 - Knative Monitoring YAML file (optional)
 function install_knative_eventing {
-  local knative_networking_pods
+  local knative_monitoring_pods knative_monitoring_version monitoring_yaml
   local INSTALL_RELEASE_YAML=$1
   echo ">> Installing Knative Eventing"
   if [[ -z "$1" ]]; then
@@ -54,15 +53,20 @@ function install_knative_eventing {
   fi
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
+  knative_monitoring_version=$(go run test/scripts/resolve_matching_release.go \
+    'knative/serving' "${LATEST_RELEASE_VERSION}") \
+    || fail_test 'Could not resolve knative monitoring version'
+
   # Ensure knative monitoring is installed only once
-  knative_networking_pods=$(kubectl get pods -n knative-monitoring \
+  knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
     --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
-  if ! [[ ${knative_networking_pods} -gt 0 ]]; then
-    echo ">> Installing Knative Monitoring"
-    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
+  if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
+    echo ">> Installing Knative Monitoring: ${knative_monitoring_version}"
+    monitoring_yaml="https://github.com/knative/serving/releases/download/${knative_monitoring_version}/monitoring.yaml"
+    start_knative_monitoring "${monitoring_yaml}" || fail_test "Knative Monitoring did not come up"
+    UNINSTALL_LIST+=( "${monitoring_yaml}" )
   else
-    echo ">> Knative Monitoring seems to be running, pods running: ${knative_networking_pods}."
+    echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
   fi
 }
 
@@ -179,7 +183,7 @@ function dump_extra_cluster_state() {
 
 function install_istio {
   if [[ -z "${ISTIO_VERSION}" ]]; then
-    readonly ISTIO_VERSION="latest"
+    readonly ISTIO_VERSION="1.4.3"
   fi
   echo ">> Installing Istio: ${ISTIO_VERSION}"
 
@@ -203,7 +207,6 @@ function install_istio {
 
 # Installs Knative Serving in the current cluster, and waits for it to be ready.
 function install_knative_serving {
-  install_istio
   echo ">> Installing Knative serving"
   local SERVING_VERSION
   SERVING_VERSION=$(go run test/scripts/resolve_matching_release.go \

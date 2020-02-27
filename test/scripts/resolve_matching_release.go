@@ -60,6 +60,7 @@ type Tag struct {
 }
 
 func resolveMatchingRelease(repo, version string) string {
+	version = prependV(version)
 	endpoint := fmt.Sprintf("%s/repos/%s/tags", ApiGateway, repo)
 	resp, err := http.Get(endpoint)
 	ensure.NoError(err)
@@ -88,9 +89,16 @@ func resolveMatchingRelease(repo, version string) string {
 func slurpVersions(tags []Tag) []string {
 	var res []string
 	for _, tag := range tags {
-		res = append(res, tag.Name)
+		res = append(res, prependV(tag.Name))
 	}
 	return res
+}
+
+func prependV(version string) string {
+	if version[0] != 'v' {
+		return "v" + version
+	}
+	return version
 }
 
 func filterMatchingVersions(version string, versions []string, strict bool) []string {
