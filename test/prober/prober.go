@@ -122,7 +122,7 @@ func (p *prober) ReportError(t *testing.T, err error) {
 	if p.config.FailOnMissingEvents {
 		t.Error(err)
 	} else {
-		p.log.Warn(err)
+		p.log.Warnf("Silenced FAIL: %v", err)
 	}
 }
 
