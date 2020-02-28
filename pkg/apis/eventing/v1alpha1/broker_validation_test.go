@@ -110,7 +110,7 @@ func TestValidSpec(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("channelTemplateSpec.kind")
+			fe := apis.ErrMissingField("kind").ViaField("channelTemplateSpec")
 			errs = errs.Also(fe)
 			return errs
 		}(),
@@ -121,7 +121,7 @@ func TestValidSpec(t *testing.T) {
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("channelTemplateSpec.apiVersion")
+			fe := apis.ErrMissingField("apiVersion").ViaField("channelTemplateSpec")
 			errs = errs.Also(fe)
 			return errs
 		}(),

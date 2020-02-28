@@ -31,7 +31,7 @@ import (
 
 func TestOurConfig(t *testing.T) {
 	actual, example := ConfigMapsFromTestFile(t, "config-broker")
-	exampleSpec := runtime.RawExtension{Raw: []byte(`{"customValue": "foo"}`)}
+	exampleSpec := runtime.RawExtension{Raw: []byte(`"customValue: foo\n"`)}
 
 	for _, tt := range []struct {
 		name string
@@ -63,13 +63,14 @@ func TestOurConfig(t *testing.T) {
 					APIVersion: "Foo/v1",
 					Kind:       "Bar",
 				},
-				//Spec: TODO
 			},
 		},
 		data: &corev1.ConfigMap{
 			Data: map[string]string{
-				"channelTemplateSpec.apiVersion": "Foo/v1",
-				"channelTemplateSpec.kind":       "Bar",
+				"channelTemplateSpec": `
+      apiVersion: Foo/v1
+      kind: Bar
+`,
 			},
 		},
 	}} {
@@ -79,7 +80,12 @@ func TestOurConfig(t *testing.T) {
 				t.Fatalf("Unexpected error value: %v", err)
 			}
 
+			t.Log(actual)
+
 			if diff := cmp.Diff(tt.want, testConfig); diff != "" {
+				if testConfig != nil && testConfig.DefaultChannelTemplate.Spec != nil {
+					t.Log(string(testConfig.DefaultChannelTemplate.Spec.Raw))
+				}
 				t.Errorf("Unexpected controller config (-want, +got): %s", diff)
 			}
 		})

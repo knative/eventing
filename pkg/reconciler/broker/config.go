@@ -18,46 +18,51 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"strings"
+	"fmt"
+	"github.com/ghodss/yaml"
+	"go.uber.org/zap"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/logging"
 )
 
 type Config struct {
 	DefaultChannelTemplate messagingv1beta1.ChannelTemplateSpec
 }
 
+const (
+	channelTemplateSpec = "channelTemplateSpec"
+)
+
 func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.ConfigMap) (*Config, error) {
 	return func(configMap *corev1.ConfigMap) (*Config, error) {
-
-		apiVersion, ok := configMap.Data["channelTemplateSpec.apiVersion"]
-		if !ok {
-			return nil, errors.New("channelTemplateSpec.apiVersion not found in config")
+		config := &Config{
+			DefaultChannelTemplate: messagingv1beta1.ChannelTemplateSpec{},
 		}
 
-		kind, ok := configMap.Data["channelTemplateSpec.kind"]
-		if !ok {
-			return nil, errors.New("channelTemplateSpec.kind not found in config")
+		temp, present := configMap.Data[channelTemplateSpec]
+		if !present {
+			logging.FromContext(ctx).Info("ConfigMap is missing key", zap.String("key", channelTemplateSpec), zap.Any("configMap", configMap))
+			return nil, errors.New("not found")
 		}
 
-		// Spec is optional.
-		var spec *runtime.RawExtension
-		if rs, ok := configMap.Data["channelTemplateSpec.specJson"]; ok {
-			spec = &runtime.RawExtension{Raw: []byte(strings.TrimSpace(rs))}
+		if temp == "" {
+			logging.FromContext(ctx).Info("ConfigMap's value was the empty string, ignoring it.", zap.Any("configMap", configMap))
+			return nil, errors.New("not found")
 		}
 
-		return &Config{
-			DefaultChannelTemplate: messagingv1beta1.ChannelTemplateSpec{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: apiVersion,
-					Kind:       kind,
-				},
-				Spec: spec,
-			},
-		}, nil
+		j, err := yaml.YAMLToJSON([]byte(temp))
+		if err != nil {
+			return nil, fmt.Errorf("ConfigMap's value could not be converted to JSON. %w, %s", err, temp)
+		}
+
+		if err := json.Unmarshal(j, &config.DefaultChannelTemplate); err != nil {
+			return nil, fmt.Errorf("ConfigMap's value could not be unmarshaled. %w, %s", err, string(j))
+		}
+
+		return config, nil
 	}
 }
