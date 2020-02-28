@@ -425,6 +425,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:f9f72e583aaacf1d1ac5d6121abd4afd3c690baa9e14e1d009df26bf831ba347"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -456,12 +464,36 @@
   version = "v0.2.2"
 
 [[projects]]
+  digest = "1:efec7b15c9f6f20c96a5710fea5d946aabf13018d9e2d2c50a4746f850514f9d"
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "903d9455db9ff1d7ac1ab199062eca7266dd11a3"
+  version = "v1.6.0"
+
+[[projects]]
+  digest = "1:d3ed3beb4c8434d4b8a8ac7696128c2c1e5ca96c720df78447b7b1ccbd7b0f92"
+  name = "github.com/phayes/freeport"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "b8543db493a5ed890c5499e935e2cad7504f3a04"
+  version = "1.0.2"
+
+[[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
   name = "github.com/pkg/errors"
   packages = ["."]
   pruneopts = "NUT"
   revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
   version = "v0.8.1"
+
+[[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "NUT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:097cc61836050f45cbb712ae3bb45d66fba464c16b8fac09907fa3c1f753eff6"
@@ -550,6 +582,14 @@
   pruneopts = "NUT"
   revision = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab"
   version = "v1.0.5"
+
+[[projects]]
+  digest = "1:619c0d90a027b62dfc220e66d94522d283e911aac02b1cef4242e3ca7be7b859"
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  pruneopts = "NUT"
+  revision = "3ebf1ddaeb260c4b1ae502a01c7844fa8c1fa0e9"
+  version = "v1.5.1"
 
 [[projects]]
   digest = "1:435d9fe926ee0d903662215091e27fba6f1b7228d33a30c289cdb5aeff1c8fc8"
@@ -1468,11 +1508,15 @@
     "github.com/google/mako/spec/proto/mako_go_proto",
     "github.com/google/uuid",
     "github.com/kelseyhightower/envconfig",
+    "github.com/mitchellh/go-homedir",
     "github.com/openzipkin/zipkin-go/model",
+    "github.com/pelletier/go-toml",
+    "github.com/phayes/freeport",
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/rogpeppe/fastuuid",
     "github.com/rogpeppe/go-internal/semver",
+    "github.com/stretchr/testify/assert",
     "github.com/tsenart/vegeta/lib",
     "github.com/wavesoftware/go-ensure",
     "go.opencensus.io/plugin/ochttp",

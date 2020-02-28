@@ -34,7 +34,7 @@ import (
 
 const (
 	configName       = "wathola-config"
-	configMountPoint = "/.config/wathola"
+	configMountPoint = "/home/nonroot/.config/wathola"
 	configFilename   = "config.toml"
 	watholaEventNs   = "com.github.cardil.wathola"
 	healthEndpoint   = "/healthz"

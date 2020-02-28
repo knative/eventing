@@ -24,6 +24,7 @@ import (
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/duck"
 	"knative.dev/eventing/test/lib/resources"
+	pkgTest "knative.dev/pkg/test"
 )
 
 var (
@@ -74,7 +75,7 @@ func forwarderKService(name, namespace string) *unstructured.Unstructured {
 				"spec": map[string]interface{}{
 					"containers": []map[string]interface{}{{
 						"name":  "forwarder",
-						"image": fmt.Sprintf("quay.io/cardil/wathola-forwarder:%v", Version),
+						"image": pkgTest.ImagePath(forwarderName),
 						"volumeMounts": []map[string]interface{}{{
 							"name":      configName,
 							"mountPath": configMountPoint,

@@ -26,10 +26,6 @@ import (
 )
 
 var (
-	// Version is a version of wathola tool version that is built outside of eventing
-	// TODO(ksuszyns): Donate a wathola tool to this repo, as discussed in knative/test-infra#1631
-	Version = "v0.7.0"
-
 	// FIXME: Interval is set to 200 msec, as lower values will result in errors: knative/eventing#2357
 	// Interval = 10 * time.Millisecond
 	Interval = 200 * time.Millisecond
