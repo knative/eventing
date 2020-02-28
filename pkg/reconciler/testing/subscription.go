@@ -197,6 +197,12 @@ func MarkAddedToChannel(s *v1alpha1.Subscription) {
 	s.Status.MarkAddedToChannel()
 }
 
+func MarkNotAddedToChannel(reason, msg string) SubscriptionOption {
+	return func(s *v1alpha1.Subscription) {
+		s.Status.MarkNotAddedToChannel(reason, msg)
+	}
+}
+
 func MarkReferencesResolved(s *v1alpha1.Subscription) {
 	s.Status.MarkReferencesResolved()
 }

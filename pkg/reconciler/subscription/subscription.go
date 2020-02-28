@@ -123,10 +123,18 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1alpha1.S
 func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1alpha1.Subscription) pkgreconciler.Event {
 	channel, err := r.getChannel(ctx, subscription)
 	if err != nil {
+		// If the channel was deleted (i.e., error == notFound), just return nil so that
+		// the subscription's finalizer is removed and the object is gc'ed.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
-
-	return r.syncChannel(ctx, channel, subscription)
+	// Remove the Subscription from the Channel's subscribers list only if it was actually added in the first place.
+	if subscription.Status.IsAddedToChannel() {
+		return r.syncChannel(ctx, channel, subscription)
+	}
+	return nil
 }
 
 func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, channel *eventingduckv1alpha1.Channelable, sub *v1alpha1.Subscription) pkgreconciler.Event {
@@ -155,7 +163,7 @@ func (r Reconciler) syncChannel(ctx context.Context, channel *eventingduckv1alph
 	if patched, err := r.syncPhysicalChannel(ctx, sub, channel, false); err != nil {
 		logging.FromContext(ctx).Warn("Failed to sync physical Channel", zap.Error(err))
 		sub.Status.MarkNotAddedToChannel(physicalChannelSyncFailed, "Failed to sync physical Channel: %v", err)
-		return pkgreconciler.NewEvent(corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to synchronized to channel %q: %v", channel.Name, err)
+		return pkgreconciler.NewEvent(corev1.EventTypeWarning, physicalChannelSyncFailed, "Failed to synchronize to channel %q: %v", channel.Name, err)
 	} else if patched {
 		if sub.DeletionTimestamp.IsZero() {
 			sub.Status.MarkAddedToChannel()
