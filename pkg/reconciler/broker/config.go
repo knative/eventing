@@ -60,7 +60,6 @@ func NewConfigFromConfigMapFunc(ctx context.Context) func(configMap *corev1.Conf
 		}
 
 		if err := json.Unmarshal(j, &config.DefaultChannelTemplate); err != nil {
-
 			return nil, fmt.Errorf("ConfigMap's value could not be unmarshaled. %w, %s", err, string(j))
 		}
 
