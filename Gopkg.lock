@@ -1483,6 +1483,7 @@
     "go.opencensus.io/trace",
     "go.uber.org/atomic",
     "go.uber.org/zap",
+    "go.uber.org/zap/zapcore",
     "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
