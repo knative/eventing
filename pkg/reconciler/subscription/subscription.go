@@ -123,10 +123,20 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, subscription *v1alpha1.S
 func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1alpha1.Subscription) pkgreconciler.Event {
 	channel, err := r.getChannel(ctx, subscription)
 	if err != nil {
-		return err
+		// If the channel was deleted (i.e., error == notFound), just return nil so that
+		// the subscription's finalizer is removed and the object is gc'ed.
+		if apierrors.IsNotFound(err) {
+			return nil
+		} else {
+			return err
+		}
+	} else {
+		// Remove the Subscription from the Channel's subscribers list only if it was actually added in the first place.
+		if subscription.Status.IsAddedToChannel() {
+			return r.syncChannel(ctx, channel, subscription)
+		}
 	}
-
-	return r.syncChannel(ctx, channel, subscription)
+	return nil
 }
 
 func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, channel *eventingduckv1alpha1.Channelable, sub *v1alpha1.Subscription) pkgreconciler.Event {

@@ -1021,6 +1021,31 @@ func TestAllCases(t *testing.T) {
 				//patchSubscribers(testNS, channelName, nil), // the channel does not have subs in this object cache.
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
+		}, {
+			Name: "subscription deleted - channel does not exists",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeleted,
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+			},
+			Key: testNS + "/" + subscriptionName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchRemoveFinalizers(testNS, subscriptionName),
+			},
 		},
 	}
 
