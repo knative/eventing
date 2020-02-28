@@ -43,7 +43,7 @@ UNINSTALL_LIST=()
 # If no parameters are passed, installs the current source-based build.
 # Parameters: $1 - Knative Eventing YAML file
 function install_knative_eventing {
-  local knative_monitoring_pods knative_monitoring_version monitoring_yaml
+  local knative_monitoring_pods
   local INSTALL_RELEASE_YAML=$1
   echo ">> Installing Knative Eventing"
   if [[ -z "$1" ]]; then
@@ -53,18 +53,13 @@ function install_knative_eventing {
   fi
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
-  knative_monitoring_version=$(go run test/scripts/resolve_matching_release.go \
-    'knative/serving' "${LATEST_RELEASE_VERSION}") \
-    || fail_test 'Could not resolve knative monitoring version'
-
   # Ensure knative monitoring is installed only once
   knative_monitoring_pods=$(kubectl get pods -n knative-monitoring \
     --field-selector status.phase=Running 2> /dev/null | tail -n +2 | wc -l)
   if ! [[ ${knative_monitoring_pods} -gt 0 ]]; then
-    echo ">> Installing Knative Monitoring: ${knative_monitoring_version}"
-    monitoring_yaml="https://github.com/knative/serving/releases/download/${knative_monitoring_version}/monitoring.yaml"
-    start_knative_monitoring "${monitoring_yaml}" || fail_test "Knative Monitoring did not come up"
-    UNINSTALL_LIST+=( "${monitoring_yaml}" )
+    echo ">> Installing Knative Monitoring"
+    start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+    UNINSTALL_LIST+=( "${KNATIVE_MONITORING_RELEASE}" )
   else
     echo ">> Knative Monitoring seems to be running, pods running: ${knative_monitoring_pods}."
   fi
@@ -208,17 +203,9 @@ function install_istio {
 # Installs Knative Serving in the current cluster, and waits for it to be ready.
 function install_knative_serving {
   echo ">> Installing Knative serving"
-  local SERVING_VERSION
-  SERVING_VERSION=$(go run test/scripts/resolve_matching_release.go \
-    'knative/serving' "${LATEST_RELEASE_VERSION}") \
-    || fail_test 'Could not resolve knative serving version'
-  readonly SERVING_YAML="https://github.com/knative/serving/releases/download/${SERVING_VERSION}/serving.yaml"
-
-  echo "Knative serving YAML: ${SERVING_YAML}"
-  kubectl apply -f "${SERVING_YAML}" || return 1
-  UNINSTALL_LIST+=( "${SERVING_YAML}" )
-
-  wait_until_pods_running knative-serving || fail_test "Knative Serving did not come up"
+  echo "Knative serving YAML: ${KNATIVE_SERVING_RELEASE}"
+  start_latest_knative_serving || fail_test 'Knative Serving failed to install'
+  UNINSTALL_LIST+=( "${KNATIVE_SERVING_RELEASE}" )
 }
 
 function wait_for_file {

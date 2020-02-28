@@ -1472,7 +1472,6 @@
     "github.com/pkg/errors",
     "github.com/robfig/cron",
     "github.com/rogpeppe/fastuuid",
-    "github.com/rogpeppe/go-internal/semver",
     "github.com/tsenart/vegeta/lib",
     "github.com/wavesoftware/go-ensure",
     "go.opencensus.io/plugin/ochttp",
