@@ -947,14 +947,12 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
-			// TODO: this test is wrong.
-			Name: "subscription deleted",
+			Name: "subscription deleted - channel patch succeeded",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
@@ -967,10 +965,6 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
-				),
-				NewInMemoryChannel(replyName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
@@ -979,18 +973,15 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				//patchSubscribers(testNS, channelName, nil), // the channel does not have subs in this object cache.
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			// TODO: this test is wrong.
-			Name: "subscription deleted - channel patch fails",
+			Name: "subscription not deleted - channel patch fails",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
@@ -1003,10 +994,10 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
-				),
-				NewInMemoryChannel(replyName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{
+						{UID: subscriptionUID, SubscriberURI: subscriberURI},
+					}),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
 				),
 			},
 			Key: testNS + "/" + subscriptionName,
@@ -1014,12 +1005,23 @@ func TestAllCases(t *testing.T) {
 				InduceFailure("patch", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				//Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch channels"),
-				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", fmt.Sprintf("Failed to synchronize to channel %q: %s", channelName, "inducing failure for patch inmemorychannels")),
 			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					MarkNotAddedToChannel("PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch inmemorychannels"),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeleted,
+				),
+			}},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				//patchSubscribers(testNS, channelName, nil), // the channel does not have subs in this object cache.
-				patchRemoveFinalizers(testNS, subscriptionName),
+				patchSubscribers(testNS, channelName, nil), // the channel does not have subs in this object cache.
 			},
 		}, {
 			Name: "subscription deleted - channel does not exists",
@@ -1087,7 +1089,7 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 		}
 		spec = fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
 	} else {
-		spec = `{"subscribable":{}}`
+		spec = `{"subscribable":{"subscribers":null}}`
 	}
 
 	patch := `{"spec":` + spec + `}`

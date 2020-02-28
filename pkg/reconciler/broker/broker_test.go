@@ -1201,7 +1201,7 @@ func TestReconcile(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerNotSubscribed("testInducedError", "test induced [error]"),
+					WithTriggerNotSubscribed("testInducedError", "test induced error"),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDependencyReady(),
