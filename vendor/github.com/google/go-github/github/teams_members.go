@@ -24,9 +24,9 @@ type TeamListTeamMembersOptions struct {
 // team.
 //
 // GitHub API docs: https://developer.github.com/v3/teams/members/#list-team-members
-func (s *TeamsService) ListTeamMembers(ctx context.Context, team int64, opt *TeamListTeamMembersOptions) ([]*User, *Response, error) {
+func (s *TeamsService) ListTeamMembers(ctx context.Context, team int64, opts *TeamListTeamMembersOptions) ([]*User, *Response, error) {
 	u := fmt.Sprintf("teams/%v/members", team)
-	u, err := addOptions(u, opt)
+	u, err := addOptions(u, opts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -35,8 +35,6 @@ func (s *TeamsService) ListTeamMembers(ctx context.Context, team int64, opt *Tea
 	if err != nil {
 		return nil, nil, err
 	}
-
-	req.Header.Set("Accept", mediaTypeNestedTeamsPreview)
 
 	var members []*User
 	resp, err := s.client.Do(ctx, req, &members)
@@ -74,8 +72,6 @@ func (s *TeamsService) GetTeamMembership(ctx context.Context, team int64, user s
 	if err != nil {
 		return nil, nil, err
 	}
-
-	req.Header.Set("Accept", mediaTypeNestedTeamsPreview)
 
 	t := new(Membership)
 	resp, err := s.client.Do(ctx, req, t)
@@ -118,9 +114,9 @@ type TeamAddTeamMembershipOptions struct {
 // added as a member of the team.
 //
 // GitHub API docs: https://developer.github.com/v3/teams/members/#add-or-update-team-membership
-func (s *TeamsService) AddTeamMembership(ctx context.Context, team int64, user string, opt *TeamAddTeamMembershipOptions) (*Membership, *Response, error) {
+func (s *TeamsService) AddTeamMembership(ctx context.Context, team int64, user string, opts *TeamAddTeamMembershipOptions) (*Membership, *Response, error) {
 	u := fmt.Sprintf("teams/%v/memberships/%v", team, user)
-	req, err := s.client.NewRequest("PUT", u, opt)
+	req, err := s.client.NewRequest("PUT", u, opts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -152,9 +148,9 @@ func (s *TeamsService) RemoveTeamMembership(ctx context.Context, team int64, use
 // Preview features are not supported for production use.
 //
 // GitHub API docs: https://developer.github.com/v3/teams/members/#list-pending-team-invitations
-func (s *TeamsService) ListPendingTeamInvitations(ctx context.Context, team int64, opt *ListOptions) ([]*Invitation, *Response, error) {
+func (s *TeamsService) ListPendingTeamInvitations(ctx context.Context, team int64, opts *ListOptions) ([]*Invitation, *Response, error) {
 	u := fmt.Sprintf("teams/%v/invitations", team)
-	u, err := addOptions(u, opt)
+	u, err := addOptions(u, opts)
 	if err != nil {
 		return nil, nil, err
 	}

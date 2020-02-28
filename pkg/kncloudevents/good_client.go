@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Knative Authors
+ * Copyright 2020 The Knative Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,14 @@ type ConnectionArgs struct {
 	MaxIdleConnsPerHost int
 }
 
+func (ca *ConnectionArgs) ConfigureTransport(transport *nethttp.Transport) {
+	if ca == nil {
+		return
+	}
+	transport.MaxIdleConns = ca.MaxIdleConns
+	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
+}
+
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	tOpts := []http.Option{
 		cloudevents.WithBinaryEncoding(),
@@ -59,12 +67,9 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 // and different connection options, in case they are specified.
 func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connectionArgs *ConnectionArgs, opts ...client.Option) (cloudevents.Client, error) {
 	// Add connection options to the default transport.
-	var base = nethttp.DefaultTransport
-	if connectionArgs != nil {
-		baseTransport := base.(*nethttp.Transport)
-		baseTransport.MaxIdleConns = connectionArgs.MaxIdleConns
-		baseTransport.MaxIdleConnsPerHost = connectionArgs.MaxIdleConnsPerHost
-	}
+	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
+	connectionArgs.ConfigureTransport(base)
+
 	// Add output tracing.
 	t.Client = &nethttp.Client{
 		Transport: &ochttp.Transport{
@@ -76,7 +81,7 @@ func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connection
 	if opts == nil {
 		opts = make([]client.Option, 0)
 	}
-	opts = append(opts, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
+	opts = append(opts, cloudevents.WithUUIDs(), cloudevents.WithTimeNow(), cloudevents.WithoutTracePropagation())
 
 	// Use the transport to make a new CloudEvents client.
 	c, err := cloudevents.NewClient(t, opts...)

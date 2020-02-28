@@ -132,6 +132,15 @@ func (t *TDigest) Centroids() CentroidList {
 	return cl
 }
 
+func (t *TDigest) Count() float64 {
+	t.process()
+	count := 0.0
+	for _, centroid := range t.processed {
+		count += centroid.Weight
+	}
+	return count
+}
+
 func (t *TDigest) updateCumulative() {
 	if n := t.processed.Len() + 1; n <= cap(t.cumulative) {
 		t.cumulative = t.cumulative[:n]

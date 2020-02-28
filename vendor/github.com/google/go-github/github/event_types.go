@@ -7,6 +7,8 @@
 
 package github
 
+import "encoding/json"
+
 // RequestedAction is included in a CheckRunEvent when a user has invoked an action,
 // i.e. when the CheckRunEvent's Action field is "requested_action".
 type RequestedAction struct {
@@ -597,6 +599,10 @@ type PullRequestEvent struct {
 	// The following field is only present when the webhook is triggered on
 	// a repository belonging to an organization.
 	Organization *Organization `json:"organization,omitempty"`
+
+	// The following fields are only populated when the Action is "synchronize".
+	Before *string `json:"before,omitempty"`
+	After  *string `json:"after,omitempty"`
 }
 
 // PullRequestReviewEvent is triggered when a review is submitted on a pull
@@ -717,6 +723,8 @@ type PushEventRepository struct {
 	HasWiki         *bool      `json:"has_wiki,omitempty"`
 	HasPages        *bool      `json:"has_pages,omitempty"`
 	ForksCount      *int       `json:"forks_count,omitempty"`
+	Archived        *bool      `json:"archived,omitempty"`
+	Disabled        *bool      `json:"disabled,omitempty"`
 	OpenIssuesCount *int       `json:"open_issues_count,omitempty"`
 	DefaultBranch   *string    `json:"default_branch,omitempty"`
 	MasterBranch    *string    `json:"master_branch,omitempty"`
@@ -738,7 +746,7 @@ type PushEventRepoOwner struct {
 }
 
 // ReleaseEvent is triggered when a release is published, unpublished, created,
-// edited, deleted, or prerelased.
+// edited, deleted, or prereleased.
 // The Webhook event name is "release".
 //
 // GitHub API docs: https://developer.github.com/v3/activity/events/types/#releaseevent
@@ -769,6 +777,22 @@ type RepositoryEvent struct {
 	// "transferred", "publicized", or "privatized".
 	Action *string     `json:"action,omitempty"`
 	Repo   *Repository `json:"repository,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Org          *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+	Installation *Installation `json:"installation,omitempty"`
+}
+
+// RepositoryDispatchEvent is triggered when a client sends a POST request to the repository dispatch event endpoint.
+//
+// GitHub API docs: https://developer.github.com/v3/activity/events/types/#repositorydispatchevent
+type RepositoryDispatchEvent struct {
+	// Action is the event_type that submitted with the repository dispatch payload. Value can be any string.
+	Action        *string         `json:"action,omitempty"`
+	Branch        *string         `json:"branch,omitempty"`
+	ClientPayload json.RawMessage `json:"client_payload,omitempty"`
+	Repo          *Repository     `json:"repository,omitempty"`
 
 	// The following fields are only populated by Webhook events.
 	Org          *Organization `json:"organization,omitempty"`
@@ -870,6 +894,20 @@ type TeamAddEvent struct {
 	Org          *Organization `json:"organization,omitempty"`
 	Sender       *User         `json:"sender,omitempty"`
 	Installation *Installation `json:"installation,omitempty"`
+}
+
+// UserEvent is triggered when a user is created or deleted.
+// The Webhook event name is "user".
+//
+// Only global webhooks can subscribe to this event type.
+//
+// GitHub API docs: https://developer.github.com/enterprise/v3/activity/events/types/#userevent-enterprise
+type UserEvent struct {
+	User *User `json:"user,omitempty"`
+	// The action performed. Possible values are: "created" or "deleted".
+	Action     *string     `json:"action,omitempty"`
+	Enterprise *Enterprise `json:"enterprise,omitempty"`
+	Sender     *User       `json:"sender,omitempty"`
 }
 
 // WatchEvent is related to starring a repository, not watching. See this API

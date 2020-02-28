@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,10 +22,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"knative.dev/pkg/apis"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
 )
 
 func TestConfigMapData(t *testing.T) {
