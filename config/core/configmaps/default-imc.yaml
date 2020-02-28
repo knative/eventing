@@ -18,5 +18,6 @@ metadata:
   name: config-br-default-channel
   namespace: knative-eventing
 data:
-  channelTemplateSpec.apiVersion: messaging.knative.dev/v1alpha1
-  channelTemplateSpec.kind: InMemoryChannel
+  channelTemplateSpec: |
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: InMemoryChannel
