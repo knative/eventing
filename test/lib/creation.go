@@ -177,7 +177,7 @@ func (client *Client) CreateBrokerConfigMapOrFail(name string, channel *metav1.T
 			"channelTemplateSpec": fmt.Sprintf(`
       apiVersion: %q
       kind: %q
-`, channel.Kind, channel.APIVersion),
+`, channel.APIVersion, channel.Kind),
 		},
 	}
 	cm, err := client.Kube.Kube.CoreV1().ConfigMaps(client.Namespace).Create(cm)
