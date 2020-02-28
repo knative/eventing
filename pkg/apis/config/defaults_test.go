@@ -19,10 +19,7 @@ package config
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmp"
@@ -31,10 +28,6 @@ import (
 	. "knative.dev/pkg/configmap/testing"
 	_ "knative.dev/pkg/system/testing"
 )
-
-var ignoreStuff = cmp.Options{
-	cmpopts.IgnoreUnexported(resource.Quantity{}),
-}
 
 func TestDefaultsConfigurationFromFile(t *testing.T) {
 	_, example := ConfigMapsFromTestFile(t, DefaultsConfigName)

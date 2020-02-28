@@ -19,16 +19,20 @@ package v1alpha1
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/messaging/config"
 	v1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/pkg/apis"
 )
 
 func (c *Channel) SetDefaults(ctx context.Context) {
 	if c != nil && c.Spec.ChannelTemplate == nil {
-		// The singleton may not have been set, if so ignore it and validation will reject the
-		// Channel.
-		if cd := v1beta1.ChannelDefaulterSingleton; cd != nil {
-			channelTemplate := cd.GetDefault(c.Namespace)
-			c.Spec.ChannelTemplate = channelTemplate
+		cfg := config.FromContextOrDefaults(ctx)
+		defaultChannel, err := cfg.ChannelDefaults.GetChannelConfig(apis.ParentMeta(ctx).Namespace)
+		if err == nil {
+			c.Spec.ChannelTemplate = &v1beta1.ChannelTemplateSpec{
+				defaultChannel.TypeMeta,
+				defaultChannel.Spec,
+			}
 		}
 	}
 	c.Spec.SetDefaults(ctx)

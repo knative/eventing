@@ -1608,6 +1608,7 @@
     "knative.dev/pkg/webhook/resourcesemantics/validation",
     "knative.dev/test-infra/scripts",
     "knative.dev/test-infra/tools/dep-collector",
+    "sigs.k8s.io/yaml",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -31,7 +32,7 @@ import (
 func TestParallelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *messagingv1beta1.ChannelTemplateSpec
+		channelTemplate     *config.ChannelTemplateSpec
 		initial             Parallel
 		expected            Parallel
 	}{
@@ -43,7 +44,7 @@ func TestParallelSetDefaults(t *testing.T) {
 			expected: Parallel{},
 		},
 		"set ChannelDefaulter": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			expected: Parallel{
 				Spec: ParallelSpec{
 					ChannelTemplate: defaultChannelTemplate,
@@ -51,7 +52,7 @@ func TestParallelSetDefaults(t *testing.T) {
 			},
 		},
 		"branches namespace defaulted": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			initial: Parallel{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
 				Spec: ParallelSpec{
@@ -110,7 +111,7 @@ func TestParallelSetDefaults(t *testing.T) {
 			},
 		},
 		"template already specified": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			initial: Parallel{
 				Spec: ParallelSpec{
 					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
@@ -135,24 +136,18 @@ func TestParallelSetDefaults(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx := context.Background()
 			if !tc.nilChannelDefaulter {
-				messagingv1beta1.ChannelDefaulterSingleton = &parallelChannelDefaulter{
-					channelTemplate: tc.channelTemplate,
-				}
-				defer func() { messagingv1beta1.ChannelDefaulterSingleton = nil }()
+				ctx = config.ToContext(ctx, &config.Config{
+					ChannelDefaults: &config.ChannelDefaults{
+						ClusterDefault: tc.channelTemplate,
+					},
+				})
 			}
-			tc.initial.SetDefaults(context.TODO())
+			tc.initial.SetDefaults(ctx)
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}
 		})
 	}
-}
-
-type parallelChannelDefaulter struct {
-	channelTemplate *messagingv1beta1.ChannelTemplateSpec
-}
-
-func (cd *parallelChannelDefaulter) GetDefault(_ string) *messagingv1beta1.ChannelTemplateSpec {
-	return cd.channelTemplate
 }

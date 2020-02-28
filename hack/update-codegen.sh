@@ -44,6 +44,7 @@ ${GOPATH}/bin/deepcopy-gen \
   -O zz_generated.deepcopy \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt \
   -i knative.dev/eventing/pkg/apis/config \
+  -i knative.dev/eventing/pkg/apis/messaging/config \
 
 # Only deepcopy the Duck types, as they are not real resources.
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy" \
