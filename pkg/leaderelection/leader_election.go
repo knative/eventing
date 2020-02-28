@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package validation
+package leaderelection
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ var (
 	)
 )
 
-func ValidateLeaderElectionConfig(configMap *corev1.ConfigMap) (*kle.Config, error) {
+func ValidateConfig(configMap *corev1.ConfigMap) (*kle.Config, error) {
 	config, err := kle.NewConfigFromMap(configMap.Data)
 	if err != nil {
 		return nil, err
