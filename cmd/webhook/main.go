@@ -89,8 +89,9 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha1.PingSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 	// v1alpha2
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):  &sourcesv1alpha2.PingSource{},
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"): &sourcesv1alpha2.SinkBinding{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha2.ApiServerSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha2.SinkBinding{},
 
 	// For group sources.eventing.knative.dev.
 	// TODO(#2312): Remove this after v0.13.
@@ -330,7 +331,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				},
 			},
 			// Sources
-			// TODO: ApiServerSource
+			sourcesv1alpha2.Kind("ApiServerSource"): {
+				DefinitionName: sources.ApiServerSourceResource.String(),
+				HubVersion:     sourcesv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
+					sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
+				},
+			},
 			sourcesv1alpha2.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
 				HubVersion:     sourcesv1alpha1_,
