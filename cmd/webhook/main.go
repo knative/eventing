@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
 	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
 	"knative.dev/pkg/configmap"
@@ -53,6 +52,7 @@ import (
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
 	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
+	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/apis/sources"
@@ -117,21 +117,13 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
 
-	logger := logging.FromContext(ctx)
+	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
+	channelStore.WatchConfigs(cmw)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return store.ToContext(ctx)
+		return channelStore.ToContext(store.ToContext(ctx))
 	}
-
-	// Watch the default-ch-webhook ConfigMap and dynamically update the default
-	// Channel CRD.
-	// TODO(#2128): This should be persisted to context in the context function
-	// above and fetched off of context by the api code.  See knative/serving's logic
-	// around config-defaults for an example of this.
-	chDefaulter := defaultchannel.New(logger.Desugar())
-	messagingv1beta1.ChannelDefaulterSingleton = chDefaulter
-	cmw.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	return defaulting.NewAdmissionController(ctx,
 
@@ -157,9 +149,12 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
 
+	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
+	channelStore.WatchConfigs(cmw)
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return store.ToContext(ctx)
+		return channelStore.ToContext(store.ToContext(ctx))
 	}
 
 	return validation.NewAdmissionController(ctx,
@@ -249,9 +244,13 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 	// Decorate contexts with the current state of the config.
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
+
+	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
+	channelStore.WatchConfigs(cmw)
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return store.ToContext(ctx)
+		return channelStore.ToContext(store.ToContext(ctx))
 	}
 
 	var (

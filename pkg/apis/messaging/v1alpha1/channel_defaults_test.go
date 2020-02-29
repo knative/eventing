@@ -23,10 +23,17 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
+	"knative.dev/eventing/pkg/apis/messaging/config"
 	"knative.dev/eventing/pkg/apis/messaging/v1beta1"
 )
 
 var (
+	configDefaultChannelTemplate = &config.ChannelTemplateSpec{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: SchemeGroupVersion.String(),
+			Kind:       "InMemoryChannel",
+		},
+	}
 	defaultChannelTemplate = &v1beta1.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
@@ -38,7 +45,7 @@ var (
 func TestChannelSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *v1beta1.ChannelTemplateSpec
+		channelTemplate     *config.ChannelTemplateSpec
 		initial             Channel
 		expected            Channel
 	}{
@@ -50,7 +57,7 @@ func TestChannelSetDefaults(t *testing.T) {
 			expected: Channel{},
 		},
 		"set ChannelDefaulter": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			expected: Channel{
 				Spec: ChannelSpec{
 					ChannelTemplate: defaultChannelTemplate,
@@ -58,7 +65,7 @@ func TestChannelSetDefaults(t *testing.T) {
 			},
 		},
 		"template already specified": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			initial: Channel{
 				Spec: ChannelSpec{
 					ChannelTemplate: &v1beta1.ChannelTemplateSpec{
@@ -83,24 +90,18 @@ func TestChannelSetDefaults(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx := context.Background()
 			if !tc.nilChannelDefaulter {
-				v1beta1.ChannelDefaulterSingleton = &channelDefaulter{
-					channelTemplate: tc.channelTemplate,
-				}
-				defer func() { v1beta1.ChannelDefaulterSingleton = nil }()
+				ctx = config.ToContext(ctx, &config.Config{
+					ChannelDefaults: &config.ChannelDefaults{
+						ClusterDefault: tc.channelTemplate,
+					},
+				})
 			}
-			tc.initial.SetDefaults(context.TODO())
+			tc.initial.SetDefaults(ctx)
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}
 		})
 	}
-}
-
-type channelDefaulter struct {
-	channelTemplate *v1beta1.ChannelTemplateSpec
-}
-
-func (cd *channelDefaulter) GetDefault(_ string) *v1beta1.ChannelTemplateSpec {
-	return cd.channelTemplate
 }

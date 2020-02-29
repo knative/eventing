@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 
+	"knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
@@ -33,10 +34,14 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 		// If we haven't configured the new channelTemplate,
 		// then set the default channel to the new channelTemplate.
 		if bs.ChannelTemplate == nil {
-			// The singleton may not have been set, if so ignore it and validation will reject the Broker.
-			if cd := messagingv1beta1.ChannelDefaulterSingleton; cd != nil {
-				channelTemplate := cd.GetDefault(apis.ParentMeta(ctx).Namespace)
-				bs.ChannelTemplate = channelTemplate
+			cfg := config.FromContextOrDefaults(ctx)
+			c, err := cfg.ChannelDefaults.GetChannelConfig(apis.ParentMeta(ctx).Namespace)
+
+			if err == nil {
+				bs.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
+					c.TypeMeta,
+					c.Spec,
+				}
 			}
 		}
 	} else {

@@ -35,15 +35,15 @@ var ignoreStuff = cmp.Options{
 func TestStoreLoadWithContext(t *testing.T) {
 	store := NewStore(logtesting.TestLogger(t))
 
-	_, defaultsConfig := ConfigMapsFromTestFile(t, DefaultsConfigName)
+	_, defaultsConfig := ConfigMapsFromTestFile(t, ChannelDefaultsConfigName)
 
 	store.OnConfigChanged(defaultsConfig)
 
 	config := FromContextOrDefaults(store.ToContext(context.Background()))
 
 	t.Run("defaults", func(t *testing.T) {
-		expected, _ := NewDefaultsConfigFromConfigMap(defaultsConfig)
-		if diff := cmp.Diff(expected, config.Defaults, ignoreStuff...); diff != "" {
+		expected, _ := NewChannelDefaultsConfigFromConfigMap(defaultsConfig)
+		if diff := cmp.Diff(expected, config.ChannelDefaults, ignoreStuff...); diff != "" {
 			t.Errorf("Unexpected defaults config (-want, +got): %v", diff)
 			t.Fatalf("Unexpected defaults config (-want, +got): %v", diff)
 		}
@@ -51,12 +51,12 @@ func TestStoreLoadWithContext(t *testing.T) {
 }
 
 func TestStoreLoadWithContextOrDefaults(t *testing.T) {
-	defaultsConfig := ConfigMapFromTestFile(t, DefaultsConfigName)
+	defaultsConfig := ConfigMapFromTestFile(t, ChannelDefaultsConfigName)
 	config := FromContextOrDefaults(context.Background())
 
-	t.Run("defaults", func(t *testing.T) {
-		expected, _ := NewDefaultsConfigFromConfigMap(defaultsConfig)
-		if diff := cmp.Diff(expected, config.Defaults, ignoreStuff...); diff != "" {
+	t.Run("channeldefaults", func(t *testing.T) {
+		expected, _ := NewChannelDefaultsConfigFromConfigMap(defaultsConfig)
+		if diff := cmp.Diff(expected, config.ChannelDefaults, ignoreStuff...); diff != "" {
 			t.Errorf("Unexpected defaults config (-want, +got): %v", diff)
 		}
 	})

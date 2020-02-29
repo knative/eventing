@@ -23,9 +23,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	"knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 const (
@@ -33,6 +34,13 @@ const (
 )
 
 var (
+	configDefaultChannelTemplate = &config.ChannelTemplateSpec{
+		TypeMeta: v1.TypeMeta{
+			APIVersion: SchemeGroupVersion.String(),
+			Kind:       "InMemoryChannel",
+		},
+	}
+
 	defaultTemplate = &messagingv1beta1.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
@@ -44,7 +52,7 @@ var (
 func TestSequenceSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *messagingv1beta1.ChannelTemplateSpec
+		channelTemplate     *config.ChannelTemplateSpec
 		initial             Sequence
 		expected            Sequence
 	}{
@@ -56,7 +64,7 @@ func TestSequenceSetDefaults(t *testing.T) {
 			expected: Sequence{},
 		},
 		"set ChannelDefaulter": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			expected: Sequence{
 				Spec: SequenceSpec{
 					ChannelTemplate: defaultChannelTemplate,
@@ -64,7 +72,7 @@ func TestSequenceSetDefaults(t *testing.T) {
 			},
 		},
 		"steps and reply namespace defaulted": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			initial: Sequence{
 				ObjectMeta: metav1.ObjectMeta{Namespace: testNS},
 				Spec: SequenceSpec{
@@ -92,7 +100,7 @@ func TestSequenceSetDefaults(t *testing.T) {
 			},
 		},
 		"template already specified": {
-			channelTemplate: defaultChannelTemplate,
+			channelTemplate: configDefaultChannelTemplate,
 			initial: Sequence{
 				Spec: SequenceSpec{
 					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
@@ -117,24 +125,18 @@ func TestSequenceSetDefaults(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
+			ctx := context.Background()
 			if !tc.nilChannelDefaulter {
-				messagingv1beta1.ChannelDefaulterSingleton = &sequenceChannelDefaulter{
-					channelTemplate: tc.channelTemplate,
-				}
-				defer func() { messagingv1beta1.ChannelDefaulterSingleton = nil }()
+				ctx = config.ToContext(ctx, &config.Config{
+					ChannelDefaults: &config.ChannelDefaults{
+						ClusterDefault: tc.channelTemplate,
+					},
+				})
 			}
-			tc.initial.SetDefaults(context.Background())
+			tc.initial.SetDefaults(ctx)
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}
 		})
 	}
-}
-
-type sequenceChannelDefaulter struct {
-	channelTemplate *messagingv1beta1.ChannelTemplateSpec
-}
-
-func (cd *sequenceChannelDefaulter) GetDefault(_ string) *messagingv1beta1.ChannelTemplateSpec {
-	return cd.channelTemplate
 }
