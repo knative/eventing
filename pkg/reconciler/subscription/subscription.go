@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/pkg/apis/duck"
@@ -335,9 +336,21 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1alpha1.Sub
 // underlying channels), fetch and validate the "backing" channel.
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription) (*eventingduckv1alpha1.Channelable, pkgreconciler.Event) {
 	logging.FromContext(ctx).Warn("GETTING channel", zap.Any("channel", sub.Spec.Channel))
+
+	// let's use the v1alpha1 API for now, until we migrate this reconciler
+	// to work directly on v1beta1 object
+	channel := sub.Spec.Channel
+	if channel.GroupVersionKind().Version == "v1beta1" {
+		channel.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   channel.GroupVersionKind().Group,
+			Version: "v1alpha1",
+			Kind:    channel.GroupVersionKind().Kind,
+		})
+	}
+
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
-	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
+	obj, err := r.trackAndFetchChannel(ctx, sub, channel)
 	if err != nil {
 		return nil, err
 	}
