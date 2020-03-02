@@ -36,6 +36,7 @@ import (
 
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
+	"knative.dev/eventing/pkg/apis/messaging"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
@@ -282,7 +283,7 @@ func (r *Reconciler) resolveDeadLetterSink(ctx context.Context, subscription *v1
 
 func (r *Reconciler) getSubStatus(subscription *v1alpha1.Subscription, channel *eventingduckv1alpha1.ChannelableCombined) (eventingduckv1alpha1.SubscriberStatus, error) {
 	if channel.Annotations != nil {
-		if channel.Annotations["messaging.knative.dev/subscribable-version"] == "v1beta1" {
+		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
 			return r.getSubStatusV1Beta1(subscription, channel)
 		}
 	}
@@ -466,7 +467,7 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 
 func (r *Reconciler) updateChannelRemoveSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1alpha1.Subscription) {
 	if channel.Annotations != nil {
-		if channel.Annotations["messaging.knative.dev/subscribable-version"] == "v1beta1" {
+		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
 			r.updateChannelRemoveSubscriptionV1Beta1(ctx, channel, sub)
 			return
 		}
@@ -501,7 +502,7 @@ func (r *Reconciler) updateChannelRemoveSubscriptionV1Beta1(ctx context.Context,
 
 func (r *Reconciler) updateChannelAddSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1alpha1.Subscription) {
 	if channel.Annotations != nil {
-		if channel.Annotations["messaging.knative.dev/subscribable-version"] == "v1beta1" {
+		if channel.Annotations[messaging.SubscribableDuckVersionAnnotation] == "v1beta1" {
 			r.updateChannelAddSubscriptionV1Beta1(ctx, channel, sub)
 			return
 		}
