@@ -18,10 +18,11 @@ package v1alpha1
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"reflect"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
@@ -300,7 +301,7 @@ func TestApiServerSourceConversionRoundTripDown(t *testing.T) {
 
 // Since v1alpha1 to v1alpha2 is lossy.
 func fixApiServerSourceDeprecated(in *ApiServerSource) *ApiServerSource {
-	for i, _ := range in.Spec.Resources {
+	for i := range in.Spec.Resources {
 		in.Spec.Resources[i].Controller = false
 		in.Spec.Resources[i].LabelSelector = metav1.LabelSelector{}
 		in.Spec.Resources[i].ControllerSelector = metav1.OwnerReference{}

@@ -19,13 +19,14 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/ptr"
-	"reflect"
 )
 
 // ConvertTo implements apis.Convertible.
