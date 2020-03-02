@@ -86,7 +86,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 		wantErr: false,
 		wantChannelDefaults: &ChannelDefaults{
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
-				"some-namespace": &ChannelTemplateSpec{
+				"some-namespace": {
 					TypeMeta: v1.TypeMeta{
 						APIVersion: "messaging.knative.dev/v1alpha1",
 						Kind:       "KafkaChannel",
@@ -146,7 +146,7 @@ func TestChannelDefaultsConfiguration(t *testing.T) {
 		wantErr: false,
 		wantChannelDefaults: &ChannelDefaults{
 			NamespaceDefaults: map[string]*ChannelTemplateSpec{
-				"some-namespace": &ChannelTemplateSpec{
+				"some-namespace": {
 					TypeMeta: v1.TypeMeta{
 						APIVersion: "messaging.knative.dev/v1beta1",
 						Kind:       "InMemoryChannel",
