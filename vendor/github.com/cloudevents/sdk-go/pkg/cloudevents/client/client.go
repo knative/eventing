@@ -6,9 +6,11 @@ import (
 	"sync"
 
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/extensions"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	"go.opencensus.io/trace"
 )
 
 // Client interface defines the runtime contract the CloudEvents client supports.
@@ -78,6 +80,8 @@ type ceClient struct {
 
 	receiverMu        sync.Mutex
 	eventDefaulterFns []EventDefaulter
+
+	disableTracePropagation bool
 }
 
 // Send transmits the provided event on a preconfigured Transport.
@@ -86,6 +90,13 @@ type ceClient struct {
 // error.
 func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	ctx, r := observability.NewReporter(ctx, reportSend)
+
+	ctx, span := trace.StartSpan(ctx, clientSpanName, trace.WithSpanKind(trace.SpanKindClient))
+	defer span.End()
+	if span.IsRecordingEvents() {
+		span.AddAttributes(eventTraceAttributes(event.Context)...)
+	}
+
 	rctx, resp, err := c.obsSend(ctx, event)
 	if err != nil {
 		r.Error()
@@ -107,6 +118,16 @@ func (c *ceClient) obsSend(ctx context.Context, event cloudevents.Event) (contex
 		}
 	}
 
+	// Set distributed tracing extension.
+	if !c.disableTracePropagation {
+		if span := trace.FromContext(ctx); span != nil {
+			event.Context = event.Context.Clone()
+			if err := extensions.FromSpanContext(span.SpanContext()).AddTracingAttributes(event.Context); err != nil {
+				return ctx, nil, fmt.Errorf("error setting distributed tracing extension: %w", err)
+			}
+		}
+	}
+
 	// Validate the event conforms to the CloudEvents Spec.
 	if err := event.Validate(); err != nil {
 		return ctx, nil, err
@@ -118,6 +139,21 @@ func (c *ceClient) obsSend(ctx context.Context, event cloudevents.Event) (contex
 // Receive is called from from the transport on event delivery.
 func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	ctx, r := observability.NewReporter(ctx, reportReceive)
+
+	var span *trace.Span
+	if !c.transport.HasTracePropagation() {
+		if ext, ok := extensions.GetDistributedTracingExtension(event); ok {
+			ctx, span = ext.StartChildSpan(ctx, clientSpanName, trace.WithSpanKind(trace.SpanKindServer))
+		}
+	}
+	if span == nil {
+		ctx, span = trace.StartSpan(ctx, clientSpanName, trace.WithSpanKind(trace.SpanKindServer))
+	}
+	defer span.End()
+	if span.IsRecordingEvents() {
+		span.AddAttributes(eventTraceAttributes(event.Context)...)
+	}
+
 	err := c.obsReceive(ctx, event, resp)
 	if err != nil {
 		r.Error()
@@ -129,13 +165,7 @@ func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *c
 
 func (c *ceClient) obsReceive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	if c.fn != nil {
-		ctx, rFn := observability.NewReporter(ctx, reportReceiveFn)
 		err := c.fn.invoke(ctx, event, resp)
-		if err != nil {
-			rFn.Error()
-		} else {
-			rFn.OK()
-		}
 
 		// Apply the defaulter chain to the outgoing event.
 		if err == nil && resp != nil && resp.Event != nil && len(c.eventDefaulterFns) > 0 {

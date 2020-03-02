@@ -7,20 +7,18 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
 )
 
 // Observable represents the the customization used by the Reporter for a given
 // measurement and trace for a single method.
 type Observable interface {
-	TraceName() string
 	MethodName() string
 	LatencyMs() *stats.Float64Measure
 }
 
-// Reporter represents a running latency counter and trace span. When Error or
-// OK are called, the latency is calculated and the trace space is ended. Error
-// or OK are only allowed to be called once.
+// Reporter represents a running latency counter. When Error or OK are
+// called, the latency is calculated. Error or OK are only allowed to
+// be called once.
 type Reporter interface {
 	Error()
 	OK()
@@ -28,7 +26,6 @@ type Reporter interface {
 
 type reporter struct {
 	ctx   context.Context
-	span  *trace.Span
 	on    Observable
 	start time.Time
 	once  sync.Once
@@ -39,30 +36,14 @@ func LatencyTags() []tag.Key {
 	return []tag.Key{KeyMethod, KeyResult}
 }
 
-var (
-	// Tracing is disabled by default. It is very useful for profiling an
-	// application.
-	tracingEnabled = false
-)
+// Deprecated. Tracing is always enabled.
+func EnableTracing(enabled bool) {}
 
-// EnableTracing allows control over if tracing is enabled for the sdk.
-// Default is false. This applies to all of the
-// `github.com/cloudevents/sdk-go/...` package.
-func EnableTracing(enabled bool) {
-	tracingEnabled = enabled
-}
-
-// NewReporter creates and returns a reporter wrapping the provided Observable,
-// and injects a trace span into the context.
+// NewReporter creates and returns a reporter wrapping the provided Observable.
 func NewReporter(ctx context.Context, on Observable) (context.Context, Reporter) {
-	var span *trace.Span
-	if tracingEnabled {
-		ctx, span = trace.StartSpan(ctx, on.TraceName())
-	}
 	r := &reporter{
 		ctx:   ctx,
 		on:    on,
-		span:  span,
 		start: time.Now(),
 	}
 	r.tagMethod()
@@ -80,9 +61,6 @@ func (r *reporter) tagMethod() {
 func (r *reporter) record() {
 	ms := float64(time.Since(r.start) / time.Millisecond)
 	stats.Record(r.ctx, r.on.LatencyMs().M(ms))
-	if r.span != nil {
-		r.span.End()
-	}
 }
 
 // Error records the result as an error.

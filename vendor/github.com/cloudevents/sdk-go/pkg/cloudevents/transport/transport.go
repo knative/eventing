@@ -19,6 +19,11 @@ type Transport interface {
 	SetConverter(Converter)
 	// HasConverter is true when a non-nil converter has been set.
 	HasConverter() bool
+	// HasTracePropagation is true when the transport implements
+	// in-band trace propagation. When false, the client receiver
+	// will propagate trace context from distributed tracing
+	// extension attributes when available.
+	HasTracePropagation() bool
 }
 
 // Receiver is an interface to define how a transport will invoke a listener

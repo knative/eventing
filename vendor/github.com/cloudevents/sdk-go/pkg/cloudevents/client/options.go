@@ -61,3 +61,12 @@ func WithConverterFn(fn ConvertFn) Option {
 		return nil
 	}
 }
+
+// WithoutTracePropagation disables automatic trace propagation via
+// the distributed tracing extension.
+func WithoutTracePropagation() Option {
+	return func(c *ceClient) error {
+		c.disableTracePropagation = true
+		return nil
+	}
+}
