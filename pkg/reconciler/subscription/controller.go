@@ -25,7 +25,7 @@ import (
 	"knative.dev/pkg/tracker"
 
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/channel"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
@@ -61,7 +61,7 @@ func NewController(
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the
 	// Subscription needs to reconcile again.
-	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
+	r.channelableTracker = duck.NewListableTracker(ctx, channelablecombined.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.destinationResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	// Track changes to Channels.

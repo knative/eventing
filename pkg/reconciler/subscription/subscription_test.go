@@ -32,6 +32,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
@@ -1054,12 +1055,13 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
+		ctx = channelablecombined.WithDuck(ctx)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			Base:                reconciler.NewBase(ctx, "subscription-unit-test", cmw),
 			subscriptionLister:  listers.GetSubscriptionLister(),
 			channelLister:       listers.GetMessagingChannelLister(),
-			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker:  duck.NewListableTracker(ctx, channelablecombined.Get, func(types.NamespacedName) {}, 0),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 			tracker:             &FakeTracker{},
 		}
