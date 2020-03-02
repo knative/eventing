@@ -48,10 +48,10 @@ type ChannelableCombined struct {
 
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableCombinedSpec struct {
-	// SubscribableTypeSpec is for the v1alpha1 spec compatiblity.
+	// SubscribableTypeSpec is for the v1alpha1 spec compatibility.
 	SubscribableTypeSpec `json:",inline"`
 
-	// SubscribableSpec is for the v1beta1 spec compatiblity.
+	// SubscribableSpec is for the v1beta1 spec compatibility.
 	eventingduckv1beta1.SubscribableSpec `json:",inline"`
 
 	// DeliverySpec contains options controlling the event delivery
