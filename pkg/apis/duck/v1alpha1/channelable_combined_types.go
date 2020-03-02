@@ -31,9 +31,11 @@ import (
 // +genduck
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Channelable is a skeleton type wrapping Subscribable and Addressable in the manner we expect resource writers
-// defining compatible resources to embed it. We will typically use this type to deserialize
-// Channelable ObjectReferences and access their subscription and address data.  This is not a real resource.
+// ChannelableCombined is a skeleton type wrapping Subscribable and Addressable of both
+// v1alpha1 and v1beta1 duck types. This is not to be used by resource writers and is
+// only used by Subscription Controller to synthesize patches and read the Status
+// of the Channelable Resources.
+// This is not a real resource.
 type ChannelableCombined struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -46,9 +48,10 @@ type ChannelableCombined struct {
 
 // ChannelableSpec contains Spec of the Channelable object
 type ChannelableCombinedSpec struct {
+	// SubscribableTypeSpec is for the v1alpha1 spec compatiblity.
 	SubscribableTypeSpec `json:",inline"`
 
-	// These are the inlined SubscribableSpec
+	// SubscribableSpec is for the v1beta1 spec compatiblity.
 	eventingduckv1beta1.SubscribableSpec `json:",inline"`
 
 	// DeliverySpec contains options controlling the event delivery
@@ -64,13 +67,12 @@ type ChannelableCombinedStatus struct {
 	duckv1.Status `json:",inline"`
 	// AddressStatus is the part where the Channelable fulfills the Addressable contract.
 	v1alpha1.AddressStatus `json:",inline"`
-	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
+	// SubscribableTypeStatus is the v1alpha1 part of the Subscribers status
 	SubscribableTypeStatus `json:",inline"`
+	// SubscribableStatus is the v1beta1 part of the Subscribers status.
+	eventingduckv1beta1.SubscribableStatus `json:",inline"`
 	// ErrorChannel is set by the channel when it supports native error handling via a channel
 	// +optional
-	// Subscribers is populated with the statuses of each of the Channelable's subscribers.
-	eventingduckv1beta1.SubscribableStatus `json:",inline"`
-
 	ErrorChannel *corev1.ObjectReference `json:"errorChannel,omitempty"`
 }
 
