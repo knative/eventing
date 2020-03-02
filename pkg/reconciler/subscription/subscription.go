@@ -138,7 +138,6 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, subscription *v1alpha1.Su
 
 func (r Reconciler) checkChannelStatusForSubscription(ctx context.Context, channel *eventingduckv1alpha1.ChannelableCombined, sub *v1alpha1.Subscription) pkgreconciler.Event {
 	ss, err := r.getSubStatus(sub, channel)
-	logging.FromContext(ctx).Warn(" SUBSCRIPTION STATUS.", zap.Any("sub", sub))
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to get subscription status.", zap.Error(err))
 		sub.Status.MarkChannelUnknown(subscriptionNotMarkedReadyByChannel, "Failed to get subscription status: %s", err)
@@ -346,7 +345,7 @@ func (r *Reconciler) trackAndFetchChannel(ctx context.Context, sub *v1alpha1.Sub
 // If the Channel is a channels.messaging type (hence, it's only a factory for
 // underlying channels), fetch and validate the "backing" channel.
 func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription) (*eventingduckv1alpha1.ChannelableCombined, pkgreconciler.Event) {
-	logging.FromContext(ctx).Warn("GETTING channel", zap.Any("channel", sub.Spec.Channel))
+	logging.FromContext(ctx).Info("GETTING channel", zap.Any("channel", sub.Spec.Channel))
 
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
@@ -450,8 +449,6 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 	if len(patch) <= 2 {
 		return false, nil
 	}
-
-	logging.FromContext(ctx).Info("APPLYING PATCH", zap.Any("patched", patch), zap.Any("BEFORE:", channel), zap.Any("AFTER", after))
 
 	resourceClient, err := eventingduck.ResourceInterface(r.DynamicClientSet, namespace, channel.GroupVersionKind())
 	if err != nil {
