@@ -350,7 +350,7 @@ func (r *Reconciler) getChannel(ctx context.Context, sub *v1alpha1.Subscription)
 
 	// 1. Track the channel pointed by subscription.
 	//   a. If channel is a Channel.messaging.knative.dev
-	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.channel)
+	obj, err := r.trackAndFetchChannel(ctx, sub, sub.Spec.Channel)
 	if err != nil {
 		return nil, err
 	}
