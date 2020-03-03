@@ -28,14 +28,13 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
@@ -147,7 +146,7 @@ func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error 
 
 // reconcileConfigMapPropagation reconciles the default ConfigMapPropagation for the Namespace 'ns'.
 func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *corev1.Namespace) (*configsv1alpha1.ConfigMapPropagation, error) {
-	current, err := r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Get(resources.DefaultConfigMapPropagationName, metav1.GetOptions{})
+	current, err := r.configMapPropagationLister.ConfigMapPropagations(ns.Name).Get(resources.DefaultConfigMapPropagationName)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
@@ -207,7 +206,7 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 
 // reconcileBrokerServiceAccount reconciles the Broker's service account for Namespace 'ns'.
 func (r *Reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount) (*corev1.ServiceAccount, error) {
-	current, err := r.KubeClientSet.CoreV1().ServiceAccounts(ns.Name).Get(sa.Name, metav1.GetOptions{})
+	current, err := r.serviceAccountLister.ServiceAccounts(ns.Name).Get(sa.Name)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
@@ -227,7 +226,7 @@ func (r *Reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *core
 
 // reconcileBrokerRBAC reconciles the Broker's service account RBAC for the Namespace 'ns'.
 func (r *Reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespace, sa *corev1.ServiceAccount, rb *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error) {
-	current, err := r.KubeClientSet.RbacV1().RoleBindings(rb.Namespace).Get(rb.Name, metav1.GetOptions{})
+	current, err := r.roleBindingLister.RoleBindings(rb.Namespace).Get(rb.Name)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
@@ -247,7 +246,7 @@ func (r *Reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespa
 
 // reconcileBroker reconciles the default Broker for the Namespace 'ns'.
 func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) (*v1beta1.Broker, error) {
-	current, err := r.EventingClientSet.EventingV1beta1().Brokers(ns.Name).Get(resources.DefaultBrokerName, metav1.GetOptions{})
+	current, err := r.brokerLister.Brokers(ns.Name).Get(resources.DefaultBrokerName)
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
