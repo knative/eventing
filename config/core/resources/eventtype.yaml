@@ -20,7 +20,6 @@ metadata:
     knative.dev/crd-install: "true"
 spec:
   group: eventing.knative.dev
-  preserveUnknownFields: false
   names:
     kind: EventType
     plural: eventtypes
@@ -32,6 +31,15 @@ spec:
   scope: Namespaced
   subresources:
     status: {}
+  preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      # this is a work around so we don't need to flesh out the
+      # schema for each version at this time
+      #
+      # see issue: https://github.com/knative/serving/issues/912
+      x-kubernetes-preserve-unknown-fields: true
   additionalPrinterColumns:
     - name: Type
       type: string
@@ -58,45 +66,6 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            required:
-              - type
-              - source
-              - broker
-            type: object
-            properties:
-              type:
-                type: string
-                description: "Describes the type of event relating to the originating occurrence (com.github.pull.create, com.example.object.delete.v2, etc.). More information: https://knative.dev/docs/eventing/event-registry."
-                minLength: 1
-              source:
-                type: string
-                description: "The context in which an event happened. Often this will include information such as the type of the event source, the organization publishing the event or the process that produced the event. More information: https://github.com/cloudevents/spec/blob/master/spec.md."
-                minLength: 1
-              schema:
-                type: string
-                description: "URI with the EventType schema that the data adheres to. It may be JSON, protobuf, etc."
-              broker:
-                type: string
-                description: "Broker that can provide the EventType."
-                minLength: 1
-              description:
-                type: string
-                description: "Describes the EventType, in any meaningful way."
   - name: v1beta1
     served: true
     storage: false
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
