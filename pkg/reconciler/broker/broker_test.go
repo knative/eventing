@@ -88,11 +88,10 @@ const (
 	brokerGeneration = 79
 
 	pingSourceName              = "test-ping-source"
-	pingSourceAPIVersion        = "sources.knative.dev/v1alpha2"
 	testSchedule                = "*/2 * * * *"
 	testData                    = "data"
 	sinkName                    = "testsink"
-	dependencyAnnotation        = "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}"
+	dependencyAnnotation        = "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha2\"}"
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 

@@ -110,8 +110,8 @@
     - source_labels: [__meta_kubernetes_service_name]
       target_label: service
 
-# cronjob-source
-- job_name: cronjob-source
+# pingsource
+- job_name: ping-source
   scrape_interval: 3s
   scrape_timeout: 3s
   kubernetes_sd_configs:

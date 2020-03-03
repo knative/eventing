@@ -31,7 +31,7 @@ These are exported by core sources.
 | ------------- | ----- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `event_count` | count | Number of events sent | `namespace_name`, `name`, `source_resource_group`, `event_source`, `event_type`, `response_code`, `response_code_class` |
 
-### CronJobSource
+### PingSource
 
 | Name          | Type  | Description           | Tags                                                                                                                    |
 | ------------- | ----- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
