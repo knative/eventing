@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/eventing/pkg/logconfig"
-	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
@@ -50,7 +49,6 @@ import (
 	"knative.dev/eventing/pkg/apis/flows"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
-	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
 	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -92,13 +90,6 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha2.ApiServerSource{},
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
 	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha2.SinkBinding{},
-
-	// For group sources.eventing.knative.dev.
-	// TODO(#2312): Remove this after v0.13.
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &legacysourcesv1alpha1.ApiServerSource{},
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("ContainerSource"): &legacysourcesv1alpha1.ContainerSource{},
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &legacysourcesv1alpha1.SinkBinding{},
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &legacysourcesv1alpha1.CronJobSource{},
 
 	// For group flows.knative.dev
 	// v1alpha1
@@ -209,29 +200,6 @@ func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.Control
 
 			// How to get all the Bindables for configuring the mutating webhook.
 			sinkbinding.ListAll,
-
-			// How to setup the context prior to invoking Do/Undo.
-			sbresolver,
-			opts...,
-		)
-	}
-}
-
-// TODO(#2312): Remove this after v0.13.
-func NewLegacySinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
-	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		sbresolver := legacysinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
-
-		return psbinding.NewAdmissionController(ctx,
-
-			// Name of the resource webhook.
-			"legacysinkbindings.webhook.sources.knative.dev",
-
-			// The path on which to serve the webhook.
-			"/legacysinkbindings",
-
-			// How to get all the Bindables for configuring the mutating webhook.
-			legacysinkbinding.ListAll,
 
 			// How to setup the context prior to invoking Do/Undo.
 			sbresolver,
@@ -383,7 +351,5 @@ func main() {
 
 		// For each binding we have a controller and a binding webhook.
 		sinkbinding.NewController, NewSinkBindingWebhook(sbSelector),
-		// TODO(#2312): Remove this after v0.13.
-		legacysinkbinding.NewController, NewLegacySinkBindingWebhook(sbSelector),
 	)
 }

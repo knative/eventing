@@ -28,14 +28,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
-const (
-	unmarshalFailedDependencyAnnotation = "{" +
-		"\"kind\":{CronJobSource}, " +
-		"\"name\":\"test-cronjob-source\"," +
-		"\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"" +
-		"}"
-)
-
 // TriggerOption enables further configuration of a Trigger.
 type TriggerOption func(*v1alpha1.Trigger)
 
@@ -158,15 +150,6 @@ func WithTriggerStatusSubscriberURI(uri string) TriggerOption {
 	return func(t *v1alpha1.Trigger) {
 		u, _ := apis.ParseURL(uri)
 		t.Status.SubscriberURI = u
-	}
-}
-
-func WithUnmarshalFailedDependencyAnnotation() TriggerOption {
-	return func(t *v1alpha1.Trigger) {
-		if t.Annotations == nil {
-			t.Annotations = make(map[string]string)
-		}
-		t.Annotations[v1alpha1.DependencyAnnotation] = unmarshalFailedDependencyAnnotation
 	}
 }
 

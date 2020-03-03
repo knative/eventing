@@ -56,24 +56,6 @@ rules:
       - "pingsources/finalizers"
     verbs: *everything
 
-  # Legacy Source resources and statuses we care about.
-  - apiGroups:
-      - "sources.eventing.knative.dev"
-    resources:
-      - "cronjobsources"
-      - "cronjobsources/status"
-      - "cronjobsources/finalizers"
-      - "containersources"
-      - "containersources/status"
-      - "containersources/finalizers"
-      - "sinkbindings"
-      - "sinkbindings/status"
-      - "sinkbindings/finalizers"
-      - "apiserversources"
-      - "apiserversources/status"
-      - "apiserversources/finalizers"
-    verbs: *everything
-
   # Knative Services admin
   - apiGroups:
       - serving.knative.dev

@@ -53,9 +53,6 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/eventing
-          # Legacy CronJobSource
-          - name: CRONJOB_RA_IMAGE
-            value: knative.dev/eventing/cmd/cronjob_receive_adapter
           # PingSource
           - name: PING_IMAGE
             value: knative.dev/eventing/cmd/ping
