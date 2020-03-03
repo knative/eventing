@@ -148,7 +148,7 @@ Each channel is _namespaced_ and MUST have the following:
 
 #### Annotation Requirements
 
-Each instantiated Channel (ie, CO) SHOULD have an annotation indicating which version of the
+Each instantiated Channel (ie, Custom Object) SHOULD have an annotation indicating which version of the
 `Channelable` duck type it conforms to. We currently have two versions:
 
 1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
@@ -345,5 +345,5 @@ disable them if desired.
 
 - `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
 - `0.13.x release`: Types in the API group `messaging.knative.dev` will be
-  promoted from `v1alpha1`to `v1beta1`. Add requirement for labeling CO to
-  indicate which duck type they support as well as document differences.
+  promoted from `v1alpha1`to `v1beta1`. Add requirement for labeling Custom
+  Objects to indicate which duck type they support as well as document differences.
