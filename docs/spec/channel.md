@@ -148,7 +148,7 @@ Each channel is _namespaced_ and MUST have the following:
 
 #### Annotation Requirements
 
-Each instantiated Channel (ie, CO) must have an annotation indicating which version of the
+Each instantiated Channel (ie, CO) SHOULD have an annotation indicating which version of the
 `Channelable` duck type it conforms to. We currently have two versions:
 
 1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
