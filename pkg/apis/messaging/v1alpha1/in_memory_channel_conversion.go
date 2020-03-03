@@ -114,12 +114,17 @@ func (sink *InMemoryChannelSpec) ConvertFrom(ctx context.Context, source v1beta1
 			Subscribers: make([]eventingduck.SubscriberSpec, len(source.Subscribers)),
 		}
 		for i, s := range source.Subscribers {
+			var deadLetterSinkURI *apis.URL
+			if s.Delivery != nil && s.Delivery.DeadLetterSink != nil {
+				deadLetterSinkURI = s.Delivery.DeadLetterSink.URI
+			}
 			sink.Subscribable.Subscribers[i] = eventingduck.SubscriberSpec{
-				UID:           s.UID,
-				Generation:    s.Generation,
-				SubscriberURI: s.SubscriberURI,
-				ReplyURI:      s.ReplyURI,
-				Delivery:      s.Delivery,
+				UID:               s.UID,
+				Generation:        s.Generation,
+				SubscriberURI:     s.SubscriberURI,
+				ReplyURI:          s.ReplyURI,
+				Delivery:          s.Delivery,
+				DeadLetterSinkURI: deadLetterSinkURI,
 			}
 		}
 	}

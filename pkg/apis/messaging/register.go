@@ -20,6 +20,9 @@ import "k8s.io/apimachinery/pkg/runtime/schema"
 
 const (
 	GroupName = "messaging.knative.dev"
+	// SubscribableDuckVersionAnnotation is the annotation we use to declare
+	// which Subscribable duck version type we conform to.
+	SubscribableDuckVersionAnnotation = "messaging.knative.dev/subscribable"
 )
 
 var (
