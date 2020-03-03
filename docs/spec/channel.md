@@ -154,15 +154,19 @@ Each instantiated Channel (ie, CO) must have an annotation indicating which vers
 1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
 1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
 
-So, for example to indicate that the Channel supports v1beta1 duck type, you should label it like so:
+So, for example to indicate that the Channel supports v1beta1 duck type, you should annotate it like
+so (only showing the annotations):
 
 ```
-      messaging.knative.dev/subscribable: v1beta1
+- apiVersion: messaging.knative.dev/v1beta1
+  kind: YourChannelType
+  metadata:
+    annotations: messaging.knative.dev/subscribable: v1beta1
 ```
 
 Unfortunately, we had to make breaking changes between the two versions, and to ensure functionality,
 the channel implementer must indicate which version they support. To ensure backwards compatibility
-with old channels, if no label is given, we assume it's `v1alpha1`.
+with old channels, if no annotation is given, we assume it's `v1alpha1`.
 
 #### Spec Requirements
 
