@@ -146,12 +146,19 @@ Each channel is _namespaced_ and MUST have the following:
 - label of `duck.knative.dev/addressable: "true"`
 - The category `channel`
 
-#### Label Requirements
+#### Annotation Requirements
 
-Each instantiated Channel (ie, CO) must have a label indicating which version of the
-`Channelable` duck type it conforms to. We currently have two
-[v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
-[v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
+Each instantiated Channel (ie, CO) must have an annotation indicating which version of the
+`Channelable` duck type it conforms to. We currently have two versions:
+
+1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
+1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
+
+So, for example to indicate that the Channel supports v1beta1 duck type, you should label it like so:
+
+```
+      messaging.knative.dev/subscribable: v1beta1
+```
 
 Unfortunately, we had to make breaking changes between the two versions, and to ensure functionality,
 the channel implementer must indicate which version they support. To ensure backwards compatibility
