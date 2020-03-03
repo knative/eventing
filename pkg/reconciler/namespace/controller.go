@@ -61,11 +61,11 @@ func NewController(
 	configMapPropagationInformer := configmappropagation.Get(ctx)
 
 	r := &Reconciler{
-		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-		namespaceLister: namespaceInformer.Lister(),
-		serviceAccountLister: serviceAccountInformer.Lister(),
-		roleBindingLister: roleBindingInformer.Lister(),
-		brokerLister: brokerInformer.Lister(),
+		Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
+		namespaceLister:            namespaceInformer.Lister(),
+		serviceAccountLister:       serviceAccountInformer.Lister(),
+		roleBindingLister:          roleBindingInformer.Lister(),
+		brokerLister:               brokerInformer.Lister(),
 		configMapPropagationLister: configMapPropagationInformer.Lister(),
 	}
 
