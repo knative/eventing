@@ -24,6 +24,6 @@ autoscaling.knative.dev/maxScale: "10"
 
 ## Extensibility
 
-Similiar to [Knative Serving](https://knative.dev/docs/serving/configuring-autoscaling/#implementing-your-own-pod-autoscaler) class annotation `autoscaling.knative.dev/class` can be used to specify implementation of eventing scaling.
+Similar to [Knative Serving](https://knative.dev/docs/serving/configuring-autoscaling/#implementing-your-own-pod-autoscaler) class annotation `autoscaling.knative.dev/class` can be used to specify implementation of eventing scaling.
 
 The default autoscaler implemention supported in Knative Eventing requires [KEDA](https://keda.sh/). For details read [KEDA Knative Eventing Scaling description](./KEDA.md).
