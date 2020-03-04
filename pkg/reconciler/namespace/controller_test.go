@@ -24,7 +24,7 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/serviceaccount/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/rbac/v1/rolebinding/fake"

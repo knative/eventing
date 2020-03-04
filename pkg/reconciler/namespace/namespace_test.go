@@ -418,7 +418,7 @@ func TestAllCases(t *testing.T) {
 		r := &Reconciler{
 			Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
 			namespaceLister:            listers.GetNamespaceLister(),
-			brokerLister:               listers.GetBrokerLister(),
+			brokerLister:               listers.GetV1Beta1BrokerLister(),
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
