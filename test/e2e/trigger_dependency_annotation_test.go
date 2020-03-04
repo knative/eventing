@@ -60,9 +60,9 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	client.CreatePodOrFail(pod, lib.WithService(subscriberName))
 
 	// Create triggers.
-	client.CreateTriggerOrFail(triggerName,
-		resources.WithSubscriberServiceRefForTrigger(subscriberName),
-		resources.WithDependencyAnnotaionTrigger(dependencyAnnotation),
+	client.CreateTriggerOrFailV1Beta1(triggerName,
+		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),
+		resources.WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation),
 	)
 
 	data := fmt.Sprintf("Test trigger-annotation %s", uuid.NewUUID())
