@@ -33,7 +33,7 @@ Event sources that are using [KEDA](https://keda.sh/) for scaling we have define
 ### Push-based Event Sources
 
 List of Knative Eventing push-based event sources that may support scaling:
-* [Github Event Source](https://github.com/knative/eventing-contrib/tree/master/github) 
+* [Github Event Source](https://github.com/knative/eventing-contrib/tree/master/github)
 
 ### Push-based Event Sources
 
@@ -51,4 +51,3 @@ List of Knative Eventing push-based event sources
 
 List of Knative Eventing push-based event sources
 * None
-
