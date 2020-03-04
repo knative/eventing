@@ -24,8 +24,6 @@ autoscaling.knative.dev/maxScale: "10"
 
 Default [Knative Serving autoscaling annotations](https://knative.dev/docs/serving/configuring-autoscaling/) SHOULD be used when underlying implementation is using Knative Serving (that may be the best option for push-based event sources if they are implemented using Knative Serving).
 
-
-
 ## Extensibility
 
 Similar to [Knative Serving](https://knative.dev/docs/serving/configuring-autoscaling/#implementing-your-own-pod-autoscaler) class annotation `autoscaling.knative.dev/class` can be used to specify implementation of eventing scaling.
