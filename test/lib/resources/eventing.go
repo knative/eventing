@@ -310,7 +310,7 @@ func WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation string) Trigger
 		if t.Annotations == nil {
 			t.Annotations = make(map[string]string)
 		}
-		t.Annotations[eventingv1alpha1.DependencyAnnotation] = dependencyAnnotation
+		t.Annotations[eventingv1beta1.DependencyAnnotation] = dependencyAnnotation
 	}
 }
 
