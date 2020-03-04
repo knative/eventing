@@ -37,7 +37,7 @@ func (source *Trigger) ConvertTo(ctx context.Context, obj apis.Convertible) erro
 			}
 			if source.Spec.Filter.Attributes != nil {
 				sink.Spec.Filter = &v1beta1.TriggerFilter{
-					Attributes: make(v1beta1.TriggerFilterAttributes, 0),
+					Attributes: make(v1beta1.TriggerFilterAttributes, len(*source.Spec.Filter.Attributes)),
 				}
 				for k, v := range *source.Spec.Filter.Attributes {
 					sink.Spec.Filter.Attributes[k] = v
