@@ -50,15 +50,10 @@ const (
 	// SubscriptionReadyLatencyN is the time it takes for a subscription to become ready since the resource is created.
 	SubscriptionReadyLatencyN = "subscription_ready_latency"
 
-	// ContainerSourceReadyCountN is the number of container sources that have become ready.
-	ContainerSourceReadyCountN = "container_source_ready_count"
-	// ContainerSourceReadyLatencyN is the time it takes for a container source to become ready since the resource is created.
-	ContainerSourceReadyLatencyN = "container_source_ready_latency"
-
-	// CronJobSourceReadyCountN is the number of cron job sources that have become ready.
-	CronJobSourceReadyCountN = "cron_job_source_ready_count"
-	// CronJobSourceReadyLatencyN is the time it takes for a cron job source to become ready since the resource is created.
-	CronJobSourceReadyLatencyN = "cron_job_source_ready_latency"
+	// PingSourceReadyCountN is the number of cron job sources that have become ready.
+	PingSourceReadyCountN = "ping_source_ready_count"
+	// PingSourceReadyLatencyN is the time it takes for a cron job source to become ready since the resource is created.
+	PingSourceReadyLatencyN = "ping_source_ready_latency"
 
 	// ApiServerSourceReadyCountN is the number of api server sources that have become ready.
 	ApiServerSourceReadyCountN = "api_server_source_ready_count"
@@ -96,13 +91,9 @@ var (
 			ReadyCountKey:   SubscriptionReadyCountN,
 		},
 		// Sources
-		"ContainerSource": {
-			ReadyLatencyKey: ContainerSourceReadyLatencyN,
-			ReadyCountKey:   ContainerSourceReadyCountN,
-		},
-		"CronJobSource": {
-			ReadyLatencyKey: CronJobSourceReadyLatencyN,
-			ReadyCountKey:   CronJobSourceReadyCountN,
+		"PingSource": {
+			ReadyLatencyKey: PingSourceReadyLatencyN,
+			ReadyCountKey:   PingSourceReadyCountN,
 		},
 		"ApiServerSource": {
 			ReadyLatencyKey: ApiServerSourceReadyLatencyN,

@@ -22,7 +22,7 @@ const (
 	controllerAgentName = "ping-source-controller"
 )
 
-// Labels are the labels attached to all resources based on a CronJobSource.
+// Labels are the labels attached to all resources based on a PingSource.
 func Labels(name string) map[string]string {
 	return map[string]string{
 		"sources.knative.dev/pingSource": name,

@@ -25,7 +25,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-// MakeEventType creates the in-memory representation of the EventType for the specified CronJobSource.
+// MakeEventType creates the in-memory representation of the EventType for the specified PingSource.
 func MakeEventType(src *v1alpha1.PingSource) *eventingv1alpha1.EventType {
 	return &eventingv1alpha1.EventType{
 		ObjectMeta: metav1.ObjectMeta{

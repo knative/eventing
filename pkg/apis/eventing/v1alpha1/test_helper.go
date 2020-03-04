@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	v1 "k8s.io/api/apps/v1"
-	"knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
@@ -122,10 +121,4 @@ func (t testHelper) AvailableDeployment() *v1.Deployment {
 		},
 	}
 	return d
-}
-
-func (t testHelper) UnknownCronJobSourceStatus() *v1alpha1.CronJobSourceStatus {
-	cjss := &v1alpha1.CronJobSourceStatus{}
-	cjss.InitializeConditions()
-	return cjss
 }

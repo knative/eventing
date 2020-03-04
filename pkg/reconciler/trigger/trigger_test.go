@@ -33,49 +33,14 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	"knative.dev/eventing/pkg/utils"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
 var (
-	sinkRef = corev1.ObjectReference{
-		Name:       sinkName,
-		Kind:       "Channel",
-		APIVersion: "messaging.knative.dev/v1alpha1",
-	}
-
-	brokerRef = corev1.ObjectReference{
-		Name:       sinkName,
-		Kind:       "Broker",
-		APIVersion: "eventing.knative.dev/v1alpha1",
-	}
-	brokerDest = duckv1beta1.Destination{
-		Ref: &corev1.ObjectReference{
-			Name:       sinkName,
-			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1alpha1",
-		},
-	}
-	sinkDNS = "sink.mynamespace.svc." + utils.GetClusterDomainName()
-	sinkURI = "http://" + sinkDNS
-
-	subscriberGVK = metav1.GroupVersionKind{
-		Group:   subscriberGroup,
-		Version: subscriberVersion,
-		Kind:    subscriberKind,
-	}
 	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
-
-	k8sServiceGVK = metav1.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Service",
-	}
 )
 
 const (
@@ -84,34 +49,13 @@ const (
 	triggerUID  = "test-trigger-uid"
 	brokerName  = "test-broker"
 
-	subscriberGroup             = "serving.knative.dev"
-	subscriberVersion           = "v1"
-	subscriberKind              = "Service"
-	subscriberName              = "subscriber-name"
-	subscriberURI               = "http://example.com/subscriber/"
-	subscriberURIReference      = "foo"
-	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
-
-	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
-
-	dependencyAnnotation    = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
-	cronJobSourceName       = "test-cronjob-source"
-	cronJobSourceAPIVersion = "sources.eventing.knative.dev/v1alpha1"
-	testSchedule            = "*/2 * * * *"
-	testData                = "data"
-	sinkName                = "testsink"
+	subscriberGroup   = "serving.knative.dev"
+	subscriberVersion = "v1"
+	subscriberKind    = "Service"
+	subscriberName    = "subscriber-name"
+	subscriberURI     = "http://example.com/subscriber/"
 
 	injectionAnnotation = "enabled"
-
-	currentGeneration  = 1
-	outdatedGeneration = 0
-	triggerGeneration  = 7
-)
-
-var (
-	trueVal = true
-
-	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 )
 
 func init() {

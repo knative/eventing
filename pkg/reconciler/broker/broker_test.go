@@ -19,6 +19,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +34,6 @@ import (
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
@@ -87,12 +87,11 @@ const (
 
 	brokerGeneration = 79
 
-	cronJobSourceName           = "test-cronjob-source"
-	cronJobSourceAPIVersion     = "sources.eventing.knative.dev/v1alpha1"
+	pingSourceName              = "test-ping-source"
 	testSchedule                = "*/2 * * * *"
 	testData                    = "data"
 	sinkName                    = "testsink"
-	dependencyAnnotation        = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
+	dependencyAnnotation        = "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha2\"}"
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
@@ -150,6 +149,13 @@ var (
 	}
 	brokerDest = duckv1beta1.Destination{
 		Ref: &corev1.ObjectReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
+	}
+	brokerDestv1 = duckv1.Destination{
+		Ref: &duckv1.KReference{
 			Name:       sinkName,
 			Kind:       "Broker",
 			APIVersion: "eventing.knative.dev/v1alpha1",
@@ -1247,7 +1253,7 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: propagating dependency readiness: getting the dependency: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: propagating dependency readiness: getting the dependency: pingsources.sources.knative.dev \"test-ping-source\" not found"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -1260,7 +1266,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+					WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: pingsources.sources.knative.dev \"test-ping-source\" not found"),
 				),
 			}},
 		}, {
@@ -1268,7 +1274,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeReadySubscription(),
-				makeFalseStatusCronJobSource(),
+				makeFalseStatusPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1327,7 +1333,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeReadySubscription(),
-				makeGenerationNotEqualCronJobSource(),
+				makeGenerationNotEqualPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1356,7 +1362,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeReadySubscription(),
-				makeReadyCronJobSource(),
+				makeReadyPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1795,37 +1801,39 @@ func makeFalseStatusSubscription() *messagingv1alpha1.Subscription {
 	return s
 }
 
-func makeFalseStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
-	return NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion), WithCronJobSourceSinkNotFound)
+func makeFalseStatusPingSource() *sourcesv1alpha2.PingSource {
+	return NewPingSourceV1Alpha2(pingSourceName, testNS, WithPingSourceV1A2SinkNotFound)
 }
 
-func makeUnknownStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
-	cjs := NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion))
-	cjs.Status = *v1alpha1.TestHelper.UnknownCronJobSourceStatus()
+func makeUnknownStatusCronJobSource() *sourcesv1alpha2.PingSource {
+	cjs := NewPingSourceV1Alpha2(pingSourceName, testNS)
+	cjs.Status.InitializeConditions()
 	return cjs
 }
 
-func makeGenerationNotEqualCronJobSource() *sourcesv1alpha1.CronJobSource {
-	c := makeFalseStatusCronJobSource()
+func makeGenerationNotEqualPingSource() *sourcesv1alpha2.PingSource {
+	c := makeFalseStatusPingSource()
 	c.Generation = currentGeneration
 	c.Status.ObservedGeneration = outdatedGeneration
 	return c
 }
 
-func makeReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
-	return NewCronJobSource(cronJobSourceName, testNS,
-		WithCronJobApiVersion(cronJobSourceAPIVersion),
-		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+func makeReadyPingSource() *sourcesv1alpha2.PingSource {
+	u, _ := apis.ParseURL(sinkURI)
+	return NewPingSourceV1Alpha2(pingSourceName, testNS,
+		WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
 			Schedule: testSchedule,
-			Data:     testData,
-			Sink:     &brokerDest,
+			JsonData: testData,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: brokerDestv1,
+			},
 		}),
-		WithInitCronJobSourceConditions,
-		WithValidCronJobSourceSchedule,
-		WithValidCronJobSourceResources,
-		WithCronJobSourceDeployed,
-		WithCronJobSourceEventType,
-		WithCronJobSourceSink(sinkURI),
+		WithInitPingSourceV1A2Conditions,
+		WithValidPingSourceV1A2Schedule,
+		WithValidPingSourceV1A2Resources,
+		WithPingSourceV1A2Deployed,
+		WithPingSourceV1A2EventType,
+		WithPingSourceV1A2Sink(u),
 	)
 }
 func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {
