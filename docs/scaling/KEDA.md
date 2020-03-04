@@ -2,7 +2,7 @@
 
 ## Introduction
 
-[Kubernetes Event-driven Autoscaling (KEDA)](https://keda.sh/)
+This document defines Knative Eventing extension to autoscaling annotations to support KEDA. [Kubernetes Event-driven Autoscaling (KEDA)](https://keda.sh/)
 provides scaling of any container in Kubernetes based on the number of events needing to be processed. We use it in Knative Eventing to scale pull-based event sources.
 
 ## Using KEDA scaling in Knative Eventing
