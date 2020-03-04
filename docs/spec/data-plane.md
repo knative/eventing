@@ -22,8 +22,9 @@ Every Sink MUST support HTTP Protocol Binding for CloudEvents [version 1.0](http
 
 This section adds restrictions on [requirements in HTTP Protocol Binding for CloudEvents](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md#12-relation-to-http).
 
-Sinks MUST reject all HTTP requests with a method other than
-POST responding with HTTP status code `405 Method Not Supported`. Non-event requests (e.g. health checks) are not constrained.
+Sinks MUST accept HTTP requests with POST method and MAY support other HTTP methods.
+If a method other is not supported Sink SHOULD respond with HTTP status code `405 Method Not Supported`. 
+Non-event requests (e.g. health checks) are not constrained.
 
 The URL used by a Sink MUST correspond to a single, unique
 endpoint at any given moment in time. This MAY be done via the host, path, query
