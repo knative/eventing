@@ -69,8 +69,8 @@ See [Channel Delivery specification](../spec/channel.md#data-plane) for details.
 
 ### Data plane contract for Brokers
 
-Broker Delivery TBW
+See [Broker Delivery specification](../spec/broker.md)
 
 ## Changelog
 
-- 2020-02-20: `0.13.x release`: initial version that exacts common contract from sources, channles and brokers.
+- 2020-02-20: `0.13.x release`: initial version that documents common contract from sources, channles and brokers.
