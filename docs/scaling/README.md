@@ -22,7 +22,7 @@ autoscaling.knative.dev/maxScale: "10"
 
 **NOTE**: the scaling defaults are different in Knative Eventing than in Scaling. If annotations are not provided default for Kantive Eventing resources is to have minimum and maximum scale set to one i.e. not scaling.
 
-The defaults can be changed by creating default configuration in cluster scope and also to create default per-namespace. (TODO describe mechanims)
+The defaults can be changed by creating default configuration in cluster scope and also to create default per-namespace. (TODO describe mechanism)
 
 Default [Knative Serving autoscaling annotations](https://knative.dev/docs/serving/configuring-autoscaling/) SHOULD be used when underlying implementation is using Knative Serving (that may be the best option for push-based event sources if they are implemented using Knative Serving).
 
