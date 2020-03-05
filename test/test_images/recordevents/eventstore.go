@@ -52,7 +52,7 @@ type eventStore struct {
 // Create a new event store.
 func newEventStore() *eventStore {
 	es := &eventStore{}
-	es.evBlocks = []*eventBlock{&eventBlock{}}
+	es.evBlocks = []*eventBlock{{}}
 
 	// One block with no entries starting at sequence number 1
 	es.evBlocks[0].firstIndex = 1
