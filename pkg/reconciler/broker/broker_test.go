@@ -19,8 +19,9 @@ package broker
 import (
 	"context"
 	"fmt"
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"testing"
+
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
