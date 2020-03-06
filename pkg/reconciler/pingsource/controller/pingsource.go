@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pingsource
+package controller
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/pkg/system"
 
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,7 +42,7 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+	"knative.dev/eventing/pkg/reconciler/pingsource/controller/resources"
 	"knative.dev/pkg/apis"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
@@ -58,6 +60,7 @@ const (
 	pingSourceDeploymentCreated = "PingSourceDeploymentCreated"
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 	component                   = "pingsource"
+	jobRunnerName               = "pingsource-jobrunner"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -75,6 +78,7 @@ type Reconciler struct {
 	*reconciler.Base
 
 	receiveAdapterImage string
+	jobRunnerImage      string
 
 	// listers index properties about resources
 	pingLister       listers.PingSourceLister
@@ -124,12 +128,27 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 	// TODO: remove MarkSchedule
 	source.Status.MarkSchedule()
 
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
-		return fmt.Errorf("creating receive adapter: %v", err)
+	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
+	if !ok {
+		scope = "cluster"
 	}
-	source.Status.PropagateDeploymentAvailability(ra)
+
+	if scope == "cluster" {
+		// Make sure the global job runner is running
+		d, err := r.reconcileJobRunner(ctx, source)
+		if err != nil {
+			logging.FromContext(ctx).Error("Unable to reconcile the job runner", zap.Error(err))
+			return err
+		}
+		source.Status.PropagateDeploymentAvailability(d)
+	} else {
+		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
+		if err != nil {
+			logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
+			return fmt.Errorf("creating receive adapter: %v", err)
+		}
+		source.Status.PropagateDeploymentAvailability(ra)
+	}
 
 	_, err = r.reconcileEventType(ctx, source)
 	if err != nil {
@@ -190,6 +209,31 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
 	}
 	return ra, nil
+}
+
+func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
+	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(jobRunnerName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			args := resources.DispatcherArgs{
+				ServiceAccountName: jobRunnerName,
+				JobRunnerName:      jobRunnerName,
+				JobRunnerNamespace: system.Namespace(),
+				Image:              r.jobRunnerImage,
+			}
+			expected := resources.MakeJobRunner(args)
+			d, err := r.KubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
+
+			if err != nil {
+				r.Recorder.Eventf(source, corev1.EventTypeWarning, pingSourceDeploymentCreated, "Cluster-scoped deployment not created (%v)", err)
+				return nil, err
+			}
+			r.Recorder.Event(source, corev1.EventTypeNormal, pingSourceDeploymentCreated, "Cluster-scoped deployment created")
+			return d, nil
+		}
+		return nil, fmt.Errorf("error getting job runner deployment %v", err)
+	}
+	return d, nil
 }
 
 func checkResourcesStatus(src *v1alpha1.PingSource) error {

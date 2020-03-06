@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pingsource
+package controller
 
 import (
 	"context"
+	"knative.dev/pkg/system"
 
 	"knative.dev/pkg/resolver"
 
@@ -48,7 +49,8 @@ const (
 // github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
 // NewController will panic.
 type envConfig struct {
-	Image string `envconfig:"PING_IMAGE" required:"true"`
+	Image          string `envconfig:"PING_IMAGE" required:"true"`
+	JobRunnerImage string `envconfig:"JOB_RUNNER_IMAGE" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -75,6 +77,7 @@ func NewController(
 		r.Logger.Panicf("unable to process CronJobSource's required environment variables: %v", err)
 	}
 	r.receiveAdapterImage = env.Image
+	r.jobRunnerImage = env.JobRunnerImage
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
@@ -83,9 +86,20 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
+	// Watch for deployments owned by the source
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("PingSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// Watch for the global deployment
+	gr := func(obj interface{}) {
+		impl.GlobalResync(pingSourceInformer.Informer())
+	}
+
+	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), jobRunnerName),
+		Handler:    controller.HandleAll(gr),
 	})
 
 	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

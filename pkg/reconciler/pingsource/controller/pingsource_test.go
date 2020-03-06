@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pingsource
+package controller
 
 import (
 	"context"
@@ -45,7 +45,7 @@ import (
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/pingsource/resources"
+	"knative.dev/eventing/pkg/reconciler/pingsource/controller/resources"
 	"knative.dev/eventing/pkg/utils"
 
 	logtesting "knative.dev/pkg/logging/testing"
@@ -127,6 +127,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 				),
@@ -139,6 +140,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -160,6 +162,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 				),
@@ -180,6 +183,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -201,6 +205,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDestURI,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 				),
@@ -221,6 +226,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDestURI,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -242,6 +248,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &brokerDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 				),
@@ -262,6 +269,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &brokerDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -291,6 +299,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &brokerDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 				),
@@ -317,6 +326,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &brokerDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -349,6 +359,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 				),
@@ -369,6 +380,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -390,6 +402,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					WithInitPingSourceConditions,
@@ -413,6 +426,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
@@ -437,6 +451,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					WithInitPingSourceConditions,
@@ -467,6 +482,7 @@ func TestAllCases(t *testing.T) {
 						Data:     testData,
 						Sink:     &sinkDest,
 					}),
+					WithPingSourceNamespaceScopeAnnotation,
 					WithPingSourceUID(sourceUID),
 					WithPingSourceObjectMetaGeneration(generation),
 					// Status Update:
