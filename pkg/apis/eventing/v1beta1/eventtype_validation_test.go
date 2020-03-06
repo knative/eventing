@@ -101,6 +101,7 @@ func TestEventTypeImmutableFields(t *testing.T) {
 	differentSource := apis.HTTP("original-source")
 	testSource := apis.HTTP("test-source")
 	testSchema := apis.HTTP("test-schema")
+	testSchemaData := `{"data": "awesome"}`
 	differentSchema := apis.HTTP("original-schema")
 	tests := []struct {
 		name     string
@@ -111,18 +112,20 @@ func TestEventTypeImmutableFields(t *testing.T) {
 		name: "good (no change)",
 		current: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: *testSource,
-				Broker: "test-broker",
-				Schema: testSchema,
+				Type:       "test-type",
+				Source:     *testSource,
+				Broker:     "test-broker",
+				Schema:     testSchema,
+				SchemaData: testSchemaData,
 			},
 		},
 		original: &EventType{
 			Spec: EventTypeSpec{
-				Type:   "test-type",
-				Source: *testSource,
-				Broker: "test-broker",
-				Schema: testSchema,
+				Type:       "test-type",
+				Source:     *testSource,
+				Broker:     "test-broker",
+				Schema:     testSchema,
+				SchemaData: testSchemaData,
 			},
 		},
 		want: nil,
