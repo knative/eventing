@@ -35,7 +35,7 @@ spec:
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: knative.dev/eventing/cmd/channel_broker
+        image: ko://knative.dev/eventing/cmd/channel_broker
 
         resources:
           requests:
@@ -55,11 +55,11 @@ spec:
             value: knative.dev/eventing
           # Broker
           - name: BROKER_INGRESS_IMAGE
-            value: knative.dev/eventing/cmd/broker/ingress
+            value: ko://knative.dev/eventing/cmd/broker/ingress
           - name: BROKER_INGRESS_SERVICE_ACCOUNT
             value: eventing-broker-ingress
           - name: BROKER_FILTER_IMAGE
-            value: knative.dev/eventing/cmd/broker/filter
+            value: ko://knative.dev/eventing/cmd/broker/filter
           - name: BROKER_FILTER_SERVICE_ACCOUNT
             value: eventing-broker-filter
           - name: BROKER_IMAGE_PULL_SECRET_NAME

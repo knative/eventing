@@ -35,7 +35,7 @@ spec:
       containers:
       - name: eventing-controller
         terminationMessagePolicy: FallbackToLogsOnError
-        image: knative.dev/eventing/cmd/controller
+        image: ko://knative.dev/eventing/cmd/controller
 
         resources:
           requests:
@@ -55,10 +55,10 @@ spec:
             value: knative.dev/eventing
           # PingSource
           - name: PING_IMAGE
-            value: knative.dev/eventing/cmd/ping
+            value: ko://knative.dev/eventing/cmd/ping
           # APIServerSource
           - name: APISERVER_RA_IMAGE
-            value: knative.dev/eventing/cmd/apiserver_receive_adapter
+            value: ko://knative.dev/eventing/cmd/apiserver_receive_adapter
 
         securityContext:
           allowPrivilegeEscalation: false

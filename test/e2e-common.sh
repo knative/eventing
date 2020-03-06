@@ -38,7 +38,7 @@ function knative_setup() {
   # Install the latest Knative/eventing in the current cluster.
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
-  ko apply -f ${EVENTING_CONFIG} || return 1
+  ko apply --strict -f ${EVENTING_CONFIG} || return 1
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing Knative Monitoring"
@@ -103,7 +103,7 @@ function uninstall_test_resources() {
 
 function install_channel_crds() {
   echo "Installing In-Memory Channel CRD"
-  ko apply -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR} || return 1
+  ko apply --strict -f ${IN_MEMORY_CHANNEL_CRD_CONFIG_DIR} || return 1
   wait_until_pods_running knative-eventing || fail_test "Failed to install the In-Memory Channel CRD"
 }
 
