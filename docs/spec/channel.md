@@ -148,14 +148,15 @@ Each channel is _namespaced_ and MUST have the following:
 
 #### Annotation Requirements
 
-Each instantiated Channel (ie, Custom Object) SHOULD have an annotation indicating which version of the
-`Channelable` duck type it conforms to. We currently have two versions:
+Each instantiated Channel (ie, Custom Object) SHOULD have an annotation
+indicating which version of the `Channelable` duck type it conforms to. We
+currently have two versions:
 
 1. [v1alpha1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1alpha1/channelable_types.go)
 1. [v1beta1](https://github.com/knative/eventing/blob/master/pkg/apis/duck/v1beta1/channelable_types.go)
 
-So, for example to indicate that the Channel supports v1beta1 duck type, you should annotate it like
-so (only showing the annotations):
+So, for example to indicate that the Channel supports v1beta1 duck type, you
+should annotate it like so (only showing the annotations):
 
 ```
 - apiVersion: messaging.knative.dev/v1beta1
@@ -164,9 +165,10 @@ so (only showing the annotations):
     annotations: messaging.knative.dev/subscribable: v1beta1
 ```
 
-Unfortunately, we had to make breaking changes between the two versions, and to ensure functionality,
-the channel implementer must indicate which version they support. To ensure backwards compatibility
-with old channels, if no annotation is given, we assume it's `v1alpha1`.
+Unfortunately, we had to make breaking changes between the two versions, and to
+ensure functionality, the channel implementer must indicate which version they
+support. To ensure backwards compatibility with old channels, if no annotation
+is given, we assume it's `v1alpha1`.
 
 #### Spec Requirements
 
@@ -222,9 +224,8 @@ to `True`.
 
 ##### v1beta1
 
-When the channel instance is ready to receive events `status.address.url`
- MUST be populated and `status.addressable` MUST be set
-to `True`.
+When the channel instance is ready to receive events `status.address.url` MUST
+be populated and `status.addressable` MUST be set to `True`.
 
 #### Channel Subscriber Status
 
@@ -237,10 +238,9 @@ is ready to be processed.
 
 ##### v1beta1
 
-Each subscription to a channel is added to the channel
-`status.subscribers` automatically. The `ready` field of the
-subscriber identified by its `uid` MUST be set to `True` when the subscription
-is ready to be processed.
+Each subscription to a channel is added to the channel `status.subscribers`
+automatically. The `ready` field of the subscriber identified by its `uid` MUST
+be set to `True` when the subscription is ready to be processed.
 
 ### Data Plane
 
@@ -310,11 +310,12 @@ Every Channel SHOULD support sending events via _Binary Content Mode_ or
 _Structured Content Mode_ of the HTTP Protocol Binding for CloudEvents.
 
 Channels MUST send events to all subscribers which are marked with a status of
-`ready: "True"` in the channel's `status.subscribableStatus.subscribers` (v1alpha1)
-or `status.subscribers` (v1beta1). The events must be sent to the `subscriberURI` field of
-`spec.subscribable.subscribers` (v1alpha1) or `spec.subscribers` (v1beta1). Each channel
-implementation will have its own quality of service guarantees (e.g. at least once, at most
-once, etc) which SHOULD be documented.
+`ready: "True"` in the channel's `status.subscribableStatus.subscribers`
+(v1alpha1) or `status.subscribers` (v1beta1). The events must be sent to the
+`subscriberURI` field of `spec.subscribable.subscribers` (v1alpha1) or
+`spec.subscribers` (v1beta1). Each channel implementation will have its own
+quality of service guarantees (e.g. at least once, at most once, etc) which
+SHOULD be documented.
 
 ##### Retries
 
@@ -346,4 +347,5 @@ disable them if desired.
 - `0.11.x release`: CloudEvents in 0.3 and 1.0 are supported.
 - `0.13.x release`: Types in the API group `messaging.knative.dev` will be
   promoted from `v1alpha1`to `v1beta1`. Add requirement for labeling Custom
-  Objects to indicate which duck type they support as well as document differences.
+  Objects to indicate which duck type they support as well as document
+  differences.
