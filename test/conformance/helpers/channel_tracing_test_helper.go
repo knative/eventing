@@ -18,7 +18,7 @@ package helpers
 
 import (
 	"fmt"
-	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,7 +42,7 @@ type SetupInfrastructureFunc func(
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, string)
+) (tracinghelper.TestSpanTree, lib.EventMatchFunc)
 
 // TracingTestCase is the test case information for tracing tests.
 type TracingTestCase struct {
@@ -103,10 +103,10 @@ func tracingTest(
 	// TestMain.
 	tracinghelper.Setup(t, client)
 
-	expected, mustContain := setupInfrastructure(t, &channel, client, loggerPodName, tc)
-	assertLogContents(t, client, loggerPodName, mustContain)
+	expected, mustMatch := setupInfrastructure(t, &channel, client, loggerPodName, tc)
+	matches := assertEventMatch(t, client, loggerPodName, mustMatch)
 
-	traceID := getTraceID(t, client, loggerPodName)
+	traceID := getTraceIDHeader(t, matches)
 	trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
 	if err != nil {
 		t.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
@@ -118,43 +118,56 @@ func tracingTest(
 	}
 }
 
-// assertLogContents verifies that loggerPodName's logs contains mustContain. It is used to show
-// that the expected event was sent to the logger Pod.
-func assertLogContents(t *testing.T, client *lib.Client, loggerPodName string, mustContain string) {
-	if err := client.CheckLog(loggerPodName, lib.CheckerContains(mustContain)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", mustContain, loggerPodName, err)
+// assertEventMatch verifies that recorder pod contains at least one event that
+// matches mustMatch. It is used to show that the expected event was sent to
+// the logger Pod.  It returns a list of the matching events.
+func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
+	mustMatch lib.EventMatchFunc) []lib.EventInfo {
+	targetTracker, err := client.NewEventInfoStore(recorderPodName, t.Logf)
+	if err != nil {
+		t.Fatalf("Pod tracker failed: %v", err)
 	}
+	defer targetTracker.Cleanup()
+	matches, err := targetTracker.WaitAtLeastNMatch(lib.ValidEvFunc(mustMatch), 1)
+	if err != nil {
+		t.Fatalf("Expected messages not found: %v", err)
+	}
+	return matches
 }
 
-// getTraceID gets the TraceID from loggerPodName's logs. It will also assert that body is present.
-func getTraceID(t *testing.T, client *lib.Client, loggerPodName string) string {
-	logs, err := client.GetLog(loggerPodName)
-	if err != nil {
-		t.Fatalf("Error getting logs: %v", err)
+// getTraceIDHeader gets the TraceID from the passed in events.  It returns the header from the
+// first matching event, but registers a fatal error if more than one traceid header is seen
+// in that message.
+func getTraceIDHeader(t *testing.T, evInfos []lib.EventInfo) string {
+	for i := range evInfos {
+		if nil != evInfos[i].HTTPHeaders {
+			traceID, found := evInfos[i].HTTPHeaders["X-B3-Traceid"]
+			if found {
+				if len(traceID) != 1 {
+					t.Fatalf("Unexpected length %d for traceid list: %v",
+						len(traceID), traceID)
+				}
+				return strings.TrimSpace(traceID[0])
+			}
+		}
 	}
-	// This is the format that the eventdetails image prints headers.
-	re := regexp.MustCompile("\nGot Header X-B3-Traceid: ([a-zA-Z0-9]{32})\n")
-	matches := re.FindStringSubmatch(logs)
-	if len(matches) != 2 {
-		t.Fatalf("Unable to extract traceID: %q", logs)
-	}
-	traceID := matches[1]
-	return traceID
+	t.Fatalf("FAIL: No traceid in %d messages: (%s)", len(evInfos), evInfos)
+	return ""
 }
 
 // setupChannelTracing is the general setup for TestChannelTracing. It creates the following:
 // SendEvents (Pod) -> Channel -> Subscription -> K8s Service -> Mutate (Pod)
 //                                                                   v
 // LogEvents (Pod) <- K8s Service <- Subscription  <- Channel <- (Reply) Subscription
-// It returns the expected trace tree and a string that is expected to be sent by the SendEvents Pod
-// and should be present in the LogEvents Pod logs.
+// It returns the expected trace tree and a match function that is expected to be sent
+// by the SendEvents Pod and should be present in the RecordEvents list of events.
 func setupChannelTracingWithReply(
 	t *testing.T,
 	channel *metav1.TypeMeta,
 	client *lib.Client,
 	loggerPodName string,
 	tc TracingTestCase,
-) (tracinghelper.TestSpanTree, string) {
+) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
 	// Create the Channels.
 	channelName := "ch"
 	client.CreateChannelOrFail(channelName, channel)
@@ -163,7 +176,7 @@ func setupChannelTracingWithReply(
 	client.CreateChannelOrFail(replyChannelName, channel)
 
 	// Create the 'sink', a LogEvents Pod and a K8s Service that points to it.
-	loggerPod := resources.EventDetailsPod(loggerPodName)
+	loggerPod := resources.EventRecordPod(loggerPodName)
 	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
 
 	// Create the subscriber, a Pod that mutates the event.
@@ -322,5 +335,17 @@ func setupChannelTracingWithReply(
 			},
 		}
 	}
-	return expected, body
+
+	matchFunc := func(ev ce.Event) bool {
+		if ev.Source() != senderName {
+			return false
+		}
+		if ev.ID() != eventID {
+			return false
+		}
+		db, _ := ev.DataBytes()
+		return strings.Contains(string(db), body)
+	}
+
+	return expected, matchFunc
 }
