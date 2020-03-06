@@ -19,10 +19,11 @@ package jobrunner
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/robfig/cron"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	"sync"
 
 	"go.uber.org/zap"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"

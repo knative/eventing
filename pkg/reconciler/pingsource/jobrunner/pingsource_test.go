@@ -18,10 +18,11 @@ package jobrunner
 
 import (
 	"context"
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
-	"knative.dev/pkg/source"
 	"sync"
 	"testing"
+
+	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
+	"knative.dev/pkg/source"
 
 	"github.com/robfig/cron"
 	"k8s.io/apimachinery/pkg/runtime"

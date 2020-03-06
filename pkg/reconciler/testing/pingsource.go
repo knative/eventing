@@ -18,8 +18,9 @@ package testing
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/apis/eventing"
 	"time"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
@@ -72,12 +73,11 @@ func WithPingSourceUID(uid string) PingSourceOption {
 	}
 }
 
-func WithPingSourceNamespaceScopeAnnotation(c *v1alpha1.PingSource) {
+func WithPingSourceResourceScopeAnnotation(c *v1alpha1.PingSource) {
 	if c.Annotations == nil {
 		c.Annotations = make(map[string]string)
 	}
-	c.Annotations[eventing.ScopeAnnotationKey] = "namespace"
-
+	c.Annotations[eventing.ScopeAnnotationKey] = "resource"
 }
 
 // WithInitPingSourceConditions initializes the PingSource's conditions.
