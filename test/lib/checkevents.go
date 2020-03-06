@@ -143,9 +143,8 @@ func (ei *EventInfoStore) doRetrieveData() error {
 
 // Clean up any background resources used by the store.  Must be called exactly once after
 // the last use.
-func (ei *EventInfoStore) Cleanup() error {
+func (ei *EventInfoStore) Cleanup() {
 	close(ei.closeCh)
-	return nil
 }
 
 // Called internally by functions wanting the current list of all
@@ -236,7 +235,7 @@ func (ei *EventInfoStore) WaitAtLeastNMatch(f EventInfoMatchFunc, n int) ([]Even
 	return matchRet, internalErr
 }
 
-// Does the provideded EventInfo match some criteria
+// Does the provided EventInfo match some criteria
 type EventInfoMatchFunc func(EventInfo) bool
 
 // Does the provided event match some criteria

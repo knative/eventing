@@ -90,7 +90,7 @@ type eventGetter struct {
 	podName       string
 	podNamespace  string
 	podPort       int
-	kubeClientset *kubernetes.Clientset
+	kubeClientset kubernetes.Interface
 	logf          logging.FormatLogger
 
 	host       string
@@ -99,7 +99,7 @@ type eventGetter struct {
 }
 
 // Creates a forwarded port to the specified recordevents pod and waits until
-// it can successfully talk to the REST API.  Times out after 4 minutes
+// it can successfully talk to the REST API.  Times out after timeoutEvRetry
 func newEventGetter(podName string, client *Client, logf logging.FormatLogger) (eventGetterInterface, error) {
 	egi := &eventGetter{podName: podName, podNamespace: client.Namespace,
 		kubeClientset: client.Kube.Kube, podPort: RecordEventsPort, logf: logf}
@@ -132,7 +132,7 @@ func (eg *eventGetter) getRunningPodInfo(podName, namespace string) (*v1.PodList
 }
 
 // Try to forward the pod port to a local port somewhere in the range 30000-60000.
-// keeps retrying with random ports in that range for 4 minutes.
+// keeps retrying with random ports in that range, timing out after timeoutEvRetry
 func (eg *eventGetter) forwardPort() error {
 	portRand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	portMin := 30000
@@ -183,7 +183,7 @@ func (eg *eventGetter) getMinMax() (minRet int, maxRet int, errRet error) {
 	if err != nil {
 		return -1, -1, fmt.Errorf("error reading response body %w", err)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return -1, -1, fmt.Errorf("error %d reading GetMinMax response", resp.StatusCode)
 	}
 	minMaxResponse := MinMaxResponse{}
@@ -211,7 +211,7 @@ func (eg *eventGetter) getEntry(seqno int) (EventInfo, error) {
 	if err != nil {
 		return EventInfo{}, fmt.Errorf("error reading response body %w", err)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return EventInfo{}, fmt.Errorf("error %d reading GetEntry response", resp.StatusCode)
 	}
 	entryResponse := EventInfo{}
@@ -239,7 +239,7 @@ func (eg *eventGetter) trimThrough(seqno int) error {
 	if err != nil {
 		return fmt.Errorf("error reading response body %w", err)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error %d reading TrimThrough response: %s", resp.StatusCode, string(body))
 	}
 
@@ -255,7 +255,7 @@ func (eg *eventGetter) cleanup() {
 	}
 }
 
-// Wait (up to 4 minutes) for the pod to RestAPI to answer request.
+// Wait (up to timeoutEvRetry) for the pod to RestAPI to answer request.
 func (eg *eventGetter) waitTillUp() error {
 	var internalErr error
 	wait.PollImmediate(minEvRetryInterval, timeoutEvRetry, func() (bool, error) {

@@ -130,6 +130,8 @@ func (deg *dummyEventGet) setEv(firstID int, allEv []EventInfo) {
 	deg.allEv = allEv
 }
 
+// Test that Finds where the server gives sequential updates that
+// don't overlap see the expected events.
 func TestSequentialAndTrim(t *testing.T) {
 	totalEv := makeEvents()
 	expectedFull := makeEvents()
@@ -158,6 +160,8 @@ func TestSequentialAndTrim(t *testing.T) {
 	ei.Cleanup()
 }
 
+// Test that Finds where the server gives overlapping updates
+// see the expected events (no double events)
 func TestOverlap(t *testing.T) {
 	totalEv := makeEvents()
 	expectedFull := makeEvents()
@@ -180,6 +184,8 @@ func TestOverlap(t *testing.T) {
 	ei.Cleanup()
 }
 
+// Test that we see an error if repeated Finds see a gap in the sequence
+// space
 func TestGap(t *testing.T) {
 	totalEv := makeEvents()
 	expectedFull := makeEvents()
@@ -201,6 +207,8 @@ func TestGap(t *testing.T) {
 	ei.Cleanup()
 }
 
+// Test that two finds, with the second one having
+// no new events, returns the right events.
 func TestSequentialNoOp(t *testing.T) {
 	totalEv := makeEvents()
 	expectedFull := makeEvents()
@@ -223,6 +231,7 @@ func TestSequentialNoOp(t *testing.T) {
 	ei.Cleanup()
 }
 
+// Test that wait for N Works
 func TestWaitForN(t *testing.T) {
 	deg := newDummyEventGet()
 	subEv := makeEvents()[:10]
