@@ -30,8 +30,8 @@ func (c *Channel) SetDefaults(ctx context.Context) {
 		defaultChannel, err := cfg.ChannelDefaults.GetChannelConfig(apis.ParentMeta(ctx).Namespace)
 		if err == nil {
 			c.Spec.ChannelTemplate = &v1beta1.ChannelTemplateSpec{
-				defaultChannel.TypeMeta,
-				defaultChannel.Spec,
+				TypeMeta: defaultChannel.TypeMeta,
+				Spec:     defaultChannel.Spec,
 			}
 		}
 	}
