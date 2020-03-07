@@ -32,7 +32,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: sender-receiver
-        image: knative.dev/eventing/test/test_images/performance
+        image: ko://knative.dev/eventing/test/test_images/performance
         args:
         - "--roles=sender,receiver"
         - "--sink=http://in-memory-test-broker-broker.perf-eventing.svc.cluster.local"
@@ -71,7 +71,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: aggregator
-    image: knative.dev/eventing/test/test_images/performance
+    image: ko://knative.dev/eventing/test/test_images/performance
     args:
     - "--roles=aggregator"
       # set to the number of sender + receiver (same image that does both counts 2)
@@ -88,7 +88,7 @@ spec:
       mountPath: /etc/config-mako
     terminationMessagePolicy: FallbackToLogsOnError
   - name: mako-stub
-    image: knative.dev/pkg/test/mako/stub-sidecar
+    image: ko://knative.dev/pkg/test/mako/stub-sidecar
     ports:
     - name: quickstore
       containerPort: 9813
