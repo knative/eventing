@@ -32,8 +32,8 @@ func (s *Sequence) SetDefaults(ctx context.Context) {
 
 		if err == nil {
 			s.Spec.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
-				c.TypeMeta,
-				c.Spec,
+				TypeMeta: c.TypeMeta,
+				Spec:     c.Spec,
 			}
 		}
 	}

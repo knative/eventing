@@ -32,8 +32,8 @@ func (p *Parallel) SetDefaults(ctx context.Context) {
 
 		if err == nil {
 			p.Spec.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
-				c.TypeMeta,
-				c.Spec,
+				TypeMeta: c.TypeMeta,
+				Spec:     c.Spec,
 			}
 		}
 	}

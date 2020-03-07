@@ -39,8 +39,8 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 
 			if err == nil {
 				bs.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
-					c.TypeMeta,
-					c.Spec,
+					TypeMeta: c.TypeMeta,
+					Spec:     c.Spec,
 				}
 			}
 		}
