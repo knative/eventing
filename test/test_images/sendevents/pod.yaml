@@ -5,5 +5,5 @@ metadata:
 spec:
   containers:
     - name: sendevents
-      image: knative.dev/eventing/test/test_images/sendevents
+      image: ko://knative.dev/eventing/test/test_images/sendevents
 
