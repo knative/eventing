@@ -37,16 +37,6 @@ var parallelConditionReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
-var parallelConditionChannelsReady = apis.Condition{
-	Type:   ParallelConditionChannelsReady,
-	Status: corev1.ConditionTrue,
-}
-
-var parallelConditionSubscriptionsReady = apis.Condition{
-	Type:   ParallelConditionSubscriptionsReady,
-	Status: corev1.ConditionTrue,
-}
-
 func TestParallelGetCondition(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -412,17 +402,17 @@ func TestParallelPropagateSetAddress(t *testing.T) {
 		wantStatus: corev1.ConditionFalse,
 	}, {
 		name:       "URL",
-		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
-		want:       &pkgduckv1.Addressable{URL},
+		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: URL}, Hostname: ""},
+		want:       &pkgduckv1.Addressable{URL: URL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "hostname",
-		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, "myhostname"},
-		want:       &pkgduckv1.Addressable{hostnameURL},
+		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{}, Hostname: "myhostname"},
+		want:       &pkgduckv1.Addressable{URL: hostnameURL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "nil",
-		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{nil}, ""},
+		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: nil}, Hostname: ""},
 		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}}
