@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ var (
 			// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
 			// Namespace is the key, the value is the KReference to the config.
 			NamespaceDefaultsConfig: map[string]*config.ClassAndKRef{
-				"mynamespace": &config.ClassAndKRef{
+				"mynamespace": {
 					KReference: &duckv1.KReference{
 						APIVersion: "v1",
 						Kind:       "ConfigMap",
@@ -42,7 +42,7 @@ var (
 						Name:       "kafka-channel",
 					},
 				},
-				"mynamespace2": &config.ClassAndKRef{
+				"mynamespace2": {
 					BrokerClass: "mynamespace2class",
 					KReference: &duckv1.KReference{
 						APIVersion: "v1",
