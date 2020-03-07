@@ -38,16 +38,6 @@ var sequenceConditionReady = apis.Condition{
 	Status: corev1.ConditionTrue,
 }
 
-var sequenceConditionChannelsReady = apis.Condition{
-	Type:   SequenceConditionChannelsReady,
-	Status: corev1.ConditionTrue,
-}
-
-var sequenceConditionSubscriptionsReady = apis.Condition{
-	Type:   SequenceConditionSubscriptionsReady,
-	Status: corev1.ConditionTrue,
-}
-
 func getSubscription(name string, ready bool) *messagingv1alpha1.Subscription {
 	s := messagingv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
@@ -84,7 +74,7 @@ func getChannelable(ready bool) *duckv1alpha1.Channelable {
 	}
 
 	if ready {
-		c.Status.Address = &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""}
+		c.Status.Address = &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: URL}, Hostname: ""}
 	}
 
 	return &c
@@ -382,17 +372,17 @@ func TestSequencePropagateSetAddress(t *testing.T) {
 		wantStatus: corev1.ConditionFalse,
 	}, {
 		name:       "URL",
-		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{URL}, ""},
-		want:       &pkgduckv1.Addressable{URL},
+		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: URL}, Hostname: ""},
+		want:       &pkgduckv1.Addressable{URL: URL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "hostname",
-		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{}, "myhostname"},
-		want:       &pkgduckv1.Addressable{hostnameURL},
+		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{}, Hostname: "myhostname"},
+		want:       &pkgduckv1.Addressable{URL: hostnameURL},
 		wantStatus: corev1.ConditionTrue,
 	}, {
 		name:       "nil",
-		address:    &pkgduckv1alpha1.Addressable{duckv1beta1.Addressable{nil}, ""},
+		address:    &pkgduckv1alpha1.Addressable{Addressable: duckv1beta1.Addressable{URL: nil}, Hostname: ""},
 		want:       nil,
 		wantStatus: corev1.ConditionFalse,
 	}}
