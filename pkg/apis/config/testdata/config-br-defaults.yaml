@@ -29,12 +29,14 @@ data:
     ################################
     default-br-config: |
       clusterDefault:
+        brokerClass: ChannelBasedBroker
         apiVersion: v1
         kind: ConfigMap
         name: somename
         namespace: knative-eventing
       namespaceDefaults:
         some-namespace:
+          brokerClass: someotherbrokerclass
           apiVersion: v1
           kind: ConfigMap
           name: someothername
