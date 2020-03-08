@@ -33,6 +33,10 @@ const (
 	// the scope of the component handling a given resource.
 	// Valid values are: cluster, namespace, resource.
 	ScopeAnnotationKey = GroupName + "/scope"
+
+	// ChannelBrokerClassValue is the value we use to specify the
+	// Broker using channels. As in Broker from this repository.
+	ChannelBrokerClassValue = "ChannelBasedBroker"
 )
 
 var (
