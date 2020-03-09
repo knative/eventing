@@ -691,7 +691,68 @@ func TestReconcile(t *testing.T) {
 			WantPatches: []clientgotesting.PatchActionImpl{
 				patchFinalizers(testNS, brokerName),
 			},
-		}, {
+		},
+		{
+			Name: "Successful Reconciliation, matching BrokerClass",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithInitBrokerConditions,
+					WithBrokerClass(eventing.ChannelBrokerClassValue)),
+				createChannel(testNS, triggerChannel, true),
+				NewDeployment(filterDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.FilterLabels(brokerName)),
+					WithDeploymentServiceAccount(filterSA),
+					WithDeploymentContainer(filterContainerName, filterImage, livenessProbe(), readinessProbe(), envVars(filterContainerName), containerPorts(8080))),
+				NewService(filterServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.FilterLabels(brokerName)),
+					WithServicePorts(servicePorts(8080))),
+				NewDeployment(ingressDeploymentName, testNS,
+					WithDeploymentOwnerReferences(ownerReferences()),
+					WithDeploymentLabels(resources.IngressLabels(brokerName)),
+					WithDeploymentServiceAccount(ingressSA),
+					WithDeploymentContainer(ingressContainerName, ingressImage, livenessProbe(), nil, envVars(ingressContainerName), containerPorts(8080))),
+				NewService(ingressServiceName, testNS,
+					WithServiceOwnerReferences(ownerReferences()),
+					WithServiceLabels(resources.IngressLabels(brokerName)),
+					WithServicePorts(servicePorts(8080))),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithBrokerReady,
+					WithBrokerTriggerChannel(createTriggerChannelRef()),
+					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
+				),
+			}},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+		},
+		{
+			Name: "Successful Reconciliation, broker ignored because mismatching BrokerClass",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithInitBrokerConditions,
+					WithBrokerClass("broker-class-mismatch")),
+			},
+			WantEvents: []string{
+				finalizerUpdatedEvent,
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, brokerName),
+			},
+		},
+		{
 			Name: "Successful Reconciliation, status update fails",
 			Key:  testKey,
 			Objects: []runtime.Object{
@@ -1413,6 +1474,7 @@ func TestReconcile(t *testing.T) {
 			channelableTracker:        duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			addressableTracker:        duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			brokerClass:               eventing.ChannelBrokerClassValue,
 		}
 		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r)
 
