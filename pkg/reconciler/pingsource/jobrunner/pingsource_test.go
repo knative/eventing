@@ -90,8 +90,6 @@ func TestAllCases(t *testing.T) {
 					}),
 					WithInitPingSourceV1A2Conditions,
 					WithValidPingSourceV1A2Schedule,
-					//WithValidPingSourceV1A2Resources,
-
 					WithPingSourceV1A2Deployed,
 					WithPingSourceV1A2Sink(sinkURI),
 					WithPingSourceV1A2EventType,

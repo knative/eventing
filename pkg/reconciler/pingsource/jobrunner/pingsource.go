@@ -101,7 +101,7 @@ func (r *Reconciler) reconcile(key string, source *v1alpha2.PingSource) error {
 	}
 	r.Logger.Info("synchronizing schedule")
 
-	// Is the scheduled already cached?
+	// Is the schedule already cached?
 	if id, ok := r.entryids[key]; ok {
 		r.cronRunner.RemoveSchedule(id)
 	}
