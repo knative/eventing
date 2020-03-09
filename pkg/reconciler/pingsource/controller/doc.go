@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package pingsource implements the PingSource controller.
+// Package controller implements the PingSource controller.
 package controller
