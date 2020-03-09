@@ -57,7 +57,8 @@ type envConfig struct {
 	IngressServiceAccount string `envconfig:"BROKER_INGRESS_SERVICE_ACCOUNT" required:"true"`
 	FilterImage           string `envconfig:"BROKER_FILTER_IMAGE" required:"true"`
 	FilterServiceAccount  string `envconfig:"BROKER_FILTER_SERVICE_ACCOUNT" required:"true"`
-	BrokerClass           string `envconfig:"BROKER_CLASS"`
+	// The default value should match the cluster default in config/core/configmaps/default-broker.yaml
+	BrokerClass           string `envconfig:"BROKER_CLASS" default:"ChannelBasedBroker"`
 }
 
 // NewController initializes the controller and is called by the generated code

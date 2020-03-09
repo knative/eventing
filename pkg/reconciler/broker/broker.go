@@ -107,11 +107,9 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
 	// TODO(vaikas): Can we just add this into the controller as part of the filtering
 	// so they won't even get queued into my queue???
-	if r.brokerClass != "" {
-		if b.GetAnnotations()[eventing.BrokerClassKey] != r.brokerClass {
-			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
-			return nil
-		}
+	if b.GetAnnotations()[eventing.BrokerClassKey] != r.brokerClass {
+		logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
+		return nil
 	}
 	filterSvc, err := r.reconcileKind(ctx, b)
 
