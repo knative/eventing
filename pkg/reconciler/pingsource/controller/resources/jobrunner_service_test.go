@@ -17,13 +17,19 @@ limitations under the License.
 package resources
 
 import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func MakeJobRunnerService(name, namespace string) *corev1.Service {
-	return &corev1.Service{
+func TestMakeJobRunnerService(t *testing.T) {
+	name := "test-name"
+	namespace := "test-ns"
+
+	want := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
@@ -44,4 +50,11 @@ func MakeJobRunnerService(name, namespace string) *corev1.Service {
 			},
 		},
 	}
+
+	got := MakeJobRunnerService(name, namespace)
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+	}
+
 }

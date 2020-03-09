@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/system"
 
@@ -215,7 +216,7 @@ func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.Pi
 	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(jobRunnerName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			args := resources.DispatcherArgs{
+			args := resources.JobRunnerArgs{
 				ServiceAccountName: jobRunnerName,
 				JobRunnerName:      jobRunnerName,
 				JobRunnerNamespace: system.Namespace(),

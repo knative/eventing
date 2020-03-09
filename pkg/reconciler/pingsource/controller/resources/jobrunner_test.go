@@ -17,33 +17,28 @@ limitations under the License.
 package resources
 
 import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"knative.dev/pkg/system"
+	_ "knative.dev/pkg/system/testing"
 )
 
-var (
-	jobRunnerLabels = map[string]string{
-		"sources.knative.dev/source": "ping-source",
-		"sources.knative.dev/role":   "jobrunner",
-	}
-)
-
-type JobRunnerArgs struct {
-	ServiceAccountName string
-	JobRunnerName      string
-	JobRunnerNamespace string
-	Image              string
-}
-
-// MakeJobRunner generates the jobrunner deployment for pingsource
-func MakeJobRunner(args JobRunnerArgs) *v1.Deployment {
+func TestMakeJobRunner(t *testing.T) {
 	replicas := int32(1)
 
-	return &v1.Deployment{
+	args := JobRunnerArgs{
+		ServiceAccountName: "test-sa",
+		JobRunnerName:      "test-name",
+		JobRunnerNamespace: "test-namespace",
+		Image:              "test-image",
+	}
+
+	want := &v1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "Deployments",
@@ -67,8 +62,26 @@ func MakeJobRunner(args JobRunnerArgs) *v1.Deployment {
 						{
 							Name:  "dispatcher",
 							Image: args.Image,
-							Env:   makeEnv(),
-
+							Env: []corev1.EnvVar{{
+								Name:  system.NamespaceEnvKey,
+								Value: system.Namespace(),
+							}, {
+								Name:  "METRICS_DOMAIN",
+								Value: "knative.dev/pingsource-jobrunner",
+							}, {
+								Name:  "CONFIG_OBSERVABILITY_NAME",
+								Value: "config-observability",
+							}, {
+								Name:  "CONFIG_LOGGING_NAME",
+								Value: "config-logging",
+							}, {
+								Name: "NAMESPACE",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.namespace",
+									},
+								},
+							}},
 							// Set low resource requests and limits.
 							// This should be configurable.
 							Resources: corev1.ResourceRequirements{
@@ -91,27 +104,10 @@ func MakeJobRunner(args JobRunnerArgs) *v1.Deployment {
 			},
 		},
 	}
-}
 
-func makeEnv() []corev1.EnvVar {
-	return []corev1.EnvVar{{
-		Name:  system.NamespaceEnvKey,
-		Value: system.Namespace(),
-	}, {
-		Name:  "METRICS_DOMAIN",
-		Value: "knative.dev/pingsource-jobrunner",
-	}, {
-		Name:  "CONFIG_OBSERVABILITY_NAME",
-		Value: "config-observability",
-	}, {
-		Name:  "CONFIG_LOGGING_NAME",
-		Value: "config-logging",
-	}, {
-		Name: "NAMESPACE",
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				FieldPath: "metadata.namespace",
-			},
-		},
-	}}
+	got := MakeJobRunner(args)
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("unexpected condition (-want, +got) = %v", diff)
+	}
 }
