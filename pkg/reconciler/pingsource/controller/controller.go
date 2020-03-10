@@ -91,7 +91,8 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	// Watch for the global deployment
+	// Watch for the global deployment and propagate
+	// any changes to all PingSources relying on it.
 	gr := func(obj interface{}) {
 		impl.GlobalResync(pingSourceInformer.Informer())
 	}

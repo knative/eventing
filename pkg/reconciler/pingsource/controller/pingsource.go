@@ -54,9 +54,6 @@ var (
 
 const (
 	// Name of the corev1.Events emitted from the reconciliation process
-	pingReconciled              = "PingSourceReconciled"
-	pingReadinessChanged        = "PingSourceReadinessChanged"
-	pingUpdateStatusFailed      = "PingSourceUpdateStatusFailed"
 	pingSourceDeploymentCreated = "PingSourceDeploymentCreated"
 	pingSourceDeploymentUpdated = "PingSourceDeploymentUpdated"
 	component                   = "pingsource"
@@ -130,10 +127,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
-		scope = "cluster"
+		scope = eventing.ScopeCluster
 	}
 
-	if scope == "cluster" {
+	if scope == eventing.ScopeCluster {
 		// Make sure the global job runner is running
 		d, err := r.reconcileJobRunner(ctx, source)
 		if err != nil {
@@ -212,18 +209,22 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 }
 
 func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.PingSource) (*appsv1.Deployment, error) {
+	if err := checkResourcesStatus(source); err != nil {
+		return nil, err
+	}
+
+	args := resources.JobRunnerArgs{
+		ServiceAccountName: jobRunnerName,
+		JobRunnerName:      jobRunnerName,
+		JobRunnerNamespace: system.Namespace(),
+		Image:              r.jobRunnerImage,
+	}
+	expected := resources.MakeJobRunner(args)
+
 	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(jobRunnerName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			args := resources.JobRunnerArgs{
-				ServiceAccountName: jobRunnerName,
-				JobRunnerName:      jobRunnerName,
-				JobRunnerNamespace: system.Namespace(),
-				Image:              r.jobRunnerImage,
-			}
-			expected := resources.MakeJobRunner(args)
 			d, err := r.KubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
-
 			if err != nil {
 				r.Recorder.Eventf(source, corev1.EventTypeWarning, pingSourceDeploymentCreated, "Cluster-scoped deployment not created (%v)", err)
 				return nil, err
@@ -232,6 +233,15 @@ func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.Pi
 			return d, nil
 		}
 		return nil, fmt.Errorf("error getting job runner deployment %v", err)
+	} else if podSpecChanged(d.Spec.Template.Spec, d.Spec.Template.Spec) {
+		d.Spec.Template.Spec = expected.Spec.Template.Spec
+		if d, err = r.KubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
+			return d, err
+		}
+		r.Recorder.Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Cluster-scoped deployment updated")
+		return d, nil
+	} else {
+		logging.FromContext(ctx).Debug("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))
 	}
 	return d, nil
 }

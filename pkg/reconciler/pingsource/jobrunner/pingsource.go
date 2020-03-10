@@ -69,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	}
 
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
-	if ok && scope != "cluster" {
+	if ok && scope != eventing.ScopeCluster {
 		// Not our responsibility
 		logging.FromContext(ctx).Info("Skipping non-cluster-scoped PingSource", zap.Any("key", key))
 		return nil

@@ -77,14 +77,28 @@ func WithPingSourceResourceScopeAnnotation(c *v1alpha1.PingSource) {
 	if c.Annotations == nil {
 		c.Annotations = make(map[string]string)
 	}
-	c.Annotations[eventing.ScopeAnnotationKey] = "resource"
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
 }
 
 func WithPingSourceV1A2ResourceScopeAnnotation(c *v1alpha2.PingSource) {
 	if c.Annotations == nil {
 		c.Annotations = make(map[string]string)
 	}
-	c.Annotations[eventing.ScopeAnnotationKey] = "resource"
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
+}
+
+func WithPingSourceClusterScopeAnnotation(c *v1alpha1.PingSource) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
+}
+
+func WithPingSourceV1A2ClusterScopeAnnotation(c *v1alpha2.PingSource) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
 }
 
 // WithInitPingSourceConditions initializes the PingSource's conditions.

@@ -29,14 +29,26 @@ const (
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"
 
+	// ChannelBrokerClassValue is the value we use to specify the
+	// Broker using channels. As in Broker from this repository.
+	ChannelBrokerClassValue = "ChannelBasedBroker"
+
 	// ScopeAnnotationKey is the annotation key to indicate
 	// the scope of the component handling a given resource.
 	// Valid values are: cluster, namespace, resource.
 	ScopeAnnotationKey = GroupName + "/scope"
 
-	// ChannelBrokerClassValue is the value we use to specify the
-	// Broker using channels. As in Broker from this repository.
-	ChannelBrokerClassValue = "ChannelBasedBroker"
+	// ScopeResource indicates that the resource
+	// must be handled by a dedicated component
+	ScopeResource = "resource"
+
+	// ScopeNamespace indicates that the resource
+	// must be handled by the namespace-scoped component
+	ScopeNamespace = "namespace"
+
+	// ScopeCluster indicates the resource must be
+	// handled by the cluster-scoped component
+	ScopeCluster = "cluster"
 )
 
 var (

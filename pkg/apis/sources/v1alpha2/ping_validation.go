@@ -47,7 +47,7 @@ func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {
 func ValidateAnnotations(errs *apis.FieldError, annotations map[string]string) *apis.FieldError {
 	if annotations != nil {
 		if scope, ok := annotations[eventing.ScopeAnnotationKey]; ok {
-			if scope != "resource" && scope != "cluster" {
+			if scope != eventing.ScopeResource && scope != eventing.ScopeCluster {
 				iv := apis.ErrInvalidValue(scope, "")
 				iv.Details = "expected either 'cluster' or 'resource'"
 				errs = errs.Also(iv.ViaFieldKey("annotations", eventing.ScopeAnnotationKey).ViaField("metadata"))

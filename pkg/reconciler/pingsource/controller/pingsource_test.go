@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/system"
+
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -502,6 +504,94 @@ func TestAllCases(t *testing.T) {
 				Name: eventTypeName,
 			}},
 		},
+		{
+			Name: "valid",
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha1(sourceName, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceResourceScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeAvailableReceiveAdapter(sinkDest),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceResourceScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitPingSourceConditions,
+					WithValidPingSourceSchedule,
+					WithValidPingSourceResources,
+					WithPingSourceDeployed,
+					WithPingSourceSink(sinkURI),
+					WithPingSourceEventType,
+					WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+		},
+		{
+			Name: "valid with cluster scope annotation",
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha1(sourceName, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceClusterScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeAvailableJobRunner(),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceClusterScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithInitPingSourceConditions,
+					WithValidPingSourceSchedule,
+					WithValidPingSourceResources,
+					WithPingSourceDeployed,
+					WithPingSourceSink(sinkURI),
+					WithPingSourceEventType,
+					WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
+		},
 	}
 
 	logger := logtesting.TestLogger(t)
@@ -552,4 +642,16 @@ func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
 		SinkURI: sinkURI,
 	}
 	return resources.MakeReceiveAdapter(&args)
+}
+
+func makeAvailableJobRunner() *appsv1.Deployment {
+	args := resources.JobRunnerArgs{
+		ServiceAccountName: "test-sa",
+		JobRunnerName:      jobRunnerName,
+		JobRunnerNamespace: system.Namespace(),
+		Image:              "test-image",
+	}
+	ra := resources.MakeJobRunner(args)
+	WithDeploymentAvailable()(ra)
+	return ra
 }
