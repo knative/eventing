@@ -18,8 +18,11 @@ package tracing
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
@@ -40,7 +43,7 @@ type SpanTree struct {
 }
 
 func (t SpanTree) String() string {
-	b, _ := json.Marshal(t)
+	b, _ := json.MarshalIndent(t, "", "  ")
 	return string(b)
 }
 
@@ -65,13 +68,132 @@ func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
 		children[i] = t.Children[i].toTestSpanTreeHelper()
 	}
 	tst := TestSpanTree{
-		Kind:                     t.Span.Kind,
-		LocalEndpointServiceName: name,
-		Tags:                     t.Span.Tags,
-		Children:                 children,
+		Span: &SpanMatcher{
+			Kind:                     &t.Span.Kind,
+			LocalEndpointServiceName: name,
+			Tags:                     t.Span.Tags,
+		},
+		Children: children,
 	}
 	tst.SortChildren()
 	return tst
+}
+
+type SpanMatcher struct {
+	Kind                     *model.Kind       `json:"a_Kind,omitempty"`
+	LocalEndpointServiceName string            `json:"b_Name,omitempty"`
+	Tags                     map[string]string `json:"c_Tags,omitempty"`
+}
+
+func (m *SpanMatcher) Cmp(m2 *SpanMatcher) int {
+	if m == nil {
+		if m2 == nil {
+			return 0
+		}
+		return -1
+	}
+	if m2 == nil {
+		return 1
+	}
+
+	if *m.Kind < *m2.Kind {
+		return -1
+	} else if *m.Kind > *m2.Kind {
+		return 1
+	}
+
+	t1 := m.Tags
+	t2 := m2.Tags
+	for _, key := range []string{"http.url", "http.host", "http.path"} {
+		if t1[key] < t2[key] {
+			return -1
+		} else if t1[key] > t2[key] {
+			return 1
+		}
+	}
+	return 0
+}
+
+type SpanMatcherOption func(*SpanMatcher)
+
+func WithLocalEndpointServiceName(s string) SpanMatcherOption {
+	return func(m *SpanMatcher) {
+		m.LocalEndpointServiceName = s
+	}
+}
+
+func (m *SpanMatcher) MatchesSpan(span *model.SpanModel) error {
+	if m == nil {
+		return nil
+	}
+	if m.Kind != nil {
+		if *m.Kind != span.Kind {
+			return fmt.Errorf("mismatched kind: got %q, want %q", span.Kind, *m.Kind)
+		}
+	}
+	if m.LocalEndpointServiceName != "" {
+		if span.LocalEndpoint == nil {
+			return errors.New("missing local endpoint")
+		}
+		if m.LocalEndpointServiceName != span.LocalEndpoint.ServiceName {
+			return fmt.Errorf("mismatched LocalEndpoint ServiceName: got %q, want %q", span.LocalEndpoint.ServiceName, m.LocalEndpointServiceName)
+		}
+	}
+	for k, v := range m.Tags {
+		if t := span.Tags[k]; t != v {
+			return fmt.Errorf("unexpected tag %s: got %q, want %q", k, t, v)
+		}
+	}
+	return nil
+}
+
+func MatchHTTPClientSpanWithCode(host string, path string, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
+	kind := model.Client
+	m := &SpanMatcher{
+		Kind: &kind,
+		Tags: map[string]string{
+			"http.method":      http.MethodPost,
+			"http.status_code": strconv.Itoa(statusCode),
+			"http.url":         fmt.Sprintf("http://%s%s", host, path),
+		},
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+func MatchHTTPServerSpanWithCode(host string, path string, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
+	kind := model.Server
+	m := &SpanMatcher{
+		Kind: &kind,
+		Tags: map[string]string{
+			"http.method":      http.MethodPost,
+			"http.status_code": strconv.Itoa(statusCode),
+			"http.host":        host,
+			"http.path":        path,
+		},
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+func MatchHTTPClientSpanNoReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchHTTPClientSpanWithCode(host, path, 202, opts...)
+}
+
+func MatchHTTPServerSpanNoReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchHTTPServerSpanWithCode(host, path, 202, opts...)
+}
+
+func MatchHTTPClientSpanWithReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchHTTPClientSpanWithCode(host, path, 200, opts...)
+}
+
+func MatchHTTPServerSpanWithReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchHTTPServerSpanWithCode(host, path, 200, opts...)
 }
 
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
@@ -80,17 +202,14 @@ func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
 // JSON. The JSON will be printed in alphabetical order, so we are imposing a certain order by
 // prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type TestSpanTree struct {
-	Note                     string            `json:"a_Note,omitempty"`
-	Root                     bool              `json:"b_Root,omitempty"`
-	Kind                     model.Kind        `json:"c_Kind,omitempty"`
-	LocalEndpointServiceName string            `json:"d_Name,omitempty"`
-	Tags                     map[string]string `json:"e_Tags,omitempty"`
-
+	Note     string         `json:"a_Note,omitempty"`
+	Root     bool           `json:"b_root"`
+	Span     *SpanMatcher   `json:"c_Span"`
 	Children []TestSpanTree `json:"z_Children,omitempty"`
 }
 
 func (t TestSpanTree) String() string {
-	b, _ := json.Marshal(t)
+	b, _ := json.MarshalIndent(t, "", "  ")
 	return string(b)
 }
 
@@ -116,16 +235,10 @@ func (t *TestSpanTree) SortChildren() {
 			return ic.height() < jc.height()
 		}
 
-		if ic.Kind != jc.Kind {
-			return ic.Kind < jc.Kind
+		if r := ic.Span.Cmp(jc.Span); r != 0 {
+			return r < 0
 		}
-		it := ic.Tags
-		jt := jc.Tags
-		for _, key := range []string{"http.url", "http.host", "http.path"} {
-			if it[key] != jt[key] {
-				return it[key] < jt[key]
-			}
-		}
+
 		// We don't have anything to reliably differentiate by. So this isn't going to really be
 		// sorted, just leave the existing one first arbitrarily.
 		return i < j
@@ -207,26 +320,14 @@ func (t TestSpanTree) Matches(actual SpanTree) error {
 	}
 	t.SortChildren()
 	if err := traceTreeMatches(".", t, actual); err != nil {
-		return fmt.Errorf("spanTree did not match: %v. \n*****Actual***** %v\n*****Expected***** %v", err, actual.ToTestSpanTree().String(), t.String())
+		return err
 	}
 	return nil
 }
 
 func traceTreeMatches(pos string, want TestSpanTree, got SpanTree) error {
-	if g, w := got.Span.Kind, want.Kind; g != w {
-		return fmt.Errorf("unexpected kind at %q: got %q, want %q", pos, g, w)
-	}
-	gotLocalEndpointServiceName := ""
-	if got.Span.LocalEndpoint != nil {
-		gotLocalEndpointServiceName = got.Span.LocalEndpoint.ServiceName
-	}
-	if w := want.LocalEndpointServiceName; w != "" && gotLocalEndpointServiceName != w {
-		return fmt.Errorf("unexpected localEndpoint.ServiceName at %q: got %q, want %q", pos, gotLocalEndpointServiceName, w)
-	}
-	for k, w := range want.Tags {
-		if g := got.Span.Tags[k]; g != w {
-			return fmt.Errorf("unexpected tag[%s] value at %q: got %q, want %q", k, pos, g, w)
-		}
+	if err := want.Span.MatchesSpan(&got.Span); err != nil {
+		return fmt.Errorf("no match for span at %q: %w", pos, err)
 	}
 	return unorderedTraceTreesMatch(pos, want.Children, got.Children)
 }
@@ -247,17 +348,18 @@ func unorderedTraceTreesMatch(pos string, want []TestSpanTree, got []SpanTree) e
 	// so n should be small (say 50 in the largest cases).
 OuterLoop:
 	for i, w := range want {
-		var lastErr error
+		var errs []error
 		for ug := range unmatchedGot {
-			lastErr = w.Matches(got[ug])
 			// If there is no error, then it matched successfully.
-			if lastErr == nil {
+			if err := w.Matches(got[ug]); err == nil {
 				unmatchedGot.Delete(ug)
 				continue OuterLoop
+			} else {
+				errs = append(errs, fmt.Errorf("no child match %v: %v", ug, err))
 			}
 		}
 		// Nothing matched.
-		return fmt.Errorf("unable to find child match %s[%d]: Last Err %v. Want: %s **** Got: %s", pos, i, lastErr, w.String(), got)
+		return fmt.Errorf("unable to find child match %s[%d]: errors %v. Want: %s **** Got: %s", pos, i, errs, w.String(), got)
 	}
 	// Everything matched.
 	return nil

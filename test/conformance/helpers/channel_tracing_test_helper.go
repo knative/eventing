@@ -23,7 +23,6 @@ import (
 	"time"
 
 	ce "github.com/cloudevents/sdk-go"
-	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/zipkin"
@@ -208,7 +207,7 @@ func setupChannelTracingWithReply(
 
 	// Everything is setup to receive an event. Generate a CloudEvent.
 	senderName := "sender"
-	eventID := fmt.Sprintf("%s", uuid.NewUUID())
+	eventID := string(uuid.NewUUID())
 	body := fmt.Sprintf("TestChannelTracing %s", eventID)
 	event := cloudevents.New(
 		fmt.Sprintf(`{"msg":%q}`, body),
@@ -240,74 +239,45 @@ func setupChannelTracingWithReply(
 		Children: []tracinghelper.TestSpanTree{
 			{
 				// 2. Channel receives event from sending pod.
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      "POST",
-					"http.status_code": "202",
-					"http.host":        fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
-					"http.path":        "/",
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace), "/"),
 				Children: []tracinghelper.TestSpanTree{
 					{
 						// 3. Channel sends event to transformer pod.
-						Kind: model.Client,
-						Tags: map[string]string{
-							"http.method":      "POST",
-							"http.status_code": "200",
-							"http.url":         fmt.Sprintf("http://%s.%s.svc.cluster.local/", transformerPod.Name, client.Namespace),
-						},
+						Span: tracinghelper.MatchHTTPClientSpanWithReply(
+							fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace), "/"),
 						Children: []tracinghelper.TestSpanTree{
 							{
 								// 4. Transformer Pod receives event from Channel.
-								Kind:                     model.Server,
-								LocalEndpointServiceName: transformerPod.Name,
-								Tags: map[string]string{
-									"http.method":      "POST",
-									"http.path":        "/",
-									"http.status_code": "200",
-									"http.host":        fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace),
-								},
+								Span: tracinghelper.MatchHTTPServerSpanWithReply(
+									fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace),
+									"/",
+									tracinghelper.WithLocalEndpointServiceName(transformerPod.Name),
+								),
 							},
 						},
 					},
 					{
 						// 5. Channel sends reply from Transformer Pod to the reply Channel.
-						Kind: model.Client,
-						Tags: map[string]string{
-							"http.method":      "POST",
-							"http.status_code": "202",
-							"http.url":         fmt.Sprintf("http://%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace),
-						},
+						Span: tracinghelper.MatchHTTPClientSpanNoReply(
+							fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace), ""),
 						Children: []tracinghelper.TestSpanTree{
 							// 6. Reply Channel receives event from the original Channel's reply.
 							{
-								Kind: model.Server,
-								Tags: map[string]string{
-									"http.method":      "POST",
-									"http.status_code": "202",
-									"http.host":        fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace),
-									"http.path":        "/",
-								},
+								Span: tracinghelper.MatchHTTPServerSpanNoReply(
+									fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace), "/"),
 								Children: []tracinghelper.TestSpanTree{
 									{
 										// 7. Reply Channel sends event to the logging Pod.
-										Kind: model.Client,
-										Tags: map[string]string{
-											"http.method":      "POST",
-											"http.status_code": "202",
-											"http.url":         fmt.Sprintf("http://%s.%s.svc.cluster.local/", loggerPod.Name, client.Namespace),
-										},
+										Span: tracinghelper.MatchHTTPClientSpanNoReply(
+											fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace), "/"),
 										Children: []tracinghelper.TestSpanTree{
 											{
 												// 8. Logging pod receives event from Channel.
-												Kind:                     model.Server,
-												LocalEndpointServiceName: loggerPod.Name,
-												Tags: map[string]string{
-													"http.method":      "POST",
-													"http.path":        "/",
-													"http.status_code": "202",
-													"http.host":        fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
-												},
+												Span: tracinghelper.MatchHTTPClientSpanNoReply(
+													fmt.Sprintf("http://%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+													"/",
+													tracinghelper.WithLocalEndpointServiceName(loggerPod.Name),
+												),
 											},
 										},
 									},
@@ -324,13 +294,11 @@ func setupChannelTracingWithReply(
 		expected.Children = []tracinghelper.TestSpanTree{
 			{
 				// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
-				Kind:                     model.Client,
-				LocalEndpointServiceName: "sender",
-				Tags: map[string]string{
-					"http.method":      "POST",
-					"http.status_code": "202",
-					"http.url":         fmt.Sprintf("http://%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
-				},
+				Span: tracinghelper.MatchHTTPClientSpanNoReply(
+					fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
+					"",
+					tracinghelper.WithLocalEndpointServiceName("sender"),
+				),
 				Children: expected.Children,
 			},
 		}
