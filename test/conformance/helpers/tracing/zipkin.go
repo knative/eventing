@@ -50,7 +50,7 @@ var setTracingConfigOnce = sync.Once{}
 // TODO Do we need a tear down method to revert the config map to its original state?
 func setTracingConfigToZipkin(t *testing.T, client *lib.Client) {
 	setTracingConfigOnce.Do(func() {
-		// Get the namespace fron the env key directly as system.Namespace() panics if unset
+		// Get the namespace from the env key directly as system.Namespace() panics if unset
 		ns := os.Getenv(system.NamespaceEnvKey)
 		if ns == "" {
 			ns = "istio-system"
