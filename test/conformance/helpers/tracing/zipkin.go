@@ -17,13 +17,15 @@ limitations under the License.
 package tracing
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"knative.dev/pkg/system"
 	"knative.dev/pkg/test/zipkin"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/test/lib"
 )
 
@@ -48,18 +50,15 @@ var setTracingConfigOnce = sync.Once{}
 // TODO Do we need a tear down method to revert the config map to its original state?
 func setTracingConfigToZipkin(t *testing.T, client *lib.Client) {
 	setTracingConfigOnce.Do(func() {
-		cmi := client.Kube.GetConfigMap("knative-eventing")
-		cm, err := cmi.Get("config-tracing", metav1.GetOptions{})
-		if err != nil {
-			t.Fatalf("Unable to get the ConfigMap: %v", err)
+		// Get the namespace fron the env key directly as system.Namespace() panics if unset
+		ns := os.Getenv(system.NamespaceEnvKey)
+		if ns == "" {
+			ns = "istio-system"
 		}
-		if _, ok := cm.Data["backend"]; !ok {
-			cm.Data["backend"] = "zipkin"
-		}
-		if _, ok := cm.Data["zipkin-endpoint"]; !ok {
-			cm.Data["zipkin-endpoint"] = "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
-		}
-		_, err = cmi.Update(cm)
+		err := client.Kube.UpdateConfigMap("knative-eventing", "config-tracing", map[string]string{
+			"backend":         "zipkin",
+			"zipkin-endpoint": fmt.Sprintf("http://zipkin.%s.svc.cluster.local:9411/api/v2/spans", ns),
+		})
 		if err != nil {
 			t.Fatalf("Unable to set the ConfigMap: %v", err)
 		}
