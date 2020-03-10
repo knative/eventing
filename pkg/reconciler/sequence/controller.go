@@ -63,7 +63,7 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Sequence, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Sequence")),
+		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Sequence")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 

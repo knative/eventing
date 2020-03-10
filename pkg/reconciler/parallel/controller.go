@@ -63,7 +63,7 @@ func NewController(
 	// Register handler for Subscriptions that are owned by Parallel, so that
 	// we get notified if they change.
 	subscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Parallel")),
+		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Parallel")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
