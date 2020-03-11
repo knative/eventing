@@ -102,7 +102,10 @@ func NewController(
 
 	classFilter := pkgreconciler.AnnotationFilterFunc(eventing.ChannelBrokerClassValue, env.BrokerClass, true)
 
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: classFilter,
+		Handler:    controller.HandleAll(impl.Enqueue),
+	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),

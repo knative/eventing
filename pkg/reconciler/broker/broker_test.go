@@ -1414,7 +1414,7 @@ func TestReconcile(t *testing.T) {
 			addressableTracker:        duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
-		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r)
+		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r, eventing.ChannelBrokerClassValue)
 
 	},
 		false,
