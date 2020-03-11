@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"knative.dev/pkg/tracker"
+
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
@@ -602,6 +604,7 @@ func TestAllCases(t *testing.T) {
 			pingLister:          listers.GetPingSourceLister(),
 			deploymentLister:    listers.GetDeploymentLister(),
 			eventTypeLister:     listers.GetEventTypeLister(),
+			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
 			receiveAdapterImage: image,
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})

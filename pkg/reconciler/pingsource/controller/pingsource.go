@@ -36,6 +36,7 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -81,6 +82,9 @@ type Reconciler struct {
 	pingLister       listers.PingSourceLister
 	deploymentLister appsv1listers.DeploymentLister
 	eventTypeLister  eventinglisters.EventTypeLister
+
+	// tracking jobrunner deployment changes
+	tracker tracker.Interface
 
 	loggingContext context.Context
 	sinkResolver   *resolver.URIResolver
@@ -138,6 +142,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 			return err
 		}
 		source.Status.PropagateDeploymentAvailability(d)
+
+		// Tell tracker to reconcile this PingSource whenever the deployment changes
+		r.tracker.TrackReference(tracker.Reference{
+			APIVersion: d.APIVersion,
+			Kind:       d.Kind,
+			Namespace:  d.Namespace,
+			Name:       d.Name,
+		}, source)
 	} else {
 		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 		if err != nil {

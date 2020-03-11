@@ -19,6 +19,10 @@ package controller
 import (
 	"context"
 
+	appsv1 "k8s.io/api/apps/v1"
+
+	"knative.dev/pkg/tracker"
+
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/reconciler"
@@ -68,12 +72,13 @@ func NewController(
 		pingLister:       pingSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
-		loggingContext:   ctx,
+
+		loggingContext: ctx,
 	}
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
-		r.Logger.Panicf("unable to process CronJobSource's required environment variables: %v", err)
+		r.Logger.Panicf("unable to process PingSourceSource's required environment variables: %v", err)
 	}
 	r.receiveAdapterImage = env.Image
 	r.jobRunnerImage = env.JobRunnerImage
@@ -91,15 +96,17 @@ func NewController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	// Watch for the global deployment and propagate
-	// any changes to all PingSources relying on it.
-	gr := func(obj interface{}) {
-		impl.GlobalResync(pingSourceInformer.Informer())
-	}
+	// Tracker is used to notify us that the jobrunner Deployment has changed so that
+	// we can reconcile PingSources that depends on it
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), jobRunnerName),
-		Handler:    controller.HandleAll(gr),
+		Handler: controller.HandleAll(
+			controller.EnsureTypeMeta(
+				r.tracker.OnChanged,
+				appsv1.SchemeGroupVersion.WithKind("Deployment"),
+			)),
 	})
 
 	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
