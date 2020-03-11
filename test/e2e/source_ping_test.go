@@ -67,7 +67,7 @@ func TestPingSourceV1Alpha1(t *testing.T) {
 
 	// verify the logger service receives the event and only once
 	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
+		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 
 	// verify the logger service receives the event and only once
 	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
+		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }
 
@@ -148,6 +148,6 @@ func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
 
 	// verify the logger service receives the event and only once
 	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
+		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }

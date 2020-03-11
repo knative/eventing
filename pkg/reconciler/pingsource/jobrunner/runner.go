@@ -19,7 +19,6 @@ package jobrunner
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/robfig/cron"
@@ -70,6 +69,9 @@ func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string) (
 		Name:          name,
 		ResourceGroup: resourceGroup,
 	}
+
+	a.Logger.Infow("schedule added", zap.Any("schedule", spec), zap.Any("event", event))
+
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, sink)
 
@@ -89,9 +91,6 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) error {
 
 func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event, reportArgs source.ReportArgs) func() {
 	return func() {
-		// One event per go routine so we can safely mutate the event
-		event.SetTime(time.Now())
-
 		// Send event (cannot be interrupted)
 		rctx, _, err := a.Client.Send(ctx, event)
 		rtctx := cloudevents.HTTPTransportContextFrom(rctx)

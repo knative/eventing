@@ -245,7 +245,7 @@ func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.Pi
 			return d, nil
 		}
 		return nil, fmt.Errorf("error getting job runner deployment %v", err)
-	} else if podSpecChanged(d.Spec.Template.Spec, d.Spec.Template.Spec) {
+	} else if podSpecChanged(d.Spec.Template.Spec, expected.Spec.Template.Spec) {
 		d.Spec.Template.Spec = expected.Spec.Template.Spec
 		if d, err = r.KubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
 			return d, err

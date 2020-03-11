@@ -68,7 +68,6 @@ func TestStartStopCron(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())
 
-	//	waitCh := make(chan bool)
 	go func() {
 		err := runner.Start(ctx.Done())
 		if err != nil {
