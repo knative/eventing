@@ -23,7 +23,7 @@ Every Sink MUST support HTTP Protocol Binding for CloudEvents [version 1.0](http
 This section adds restrictions on [requirements in HTTP Protocol Binding for CloudEvents](https://github.com/cloudevents/spec/blob/v1.0/http-protocol-binding.md#12-relation-to-http).
 
 Sinks MUST accept HTTP requests with POST method and MAY support other HTTP methods.
-If a method other is not supported Sink SHOULD respond with HTTP status code `405 Method Not Supported`.
+If a method is not supported Sink SHOULD respond with HTTP status code `405 Method Not Supported`.
 Non-event requests (e.g. health checks) are not constrained.
 
 The URL used by a Sink MUST correspond to a single, unique
@@ -35,7 +35,7 @@ If an HTTP request's URL does not correspond to an existing endpoint, then
 the Sink MUST respond with `404 Not Found`.
 
 Every non-Callable Sink MUST respond with `202 Accepted` if the request is
-accepted. If Sink is Callabel it MAY reposne with `202 OK` and a single event in the HTTP response. A returned event is not required to be related to the received event. The Callable should return a successful response if the event was processed successfully.
+accepted. If Sink is Callable it MAY repond with `202 OK` and a single event in the HTTP response. A returned event is not required to be related to the received event. The Callable should return a successful response if the event was processed successfully.
 
 If a Sink receives a request and is unable to parse a valid
 CloudEvent, then it MUST respond with `400 Bad Request`.
