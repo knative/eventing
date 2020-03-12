@@ -30,5 +30,6 @@ keda.autoscaling.knative.dev/cooldownPeriod: "15"
 ```
 
 List of Knative Eventing sources that support KEDA scaling:
-* [Google PubSub](https://github.com/google/knative-gcp/pull/551)
-* [Kafka Source](https://github.com/knative/eventing-contrib/pull/886)
+
+- [Google PubSub](https://github.com/google/knative-gcp/pull/551)
+- [Kafka Source](https://github.com/knative/eventing-contrib/pull/886)
