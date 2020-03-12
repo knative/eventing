@@ -25,8 +25,8 @@ and additional KEDA configuration parameters may be enabled with
 For example:
 
 ```yaml
-    keda.autoscaling.knative.dev/pollingInterval: "2"
-    keda.autoscaling.knative.dev/cooldownPeriod: "15"
+keda.autoscaling.knative.dev/pollingInterval: "2"
+keda.autoscaling.knative.dev/cooldownPeriod: "15"
 ```
 
 List of Knative Eventing sources that support KEDA scaling:
