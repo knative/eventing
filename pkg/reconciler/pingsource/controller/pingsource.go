@@ -144,12 +144,17 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 		source.Status.PropagateDeploymentAvailability(d)
 
 		// Tell tracker to reconcile this PingSource whenever the deployment changes
-		r.tracker.TrackReference(tracker.Reference{
-			APIVersion: d.APIVersion,
-			Kind:       d.Kind,
+		err = r.tracker.TrackReference(tracker.Reference{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
 			Namespace:  d.Namespace,
 			Name:       d.Name,
 		}, source)
+
+		if err != nil {
+			logging.FromContext(ctx).Error("Unable to track the deployment", zap.Error(err))
+			return err
+		}
 	} else {
 		ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
 		if err != nil {
