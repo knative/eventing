@@ -52,7 +52,8 @@ combination of these. This mapping is handled exclusively by the
 If an HTTP request's URL does not correspond to an existing endpoint, then the
 Sink MUST respond with `404 Not Found`.
 
-Every non-Callable Sink MUST respond with `202 Accepted` if the request is accepted.
+Every non-Callable Sink MUST respond with `202 Accepted` if the request is
+accepted.
 
 If Sink is Callable it MAY respond with `202 OK` and a single event in the HTTP
 response. A returned event is not required to be related to the received event.
@@ -65,8 +66,8 @@ MUST respond with `400 Bad Request`.
 
 ### Content Modes Supported
 
-A Sink MUST support `Binary Content Mode` and `Structured Content Mode` 
-as described in 
+A Sink MUST support `Binary Content Mode` and `Structured Content Mode`
+as described in
 [HTTP Message Mapping section of HTTP Protocol Binding for CloudEvents](https://github.com/cloudevents/spec/blob/master/http-protocol-binding.md#3-http-message-mapping)
 
 A Sink MAY support `Batched Content Mode` but that mode is not used in Knative
