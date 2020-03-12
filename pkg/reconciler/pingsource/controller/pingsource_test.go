@@ -94,12 +94,13 @@ var (
 )
 
 const (
-	image        = "github.com/knative/test/image"
-	sourceName   = "test-ping-source"
-	sourceUID    = "1234"
-	testNS       = "testnamespace"
-	testSchedule = "*/2 * * * *"
-	testData     = "data"
+	image          = "github.com/knative/test/image"
+	jobRunnerImage = "job-runner-image"
+	sourceName     = "test-ping-source"
+	sourceUID      = "1234"
+	testNS         = "testnamespace"
+	testSchedule   = "*/2 * * * *"
+	testData       = "data"
 
 	sinkName   = "testsink"
 	generation = 1
@@ -505,8 +506,7 @@ func TestAllCases(t *testing.T) {
 			WantDeletes: []clientgotesting.DeleteActionImpl{{
 				Name: eventTypeName,
 			}},
-		},
-		{
+		}, {
 			Name: "valid",
 			Objects: []runtime.Object{
 				NewPingSourceV1Alpha1(sourceName, testNS,
@@ -549,8 +549,7 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
-		},
-		{
+		}, {
 			Name: "valid with cluster scope annotation",
 			Objects: []runtime.Object{
 				NewPingSourceV1Alpha1(sourceName, testNS,
@@ -593,6 +592,53 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
+		}, {
+			Name:                    "valid with cluster scope annotation, create deployment",
+			SkipNamespaceValidation: true,
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha1(sourceName, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceClusterScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+			},
+			Key: testNS + "/" + sourceName,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Cluster-scoped deployment created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceName),
+			},
+			WantCreates: []runtime.Object{
+				makeJobRunner(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewPingSourceV1Alpha1(sourceName, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceClusterScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithPingSourceNotDeployed(jobRunnerName),
+					WithInitPingSourceConditions,
+					WithValidPingSourceSchedule,
+					WithValidPingSourceResources,
+					WithPingSourceEventType,
+					WithPingSourceSink(sinkURI),
+					WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
 		},
 	}
 
@@ -606,6 +652,7 @@ func TestAllCases(t *testing.T) {
 			eventTypeLister:     listers.GetEventTypeLister(),
 			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
 			receiveAdapterImage: image,
+			jobRunnerImage:      jobRunnerImage,
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
@@ -647,14 +694,18 @@ func makeReceiveAdapterWithSink(dest duckv1.Destination) *appsv1.Deployment {
 	return resources.MakeReceiveAdapter(&args)
 }
 
-func makeAvailableJobRunner() *appsv1.Deployment {
+func makeJobRunner() *appsv1.Deployment {
 	args := resources.JobRunnerArgs{
-		ServiceAccountName: "test-sa",
+		ServiceAccountName: jobRunnerName,
 		JobRunnerName:      jobRunnerName,
 		JobRunnerNamespace: system.Namespace(),
-		Image:              "test-image",
+		Image:              jobRunnerImage,
 	}
-	ra := resources.MakeJobRunner(args)
-	WithDeploymentAvailable()(ra)
-	return ra
+	return resources.MakeJobRunner(args)
+}
+
+func makeAvailableJobRunner() *appsv1.Deployment {
+	jr := makeJobRunner()
+	WithDeploymentAvailable()(jr)
+	return jr
 }

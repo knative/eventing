@@ -142,6 +142,12 @@ func WithPingSourceV1A2Sink(uri *apis.URL) PingSourceV1A2Option {
 	}
 }
 
+func WithPingSourceNotDeployed(name string) PingSourceOption {
+	return func(s *v1alpha1.PingSource) {
+		s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
+	}
+}
+
 func WithPingSourceDeployed(s *v1alpha1.PingSource) {
 	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
