@@ -140,44 +140,53 @@ reply events, unless the reply is sent with a different set of tracing
 attributes.
 
 ## Conformance Tests
-This test outline validates the conformance of a Broker implementation, with some [exceptions](#exceptions).
+
+This test outline validates the conformance of a Broker implementation, with
+some [exceptions](#exceptions).
 
 1. Control Plane Tests
-    1. A Trigger can be created before its Broker exists. That Trigger specifies an attributes filter.
-    1. A Broker can be created (given valid configuration) and progresses to Ready.
-    1. The Broker, once Ready, is a valid Addressable.
-    1. The Trigger, once its Broker is Ready, progresses to Ready.
-    1. The Trigger, once Ready, includes a status.subscriberUri field.
-    1. A second Trigger, with a different but overlapping filter,, can be created and progresses to Ready.
+   1. A Trigger can be created before its Broker exists. That Trigger specifies
+      an attributes filter.
+   1. A Broker can be created (given valid configuration) and progresses to
+      Ready.
+   1. The Broker, once Ready, is a valid Addressable.
+   1. The Trigger, once its Broker is Ready, progresses to Ready.
+   1. The Trigger, once Ready, includes a status.subscriberUri field.
+   1. A second Trigger, with a different but overlapping filter,, can be created
+      and progresses to Ready.
 1. Data Plane Tests
-    1. Broker ingress can receive events in the following formats via HTTP:
-        1. CloudEvents 0.3
-        1. CloudEvents 1.0
-        1. Structured mode
-        1. Binary mode
-    1. Broker ingress responds with:
-        1. 2xx on valid event
-        1. 400 on invalid event
-    1. Broker ingress responds with 405 to any method except POST to publish URI
-    1. Produce 2 events to ingress:
-        1. Matching only first Trigger (event 1)
-        1. Matching both first and second Trigger (event 2)
-        1. With a known trace header
-    1. First Trigger subscriber receives events 1 and 2:
-        1. With original version
-        1. With all originally specified attributes identical
-        1. With the correct trace header
-        1. Matching its filter
-    1. And replies to event 1 with an event that matches only second trigger (event 3)
-        1. Second Trigger subscriber receives events 2 and 3:
-        1. And rejects events on first delivery, verifying events are redelivered
-        1. With the correct trace header
+   1. Broker ingress can receive events in the following formats via HTTP:
+      1. CloudEvents 0.3
+      1. CloudEvents 1.0
+      1. Structured mode
+      1. Binary mode
+   1. Broker ingress responds with:
+      1. 2xx on valid event
+      1. 400 on invalid event
+   1. Broker ingress responds with 405 to any method except POST to publish URI
+   1. Produce 2 events to ingress:
+      1. Matching only first Trigger (event 1)
+      1. Matching both first and second Trigger (event 2)
+      1. With a known trace header
+   1. First Trigger subscriber receives events 1 and 2:
+      1. With original version
+      1. With all originally specified attributes identical
+      1. With the correct trace header
+      1. Matching its filter
+   1. And replies to event 1 with an event that matches only second trigger
+      (event 3)
+      1. Second Trigger subscriber receives events 2 and 3:
+      1. And rejects events on first delivery, verifying events are redelivered
+      1. With the correct trace header
 
 ### Exceptions
 
 These aspects of the spec are not tested in this outline:
-* **Replies that fail to be published cause initial message to be redelivered.** Requires implementation-specific setup to induce a failure.
-* **Metrics support.** Currently there is no shared format that could be used to test support for metrics.
+
+- **Replies that fail to be published cause initial message to be redelivered.**
+  Requires implementation-specific setup to induce a failure.
+- **Metrics support.** Currently there is no shared format that could be used to
+  test support for metrics.
 
 ## Changelog
 
