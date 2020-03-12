@@ -65,7 +65,9 @@ MUST respond with `400 Bad Request`.
 
 ### Content Modes Supported
 
-A Sink MUST support `Binary Content Mode` and `Structured Content Mode`.
+A Sink MUST support `Binary Content Mode` and `Structured Content Mode` 
+as described in 
+[HTTP Message Mapping section of HTTP Protocol Binding for CloudEvents](https://github.com/cloudevents/spec/blob/master/http-protocol-binding.md#3-http-message-mapping)
 
 A Sink MAY support `Batched Content Mode` but that mode is not used in Knative
 Eventing currently (that may change in future).
