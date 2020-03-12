@@ -105,11 +105,6 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
-	filterFunc := pkgreconciler.AnnotationFilterFunc(eventing.BrokerClassKey, r.brokerClass, true)
-	if !filterFunc(b) {
-		logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
-		return nil
-	}
 	filterSvc, err := r.reconcileKind(ctx, b)
 
 	if b.Status.IsReady() {

@@ -22,9 +22,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/pkg/apis"
 )
 
@@ -152,9 +152,11 @@ func WithBrokerTriggerChannel(c *corev1.ObjectReference) BrokerOption {
 
 func WithBrokerClass(bc string) BrokerOption {
 	return func(b *v1alpha1.Broker) {
-		if b.GetAnnotations() == nil {
-			b.SetAnnotations(map[string]string{})
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
 		}
-		b.GetAnnotations()[eventing.BrokerClassKey] = bc
+		annotations[broker.ClassAnnotationKey] = bc
+		b.SetAnnotations(annotations)
 	}
 }

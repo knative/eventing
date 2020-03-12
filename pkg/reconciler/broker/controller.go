@@ -92,7 +92,8 @@ func NewController(
 		filterServiceAccountName:  env.FilterServiceAccount,
 		brokerClass:               env.BrokerClass,
 	}
-	impl := brokerreconciler.NewImpl(ctx, r)
+
+	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass)
 
 	r.Logger.Info("Setting up event handlers")
 
@@ -101,7 +102,10 @@ func NewController(
 	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, env.BrokerClass, false /*allowUnset*/),
+		Handler:    controller.HandleAll(impl.Enqueue),
+	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Broker")),
