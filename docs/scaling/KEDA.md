@@ -16,7 +16,7 @@ support Knative Eventing scaling with KEDA.
 To enable using KEDA scalign add Knative Eventing scaling class:
 
 ```yaml
-    autoscaling.knative.dev/class: keda.autoscaling.knative.dev
+autoscaling.knative.dev/class: keda.autoscaling.knative.dev
 ```
 
 and additional KEDA configuration parameters may be enabled with
