@@ -21,12 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"testing"
 
 	"github.com/openzipkin/zipkin-go/model"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // PrettyPrintTrace pretty prints a Trace.
@@ -45,38 +43,6 @@ type SpanTree struct {
 func (t SpanTree) String() string {
 	b, _ := json.MarshalIndent(t, "", "  ")
 	return string(b)
-}
-
-func (t SpanTree) ToTestSpanTree() TestSpanTree {
-	children := make([]TestSpanTree, len(t.Children))
-	for i := range t.Children {
-		children[i] = t.Children[i].toTestSpanTreeHelper()
-	}
-	return TestSpanTree{
-		Root:     t.Root,
-		Children: children,
-	}
-}
-
-func (t SpanTree) toTestSpanTreeHelper() TestSpanTree {
-	name := ""
-	if t.Span.LocalEndpoint != nil {
-		name = t.Span.LocalEndpoint.ServiceName
-	}
-	children := make([]TestSpanTree, len(t.Children))
-	for i := range t.Children {
-		children[i] = t.Children[i].toTestSpanTreeHelper()
-	}
-	tst := TestSpanTree{
-		Span: &SpanMatcher{
-			Kind:                     &t.Span.Kind,
-			LocalEndpointServiceName: name,
-			Tags:                     t.Span.Tags,
-		},
-		Children: children,
-	}
-	tst.SortChildren()
-	return tst
 }
 
 type SpanMatcher struct {
@@ -213,50 +179,8 @@ func (t TestSpanTree) String() string {
 	return string(b)
 }
 
-// SortChildren attempts to sort the children of this TestSpanTree. The children are siblings, order
-// does not actually matter. TestSpanTree.Matches() correctly handles this, by matching in any
-// order. SortChildren() is most useful before JSON pretty printing the structure and comparing
-// manually.
-//
-// The order it uses:
-//   1. Shorter children first.
-//   2. Span kind.
-//   3. "http.url", "http.host", "http.path" tag presence and values.
-// If all of those are equal, then arbitrarily choose the earlier index.
-func (t *TestSpanTree) SortChildren() {
-	for _, child := range t.Children {
-		child.SortChildren()
-	}
-	sort.Slice(t.Children, func(i, j int) bool {
-		ic := t.Children[i]
-		jc := t.Children[j]
-
-		if ic.height() != jc.height() {
-			return ic.height() < jc.height()
-		}
-
-		if r := ic.Span.Cmp(jc.Span); r != 0 {
-			return r < 0
-		}
-
-		// We don't have anything to reliably differentiate by. So this isn't going to really be
-		// sorted, just leave the existing one first arbitrarily.
-		return i < j
-	})
-}
-
-func (t TestSpanTree) height() int {
-	height := 0
-	for _, child := range t.Children {
-		if ch := child.height(); ch >= height {
-			height = ch + 1
-		}
-	}
-	return height
-}
-
 // GetTraceTree converts a set slice of spans into a SpanTree.
-func GetTraceTree(t *testing.T, trace []model.SpanModel) SpanTree {
+func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 	var roots []model.SpanModel
 	parents := map[model.ID][]model.SpanModel{}
 	for _, span := range trace {
@@ -269,7 +193,7 @@ func GetTraceTree(t *testing.T, trace []model.SpanModel) SpanTree {
 
 	children, err := getChildren(parents, roots)
 	if err != nil {
-		t.Fatalf("Could not create span tree for %v: %v", PrettyPrintTrace(trace), err)
+		return nil, fmt.Errorf("Could not create span tree for %v: %v", PrettyPrintTrace(trace), err)
 	}
 
 	tree := SpanTree{
@@ -277,9 +201,9 @@ func GetTraceTree(t *testing.T, trace []model.SpanModel) SpanTree {
 		Children: children,
 	}
 	if len(parents) != 0 {
-		t.Fatalf("Left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
+		return nil, fmt.Errorf("Left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
 	}
-	return tree
+	return &tree, nil
 }
 
 func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanModel) ([]SpanTree, error) {
@@ -312,55 +236,59 @@ func (t TestSpanTree) SpanCount() int {
 	return spans
 }
 
-// Matches checks to see if this TestSpanTree matches an actual SpanTree. It is intended to be used
-// for assertions while testing.
-func (t TestSpanTree) Matches(actual SpanTree) error {
-	if g, w := actual.ToTestSpanTree().SpanCount(), t.SpanCount(); g != w {
-		return fmt.Errorf("unexpected number of spans. got %d want %d", g, w)
+// MatchesSubtree checks to see if this TestSpanTree matches a subtree
+// of the actual SpanTree. It is intended to be used for assertions
+// while testing. Returns the set of possible subtree matches with the
+// corresponding set of unmatched siblings.
+func (tt TestSpanTree) MatchesSubtree(t *testing.T, actual *SpanTree) (matches [][]SpanTree) {
+	if t != nil {
+		t.Helper()
+		t.Logf("attempting to match test tree %v against %v", tt, actual)
 	}
-	t.SortChildren()
-	if err := traceTreeMatches(".", t, actual); err != nil {
-		return err
+	if err := tt.Span.MatchesSpan(&actual.Span); err == nil {
+		if t != nil {
+			t.Logf("%v matches span %v, matching children", tt.Span, actual.Span)
+		}
+		// Tree roots match; check children.
+		if err := matchesSubtrees(t, tt.Children, actual.Children); err == nil {
+			// A matching root leaves no unmatched siblings.
+			matches = append(matches, nil)
+		}
 	}
-	return nil
+	// Recursively match children.
+	for i, child := range actual.Children {
+		for _, childMatch := range tt.MatchesSubtree(t, &child) {
+			// Append unmatched children to child results.
+			childMatch = append(childMatch, actual.Children[:i]...)
+			childMatch = append(childMatch, actual.Children[i+1:]...)
+			matches = append(matches, childMatch)
+		}
+	}
+	return
 }
 
-func traceTreeMatches(pos string, want TestSpanTree, got SpanTree) error {
-	if err := want.Span.MatchesSpan(&got.Span); err != nil {
-		return fmt.Errorf("no match for span at %q: %w", pos, err)
+// matchesSubtrees checks for a match of each TestSpanTree with a
+// subtree of a distrinct actual SpanTree.
+func matchesSubtrees(t *testing.T, ts []TestSpanTree, as []SpanTree) error {
+	if t != nil {
+		t.Helper()
+		t.Logf("attempting to match test trees %v against %v", ts, as)
 	}
-	return unorderedTraceTreesMatch(pos, want.Children, got.Children)
-}
-
-// unorderedTraceTreesMatch checks to see if for every TestSpanTree in want, there is a
-// corresponding SpanTree in got. It's comparison is done unordered, but slowly. It should not be
-// called with too many entries in either slice.
-func unorderedTraceTreesMatch(pos string, want []TestSpanTree, got []SpanTree) error {
-	if g, w := len(got), len(want); g != w {
-		return fmt.Errorf("unexpected number of children at %q: got %v, want %v", pos, g, w)
+	if len(ts) == 0 {
+		return nil
 	}
-	unmatchedGot := sets.NewInt()
-	for i := range got {
-		unmatchedGot.Insert(i)
-	}
-	// This is an O(n^4) algorithm. It compares every item in want to every item in got, O(n^2).
-	// Those comparisons do the same recursively O(n^2). We expect there to be not too many traces,
-	// so n should be small (say 50 in the largest cases).
-OuterLoop:
-	for i, w := range want {
-		var errs []error
-		for ug := range unmatchedGot {
-			// If there is no error, then it matched successfully.
-			if err := w.Matches(got[ug]); err == nil {
-				unmatchedGot.Delete(ug)
-				continue OuterLoop
-			} else {
-				errs = append(errs, fmt.Errorf("no child match %v: %v", ug, err))
+	tt := ts[0]
+	for j, a := range as {
+		// If there is no error, then it matched successfully.
+		for _, match := range tt.MatchesSubtree(t, &a) {
+			asNew := make([]SpanTree, 0, len(as)-1+len(match))
+			asNew = append(asNew, as[:j]...)
+			asNew = append(asNew, as[j+1:]...)
+			asNew = append(asNew, match...)
+			if err := matchesSubtrees(t, ts[1:], asNew); err == nil {
+				return nil
 			}
 		}
-		// Nothing matched.
-		return fmt.Errorf("unable to find child match %s[%d]: errors %v. Want: %s **** Got: %s", pos, i, errs, w.String(), got)
 	}
-	// Everything matched.
-	return nil
+	return fmt.Errorf("unmatched span trees. want: %s got %s", ts, as)
 }

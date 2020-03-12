@@ -23,6 +23,7 @@ import (
 	"time"
 
 	ce "github.com/cloudevents/sdk-go"
+	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/zipkin"
@@ -106,14 +107,23 @@ func tracingTest(
 	matches := assertEventMatch(t, client, loggerPodName, mustMatch)
 
 	traceID := getTraceIDHeader(t, matches)
-	trace, err := zipkin.JSONTrace(traceID, expected.SpanCount(), 2*time.Minute)
+	trace, err := zipkin.JSONTracePred(traceID, 2*time.Minute, func(trace []model.SpanModel) bool {
+		tree, err := tracinghelper.GetTraceTree(trace)
+		if err != nil {
+			return false
+		}
+		// Do not pass t to prevent unnecessary log output.
+		return len(expected.MatchesSubtree(nil, tree)) > 0
+	})
 	if err != nil {
-		t.Fatalf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
-	}
-
-	tree := tracinghelper.GetTraceTree(t, trace)
-	if err := expected.Matches(tree); err != nil {
-		t.Fatalf("Trace Tree did not match expected: %v", err)
+		t.Logf("Unable to get trace %q: %v. Trace so far %+v", traceID, err, tracinghelper.PrettyPrintTrace(trace))
+		tree, err := tracinghelper.GetTraceTree(trace)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(expected.MatchesSubtree(t, tree)) == 0 {
+			t.Fatalf("No matching subtree. want: %v got: %v", expected, tree)
+		}
 	}
 }
 
@@ -273,8 +283,8 @@ func setupChannelTracingWithReply(
 										Children: []tracinghelper.TestSpanTree{
 											{
 												// 8. Logging pod receives event from Channel.
-												Span: tracinghelper.MatchHTTPClientSpanNoReply(
-													fmt.Sprintf("http://%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+												Span: tracinghelper.MatchHTTPServerSpanNoReply(
+													fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
 													"/",
 													tracinghelper.WithLocalEndpointServiceName(loggerPod.Name),
 												),
