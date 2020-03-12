@@ -10,6 +10,8 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ## Data plane contract for Sinks
 
+A **Sink** MUST be idempotent and MUST be able to handle duplicate events.
+
 A **Sink** is an [_addressable_](./interfaces.md#addressable) resource that takes responsibility for the event. A Sink could be a consumer of events, or middleware. A Sink MUST be able to receive CloudEvents over HTTP and HTTPS.
 
 A **Sink** MAY be [_callable_](./interfaces.md#callable) resource that represents an Addressable endpoint which receives an event as input and optionally returns an event to forward downstream
@@ -34,8 +36,9 @@ string, or any combination of these. This mapping is handled exclusively by the
 If an HTTP request's URL does not correspond to an existing endpoint, then
 the Sink MUST respond with `404 Not Found`.
 
-Every non-Callable Sink MUST respond with `202 Accepted` if the request is
-accepted. If Sink is Callable it MAY repond with `202 OK` and a single event in the HTTP response. A returned event is not required to be related to the received event. The Callable should return a successful response if the event was processed successfully.
+Every non-Callable Sink MUST respond with `202 Accepted` if the request is accepted. 
+
+If Sink is Callable it MAY respond with `202 OK` and a single event in the HTTP response. A returned event is not required to be related to the received event. The Callable should return a successful response if the event was processed successfully. If there is no event to send back then Callable Sink MUST respond with 2xx HTTP and with empty body.
 
 If a Sink receives a request and is unable to parse a valid
 CloudEvent, then it MUST respond with `400 Bad Request`.
@@ -52,7 +55,7 @@ Sinks should expect that retries and accept possibility that duplicate events ma
 
 ### Error handling
 
-Some sources of events (such as Knative sources, brokers or channels) MAY support [dead letter sink or channel](../delivery/README.md) for events that can not be delivered.
+If Sink is not returning HTTP success header (200 or 202) then the event may be sent again. If the event can not be delivered then some sources of events (such as Knative sources, brokers or channels) MAY support [dead letter sink or channel](../delivery/README.md) for events that can not be delivered.
 
 ### Observability
 
