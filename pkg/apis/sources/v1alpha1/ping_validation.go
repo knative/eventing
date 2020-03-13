@@ -21,10 +21,13 @@ import (
 
 	"github.com/robfig/cron"
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
 func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
-	return c.Spec.Validate(ctx).ViaField("spec")
+	errs := c.Spec.Validate(ctx).ViaField("spec")
+	return v1alpha2.ValidateAnnotations(errs, c.Annotations)
 }
 
 func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {

@@ -52,9 +52,6 @@ const (
 	dispatcherRoleBindingCreated    = "DispatcherRoleBindingCreated"
 	dispatcherDeploymentCreated     = "DispatcherDeploymentCreated"
 	dispatcherServiceCreated        = "DispatcherServiceCreated"
-
-	scopeCluster   = "cluster"
-	scopeNamespace = "namespace"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
@@ -108,11 +105,11 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 
 	scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
-		scope = "cluster"
+		scope = eventing.ScopeCluster
 	}
 
 	dispatcherNamespace := r.systemNamespace
-	if scope == scopeNamespace {
+	if scope == eventing.ScopeNamespace {
 		dispatcherNamespace = imc.Namespace
 	}
 
@@ -176,7 +173,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 }
 
 func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherNamespace string, imc *v1alpha1.InMemoryChannel) (*appsv1.Deployment, error) {
-	if scope == scopeNamespace {
+	if scope == eventing.ScopeNamespace {
 		// Configure RBAC in namespace to access the configmaps
 		// For cluster-deployed dispatcher, RBAC policies are already there.
 
@@ -204,7 +201,7 @@ func (r *Reconciler) reconcileDispatcher(ctx context.Context, scope, dispatcherN
 	d, err := r.deploymentLister.Deployments(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if scope == scopeNamespace {
+			if scope == eventing.ScopeNamespace {
 				// Create dispatcher in imc's namespace
 				args := resources.DispatcherArgs{
 					ServiceAccountName:  dispatcherName,
@@ -274,7 +271,7 @@ func (r *Reconciler) reconcileDispatcherService(ctx context.Context, scope, disp
 	svc, err := r.serviceLister.Services(dispatcherNamespace).Get(dispatcherName)
 	if err != nil {
 		if apierrs.IsNotFound(err) {
-			if scope == scopeNamespace {
+			if scope == eventing.ScopeNamespace {
 				expected := resources.MakeDispatcherService(dispatcherName, dispatcherNamespace)
 				svc, err := r.KubeClientSet.CoreV1().Services(dispatcherNamespace).Create(expected)
 				if err != nil {

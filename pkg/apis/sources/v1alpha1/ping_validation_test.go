@@ -20,58 +20,91 @@ import (
 	"context"
 	"testing"
 
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
 	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 func TestPingSourceValidation(t *testing.T) {
 	tests := []struct {
-		name string
-		spec PingSourceSpec
-		want *apis.FieldError
+		name   string
+		source PingSource
+		want   *apis.FieldError
 	}{{
 		name: "valid spec",
-		spec: PingSourceSpec{
-			Schedule: "*/2 * * * *",
-			Sink: &duckv1.Destination{
-				Ref: &duckv1.KReference{
-					APIVersion: "v1alpha1",
-					Kind:       "broker",
-					Name:       "default",
-					Namespace:  "namespace",
+		source: PingSource{
+			Spec: PingSourceSpec{
+				Schedule: "*/2 * * * *",
+				Sink: &duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+						Namespace:  "namespace",
+					},
 				},
 			},
 		},
 		want: nil,
 	}, {
 		name: "empty sink",
-		spec: PingSourceSpec{
-			Schedule: "*/2 * * * *",
+		source: PingSource{
+			Spec: PingSourceSpec{
+				Schedule: "*/2 * * * *",
+			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrMissingField("sink")
+			fe := apis.ErrMissingField("spec.sink")
 			errs = errs.Also(fe)
 			return errs
 		}(),
 	}, {
 		name: "invalid schedule",
-		spec: PingSourceSpec{
-			Schedule: "2",
-			Sink: &duckv1.Destination{
-				Ref: &duckv1.KReference{
-					APIVersion: "v1alpha1",
-					Kind:       "broker",
-					Name:       "default",
-					Namespace:  "namespace",
+		source: PingSource{
+			Spec: PingSourceSpec{
+				Schedule: "2",
+				Sink: &duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+						Namespace:  "namespace",
+					},
 				},
 			},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
-			fe := apis.ErrInvalidValue("2", "schedule")
+			fe := apis.ErrInvalidValue("2", "spec.schedule")
+			errs = errs.Also(fe)
+			return errs
+		}(),
+	}, {
+		name: "invalid annotation",
+		source: PingSource{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					eventing.ScopeAnnotationKey: "notvalid",
+				},
+			},
+			Spec: PingSourceSpec{
+				Schedule: "*/2 * * * *",
+				Sink: &duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+						Namespace:  "namespace",
+					},
+				},
+			},
+		},
+		want: func() *apis.FieldError {
+			var errs *apis.FieldError
+			fe := apis.ErrInvalidValue("notvalid", "metadata.annotations.[eventing.knative.dev/scope]\nexpected either 'cluster' or 'resource'")
 			errs = errs.Also(fe)
 			return errs
 		}(),
@@ -79,9 +112,9 @@ func TestPingSourceValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.spec.Validate(context.TODO())
+			got := test.source.Validate(context.TODO())
 			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("ContainerSourceSpec.Validate (-want, +got) = %v", diff)
+				t.Errorf("PingSource.Spec.Validate (-want, +got) = %v", diff)
 			}
 		})
 	}

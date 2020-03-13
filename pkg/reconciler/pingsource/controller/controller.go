@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pingsource
+package controller
 
 import (
 	"context"
 
-	"knative.dev/pkg/resolver"
+	appsv1 "k8s.io/api/apps/v1"
+
+	"knative.dev/pkg/tracker"
 
 	"github.com/kelseyhightower/envconfig"
 	"k8s.io/client-go/tools/cache"
@@ -28,6 +30,8 @@ import (
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
@@ -48,7 +52,8 @@ const (
 // github.com/kelseyhightower/envconfig. If this configuration cannot be extracted, then
 // NewController will panic.
 type envConfig struct {
-	Image string `envconfig:"PING_IMAGE" required:"true"`
+	Image          string `envconfig:"PING_IMAGE" required:"true"`
+	JobRunnerImage string `envconfig:"JOB_RUNNER_IMAGE" required:"true"`
 }
 
 // NewController initializes the controller and is called by the generated code
@@ -67,14 +72,16 @@ func NewController(
 		pingLister:       pingSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 		eventTypeLister:  eventTypeInformer.Lister(),
-		loggingContext:   ctx,
+
+		loggingContext: ctx,
 	}
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
-		r.Logger.Panicf("unable to process CronJobSource's required environment variables: %v", err)
+		r.Logger.Panicf("unable to process PingSourceSource's required environment variables: %v", err)
 	}
 	r.receiveAdapterImage = env.Image
+	r.jobRunnerImage = env.JobRunnerImage
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)
 
@@ -83,9 +90,23 @@ func NewController(
 	r.Logger.Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
+	// Watch for deployments owned by the source
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("PingSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	// Tracker is used to notify us that the jobrunner Deployment has changed so that
+	// we can reconcile PingSources that depends on it
+	r.tracker = tracker.New(impl.EnqueueKey, controller.GetTrackerLease(ctx))
+
+	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controller.FilterWithNameAndNamespace(system.Namespace(), jobRunnerName),
+		Handler: controller.HandleAll(
+			controller.EnsureTypeMeta(
+				r.tracker.OnChanged,
+				appsv1.SchemeGroupVersion.WithKind("Deployment"),
+			)),
 	})
 
 	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

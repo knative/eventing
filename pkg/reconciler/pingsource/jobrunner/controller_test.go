@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Knative Authors
+Copyright 2019 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,5 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package pingsource implements the PingSource controller.
-package pingsource
+package jobrunner
+
+import (
+	"testing"
+
+	"knative.dev/pkg/configmap"
+	. "knative.dev/pkg/reconciler/testing"
+
+	// Fake injection informers
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource/fake"
+)
+
+func TestNew(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	c := NewController(ctx, &configmap.InformedWatcher{})
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
+}

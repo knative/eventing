@@ -26,7 +26,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
 	"knative.dev/eventing/pkg/reconciler/parallel"
-	"knative.dev/eventing/pkg/reconciler/pingsource"
+	pingsource "knative.dev/eventing/pkg/reconciler/pingsource/controller"
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	"knative.dev/eventing/pkg/reconciler/subscription"
 	"knative.dev/eventing/pkg/reconciler/trigger"
