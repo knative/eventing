@@ -87,12 +87,12 @@ func NewController(
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: informer,
 	}
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	// Nothing to filer, enqueue all imcs if configmap updates.
 	noopFilter := func(interface{}) bool { return true }
 	resyncIMCs := configmap.TypeFilter(channel.EventDispatcherConfig{})(func(string, interface{}) {
-		r.impl.FilteredGlobalResync(noopFilter, informer)
+		impl.FilteredGlobalResync(noopFilter, informer)
 	})
 	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
 	configStore := channel.NewEventDispatcherConfigStore(base.Logger, resyncIMCs)
@@ -105,7 +105,7 @@ func NewController(
 	r.inmemorychannelInformer.AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: filterWithAnnotation(injection.HasNamespaceScope(ctx)),
-			Handler:    controller.HandleAll(r.impl.Enqueue),
+			Handler:    controller.HandleAll(impl.Enqueue),
 		})
 
 	// Start the dispatcher.
@@ -116,7 +116,7 @@ func NewController(
 		}
 	}()
 
-	return r.impl
+	return impl
 }
 
 func filterWithAnnotation(namespaced bool) func(obj interface{}) bool {
