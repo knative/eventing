@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/pkg/apis"
 )
 
@@ -146,5 +147,16 @@ func WithIngressDeploymentAvailable() BrokerOption {
 func WithBrokerTriggerChannel(c *corev1.ObjectReference) BrokerOption {
 	return func(b *v1alpha1.Broker) {
 		b.Status.TriggerChannel = c
+	}
+}
+
+func WithBrokerClass(bc string) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations[broker.ClassAnnotationKey] = bc
+		b.SetAnnotations(annotations)
 	}
 }

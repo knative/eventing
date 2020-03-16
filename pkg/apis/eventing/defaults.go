@@ -14,31 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package eventing
 
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/config"
-	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/pkg/apis"
 )
 
-func (b *Broker) SetDefaults(ctx context.Context) {
-	// Default Spec fields.
-	withNS := apis.WithinParent(ctx, b.ObjectMeta)
-	b.Spec.SetDefaults(withNS)
-	eventing.DefaultBrokerClassIfUnset(withNS, &b.ObjectMeta)
-}
-
-func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
-	if bs.Config != nil {
-		return
+// DefaultBrokerClassIfUnset sets default broker class annotation if unset.
+func DefaultBrokerClassIfUnset(ctx context.Context, obj *metav1.ObjectMeta) {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string, 1)
 	}
-
-	cfg := config.FromContextOrDefaults(ctx)
-	c, err := cfg.Defaults.GetBrokerConfig(apis.ParentMeta(ctx).Namespace)
-	if err == nil {
-		bs.Config = c
+	if _, present := annotations[BrokerClassKey]; !present {
+		cfg := config.FromContextOrDefaults(ctx)
+		c, err := cfg.Defaults.GetBrokerClass(obj.Namespace)
+		if err == nil {
+			annotations[BrokerClassKey] = c
+			obj.SetAnnotations(annotations)
+		}
 	}
 }
