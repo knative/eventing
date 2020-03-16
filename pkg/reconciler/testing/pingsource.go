@@ -210,3 +210,14 @@ func WithPingSourceObjectMetaGeneration(generation int64) PingSourceOption {
 		c.ObjectMeta.Generation = generation
 	}
 }
+
+func WithPingSourceV1A2Finalizers(finalizers ...string) PingSourceV1A2Option {
+	return func(c *v1alpha2.PingSource) {
+		c.Finalizers = finalizers
+	}
+}
+
+func WithPingSourceV1A2Deleted(c *v1alpha2.PingSource) {
+	t := metav1.NewTime(time.Unix(1e9, 0))
+	c.SetDeletionTimestamp(&t)
+}

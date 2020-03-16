@@ -18,18 +18,31 @@ package jobrunner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
+	"github.com/kubernetes/kube-openapi/pkg/util/sets"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
+
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	"knative.dev/eventing/pkg/logging"
+)
+
+const (
+	finalizerName = "jobrunners.pingsources.sources.knative.dev"
 )
 
 // Reconciler reconciles PingSources
@@ -67,16 +80,21 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource) error {
 	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
-	if source.DeletionTimestamp != nil {
-		if id, ok := r.entryids[key]; ok {
-			r.cronRunner.RemoveSchedule(id)
-
-			r.entryidMu.Lock()
-			delete(r.entryids, key)
-			r.entryidMu.Unlock()
-		}
-		return nil
+	if !source.DeletionTimestamp.IsZero() {
+		return r.finalize(ctx, key, source)
 	}
+
+	// Make sure finalizer is set
+	finalizers := sets.NewString(source.Finalizers...)
+	if !finalizers.Has(finalizerName) {
+		finalizers.Insert(finalizerName)
+		var err error
+		if source, err = r.patchFinalizer(source, finalizers.List()); err != nil {
+			logging.FromContext(ctx).Debug("Failed to update finalizer", zap.Error(err))
+			return err
+		}
+	}
+
 	logging.FromContext(ctx).Info("synchronizing schedule")
 
 	// Is the schedule already cached?
@@ -92,4 +110,50 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 	r.entryidMu.Unlock()
 
 	return nil
+}
+
+func (r *Reconciler) finalize(ctx context.Context, key string, source *v1alpha2.PingSource) error {
+	if id, ok := r.entryids[key]; ok {
+		r.cronRunner.RemoveSchedule(id)
+
+		r.entryidMu.Lock()
+		delete(r.entryids, key)
+		r.entryidMu.Unlock()
+	}
+
+	// Now we can remove the finalizer
+	finalizers := sets.NewString(source.Finalizers...)
+	if finalizers.Has(finalizerName) {
+		finalizers.Delete(finalizerName)
+		if _, err := r.patchFinalizer(source, finalizers.List()); err != nil {
+			logging.FromContext(ctx).Debug("Failed to remove finalizer", zap.Error(err))
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) patchFinalizer(source *v1alpha2.PingSource, finalizers []string) (*v1alpha2.PingSource, error) {
+	mergePatch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"finalizers":      finalizers,
+			"resourceVersion": source.ResourceVersion,
+		},
+	}
+
+	patch, err := json.Marshal(mergePatch)
+	if err != nil {
+		return source, err
+	}
+
+	source, err = r.EventingClientSet.SourcesV1alpha2().PingSources(source.Namespace).Patch(source.Name, types.MergePatchType, patch)
+	if err != nil {
+		r.Recorder.Eventf(source, v1.EventTypeWarning, "FinalizerUpdateFailed",
+			"Failed to update finalizers for %q: %v", source.Name, err)
+	} else {
+		r.Recorder.Eventf(source, v1.EventTypeNormal, "FinalizerUpdate",
+			"Updated %q finalizers", source.GetName())
+	}
+	return source, err
 }

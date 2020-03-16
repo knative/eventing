@@ -22,7 +22,10 @@ import (
 	"testing"
 
 	"github.com/robfig/cron"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	clientgotesting "k8s.io/client-go/testing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
@@ -95,6 +98,85 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceV1A2EventType,
 				),
 			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, pingSourceName, finalizerName),
+			},
+			WantErr: false,
+		}, {
+			Name: "valid schedule, with finalizer",
+			Key:  pingsourceKey,
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha2(pingSourceName, testNS,
+					WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+						Schedule: testSchedule,
+						JsonData: testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink:                sinkDest,
+							CloudEventOverrides: nil,
+						},
+					}),
+					WithInitPingSourceV1A2Conditions,
+					WithValidPingSourceV1A2Schedule,
+					WithPingSourceV1A2Deployed,
+					WithPingSourceV1A2Sink(sinkURI),
+					WithPingSourceV1A2EventType,
+					WithPingSourceV1A2Finalizers(finalizerName),
+				),
+			},
+			WantErr: false,
+		}, {
+			Name: "valid schedule, deleted with finalizer",
+			Key:  pingsourceKey,
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha2(pingSourceName, testNS,
+					WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+						Schedule: testSchedule,
+						JsonData: testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink:                sinkDest,
+							CloudEventOverrides: nil,
+						},
+					}),
+					WithInitPingSourceV1A2Conditions,
+					WithValidPingSourceV1A2Schedule,
+					WithPingSourceV1A2Deployed,
+					WithPingSourceV1A2Sink(sinkURI),
+					WithPingSourceV1A2EventType,
+					WithPingSourceV1A2Finalizers(finalizerName),
+					WithPingSourceV1A2Deleted,
+				),
+			},
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
+			},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchFinalizers(testNS, pingSourceName, ""),
+			},
+			WantErr: false,
+		}, {
+			Name: "valid schedule, deleted without finalizer",
+			Key:  pingsourceKey,
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha2(pingSourceName, testNS,
+					WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+						Schedule: testSchedule,
+						JsonData: testData,
+						SourceSpec: duckv1.SourceSpec{
+							Sink:                sinkDest,
+							CloudEventOverrides: nil,
+						},
+					}),
+					WithInitPingSourceV1A2Conditions,
+					WithValidPingSourceV1A2Schedule,
+					WithPingSourceV1A2Deployed,
+					WithPingSourceV1A2Sink(sinkURI),
+					WithPingSourceV1A2EventType,
+					WithPingSourceV1A2Deleted,
+				),
+			},
 			WantErr: false,
 		},
 	}
@@ -115,4 +197,22 @@ func TestAllCases(t *testing.T) {
 			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 
+}
+
+func patchFinalizers(namespace, name string, finalizers string) clientgotesting.PatchActionImpl {
+	fstr := ""
+	if finalizers != "" {
+		fstr = `"` + finalizers + `"`
+	}
+	return clientgotesting.PatchActionImpl{
+		ActionImpl: clientgotesting.ActionImpl{
+			Namespace:   namespace,
+			Verb:        "patch",
+			Resource:    schema.GroupVersionResource{Group: "sources.knative.dev", Version: "v1alpha2", Resource: "pingsources"},
+			Subresource: "",
+		},
+		Name:      name,
+		PatchType: "application/merge-patch+json",
+		Patch:     []byte(`{"metadata":{"finalizers":[` + fstr + `],"resourceVersion":""}}`),
+	}
 }
