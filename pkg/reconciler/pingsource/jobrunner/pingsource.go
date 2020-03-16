@@ -22,21 +22,16 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kubernetes/kube-openapi/pkg/util/sets"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
-	pkgreconciler "knative.dev/pkg/reconciler"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
+	pkgreconciler "knative.dev/pkg/reconciler"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
-	"knative.dev/eventing/pkg/logging"
-
-	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
 )
