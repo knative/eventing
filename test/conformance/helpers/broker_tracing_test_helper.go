@@ -18,12 +18,10 @@ package helpers
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 	"testing"
 
 	ce "github.com/cloudevents/sdk-go"
-	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
@@ -123,7 +121,7 @@ func setupBrokerTracing(
 
 	// Everything is setup to receive an event. Generate a CloudEvent.
 	senderName := "sender"
-	eventID := fmt.Sprintf("%s", uuid.NewUUID())
+	eventID := string(uuid.NewUUID())
 	body := fmt.Sprintf("TestBrokerTracing %s", eventID)
 	event := cloudevents.New(
 		fmt.Sprintf(`{"msg":%q}`, body),
@@ -182,22 +180,11 @@ func setupBrokerTracing(
 	// Steps 15-16: 'logger' event being sent to the 'transformer' Trigger.
 	loggerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 		Note: "15. Broker TrChannel sends the event to the Broker Filter for the 'transformer' trigger.",
-		Kind: model.Client,
-		Tags: map[string]string{
-			"http.method":      http.MethodPost,
-			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
-		},
+		Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, transformerTriggerPath),
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "16. Broker Filter for the 'transformer' trigger receives the event from the Broker TrChannel. This does not pass the filter, so this 'branch' ends here.",
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.host":        filterHost,
-					"http.path":        transformerTriggerPath,
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, transformerTriggerPath),
 			},
 		},
 	}
@@ -205,41 +192,19 @@ func setupBrokerTracing(
 	// Steps 17-20: 'logger' event being sent to the 'logger' Trigger.
 	loggerEventSentFromTrChannelToLogger := tracinghelper.TestSpanTree{
 		Note: "17. Broker TrChannel sends the event to the Broker Filter for the 'logger' trigger.",
-		Kind: model.Client,
-		Tags: map[string]string{
-			"http.method":      http.MethodPost,
-			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s%s", filterHost, loggerTriggerPath),
-		},
+		Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, loggerTriggerPath),
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "18. Broker Filter for the 'logger' trigger receives the event from the Broker TrChannel.",
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.host":        filterHost,
-					"http.path":        loggerTriggerPath,
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, loggerTriggerPath),
 				Children: []tracinghelper.TestSpanTree{
 					{
 						Note: "19. Broker Filter for the 'logger' trigger sends the event to the logger pod.",
-						Kind: model.Client,
-						Tags: map[string]string{
-							"http.method":      http.MethodPost,
-							"http.status_code": "202",
-							"http.url":         fmt.Sprintf("http://%s/", loggerSVCHost),
-						},
+						Span: tracinghelper.MatchHTTPClientSpanNoReply(loggerSVCHost, "/"),
 						Children: []tracinghelper.TestSpanTree{
 							{
 								Note: "20. Logger pod receives the event from the Broker Filter for the 'logger' trigger.",
-								Kind: model.Server,
-								Tags: map[string]string{
-									"http.method":      http.MethodPost,
-									"http.path":        "/",
-									"http.status_code": "202",
-									"http.host":        loggerSVCHost,
-								},
+								Span: tracinghelper.MatchHTTPServerSpanNoReply(loggerSVCHost, "/"),
 							},
 						},
 					},
@@ -251,22 +216,11 @@ func setupBrokerTracing(
 	// Steps 13-20. Directly steps 15-16. 17-20 are included as children.
 	loggerEventIngressToTrigger := tracinghelper.TestSpanTree{
 		Note: "13. Broker Ingress sends the event to the Broker's TrChannel.",
-		Kind: model.Client,
-		Tags: map[string]string{
-			"http.method":      http.MethodPost,
-			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s/", triggerChanHost),
-		},
+		Span: tracinghelper.MatchHTTPClientSpanNoReply(triggerChanHost, "/"),
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "14. Broker TrChannel receives the event from the Broker Ingress.",
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.host":        triggerChanHost,
-					"http.path":        "/",
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(triggerChanHost, "/"),
 				Children: []tracinghelper.TestSpanTree{
 					// Steps 15-16.
 					loggerEventSentFromTrChannelToTransformer,
@@ -280,40 +234,19 @@ func setupBrokerTracing(
 	// Steps 7-10: Event from TrChannel sent to transformer Trigger and its reply to the InChannel.
 	transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 		Note: "7. Broker TrChannel sends the event to the Broker Filter for the 'transformer' trigger.",
-		Kind: model.Client,
-		Tags: map[string]string{
-			"http.method": http.MethodPost,
-			"http.url":    fmt.Sprintf("http://%s%s", filterHost, transformerTriggerPath),
-		},
+		Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, transformerTriggerPath),
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "8. Broker Filter for the 'transformer' trigger receives the event from the Broker TrChannel.",
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.host":        filterHost,
-					"http.path":        transformerTriggerPath,
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, transformerTriggerPath),
 				Children: []tracinghelper.TestSpanTree{
 					{
 						Note: "9. Broker Filter for the 'transformer' trigger sends the event to the transformer pod.",
-						Kind: model.Client,
-						Tags: map[string]string{
-							"http.method":      http.MethodPost,
-							"http.status_code": "200",
-							"http.url":         fmt.Sprintf("http://%s/", transformerSVCHost),
-						},
+						Span: tracinghelper.MatchHTTPClientSpanWithReply(transformerSVCHost, "/"),
 						Children: []tracinghelper.TestSpanTree{
 							{
 								Note: "10. Transformer pod receives the event from the Broker Filter for the 'transformer' trigger.",
-								Kind: model.Server,
-								Tags: map[string]string{
-									"http.method":      http.MethodPost,
-									"http.path":        "/",
-									"http.status_code": "200",
-									"http.host":        transformerSVCHost,
-								},
+								Span: tracinghelper.MatchHTTPServerSpanWithReply(transformerSVCHost, "/"),
 							},
 						},
 					},
@@ -327,23 +260,11 @@ func setupBrokerTracing(
 	// Ingress.
 	transformerEventResponseFromTrChannel := tracinghelper.TestSpanTree{
 		Note: "11. Broker TrChannel for the 'transformer' sends the transformer pod's reply to the Broker Ingress.",
-		Kind: model.Client,
-		Tags: map[string]string{
-			"http.method":      http.MethodPost,
-			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s", ingressHost),
-		},
+		Span: tracinghelper.MatchHTTPClientSpanNoReply(ingressHost, ""),
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "12. Broker Ingress receives the event from the Broker Filter for the 'transformer' trigger.",
-				Kind: model.Server,
-				Tags: map[string]string{
-
-					"http.method":      http.MethodPost,
-					"http.path":        "/",
-					"http.status_code": "202",
-					"http.host":        ingressHost,
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
 				Children: []tracinghelper.TestSpanTree{
 					// Steps 13-20.
 					loggerEventIngressToTrigger,
@@ -355,22 +276,11 @@ func setupBrokerTracing(
 	// Steps 5-6: Event from TrChannel sent to logger Trigger.
 	transformerEventSentFromTrChannelToLogger := tracinghelper.TestSpanTree{
 		Note: "5. Broker TrChannel sends the event to the Broker Filter for the 'logger' trigger.",
-		Kind: model.Client,
-		Tags: map[string]string{
-			"http.method":      http.MethodPost,
-			"http.status_code": "202",
-			"http.url":         fmt.Sprintf("http://%s%s", filterHost, loggerTriggerPath),
-		},
+		Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, loggerTriggerPath),
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "6. Broker Filter for the 'logger' trigger receives the event from the Broker TrChannel. This does not pass the filter, so this 'branch' ends here.",
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.host":        filterHost,
-					"http.path":        loggerTriggerPath,
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, loggerTriggerPath),
 			},
 		},
 	}
@@ -384,32 +294,15 @@ func setupBrokerTracing(
 		Children: []tracinghelper.TestSpanTree{
 			{
 				Note: "2. Broker Ingress receives the event from the sending pod.",
-				Kind: model.Server,
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.host":        ingressHost,
-					"http.path":        "/",
-				},
+				Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
 				Children: []tracinghelper.TestSpanTree{
 					{
 						Note: "3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).",
-						Kind: model.Client,
-						Tags: map[string]string{
-							"http.method":      http.MethodPost,
-							"http.status_code": "202",
-							"http.url":         fmt.Sprintf("http://%s/", triggerChanHost),
-						},
+						Span: tracinghelper.MatchHTTPClientSpanNoReply(triggerChanHost, "/"),
 						Children: []tracinghelper.TestSpanTree{
 							{
 								Note: "4. Broker TrChannel receives the event from the Broker Ingress.",
-								Kind: model.Server,
-								Tags: map[string]string{
-									"http.method":      http.MethodPost,
-									"http.status_code": "202",
-									"http.host":        triggerChanHost,
-									"http.path":        "/",
-								},
+								Span: tracinghelper.MatchHTTPServerSpanNoReply(triggerChanHost, "/"),
 								Children: []tracinghelper.TestSpanTree{
 									// Steps 5-6.
 									transformerEventSentFromTrChannelToLogger,
@@ -429,14 +322,8 @@ func setupBrokerTracing(
 	if tc.IncomingTraceId {
 		expected.Children = []tracinghelper.TestSpanTree{
 			{
-				Note:                     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
-				Kind:                     model.Client,
-				LocalEndpointServiceName: "sender",
-				Tags: map[string]string{
-					"http.method":      http.MethodPost,
-					"http.status_code": "202",
-					"http.url":         fmt.Sprintf("http://%s", ingressHost),
-				},
+				Note:     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
+				Span:     tracinghelper.MatchHTTPClientSpanNoReply(ingressHost, ""),
 				Children: expected.Children,
 			},
 		}
