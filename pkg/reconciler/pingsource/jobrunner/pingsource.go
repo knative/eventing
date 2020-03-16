@@ -41,7 +41,6 @@ type Reconciler struct {
 
 	cronRunner       *cronJobsRunner
 	pingsourceLister sourceslisters.PingSourceLister
-	impl             *controller.Impl
 
 	entryidMu sync.Mutex
 	entryids  map[string]cron.EntryID // key: resource namespace/name

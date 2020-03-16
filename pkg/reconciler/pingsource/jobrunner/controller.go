@@ -66,12 +66,12 @@ func NewController(
 		entryids:         make(map[string]cron.EntryID),
 	}
 
-	r.impl = controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
 	r.Logger.Info("Setting up event handlers")
 
 	// Watch for pingsource objects
-	pingsourceInformer.Informer().AddEventHandler(controller.HandleAll(r.impl.Enqueue))
+	pingsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Create the cron job runner
 	ceClient, err := kncloudevents.NewDefaultClient()
@@ -94,5 +94,5 @@ func NewController(
 		}
 	}()
 
-	return r.impl
+	return impl
 }
