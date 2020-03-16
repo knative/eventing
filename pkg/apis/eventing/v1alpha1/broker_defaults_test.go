@@ -23,13 +23,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"knative.dev/eventing/pkg/apis/messaging/config"
+	"knative.dev/eventing/pkg/apis/config"
+	"knative.dev/eventing/pkg/apis/eventing"
+	messagingconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
-	configDefaultChannelTemplate = &config.ChannelTemplateSpec{
+	configDefaultChannelTemplate = &messagingconfig.ChannelTemplateSpec{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
 			Kind:       "InMemoryChannel",
@@ -42,25 +44,56 @@ var (
 			Kind:       "InMemoryChannel",
 		},
 	}
+	defaultConfig = &config.Config{
+		Defaults: &config.Defaults{
+			// NamespaceDefaultsConfig are the default Broker Configs for each namespace.
+			// Namespace is the key, the value is the KReference to the config.
+			NamespaceDefaultsConfig: map[string]*config.ClassAndKRef{
+				"mynamespace": {
+					BrokerClass: "mynamespaceclass",
+				},
+			},
+			ClusterDefault: &config.ClassAndKRef{
+				BrokerClass: eventing.ChannelBrokerClassValue,
+			},
+		},
+	}
 )
 
 func TestBrokerSetDefaults(t *testing.T) {
 	testCases := map[string]struct {
 		nilChannelDefaulter bool
-		channelTemplate     *config.ChannelTemplateSpec
+		channelTemplate     *messagingconfig.ChannelTemplateSpec
 		initial             Broker
 		expected            Broker
 	}{
 		"nil ChannelDefaulter": {
 			nilChannelDefaulter: true,
-			expected:            Broker{},
+			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+					},
+				},
+			},
 		},
 		"unset ChannelDefaulter": {
-			expected: Broker{},
+			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+					},
+				},
+			},
 		},
 		"set ChannelDefaulter": {
 			channelTemplate: configDefaultChannelTemplate,
 			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+					},
+				},
 				Spec: BrokerSpec{
 					ChannelTemplate: defaultChannelTemplate,
 				},
@@ -79,6 +112,11 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+					},
+				},
 				Spec: BrokerSpec{
 					ChannelTemplate: &messagingv1beta1.ChannelTemplateSpec{
 						TypeMeta: v1.TypeMeta{
@@ -89,7 +127,7 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 		},
-		"config already specified": {
+		"config already specified, adds annotation": {
 			channelTemplate: configDefaultChannelTemplate,
 			initial: Broker{
 				Spec: BrokerSpec{
@@ -102,6 +140,11 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+					},
+				},
 				Spec: BrokerSpec{
 					Config: &duckv1.KReference{
 						Kind:       "k",
@@ -112,18 +155,58 @@ func TestBrokerSetDefaults(t *testing.T) {
 				},
 			},
 		},
+		"class annotation exists": {
+			initial: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "mynamespace",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "myclass",
+					},
+				},
+			},
+			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "mynamespace",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "myclass",
+					},
+				},
+			},
+		},
+		"default class annotation from cluster": {
+			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: eventing.ChannelBrokerClassValue,
+					},
+				},
+			},
+		},
+		"default class annotation from namespace": {
+			initial: Broker{
+				ObjectMeta: v1.ObjectMeta{Namespace: "mynamespace"},
+			},
+			expected: Broker{
+				ObjectMeta: v1.ObjectMeta{
+					Namespace: "mynamespace",
+					Annotations: map[string]string{
+						eventing.BrokerClassKey: "mynamespaceclass",
+					},
+				},
+			},
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 			ctx := context.Background()
 			if !tc.nilChannelDefaulter {
-				ctx = config.ToContext(ctx, &config.Config{
-					ChannelDefaults: &config.ChannelDefaults{
+				ctx = messagingconfig.ToContext(ctx, &messagingconfig.Config{
+					ChannelDefaults: &messagingconfig.ChannelDefaults{
 						ClusterDefault: tc.channelTemplate,
 					},
 				})
 			}
-			tc.initial.SetDefaults(ctx)
+			tc.initial.SetDefaults(config.ToContext(ctx, defaultConfig))
 			if diff := cmp.Diff(tc.expected, tc.initial); diff != "" {
 				t.Fatalf("Unexpected defaults (-want, +got): %s", diff)
 			}

@@ -25,8 +25,6 @@ import (
 	"knative.dev/pkg/kmp"
 	"knative.dev/pkg/system"
 
-	"knative.dev/eventing/pkg/apis/eventing"
-
 	. "knative.dev/pkg/configmap/testing"
 	_ "knative.dev/pkg/system/testing"
 )
@@ -88,8 +86,8 @@ func TestGetBrokerClass(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetBrokerClass Failed = %v", err)
 	}
-	if c != eventing.ChannelBrokerClassValue {
-		t.Errorf("GetBrokerClass Failed, wanted somename, got: %s", c)
+	if c != "ChannelBasedBroker" {
+		t.Errorf("GetBrokerClass Failed, wanted ChannelBasedBroker, got: %s", c)
 	}
 	c, err = defaults.GetBrokerClass("some-namespace")
 	if err != nil {

@@ -19,7 +19,8 @@ package v1alpha1
 import (
 	"context"
 
-	"knative.dev/eventing/pkg/apis/messaging/config"
+	"knative.dev/eventing/pkg/apis/eventing"
+	messagingconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/pkg/apis"
 )
@@ -27,6 +28,7 @@ import (
 func (b *Broker) SetDefaults(ctx context.Context) {
 	withNS := apis.WithinParent(ctx, b.ObjectMeta)
 	b.Spec.SetDefaults(withNS)
+	eventing.DefaultBrokerClassIfUnset(withNS, &b.ObjectMeta)
 }
 
 func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
@@ -34,8 +36,8 @@ func (bs *BrokerSpec) SetDefaults(ctx context.Context) {
 		// If we haven't configured the new channelTemplate,
 		// then set the default channel to the new channelTemplate.
 		if bs.ChannelTemplate == nil {
-			cfg := config.FromContextOrDefaults(ctx)
-			c, err := cfg.ChannelDefaults.GetChannelConfig(apis.ParentMeta(ctx).Namespace)
+			channelCfg := messagingconfig.FromContextOrDefaults(ctx)
+			c, err := channelCfg.ChannelDefaults.GetChannelConfig(apis.ParentMeta(ctx).Namespace)
 
 			if err == nil {
 				bs.ChannelTemplate = &messagingv1beta1.ChannelTemplateSpec{
