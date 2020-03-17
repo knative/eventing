@@ -38,36 +38,36 @@ var defaultTransformers = []binding.TransformerFactory{
 	transformer.AddTimeNow,
 }
 
-// EventReceiverBindings starts a server to receive new events for the channel dispatcher. The new
+// MessageReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
-type EventReceiverBindings struct {
+type MessageReceiver struct {
 	messageBufferingCtx  context.Context
-	httpBindingsReceiver *kncloudevents.HttpBindingsReceiver
-	receiverFunc         ReceiverBindingsFunc
+	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
+	receiverFunc         MessageReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
 }
 
 // ReceiverBindingFunc is the function to be called for handling the event.
-type ReceiverBindingsFunc func(context.Context, ChannelReference, binding.Message, nethttp.Header) error
+type MessageReceiverFunc func(context.Context, ChannelReference, binding.Message, nethttp.Header) error
 
 // ReceiverOptions provides functional options to EventReceiver function.
-type ReceiverBindingsOptions func(*EventReceiverBindings) error
+type MessageReceiverOptions func(*MessageReceiver) error
 
 // ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannel function.
-func ResolveChannelFromHostHeaderBindings(hostToChannelFunc ResolveChannelFromHostFunc) ReceiverBindingsOptions {
-	return func(r *EventReceiverBindings) error {
+func ResolveChannelFromHostHeaderBindings(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
+	return func(r *MessageReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
 		return nil
 	}
 }
 
-// NewEventReceiverBinding creates an event receiver passing new events to the
+// NewMessageReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewEventReceiverBinding(messageBufferingCtx context.Context, receiverFunc ReceiverBindingsFunc, logger *zap.Logger, opts ...ReceiverBindingsOptions) (*EventReceiverBindings, error) {
-	bindingsReceiver := kncloudevents.NewHttpBindingsReceiver(8080)
-	receiver := &EventReceiverBindings{
+func NewMessageReceiver(messageBufferingCtx context.Context, receiverFunc MessageReceiverFunc, logger *zap.Logger, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
+	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
+	receiver := &MessageReceiver{
 		messageBufferingCtx:  messageBufferingCtx,
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
@@ -87,7 +87,7 @@ func NewEventReceiverBinding(messageBufferingCtx context.Context, receiverFunc R
 // Only HTTP POST requests to the root path (/) are accepted. If other paths or
 // methods are needed, use the HandleRequest method directly with another HTTP
 // server.
-func (r *EventReceiverBindings) Start(ctx context.Context) error {
+func (r *MessageReceiver) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -115,7 +115,7 @@ func (r *EventReceiverBindings) Start(ctx context.Context) error {
 	}
 }
 
-func (r *EventReceiverBindings) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
 	if request.Method != nethttp.MethodPost {
 		response.WriteHeader(nethttp.StatusMethodNotAllowed)
 		return
@@ -156,7 +156,7 @@ func (r *EventReceiverBindings) ServeHTTP(response nethttp.ResponseWriter, reque
 		transformers = append(transformers, tracing.AddTraceparent(span)...)
 	}
 
-	// TODO Why do i buffer the message if i don't need it (kafka channel use case)?
+	// TODO(slinkydeveloper) Why do i buffer the message if i don't need it (kafka channel use case)?
 	// CopyMessage generates a message that we can reuse several times
 	bufferedMessage, err := buffering.CopyMessage(r.messageBufferingCtx, message, transformers)
 	// We can forget the original message (in case of http, close the body)
@@ -177,4 +177,4 @@ func (r *EventReceiverBindings) ServeHTTP(response nethttp.ResponseWriter, reque
 	return
 }
 
-var _ nethttp.Handler = (*EventReceiverBindings)(nil)
+var _ nethttp.Handler = (*MessageReceiver)(nil)

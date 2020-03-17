@@ -32,12 +32,12 @@ const (
 	DefaultShutdownTimeout = time.Minute * 1
 )
 
-type HttpBindingSender struct {
+type HttpMessageSender struct {
 	Client *nethttp.Client
 	Target string
 }
 
-func NewHttpBindingsSender(connectionArgs *ConnectionArgs, target string) (*HttpBindingSender, error) {
+func NewHttpMessageSender(connectionArgs *ConnectionArgs, target string) (*HttpMessageSender, error) {
 	// Add connection options to the default transport.
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 	connectionArgs.ConfigureTransport(base)
@@ -49,22 +49,22 @@ func NewHttpBindingsSender(connectionArgs *ConnectionArgs, target string) (*Http
 		},
 	}
 
-	return &HttpBindingSender{Client: client, Target: target}, nil
+	return &HttpMessageSender{Client: client, Target: target}, nil
 }
 
-func (s *HttpBindingSender) NewCloudEventRequest(ctx context.Context) (*nethttp.Request, error) {
+func (s *HttpMessageSender) NewCloudEventRequest(ctx context.Context) (*nethttp.Request, error) {
 	return nethttp.NewRequestWithContext(ctx, "POST", s.Target, nil)
 }
 
-func (s *HttpBindingSender) NewCloudEventRequestWithTarget(ctx context.Context, target string) (*nethttp.Request, error) {
+func (s *HttpMessageSender) NewCloudEventRequestWithTarget(ctx context.Context, target string) (*nethttp.Request, error) {
 	return nethttp.NewRequestWithContext(ctx, "POST", target, nil)
 }
 
-func (s *HttpBindingSender) Send(req *nethttp.Request) (*nethttp.Response, error) {
+func (s *HttpMessageSender) Send(req *nethttp.Request) (*nethttp.Response, error) {
 	return s.Client.Do(req)
 }
 
-type HttpBindingsReceiver struct {
+type HttpMessageReceiver struct {
 	port int
 
 	handler  *nethttp.ServeMux
@@ -73,14 +73,14 @@ type HttpBindingsReceiver struct {
 	listener net.Listener
 }
 
-func NewHttpBindingsReceiver(port int) *HttpBindingsReceiver {
-	return &HttpBindingsReceiver{
+func NewHttpMessageReceiver(port int) *HttpMessageReceiver {
+	return &HttpMessageReceiver{
 		port: port,
 	}
 }
 
 // Blocking
-func (recv *HttpBindingsReceiver) StartListen(ctx context.Context, handler nethttp.Handler) error {
+func (recv *HttpMessageReceiver) StartListen(ctx context.Context, handler nethttp.Handler) error {
 	var err error
 	if recv.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", recv.port)); err != nil {
 		return err

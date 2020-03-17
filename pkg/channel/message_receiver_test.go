@@ -43,7 +43,7 @@ func TestEventReceiverBindings_ServeHTTP(t *testing.T) {
 		path              string
 		additionalHeaders nethttp.Header
 		expected          int
-		receiverFunc      ReceiverBindingsFunc
+		receiverFunc      MessageReceiverFunc
 	}{
 		"non '/' path": {
 			path:     "/something",
@@ -138,7 +138,7 @@ func TestEventReceiverBindings_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewEventReceiverBinding(context.TODO(), f, zap.NewNop())
+			r, err := NewMessageReceiver(context.TODO(), f, zap.NewNop())
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -181,7 +181,7 @@ func TestEventReceiverBindingsWrongRequest(t *testing.T) {
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewEventReceiverBinding(context.TODO(), f, zap.NewNop())
+	r, err := NewMessageReceiver(context.TODO(), f, zap.NewNop())
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}

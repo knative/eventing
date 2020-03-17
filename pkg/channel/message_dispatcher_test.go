@@ -541,7 +541,7 @@ func TestDispatchMessageBinding(t *testing.T) {
 
 			ctx := context.Background()
 
-			md := NewEventDispatcherBinding(zap.NewNop())
+			md := NewMessageDispatcher(zap.NewNop())
 			destination := getDomain(t, tc.sendToDestination, destServer.URL)
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
 
@@ -556,13 +556,13 @@ func TestDispatchMessageBinding(t *testing.T) {
 			message = binding.ToMessage(ev)
 
 			if tc.hasDeliveryOptions {
-				err = md.DispatchEventWithDelivery(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deliveryOptions)
+				err = md.DispatchMessageWithDelivery(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deliveryOptions)
 			} else {
-				err = md.DispatchEvent(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply)
+				err = md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply)
 			}
 
 			if tc.expectedErr != (err != nil) {
-				t.Errorf("Unexpected error from DispatchEvent. Expected %v. Actual: %v", tc.expectedErr, err)
+				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)

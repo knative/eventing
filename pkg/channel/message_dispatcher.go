@@ -22,6 +22,7 @@ import (
 	nethttp "net/http"
 	"net/url"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/cloudevents/sdk-go/pkg/binding"
 	"github.com/cloudevents/sdk-go/pkg/protocol/http"
 	"go.uber.org/zap"
@@ -31,60 +32,60 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-type DispatcherBinding interface {
-	// DispatchEvent dispatches an event to a destination over HTTP.
+type MessageDispatcher interface {
+	// DispatchMessage dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
-	DispatchEvent(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, destination, reply string) error
+	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination, reply string) error
 
-	// DispatchEventWithDelivery dispatches an event to a destination over HTTP with delivery options
+	// DispatchMessageWithDelivery dispatches an event to a destination over HTTP with delivery options
 	//
 	// The destination and reply are URLs.
-	DispatchEventWithDelivery(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, destination, reply string, delivery *DeliveryOptions) error
+	DispatchMessageWithDelivery(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination, reply string, delivery *DeliveryOptions) error
 }
 
-// EventDispatcherBinding is the 'real' DispatcherBinding used everywhere except unit tests.
-var _ DispatcherBinding = &EventDispatcherBinding{}
+// MessageDispatcherImpl is the 'real' MessageDispatcher used everywhere except unit tests.
+var _ MessageDispatcher = &MessageDispatcherImpl{}
 
-// EventDispatcherBinding dispatches events to a destination over HTTP.
-type EventDispatcherBinding struct {
-	sender           *kncloudevents.HttpBindingSender
+// MessageDispatcherImpl dispatches events to a destination over HTTP.
+type MessageDispatcherImpl struct {
+	sender           *kncloudevents.HttpMessageSender
 	supportedSchemes sets.String
 
 	logger *zap.Logger
 }
 
-// NewEventDispatcherBinding creates a new event dispatcher that can dispatch
+// NewMessageDispatcher creates a new event dispatcher that can dispatch
 // events to HTTP destinations.
-func NewEventDispatcherBinding(logger *zap.Logger) *EventDispatcherBinding {
-	return NewEventDispatcherBindingFromConfig(logger, defaultEventDispatcherConfig)
+func NewMessageDispatcher(logger *zap.Logger) *MessageDispatcherImpl {
+	return NewMessageDispatcherFromConfig(logger, defaultEventDispatcherConfig)
 }
 
-// NewEventDispatcherBindingFromConfig creates a new event dispatcher based on config.
-func NewEventDispatcherBindingFromConfig(logger *zap.Logger, config EventDispatcherConfig) *EventDispatcherBinding {
-	sender, err := kncloudevents.NewHttpBindingsSender(&config.ConnectionArgs, "")
+// NewMessageDispatcherFromConfig creates a new event dispatcher based on config.
+func NewMessageDispatcherFromConfig(logger *zap.Logger, config EventDispatcherConfig) *MessageDispatcherImpl {
+	sender, err := kncloudevents.NewHttpMessageSender(&config.ConnectionArgs, "")
 	if err != nil {
 		logger.Fatal("Unable to create cloudevents binding sender", zap.Error(err))
 		return nil
 	}
-	return &EventDispatcherBinding{
+	return &MessageDispatcherImpl{
 		sender:           sender,
 		supportedSchemes: sets.NewString("http", "https"),
 		logger:           logger,
 	}
 }
 
-// DispatchEvent dispatches an event to a destination over HTTP.
+// DispatchMessage dispatches an event to a destination over HTTP.
 //
 // The destination and reply are URLs.
-func (d *EventDispatcherBinding) DispatchEvent(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, destination, reply string) error {
-	return d.DispatchEventWithDelivery(ctx, message, additionalHeaders, destination, reply, nil)
+func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination, reply string) error {
+	return d.DispatchMessageWithDelivery(ctx, message, additionalHeaders, destination, reply, nil)
 }
 
-// DispatchEventWithDelivery dispatches an event to a destination over HTTP with delivery options
+// DispatchMessageWithDelivery dispatches an event to a destination over HTTP with delivery options
 //
 // The destination and reply are URLs.
-func (d *EventDispatcherBinding) DispatchEventWithDelivery(ctx context.Context, message binding.Message, initialAdditionalHeaders nethttp.Header, destination, reply string, delivery *DeliveryOptions) error {
+func (d *MessageDispatcherImpl) DispatchMessageWithDelivery(ctx context.Context, message cloudevents.Message, initialAdditionalHeaders nethttp.Header, destination, reply string, delivery *DeliveryOptions) error {
 	var err error
 
 	// Default to replying with the original event. If there is a destination, then replace it
@@ -144,7 +145,7 @@ func (d *EventDispatcherBinding) DispatchEventWithDelivery(ctx context.Context, 
 	return nil
 }
 
-func (d *EventDispatcherBinding) executeRequest(ctx context.Context, url *url.URL, message binding.Message, additionalHeaders nethttp.Header) (binding.Message, nethttp.Header, error) {
+func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL, message cloudevents.Message, additionalHeaders nethttp.Header) (cloudevents.Message, nethttp.Header, error) {
 	d.logger.Debug("Dispatching event", zap.String("url", url.String()))
 
 	req, err := d.sender.NewCloudEventRequestWithTarget(ctx, url.String())
@@ -152,7 +153,7 @@ func (d *EventDispatcherBinding) executeRequest(ctx context.Context, url *url.UR
 		return nil, nil, err
 	}
 
-	err = kncloudevents.WriteHttpRequest(ctx, message, req, additionalHeaders, []binding.TransformerFactory{})
+	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, []binding.TransformerFactory{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -173,7 +174,7 @@ func (d *EventDispatcherBinding) executeRequest(ctx context.Context, url *url.UR
 	return responseMessage, utils.PassThroughHeaders(response.Header), nil
 }
 
-func (d *EventDispatcherBinding) resolveURL(destination string) *url.URL {
+func (d *MessageDispatcherImpl) resolveURL(destination string) *url.URL {
 	if u, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(u.Scheme) {
 		// Already a URL with a known scheme.
 		return u
