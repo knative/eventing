@@ -98,14 +98,6 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 }
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgreconciler.Event {
-	// TODO(vaikas): Can we just add this into the controller as part of the filtering
-	// so they won't even get queued into my queue???
-	if r.brokerClass != "" {
-		if b.GetAnnotations()[eventing.BrokerClassKey] != r.brokerClass {
-			logging.FromContext(ctx).Info("Not reconciling broker, cause it's not mine", zap.String("broker", b.Name))
-			return nil
-		}
-	}
 	err := r.reconcileKind(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling broker", zap.Error(err))
@@ -134,9 +126,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	b.Status.ObservedGeneration = b.Generation
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
-	// 2. Filter Deployment.
-	// 4. K8s Service that points to Filter Deployment
-
+	// 2. Check that Filter / Ingress deployment (shared within cluster are there)
 	chanMan, err := r.getChannelTemplate(ctx, b)
 	if err != nil {
 		b.Status.MarkTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: %s", err)
@@ -181,6 +171,8 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	}
 	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
 
+	// Route everything to shared ingress, just tack on the namespace/name as path
+	// so we can route there appropriately.
 	b.Status.SetAddress(&apis.URL{
 		Scheme: "http",
 		Host:   names.ServiceHostName("broker-ingress", "knative-eventing"),

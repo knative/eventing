@@ -47,6 +47,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
+	"knative.dev/pkg/system"
 	pkgtracing "knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 )
@@ -74,6 +75,7 @@ type envConfig struct {
 	// TODO: change this environment variable to something like "PodGroupName".
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
+	Port          int    `envconfig:"PORT" default:"8080"`
 }
 
 func main() {
@@ -107,7 +109,7 @@ func main() {
 	loggingConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, logging.ConfigMapName())
 	metricsConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, metrics.ConfigMapName())
 
-	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, "knative-eventing", loggingConfigMapName)
+	loggingConfig, err := cmdbroker.GetLoggingConfig(ctx, system.Namespace(), loggingConfigMapName)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
@@ -118,7 +120,7 @@ func main() {
 	logger.Info("Starting the Broker Ingress")
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), "knative-eventing")
+	configMapWatcher := configmap.NewInformedWatcher(kubeclient.Get(ctx), system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
 	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(metrics.ExporterOptions{
 		Component:      component,
@@ -133,7 +135,7 @@ func main() {
 	configMapWatcher.Watch(loggingConfigMapName, logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
-		Namespace:  "knative-eventing",
+		Namespace:  system.Namespace(),
 		BrokerName: "cluster",
 	})
 	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin,
@@ -148,6 +150,7 @@ func main() {
 
 	// Liveness check.
 	httpTransport.Handler = http.NewServeMux()
+	httpTransport.Port = &env.Port
 	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})

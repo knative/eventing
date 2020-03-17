@@ -18,10 +18,7 @@ package mtbroker
 
 import (
 	"context"
-	"log"
 
-	"github.com/kelseyhightower/envconfig"
-	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
@@ -49,14 +46,10 @@ const (
 	ReconcilerName = "Brokers"
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "broker-controller"
+	controllerAgentName = "mt-broker-controller"
 	// BrokerClass is our annotation
-	brokerClass = "MTChannelBroker"
+	brokerClass = "MTChannelBasedBroker"
 )
-
-type envConfig struct {
-	BrokerClass string `envconfig:"BROKER_CLASS"`
-}
 
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
@@ -64,11 +57,6 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-
-	var env envConfig
-	if err := envconfig.Process("", &env); err != nil {
-		log.Fatal("Failed to process env var", zap.Error(err))
-	}
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
@@ -83,9 +71,9 @@ func NewController(
 		deploymentLister:   deploymentInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
-		brokerClass:        env.BrokerClass,
+		brokerClass:        brokerClass,
 	}
-	impl := brokerreconciler.NewImpl(ctx, r)
+	impl := brokerreconciler.NewImpl(ctx, r, brokerClass)
 
 	r.Logger.Info("Setting up event handlers")
 
@@ -94,7 +82,10 @@ func NewController(
 	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
-	brokerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, brokerClass, false /*allowUnset*/),
+		Handler:    controller.HandleAll(impl.Enqueue),
+	})
 
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
