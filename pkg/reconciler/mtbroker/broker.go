@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
-	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -62,8 +61,7 @@ type Reconciler struct {
 
 	// listers index properties about resources
 	brokerLister       eventinglisters.BrokerLister
-	serviceLister      corev1listers.ServiceLister
-	deploymentLister   appsv1listers.DeploymentLister
+	endpointsLister    corev1listers.EndpointsLister
 	subscriptionLister messaginglisters.SubscriptionLister
 	triggerLister      eventinglisters.TriggerLister
 
@@ -164,13 +162,21 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	b.Status.TriggerChannel = &chanMan.ref
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
-	filterDeployment, err := r.deploymentLister.Deployments(system.Namespace()).Get("broker-filter")
+	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get("broker-filter")
 	if err != nil {
-		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
-		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
+		logging.FromContext(ctx).Error("Problem getting endpoints for filter", zap.String("namespace", system.Namespace()), zap.Error(err))
+		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
 		return err
 	}
-	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
+	b.Status.PropagateFilterAvailability(filterEndpoints)
+
+	ingressEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get("broker-ingress")
+	if err != nil {
+		logging.FromContext(ctx).Error("Problem getting endpoints for ingress", zap.String("namespace", system.Namespace()), zap.Error(err))
+		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
+		return err
+	}
+	b.Status.PropagateIngressAvailability(ingressEndpoints)
 
 	// Route everything to shared ingress, just tack on the namespace/name as path
 	// so we can route there appropriately.
@@ -179,14 +185,6 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 		Host:   names.ServiceHostName("broker-ingress", system.Namespace()),
 		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
 	})
-
-	ingressDeployment, err := r.deploymentLister.Deployments(system.Namespace()).Get("broker-ingress")
-	if err != nil {
-		logging.FromContext(ctx).Error("Problem fetching ingress Deployment", zap.Error(err))
-		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
-		return err
-	}
-	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.

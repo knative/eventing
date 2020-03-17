@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	clientgotesting "k8s.io/client-go/testing"
@@ -54,7 +53,6 @@ import (
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
-	"knative.dev/pkg/system"
 
 	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger/fake"
 	. "knative.dev/eventing/pkg/reconciler/testing"
@@ -65,6 +63,7 @@ import (
 type channelType string
 
 const (
+	systemNS   = "knative-testing"
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
 
@@ -112,10 +111,8 @@ var (
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 
-	filterDeploymentName  = fmt.Sprintf("%s-broker-filter", brokerName)
-	filterServiceName     = fmt.Sprintf("%s-broker-filter", brokerName)
-	ingressDeploymentName = fmt.Sprintf("%s-broker-ingress", brokerName)
-	ingressServiceName    = fmt.Sprintf("%s-broker", brokerName)
+	filterServiceName  = "broker-filter"
+	ingressServiceName = "broker-ingress"
 
 	ingressSubscriptionGenerateName = fmt.Sprintf("internal-ingress-%s-", brokerName)
 	subscriptionName                = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
@@ -164,6 +161,12 @@ var (
 	sinkDNS               = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI               = "http://" + sinkDNS
 	finalizerUpdatedEvent = Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-broker" finalizers`)
+
+	brokerAddress = &apis.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, systemNS, utils.GetClusterDomainName()),
+		Path:   fmt.Sprintf("/%s/%s", testNS, brokerName),
+	}
 )
 
 func init() {
@@ -308,6 +311,12 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, true),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
@@ -315,8 +324,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
-				),
+					WithBrokerAddressURI(brokerAddress)),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
@@ -333,6 +341,12 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, true),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "brokers"),
@@ -343,8 +357,7 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())),
-				),
+					WithBrokerAddressURI(brokerAddress)),
 			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
@@ -363,6 +376,12 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, true),
+				NewEndpoints(filterServiceName, systemNS,
+					WithEndpointsLabels(FilterLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+				NewEndpoints(ingressServiceName, systemNS,
+					WithEndpointsLabels(IngressLabels()),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI)),
@@ -385,8 +404,8 @@ func TestReconcile(t *testing.T) {
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
-					WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName())))},
-			},
+					WithBrokerAddressURI(brokerAddress)),
+			}},
 			WantEvents: []string{
 				finalizerUpdatedEvent,
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
@@ -1008,8 +1027,8 @@ func TestReconcile(t *testing.T) {
 			subscriptionLister: listers.GetSubscriptionLister(),
 			triggerLister:      listers.GetTriggerLister(),
 			brokerLister:       listers.GetBrokerLister(),
-			serviceLister:      listers.GetK8sServiceLister(),
-			deploymentLister:   listers.GetDeploymentLister(),
+
+			endpointsLister:    listers.GetEndpointsLister(),
 			kresourceTracker:   duck.NewListableTracker(ctx, conditions.Get, func(types.NamespacedName) {}, 0),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
@@ -1038,143 +1057,6 @@ func channel() metav1.TypeMeta {
 		APIVersion: "messaging.knative.dev/v1alpha1",
 		Kind:       "InMemoryChannel",
 	}
-}
-
-func livenessProbe() *corev1.Probe {
-	return &corev1.Probe{
-		Handler: corev1.Handler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/healthz",
-				Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-			},
-		},
-		InitialDelaySeconds: 5,
-		PeriodSeconds:       2,
-	}
-}
-
-func readinessProbe() *corev1.Probe {
-	return &corev1.Probe{
-		Handler: corev1.Handler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/readyz",
-				Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-			},
-		},
-		InitialDelaySeconds: 5,
-		PeriodSeconds:       2,
-	}
-}
-
-func envVars(containerName string) []corev1.EnvVar {
-	switch containerName {
-	case filterContainerName:
-		return []corev1.EnvVar{
-			{
-				Name:  system.NamespaceEnvKey,
-				Value: system.Namespace(),
-			},
-			{
-				Name: "NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
-			},
-			{
-				Name: "POD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
-					},
-				},
-			},
-			{
-				Name:  "CONTAINER_NAME",
-				Value: filterContainerName,
-			},
-			{
-				Name:  "BROKER",
-				Value: brokerName,
-			},
-			{
-				Name:  "METRICS_DOMAIN",
-				Value: "knative.dev/internal/eventing",
-			},
-		}
-	case ingressContainerName:
-		return []corev1.EnvVar{
-			{
-				Name:  system.NamespaceEnvKey,
-				Value: system.Namespace(),
-			},
-			{
-				Name: "NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
-			},
-			{
-				Name: "POD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
-					},
-				},
-			},
-			{
-				Name:  "CONTAINER_NAME",
-				Value: ingressContainerName,
-			},
-			{
-				Name:  "FILTER",
-				Value: "",
-			},
-			{
-				Name:  "CHANNEL",
-				Value: triggerChannelHostname,
-			},
-			{
-				Name:  "BROKER",
-				Value: brokerName,
-			},
-			{
-				Name:  "METRICS_DOMAIN",
-				Value: "knative.dev/internal/eventing",
-			},
-		}
-	}
-	return []corev1.EnvVar{}
-}
-
-func containerPorts(httpInternal int32) []corev1.ContainerPort {
-	return []corev1.ContainerPort{
-		{
-			Name:          "http",
-			ContainerPort: httpInternal,
-		},
-		{
-			Name:          "metrics",
-			ContainerPort: 9090,
-		},
-	}
-}
-
-func servicePorts(httpInternal int) []corev1.ServicePort {
-	svcPorts := []corev1.ServicePort{
-		{
-			Name:       "http",
-			Port:       80,
-			TargetPort: intstr.FromInt(httpInternal),
-		}, {
-			Name: "http-metrics",
-			Port: 9090,
-		},
-	}
-	return svcPorts
 }
 
 func createChannel(namespace string, ready bool) *unstructured.Unstructured {
@@ -1262,7 +1144,7 @@ func createTriggerChannelRef() *corev1.ObjectReference {
 func makeServiceURI() *apis.URL {
 	return &apis.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("broker-filter.knative-eventing.svc.%s", utils.GetClusterDomainName()),
+		Host:   fmt.Sprintf("broker-filter.%s.svc.%s", systemNS, utils.GetClusterDomainName()),
 		Path:   fmt.Sprintf("/triggers/%s/%s/%s", testNS, triggerName, triggerUID),
 	}
 }
@@ -1336,8 +1218,14 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithBrokerFinalizers("brokers.eventing.knative.dev"),
 			WithBrokerResourceVersion(""),
 			WithBrokerTriggerChannel(createTriggerChannelRef()),
-			WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
+			WithBrokerAddressURI(brokerAddress)),
 		createChannel(testNS, true),
+		NewEndpoints(filterServiceName, systemNS,
+			WithEndpointsLabels(FilterLabels()),
+			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
+		NewEndpoints(ingressServiceName, systemNS,
+			WithEndpointsLabels(IngressLabels()),
+			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 	}
 	return append(brokerObjs[:], objs...)
 }
@@ -1450,4 +1338,18 @@ func patchRemoveFinalizers(namespace, name string) clientgotesting.PatchActionIm
 	patch := `{"metadata":{"finalizers":[],"resourceVersion":""}}`
 	action.Patch = []byte(patch)
 	return action
+}
+
+// FilterLabels generates the labels present on all resources representing the filter of the given
+// Broker.
+func FilterLabels() map[string]string {
+	return map[string]string{
+		"eventing.knative.dev/brokerRole": "filter",
+	}
+}
+
+func IngressLabels() map[string]string {
+	return map[string]string{
+		"eventing.knative.dev/brokerRole": "ingress",
+	}
 }
