@@ -25,7 +25,7 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
