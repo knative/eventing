@@ -70,7 +70,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 	} else {
 		logging.FromContext(ctx).Debug("PingSource reconciled")
 	}
-	return nil
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource) error {
