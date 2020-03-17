@@ -47,8 +47,6 @@ const (
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
 	controllerAgentName = "mt-broker-controller"
-	// BrokerClass is our annotation
-	brokerClass = "MTChannelBasedBroker"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -71,9 +69,9 @@ func NewController(
 		deploymentLister:   deploymentInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
-		brokerClass:        brokerClass,
+		brokerClass:        eventing.MTChannelBrokerClassValue,
 	}
-	impl := brokerreconciler.NewImpl(ctx, r, brokerClass)
+	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
 
 	r.Logger.Info("Setting up event handlers")
 
@@ -83,7 +81,7 @@ func NewController(
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, brokerClass, false /*allowUnset*/),
+		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/),
 		Handler:    controller.HandleAll(impl.Enqueue),
 	})
 

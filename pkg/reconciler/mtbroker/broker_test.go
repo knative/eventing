@@ -76,9 +76,8 @@ const (
 	filterContainerName  = "filter"
 	ingressContainerName = "ingress"
 
-	triggerChannel channelType = "TriggerChannel"
-	triggerName                = "test-trigger"
-	triggerUID                 = "test-trigger-uid"
+	triggerName = "test-trigger"
+	triggerUID  = "test-trigger-uid"
 
 	subscriberURI     = "http://example.com/subscriber/"
 	subscriberKind    = "Service"
@@ -191,6 +190,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerDeletionTimestamp),
@@ -203,6 +203,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
@@ -214,6 +215,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil")),
 			}},
@@ -224,14 +226,16 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(testNS, triggerChannel, false),
+				createChannel(testNS, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
@@ -252,14 +256,16 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
 			WantCreates: []runtime.Object{
-				createChannel(testNS, triggerChannel, false),
+				createChannel(testNS, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
@@ -275,12 +281,14 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannel(testNS, triggerChannel, false),
+				createChannel(testNS, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
@@ -296,12 +304,14 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, true),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -319,15 +329,17 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, true),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "brokers"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -347,9 +359,10 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
-				createChannel(testNS, triggerChannel, true),
+				createChannel(testNS, true),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI)),
@@ -368,6 +381,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}, {
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -385,6 +399,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -408,6 +423,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}, {
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil")),
 			}},
@@ -424,6 +440,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerFinalizers("brokers.eventing.knative.dev"),
@@ -452,6 +469,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.MTChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerFinalizers("brokers.eventing.knative.dev"),
@@ -1159,20 +1177,22 @@ func servicePorts(httpInternal int) []corev1.ServicePort {
 	return svcPorts
 }
 
-func createChannel(namespace string, t channelType, ready bool) *unstructured.Unstructured {
+func createChannel(namespace string, ready bool) *unstructured.Unstructured {
 	var labels map[string]interface{}
+	var annotations map[string]interface{}
 	var name string
 	var hostname string
 	var url string
-	if t == triggerChannel {
-		name = fmt.Sprintf("%s-kne-trigger", brokerName)
-		labels = map[string]interface{}{
-			eventing.BrokerLabelKey:                 brokerName,
-			"eventing.knative.dev/brokerEverything": "true",
-		}
-		hostname = triggerChannelHostname
-		url = fmt.Sprintf("http://%s", triggerChannelHostname)
+	name = fmt.Sprintf("%s-kne-trigger", brokerName)
+	labels = map[string]interface{}{
+		eventing.BrokerLabelKey:                 brokerName,
+		"eventing.knative.dev/brokerEverything": "true",
 	}
+	annotations = map[string]interface{}{
+		"eventing.knative.dev/scope": "cluster",
+	}
+	hostname = triggerChannelHostname
+	url = fmt.Sprintf("http://%s", triggerChannelHostname)
 	if ready {
 		return &unstructured.Unstructured{
 			Object: map[string]interface{}{
@@ -1192,7 +1212,8 @@ func createChannel(namespace string, t channelType, ready bool) *unstructured.Un
 							"uid":                "",
 						},
 					},
-					"labels": labels,
+					"labels":      labels,
+					"annotations": annotations,
 				},
 				"status": map[string]interface{}{
 					"address": map[string]interface{}{
@@ -1222,7 +1243,8 @@ func createChannel(namespace string, t channelType, ready bool) *unstructured.Un
 						"uid":                "",
 					},
 				},
-				"labels": labels,
+				"labels":      labels,
+				"annotations": annotations,
 			},
 		},
 	}
@@ -1307,6 +1329,7 @@ func makeBroker() *v1alpha1.Broker {
 func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 	brokerObjs := []runtime.Object{
 		NewBroker(brokerName, testNS,
+			WithBrokerClass(eventing.MTChannelBrokerClassValue),
 			WithBrokerChannel(channel()),
 			WithInitBrokerConditions,
 			WithBrokerReady,
@@ -1314,7 +1337,7 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithBrokerResourceVersion(""),
 			WithBrokerTriggerChannel(createTriggerChannelRef()),
 			WithBrokerAddress(fmt.Sprintf("%s.%s.svc.%s", ingressServiceName, testNS, utils.GetClusterDomainName()))),
-		createChannel(testNS, triggerChannel, true),
+		createChannel(testNS, true),
 	}
 	return append(brokerObjs[:], objs...)
 }
