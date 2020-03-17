@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,34 +24,31 @@ import (
 	"net/http"
 	"time"
 
-	// Uncomment the following line to load the gcp plugin
-	// (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	"knative.dev/pkg/profiling"
+	"knative.dev/pkg/signals"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/profiling"
-	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 
 	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 )
 
-type Adapter interface {
+type MessageAdapter interface {
 	Start(stopCh <-chan struct{}) error
 }
 
-type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client, reporter source.StatsReporter) Adapter
+type MessageAdapterConstructor func(ctx context.Context, env EnvConfigAccessor, adapter *kncloudevents.HttpMessageSender, reporter source.StatsReporter) MessageAdapter
 
-func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
-	MainWithContext(signals.NewContext(), component, ector, ctor)
+func MainMessageAdapter(component string, ector EnvConfigConstructor, ctor MessageAdapterConstructor) {
+	MainMessageAdapterWithContext(signals.NewContext(), component, ector, ctor)
 }
 
-func MainWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
+func MainMessageAdapterWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor MessageAdapterConstructor) {
 	flag.Parse()
 
 	env := ector()
@@ -121,22 +118,17 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("Error setting up trace publishing", zap.Error(err))
 	}
 
-	eventsClient, err := kncloudevents.NewDefaultClient(env.GetSinkURI())
+	httpBindingsSender, err := kncloudevents.NewHttpMessageSender(nil, env.GetSinkURI())
 	if err != nil {
 		logger.Fatal("error building cloud event client", zap.Error(err))
 	}
 
 	// Configuring the adapter
-	adapter := ctor(ctx, env, eventsClient, reporter)
+	adapter := ctor(ctx, env, httpBindingsSender, reporter)
 
-	logger.Info("Starting Receive Adapter", zap.Any("adapter", adapter))
+	logger.Info("Starting Receive MessageAdapter", zap.Any("adapter", adapter))
 
 	if err := adapter.Start(ctx.Done()); err != nil {
 		logger.Warn("start returned an error", zap.Error(err))
 	}
-}
-
-func flush(logger *zap.SugaredLogger) {
-	_ = logger.Sync()
-	metrics.FlushExporter()
 }

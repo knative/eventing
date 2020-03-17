@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,18 +21,16 @@ import (
 	"os"
 	"testing"
 
-	// Uncomment the following line to load the gcp plugin
-	// (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/kncloudevents"
 )
 
-type myAdapter struct{}
+type myAdapterBindings struct{}
 
-func TestMain(t *testing.T) {
+func TestMainMessageAdapter(t *testing.T) {
 	os.Setenv("SINK_URI", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", "metrics")
@@ -41,11 +39,11 @@ func TestMain(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 
-	MainWithContext(ctx,
-		"mycomponent",
+	MainMessageAdapterWithContext(ctx,
+		"mycomponentbindings",
 		func() EnvConfigAccessor { return &myEnvConfig{} },
-		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client, reporter source.StatsReporter) Adapter {
-			env := processed.(*myEnvConfig)
+		func(ctx context.Context, environment EnvConfigAccessor, sender *kncloudevents.HttpMessageSender, reporter source.StatsReporter) MessageAdapter {
+			env := environment.(*myEnvConfig)
 			if env.Mode != "mymode" {
 				t.Errorf("Expected mode mymode, got: %s", env.Mode)
 			}
@@ -53,7 +51,7 @@ func TestMain(t *testing.T) {
 			if env.SinkURI != "http://sink" {
 				t.Errorf("Expected sinkURI http://sink, got: %s", env.SinkURI)
 			}
-			return &myAdapter{}
+			return &myAdapterBindings{}
 		})
 
 	cancel()
@@ -61,6 +59,6 @@ func TestMain(t *testing.T) {
 	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
-func (m *myAdapter) Start(stopCh <-chan struct{}) error {
+func (m *myAdapterBindings) Start(_ <-chan struct{}) error {
 	return nil
 }
