@@ -82,7 +82,6 @@ func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cl
 	}
 
 	// tctx.URI is actually the request uri...
-	h.Logger.Info("Handling post", zap.String("URI", tctx.URI))
 	if tctx.URI == "/" {
 		resp.Status = http.StatusNotFound
 		return nil

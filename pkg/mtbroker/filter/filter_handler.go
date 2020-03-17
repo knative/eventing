@@ -181,8 +181,6 @@ func (r *Handler) serveHTTP(ctx context.Context, event cloudevents.Event, resp *
 		return errors.New("unable to parse path as a Trigger")
 	}
 
-	r.logger.Info("Trigger Ref", zap.String("path", tctx.URI), zap.Any("TriggerRef", triggerRef))
-
 	// Remove the TTL attribute that is used by the Broker.
 	ttl, err := broker.GetTTL(event.Context)
 	if err != nil {

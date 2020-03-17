@@ -24,7 +24,6 @@ spec:
   selector:
     matchLabels:
       eventing.knative.dev/brokerRole: ingress
-      eventing.knative.dev/release: devel
   template:
     metadata:
       labels:
@@ -81,6 +80,8 @@ spec:
             value: config-observability
           - name: METRICS_DOMAIN
             value: knative.dev/internal/eventing
+          - name: INGRESS_PORT
+            value: "8080"
         securityContext:
           allowPrivilegeEscalation: false
 
