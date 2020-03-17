@@ -1,0 +1,180 @@
+/*
+ * Copyright 2020 The Knative Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package channel
+
+import (
+	"context"
+	"errors"
+	nethttp "net/http"
+	"time"
+
+	"github.com/cloudevents/sdk-go/pkg/binding"
+	"github.com/cloudevents/sdk-go/pkg/binding/buffering"
+	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
+	"github.com/cloudevents/sdk-go/pkg/protocol/http"
+	"go.opencensus.io/trace"
+	"go.uber.org/zap"
+
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/tracing"
+	"knative.dev/eventing/pkg/utils"
+)
+
+var defaultTransformers = []binding.TransformerFactory{
+	transformer.AddTimeNow,
+}
+
+// MessageReceiver starts a server to receive new events for the channel dispatcher. The new
+// event is emitted via the receiver function.
+type MessageReceiver struct {
+	messageBufferingCtx  context.Context
+	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
+	receiverFunc         MessageReceiverFunc
+	logger               *zap.Logger
+	hostToChannelFunc    ResolveChannelFromHostFunc
+}
+
+// ReceiverBindingFunc is the function to be called for handling the event.
+type MessageReceiverFunc func(context.Context, ChannelReference, binding.Message, nethttp.Header) error
+
+// ReceiverOptions provides functional options to EventReceiver function.
+type MessageReceiverOptions func(*MessageReceiver) error
+
+// ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
+// default behaviour defined by ParseChannel function.
+func ResolveChannelFromHostHeaderBindings(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
+	return func(r *MessageReceiver) error {
+		r.hostToChannelFunc = hostToChannelFunc
+		return nil
+	}
+}
+
+// NewMessageReceiver creates an event receiver passing new events to the
+// receiverFunc.
+func NewMessageReceiver(messageBufferingCtx context.Context, receiverFunc MessageReceiverFunc, logger *zap.Logger, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
+	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
+	receiver := &MessageReceiver{
+		messageBufferingCtx:  messageBufferingCtx,
+		httpBindingsReceiver: bindingsReceiver,
+		receiverFunc:         receiverFunc,
+		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannel),
+		logger:               logger,
+	}
+	for _, opt := range opts {
+		if err := opt(receiver); err != nil {
+			return nil, err
+		}
+	}
+	return receiver, nil
+}
+
+// Start begins to receive events for the receiver.
+//
+// Only HTTP POST requests to the root path (/) are accepted. If other paths or
+// methods are needed, use the HandleRequest method directly with another HTTP
+// server.
+func (r *MessageReceiver) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- r.httpBindingsReceiver.StartListen(ctx, r)
+	}()
+
+	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		break
+	}
+
+	// Done channel has been closed, we need to gracefully shutdown r.ceClient. The cancel() method will start its
+	// shutdown, if it hasn't finished in a reasonable amount of time, just return an error.
+	cancel()
+	select {
+	case err := <-errCh:
+		return err
+	case <-time.After(shutdownTimeout):
+		return errors.New("timeout shutting down http bindings receiver")
+	}
+}
+
+func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+	if request.Method != nethttp.MethodPost {
+		response.WriteHeader(nethttp.StatusMethodNotAllowed)
+		return
+	}
+
+	// tctx.URI is actually the path...
+	if request.URL.Path != "/" {
+		response.WriteHeader(nethttp.StatusNotFound)
+		return
+	}
+
+	// The response status codes:
+	//   202 - the event was sent to subscribers
+	//   404 - the request was for an unknown channel
+	//   500 - an error occurred processing the request
+
+	host := request.Host
+	r.logger.Debug("Received request", zap.String("host", host))
+	channel, err := r.hostToChannelFunc(host)
+	if err != nil {
+		r.logger.Info("Could not extract channel", zap.Error(err))
+		response.WriteHeader(nethttp.StatusInternalServerError)
+		return
+	}
+	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))
+
+	message := http.NewMessageFromHttpRequest(request)
+
+	if message.ReadEncoding() == binding.EncodingUnknown {
+		r.logger.Info("Cannot determine the cloudevent message encoding")
+		response.WriteHeader(nethttp.StatusBadRequest)
+		return
+	}
+
+	transformers := append(defaultTransformers, AddHistory(host)...)
+	span := trace.FromContext(request.Context())
+	if span != nil {
+		transformers = append(transformers, tracing.AddTraceparent(span)...)
+	}
+
+	// TODO(slinkydeveloper) Why do i buffer the message if i don't need it (kafka channel use case)?
+	// CopyMessage generates a message that we can reuse several times
+	bufferedMessage, err := buffering.CopyMessage(r.messageBufferingCtx, message, transformers)
+	// We can forget the original message (in case of http, close the body)
+	_ = message.Finish(nil)
+
+	err = r.receiverFunc(request.Context(), channel, bufferedMessage, utils.PassThroughHeaders(request.Header))
+	if err != nil {
+		if _, ok := err.(*UnknownChannelError); ok {
+			response.WriteHeader(nethttp.StatusNotFound)
+		} else {
+			r.logger.Info("Error in receiver", zap.Error(err))
+			response.WriteHeader(nethttp.StatusInternalServerError)
+		}
+		return
+	}
+
+	response.WriteHeader(nethttp.StatusAccepted)
+	return
+}
+
+var _ nethttp.Handler = (*MessageReceiver)(nil)

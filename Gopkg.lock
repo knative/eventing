@@ -122,9 +122,10 @@
   version = "v0.2.1"
 
 [[projects]]
-  digest = "1:057b1bb73cf9a503259344a26be36e952431324e9b756476849331faff855253"
+  digest = "1:ebd6a5e731193fe6ac076e1184901ee3abf8c22388e49fbfbd93739a56e835f7"
   name = "github.com/cloudevents/sdk-go"
   packages = [
+    ".",
     "legacy",
     "legacy/pkg/cloudevents",
     "legacy/pkg/cloudevents/client",
@@ -138,6 +139,24 @@
     "legacy/pkg/cloudevents/transport",
     "legacy/pkg/cloudevents/transport/http",
     "legacy/pkg/cloudevents/types",
+    "pkg/binding",
+    "pkg/binding/buffering",
+    "pkg/binding/format",
+    "pkg/binding/spec",
+    "pkg/binding/test",
+    "pkg/binding/transformer",
+    "pkg/client",
+    "pkg/context",
+    "pkg/event",
+    "pkg/event/datacodec",
+    "pkg/event/datacodec/json",
+    "pkg/event/datacodec/text",
+    "pkg/event/datacodec/xml",
+    "pkg/extensions",
+    "pkg/observability",
+    "pkg/protocol",
+    "pkg/protocol/http",
+    "pkg/types",
   ]
   pruneopts = "NUT"
   revision = "f248e160418f3e881491fdc3a60ea83660e30b37"
@@ -477,6 +496,14 @@
   version = "v0.8.1"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "NUT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:097cc61836050f45cbb712ae3bb45d66fba464c16b8fac09907fa3c1f753eff6"
   name = "github.com/prometheus/client_golang"
   packages = [
@@ -565,12 +592,31 @@
   version = "v1.0.5"
 
 [[projects]]
+  digest = "1:e6aedc9ffe708685ae5bb6c1e9fb12ce9d3ef0aa14872c620c8d34e13fc233e2"
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "require",
+  ]
+  pruneopts = "NUT"
+  revision = "3ebf1ddaeb260c4b1ae502a01c7844fa8c1fa0e9"
+  version = "v1.5.1"
+
+[[projects]]
   digest = "1:435d9fe926ee0d903662215091e27fba6f1b7228d33a30c289cdb5aeff1c8fc8"
   name = "github.com/tsenart/vegeta"
   packages = ["lib"]
   pruneopts = "NUT"
   revision = "9c95632b3e8562be6df690c639a3f5a6f40d3004"
   version = "v12.7.0"
+
+[[projects]]
+  digest = "1:af354641f23332b1a8d5d361d11b5a9171589e412a67d499633706c611acc064"
+  name = "github.com/valyala/bytebufferpool"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:7c3ff97df88fd061f688c42cc4b99c6636bc256aa6f5c919042bd8cffbdbd71f"
@@ -1459,11 +1505,18 @@
   analyzer-version = 1
   input-imports = [
     "contrib.go.opencensus.io/exporter/ocagent",
+    "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/legacy",
     "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/client",
     "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http",
     "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/types",
+    "github.com/cloudevents/sdk-go/pkg/binding",
+    "github.com/cloudevents/sdk-go/pkg/binding/buffering",
+    "github.com/cloudevents/sdk-go/pkg/binding/test",
+    "github.com/cloudevents/sdk-go/pkg/binding/transformer",
+    "github.com/cloudevents/sdk-go/pkg/protocol/http",
+    "github.com/cloudevents/sdk-go/pkg/types",
     "github.com/ghodss/yaml",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes",
