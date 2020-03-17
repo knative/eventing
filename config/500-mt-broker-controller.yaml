@@ -1,0 +1,64 @@
+# Copyright 2020 The Knative Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mt-broker-controller
+  namespace: knative-eventing
+  labels:
+    eventing.knative.dev/release: devel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mt-broker-controller
+  template:
+    metadata:
+      labels:
+        app: mt-broker-controller
+        eventing.knative.dev/release: devel
+    spec:
+      serviceAccountName: eventing-controller
+
+      containers:
+      - name: eventing-controller
+        terminationMessagePolicy: FallbackToLogsOnError
+        image: ko://knative.dev/eventing/cmd/mtchannel_broker
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+
+        env:
+          - name: SYSTEM_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: CONFIG_LOGGING_NAME
+            value: config-logging
+          - name: CONFIG_OBSERVABILITY_NAME
+            value: config-observability
+          - name: METRICS_DOMAIN
+            value: knative.dev/eventing
+
+        securityContext:
+          allowPrivilegeEscalation: false
+
+        ports:
+        - name: metrics
+          containerPort: 9090
+        - name: profiling
+          containerPort: 8008
