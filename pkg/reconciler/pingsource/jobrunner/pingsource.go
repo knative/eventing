@@ -18,32 +18,26 @@ package jobrunner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
 )
 
-const (
-	finalizerName = "jobrunners.pingsources.sources.knative.dev"
-)
-
 // Reconciler reconciles PingSources
 type Reconciler struct {
-	cronRunner       *cronJobsRunner
-	pingsourceLister sourceslisters.PingSourceLister
+	cronRunner        *cronJobsRunner
+	eventingClientSet clientset.Interface
+	pingsourceLister  sourceslisters.PingSourceLister
 
 	entryidMu sync.Mutex
 	entryids  map[string]cron.EntryID // key: resource namespace/name
@@ -51,6 +45,9 @@ type Reconciler struct {
 
 // Check that our Reconciler implements ReconcileKind.
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
+
+// Check that our Reconciler implements FinalizeKind.
+var _ pingsourcereconciler.Finalizer = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
@@ -74,24 +71,9 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource) error {
-	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
-	if !source.DeletionTimestamp.IsZero() {
-		return r.finalize(ctx, key, source)
-	}
-
-	// Make sure finalizer is set
-	finalizers := sets.NewString(source.Finalizers...)
-	if !finalizers.Has(finalizerName) {
-		finalizers.Insert(finalizerName)
-		var err error
-		if source, err = r.patchFinalizer(source, finalizers.List()); err != nil {
-			logging.FromContext(ctx).Debug("Failed to update finalizer", zap.Error(err))
-			return err
-		}
-	}
-
 	logging.FromContext(ctx).Info("synchronizing schedule")
 
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 	// Is the schedule already cached?
 	if id, ok := r.entryids[key]; ok {
 		r.cronRunner.RemoveSchedule(id)
@@ -107,7 +89,9 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 	return nil
 }
 
-func (r *Reconciler) finalize(ctx context.Context, key string, source *v1alpha2.PingSource) error {
+func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
+
 	if id, ok := r.entryids[key]; ok {
 		r.cronRunner.RemoveSchedule(id)
 
@@ -116,39 +100,5 @@ func (r *Reconciler) finalize(ctx context.Context, key string, source *v1alpha2.
 		r.entryidMu.Unlock()
 	}
 
-	// Now we can remove the finalizer
-	finalizers := sets.NewString(source.Finalizers...)
-	if finalizers.Has(finalizerName) {
-		finalizers.Delete(finalizerName)
-		if _, err := r.patchFinalizer(source, finalizers.List()); err != nil {
-			logging.FromContext(ctx).Debug("Failed to remove finalizer", zap.Error(err))
-			return err
-		}
-	}
-
 	return nil
-}
-
-func (r *Reconciler) patchFinalizer(source *v1alpha2.PingSource, finalizers []string) (*v1alpha2.PingSource, error) {
-	mergePatch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"finalizers":      finalizers,
-			"resourceVersion": source.ResourceVersion,
-		},
-	}
-
-	patch, err := json.Marshal(mergePatch)
-	if err != nil {
-		return source, err
-	}
-
-	source, err = r.EventingClientSet.SourcesV1alpha2().PingSources(source.Namespace).Patch(source.Name, types.MergePatchType, patch)
-	if err != nil {
-		r.Recorder.Eventf(source, v1.EventTypeWarning, "FinalizerUpdateFailed",
-			"Failed to update finalizers for %q: %v", source.Name, err)
-	} else {
-		r.Recorder.Eventf(source, v1.EventTypeNormal, "FinalizerUpdate",
-			"Updated %q finalizers", source.GetName())
-	}
-	return source, err
 }

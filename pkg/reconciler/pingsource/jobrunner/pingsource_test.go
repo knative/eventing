@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
@@ -42,11 +43,12 @@ import (
 )
 
 const (
-	testNS         = "test-namespace"
-	pingSourceName = "test-pingsource"
-	testSchedule   = "*/2 * * * *"
-	testData       = "data"
-	sinkName       = "mysink"
+	testNS               = "test-namespace"
+	pingSourceName       = "test-pingsource"
+	testSchedule         = "*/2 * * * *"
+	testData             = "data"
+	sinkName             = "mysink"
+	defaultFinalizerName = "pingsources.sources.knative.dev"
 )
 
 var (
@@ -102,7 +104,7 @@ func TestAllCases(t *testing.T) {
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "%s" finalizers`, pingSourceName),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				patchFinalizers(testNS, pingSourceName, finalizerName),
+				patchFinalizers(testNS, pingSourceName, defaultFinalizerName),
 			},
 			WantErr: false,
 		}, {
@@ -123,7 +125,7 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceV1A2Deployed,
 					WithPingSourceV1A2Sink(sinkURI),
 					WithPingSourceV1A2EventType,
-					WithPingSourceV1A2Finalizers(finalizerName),
+					WithPingSourceV1A2Finalizers(defaultFinalizerName),
 				),
 			},
 			WantErr: false,
@@ -145,7 +147,7 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceV1A2Deployed,
 					WithPingSourceV1A2Sink(sinkURI),
 					WithPingSourceV1A2EventType,
-					WithPingSourceV1A2Finalizers(finalizerName),
+					WithPingSourceV1A2Finalizers(defaultFinalizerName),
 					WithPingSourceV1A2Deleted,
 				),
 			},
@@ -187,10 +189,11 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			pingsourceLister: listers.GetPingSourceV1alpha2Lister(),
-			cronRunner:       NewCronJobsRunner(ce, reporter, logger),
-			entryidMu:        sync.Mutex{},
-			entryids:         make(map[string]cron.EntryID),
+			eventingClientSet: eventingclient.Get(ctx),
+			pingsourceLister:  listers.GetPingSourceV1alpha2Lister(),
+			cronRunner:        NewCronJobsRunner(ce, reporter, logger),
+			entryidMu:         sync.Mutex{},
+			entryids:          make(map[string]cron.EntryID),
 		}
 		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
 			fakeeventingclient.Get(ctx), listers.GetPingSourceV1alpha2Lister(),
