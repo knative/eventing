@@ -29,7 +29,6 @@ import (
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
 
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	apiserversourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource"
 	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -57,12 +56,10 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	apiServerSourceInformer := apiserversourceinformer.Get(ctx)
-	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
 		Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
 		apiserversourceLister: apiServerSourceInformer.Lister(),
-		eventTypeLister:       eventTypeInformer.Lister(),
 		source:                GetCfgHost(ctx),
 		loggingContext:        ctx,
 	}
@@ -81,11 +78,6 @@ func NewController(
 	apiServerSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("ApiServerSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
-
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("ApiServerSource")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

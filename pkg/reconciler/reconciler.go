@@ -21,7 +21,6 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -47,9 +46,6 @@ type Base struct {
 
 	// EventingClientSet allows us to configure Eventing objects
 	EventingClientSet clientset.Interface
-
-	// ApiExtensionsClientSet allows us to configure k8s API extension objects.
-	ApiExtensionsClientSet apiextensionsclientset.Interface
 
 	// DynamicClientSet allows us to configure pluggable Build objects
 	DynamicClientSet dynamic.Interface

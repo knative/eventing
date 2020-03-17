@@ -154,7 +154,7 @@ func (ts *TriggerStatus) MarkDependencyUnknown(reason, messageFormat string, mes
 }
 
 func (ts *TriggerStatus) MarkDependencyNotConfigured() {
-	triggerCondSet.Manage(ts).MarkUnknown(EventTypeConditionBrokerReady,
+	triggerCondSet.Manage(ts).MarkUnknown(TriggerConditionDependency,
 		"DependencyNotConfigured", "Dependency has not yet been reconciled.")
 }
 

@@ -49,6 +49,10 @@ const (
 	// ScopeCluster indicates the resource must be
 	// handled by the cluster-scoped component
 	ScopeCluster = "cluster"
+
+	// EventTypesAnnotationKey is the annotation key to specify
+	// if a Source has event types defines in its CRD.
+	EventTypesAnnotationKey = "registry.knative.dev/eventTypes"
 )
 
 var (

@@ -82,12 +82,14 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 			},
 			Spec: PingSourceSpec{},
 			Status: PingSourceStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
 				},
 			},
 		},
@@ -102,12 +104,14 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 				Sink: &sink,
 			},
 			Status: PingSourceStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "Unknown",
-					}},
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "Unknown",
+						}},
+					},
 				},
 			},
 		},
@@ -122,14 +126,16 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 				// TODO: full spec
 			},
 			Status: PingSourceStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI: sinkUri,
 				},
-				SinkURI: sinkUri,
 			},
 		},
 	}}

@@ -39,10 +39,8 @@ import (
 	"knative.dev/pkg/tracker"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler"
@@ -81,7 +79,6 @@ type Reconciler struct {
 	// listers index properties about resources
 	pingLister       listers.PingSourceLister
 	deploymentLister appsv1listers.DeploymentLister
-	eventTypeLister  eventinglisters.EventTypeLister
 
 	// tracking jobrunner deployment changes
 	tracker tracker.Interface
@@ -164,12 +161,10 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSou
 		source.Status.PropagateDeploymentAvailability(ra)
 	}
 
-	_, err = r.reconcileEventType(ctx, source)
-	if err != nil {
-		source.Status.MarkNoEventType("EventTypeReconcileFailed", "")
-		return fmt.Errorf("reconciling event types: %v", err)
-	}
-	source.Status.MarkEventType()
+	source.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
+		Type:   v1alpha1.PingSourceEventType,
+		Source: v1alpha1.PingSourceSource(source.Namespace, source.Name),
+	}}
 
 	return newReconciledNormal(source.Namespace, source.Name)
 }
@@ -307,52 +302,6 @@ func podSpecChanged(oldPodSpec corev1.PodSpec, newPodSpec corev1.PodSpec) bool {
 	return false
 }
 
-func (r *Reconciler) reconcileEventType(ctx context.Context, src *v1alpha1.PingSource) (*eventingv1alpha1.EventType, error) {
-	sinkRef := src.Spec.Sink.GetRef()
-	if sinkRef == nil {
-		// Can't figure out the broker so return
-		return nil, nil
-	}
-	expected := resources.MakeEventType(src)
-	current, err := r.eventTypeLister.EventTypes(src.Namespace).Get(expected.Name)
-	if err != nil && !apierrors.IsNotFound(err) {
-		logging.FromContext(ctx).Error("Unable to get an existing event type", zap.Error(err))
-		return nil, fmt.Errorf("getting event types: %v", err)
-	}
-
-	// Only create EventTypes for Broker sinks. But if there is an EventType and the src has a non-Broker sink
-	// (possibly because it was updated), then we need to delete it.
-	if sinkRef.Kind != "Broker" {
-		if current != nil {
-			if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
-				logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))
-				return nil, fmt.Errorf("deleting event type: %v", err)
-			}
-		}
-		// No current and no error.
-		return nil, nil
-	}
-
-	if current != nil {
-		if equality.Semantic.DeepEqual(expected.Spec, current.Spec) {
-			return current, nil
-		}
-		// EventTypes are immutable, delete it and create it again.
-		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(current.Name, &metav1.DeleteOptions{}); err != nil {
-			logging.FromContext(ctx).Error("Error deleting existing event type", zap.Error(err), zap.Any("eventType", current))
-			return nil, fmt.Errorf("deleting event type: %v", err)
-		}
-	}
-
-	current, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(expected)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error creating event type", zap.Error(err), zap.Any("eventType", expected))
-		return nil, fmt.Errorf("creating event type: %v", err)
-	}
-	logging.FromContext(ctx).Debug("EventType created", zap.Any("eventType", current))
-	return current, nil
-}
-
 // TODO determine how to push the updated logging config to existing data plane Pods.
 func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
 	if cfg != nil {
@@ -365,7 +314,7 @@ func (r *Reconciler) UpdateFromLoggingConfigMap(cfg *corev1.ConfigMap) {
 		return
 	}
 	r.loggingConfig = logcfg
-	logging.FromContext(r.loggingContext).Info("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
+	logging.FromContext(r.loggingContext).Debug("Update from logging ConfigMap", zap.Any("ConfigMap", cfg))
 }
 
 // TODO determine how to push the updated metrics config to existing data plane Pods.
@@ -379,5 +328,5 @@ func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 		Component: component,
 		ConfigMap: cfg.Data,
 	}
-	logging.FromContext(r.loggingContext).Info("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
+	logging.FromContext(r.loggingContext).Debug("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }

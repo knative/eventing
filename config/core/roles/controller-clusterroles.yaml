@@ -124,3 +124,11 @@ rules:
       - "get"
       - "list"
       - "watch"
+
+  # The source CRD controller needs to also patch CustomResourceDefinitions finalizers
+  - apiGroups:
+      - "apiextensions.k8s.io"
+    resources:
+      - "customresourcedefinitions/finalizers"
+    verbs:
+      - "patch"

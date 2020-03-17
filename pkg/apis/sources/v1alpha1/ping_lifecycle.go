@@ -39,9 +39,6 @@ const (
 	// PingSourceConditionDeployed has status True when the PingSource has had it's receive adapter deployment created.
 	PingSourceConditionDeployed apis.ConditionType = "Deployed"
 
-	// PingSourceConditionEventTypeProvided has status True when the PingSource has been configured with its event type.
-	PingSourceConditionEventTypeProvided apis.ConditionType = "EventTypeProvided"
-
 	// PingSourceConditionResources is True when the resources listed for the PingSource have been properly
 	// parsed and match specified syntax for resource quantities
 	PingSourceConditionResources apis.ConditionType = "ResourcesCorrect"
@@ -129,16 +126,6 @@ func (s *PingSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deployment)
 		// for now.
 		PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
-}
-
-// MarkEventType sets the condition that the source has set its event type.
-func (s *PingSourceStatus) MarkEventType() {
-	PingSourceCondSet.Manage(s).MarkTrue(PingSourceConditionEventTypeProvided)
-}
-
-// MarkNoEventType sets the condition that the source does not its event type configured.
-func (s *PingSourceStatus) MarkNoEventType(reason, messageFormat string, messageA ...interface{}) {
-	PingSourceCondSet.Manage(s).MarkFalse(PingSourceConditionEventTypeProvided, reason, messageFormat, messageA...)
 }
 
 // MarkResourcesCorrect sets the condition that the source resources are properly parsable quantities

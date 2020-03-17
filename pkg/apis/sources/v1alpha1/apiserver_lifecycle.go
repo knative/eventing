@@ -37,9 +37,6 @@ const (
 
 	// ApiServerConditionSufficientPermissions has status True when the ApiServerSource has sufficient permissions to access resources.
 	ApiServerConditionSufficientPermissions apis.ConditionType = "SufficientPermissions"
-
-	// ApiServerConditionEventTypeProvided has status True when the ApiServerSource has been configured with its event types.
-	ApiServerConditionEventTypeProvided apis.ConditionType = "EventTypesProvided"
 )
 
 var apiserverCondSet = apis.NewLivingConditionSet(
@@ -119,16 +116,6 @@ func (s *ApiServerSourceStatus) PropagateDeploymentAvailability(d *appsv1.Deploy
 		// for now.
 		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionDeployed, "DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
 	}
-}
-
-// MarkEventTypes sets the condition that the source has set its event type.
-func (s *ApiServerSourceStatus) MarkEventTypes() {
-	apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionEventTypeProvided)
-}
-
-// MarkNoEventTypes sets the condition that the source does not its event type configured.
-func (s *ApiServerSourceStatus) MarkNoEventTypes(reason, messageFormat string, messageA ...interface{}) {
-	apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionEventTypeProvided, reason, messageFormat, messageA...)
 }
 
 // MarkSufficientPermissions sets the condition that the source has enough permissions to access the resources.

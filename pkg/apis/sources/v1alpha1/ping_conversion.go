@@ -71,8 +71,10 @@ func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) e
 			CloudEventOverrides: source.Spec.CloudEventOverrides,
 		}
 		sink.Status = PingSourceStatus{
-			Status:  source.Status.Status,
-			SinkURI: source.Status.SinkURI,
+			SourceStatus: duckv1.SourceStatus{
+				Status:  source.Status.Status,
+				SinkURI: source.Status.SinkURI,
+			},
 		}
 		if reflect.DeepEqual(*sink.Spec.Sink, duckv1.Destination{}) {
 			sink.Spec.Sink = nil

@@ -28,6 +28,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/parallel"
 	pingsource "knative.dev/eventing/pkg/reconciler/pingsource/controller"
 	"knative.dev/eventing/pkg/reconciler/sequence"
+	sourcecrd "knative.dev/eventing/pkg/reconciler/source/crd"
 	"knative.dev/eventing/pkg/reconciler/subscription"
 	"knative.dev/eventing/pkg/reconciler/trigger"
 )
@@ -50,5 +51,7 @@ func main() {
 		// Sources
 		apiserversource.NewController,
 		pingsource.NewController,
+		// Sources CRD
+		sourcecrd.NewController,
 	)
 }
