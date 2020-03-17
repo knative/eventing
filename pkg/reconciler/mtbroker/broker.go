@@ -48,6 +48,7 @@ import (
 	duckapis "knative.dev/pkg/apis/duck"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -163,7 +164,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	b.Status.TriggerChannel = &chanMan.ref
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
-	filterDeployment, err := r.deploymentLister.Deployments("knative-eventing").Get("broker-filter")
+	filterDeployment, err := r.deploymentLister.Deployments(system.Namespace()).Get("broker-filter")
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
 		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
@@ -175,11 +176,11 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	// so we can route there appropriately.
 	b.Status.SetAddress(&apis.URL{
 		Scheme: "http",
-		Host:   names.ServiceHostName("broker-ingress", "knative-eventing"),
+		Host:   names.ServiceHostName("broker-ingress", system.Namespace()),
 		Path:   fmt.Sprintf("/%s/%s", b.Namespace, b.Name),
 	})
 
-	ingressDeployment, err := r.deploymentLister.Deployments("knative-eventing").Get("broker-ingress")
+	ingressDeployment, err := r.deploymentLister.Deployments(system.Namespace()).Get("broker-ingress")
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem fetching ingress Deployment", zap.Error(err))
 		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
@@ -201,8 +202,7 @@ type channelTemplate struct {
 func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker) (*channelTemplate, error) {
 	triggerChannelName := resources.BrokerChannelName(b.Name, "trigger")
 	ref := corev1.ObjectReference{
-		Name: triggerChannelName,
-		//		Namespace: "knative-eventing",
+		Name:      triggerChannelName,
 		Namespace: b.Namespace,
 	}
 	var template *messagingv1beta1.ChannelTemplateSpec
@@ -245,7 +245,6 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker)
 
 	gvr, _ := meta.UnsafeGuessKindToResource(template.GetObjectKind().GroupVersionKind())
 
-	//	inf := r.DynamicClientSet.Resource(gvr).Namespace("knative-eventing")
 	inf := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
 	if inf == nil {
 		return nil, fmt.Errorf("unable to create dynamic client for: %+v", template)

@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -103,7 +104,7 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference) (*messagingv1alpha1.Subscription, error) {
 	uri := &apis.URL{
 		Scheme: "http",
-		Host:   names.ServiceHostName("broker-filter", "knative-eventing"),
+		Host:   names.ServiceHostName("broker-filter", system.Namespace()),
 		Path:   path.Generate(t),
 	}
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not

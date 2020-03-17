@@ -68,14 +68,14 @@ const (
 	defaultMaxIdleConnectionsPerHost       = 1000
 	defaultTTL                       int32 = 255
 	defaultMetricsPort                     = 9092
-	component                              = "broker_ingress"
+	component                              = "mt_broker_ingress"
 )
 
 type envConfig struct {
 	// TODO: change this environment variable to something like "PodGroupName".
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
-	Port          int    `envconfig:"PORT" default:"8080"`
+	Port          int    `envconfig:"INGRESS_PORT" default:"8080"`
 }
 
 func main() {

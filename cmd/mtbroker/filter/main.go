@@ -39,6 +39,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
+	"knative.dev/pkg/system"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	"knative.dev/pkg/injection/sharedmain"
@@ -54,7 +55,7 @@ var (
 
 const (
 	defaultMetricsPort = 9092
-	component          = "broker_filter"
+	component          = "mt_broker_filter"
 )
 
 type envConfig struct {
@@ -94,7 +95,7 @@ func main() {
 	metricsConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, metrics.ConfigMapName())
 
 	//	loggingConfig, err := broker.GetLoggingConfig(ctx, env.Namespace, loggingConfigMapName)
-	loggingConfig, err := broker.GetLoggingConfig(ctx, "knative-eventing", loggingConfigMapName)
+	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), loggingConfigMapName)
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
@@ -110,7 +111,7 @@ func main() {
 	triggerInformer := eventingFactory.Eventing().V1alpha1().Triggers()
 
 	// Watch the logging config map and dynamically update logging levels.
-	configMapWatcher := configmap.NewInformedWatcher(kubeClient, "knative-eventing")
+	configMapWatcher := configmap.NewInformedWatcher(kubeClient, system.Namespace())
 	// Watch the observability config map and dynamically update metrics exporter.
 	updateFunc, err := metrics.UpdateExporterFromConfigMapWithOpts(metrics.ExporterOptions{
 		Component:      component,
@@ -137,7 +138,7 @@ func main() {
 
 	// We are running both the receiver (takes messages in from the Broker) and the dispatcher (send
 	// the messages to the triggers' subscribers) in this binary.
-	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter)
+	handler, err := filter.NewHandler(logger, triggerInformer.Lister(), reporter, env.Port)
 	if err != nil {
 		logger.Fatal("Error creating Handler", zap.Error(err))
 	}

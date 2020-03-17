@@ -83,8 +83,8 @@ type FilterResult string
 
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
-func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
+func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
+	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)), cloudevents.WithPort(port))
 	if err != nil {
 		return nil, err
 	}
@@ -289,11 +289,7 @@ func (r *Handler) sendEvent(ctx context.Context, tctx cloudevents.HTTPTransportC
 }
 
 func (r *Handler) getTrigger(ctx context.Context, ref path.NamespacedNameUID) (*eventingv1alpha1.Trigger, error) {
-	logging.FromContext(ctx).Info("Fetching Trigger", zap.String("Namespace", ref.Namespace), zap.String("Name", ref.Name))
-
 	t, err := r.triggerLister.Triggers(ref.Namespace).Get(ref.Name)
-	logging.FromContext(ctx).Info("Got Back", zap.Any("TRIGGER", t), zap.Error(err))
-
 	if err != nil {
 		return nil, err
 	}
