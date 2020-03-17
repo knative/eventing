@@ -19,7 +19,6 @@ package ingress
 import (
 	"context"
 	nethttp "net/http"
-	"net/url"
 	"reflect"
 	"sync"
 	"testing"
@@ -34,7 +33,7 @@ import (
 const (
 	namespace       = "testNamespace"
 	brokerName      = "testBroker"
-	validURI        = "/"
+	validURI        = "/testNamespace/testBroker"
 	urlHost         = "testHost"
 	urlPath         = "/"
 	urlScheme       = "http"
@@ -123,17 +122,10 @@ func TestIngressHandler_Receive_FAIL(t *testing.T) {
 			client, _ := cloudevents.NewDefaultClient()
 			reporter := &mockReporter{}
 			handler := Handler{
-				Logger:   zap.NewNop(),
-				CeClient: client,
-				ChannelURI: &url.URL{
-					Scheme: urlScheme,
-					Host:   urlHost,
-					Path:   urlPath,
-				},
-				BrokerName: brokerName,
-				Namespace:  namespace,
-				Reporter:   reporter,
-				Defaulter:  broker.TTLDefaulter(zap.NewNop(), 5),
+				Logger:    zap.NewNop(),
+				CeClient:  client,
+				Reporter:  reporter,
+				Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
 			}
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
 			resp := new(cloudevents.EventResponse)
@@ -157,17 +149,10 @@ func TestIngressHandler_Receive_Succeed(t *testing.T) {
 	client := &fakeClient{}
 	reporter := &mockReporter{}
 	handler := Handler{
-		Logger:   zap.NewNop(),
-		CeClient: client,
-		ChannelURI: &url.URL{
-			Scheme: urlScheme,
-			Host:   urlHost,
-			Path:   urlPath,
-		},
-		BrokerName: brokerName,
-		Namespace:  namespace,
-		Reporter:   reporter,
-		Defaulter:  broker.TTLDefaulter(zap.NewNop(), 5),
+		Logger:    zap.NewNop(),
+		CeClient:  client,
+		Reporter:  reporter,
+		Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
 	}
 
 	event := cloudevents.NewEvent()
@@ -193,14 +178,7 @@ func TestIngressHandler_Receive_NoTTL(t *testing.T) {
 	handler := Handler{
 		Logger:   zap.NewNop(),
 		CeClient: client,
-		ChannelURI: &url.URL{
-			Scheme: urlScheme,
-			Host:   urlHost,
-			Path:   urlPath,
-		},
-		BrokerName: brokerName,
-		Namespace:  namespace,
-		Reporter:   reporter,
+		Reporter: reporter,
 	}
 	event := cloudevents.NewEvent(cloudevents.VersionV1)
 	resp := new(cloudevents.EventResponse)
@@ -219,17 +197,10 @@ func TestIngressHandler_Start(t *testing.T) {
 	client := &fakeClient{}
 	reporter := &mockReporter{}
 	handler := Handler{
-		Logger:   zap.NewNop(),
-		CeClient: client,
-		ChannelURI: &url.URL{
-			Scheme: urlScheme,
-			Host:   urlHost,
-			Path:   urlPath,
-		},
-		BrokerName: brokerName,
-		Namespace:  namespace,
-		Reporter:   reporter,
-		Defaulter:  broker.TTLDefaulter(zap.NewNop(), 5),
+		Logger:    zap.NewNop(),
+		CeClient:  client,
+		Reporter:  reporter,
+		Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

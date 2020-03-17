@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/labels"
-
 	cloudevents "github.com/cloudevents/sdk-go"
 	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
 	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
@@ -39,8 +37,7 @@ import (
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
-	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
+	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 )
@@ -336,11 +333,13 @@ func TestReceiver(t *testing.T) {
 				}
 				correctURI = append(correctURI, trig)
 			}
+			listers := reconcilertesting.NewListers(correctURI)
 			reporter := &mockReporter{}
 			r, err := NewHandler(
 				zap.NewNop(),
-				getFakeTriggerLister(correctURI),
-				reporter)
+				listers.GetTriggerLister(),
+				reporter,
+				8080)
 			if tc.expectNewToFail {
 				if err == nil {
 					t.Fatal("Expected New to fail, it didn't")
@@ -484,26 +483,6 @@ func (h *fakeHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	_, err = resp.Write(msg.Body)
 	if err != nil {
 		h.t.Fatalf("Unable to write body: %v", err)
-	}
-}
-
-type FakeBrokerNamespaceLister struct {
-	client *fake.Clientset
-}
-
-func (f *FakeBrokerNamespaceLister) List(selector labels.Selector) (ret []*eventingv1alpha1.Trigger, err error) {
-	panic("implement me")
-}
-
-func (f *FakeBrokerNamespaceLister) Get(name string) (*eventingv1alpha1.Trigger, error) {
-	return f.client.EventingV1alpha1().Triggers(testNS).Get(name, metav1.GetOptions{})
-}
-
-func getFakeTriggerLister(initial []runtime.Object) v1alpha1.TriggerNamespaceLister {
-	c := fake.NewSimpleClientset(initial...)
-
-	return &FakeBrokerNamespaceLister{
-		client: c,
 	}
 }
 
