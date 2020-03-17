@@ -60,7 +60,7 @@ const (
 	testCeType   = "testtype"
 )
 
-func TestDispatchMessage(t *testing.T) {
+func TestDispatchEvent(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination         bool
 		sendToReply               bool

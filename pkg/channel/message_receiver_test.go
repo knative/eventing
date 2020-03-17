@@ -36,7 +36,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestEventReceiverBindings_ServeHTTP(t *testing.T) {
+func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
 		method            string
 		host              string
@@ -175,7 +175,7 @@ func TestEventReceiverBindings_ServeHTTP(t *testing.T) {
 	}
 }
 
-func TestEventReceiverBindingsWrongRequest(t *testing.T) {
+func TestMessageReceiverWrongRequest(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ nethttp.Header) error {
