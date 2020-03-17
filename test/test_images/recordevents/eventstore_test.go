@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 
 	"knative.dev/eventing/test/lib"
 )

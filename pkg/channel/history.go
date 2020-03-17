@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"strings"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 )
 
 const (

@@ -24,13 +24,14 @@ import (
 	"testing"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"knative.dev/pkg/apis"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
-	"knative.dev/pkg/apis"
 )
 
 // Domains used in subscriptions, which will be replaced by the real domains of the started HTTP
@@ -141,7 +142,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
-			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/issues/193 is fixed",
+			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/legacy/issues/193 is fixed",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
@@ -179,7 +180,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"all subs succeed with async handler": {
-			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/issues/193 is fixed",
+			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/legacy/issues/193 is fixed",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,

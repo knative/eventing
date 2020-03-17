@@ -28,21 +28,22 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cepkg "github.com/cloudevents/sdk-go/pkg/cloudevents"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cepkg "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents"
+	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	"knative.dev/pkg/apis"
+
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/client/clientset/versioned/fake"
 	"knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/apis"
 )
 
 const (

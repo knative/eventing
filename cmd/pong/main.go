@@ -22,7 +22,7 @@ import (
 	"flag"
 	"log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"github.com/google/uuid"
 )
 

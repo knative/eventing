@@ -30,10 +30,11 @@ import (
 	"fmt"
 	"net/http"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+
 	"knative.dev/eventing/pkg/channel/fanout"
 )
 
