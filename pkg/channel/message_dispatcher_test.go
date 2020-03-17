@@ -33,7 +33,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 )
 
-func TestDispatchMessageBinding(t *testing.T) {
+func TestDispatchMessage(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination         bool
 		sendToReply               bool
