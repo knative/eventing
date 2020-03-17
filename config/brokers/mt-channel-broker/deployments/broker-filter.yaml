@@ -31,9 +31,7 @@ spec:
         eventing.knative.dev/brokerRole: filter
         eventing.knative.dev/release: devel
     spec:
-      # DO NOT SUBMIT
-      # TODO: CHANGE THIS
-      serviceAccountName: eventing-controller
+      serviceAccountName: mt-broker-filter
       containers:
       - name: filter
         terminationMessagePolicy: FallbackToLogsOnError
@@ -87,7 +85,7 @@ spec:
           allowPrivilegeEscalation: false
 
 ---
-apiVersion: v1 
+apiVersion: v1
 kind: Service
 metadata:
   labels:
