@@ -81,9 +81,6 @@ type Reconciler struct {
 	// Dynamic tracker to track AddressableTypes. In particular, it tracks Trigger subscribers.
 	addressableTracker duck.ListableTracker
 	uriResolver        *resolver.URIResolver
-
-	// If specified, only reconcile brokers with these labels
-	brokerClass string
 }
 
 // Check that our Reconciler implements Interface

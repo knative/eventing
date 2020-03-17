@@ -90,10 +90,11 @@ func NewController(
 		ingressServiceAccountName: env.IngressServiceAccount,
 		filterImage:               env.FilterImage,
 		filterServiceAccountName:  env.FilterServiceAccount,
-		brokerClass:               env.BrokerClass,
 	}
-
-	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass)
+	classValue := env.BrokerClass
+	allowUnset := true
+	classFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, classValue, allowUnset /*allowUnset*/)
+	impl := brokerreconciler.NewImpl(ctx, r, classFilter)
 
 	r.Logger.Info("Setting up event handlers")
 
@@ -103,7 +104,7 @@ func NewController(
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, env.BrokerClass, false /*allowUnset*/),
+		FilterFunc: classFilter,
 		Handler:    controller.HandleAll(impl.Enqueue),
 	})
 

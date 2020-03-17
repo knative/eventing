@@ -42,13 +42,14 @@ func NewController(
 	brokerInformer := broker.Get(ctx)
 
 	classValue := "default" // TODO: update this to the appropriate value.
-	classFilter := reconciler.AnnotationFilterFunc(v1alpha1broker.ClassAnnotationKey, classValue, false /*allowUnset*/)
+	allowUnset := false     // TODO: update this to specific matching unset ClassAnnotationKey or not.
+	classFilter := reconciler.AnnotationFilterFunc(v1alpha1broker.ClassAnnotationKey, classValue, allowUnset /*allowUnset*/)
 
 	// TODO: setup additional informers here.
 	// TODO: remember to use the classFilter from above to filter appropriately.
 
 	r := &Reconciler{}
-	impl := v1alpha1broker.NewImpl(ctx, r, classValue)
+	impl := v1alpha1broker.NewImpl(ctx, r, classFilter)
 
 	logger.Info("Setting up event handlers.")
 

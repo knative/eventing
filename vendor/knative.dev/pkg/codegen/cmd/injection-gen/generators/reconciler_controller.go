@@ -164,7 +164,7 @@ const (
 // the queue through an implementation of {{.controllerReconciler|raw}}, delegating to
 // the provided Interface and optional Finalizer methods. OptionsFn is used to return
 // {{.controllerOptions|raw}} to be used but the internal reconciler.
-func NewImpl(ctx {{.contextContext|raw}}, r Interface{{if .hasClass}}, classValue string{{end}}, optionsFns ...{{.controllerOptionsFn|raw}}) *{{.controllerImpl|raw}} {
+func NewImpl(ctx {{.contextContext|raw}}, r Interface{{if .hasClass}}, classFilter func(interface{}) bool{{end}}, optionsFns ...{{.controllerOptionsFn|raw}}) *{{.controllerImpl|raw}} {
 	logger := {{.loggingFromContext|raw}}(ctx)
 
 	// Check the options function input. It should be 0 or 1.
@@ -198,7 +198,7 @@ func NewImpl(ctx {{.contextContext|raw}}, r Interface{{if .hasClass}}, classValu
 		Lister:  {{.type|lowercaseSingular}}Informer.Lister(),
 		Recorder: recorder,
 		reconciler:    r,
-		{{if .hasClass}}classValue: classValue,{{end}}
+		{{if .hasClass}}classFilter: classFilter,{{end}}
 	}
 	impl := {{.controllerNewImpl|raw}}(rec, logger, defaultQueueName)
 

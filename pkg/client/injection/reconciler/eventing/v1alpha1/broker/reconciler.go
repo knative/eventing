@@ -82,25 +82,25 @@ type reconcilerImpl struct {
 	// reconciler is the implementation of the business logic of the resource.
 	reconciler Interface
 
-	// classValue is the resource annotation[eventing.knative.dev/broker.class] instance value this reconciler instance filters on.
-	classValue string
+	// classFilter is the filter function for annotation[eventing.knative.dev/broker.class] instance value this reconciler instance filters on.
+	classFilter func(interface{}) bool
 }
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*reconcilerImpl)(nil)
 
-func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client versioned.Interface, lister eventingv1alpha1.BrokerLister, recorder record.EventRecorder, r Interface, classValue string, options ...controller.Options) controller.Reconciler {
+func NewReconciler(ctx context.Context, logger *zap.SugaredLogger, client versioned.Interface, lister eventingv1alpha1.BrokerLister, recorder record.EventRecorder, r Interface, classFilter func(interface{}) bool, options ...controller.Options) controller.Reconciler {
 	// Check the options function input. It should be 0 or 1.
 	if len(options) > 1 {
 		logger.Fatalf("up to one options struct is supported, found %d", len(options))
 	}
 
 	rec := &reconcilerImpl{
-		Client:     client,
-		Lister:     lister,
-		Recorder:   recorder,
-		reconciler: r,
-		classValue: classValue,
+		Client:      client,
+		Lister:      lister,
+		Recorder:    recorder,
+		reconciler:  r,
+		classFilter: classFilter,
 	}
 
 	for _, opts := range options {
@@ -141,10 +141,10 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
-	if classValue, found := original.GetAnnotations()[ClassAnnotationKey]; !found || classValue != r.classValue {
+	if !r.classFilter(original) {
 		logger.Debugw("Skip reconciling resource, class annotation value does not match reconciler instance value.",
 			zap.String("classKey", ClassAnnotationKey),
-			zap.String("issue", classValue+"!="+r.classValue))
+			zap.String("classValue", original.GetAnnotations()[ClassAnnotationKey]))
 		return nil
 	}
 

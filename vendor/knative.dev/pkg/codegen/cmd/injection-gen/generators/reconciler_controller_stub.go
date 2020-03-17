@@ -120,14 +120,15 @@ func NewController(
 
 	{{if .hasClass}}
 	classValue := "default" // TODO: update this to the appropriate value.
-	classFilter := {{.annotationFilterFunc|raw}}({{.classAnnotationKey|raw}}, classValue, false /*allowUnset*/)
+	allowUnset := false // TODO: update this to specific matching unset ClassAnnotationKey or not.
+	classFilter := {{.annotationFilterFunc|raw}}({{.classAnnotationKey|raw}}, classValue, allowUnset /*allowUnset*/)
 	{{end}}
 
 	// TODO: setup additional informers here.
 	{{if .hasClass}}// TODO: remember to use the classFilter from above to filter appropriately.{{end}}
 
 	r := &Reconciler{}
-	impl := {{.reconcilerNewImpl|raw}}(ctx, r{{if .hasClass}}, classValue{{end}})
+	impl := {{.reconcilerNewImpl|raw}}(ctx, r{{if .hasClass}}, classFilter{{end}})
 
 	logger.Info("Setting up event handlers.")
 
