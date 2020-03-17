@@ -1373,8 +1373,8 @@
   revision = "8d271d903fe4c290aa361acfb242cff7bcee96f1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:73d6a1f3f7a178275499102ae27b5177a91aaccc57e3a0328e628cb3ced708f8"
+  branch = "rt_registry"
+  digest = "1:ef06d4c4c23224cc3896e2877ca65c4e0703cbe4d94a68c35b5b9f78a5fcb657"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1479,7 +1479,8 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "be54585f8f04fe39ce6b6d28d78809818b724734"
+  revision = "35afaa9e956027672468a6d69a687771ba4f2b33"
+  source = "github.com/nachocano/pkg"
 
 [[projects]]
   branch = "master"
@@ -1605,6 +1606,8 @@
     "knative.dev/pkg/apis/duck/v1",
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
+    "knative.dev/pkg/client/injection/apiextensions/client",
+    "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable",
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
