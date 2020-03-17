@@ -41,24 +41,6 @@ const (
 	reportDecode
 )
 
-// TraceName implements Observable.TraceName
-func (o observed) TraceName() string {
-	switch o {
-	case reportSend:
-		return "transport/http/send"
-	case reportReceive:
-		return "transport/http/receive"
-	case reportServeHTTP:
-		return "transport/http/servehttp"
-	case reportEncode:
-		return "transport/http/encode"
-	case reportDecode:
-		return "transport/http/decode"
-	default:
-		return "transport/http/unknown"
-	}
-}
-
 // MethodName implements Observable.MethodName
 func (o observed) MethodName() string {
 	switch o {
@@ -92,11 +74,6 @@ type CodecObserved struct {
 
 // Adheres to Observable
 var _ observability.Observable = (*CodecObserved)(nil)
-
-// TraceName implements Observable.TraceName
-func (c CodecObserved) TraceName() string {
-	return fmt.Sprintf("%s/%s", c.o.TraceName(), c.c)
-}
 
 // MethodName implements Observable.MethodName
 func (c CodecObserved) MethodName() string {

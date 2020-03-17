@@ -34,7 +34,7 @@ func (e *Event) fieldOK(field string) {
 }
 
 // New returns a new Event, an optional version can be passed to change the
-// default spec version from 0.2 to the provided version.
+// default spec version from 1.0 to the provided version.
 func New(version ...string) Event {
 	specVersion := defaultEventVersion // TODO: should there be a default? or set a default?
 	if len(version) >= 1 {
