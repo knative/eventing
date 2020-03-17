@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +34,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"knative.dev/eventing/pkg/adapter"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter"
 )
 
 var (

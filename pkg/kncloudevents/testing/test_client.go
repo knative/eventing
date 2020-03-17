@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 )
 
 type TestCloudEventsClient struct {

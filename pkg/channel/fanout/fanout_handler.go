@@ -26,9 +26,10 @@ import (
 	"errors"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
 )

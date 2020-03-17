@@ -22,13 +22,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
 	"go.uber.org/zap"
+	"knative.dev/pkg/apis"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/pkg/apis"
 )
 
 var replaceDomain = apis.HTTP("replaceDomain")

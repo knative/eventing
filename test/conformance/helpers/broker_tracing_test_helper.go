@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	ce "github.com/cloudevents/sdk-go"
+	ce "github.com/cloudevents/sdk-go/legacy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 

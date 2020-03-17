@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/json"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/pkg/source"

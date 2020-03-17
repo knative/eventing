@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	"github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/client"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/rogpeppe/fastuuid"

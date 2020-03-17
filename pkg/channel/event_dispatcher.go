@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"net/url"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"

@@ -20,7 +20,7 @@ import (
 	"context"
 	"log"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/kncloudevents"

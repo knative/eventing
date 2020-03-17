@@ -122,26 +122,26 @@
   version = "v0.2.1"
 
 [[projects]]
-  digest = "1:e4d3d7220e4ddba3f42013a5137d2245f00cb644fde62281b452972926d43856"
+  digest = "1:057b1bb73cf9a503259344a26be36e952431324e9b756476849331faff855253"
   name = "github.com/cloudevents/sdk-go"
   packages = [
-    ".",
-    "pkg/cloudevents",
-    "pkg/cloudevents/client",
-    "pkg/cloudevents/context",
-    "pkg/cloudevents/datacodec",
-    "pkg/cloudevents/datacodec/json",
-    "pkg/cloudevents/datacodec/text",
-    "pkg/cloudevents/datacodec/xml",
-    "pkg/cloudevents/extensions",
-    "pkg/cloudevents/observability",
-    "pkg/cloudevents/transport",
-    "pkg/cloudevents/transport/http",
-    "pkg/cloudevents/types",
+    "legacy",
+    "legacy/pkg/cloudevents",
+    "legacy/pkg/cloudevents/client",
+    "legacy/pkg/cloudevents/context",
+    "legacy/pkg/cloudevents/datacodec",
+    "legacy/pkg/cloudevents/datacodec/json",
+    "legacy/pkg/cloudevents/datacodec/text",
+    "legacy/pkg/cloudevents/datacodec/xml",
+    "legacy/pkg/cloudevents/extensions",
+    "legacy/pkg/cloudevents/observability",
+    "legacy/pkg/cloudevents/transport",
+    "legacy/pkg/cloudevents/transport/http",
+    "legacy/pkg/cloudevents/types",
   ]
   pruneopts = "NUT"
-  revision = "a29c9e98fc567e992eba32ba5532c180a67a5d63"
-  version = "v1.1.2"
+  revision = "f248e160418f3e881491fdc3a60ea83660e30b37"
+  version = "v2.0.0-preview3"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -1459,11 +1459,11 @@
   analyzer-version = 1
   input-imports = [
     "contrib.go.opencensus.io/exporter/ocagent",
-    "github.com/cloudevents/sdk-go",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
+    "github.com/cloudevents/sdk-go/legacy",
+    "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents",
+    "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/client",
+    "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http",
+    "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/types",
     "github.com/ghodss/yaml",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes",

@@ -20,14 +20,15 @@ import (
 	"context"
 	"reflect"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/adapter/apiserver/events"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter/apiserver/events"
 )
 
 type ref struct {

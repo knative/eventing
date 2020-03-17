@@ -26,19 +26,12 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/legacy"
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 
-	cmdbroker "knative.dev/eventing/cmd/broker"
-	"knative.dev/eventing/pkg/broker"
-	"knative.dev/eventing/pkg/broker/ingress"
-	"knative.dev/eventing/pkg/kncloudevents"
-	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
-	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
-	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -50,6 +43,14 @@ import (
 	"knative.dev/pkg/signals"
 	pkgtracing "knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
+
+	cmdbroker "knative.dev/eventing/cmd/broker"
+	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/broker/ingress"
+	"knative.dev/eventing/pkg/kncloudevents"
+	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
+	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
+	"knative.dev/eventing/pkg/tracing"
 )
 
 var (
