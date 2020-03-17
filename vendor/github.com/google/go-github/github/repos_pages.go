@@ -8,6 +8,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // Pages represents a GitHub Pages site configuration.
@@ -43,28 +44,19 @@ type PagesBuild struct {
 	UpdatedAt *Timestamp  `json:"updated_at,omitempty"`
 }
 
-// createPagesRequest is a subset of Pages and is used internally
-// by EnablePages to pass only the known fields for the endpoint.
-type createPagesRequest struct {
-	Source *PagesSource `json:"source,omitempty"`
-}
-
 // EnablePages enables GitHub Pages for the named repo.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/pages/#enable-a-pages-site
-func (s *RepositoriesService) EnablePages(ctx context.Context, owner, repo string, pages *Pages) (*Pages, *Response, error) {
+func (s *RepositoriesService) EnablePages(ctx context.Context, owner, repo string) (*Pages, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pages", owner, repo)
-
-	pagesReq := &createPagesRequest{
-		Source: pages.Source,
-	}
-
-	req, err := s.client.NewRequest("POST", u, pagesReq)
+	req, err := s.client.NewRequest("POST", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	req.Header.Set("Accept", mediaTypeEnablePagesAPIPreview)
+	// TODO: remove custom Accept header when this API fully launches.
+	acceptHeaders := []string{mediaTypeEnablePagesAPIPreview, mediaTypePagesPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	enable := new(Pages)
 	resp, err := s.client.Do(ctx, req, enable)
@@ -101,6 +93,9 @@ func (s *RepositoriesService) GetPagesInfo(ctx context.Context, owner, repo stri
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypePagesPreview)
+
 	site := new(Pages)
 	resp, err := s.client.Do(ctx, req, site)
 	if err != nil {
@@ -113,9 +108,9 @@ func (s *RepositoriesService) GetPagesInfo(ctx context.Context, owner, repo stri
 // ListPagesBuilds lists the builds for a GitHub Pages site.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/pages/#list-pages-builds
-func (s *RepositoriesService) ListPagesBuilds(ctx context.Context, owner, repo string, opts *ListOptions) ([]*PagesBuild, *Response, error) {
+func (s *RepositoriesService) ListPagesBuilds(ctx context.Context, owner, repo string, opt *ListOptions) ([]*PagesBuild, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pages/builds", owner, repo)
-	u, err := addOptions(u, opts)
+	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -181,6 +176,9 @@ func (s *RepositoriesService) RequestPageBuild(ctx context.Context, owner, repo 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypePagesPreview)
 
 	build := new(PagesBuild)
 	resp, err := s.client.Do(ctx, req, build)

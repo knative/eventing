@@ -22,7 +22,7 @@ import (
 	"k8s.io/gengo/types"
 )
 
-var consonants = "bcdfghjklmnpqrstvwxyz"
+var consonants = "bcdfghjklmnpqrsttvwxyz"
 
 type pluralNamer struct {
 	// key is the case-sensitive type name, value is the case-insensitive

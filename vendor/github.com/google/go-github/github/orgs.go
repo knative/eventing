@@ -56,17 +56,8 @@ type Organization struct {
 	// MembersCanCreateRepos default value is true and is only used in Organizations.Edit.
 	MembersCanCreateRepos *bool `json:"members_can_create_repositories,omitempty"`
 
-	// https://developer.github.com/changes/2019-12-03-internal-visibility-changes/#rest-v3-api
-	MembersCanCreatePublicRepos   *bool `json:"members_can_create_public_repositories,omitempty"`
-	MembersCanCreatePrivateRepos  *bool `json:"members_can_create_private_repositories,omitempty"`
-	MembersCanCreateInternalRepos *bool `json:"members_can_create_internal_repositories,omitempty"`
-
 	// MembersAllowedRepositoryCreationType denotes if organization members can create repositories
 	// and the type of repositories they can create. Possible values are: "all", "private", or "none".
-	//
-	// Deprecated: Use MembersCanCreatePublicRepos, MembersCanCreatePrivateRepos, MembersCanCreateInternalRepos
-	// instead. The new fields overrides the existing MembersAllowedRepositoryCreationType during 'edit'
-	// operation and does not consider 'internal' repositories during 'get' operation
 	MembersAllowedRepositoryCreationType *string `json:"members_allowed_repository_creation_type,omitempty"`
 
 	// API URLs
@@ -79,12 +70,6 @@ type Organization struct {
 	ReposURL         *string `json:"repos_url,omitempty"`
 }
 
-// OrganizationInstallations represents GitHub app installations for an organization.
-type OrganizationInstallations struct {
-	TotalCount    *int            `json:"total_count,omitempty"`
-	Installations []*Installation `json:"installations,omitempty"`
-}
-
 func (o Organization) String() string {
 	return Stringify(o)
 }
@@ -95,8 +80,6 @@ type Plan struct {
 	Space         *int    `json:"space,omitempty"`
 	Collaborators *int    `json:"collaborators,omitempty"`
 	PrivateRepos  *int    `json:"private_repos,omitempty"`
-	FilledSeats   *int    `json:"filled_seats,omitempty"`
-	Seats         *int    `json:"seats,omitempty"`
 }
 
 func (p Plan) String() string {
@@ -122,8 +105,8 @@ type OrganizationsListOptions struct {
 // as the opts.Since parameter for the next call.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/#list-all-organizations
-func (s *OrganizationsService) ListAll(ctx context.Context, opts *OrganizationsListOptions) ([]*Organization, *Response, error) {
-	u, err := addOptions("organizations", opts)
+func (s *OrganizationsService) ListAll(ctx context.Context, opt *OrganizationsListOptions) ([]*Organization, *Response, error) {
+	u, err := addOptions("organizations", opt)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -145,14 +128,14 @@ func (s *OrganizationsService) ListAll(ctx context.Context, opts *OrganizationsL
 // organizations for the authenticated user.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/#list-user-organizations
-func (s *OrganizationsService) List(ctx context.Context, user string, opts *ListOptions) ([]*Organization, *Response, error) {
+func (s *OrganizationsService) List(ctx context.Context, user string, opt *ListOptions) ([]*Organization, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/orgs", user)
 	} else {
 		u = "user/orgs"
 	}
-	u, err := addOptions(u, opts)
+	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -222,9 +205,6 @@ func (s *OrganizationsService) Edit(ctx context.Context, name string, org *Organ
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMemberAllowedRepoCreationTypePreview)
-
 	o := new(Organization)
 	resp, err := s.client.Do(ctx, req, o)
 	if err != nil {
@@ -232,32 +212,4 @@ func (s *OrganizationsService) Edit(ctx context.Context, name string, org *Organ
 	}
 
 	return o, resp, nil
-}
-
-// ListInstallations lists installations for an organization.
-//
-// GitHub API docs: https://developer.github.com/v3/orgs/#list-installations-for-an-organization
-func (s *OrganizationsService) ListInstallations(ctx context.Context, org string, opts *ListOptions) (*OrganizationInstallations, *Response, error) {
-	u := fmt.Sprintf("orgs/%v/installations", org)
-
-	u, err := addOptions(u, opts)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	req, err := s.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeIntegrationPreview)
-
-	result := new(OrganizationInstallations)
-	resp, err := s.client.Do(ctx, req, result)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return result, resp, nil
 }

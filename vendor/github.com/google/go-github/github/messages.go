@@ -74,14 +74,12 @@ var (
 		"pull_request":                   "PullRequestEvent",
 		"push":                           "PushEvent",
 		"repository":                     "RepositoryEvent",
-		"repository_dispatch":            "RepositoryDispatchEvent",
 		"repository_vulnerability_alert": "RepositoryVulnerabilityAlertEvent",
 		"release":                        "ReleaseEvent",
 		"star":                           "StarEvent",
 		"status":                         "StatusEvent",
 		"team":                           "TeamEvent",
 		"team_add":                       "TeamAddEvent",
-		"user":                           "UserEvent",
 		"watch":                          "WatchEvent",
 	}
 )

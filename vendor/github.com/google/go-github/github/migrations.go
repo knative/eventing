@@ -75,13 +75,13 @@ type startMigration struct {
 // repos is a slice of repository names to migrate.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/migrations/#start-a-migration
-func (s *MigrationService) StartMigration(ctx context.Context, org string, repos []string, opts *MigrationOptions) (*Migration, *Response, error) {
+func (s *MigrationService) StartMigration(ctx context.Context, org string, repos []string, opt *MigrationOptions) (*Migration, *Response, error) {
 	u := fmt.Sprintf("orgs/%v/migrations", org)
 
 	body := &startMigration{Repositories: repos}
-	if opts != nil {
-		body.LockRepositories = Bool(opts.LockRepositories)
-		body.ExcludeAttachments = Bool(opts.ExcludeAttachments)
+	if opt != nil {
+		body.LockRepositories = Bool(opt.LockRepositories)
+		body.ExcludeAttachments = Bool(opt.ExcludeAttachments)
 	}
 
 	req, err := s.client.NewRequest("POST", u, body)
@@ -103,13 +103,9 @@ func (s *MigrationService) StartMigration(ctx context.Context, org string, repos
 
 // ListMigrations lists the most recent migrations.
 //
-// GitHub API docs: https://developer.github.com/v3/migrations/orgs/#get-a-list-of-organization-migrations
-func (s *MigrationService) ListMigrations(ctx context.Context, org string, opts *ListOptions) ([]*Migration, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/migration/migrations/#get-a-list-of-migrations
+func (s *MigrationService) ListMigrations(ctx context.Context, org string) ([]*Migration, *Response, error) {
 	u := fmt.Sprintf("orgs/%v/migrations", org)
-	u, err := addOptions(u, opts)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
