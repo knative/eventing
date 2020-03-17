@@ -62,6 +62,7 @@ type envConfig struct {
 	// TODO: change this environment variable to something like "PodGroupName".
 	PodName       string `envconfig:"POD_NAME" required:"true"`
 	ContainerName string `envconfig:"CONTAINER_NAME" required:"true"`
+	Port          int    `envconfig:"FILTER_PORT" default:"8080"`
 }
 
 func main() {
