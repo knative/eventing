@@ -17,25 +17,19 @@ limitations under the License.
 package channel
 
 import (
-	"fmt"
-	"testing"
-
-	_ "knative.dev/pkg/system/testing"
+	"github.com/cloudevents/sdk-go/pkg/binding"
+	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
+	"github.com/cloudevents/sdk-go/pkg/types"
 )
 
-const (
-	referencesTestNamespace   = "test-namespace"
-	referencesTestChannelName = "test-channel"
-)
-
-func TestChannelReference_String(t *testing.T) {
-	ref := ChannelReference{
-		Name:      referencesTestChannelName,
-		Namespace: referencesTestNamespace,
-	}
-	expected := fmt.Sprintf("%s/%s", referencesTestNamespace, referencesTestChannelName)
-	actual := ref.String()
-	if expected != actual {
-		t.Errorf("%s expected: %+v got: %+v", "ChannelReference", expected, actual)
-	}
+func AddHistory(host string) []binding.TransformerFactory {
+	return transformer.SetExtension(EventHistory, host, func(i interface{}) (interface{}, error) {
+		str, err := types.Format(i)
+		if err != nil {
+			return nil, err
+		}
+		h := decodeEventHistory(str)
+		h = append(h, host)
+		return encodeEventHistory(h), nil
+	})
 }

@@ -14,28 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package channel
+package tracing
 
 import (
-	"fmt"
-	"testing"
-
-	_ "knative.dev/pkg/system/testing"
+	"github.com/cloudevents/sdk-go/pkg/binding"
+	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
+	"go.opencensus.io/trace"
 )
 
-const (
-	referencesTestNamespace   = "test-namespace"
-	referencesTestChannelName = "test-channel"
-)
-
-func TestChannelReference_String(t *testing.T) {
-	ref := ChannelReference{
-		Name:      referencesTestChannelName,
-		Namespace: referencesTestNamespace,
-	}
-	expected := fmt.Sprintf("%s/%s", referencesTestNamespace, referencesTestChannelName)
-	actual := ref.String()
-	if expected != actual {
-		t.Errorf("%s expected: %+v got: %+v", "ChannelReference", expected, actual)
-	}
+// AddTraceparent returns a CloudEvent that is identical to the input event,
+// with the traceparent CloudEvents extension attribute added.
+func AddTraceparent(span *trace.Span) []binding.TransformerFactory {
+	val := traceparentAttributeValue(span)
+	return transformer.SetExtension(traceparentAttribute, val, func(i2 interface{}) (i interface{}, err error) {
+		return val, nil
+	})
 }

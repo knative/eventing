@@ -14,19 +14,27 @@
  * limitations under the License.
  */
 
-package channel
+package kncloudevents
 
 import (
-	"fmt"
+	"context"
+	nethttp "net/http"
+
+	"github.com/cloudevents/sdk-go/pkg/binding"
+	"github.com/cloudevents/sdk-go/pkg/protocol/http"
 )
 
-// ChannelReference references a Channel within the cluster by name and
-// namespace.
-type ChannelReference struct {
-	Namespace string
-	Name      string
-}
+func WriteHttpRequest(ctx context.Context, message binding.Message, req *nethttp.Request, additionalHeaders nethttp.Header, transformers binding.TransformerFactories) error {
+	err := http.WriteRequest(ctx, message, req, transformers)
+	if err != nil {
+		return err
+	}
 
-func (r *ChannelReference) String() string {
-	return fmt.Sprintf("%s/%s", r.Namespace, r.Name)
+	if additionalHeaders != nil {
+		for k, v := range additionalHeaders {
+			req.Header[k] = v
+		}
+	}
+
+	return nil
 }

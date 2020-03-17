@@ -22,45 +22,18 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
-	"strings"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
-	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
-	"github.com/google/go-cmp/cmp"
+	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/cloudevents/sdk-go/pkg/binding"
+	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/util/sets"
+
+	"knative.dev/eventing/pkg/utils"
 )
 
-var (
-	// Headers that are added to the response, but we don't want to check in our assertions.
-	unimportantHeaders = sets.NewString(
-		"accept-encoding",
-		"content-length",
-		"content-type",
-		"user-agent",
-	)
-
-	// Headers that should be present, but their value should not be asserted.
-	ignoreValueHeaders = sets.NewString(
-		// These are headers added for tracing, they will have random values, so don't bother
-		// checking them.
-		"x-b3-spanid",
-		"x-b3-traceid",
-		// CloudEvents headers, they will have random values, so don't bother checking them.
-		"ce-id",
-		"ce-time",
-		"ce-traceparent",
-	)
-)
-
-const (
-	testCeSource = "testsource"
-	testCeType   = "testtype"
-)
-
-func TestDispatchMessage(t *testing.T) {
+func TestDispatchMessageBinding(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination         bool
 		sendToReply               bool
@@ -103,7 +76,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -135,7 +107,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -172,7 +143,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"reply"`,
 			},
@@ -204,7 +174,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"reply"`,
 			},
@@ -242,7 +211,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -280,7 +248,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -323,7 +290,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -355,7 +321,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: "destination-response",
 			},
@@ -388,7 +353,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -406,7 +370,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -459,7 +422,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -476,7 +438,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: "destination-response",
 			},
@@ -493,7 +454,6 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
-					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -571,28 +531,34 @@ func TestDispatchMessage(t *testing.T) {
 			}
 
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
+			event.SetID(uuid.New().String())
 			event.SetType("testtype")
 			event.SetSource("testsource")
 			for n, v := range tc.eventExtensions {
 				event.SetExtension(n, v)
 			}
-			event.SetData(tc.body)
-			event.SetDataContentType(cloudevents.ApplicationJSON)
+			event.SetData(cloudevents.ApplicationJSON, tc.body)
 
 			ctx := context.Background()
-			tctx := cloudevents.HTTPTransportContextFrom(ctx)
-			tctx.Header = tc.header
-			ctx = cehttp.WithTransportContext(ctx, tctx)
 
-			md := NewEventDispatcher(zap.NewNop())
+			md := NewEventDispatcherBinding(zap.NewNop())
 			destination := getDomain(t, tc.sendToDestination, destServer.URL)
 			reply := getDomain(t, tc.sendToReply, replyServer.URL)
 
+			// We need this to eventually setup the default uuid and time now (as the event receiver would do)
+			message := binding.ToMessage(&event)
 			var err error
+			ev, err := binding.ToEvent(ctx, message, binding.TransformerFactories{transformer.AddTimeNow})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			message = binding.ToMessage(ev)
+
 			if tc.hasDeliveryOptions {
-				err = md.DispatchEventWithDelivery(ctx, event, destination, reply, deliveryOptions)
+				err = md.DispatchEventWithDelivery(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deliveryOptions)
 			} else {
-				err = md.DispatchEvent(ctx, event, destination, reply)
+				err = md.DispatchEvent(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply)
 			}
 
 			if tc.expectedErr != (err != nil) {
@@ -620,103 +586,5 @@ func TestDispatchMessage(t *testing.T) {
 				t.Errorf("Unexpected dead letter sink requests: %+v", deadLetterSinkHandler.requests)
 			}
 		})
-	}
-}
-
-func getDomain(t *testing.T, shouldSend bool, serverURL string) string {
-	if shouldSend {
-		server, err := url.Parse(serverURL)
-		if err != nil {
-			t.Errorf("Bad serverURL: %q", serverURL)
-		}
-		return server.Host
-	}
-	return ""
-}
-
-type requestValidation struct {
-	Host    string
-	Headers http.Header
-	Body    string
-}
-
-type fakeHandler struct {
-	t        *testing.T
-	response *http.Response
-	requests []requestValidation
-}
-
-func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	// Make a copy of the request.
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		f.t.Error("Failed to read the request body")
-	}
-	f.requests = append(f.requests, requestValidation{
-		Host:    r.Host,
-		Headers: r.Header,
-		Body:    string(body),
-	})
-
-	// Write the response.
-	if f.response != nil {
-		for h, vs := range f.response.Header {
-			for _, v := range vs {
-				w.Header().Add(h, v)
-			}
-		}
-		w.WriteHeader(f.response.StatusCode)
-		var buf bytes.Buffer
-		buf.ReadFrom(f.response.Body)
-		w.Write(buf.Bytes())
-	} else {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(""))
-	}
-}
-
-func (f *fakeHandler) popRequest(t *testing.T) requestValidation {
-	if len(f.requests) == 0 {
-		t.Error("Unable to pop request")
-		return requestValidation{
-			Host: "MADE UP, no such request",
-			Body: "MADE UP, no such request",
-		}
-	}
-	rv := f.requests[0]
-	f.requests = f.requests[1:]
-	return rv
-}
-
-func assertEquality(t *testing.T, replacementURL string, expected, actual requestValidation) {
-	server, err := url.Parse(replacementURL)
-	if err != nil {
-		t.Errorf("Bad replacement URL: %q", replacementURL)
-	}
-	expected.Host = server.Host
-	canonicalizeHeaders(expected, actual)
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("Unexpected difference (-want, +got): %v", diff)
-	}
-}
-
-func canonicalizeHeaders(rvs ...requestValidation) {
-	// HTTP header names are case-insensitive, so normalize them to lower case for comparison.
-	for _, rv := range rvs {
-		headers := rv.Headers
-		for n, v := range headers {
-			delete(headers, n)
-			n = strings.ToLower(n)
-			if unimportantHeaders.Has(n) {
-				continue
-			}
-			if ignoreValueHeaders.Has(n) {
-				headers[n] = []string{"ignored-value-header"}
-			} else {
-				headers[n] = v
-			}
-		}
 	}
 }
