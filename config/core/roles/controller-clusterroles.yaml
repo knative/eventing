@@ -26,6 +26,7 @@ rules:
       - "secrets"
       - "configmaps"
       - "services"
+      - "endpoints"
       - "events"
       - "serviceaccounts"
     verbs: &everything

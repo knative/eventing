@@ -37,6 +37,7 @@ import (
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
+	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -78,11 +79,13 @@ func NewController(
 	triggerInformer := triggerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	serviceInformer := serviceinformer.Get(ctx)
+	endpointsInformer := endpointsinformer.Get(ctx)
 
 	r := &Reconciler{
 		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
 		brokerLister:              brokerInformer.Lister(),
 		serviceLister:             serviceInformer.Lister(),
+		endpointsLister:           endpointsInformer.Lister(),
 		deploymentLister:          deploymentInformer.Lister(),
 		subscriptionLister:        subscriptionInformer.Lister(),
 		triggerLister:             triggerInformer.Lister(),
@@ -110,6 +113,11 @@ func NewController(
 	serviceInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("Broker")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	})
+
+	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.LabelExistsFilterFunc(eventing.BrokerLabelKey),
+		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("" /*any namespace*/, eventing.BrokerLabelKey)),
 	})
 
 	deploymentInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
