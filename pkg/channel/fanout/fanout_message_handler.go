@@ -92,14 +92,15 @@ func (f *MessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *net
 
 // dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *MessageHandler) dispatch(ctx context.Context, message binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
+func (f *MessageHandler) dispatch(ctx context.Context, originalMessage binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
 	// We buffer the message and bind the lifecycle with all fanout requests acks from other messages are received
 	subs := len(f.config.Subscriptions)
-	var err error
-	message, err = buffering.BufferMessage(ctx, message, transformers)
+	message, err := buffering.BufferMessage(ctx, originalMessage, transformers)
 	if err != nil {
 		return err
 	}
+	_ = originalMessage.Finish(nil)
+
 	message = buffering.WithAcksBeforeFinish(message, subs)
 
 	errorCh := make(chan error, subs)
