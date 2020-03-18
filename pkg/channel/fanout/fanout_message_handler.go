@@ -51,7 +51,7 @@ type MessageHandler struct {
 }
 
 // NewHandler creates a new fanout.Handler.
-func NewMessageHandler(ctx context.Context, logger *zap.Logger, config Config) (*MessageHandler, error) {
+func NewMessageHandler(logger *zap.Logger, config Config) (*MessageHandler, error) {
 	handler := &MessageHandler{
 		logger:     logger,
 		config:     config,
@@ -60,7 +60,7 @@ func NewMessageHandler(ctx context.Context, logger *zap.Logger, config Config) (
 	}
 	// The receiver function needs to point back at the handler itself, so set it up after
 	// initialization.
-	receiver, err := channel.NewMessageReceiver(ctx, createReceiverFunctionBinding(handler), logger)
+	receiver, err := channel.NewMessageReceiver(createMessageReceiverFunction(handler), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -68,21 +68,21 @@ func NewMessageHandler(ctx context.Context, logger *zap.Logger, config Config) (
 	return handler, nil
 }
 
-func createReceiverFunctionBinding(f *MessageHandler) func(context.Context, channel.ChannelReference, binding.Message, nethttp.Header) error {
+func createMessageReceiverFunction(f *MessageHandler) func(context.Context, channel.ChannelReference, binding.Message, []binding.TransformerFactory, nethttp.Header) error {
 	if f.config.AsyncHandler {
-		return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, additionalHeaders nethttp.Header) error {
+		return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
 			parentSpan := trace.FromContext(ctx)
 			go func() {
 				// Run async dispatch with background context.
 				ctx = trace.NewContext(context.Background(), parentSpan)
 				// Any returned error is already logged in f.dispatch().
-				_ = f.dispatch(ctx, message, additionalHeaders)
+				_ = f.dispatch(ctx, message, transformers, additionalHeaders)
 			}()
 			return nil
 		}
 	}
-	return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, additionalHeaders nethttp.Header) error {
-		return f.dispatch(ctx, message, additionalHeaders)
+	return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
+		return f.dispatch(ctx, message, transformers, additionalHeaders)
 	}
 }
 
@@ -92,13 +92,24 @@ func (f *MessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *net
 
 // dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
-func (f *MessageHandler) dispatch(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header) error {
-	//TODO what if this method handles the lifecycle of the final message, more than EventDispatcher?
-	message = buffering.WithAcksBeforeFinish(message, len(f.config.Subscriptions))
-	errorCh := make(chan error, len(f.config.Subscriptions))
+func (f *MessageHandler) dispatch(ctx context.Context, originalMessage binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
+	subs := len(f.config.Subscriptions)
+
+	// We buffer the message to send it several times
+	bufferedMessage, err := buffering.CopyMessage(ctx, originalMessage, transformers)
+	if err != nil {
+		return err
+	}
+	// We don't need the original message anymore
+	_ = originalMessage.Finish(nil)
+
+	// Bind the lifecycle of the buffered message to the number of subs
+	bufferedMessage = buffering.WithAcksBeforeFinish(bufferedMessage, subs)
+
+	errorCh := make(chan error, subs)
 	for _, sub := range f.config.Subscriptions {
 		go func(s eventingduck.SubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(ctx, message, additionalHeaders, s)
+			errorCh <- f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
 		}(sub)
 	}
 

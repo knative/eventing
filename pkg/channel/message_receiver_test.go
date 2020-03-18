@@ -43,7 +43,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 		path              string
 		additionalHeaders nethttp.Header
 		expected          int
-		receiverFunc      MessageReceiverFunc
+		receiverFunc      UnbufferedMessageReceiverFunc
 	}{
 		"non '/' path": {
 			path:     "/something",
@@ -58,13 +58,13 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			expected: nethttp.StatusInternalServerError,
 		},
 		"unknown channel error": {
-			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ nethttp.Header) error {
+			receiverFunc: func(_ context.Context, c ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
 				return &UnknownChannelError{c: c}
 			},
 			expected: nethttp.StatusNotFound,
 		},
 		"other receiver function error": {
-			receiverFunc: func(_ context.Context, _ ChannelReference, _ binding.Message, _ nethttp.Header) error {
+			receiverFunc: func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
 				return errors.New("test induced receiver function error")
 			},
 			expected: nethttp.StatusInternalServerError,
@@ -84,12 +84,12 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				"x-ot-pass":           {"will not pass"},
 			},
 			host: "test-name.test-namespace.svc." + utils.GetClusterDomainName(),
-			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, additionalHeaders nethttp.Header) error {
+			receiverFunc: func(ctx context.Context, r ChannelReference, m binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
 				if r.Namespace != "test-namespace" || r.Name != "test-name" {
 					return fmt.Errorf("test receiver func -- bad reference: %v", r)
 				}
 
-				e, err := binding.ToEvent(ctx, m, nil)
+				e, err := binding.ToEvent(ctx, m, transformers...)
 				if err != nil {
 					return err
 				}
@@ -138,7 +138,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewMessageReceiver(context.TODO(), f, zap.NewNop())
+			r, err := NewMessageReceiver(f, zap.NewNop())
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -178,10 +178,10 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 func TestMessageReceiverWrongRequest(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
 
-	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ nethttp.Header) error {
+	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewMessageReceiver(context.TODO(), f, zap.NewNop())
+	r, err := NewMessageReceiver(f, zap.NewNop())
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
