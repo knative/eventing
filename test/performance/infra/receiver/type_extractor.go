@@ -16,7 +16,7 @@ limitations under the License.
 
 package receiver
 
-import cloudevents "github.com/cloudevents/sdk-go/legacy"
+import cloudevents "github.com/cloudevents/sdk-go/v1"
 
 // TypeExtractor is used by the receiver to establish the type of the received event
 type TypeExtractor func(event cloudevents.Event) string

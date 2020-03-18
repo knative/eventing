@@ -26,8 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
-	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"

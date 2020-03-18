@@ -25,7 +25,7 @@ import (
 	"log"
 	"os"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 
 	"knative.dev/eventing/pkg/utils"
 )

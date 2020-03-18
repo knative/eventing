@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
-	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"knative.dev/pkg/apis"
@@ -142,7 +142,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"one sub succeeds, one sub fails": {
-			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/legacy/issues/193 is fixed",
+			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/v1/issues/193 is fixed",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
@@ -180,7 +180,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusAccepted,
 		},
 		"all subs succeed with async handler": {
-			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/legacy/issues/193 is fixed",
+			skip: "RACE condition due to bug in cloudevents-sdk. Unskip it once the issue https://github.com/cloudevents/sdk-go/v1/issues/193 is fixed",
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,

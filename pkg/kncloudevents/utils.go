@@ -20,8 +20,8 @@ import (
 	"context"
 	nethttp "net/http"
 
-	"github.com/cloudevents/sdk-go/pkg/binding"
-	"github.com/cloudevents/sdk-go/pkg/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 )
 
 func WriteHttpRequestWithAdditionalHeaders(ctx context.Context, message binding.Message, req *nethttp.Request, additionalHeaders nethttp.Header, transformers binding.TransformerFactories) error {

@@ -19,7 +19,7 @@ package channel
 import (
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 )
 
 func TestMessageHistory(t *testing.T) {

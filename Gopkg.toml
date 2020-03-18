@@ -91,7 +91,7 @@ required = [
 
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
-  version = "v2.0.0-preview3"
+  version = "v2.0.0-preview4"
 
 # needed because pkg upgraded
 [[override]]
