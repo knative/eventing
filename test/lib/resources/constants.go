@@ -60,10 +60,3 @@ const (
 	FlowsSequenceKind string = "Sequence"
 	FlowsParallelKind string = "Parallel"
 )
-
-// Kind for sources resources.
-const (
-	CronJobSourceKind   string = "CronJobSource"
-	ContainerSourceKind string = "ContainerSource"
-	ApiServerSourceKind string = "ApiServerSource"
-)
