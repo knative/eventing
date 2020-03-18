@@ -1,83 +1,59 @@
-# Multi Tenancy
+# Source Multi Tenancy
 
-Knative Eventing generally provides two sets of data-plane components:
+## Problem
 
-- single-tenant: these are components capable of handling one and only one resource.
-  For instance both the `APIServerSource` and the `GitHubSource` adapters
-  are single-tenant. There is one component per resource and usually the component
-  is deployed in the same namespace as the resource it manages.
-- multi-tenant: these are components capable of handling more than one resource.
-  For example, both the in-memory and the kafka dispatchers support
-  multi-tenancy. These components can typically be either deployed in
-  the system namespace (eg. `knative-eventing`) or in the same namespace as the
-  resources it manages.
+Single-tenant receive adapters handle only one source instance (CR) at a time,
+i.e. there is a one-to-one mapping between the receive adapter, and the source instance
+specification. While this architecture works well for high volume, always "on" event
+sources, it is not optimal (i.e. waste precious resources, cpu and memory) for sources 
+producing "few" events, such as PingSource, APIServerSource and GitHubSource,
+or for small applications.
 
-## Configuring multi-tenancy
+## Solution 
 
-Each component potentially supports three multi-tenancy modes:
+Add support for multi-tenant receive adapters capable of handling
+more than one source.
 
-- single-tenant
-- multi-tenant, one per namespace
-- multi-tenant, one per cluster
+## Multi Tenancy Modes
 
-By default all components operate in multi-tenant, one per cluster mode, unless
-the component does not support it. See the table below for more details.
+There are three possible multi-tenancy modes:
 
-The default mode can be overridden by adding the `eventing.knative.dev/scope`
-annotation to a resource. The possible values to:
+- `off`: disable multi-tenancy, falling back to the single-tenant receive adapter.
+- `namespace`: multi-tenant receive adapter, one per namespace
+- `cluster`: multi-tenant receive adapter, one per cluster
 
-- `resource` (single-tenant),
-- `namespace` (multi-tenant, one per namespace),
-- `cluster` (multi-tenant, one per cluster)
+## Configuration
 
-For instance, this specification:
+### Via ConfigMap
 
-```yaml
-apiVersion: messaging.knative.dev/v1beta1
-kind: InMemoryChannel
+To change the multi-tenancy mode, edit the `config-sources` ConfigMap
+*before* installing Knative Eventing.
+
+
+```yaml 
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: foo-ns
-  namespace: default
-  annotations:
-    eventing.knative.dev/scope: namespace
+  name: config-sources
+  namespace: knative-eventing
+data:
+  _example: |
+    ################################
+    #                              #
+    #    EXAMPLE CONFIGURATION     #
+    #                              #
+    ################################
+    # This block is not actually functional configuration,
+    # but serves to illustrate the available configuration
+    # options and document them in a way that is accessible
+    # to users that `kubectl edit` this config map.
+    #
+    # These sample configuration options may be copied out of
+    # this example block and unindented to be in the data block
+    # to actually change the configuration.
+    #
+    # Multitenancy modes. This may be "off", "namespace" or "cluster". The default is "cluster"
+    multitenancy: "cluster"
 ```
-
-tells Knative Eventing to use the in-memory dispatcher in the `default`
-namespace to manage `foo-ns`.
-
-## Components
-
-This list describes which modes are being supported by the Knative Eventing
-data-plane components.
-
-<sup>default</sup> indicates the default mode.
-
-### Channels
-
-| Component | single-tenant | multi-tenant, namespace | multi-tenant, cluster |
-|--- |---|---|---|
-| In-memory dispatcher | No | Yes | Yes<sup>default</sup> |
-| Kafka dispatcher | No | Yes | Yes<sup>default</sup> |
-| NATS dispatcher | No | No | Yes<sup>default</sup> |
-
-### Brokers
-
-| Component | single-tenant | multi-tenant, namespace | multi-tenant, cluster |
-|--- |---|---|---|
-| Channel-based broker | No | Yes<sup>default</sup> | No |
-
-### Sources
-
-| Component | single-tenant | multi-tenant, namespace | multi-tenant, cluster |
-|--- |---|---|---|
-| PingSource | Yes | No | Yes<sup>default</sup> |
-| APIServerSource | Yes<sup>default</sup> | No | No |
-| AWSSQSSource | Yes<sup>default</sup> | No | No |
-| CamelSource | Yes<sup>default</sup> | No | No |
-| CephSource | Yes<sup>default</sup> | No | No |
-| CouchDBSource | Yes<sup>default</sup> | No | No |
-| GithubSource | Yes<sup>default</sup> | No | No |
-| KafkaSource | Yes<sup>default</sup> | No | No |
-| PrometheusSource | Yes<sup>default</sup> | No | No |
 
 
