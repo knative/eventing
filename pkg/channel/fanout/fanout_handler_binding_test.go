@@ -36,7 +36,7 @@ import (
 
 func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 	testCases := map[string]struct {
-		receiverFunc   channel.MessageReceiverFunc
+		receiverFunc   channel.UnbufferedMessageReceiverFunc
 		timeout        time.Duration
 		subs           []eventingduck.SubscriberSpec
 		subscriber     func(http.ResponseWriter, *http.Request)
@@ -46,7 +46,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 		skip           string
 	}{
 		"rejected by receiver": {
-			receiverFunc: func(context.Context, channel.ChannelReference, binding.Message, http.Header) error {
+			receiverFunc: func(context.Context, channel.ChannelReference, binding.Message, []binding.TransformerFactory, http.Header) error {
 				return errors.New("rejected by test-receiver")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -207,7 +207,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 				subs = append(subs, sub)
 			}
 
-			h, err := NewMessageHandler(context.TODO(), zap.NewNop(), Config{Subscriptions: subs})
+			h, err := NewMessageHandler(zap.NewNop(), Config{Subscriptions: subs})
 			if err != nil {
 				t.Fatalf("NewHandler failed. Error:%s", err)
 			}
@@ -215,7 +215,7 @@ func TestFanoutMessageHandler_ServeHTTP(t *testing.T) {
 				h.config.AsyncHandler = true
 			}
 			if tc.receiverFunc != nil {
-				receiver, err := channel.NewMessageReceiver(context.TODO(), tc.receiverFunc, zap.NewNop())
+				receiver, err := channel.NewMessageReceiver(tc.receiverFunc, zap.NewNop())
 				if err != nil {
 					t.Fatalf("NewEventReceiver failed. Error:%s", err)
 				}

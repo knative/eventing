@@ -51,7 +51,7 @@ func NewMessageHandler(ctx context.Context, logger *zap.Logger, conf Config) (*M
 
 	for _, cc := range conf.ChannelConfigs {
 		key := makeChannelKeyFromConfig(cc)
-		handler, err := fanout.NewMessageHandler(ctx, logger, cc.FanoutConfig)
+		handler, err := fanout.NewMessageHandler(logger, cc.FanoutConfig)
 		if err != nil {
 			logger.Error("Failed creating new fanout handler.", zap.Error(err))
 			return nil, err
