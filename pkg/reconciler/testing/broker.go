@@ -99,6 +99,13 @@ func WithBrokerAddress(address string) BrokerOption {
 	}
 }
 
+// WithBrokerAddressURI sets the Broker's address as URI.
+func WithBrokerAddressURI(uri *apis.URL) BrokerOption {
+	return func(b *v1alpha1.Broker) {
+		b.Status.SetAddress(uri)
+	}
+}
+
 // WithBrokerReady sets .Status to ready.
 func WithBrokerReady(b *v1alpha1.Broker) {
 	b.Status = *v1alpha1.TestHelper.ReadyBrokerStatus()
