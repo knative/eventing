@@ -93,20 +93,23 @@ func (f *MessageHandler) ServeHTTP(response nethttp.ResponseWriter, request *net
 // dispatch takes the event, fans it out to each subscription in f.config. If all the fanned out
 // events return successfully, then return nil. Else, return an error.
 func (f *MessageHandler) dispatch(ctx context.Context, originalMessage binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
-	// We buffer the message and bind the lifecycle with all fanout requests acks from other messages are received
 	subs := len(f.config.Subscriptions)
-	message, err := buffering.BufferMessage(ctx, originalMessage, transformers)
+
+	// We buffer the message to send it several times
+	bufferedMessage, err := buffering.CopyMessage(ctx, originalMessage, transformers)
 	if err != nil {
 		return err
 	}
+	// We don't need the original message anymore
 	_ = originalMessage.Finish(nil)
 
-	message = buffering.WithAcksBeforeFinish(message, subs)
+	// Bind the lifecycle of the buffered message to the number of subs
+	bufferedMessage = buffering.WithAcksBeforeFinish(bufferedMessage, subs)
 
 	errorCh := make(chan error, subs)
 	for _, sub := range f.config.Subscriptions {
 		go func(s eventingduck.SubscriberSpec) {
-			errorCh <- f.makeFanoutRequest(ctx, message, additionalHeaders, s)
+			errorCh <- f.makeFanoutRequest(ctx, bufferedMessage, additionalHeaders, s)
 		}(sub)
 	}
 
