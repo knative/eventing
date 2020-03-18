@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
-	"github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/client"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	"github.com/cloudevents/sdk-go/v1/cloudevents/client"
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/broker"
 	"knative.dev/eventing/pkg/utils"
@@ -116,13 +116,12 @@ func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cl
 	}
 
 	start := time.Now()
-	// TODO: DO NOT SUBMIT
-	// Needs to be looked up from the Channel.Status.URL
+	// TODO: Today these are pre-deterministic, change this watch for
+	// channels and look up from the channels Status
 	channelURI := &url.URL{
 		Scheme: "http",
-		//		Host:   fmt.Sprintf("%s-%s-kne-trigger-kn-channel.knative-eventing.svc.cluster.local", brokerNamespace, brokerName),
-		Host: fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.cluster.local", brokerName, brokerNamespace),
-		Path: "/",
+		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.cluster.local", brokerName, brokerNamespace),
+		Path:   "/",
 	}
 	sendingCTX := utils.SendingContextFrom(ctx, tctx, channelURI)
 

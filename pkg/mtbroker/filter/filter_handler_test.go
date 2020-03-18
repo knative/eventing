@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
-	cepkg "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents"
-	cehttp "github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cepkg "github.com/cloudevents/sdk-go/v1/cloudevents"
+	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
