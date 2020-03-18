@@ -34,6 +34,7 @@ import (
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/kmeta"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -64,6 +65,7 @@ type Reconciler struct {
 	// listers index properties about resources
 	brokerLister       eventinglisters.BrokerLister
 	serviceLister      corev1listers.ServiceLister
+	endpointsLister    corev1listers.EndpointsLister
 	deploymentLister   appsv1listers.DeploymentLister
 	subscriptionLister messaginglisters.SubscriptionLister
 	triggerLister      eventinglisters.TriggerLister
@@ -124,7 +126,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	return err
 }
 
-func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, pkgreconciler.Event) {
+func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (kmeta.Accessor, pkgreconciler.Event) {
 	logging.FromContext(ctx).Debug("Reconciling", zap.Any("Broker", b))
 	b.Status.InitializeConditions()
 	b.Status.ObservedGeneration = b.Generation
@@ -176,42 +178,40 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (*co
 	b.Status.TriggerChannel = &chanMan.ref
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
-	filterDeployment, err := r.reconcileFilterDeployment(ctx, b)
-	if err != nil {
+	if err := r.reconcileFilterDeployment(ctx, b); err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Deployment", zap.Error(err))
 		b.Status.MarkFilterFailed("DeploymentFailure", "%v", err)
 		return nil, err
 	}
-	filterSvc, err := r.reconcileFilterService(ctx, b)
+	filterEndpoints, err := r.reconcileFilterService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling filter Service", zap.Error(err))
 		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
 		return nil, err
 	}
-	b.Status.PropagateFilterDeploymentAvailability(filterDeployment)
+	b.Status.PropagateFilterAvailability(filterEndpoints)
 
-	ingressDeployment, err := r.reconcileIngressDeployment(ctx, b, triggerChan)
-	if err != nil {
+	if err := r.reconcileIngressDeployment(ctx, b, triggerChan); err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Deployment", zap.Error(err))
 		b.Status.MarkIngressFailed("DeploymentFailure", "%v", err)
 		return nil, err
 	}
 
-	svc, err := r.reconcileIngressService(ctx, b)
+	ingressEndpoints, err := r.reconcileIngressService(ctx, b)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem reconciling ingress Service", zap.Error(err))
 		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
 		return nil, err
 	}
-	b.Status.PropagateIngressDeploymentAvailability(ingressDeployment)
+	b.Status.PropagateIngressAvailability(ingressEndpoints)
 	b.Status.SetAddress(&apis.URL{
 		Scheme: "http",
-		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+		Host:   names.ServiceHostName(ingressEndpoints.GetName(), ingressEndpoints.GetNamespace()),
 	})
 
 	// So, at this point the Broker is ready and everything should be solid
 	// for the triggers to act upon.
-	return filterSvc, nil
+	return filterEndpoints, nil
 }
 
 type channelTemplate struct {
@@ -292,7 +292,7 @@ func (r *Reconciler) FinalizeKind(ctx context.Context, b *v1alpha1.Broker) pkgre
 }
 
 // reconcileFilterDeployment reconciles Broker's 'b' filter deployment.
-func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.Broker) error {
 	expected := resources.MakeFilterDeployment(&resources.FilterArgs{
 		Broker:             b,
 		Image:              r.filterImage,
@@ -302,7 +302,7 @@ func (r *Reconciler) reconcileFilterDeployment(ctx context.Context, b *v1alpha1.
 }
 
 // reconcileFilterService reconciles Broker's 'b' filter service.
-func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
+func (r *Reconciler) reconcileFilterService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Endpoints, error) {
 	expected := resources.MakeFilterService(b)
 	return r.reconcileService(ctx, expected)
 }
@@ -356,16 +356,15 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 }
 
 // reconcileDeployment reconciles the K8s Deployment 'd'.
-func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) error {
 	current, err := r.deploymentLister.Deployments(d.Namespace).Get(d.Name)
 	if apierrs.IsNotFound(err) {
 		current, err = r.KubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return current, nil
 	} else if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !equality.Semantic.DeepDerivative(d.Spec, current.Spec) {
@@ -374,21 +373,20 @@ func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 		desired.Spec = d.Spec
 		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return current, nil
+	return nil
 }
 
 // reconcileService reconciles the K8s Service 'svc'.
-func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
+func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Endpoints, error) {
 	current, err := r.serviceLister.Services(svc.Namespace).Get(svc.Name)
 	if apierrs.IsNotFound(err) {
 		current, err = r.KubeClientSet.CoreV1().Services(svc.Namespace).Create(svc)
 		if err != nil {
 			return nil, err
 		}
-		return current, nil
 	} else if err != nil {
 		return nil, err
 	}
@@ -405,11 +403,12 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 			return nil, err
 		}
 	}
-	return current, nil
+
+	return r.endpointsLister.Endpoints(svc.Namespace).Get(svc.Name)
 }
 
 // reconcileIngressDeploymentCRD reconciles the Ingress Deployment for a CRD backed channel.
-func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) (*v1.Deployment, error) {
+func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1.Broker, c *duckv1alpha1.Channelable) error {
 	expected := resources.MakeIngressDeployment(&resources.IngressArgs{
 		Broker:             b,
 		Image:              r.ingressImage,
@@ -420,13 +419,13 @@ func (r *Reconciler) reconcileIngressDeployment(ctx context.Context, b *v1alpha1
 }
 
 // reconcileIngressService reconciles the Ingress Service.
-func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Service, error) {
+func (r *Reconciler) reconcileIngressService(ctx context.Context, b *v1alpha1.Broker) (*corev1.Endpoints, error) {
 	expected := resources.MakeIngressService(b)
 	return r.reconcileService(ctx, expected)
 }
 
 // reconcileTriggers reconciles the Triggers that are pointed to this broker
-func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, filterSvc *corev1.Service) error {
+func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, filterSvc kmeta.Accessor) error {
 
 	// TODO: Figure out the labels stuff... If webhook does it, we can filter like this...
 	// Find all the Triggers that have been labeled as belonging to me
