@@ -17,8 +17,8 @@ limitations under the License.
 package cloudevents
 
 import (
-	ce "github.com/cloudevents/sdk-go/legacy"
-	"github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/types"
+	ce "github.com/cloudevents/sdk-go/v1"
+	"github.com/cloudevents/sdk-go/v1/cloudevents/types"
 )
 
 // CloudEvent related constants.

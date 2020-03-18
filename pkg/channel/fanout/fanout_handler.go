@@ -26,7 +26,7 @@ import (
 	"errors"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 

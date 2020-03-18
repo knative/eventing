@@ -23,8 +23,8 @@ import (
 	"net/url"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
-	"github.com/cloudevents/sdk-go/legacy/pkg/cloudevents/client"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	"github.com/cloudevents/sdk-go/v1/cloudevents/client"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/broker"

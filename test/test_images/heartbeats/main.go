@@ -30,7 +30,7 @@ import (
 
 	"knative.dev/eventing/pkg/kncloudevents"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/kelseyhightower/envconfig"
 )
 

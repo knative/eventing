@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

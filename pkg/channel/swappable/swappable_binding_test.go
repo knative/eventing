@@ -22,9 +22,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/binding"
-	bindingshttp "github.com/cloudevents/sdk-go/pkg/protocol/http"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"

@@ -17,8 +17,8 @@ limitations under the License.
 package tracing
 
 import (
-	"github.com/cloudevents/sdk-go/pkg/binding"
-	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	"go.opencensus.io/trace"
 )
 

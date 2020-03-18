@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/google/go-cmp/cmp"
 
 	"knative.dev/eventing/pkg/adapter/apiserver/events"

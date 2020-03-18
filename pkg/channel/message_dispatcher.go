@@ -22,9 +22,9 @@ import (
 	nethttp "net/http"
 	"net/url"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/cloudevents/sdk-go/pkg/binding"
-	"github.com/cloudevents/sdk-go/pkg/protocol/http"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 
