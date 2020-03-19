@@ -135,7 +135,7 @@ func (r *Handler) readyZ(writer http.ResponseWriter, _ *http.Request) {
 //
 // This method will block until a message is received on the stop channel.
 func (r *Handler) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	errCh := make(chan error, 1)
