@@ -28,10 +28,8 @@ import (
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/logging"
@@ -44,19 +42,11 @@ const (
 	namespaceReconcileFailure = "NamespaceReconcileFailure"
 
 	// Name of the corev1.Events emitted from the reconciliation process.
-	configMapPropagationCreated = "ConfigMapPropagationCreated"
-	brokerCreated               = "BrokerCreated"
-	serviceAccountCreated       = "BrokerServiceAccountCreated"
-	serviceAccountRBACCreated   = "BrokerServiceAccountRBACCreated"
-	secretCopied                = "SecretCopied"
-	secretCopyFailure           = "SecretCopyFailure"
+	brokerCreated = "BrokerCreated"
 )
 
 var (
-	serviceAccountGVK       = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
-	roleBindingGVK          = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
-	brokerGVK               = v1alpha1.SchemeGroupVersion.WithKind("Broker")
-	configMapPropagationGVK = configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation")
+	brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
 )
 
 type Reconciler struct {

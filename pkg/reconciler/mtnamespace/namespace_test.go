@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
@@ -180,12 +179,4 @@ func TestAllCases(t *testing.T) {
 			brokerLister:    listers.GetV1Beta1BrokerLister(),
 		}
 	}, false, logger))
-}
-
-func createPatch(namespace string, name string) clientgotesting.PatchActionImpl {
-	patch := clientgotesting.PatchActionImpl{}
-	patch.Namespace = namespace
-	patch.Name = name
-	patch.Patch = []byte(`{"imagePullSecrets":[{"name":"` + brokerImagePullSecretName + `"}]}`)
-	return patch
 }
