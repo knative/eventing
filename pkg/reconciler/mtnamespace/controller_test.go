@@ -14,21 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package mtnamespace
 
 import (
-	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"testing"
 
-	"knative.dev/pkg/injection/sharedmain"
+	"knative.dev/pkg/configmap"
+	. "knative.dev/pkg/reconciler/testing"
 
-	"knative.dev/eventing/pkg/reconciler/mtbroker"
-	"knative.dev/eventing/pkg/reconciler/mtnamespace"
+	// Fake injection informers
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/namespace/fake"
 )
 
-func main() {
-	sharedmain.Main("mt-broker-controller",
-		mtnamespace.NewController,
-		mtbroker.NewController,
-	)
+func TestNew(t *testing.T) {
+	ctx, _ := SetupFakeContext(t)
+
+	c := NewController(ctx, configmap.NewStaticWatcher())
+
+	if c == nil {
+		t.Fatal("Expected NewController to return a non-nil value")
+	}
 }
