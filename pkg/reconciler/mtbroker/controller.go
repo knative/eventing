@@ -38,6 +38,7 @@ import (
 	"knative.dev/pkg/controller"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
 )
 
 const (
@@ -77,14 +78,10 @@ func NewController(
 	r.addressableTracker = duck.NewListableTracker(ctx, addressable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.uriResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
+	brokerFilter := pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/)
 	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.AnnotationFilterFunc(brokerreconciler.ClassAnnotationKey, eventing.MTChannelBrokerClassValue, false /*allowUnset*/),
+		FilterFunc: brokerFilter,
 		Handler:    controller.HandleAll(impl.Enqueue),
-	})
-
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.LabelExistsFilterFunc(eventing.BrokerLabelKey),
-		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("" /*any namespace*/, eventing.BrokerLabelKey)),
 	})
 
 	// Reconcile Broker (which transitively reconciles the triggers), when Subscriptions
@@ -108,6 +105,30 @@ func NewController(
 			}
 		},
 	))
+
+	// When the endpoints in our multi-tenant filter/ingress change, do a global resync.
+	// During installation, we might reconcile Brokers before our shared filter/ingress is
+	// ready, so when these endpoints change perform a global resync.
+	grCb := func(obj interface{}) {
+		// Since changes in the Filter/Ingress Service endpoints affect all the Broker objects,
+		// do a global resync.
+		r.Logger.Info("Doing a global resync due to endpoint changes in shared broker component")
+		impl.FilteredGlobalResync(brokerFilter, brokerInformer.Informer())
+	}
+	// Resync for the filter.
+	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.ChainFilterFuncs(
+			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
+			pkgreconciler.NameFilterFunc(BrokerFilterName)),
+		Handler: controller.HandleAll(grCb),
+	})
+	// Resync for the ingress.
+	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.ChainFilterFuncs(
+			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
+			pkgreconciler.NameFilterFunc(BrokerIngressName)),
+		Handler: controller.HandleAll(grCb),
+	})
 
 	return impl
 }
