@@ -18,11 +18,12 @@ package v1alpha2
 
 import (
 	"context"
-	"knative.dev/eventing/pkg/testutils"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/testutils"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 

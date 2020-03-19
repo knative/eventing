@@ -18,7 +18,9 @@ package v1alpha2
 
 import (
 	"context"
+
 	"github.com/robfig/cron"
+
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/eventing"

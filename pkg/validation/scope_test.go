@@ -18,9 +18,10 @@ package validation
 
 import (
 	"fmt"
+	"testing"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/testutils"
-	"testing"
 )
 
 type r struct {

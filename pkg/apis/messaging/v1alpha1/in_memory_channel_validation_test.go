@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"knative.dev/eventing/pkg/testutils"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +25,7 @@ import (
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/testutils"
 )
 
 func TestInMemoryChannelValidation(t *testing.T) {

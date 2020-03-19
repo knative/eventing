@@ -22,6 +22,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/validation"
+
 	"knative.dev/pkg/apis"
 )
 
