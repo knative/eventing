@@ -33,6 +33,17 @@ const (
 	// the scope of the component handling a given resource.
 	// Valid values are: cluster, namespace, resource.
 	ScopeAnnotationKey = GroupName + "/scope"
+
+	// ScopeCluster is the value of the ScopeAnnotationKey
+	// indicating the cluster scope
+	ScopeCluster = "cluster"
+
+	// ScopeNamespace is the value of the ScopeAnnotationKey
+	// indicating the namespace scope
+	ScopeNamespace = "namespace"
+
+	// DefaultScope is the default value of the ScopeAnnotationKey
+	DefaultScope = ScopeCluster
 )
 
 var (

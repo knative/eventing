@@ -30,13 +30,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
+
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
@@ -392,7 +395,7 @@ func TestInNamespace(t *testing.T) {
 			Name: "Works, creates new service account, role binding, dispatcher deployment and service and channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace)),
+				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeReadyEndpoints(),
 			},
@@ -406,7 +409,7 @@ func TestInNamespace(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace),
+					reconciletesting.WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),
@@ -426,7 +429,7 @@ func TestInNamespace(t *testing.T) {
 			Name: "Works, existing service account, role binding, dispatcher deployment and service, new channel",
 			Key:  imcKey,
 			Objects: []runtime.Object{
-				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace)),
+				reconciletesting.NewInMemoryChannel(imcName, testNS, reconciletesting.WithInMemoryScopeAnnotation(eventing.ScopeNamespace)),
 				makeServiceAccount(reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(testNS, dispatcherName, dispatcherName, reconciletesting.NewInMemoryChannel(imcName, testNS)),
 				makeRoleBinding(systemNS, dispatcherName+"-"+testNS, "eventing-config-reader", reconciletesting.NewInMemoryChannel(imcName, "knative-testing")),
@@ -440,7 +443,7 @@ func TestInNamespace(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewInMemoryChannel(imcName, testNS,
-					reconciletesting.WithInMemoryScopeAnnotation(scopeNamespace),
+					reconciletesting.WithInMemoryScopeAnnotation(eventing.ScopeNamespace),
 					reconciletesting.WithInitInMemoryChannelConditions,
 					reconciletesting.WithInMemoryChannelServiceReady(),
 					reconciletesting.WithInMemoryChannelEndpointsReady(),

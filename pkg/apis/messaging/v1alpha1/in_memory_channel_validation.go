@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/kmp"
 
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/validation"
 	"knative.dev/pkg/apis"
 )
 
@@ -31,12 +31,16 @@ func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
 	// Validate annotations
 	if imc.Annotations != nil {
 		if scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]; ok {
-			if scope != "namespace" && scope != "cluster" {
+			if scope != eventing.ScopeNamespace && scope != eventing.ScopeCluster {
 				iv := apis.ErrInvalidValue(scope, "")
 				iv.Details = "expected either 'cluster' or 'namespace'"
 				errs = errs.Also(iv.ViaFieldKey("annotations", eventing.ScopeAnnotationKey).ViaField("metadata"))
 			}
 		}
+	}
+
+	if err := imc.checkImmutableFields(ctx); err != nil {
+		errs = errs.Also(err)
 	}
 
 	return errs
@@ -58,25 +62,19 @@ func (imcs *InMemoryChannelSpec) Validate(ctx context.Context) *apis.FieldError 
 	return errs
 }
 
-func (imcs *InMemoryChannel) CheckImmutableFields(ctx context.Context, original *InMemoryChannel) *apis.FieldError {
-	if original == nil {
+func (imcs *InMemoryChannel) checkImmutableFields(ctx context.Context) *apis.FieldError {
+
+	if !apis.IsInUpdate(ctx) {
 		return nil
 	}
 
-	diff, err := kmp.ShortDiff(original.GetAnnotations()[eventing.ScopeAnnotationKey], imcs.GetAnnotations()[eventing.ScopeAnnotationKey])
+	original := apis.GetBaseline(ctx).(*InMemoryChannel)
 
-	if err != nil {
+	if err := validation.Scope(original.GetAnnotations(), imcs.GetAnnotations()); err != nil {
 		return &apis.FieldError{
-			Message: "couldn't diff the Broker objects",
+			Message: fmt.Sprintf("invalid %s annotation value", eventing.ScopeAnnotationKey),
+			Paths:   []string{"metadata.annotations"},
 			Details: err.Error(),
-		}
-	}
-
-	if diff != "" {
-		return &apis.FieldError{
-			Message: "Immutable fields changed (-old +new)",
-			Paths:   []string{"annotations"},
-			Details: diff,
 		}
 	}
 

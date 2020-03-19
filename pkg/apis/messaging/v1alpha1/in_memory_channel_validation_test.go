@@ -17,12 +17,17 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"knative.dev/pkg/apis"
+
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/pkg/apis"
+	"knative.dev/eventing/pkg/testutils"
 )
 
 func TestInMemoryChannelValidation(t *testing.T) {
@@ -97,4 +102,50 @@ func TestInMemoryChannelValidation(t *testing.T) {
 	}}
 
 	doValidateTest(t, tests)
+}
+
+func TestChannel_CheckImmutableFields(t *testing.T) {
+
+	type tc struct {
+		name      string
+		ctx       context.Context
+		imcs      *InMemoryChannel
+		wantError bool
+	}
+
+	imcp := func(annotations map[string]string) *InMemoryChannel {
+		return &InMemoryChannel{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: annotations,
+			},
+		}
+	}
+
+	transitions := testutils.GetScopeAnnotationsTransitions()
+	tt := make([]tc, len(transitions))
+
+	for i, t := range transitions {
+		tt[i] = tc{
+			name:      fmt.Sprintf("original %s current %s", t.Original[eventing.ScopeAnnotationKey], t.Current[eventing.ScopeAnnotationKey]),
+			ctx:       apis.WithinUpdate(context.TODO(), imcp(t.Original)),
+			imcs:      imcp(t.Current),
+			wantError: t.WantError,
+		}
+	}
+
+	tt = append(tt, tc{
+		name:      "no original",
+		ctx:       context.TODO(),
+		imcs:      &InMemoryChannel{},
+		wantError: false,
+	})
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := tc.imcs.checkImmutableFields(tc.ctx)
+			if tc.wantError != (errs != nil) {
+				t.Fatalf("want error %v got %+v", tc.wantError, errs)
+			}
+		})
+	}
 }
