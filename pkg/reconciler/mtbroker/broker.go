@@ -54,6 +54,9 @@ const (
 	// Name of the corev1.Events emitted from the Broker reconciliation process.
 	brokerReconcileError = "BrokerReconcileError"
 	brokerReconciled     = "BrokerReconciled"
+
+	BrokerFilterName  = "broker-filter"
+	BrokerIngressName = "broker-ingress"
 )
 
 type Reconciler struct {
@@ -162,7 +165,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	b.Status.TriggerChannel = &chanMan.ref
 	b.Status.PropagateTriggerChannelReadiness(&triggerChan.Status)
 
-	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get("broker-filter")
+	filterEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(BrokerFilterName)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem getting endpoints for filter", zap.String("namespace", system.Namespace()), zap.Error(err))
 		b.Status.MarkFilterFailed("ServiceFailure", "%v", err)
@@ -170,7 +173,7 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) pkgr
 	}
 	b.Status.PropagateFilterAvailability(filterEndpoints)
 
-	ingressEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get("broker-ingress")
+	ingressEndpoints, err := r.endpointsLister.Endpoints(system.Namespace()).Get(BrokerIngressName)
 	if err != nil {
 		logging.FromContext(ctx).Error("Problem getting endpoints for ingress", zap.String("namespace", system.Namespace()), zap.Error(err))
 		b.Status.MarkIngressFailed("ServiceFailure", "%v", err)
