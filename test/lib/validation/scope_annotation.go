@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package testutils
+package validation
 
 import (
 	"context"
 	"fmt"
-	"testing"
-
-	"knative.dev/pkg/apis"
-
 	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/pkg/apis"
+	"testing"
 )
 
 // AnnotationsTransition contains original and current annotations,

@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/testutils"
+	testlib "knative.dev/eventing/test/lib/validation"
 )
 
 type r struct {
@@ -34,7 +34,7 @@ func (m r) GetAnnotations() map[string]string {
 
 func TestScope(t *testing.T) {
 
-	tt := testutils.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeNamespace)
+	tt := testlib.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeNamespace)
 
 	for _, tc := range tt {
 		name := fmt.Sprintf("original %s current %s", tc.Original[eventing.ScopeAnnotationKey], tc.Current[eventing.ScopeAnnotationKey])

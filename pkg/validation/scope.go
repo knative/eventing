@@ -24,6 +24,8 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 )
 
+const immutableScopeAnnotationErrorMsg = "invalid " + eventing.ScopeAnnotationKey + " annotation value - the " + eventing.ScopeAnnotationKey + " annotation is immutable"
+
 type AnnotationProvider interface {
 	GetAnnotations() map[string]string
 }
@@ -41,7 +43,7 @@ func Scope(errs *apis.FieldError, original AnnotationProvider, current Annotatio
 	if !originalHasAnnotation {
 		if currentScope != defaultScope {
 			return addError(errs, &apis.FieldError{
-				Message: fmt.Sprintf("invalid %s annotation value", eventing.ScopeAnnotationKey),
+				Message: immutableScopeAnnotationErrorMsg,
 				Paths:   []string{"metadata.annotations"},
 				Details: fmt.Sprintf("'%s' annotation was not present - applied default '%s'", eventing.ScopeAnnotationKey, defaultScope),
 			})
@@ -51,7 +53,7 @@ func Scope(errs *apis.FieldError, original AnnotationProvider, current Annotatio
 
 	if originalScope != currentScope {
 		return addError(errs, &apis.FieldError{
-			Message: fmt.Sprintf("invalid %s annotation value", eventing.ScopeAnnotationKey),
+			Message: immutableScopeAnnotationErrorMsg,
 			Paths:   []string{"metadata.annotations"},
 			Details: fmt.Sprintf("'%s' annotation was '%s' - current is '%s'", eventing.ScopeAnnotationKey, originalScope, currentScope),
 		})

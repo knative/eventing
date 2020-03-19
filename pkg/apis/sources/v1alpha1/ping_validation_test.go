@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/testutils"
+	testlib "knative.dev/eventing/test/lib/validation"
 
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -125,9 +125,9 @@ func TestPingSourceValidation(t *testing.T) {
 }
 
 func TestPingSourceValidation_ImmutabilityScopeAnnotation(t *testing.T) {
-	testutils.CheckScopeAnnotationWithTransitions(
+	testlib.CheckScopeAnnotationWithTransitions(
 		t,
-		func(m map[string]string) testutils.Resource {
+		func(m map[string]string) testlib.Resource {
 			return &PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: m,
@@ -145,5 +145,5 @@ func TestPingSourceValidation_ImmutabilityScopeAnnotation(t *testing.T) {
 				},
 			}
 		},
-		testutils.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeResource))
+		testlib.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeResource))
 }

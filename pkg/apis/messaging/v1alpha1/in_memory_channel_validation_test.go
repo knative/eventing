@@ -25,7 +25,7 @@ import (
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/testutils"
+	testlib "knative.dev/eventing/test/lib/validation"
 )
 
 func TestInMemoryChannelValidation(t *testing.T) {
@@ -103,14 +103,14 @@ func TestInMemoryChannelValidation(t *testing.T) {
 }
 
 func TestInMemoryChannelValidation_ImmutabilityScopeAnnotation(t *testing.T) {
-	testutils.CheckScopeAnnotationWithTransitions(
+	testlib.CheckScopeAnnotationWithTransitions(
 		t,
-		func(m map[string]string) testutils.Resource {
+		func(m map[string]string) testlib.Resource {
 			return &InMemoryChannel{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: m,
 				},
 			}
 		},
-		testutils.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeNamespace))
+		testlib.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeNamespace))
 }

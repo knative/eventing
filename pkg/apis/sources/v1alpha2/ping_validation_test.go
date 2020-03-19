@@ -23,8 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/testutils"
-
+	testlib "knative.dev/eventing/test/lib/validation"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -126,9 +125,9 @@ func TestPingSourceValidation(t *testing.T) {
 }
 
 func TestPingSourceValidation_ImmutabilityScopeAnnotation(t *testing.T) {
-	testutils.CheckScopeAnnotationWithTransitions(
+	testlib.CheckScopeAnnotationWithTransitions(
 		t,
-		func(m map[string]string) testutils.Resource {
+		func(m map[string]string) testlib.Resource {
 			return &PingSource{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: m,
@@ -147,5 +146,5 @@ func TestPingSourceValidation_ImmutabilityScopeAnnotation(t *testing.T) {
 				},
 			}
 		},
-		testutils.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeResource))
+		testlib.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeResource))
 }
