@@ -23,7 +23,6 @@ import (
 	"knative.dev/pkg/configmap"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -39,27 +38,7 @@ import (
 )
 
 const (
-	testNS                    = "test-namespace"
-	brokerImagePullSecretName = "broker-image-pull-secret"
-)
-
-var (
-	brokerGVR = schema.GroupVersionResource{
-		Group:    "eventing.knative.dev",
-		Version:  "v1alpha1",
-		Resource: "brokers",
-	}
-
-	roleBindingGVR = schema.GroupVersionResource{
-		Group:    "rbac.authorization.k8s.io",
-		Version:  "v1",
-		Resource: "rolebindings",
-	}
-
-	serviceAccountGVR = schema.GroupVersionResource{
-		Version:  "v1",
-		Resource: "serviceaccounts",
-	}
+	testNS = "test-namespace"
 )
 
 func init() {
