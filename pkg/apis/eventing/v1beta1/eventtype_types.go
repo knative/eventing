@@ -65,6 +65,11 @@ type EventTypeSpec struct {
 	// It may be a JSON schema, a protobuf schema, etc. It is optional.
 	// +optional
 	Schema *apis.URL `json:"schema,omitempty"`
+	// SchemaData allows the CloudEvents schema to be stored directly in the
+	// EventType. Content is dependent on the encoding. Optional attribute.
+	// The contents are not validated or manipulated by the system.
+	// +optional
+	SchemaData string `json:"schemaData,omitempty"`
 	// Broker refers to the Broker that can provide the EventType.
 	Broker string `json:"broker"`
 	// Description is an optional field used to describe the EventType, in any meaningful way.

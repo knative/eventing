@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +34,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"knative.dev/eventing/pkg/adapter"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter"
 )
 
 var (
@@ -73,7 +74,7 @@ const (
 	// ResourceMode produces payloads of ResourceEvent
 	ResourceMode = "Resource"
 
-	resourceGroup = "apiserversources.sources.eventing.knative.dev"
+	resourceGroup = "apiserversources.sources.knative.dev"
 )
 
 // GVRC is a combination of GroupVersionResource, Controller flag, LabelSelector and OwnerRef

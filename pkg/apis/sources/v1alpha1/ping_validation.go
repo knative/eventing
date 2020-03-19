@@ -18,13 +18,23 @@ package v1alpha1
 
 import (
 	"context"
-
 	"github.com/robfig/cron"
 	"knative.dev/pkg/apis"
+
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/validation"
 )
 
 func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
-	return c.Spec.Validate(ctx).ViaField("spec")
+	errs := c.Spec.Validate(ctx).ViaField("spec")
+	errs = v1alpha2.ValidateAnnotations(errs, c.Annotations)
+
+	if !apis.IsInUpdate(ctx) {
+		return errs
+	}
+
+	return validation.Scope(errs, apis.GetBaseline(ctx).(*PingSource).GetAnnotations, c.GetAnnotations, eventing.ScopeCluster)
 }
 
 func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {

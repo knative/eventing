@@ -28,6 +28,10 @@ type FakeSourcesV1alpha2 struct {
 	*testing.Fake
 }
 
+func (c *FakeSourcesV1alpha2) ApiServerSources(namespace string) v1alpha2.ApiServerSourceInterface {
+	return &FakeApiServerSources{c, namespace}
+}
+
 func (c *FakeSourcesV1alpha2) PingSources(namespace string) v1alpha2.PingSourceInterface {
 	return &FakePingSources{c, namespace}
 }

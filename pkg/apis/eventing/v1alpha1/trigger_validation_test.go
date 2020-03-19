@@ -67,7 +67,6 @@ var (
 		},
 	}
 	// Dependency annotation
-	validDependencyAnnotation   = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
 	invalidDependencyAnnotation = "invalid dependency annotation"
 	dependencyAnnotationPath    = fmt.Sprintf("metadata.annotations[%s]", DependencyAnnotation)
 	// Create default broker annotation
@@ -158,7 +157,7 @@ func TestTriggerValidation(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: "test-ns-1",
 				Annotations: map[string]string{
-					DependencyAnnotation: "{\"kind\":\"CronJobSource\",\"namespace\":\"test-ns-2\", \"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}",
+					DependencyAnnotation: "{\"kind\":\"PingSource\",\"namespace\":\"test-ns-2\", \"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
 				}},
 			Spec: TriggerSpec{
 				Broker:     "test_broker",
@@ -176,7 +175,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: "{\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}",
+						DependencyAnnotation: "{\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
@@ -193,7 +192,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: "{\"kind\":\"CronJobSource\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}",
+						DependencyAnnotation: "{\"kind\":\"PingSource\",\"apiVersion\":\"sources.knative.dev/v1alpha1\"}",
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",
@@ -210,7 +209,7 @@ func TestTriggerValidation(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{
 					Namespace: "test-ns",
 					Annotations: map[string]string{
-						DependencyAnnotation: "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\"}",
+						DependencyAnnotation: "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\"}",
 					}},
 				Spec: TriggerSpec{
 					Broker:     "test_broker",

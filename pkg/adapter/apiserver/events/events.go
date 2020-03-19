@@ -24,8 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+
+	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
 func MakeAddEvent(source string, obj interface{}) (*cloudevents.Event, error) {

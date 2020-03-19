@@ -5,5 +5,5 @@ metadata:
 spec:
   containers:
     - name: filterevents
-      image: knative.dev/eventing/test/test_images/filterevents
+      image: ko://knative.dev/eventing/test/test_images/filterevents
 

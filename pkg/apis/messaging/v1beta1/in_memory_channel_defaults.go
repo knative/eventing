@@ -16,9 +16,20 @@ limitations under the License.
 
 package v1beta1
 
-import "context"
+import (
+	"context"
+
+	"knative.dev/eventing/pkg/apis/messaging"
+)
 
 func (imc *InMemoryChannel) SetDefaults(ctx context.Context) {
+	// Set the duck subscription to indicate that we support
+	// v1beta1 version of the Subscribable.
+	if imc.Annotations == nil {
+		imc.Annotations = make(map[string]string)
+	}
+	imc.Annotations[messaging.SubscribableDuckVersionAnnotation] = "v1beta1"
+
 	imc.Spec.SetDefaults(ctx)
 }
 

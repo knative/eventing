@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,11 +23,12 @@ import (
 	"net/http"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
-	"knative.dev/eventing/pkg/utils"
 	_ "knative.dev/pkg/system/testing"
+
+	"knative.dev/eventing/pkg/utils"
 
 	"go.uber.org/zap"
 )

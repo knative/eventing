@@ -20,7 +20,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/duck"
@@ -71,17 +70,27 @@ func (s *ApiServerSourceStatus) InitializeConditions() {
 
 // MarkSink sets the condition that the source has a sink configured.
 func (s *ApiServerSourceStatus) MarkSink(uri string) {
-	s.SinkURI = uri
+	s.SinkURI = nil
 	if len(uri) > 0 {
-		apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
+		if u, err := apis.ParseURL(uri); err != nil {
+			apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkInvalid", "Failed to parse sink: %v", err)
+		} else {
+			s.SinkURI = u
+			apiserverCondSet.Manage(s).MarkTrue(ApiServerConditionSinkProvided)
+		}
+
 	} else {
-		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.%s", "")
+		apiserverCondSet.Manage(s).MarkFalse(ApiServerConditionSinkProvided, "SinkEmpty", "Sink has resolved to empty.")
 	}
 }
 
 // MarkSinkWarnDeprecated sets the condition that the source has a sink configured and warns ref is deprecated.
 func (s *ApiServerSourceStatus) MarkSinkWarnRefDeprecated(uri string) {
-	s.SinkURI = uri
+	if u, err := apis.ParseURL(uri); err != nil {
+		s.SinkURI = nil
+	} else {
+		s.SinkURI = u
+	}
 	if len(uri) > 0 {
 		c := apis.Condition{
 			Type:     ApiServerConditionSinkProvided,

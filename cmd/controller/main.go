@@ -25,11 +25,8 @@ import (
 	"knative.dev/eventing/pkg/reconciler/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/channel"
 	"knative.dev/eventing/pkg/reconciler/eventtype"
-	"knative.dev/eventing/pkg/reconciler/legacyapiserversource"
-	"knative.dev/eventing/pkg/reconciler/legacycontainersource"
-	"knative.dev/eventing/pkg/reconciler/legacycronjobsource"
 	"knative.dev/eventing/pkg/reconciler/parallel"
-	"knative.dev/eventing/pkg/reconciler/pingsource"
+	pingsource "knative.dev/eventing/pkg/reconciler/pingsource/controller"
 	"knative.dev/eventing/pkg/reconciler/sequence"
 	"knative.dev/eventing/pkg/reconciler/subscription"
 	"knative.dev/eventing/pkg/reconciler/trigger"
@@ -53,11 +50,5 @@ func main() {
 		// Sources
 		apiserversource.NewController,
 		pingsource.NewController,
-
-		// Legacy Sources
-		// TODO(#2312): Remove this after v0.13.
-		legacyapiserversource.NewController,
-		legacycontainersource.NewController,
-		legacycronjobsource.NewController,
 	)
 }

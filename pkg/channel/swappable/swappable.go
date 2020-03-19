@@ -28,8 +28,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.uber.org/zap"
+
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
 )
 

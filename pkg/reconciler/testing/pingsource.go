@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"knative.dev/eventing/pkg/apis/eventing"
+
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	"knative.dev/pkg/apis"
@@ -71,12 +73,48 @@ func WithPingSourceUID(uid string) PingSourceOption {
 	}
 }
 
+func WithPingSourceResourceScopeAnnotation(c *v1alpha1.PingSource) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
+}
+
+func WithPingSourceV1A2ResourceScopeAnnotation(c *v1alpha2.PingSource) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeResource
+}
+
+func WithPingSourceClusterScopeAnnotation(c *v1alpha1.PingSource) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
+}
+
+func WithPingSourceV1A2ClusterScopeAnnotation(c *v1alpha2.PingSource) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	c.Annotations[eventing.ScopeAnnotationKey] = eventing.ScopeCluster
+}
+
 // WithInitPingSourceConditions initializes the PingSource's conditions.
 func WithInitPingSourceConditions(s *v1alpha1.PingSource) {
 	s.Status.InitializeConditions()
 }
 
+func WithInitPingSourceV1A2Conditions(s *v1alpha2.PingSource) {
+	s.Status.InitializeConditions()
+}
+
 func WithValidPingSourceSchedule(s *v1alpha1.PingSource) {
+	s.Status.MarkSchedule()
+}
+
+func WithValidPingSourceV1A2Schedule(s *v1alpha2.PingSource) {
 	s.Status.MarkSchedule()
 }
 
@@ -88,9 +126,25 @@ func WithPingSourceSinkNotFound(s *v1alpha1.PingSource) {
 	s.Status.MarkNoSink("NotFound", "")
 }
 
+func WithPingSourceV1A2SinkNotFound(s *v1alpha2.PingSource) {
+	s.Status.MarkNoSink("NotFound", "")
+}
+
 func WithPingSourceSink(uri *apis.URL) PingSourceOption {
 	return func(s *v1alpha1.PingSource) {
 		s.Status.MarkSink(uri)
+	}
+}
+
+func WithPingSourceV1A2Sink(uri *apis.URL) PingSourceV1A2Option {
+	return func(s *v1alpha2.PingSource) {
+		s.Status.MarkSink(uri)
+	}
+}
+
+func WithPingSourceNotDeployed(name string) PingSourceOption {
+	return func(s *v1alpha1.PingSource) {
+		s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
 	}
 }
 
@@ -98,11 +152,23 @@ func WithPingSourceDeployed(s *v1alpha1.PingSource) {
 	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
 
+func WithPingSourceV1A2Deployed(s *v1alpha2.PingSource) {
+	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
+}
+
 func WithPingSourceEventType(s *v1alpha1.PingSource) {
 	s.Status.MarkEventType()
 }
 
+func WithPingSourceV1A2EventType(s *v1alpha2.PingSource) {
+	s.Status.MarkEventType()
+}
+
 func WithValidPingSourceResources(s *v1alpha1.PingSource) {
+	s.Status.MarkResourcesCorrect()
+}
+
+func WithValidPingSourceV1A2Resources(s *v1alpha2.PingSource) {
 	s.Status.MarkResourcesCorrect()
 }
 

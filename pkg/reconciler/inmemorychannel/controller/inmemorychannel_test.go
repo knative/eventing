@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -34,6 +32,7 @@ import (
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"

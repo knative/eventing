@@ -107,7 +107,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryCh
 
 	scope, ok := imc.Annotations[eventing.ScopeAnnotationKey]
 	if !ok {
-		scope = eventing.DefaultScope
+		scope = eventing.ScopeCluster
 	}
 
 	dispatcherNamespace := r.systemNamespace

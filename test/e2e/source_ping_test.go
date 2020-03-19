@@ -65,9 +65,9 @@ func TestPingSourceV1Alpha1(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	// verify the logger service receives the event
-	if err := client.CheckLog(loggerPodName, lib.CheckerContains(data)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
+	// verify the logger service receives the event and only once
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
+		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }
 
@@ -105,8 +105,49 @@ func TestPingSourceV1Alpha2(t *testing.T) {
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
 
-	// verify the logger service receives the event
-	if err := client.CheckLog(loggerPodName, lib.CheckerContains(data)); err != nil {
-		t.Fatalf("String %q not found in logs of logger pod %q: %v", data, loggerPodName, err)
+	// verify the logger service receives the event and only once
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
+		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
+	}
+}
+
+func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
+	const (
+		sourceName = "e2e-ping-source"
+		// Every 1 minute starting from now
+
+		loggerPodName = "e2e-ping-source-logger-pod"
+	)
+
+	client := setup(t, true)
+	defer tearDown(client)
+
+	// create event logger pod and service
+	loggerPod := resources.EventLoggerPod(loggerPodName)
+	client.CreatePodOrFail(loggerPod, lib.WithService(loggerPodName))
+
+	// create cron job source
+	data := fmt.Sprintf("TestPingSource %s", uuid.NewUUID())
+	source := eventingtesting.NewPingSourceV1Alpha2(
+		sourceName,
+		client.Namespace,
+		eventingtesting.WithPingSourceV1A2ResourceScopeAnnotation,
+		eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+			JsonData: data,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: resources.KnativeRefForService(loggerPodName, client.Namespace),
+				},
+			},
+		}),
+	)
+	client.CreatePingSourceV1Alpha2OrFail(source)
+
+	// wait for all test resources to be ready
+	client.WaitForAllTestResourcesReadyOrFail()
+
+	// verify the logger service receives the event and only once
+	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
+		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
 }

@@ -24,17 +24,16 @@ import (
 	"net/http"
 	"time"
 
-	"knative.dev/pkg/profiling"
-
 	// Uncomment the following line to load the gcp plugin
 	// (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
+	"knative.dev/pkg/profiling"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/source"
 
@@ -49,9 +48,11 @@ type Adapter interface {
 type AdapterConstructor func(ctx context.Context, env EnvConfigAccessor, client cloudevents.Client, reporter source.StatsReporter) Adapter
 
 func Main(component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
-	flag.Parse()
+	MainWithContext(signals.NewContext(), component, ector, ctor)
+}
 
-	ctx := signals.NewContext()
+func MainWithContext(ctx context.Context, component string, ector EnvConfigConstructor, ctor AdapterConstructor) {
+	flag.Parse()
 
 	env := ector()
 	if err := envconfig.Process("", env); err != nil {

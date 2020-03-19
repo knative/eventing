@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,7 +35,6 @@ import (
 	eventingduckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
@@ -87,12 +88,11 @@ const (
 
 	brokerGeneration = 79
 
-	cronJobSourceName           = "test-cronjob-source"
-	cronJobSourceAPIVersion     = "sources.eventing.knative.dev/v1alpha1"
+	pingSourceName              = "test-ping-source"
 	testSchedule                = "*/2 * * * *"
 	testData                    = "data"
 	sinkName                    = "testsink"
-	dependencyAnnotation        = "{\"kind\":\"CronJobSource\",\"name\":\"test-cronjob-source\",\"apiVersion\":\"sources.eventing.knative.dev/v1alpha1\"}"
+	dependencyAnnotation        = "{\"kind\":\"PingSource\",\"name\":\"test-ping-source\",\"apiVersion\":\"sources.knative.dev/v1alpha2\"}"
 	subscriberURIReference      = "foo"
 	subscriberResolvedTargetURI = "http://example.com/subscriber/foo"
 
@@ -155,6 +155,13 @@ var (
 			APIVersion: "eventing.knative.dev/v1alpha1",
 		},
 	}
+	brokerDestv1 = duckv1.Destination{
+		Ref: &duckv1.KReference{
+			Name:       sinkName,
+			Kind:       "Broker",
+			APIVersion: "eventing.knative.dev/v1alpha1",
+		},
+	}
 	sinkDNS               = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI               = "http://" + sinkDNS
 	finalizerUpdatedEvent = Eventf(corev1.EventTypeNormal, "FinalizerUpdate", `Updated "test-broker" finalizers`)
@@ -184,6 +191,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerDeletionTimestamp),
@@ -196,6 +204,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithInitBrokerConditions),
 			},
 			WantEvents: []string{
@@ -207,6 +216,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil")),
 			}},
@@ -217,6 +227,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
@@ -225,6 +236,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("ChannelFailure", "inducing failure for create inmemorychannels")),
@@ -245,6 +257,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 			},
@@ -253,6 +266,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithBrokerChannel(channel()),
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
@@ -268,12 +282,14 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, false),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("NoAddress", "Channel does not have an address.")),
@@ -289,6 +305,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -305,6 +322,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
@@ -324,6 +342,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -338,6 +357,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
@@ -364,6 +384,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -384,6 +405,7 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
@@ -403,6 +425,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -427,6 +450,7 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
@@ -446,6 +470,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -458,6 +483,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("create", "deployments"),
@@ -472,10 +500,11 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithFilterDeploymentAvailable(),
+					WithFilterAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("DeploymentFailure", "inducing failure for create deployments")),
 			}},
@@ -492,6 +521,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerGeneration(brokerGeneration),
@@ -506,6 +536,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -524,12 +557,13 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerGeneration(brokerGeneration),
 					WithBrokerStatusObservedGeneration(brokerGeneration),
 					WithTriggerChannelReady(),
-					WithFilterDeploymentAvailable(),
+					WithFilterAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("DeploymentFailure", "inducing failure for update deployments")),
 			}},
@@ -546,6 +580,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -558,6 +593,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -575,10 +613,11 @@ func TestReconcile(t *testing.T) {
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithFilterDeploymentAvailable(),
+					WithFilterAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("ServiceFailure", "inducing failure for create services")),
 			}},
@@ -595,6 +634,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -607,6 +647,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -628,10 +671,11 @@ func TestReconcile(t *testing.T) {
 			}},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithTriggerChannelReady(),
-					WithFilterDeploymentAvailable(),
+					WithFilterAvailable(),
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
 					WithIngressFailed("ServiceFailure", "inducing failure for update services")),
 			}},
@@ -648,6 +692,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -660,6 +705,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -669,9 +717,13 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(ingressServiceName, testNS,
+					WithEndpointsLabels(resources.IngressLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -685,10 +737,20 @@ func TestReconcile(t *testing.T) {
 				patchFinalizers(testNS, brokerName),
 			},
 		}, {
+			Name: "Successful Reconciliation, broker ignored because mismatching BrokerClass",
+			Key:  testKey,
+			Objects: []runtime.Object{
+				NewBroker(brokerName, testNS,
+					WithBrokerChannel(channel()),
+					WithInitBrokerConditions,
+					WithBrokerClass("broker-class-mismatch")),
+			},
+		}, {
 			Name: "Successful Reconciliation, status update fails",
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -701,6 +763,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -710,12 +775,16 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(ingressServiceName, testNS,
+					WithEndpointsLabels(resources.IngressLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 			},
 			WithReactors: []clientgotesting.ReactionFunc{
 				InduceFailure("update", "brokers"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -735,6 +804,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions),
 				createChannel(testNS, triggerChannel, true),
@@ -747,6 +817,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.FilterLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(filterServiceName, testNS,
+					WithEndpointsLabels(resources.FilterLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewDeployment(ingressDeploymentName, testNS,
 					WithDeploymentOwnerReferences(ownerReferences()),
 					WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -756,6 +829,9 @@ func TestReconcile(t *testing.T) {
 					WithServiceOwnerReferences(ownerReferences()),
 					WithServiceLabels(resources.IngressLabels(brokerName)),
 					WithServicePorts(servicePorts(8080))),
+				NewEndpoints(ingressServiceName, testNS,
+					WithEndpointsLabels(resources.IngressLabels(brokerName)),
+					WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI)),
@@ -774,6 +850,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}, {
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithBrokerReady,
 					WithBrokerTriggerChannel(createTriggerChannelRef()),
@@ -791,6 +868,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithInitBrokerConditions),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -814,6 +892,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerStatusSubscriberURI(subscriberURI)),
 			}, {
 				Object: NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithInitBrokerConditions,
 					WithTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: Broker.Spec.ChannelTemplate is nil")),
 			}},
@@ -830,6 +909,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerFinalizers("brokers.eventing.knative.dev"),
@@ -858,6 +938,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: []runtime.Object{
 				NewBroker(brokerName, testNS,
+					WithBrokerClass(eventing.ChannelBrokerClassValue),
 					WithBrokerChannel(channel()),
 					WithInitBrokerConditions,
 					WithBrokerFinalizers("brokers.eventing.knative.dev"),
@@ -1201,7 +1282,7 @@ func TestReconcile(t *testing.T) {
 					// The first reconciliation will initialize the status conditions.
 					WithInitTriggerConditions,
 					WithTriggerBrokerReady(),
-					WithTriggerNotSubscribed("testInducedError", "test induced [error]"),
+					WithTriggerNotSubscribed("testInducedError", "test induced error"),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
 					WithTriggerDependencyReady(),
@@ -1247,7 +1328,7 @@ func TestReconcile(t *testing.T) {
 					WithDependencyAnnotation(dependencyAnnotation),
 				)}...),
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: propagating dependency readiness: getting the dependency: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconcile failed: propagating dependency readiness: getting the dependency: pingsources.sources.knative.dev \"test-ping-source\" not found"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -1260,7 +1341,7 @@ func TestReconcile(t *testing.T) {
 					WithTriggerSubscribed(),
 					WithTriggerStatusSubscriberURI(subscriberURI),
 					WithTriggerSubscriberResolvedSucceeded(),
-					WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: cronjobsources.sources.eventing.knative.dev \"test-cronjob-source\" not found"),
+					WithTriggerDependencyFailed("DependencyDoesNotExist", "Dependency does not exist: pingsources.sources.knative.dev \"test-ping-source\" not found"),
 				),
 			}},
 		}, {
@@ -1268,7 +1349,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeReadySubscription(),
-				makeFalseStatusCronJobSource(),
+				makeFalseStatusPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1327,7 +1408,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeReadySubscription(),
-				makeGenerationNotEqualCronJobSource(),
+				makeGenerationNotEqualPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1356,7 +1437,7 @@ func TestReconcile(t *testing.T) {
 			Key:  testKey,
 			Objects: allBrokerObjectsReadyPlus([]runtime.Object{
 				makeReadySubscription(),
-				makeReadyCronJobSource(),
+				makeReadyPingSource(),
 				NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
 					WithTriggerSubscriberURI(subscriberURI),
@@ -1397,6 +1478,7 @@ func TestReconcile(t *testing.T) {
 			triggerLister:             listers.GetTriggerLister(),
 			brokerLister:              listers.GetBrokerLister(),
 			serviceLister:             listers.GetK8sServiceLister(),
+			endpointsLister:           listers.GetEndpointsLister(),
 			deploymentLister:          listers.GetDeploymentLister(),
 			filterImage:               filterImage,
 			filterServiceAccountName:  filterSA,
@@ -1406,8 +1488,9 @@ func TestReconcile(t *testing.T) {
 			channelableTracker:        duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			addressableTracker:        duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			brokerClass:               eventing.ChannelBrokerClassValue,
 		}
-		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r)
+		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r, eventing.ChannelBrokerClassValue)
 
 	},
 		false,
@@ -1721,6 +1804,7 @@ func makeBroker() *v1alpha1.Broker {
 func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 	brokerObjs := []runtime.Object{
 		NewBroker(brokerName, testNS,
+			WithBrokerClass(eventing.ChannelBrokerClassValue),
 			WithBrokerChannel(channel()),
 			WithInitBrokerConditions,
 			WithBrokerReady,
@@ -1738,6 +1822,9 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithServiceOwnerReferences(ownerReferences()),
 			WithServiceLabels(resources.FilterLabels(brokerName)),
 			WithServicePorts(servicePorts(8080))),
+		NewEndpoints(filterServiceName, testNS,
+			WithEndpointsLabels(resources.FilterLabels(brokerName)),
+			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 		NewDeployment(ingressDeploymentName, testNS,
 			WithDeploymentOwnerReferences(ownerReferences()),
 			WithDeploymentLabels(resources.IngressLabels(brokerName)),
@@ -1747,6 +1834,9 @@ func allBrokerObjectsReadyPlus(objs ...runtime.Object) []runtime.Object {
 			WithServiceOwnerReferences(ownerReferences()),
 			WithServiceLabels(resources.IngressLabels(brokerName)),
 			WithServicePorts(servicePorts(8080))),
+		NewEndpoints(ingressServiceName, testNS,
+			WithEndpointsLabels(resources.IngressLabels(brokerName)),
+			WithEndpointsAddresses(corev1.EndpointAddress{IP: "127.0.0.1"})),
 	}
 	return append(brokerObjs[:], objs...)
 }
@@ -1795,37 +1885,39 @@ func makeFalseStatusSubscription() *messagingv1alpha1.Subscription {
 	return s
 }
 
-func makeFalseStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
-	return NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion), WithCronJobSourceSinkNotFound)
+func makeFalseStatusPingSource() *sourcesv1alpha2.PingSource {
+	return NewPingSourceV1Alpha2(pingSourceName, testNS, WithPingSourceV1A2SinkNotFound)
 }
 
-func makeUnknownStatusCronJobSource() *sourcesv1alpha1.CronJobSource {
-	cjs := NewCronJobSource(cronJobSourceName, testNS, WithCronJobApiVersion(cronJobSourceAPIVersion))
-	cjs.Status = *v1alpha1.TestHelper.UnknownCronJobSourceStatus()
+func makeUnknownStatusCronJobSource() *sourcesv1alpha2.PingSource {
+	cjs := NewPingSourceV1Alpha2(pingSourceName, testNS)
+	cjs.Status.InitializeConditions()
 	return cjs
 }
 
-func makeGenerationNotEqualCronJobSource() *sourcesv1alpha1.CronJobSource {
-	c := makeFalseStatusCronJobSource()
+func makeGenerationNotEqualPingSource() *sourcesv1alpha2.PingSource {
+	c := makeFalseStatusPingSource()
 	c.Generation = currentGeneration
 	c.Status.ObservedGeneration = outdatedGeneration
 	return c
 }
 
-func makeReadyCronJobSource() *sourcesv1alpha1.CronJobSource {
-	return NewCronJobSource(cronJobSourceName, testNS,
-		WithCronJobApiVersion(cronJobSourceAPIVersion),
-		WithCronJobSourceSpec(sourcesv1alpha1.CronJobSourceSpec{
+func makeReadyPingSource() *sourcesv1alpha2.PingSource {
+	u, _ := apis.ParseURL(sinkURI)
+	return NewPingSourceV1Alpha2(pingSourceName, testNS,
+		WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
 			Schedule: testSchedule,
-			Data:     testData,
-			Sink:     &brokerDest,
+			JsonData: testData,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: brokerDestv1,
+			},
 		}),
-		WithInitCronJobSourceConditions,
-		WithValidCronJobSourceSchedule,
-		WithValidCronJobSourceResources,
-		WithCronJobSourceDeployed,
-		WithCronJobSourceEventType,
-		WithCronJobSourceSink(sinkURI),
+		WithInitPingSourceV1A2Conditions,
+		WithValidPingSourceV1A2Schedule,
+		WithValidPingSourceV1A2Resources,
+		WithPingSourceV1A2Deployed,
+		WithPingSourceV1A2EventType,
+		WithPingSourceV1A2Sink(u),
 	)
 }
 func makeSubscriberKubernetesServiceAsUnstructured() *unstructured.Unstructured {

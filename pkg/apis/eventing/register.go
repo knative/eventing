@@ -29,21 +29,33 @@ const (
 	// which Controller is responsible for them.
 	BrokerClassKey = GroupName + "/broker.class"
 
+	// ChannelBrokerClassValue is the value we use to specify the
+	// Broker using channels. As in Broker from this repository
+	// pkg/reconciler/broker
+	ChannelBrokerClassValue = "ChannelBasedBroker"
+
+	// MTChannelBrokerClassValue is the value we use to specify the
+	// Broker using channels, but the resources (ingress,filter) run
+	// in the system namespace. As in Broker from this repository
+	// pkg/reconciler/mtbroker
+	MTChannelBrokerClassValue = "MTChannelBasedBroker"
+
 	// ScopeAnnotationKey is the annotation key to indicate
 	// the scope of the component handling a given resource.
 	// Valid values are: cluster, namespace, resource.
 	ScopeAnnotationKey = GroupName + "/scope"
 
-	// ScopeCluster is the value of the ScopeAnnotationKey
-	// indicating the cluster scope
-	ScopeCluster = "cluster"
+	// ScopeResource indicates that the resource
+	// must be handled by a dedicated component
+	ScopeResource = "resource"
 
-	// ScopeNamespace is the value of the ScopeAnnotationKey
-	// indicating the namespace scope
+	// ScopeNamespace indicates that the resource
+	// must be handled by the namespace-scoped component
 	ScopeNamespace = "namespace"
 
-	// DefaultScope is the default value of the ScopeAnnotationKey
-	DefaultScope = ScopeCluster
+	// ScopeCluster indicates the resource must be
+	// handled by the cluster-scoped component
+	ScopeCluster = "cluster"
 )
 
 var (

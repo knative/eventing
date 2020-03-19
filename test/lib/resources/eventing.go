@@ -294,13 +294,13 @@ func WithAttributesTriggerFilterV1Beta1(eventSource, eventType string, extension
 	}
 }
 
-// WithDependencyAnnotaionTrigger returns an option that adds a dependency annotation to the given Trigger.
-func WithDependencyAnnotaionTrigger(dependencyAnnotation string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
+// WithDependencyAnnotationTrigger returns an option that adds a dependency annotation to the given Trigger.
+func WithDependencyAnnotationTriggerV1Beta1(dependencyAnnotation string) TriggerOptionV1Beta1 {
+	return func(t *eventingv1beta1.Trigger) {
 		if t.Annotations == nil {
 			t.Annotations = make(map[string]string)
 		}
-		t.Annotations[eventingv1alpha1.DependencyAnnotation] = dependencyAnnotation
+		t.Annotations[eventingv1beta1.DependencyAnnotation] = dependencyAnnotation
 	}
 }
 
@@ -308,17 +308,6 @@ func WithDependencyAnnotaionTrigger(dependencyAnnotation string) TriggerOption {
 func WithBroker(brokerName string) TriggerOption {
 	return func(t *eventingv1alpha1.Trigger) {
 		t.Spec.Broker = brokerName
-	}
-}
-
-// WithSubscriberKServiceRefForTrigger returns an option that adds a Subscriber Knative Service Ref for the given Trigger.
-func WithSubscriberKServiceRefForTrigger(name string) TriggerOption {
-	return func(t *eventingv1alpha1.Trigger) {
-		if name != "" {
-			t.Spec.Subscriber = duckv1.Destination{
-				Ref: KnativeRefForService(name, t.Namespace),
-			}
-		}
 	}
 }
 

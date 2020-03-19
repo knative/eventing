@@ -43,7 +43,6 @@ type Reconciler struct {
 	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
-	impl                    *controller.Impl
 }
 
 // Check that our Reconciler implements controller.Reconciler.

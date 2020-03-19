@@ -18,26 +18,29 @@ package v1beta1
 
 import (
 	"context"
-)
 
-var (
-	// ChannelDefaulterSingleton is the global singleton used to default Channels that do not
-	// specify a Channel CRD.
-	ChannelDefaulterSingleton ChannelDefaulter
+	"knative.dev/eventing/pkg/apis/messaging/config"
+	"knative.dev/pkg/apis"
 )
 
 func (c *Channel) SetDefaults(ctx context.Context) {
-	if c != nil && c.Spec.ChannelTemplate == nil {
-		// The singleton may not have been set, if so ignore it and validation will reject the
-		// Channel.
-		if cd := ChannelDefaulterSingleton; cd != nil {
-			c.Spec.ChannelTemplate = cd.GetDefault(c.Namespace)
-		}
-	}
-	c.Spec.SetDefaults(ctx)
+	c.Spec.SetDefaults(apis.WithinParent(ctx, c.ObjectMeta))
 }
 
-func (cs *ChannelSpec) SetDefaults(ctx context.Context) {}
+func (cs *ChannelSpec) SetDefaults(ctx context.Context) {
+	if cs.ChannelTemplate != nil {
+		return
+	}
+
+	cfg := config.FromContextOrDefaults(ctx)
+	c, err := cfg.ChannelDefaults.GetChannelConfig(apis.ParentMeta(ctx).Namespace)
+	if err == nil {
+		cs.ChannelTemplate = &ChannelTemplateSpec{
+			c.TypeMeta,
+			c.Spec,
+		}
+	}
+}
 
 // ChannelDefaulter sets the default Channel CRD and Arguments on Channels that do not
 // specify any implementation.

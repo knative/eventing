@@ -104,6 +104,11 @@ func EventDetailsPod(name string) *corev1.Pod {
 	return eventLoggerPod("eventdetails", name)
 }
 
+// EventRecordPod creates a Pod that stores received events for test retrieval.
+func EventRecordPod(name string) *corev1.Pod {
+	return eventLoggerPod("recordevents", name)
+}
+
 func eventLoggerPod(imageName string, name string) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{

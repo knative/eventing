@@ -21,12 +21,11 @@ const SystemNamespace = "knative-eventing"
 
 // API versions for the resources.
 const (
-	CoreAPIVersion          = "v1"
-	EventingAPIVersion      = "eventing.knative.dev/v1alpha1"
-	LegacySourcesAPIVersion = "sources.eventing.knative.dev/v1alpha1"
-	MessagingAPIVersion     = "messaging.knative.dev/v1alpha1"
-	FlowsAPIVersion         = "flows.knative.dev/v1alpha1"
-	ServingAPIVersion       = "serving.knative.dev/v1"
+	CoreAPIVersion      = "v1"
+	EventingAPIVersion  = "eventing.knative.dev/v1alpha1"
+	MessagingAPIVersion = "messaging.knative.dev/v1alpha1"
+	FlowsAPIVersion     = "flows.knative.dev/v1alpha1"
+	ServingAPIVersion   = "serving.knative.dev/v1"
 )
 
 // Kind for Knative resources.
@@ -60,11 +59,4 @@ const (
 const (
 	FlowsSequenceKind string = "Sequence"
 	FlowsParallelKind string = "Parallel"
-)
-
-// Kind for sources resources.
-const (
-	CronJobSourceKind   string = "CronJobSource"
-	ContainerSourceKind string = "ContainerSource"
-	ApiServerSourceKind string = "ApiServerSource"
 )

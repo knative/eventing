@@ -22,7 +22,7 @@ import (
 	"regexp"
 	"strconv"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"go.opencensus.io/trace"
 )
@@ -57,10 +57,8 @@ func traceparentAttributeValue(span *trace.Span) string {
 	if span.SpanContext().IsSampled() {
 		flags = "01"
 	}
-	return fmt.Sprintf("00-%s-%s-%s",
-		span.SpanContext().TraceID.String(),
-		span.SpanContext().SpanID.String(),
-		flags)
+	return "00-" + span.SpanContext().TraceID.String() + "-" +
+		span.SpanContext().SpanID.String() + "-" + flags
 }
 
 // AddSpanFromTraceparentAttribute extracts the traceparent extension attribute from the CloudEvent

@@ -39,11 +39,11 @@ func (imc *InMemoryChannel) Validate(ctx context.Context) *apis.FieldError {
 		}
 	}
 
-	if err := imc.checkImmutableFields(ctx); err != nil {
-		errs = errs.Also(err)
+	if !apis.IsInUpdate(ctx) {
+		return errs
 	}
 
-	return errs
+	return validation.Scope(errs, apis.GetBaseline(ctx).(*InMemoryChannel), imc, eventing.ScopeCluster)
 }
 
 func (imcs *InMemoryChannelSpec) Validate(ctx context.Context) *apis.FieldError {
@@ -60,23 +60,4 @@ func (imcs *InMemoryChannelSpec) Validate(ctx context.Context) *apis.FieldError 
 	}
 
 	return errs
-}
-
-func (imcs *InMemoryChannel) checkImmutableFields(ctx context.Context) *apis.FieldError {
-
-	if !apis.IsInUpdate(ctx) {
-		return nil
-	}
-
-	original := apis.GetBaseline(ctx).(*InMemoryChannel)
-
-	if err := validation.Scope(original.GetAnnotations(), imcs.GetAnnotations()); err != nil {
-		return &apis.FieldError{
-			Message: fmt.Sprintf("invalid %s annotation value", eventing.ScopeAnnotationKey),
-			Paths:   []string{"metadata.annotations"},
-			Details: err.Error(),
-		}
-	}
-
-	return nil
 }

@@ -24,7 +24,9 @@ import (
 	// Uncomment the following line to load the gcp plugin
 	// (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	cloudevents "github.com/cloudevents/sdk-go"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	"go.opencensus.io/stats/view"
+	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/source"
 )
 
@@ -37,7 +39,10 @@ func TestMain(t *testing.T) {
 	os.Setenv("K_LOGGING_CONFIG", "logging")
 	os.Setenv("MODE", "mymode")
 
-	Main("mycomponent",
+	ctx, cancel := context.WithCancel(context.TODO())
+
+	MainWithContext(ctx,
+		"mycomponent",
 		func() EnvConfigAccessor { return &myEnvConfig{} },
 		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client, reporter source.StatsReporter) Adapter {
 			env := processed.(*myEnvConfig)
@@ -50,6 +55,10 @@ func TestMain(t *testing.T) {
 			}
 			return &myAdapter{}
 		})
+
+	cancel()
+
+	defer view.Unregister(metrics.NewMemStatsAll().DefaultViews()...)
 }
 
 func (m *myAdapter) Start(stopCh <-chan struct{}) error {

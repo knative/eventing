@@ -23,14 +23,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"knative.dev/eventing/pkg/defaultchannel"
 	"knative.dev/eventing/pkg/logconfig"
-	"knative.dev/eventing/pkg/reconciler/legacysinkbinding"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
 	"knative.dev/pkg/injection/sharedmain"
-	"knative.dev/pkg/leaderelection"
+	kle "knative.dev/pkg/leaderelection"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/signals"
 	tracingconfig "knative.dev/pkg/tracing/config"
@@ -45,20 +43,20 @@ import (
 
 	defaultconfig "knative.dev/eventing/pkg/apis/config"
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	configvalidation "knative.dev/eventing/pkg/apis/configs/validation"
 	"knative.dev/eventing/pkg/apis/eventing"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/eventing/pkg/apis/flows"
 	flowsv1alpha1 "knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	flowsv1beta1 "knative.dev/eventing/pkg/apis/flows/v1beta1"
-	legacysourcesv1alpha1 "knative.dev/eventing/pkg/apis/legacysources/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging"
+	channeldefaultconfig "knative.dev/eventing/pkg/apis/messaging/config"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
 	"knative.dev/eventing/pkg/apis/sources"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/leaderelection"
 	"knative.dev/eventing/pkg/reconciler/sinkbinding"
 )
 
@@ -89,15 +87,9 @@ var ourTypes = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha1.PingSource{},
 	sourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha1.SinkBinding{},
 	// v1alpha2
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):  &sourcesv1alpha2.PingSource{},
-	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"): &sourcesv1alpha2.SinkBinding{},
-
-	// For group sources.eventing.knative.dev.
-	// TODO(#2312): Remove this after v0.13.
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("ApiServerSource"): &legacysourcesv1alpha1.ApiServerSource{},
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("ContainerSource"): &legacysourcesv1alpha1.ContainerSource{},
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("SinkBinding"):     &legacysourcesv1alpha1.SinkBinding{},
-	legacysourcesv1alpha1.SchemeGroupVersion.WithKind("CronJobSource"):   &legacysourcesv1alpha1.CronJobSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("ApiServerSource"): &sourcesv1alpha2.ApiServerSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("PingSource"):      &sourcesv1alpha2.PingSource{},
+	sourcesv1alpha2.SchemeGroupVersion.WithKind("SinkBinding"):     &sourcesv1alpha2.SinkBinding{},
 
 	// For group flows.knative.dev
 	// v1alpha1
@@ -116,21 +108,13 @@ func NewDefaultingAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
 
-	logger := logging.FromContext(ctx)
+	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
+	channelStore.WatchConfigs(cmw)
 
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return store.ToContext(ctx)
+		return channelStore.ToContext(store.ToContext(ctx))
 	}
-
-	// Watch the default-ch-webhook ConfigMap and dynamically update the default
-	// Channel CRD.
-	// TODO(#2128): This should be persisted to context in the context function
-	// above and fetched off of context by the api code.  See knative/serving's logic
-	// around config-defaults for an example of this.
-	chDefaulter := defaultchannel.New(logger.Desugar())
-	messagingv1beta1.ChannelDefaulterSingleton = chDefaulter
-	cmw.Watch(defaultchannel.ConfigMapName, chDefaulter.UpdateConfigMap)
 
 	return defaulting.NewAdmissionController(ctx,
 
@@ -156,9 +140,12 @@ func NewValidationAdmissionController(ctx context.Context, cmw configmap.Watcher
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
 
+	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
+	channelStore.WatchConfigs(cmw)
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return store.ToContext(ctx)
+		return channelStore.ToContext(store.ToContext(ctx))
 	}
 
 	return validation.NewAdmissionController(ctx,
@@ -193,8 +180,8 @@ func NewConfigValidationController(ctx context.Context, cmw configmap.Watcher) *
 		configmap.Constructors{
 			tracingconfig.ConfigName: tracingconfig.NewTracingConfigFromConfigMap,
 			// metrics.ConfigMapName():   metricsconfig.NewObservabilityConfigFromConfigMap,
-			logging.ConfigMapName():        logging.NewConfigFromConfigMap,
-			leaderelection.ConfigMapName(): configvalidation.ValidateLeaderElectionConfig,
+			logging.ConfigMapName(): logging.NewConfigFromConfigMap,
+			kle.ConfigMapName():     leaderelection.ValidateConfig,
 		},
 	)
 }
@@ -221,36 +208,17 @@ func NewSinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.Control
 	}
 }
 
-// TODO(#2312): Remove this after v0.13.
-func NewLegacySinkBindingWebhook(opts ...psbinding.ReconcilerOption) injection.ControllerConstructor {
-	return func(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
-		sbresolver := legacysinkbinding.WithContextFactory(ctx, func(types.NamespacedName) {})
-
-		return psbinding.NewAdmissionController(ctx,
-
-			// Name of the resource webhook.
-			"legacysinkbindings.webhook.sources.knative.dev",
-
-			// The path on which to serve the webhook.
-			"/legacysinkbindings",
-
-			// How to get all the Bindables for configuring the mutating webhook.
-			legacysinkbinding.ListAll,
-
-			// How to setup the context prior to invoking Do/Undo.
-			sbresolver,
-			opts...,
-		)
-	}
-}
-
 func NewConversionController(ctx context.Context, cmw configmap.Watcher) *controller.Impl {
 	// Decorate contexts with the current state of the config.
 	store := defaultconfig.NewStore(logging.FromContext(ctx).Named("config-store"))
 	store.WatchConfigs(cmw)
+
+	channelStore := channeldefaultconfig.NewStore(logging.FromContext(ctx).Named("channel-config-store"))
+	channelStore.WatchConfigs(cmw)
+
 	// Decorate contexts with the current state of the config.
 	ctxFunc := func(ctx context.Context) context.Context {
-		return store.ToContext(ctx)
+		return channelStore.ToContext(store.ToContext(ctx))
 	}
 
 	var (
@@ -330,7 +298,14 @@ func NewConversionController(ctx context.Context, cmw configmap.Watcher) *contro
 				},
 			},
 			// Sources
-			// TODO: ApiServerSource
+			sourcesv1alpha2.Kind("ApiServerSource"): {
+				DefinitionName: sources.ApiServerSourceResource.String(),
+				HubVersion:     sourcesv1alpha1_,
+				Zygotes: map[string]conversion.ConvertibleObject{
+					sourcesv1alpha1_: &sourcesv1alpha1.ApiServerSource{},
+					sourcesv1alpha2_: &sourcesv1alpha2.ApiServerSource{},
+				},
+			},
 			sourcesv1alpha2.Kind("PingSource"): {
 				DefinitionName: sources.PingSourceResource.String(),
 				HubVersion:     sourcesv1alpha1_,
@@ -376,7 +351,5 @@ func main() {
 
 		// For each binding we have a controller and a binding webhook.
 		sinkbinding.NewController, NewSinkBindingWebhook(sbSelector),
-		// TODO(#2312): Remove this after v0.13.
-		legacysinkbinding.NewController, NewLegacySinkBindingWebhook(sbSelector),
 	)
 }

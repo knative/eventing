@@ -32,7 +32,7 @@ spec:
       serviceAccountName: imc-controller
       containers:
       - name: controller
-        image: knative.dev/eventing/cmd/in_memory/channel_controller
+        image: ko://knative.dev/eventing/cmd/in_memory/channel_controller
         env:
           - name: CONFIG_LOGGING_NAME
             value: config-logging
@@ -45,7 +45,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: DISPATCHER_IMAGE
-            value: knative.dev/eventing/cmd/in_memory/channel_dispatcher
+            value: ko://knative.dev/eventing/cmd/in_memory/channel_dispatcher
         securityContext:
           allowPrivilegeEscalation: false
 

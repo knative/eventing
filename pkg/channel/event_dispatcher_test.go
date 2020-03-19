@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	cehttp "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -51,6 +51,7 @@ var (
 		// CloudEvents headers, they will have random values, so don't bother checking them.
 		"ce-id",
 		"ce-time",
+		"ce-traceparent",
 	)
 )
 
@@ -59,7 +60,7 @@ const (
 	testCeType   = "testtype"
 )
 
-func TestDispatchMessage(t *testing.T) {
+func TestDispatchEvent(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination         bool
 		sendToReply               bool
@@ -102,6 +103,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -133,6 +135,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -169,6 +172,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"reply"`,
 			},
@@ -200,6 +204,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"reply"`,
 			},
@@ -237,6 +242,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -274,6 +280,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -316,6 +323,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -347,6 +355,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: "destination-response",
 			},
@@ -379,6 +388,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -396,6 +406,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -448,6 +459,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},
@@ -464,6 +476,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: "destination-response",
 			},
@@ -480,6 +493,7 @@ func TestDispatchMessage(t *testing.T) {
 					"ce-source":      {testCeSource},
 					"ce-type":        {testCeType},
 					"ce-specversion": {cloudevents.VersionV1},
+					"ce-traceparent": {"ignored-value-header"},
 				},
 				Body: `"destination"`,
 			},

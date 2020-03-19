@@ -19,29 +19,49 @@ package validation
 import (
 	"fmt"
 
+	"knative.dev/pkg/apis"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 )
 
-func Scope(originalAnnotations map[string]string, currentAnnotations map[string]string) error {
+type AnnotationProvider func() map[string]string
 
-	currentScope, currentHasAnnotation := currentAnnotations[eventing.ScopeAnnotationKey]
+func Scope(errs *apis.FieldError, original AnnotationProvider, current AnnotationProvider, defaultScope string) *apis.FieldError {
 
-	originalScope, originalHasAnnotation := originalAnnotations[eventing.ScopeAnnotationKey]
+	currentScope, currentHasAnnotation := current()[eventing.ScopeAnnotationKey]
+
+	originalScope, originalHasAnnotation := original()[eventing.ScopeAnnotationKey]
 
 	if !currentHasAnnotation && !originalHasAnnotation {
 		return nil
 	}
 
 	if !originalHasAnnotation {
-		if currentScope != eventing.DefaultScope {
-			return fmt.Errorf("'%s' annotation was not present - applied default '%s'", eventing.ScopeAnnotationKey, eventing.DefaultScope)
+		if currentScope != defaultScope {
+			return addError(errs, &apis.FieldError{
+				Message: fmt.Sprintf("invalid %s annotation value", eventing.ScopeAnnotationKey),
+				Paths:   []string{"metadata.annotations"},
+				Details: fmt.Sprintf("'%s' annotation was not present - applied default '%s'", eventing.ScopeAnnotationKey, defaultScope),
+			})
 		}
 		return nil
 	}
 
 	if originalScope != currentScope {
-		return fmt.Errorf("'%s' annotation was '%s' - current is '%s'", eventing.ScopeAnnotationKey, originalScope, currentScope)
+		return addError(errs, &apis.FieldError{
+			Message: fmt.Sprintf("invalid %s annotation value", eventing.ScopeAnnotationKey),
+			Paths:   []string{"metadata.annotations"},
+			Details: fmt.Sprintf("'%s' annotation was '%s' - current is '%s'", eventing.ScopeAnnotationKey, originalScope, currentScope),
+		})
 	}
 
-	return nil
+	return errs
+}
+
+func addError(errs *apis.FieldError, err *apis.FieldError) *apis.FieldError {
+	if errs == nil {
+		errs = err
+		return errs
+	}
+	return errs.Also(err)
 }

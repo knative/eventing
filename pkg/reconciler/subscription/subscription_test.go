@@ -32,6 +32,7 @@ import (
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/reconciler"
@@ -947,14 +948,12 @@ func TestAllCases(t *testing.T) {
 				patchFinalizers(testNS, "a-"+subscriptionName),
 			},
 		}, {
-			// TODO: this test is wrong.
-			Name: "subscription deleted",
+			Name: "subscription deleted - channel patch succeeded",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
@@ -967,30 +966,27 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
-				),
-				NewInMemoryChannel(replyName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
 				),
 			},
 			Key:     testNS + "/" + subscriptionName,
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
+				Eventf(corev1.EventTypeNormal, "SubscriberRemoved", "Subscription was removed from channel \"origin\""),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				//patchSubscribers(testNS, channelName, nil), // the channel does not have subs in this object cache.
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: serviceURI},
+				}),
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		}, {
-			// TODO: this test is wrong.
-			Name: "subscription deleted - channel patch fails",
+			Name: "subscription not deleted - channel patch fails",
 			Objects: []runtime.Object{
 				NewSubscription(subscriptionName, testNS,
 					WithSubscriptionUID(subscriptionUID),
 					WithSubscriptionChannel(testChannelGVK, channelName),
 					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
-					WithSubscriptionReply(testChannelGVK, replyName, testNS),
 					WithInitSubscriptionConditions,
 					MarkSubscriptionReady,
 					WithSubscriptionFinalizers(finalizerName),
@@ -1003,10 +999,10 @@ func TestAllCases(t *testing.T) {
 				NewInMemoryChannel(channelName, testNS,
 					WithInitInMemoryChannelConditions,
 					WithInMemoryChannelAddress(channelDNS),
-				),
-				NewInMemoryChannel(replyName, testNS,
-					WithInitInMemoryChannelConditions,
-					WithInMemoryChannelAddress(replyDNS),
+					WithInMemoryChannelSubscribers([]eventingduck.SubscriberSpec{
+						{UID: subscriptionUID, SubscriberURI: subscriberURI},
+					}),
+					WithInMemoryChannelReadySubscriber(subscriptionUID),
 				),
 			},
 			Key: testNS + "/" + subscriptionName,
@@ -1014,11 +1010,49 @@ func TestAllCases(t *testing.T) {
 				InduceFailure("patch", "inmemorychannels"),
 			},
 			WantEvents: []string{
-				//Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch channels"),
+				Eventf(corev1.EventTypeWarning, "PhysicalChannelSyncFailed", fmt.Sprintf("Failed to synchronize to channel %q: %s", channelName, "inducing failure for patch inmemorychannels")),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					MarkNotAddedToChannel("PhysicalChannelSyncFailed", "Failed to sync physical Channel: inducing failure for patch inmemorychannels"),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeleted,
+				),
+			}},
+			WantPatches: []clientgotesting.PatchActionImpl{
+				patchSubscribers(testNS, channelName, []eventingduck.SubscriberSpec{
+					{UID: subscriptionUID, SubscriberURI: serviceURI},
+				}),
+			},
+		}, {
+			Name: "subscription deleted - channel does not exists",
+			Objects: []runtime.Object{
+				NewSubscription(subscriptionName, testNS,
+					WithSubscriptionUID(subscriptionUID),
+					WithSubscriptionChannel(testChannelGVK, channelName),
+					WithSubscriptionSubscriberRef(subscriberGVK, subscriberName, testNS),
+					WithSubscriptionReply(testChannelGVK, replyName, testNS),
+					WithInitSubscriptionConditions,
+					MarkSubscriptionReady,
+					WithSubscriptionFinalizers(finalizerName),
+					WithSubscriptionPhysicalSubscriptionSubscriber(serviceURI),
+					WithSubscriptionDeleted,
+				),
+				NewUnstructured(subscriberGVK, subscriberName, testNS,
+					WithUnstructuredAddressable(subscriberDNS),
+				),
+			},
+			Key: testNS + "/" + subscriptionName,
+			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "FinalizerUpdate", "Updated %q finalizers", subscriptionName),
 			},
 			WantPatches: []clientgotesting.PatchActionImpl{
-				//patchSubscribers(testNS, channelName, nil), // the channel does not have subs in this object cache.
 				patchRemoveFinalizers(testNS, subscriptionName),
 			},
 		},
@@ -1027,12 +1061,13 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
+		ctx = channelablecombined.WithDuck(ctx)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			Base:                reconciler.NewBase(ctx, "subscription-unit-test", cmw),
 			subscriptionLister:  listers.GetSubscriptionLister(),
 			channelLister:       listers.GetMessagingChannelLister(),
-			channelableTracker:  duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
+			channelableTracker:  duck.NewListableTracker(ctx, channelablecombined.Get, func(types.NamespacedName) {}, 0),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 			tracker:             &FakeTracker{},
 		}
@@ -1062,7 +1097,7 @@ func patchSubscribers(namespace, name string, subscribers []eventingduck.Subscri
 		}
 		spec = fmt.Sprintf(`{"subscribable":{"subscribers":%s}}`, subs)
 	} else {
-		spec = `{"subscribable":{}}`
+		spec = `{"subscribable":{"subscribers":null}}`
 	}
 
 	patch := `{"spec":` + spec + `}`

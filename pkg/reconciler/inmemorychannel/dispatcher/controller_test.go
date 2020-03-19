@@ -20,6 +20,8 @@ import (
 	"os"
 	"testing"
 
+	"knative.dev/eventing/pkg/apis/eventing"
+
 	"knative.dev/pkg/configmap"
 	. "knative.dev/pkg/reconciler/testing"
 
@@ -30,7 +32,7 @@ import (
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	os.Setenv("SCOPE", "cluster")
+	os.Setenv("SCOPE", eventing.ScopeCluster)
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {
@@ -41,7 +43,7 @@ func TestNew(t *testing.T) {
 func TestNewInNamespace(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
 
-	os.Setenv("SCOPE", "namespace")
+	os.Setenv("SCOPE", eventing.ScopeNamespace)
 	c := NewController(ctx, &configmap.InformedWatcher{})
 
 	if c == nil {

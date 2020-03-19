@@ -82,11 +82,11 @@ func TestInMemoryChannelConversion(t *testing.T) {
 				Subscribable: &eventingduck.Subscribable{
 					Subscribers: []eventingduck.SubscriberSpec{
 						{
-							UID:           "uid-1",
-							Generation:    7,
-							SubscriberURI: apis.HTTP("subscriber.example.com"),
-							ReplyURI:      apis.HTTP("reply.example.com"),
-							//							DeadLetterSinkURI: apis.HTTP("dlc.reply.example.com"),
+							UID:               "uid-1",
+							Generation:        7,
+							SubscriberURI:     apis.HTTP("subscriber.example.com"),
+							ReplyURI:          apis.HTTP("reply.example.com"),
+							DeadLetterSinkURI: apis.HTTP("subscriber.dls.example.com"),
 							Delivery: &eventingduckv1beta1.DeliverySpec{
 								DeadLetterSink: &duckv1.Destination{
 									Ref: &duckv1.KReference{

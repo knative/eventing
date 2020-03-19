@@ -21,7 +21,7 @@ import (
 	"flag"
 	"log"
 
-	ce "github.com/cloudevents/sdk-go"
+	ce "github.com/cloudevents/sdk-go/v1"
 
 	"knative.dev/eventing/test/lib/cloudevents"
 )
