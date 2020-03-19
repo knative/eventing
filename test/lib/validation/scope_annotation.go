@@ -19,9 +19,10 @@ package validation
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/pkg/apis"
-	"testing"
 )
 
 // AnnotationsTransition contains original and current annotations,
