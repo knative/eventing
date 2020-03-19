@@ -105,13 +105,6 @@ func CheckScopeAnnotationWithTransitions(t *testing.T, creator ResourceCreator, 
 		}
 	}
 
-	tt = append(tt, tc{
-		name:      "no original",
-		ctx:       context.TODO(),
-		r:         creator(nil),
-		wantError: false,
-	})
-
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			errs := tc.r.Validate(tc.ctx)

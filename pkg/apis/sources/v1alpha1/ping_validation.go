@@ -18,7 +18,9 @@ package v1alpha1
 
 import (
 	"context"
+
 	"github.com/robfig/cron"
+
 	"knative.dev/pkg/apis"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -34,7 +36,7 @@ func (c *PingSource) Validate(ctx context.Context) *apis.FieldError {
 		return errs
 	}
 
-	return validation.Scope(errs, apis.GetBaseline(ctx).(*PingSource).GetAnnotations, c.GetAnnotations, eventing.ScopeCluster)
+	return validation.Scope(errs, apis.GetBaseline(ctx).(*PingSource), c, eventing.ScopeCluster)
 }
 
 func (cs *PingSourceSpec) Validate(ctx context.Context) *apis.FieldError {

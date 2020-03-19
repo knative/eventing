@@ -132,6 +132,17 @@ func TestPingSourceValidation_ImmutabilityScopeAnnotation(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: m,
 				},
+				Spec: PingSourceSpec{
+					Schedule: "*/2 * * * *",
+					Sink: &duckv1.Destination{
+						Ref: &duckv1.KReference{
+							APIVersion: "v1alpha1",
+							Kind:       "broker",
+							Name:       "default",
+							Namespace:  "namespace",
+						},
+					},
+				},
 			}
 		},
 		testutils.GetScopeAnnotationsTransitions(eventing.ScopeCluster, eventing.ScopeResource))

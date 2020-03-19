@@ -24,13 +24,15 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 )
 
-type AnnotationProvider func() map[string]string
+type AnnotationProvider interface {
+	GetAnnotations() map[string]string
+}
 
 func Scope(errs *apis.FieldError, original AnnotationProvider, current AnnotationProvider, defaultScope string) *apis.FieldError {
 
-	currentScope, currentHasAnnotation := current()[eventing.ScopeAnnotationKey]
+	currentScope, currentHasAnnotation := current.GetAnnotations()[eventing.ScopeAnnotationKey]
 
-	originalScope, originalHasAnnotation := original()[eventing.ScopeAnnotationKey]
+	originalScope, originalHasAnnotation := original.GetAnnotations()[eventing.ScopeAnnotationKey]
 
 	if !currentHasAnnotation && !originalHasAnnotation {
 		return nil
