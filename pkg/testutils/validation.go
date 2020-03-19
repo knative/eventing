@@ -85,6 +85,7 @@ type Resource interface {
 
 type ResourceCreator func(map[string]string) Resource
 
+// CheckScopeAnnotationWithTransitions check if the given transitions are valid for resources created by creator
 func CheckScopeAnnotationWithTransitions(t *testing.T, creator ResourceCreator, transitions []AnnotationsTransition) {
 
 	type tc struct {
