@@ -153,7 +153,7 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 		return nil, nil, err
 	}
 
-	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders, []binding.TransformerFactory{})
+	err = kncloudevents.WriteHttpRequestWithAdditionalHeaders(ctx, message, req, additionalHeaders)
 	if err != nil {
 		return nil, nil, err
 	}

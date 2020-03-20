@@ -72,7 +72,7 @@ type accessor interface {
 var acc = [nAttrs]accessor{
 	&aStr{aKind(ID), event.EventContextReader.GetID, event.EventContextWriter.SetID},
 	&aStr{aKind(Source), event.EventContextReader.GetSource, event.EventContextWriter.SetSource},
-	&aStr{aKind(SpecVersion), event.EventContextReader.GetSpecVersion, event.EventContextWriter.SetSpecVersion},
+	&aStr{aKind(SpecVersion), event.EventContextReader.GetSpecVersion, func(writer event.EventContextWriter, s string) error { return nil }},
 	&aStr{aKind(Type), event.EventContextReader.GetType, event.EventContextWriter.SetType},
 	&aStr{aKind(DataContentType), event.EventContextReader.GetDataContentType, event.EventContextWriter.SetDataContentType},
 	&aStr{aKind(DataSchema), event.EventContextReader.GetDataSchema, event.EventContextWriter.SetDataSchema},

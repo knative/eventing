@@ -27,14 +27,6 @@ func (m *binaryBufferedMessage) Start(ctx context.Context) error {
 	return nil
 }
 
-func (m *binaryBufferedMessage) End(ctx context.Context) error {
-	return nil
-}
-
-func (m *binaryBufferedMessage) GetParent() binding.Message {
-	return nil
-}
-
 func (m *binaryBufferedMessage) ReadEncoding() binding.Encoding {
 	return binding.EncodingBinary
 }
@@ -99,6 +91,10 @@ func (b *binaryBufferedMessage) SetAttribute(attribute spec.Attribute, value int
 
 func (b *binaryBufferedMessage) SetExtension(name string, value interface{}) error {
 	b.extensions[name] = value
+	return nil
+}
+
+func (m *binaryBufferedMessage) End(ctx context.Context) error {
 	return nil
 }
 

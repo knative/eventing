@@ -9,25 +9,26 @@ var _ EventWriter = (*Event)(nil)
 
 // SetSpecVersion implements EventWriter.SetSpecVersion
 func (e *Event) SetSpecVersion(v string) {
-	if e.Context == nil {
-		switch v {
-		case CloudEventsVersionV03:
-			e.Context = EventContextV03{}.AsV03()
-		case CloudEventsVersionV1:
-			e.Context = EventContextV1{}.AsV1()
-		default:
-			e.fieldError("specversion", fmt.Errorf("a valid spec version is required: [%s, %s]",
-				CloudEventsVersionV03, CloudEventsVersionV1))
-			return
+	switch v {
+	case CloudEventsVersionV03:
+		if e.Context == nil {
+			e.Context = &EventContextV03{}
+		} else {
+			e.Context = e.Context.AsV03()
 		}
-		e.fieldOK("specversion")
+	case CloudEventsVersionV1:
+		if e.Context == nil {
+			e.Context = &EventContextV1{}
+		} else {
+			e.Context = e.Context.AsV1()
+		}
+	default:
+		e.fieldError("specversion", fmt.Errorf("a valid spec version is required: [%s, %s]",
+			CloudEventsVersionV03, CloudEventsVersionV1))
 		return
 	}
-	if err := e.Context.SetSpecVersion(v); err != nil {
-		e.fieldError("specversion", err)
-	} else {
-		e.fieldOK("specversion")
-	}
+	e.fieldOK("specversion")
+	return
 }
 
 // SetType implements EventWriter.SetType

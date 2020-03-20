@@ -26,11 +26,11 @@ func DirectWrite(
 	message MessageReader,
 	structuredWriter StructuredWriter,
 	binaryWriter BinaryWriter,
-	transformers TransformerFactories,
+	transformers ...TransformerFactory,
 ) (Encoding, error) {
 	if structuredWriter != nil && !GetOrDefaultFromCtx(ctx, SKIP_DIRECT_STRUCTURED_ENCODING, false).(bool) {
 		// Wrap the transformers in the structured builder
-		structuredWriter = transformers.StructuredTransformer(structuredWriter)
+		structuredWriter = TransformerFactories(transformers).StructuredTransformer(structuredWriter)
 
 		// StructuredTransformer could return nil if one of transcoders doesn't support
 		// direct structured transcoding
@@ -44,7 +44,7 @@ func DirectWrite(
 	}
 
 	if binaryWriter != nil && !GetOrDefaultFromCtx(ctx, SKIP_DIRECT_BINARY_ENCODING, false).(bool) {
-		binaryWriter = transformers.BinaryTransformer(binaryWriter)
+		binaryWriter = TransformerFactories(transformers).BinaryTransformer(binaryWriter)
 		if binaryWriter != nil {
 			if err := message.ReadBinary(ctx, binaryWriter); err == nil {
 				return EncodingBinary, nil
@@ -79,7 +79,7 @@ func Write(
 	var err error
 	// Skip direct encoding if the event is an event message
 	if enc != EncodingEvent {
-		enc, err = DirectWrite(ctx, message, structuredWriter, binaryWriter, transformers)
+		enc, err = DirectWrite(ctx, message, structuredWriter, binaryWriter, transformers...)
 		if enc != EncodingUnknown {
 			// Message directly encoded, nothing else to do here
 			return enc, err

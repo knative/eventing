@@ -17,7 +17,7 @@ type Option func(*Protocol) error
 func WithTarget(targetUrl string) Option {
 	return func(p *Protocol) error {
 		if p == nil {
-			return fmt.Errorf("http protocol option can not set nil protocol")
+			return fmt.Errorf("http target option can not set nil protocol")
 		}
 		targetUrl = strings.TrimSpace(targetUrl)
 		if targetUrl != "" {
@@ -48,7 +48,7 @@ func WithTarget(targetUrl string) Option {
 func WithHeader(key, value string) Option {
 	return func(p *Protocol) error {
 		if p == nil {
-			return fmt.Errorf("http header option can not set nil transport")
+			return fmt.Errorf("http header option can not set nil protocol")
 		}
 		key = strings.TrimSpace(key)
 		if key != "" {
@@ -71,7 +71,7 @@ func WithHeader(key, value string) Option {
 func WithShutdownTimeout(timeout time.Duration) Option {
 	return func(t *Protocol) error {
 		if t == nil {
-			return fmt.Errorf("http shutdown timeout option can not set nil transport")
+			return fmt.Errorf("http shutdown timeout option can not set nil protocol")
 		}
 		t.ShutdownTimeout = &timeout
 		return nil
@@ -93,7 +93,7 @@ func checkListen(t *Protocol, prefix string) error {
 func WithPort(port int) Option {
 	return func(t *Protocol) error {
 		if t == nil {
-			return fmt.Errorf("http port option can not set nil transport")
+			return fmt.Errorf("http port option can not set nil protocol")
 		}
 		if port < 0 || port > 65535 {
 			return fmt.Errorf("http port option was given an invalid port: %d", port)
@@ -111,7 +111,7 @@ func WithPort(port int) Option {
 func WithListener(l net.Listener) Option {
 	return func(t *Protocol) error {
 		if t == nil {
-			return fmt.Errorf("http listener option can not set nil transport")
+			return fmt.Errorf("http listener option can not set nil protocol")
 		}
 		if err := checkListen(t, "http port option"); err != nil {
 			return err
@@ -126,7 +126,7 @@ func WithListener(l net.Listener) Option {
 func WithPath(path string) Option {
 	return func(t *Protocol) error {
 		if t == nil {
-			return fmt.Errorf("http path option can not set nil transport")
+			return fmt.Errorf("http path option can not set nil protocol")
 		}
 		path = strings.TrimSpace(path)
 		if len(path) == 0 {
@@ -134,6 +134,25 @@ func WithPath(path string) Option {
 		}
 		t.Path = path
 		return nil
+	}
+}
+
+// WithMethod sets the HTTP verb (GET, POST, PUT, etc.) to use
+// when using an HTTP request.
+func WithMethod(method string) Option {
+	return func(p *Protocol) error {
+		if p == nil {
+			return fmt.Errorf("http method option can not set nil protocol")
+		}
+		method = strings.TrimSpace(method)
+		if method != "" {
+			if p.RequestTemplate == nil {
+				p.RequestTemplate = &nethttp.Request{}
+			}
+			p.RequestTemplate.Method = method
+			return nil
+		}
+		return fmt.Errorf("http method option was empty string")
 	}
 }
 
@@ -148,17 +167,20 @@ type Middleware func(next nethttp.Handler) nethttp.Handler
 func WithMiddleware(middleware Middleware) Option {
 	return func(t *Protocol) error {
 		if t == nil {
-			return fmt.Errorf("http middleware option can not set nil transport")
+			return fmt.Errorf("http middleware option can not set nil protocol")
 		}
 		t.middleware = append(t.middleware, middleware)
 		return nil
 	}
 }
 
-// WithHTTPTransport sets the HTTP client transport.
-func WithHTTPTransport(httpTransport nethttp.RoundTripper) Option {
+// WithRoundTripper sets the HTTP RoundTripper.
+func WithRoundTripper(roundTripper nethttp.RoundTripper) Option {
 	return func(t *Protocol) error {
-		t.transport = httpTransport
+		if t == nil {
+			return fmt.Errorf("http round tripper option can not set nil protocol")
+		}
+		t.roundTripper = roundTripper
 		return nil
 	}
 }

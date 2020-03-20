@@ -2,7 +2,6 @@ package event
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -12,15 +11,6 @@ import (
 
 // Adhere to EventContextWriter
 var _ EventContextWriter = (*EventContextV03)(nil)
-
-// SetSpecVersion implements EventContextWriter.SetSpecVersion
-func (ec *EventContextV03) SetSpecVersion(v string) error {
-	if v != CloudEventsVersionV03 {
-		return fmt.Errorf("invalid version %q, expecting %q", v, CloudEventsVersionV03)
-	}
-	ec.SpecVersion = CloudEventsVersionV03
-	return nil
-}
 
 // SetDataContentType implements EventContextWriter.SetDataContentType
 func (ec *EventContextV03) SetDataContentType(ct string) error {

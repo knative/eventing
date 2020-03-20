@@ -20,10 +20,6 @@ type structBufferedMessage struct {
 	Bytes  *bytebufferpool.ByteBuffer
 }
 
-func (m *structBufferedMessage) GetParent() binding.Message {
-	return nil
-}
-
 func (m *structBufferedMessage) ReadEncoding() binding.Encoding {
 	return binding.EncodingStructured
 }

@@ -8,10 +8,7 @@ import (
 
 // GetSpecVersion implements EventContextReader.GetSpecVersion
 func (ec EventContextV1) GetSpecVersion() string {
-	if ec.SpecVersion != "" {
-		return ec.SpecVersion
-	}
-	return CloudEventsVersionV03
+	return CloudEventsVersionV1
 }
 
 // GetDataContentType implements EventContextReader.GetDataContentType

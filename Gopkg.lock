@@ -122,7 +122,7 @@
   version = "v0.2.1"
 
 [[projects]]
-  digest = "1:ea81e13a33886f03955d60157defe3bcfcc878142f01e990382189951622caca"
+  digest = "1:f022532e7adbfec6e1c6ba705a30fdfc22732d1c2684e6087343a2d55a3d9548"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     "v1",
@@ -159,8 +159,8 @@
     "v2/types",
   ]
   pruneopts = "NUT"
-  revision = "0a5202bf31a5927f261fb8ee0bba88cef0963d8c"
-  version = "v2.0.0-preview4"
+  revision = "0331394117d40bbbe9448cb7008cf2566fa29a86"
+  version = "v2.0.0-preview6"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -1374,7 +1374,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7fce3b5a8d117763efbf4b6b9862940a5472d276022b0b324b39b70ef4fa77bd"
+  digest = "1:94d7cfde4eee652c089b47f0200b86bc28e618de18a2e5368b0bbc8e2b601026"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1479,7 +1479,7 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "42d1b005c814b8f9ea786ff89c90c91448c1417a"
+  revision = "c13e86e2d4f484f1dd3b8ca6474994c16da74f20"
 
 [[projects]]
   branch = "master"
@@ -1490,7 +1490,7 @@
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "e7f947d615d5eb623e80824f71d139a958c4019f"
+  revision = "54bbe34c6c26f6251a92d48a546166fc28d434a6"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"

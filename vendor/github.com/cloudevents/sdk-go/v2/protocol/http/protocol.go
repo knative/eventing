@@ -46,7 +46,7 @@ type Protocol struct {
 	// http server. If nil, the Protocol will create a one.
 	Handler           *http.ServeMux
 	listener          net.Listener
-	transport         http.RoundTripper // TODO: use this.
+	roundTripper      http.RoundTripper // TODO: use this.
 	server            *http.Server
 	handlerRegistered bool
 	middleware        []Middleware
@@ -84,12 +84,24 @@ func (p *Protocol) applyOptions(opts ...Option) error {
 
 // Send implements binding.Sender
 func (p *Protocol) Send(ctx context.Context, m binding.Message) error {
+	if ctx == nil {
+		return fmt.Errorf("nil Context")
+	} else if m == nil {
+		return fmt.Errorf("nil Message")
+	}
+
 	_, err := p.Request(ctx, m)
 	return err
 }
 
 // Request implements binding.Requester
 func (p *Protocol) Request(ctx context.Context, m binding.Message) (binding.Message, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil Context")
+	} else if m == nil {
+		return nil, fmt.Errorf("nil Message")
+	}
+
 	var err error
 	defer func() { _ = m.Finish(err) }()
 
@@ -116,6 +128,7 @@ func (p *Protocol) Request(ctx context.Context, m binding.Message) (binding.Mess
 func (p *Protocol) makeRequest(ctx context.Context) *http.Request {
 	// TODO: support custom headers from context?
 	req := &http.Request{
+		Method: http.MethodPost,
 		Header: make(http.Header),
 		// TODO: HeaderFrom(ctx),
 	}
@@ -164,6 +177,10 @@ func copyHeaders(from, to http.Header) {
 // Returns non-nil error if the incoming HTTP request fails to parse as a CloudEvent
 // Returns io.EOF if the receiver is closed.
 func (p *Protocol) Receive(ctx context.Context) (binding.Message, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil Context")
+	}
+
 	msg, fn, err := p.Respond(ctx)
 	// No-op the response.
 	defer func() {
@@ -179,11 +196,19 @@ func (p *Protocol) Receive(ctx context.Context) (binding.Message, error) {
 // Returns non-nil error if the incoming HTTP request fails to parse as a CloudEvent
 // Returns io.EOF if the receiver is closed.
 func (p *Protocol) Respond(ctx context.Context) (binding.Message, protocol.ResponseFn, error) {
-	in, ok := <-p.incoming
-	if !ok {
+	if ctx == nil {
+		return nil, nil, fmt.Errorf("nil Context")
+	}
+
+	select {
+	case in, ok := <-p.incoming:
+		if !ok {
+			return nil, nil, io.EOF
+		}
+		return in.msg, in.respFn, in.err
+	case <-ctx.Done():
 		return nil, nil, io.EOF
 	}
-	return in.msg, in.respFn, in.err
 }
 
 type msgErr struct {
@@ -195,11 +220,13 @@ type msgErr struct {
 // ServeHTTP implements http.Handler.
 // Blocks until Message.Finish is called.
 func (p *Protocol) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	var err error
+
 	m := NewMessageFromHttpRequest(req)
-	if m.ReadEncoding() == binding.EncodingUnknown {
+	if m == nil || m.ReadEncoding() == binding.EncodingUnknown {
 		p.incoming <- msgErr{msg: nil, err: binding.ErrUnknownEncoding}
+		return // if there was no message, return.
 	}
+
 	done := make(chan error)
 
 	m.OnFinish = func(err error) error {
@@ -226,8 +253,8 @@ func (p *Protocol) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return nil
 	}
 
-	p.incoming <- msgErr{msg: m, respFn: fn, err: err} // Send to Respond()
-	if err = <-done; err != nil {
+	p.incoming <- msgErr{msg: m, respFn: fn} // Send to Request
+	if err := <-done; err != nil {
 		fmt.Println("attempting to write an error out on response writer:", err)
 		http.Error(rw, fmt.Sprintf("cannot forward CloudEvent: %v", err), http.StatusInternalServerError)
 	}
