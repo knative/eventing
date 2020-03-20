@@ -38,8 +38,9 @@ func (source *PingSource) ConvertTo(ctx context.Context, obj apis.Convertible) e
 		}
 		sink.Status = v1alpha2.PingSourceStatus{
 			SourceStatus: duckv1.SourceStatus{
-				Status:  source.Status.Status,
-				SinkURI: source.Status.SinkURI,
+				Status:               source.Status.Status,
+				SinkURI:              source.Status.SinkURI,
+				CloudEventAttributes: source.Status.CloudEventAttributes,
 			},
 		}
 		// Optionals
@@ -72,8 +73,9 @@ func (sink *PingSource) ConvertFrom(ctx context.Context, obj apis.Convertible) e
 		}
 		sink.Status = PingSourceStatus{
 			SourceStatus: duckv1.SourceStatus{
-				Status:  source.Status.Status,
-				SinkURI: source.Status.SinkURI,
+				Status:               source.Status.Status,
+				SinkURI:              source.Status.SinkURI,
+				CloudEventAttributes: source.Status.CloudEventAttributes,
 			},
 		}
 		if reflect.DeepEqual(*sink.Spec.Sink, duckv1.Destination{}) {

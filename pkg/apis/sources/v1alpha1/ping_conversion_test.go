@@ -183,6 +183,11 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 		},
 	}
 
+	ceAttributes := []duckv1.CloudEventAttributes{{
+		Type:   PingSourceEventType,
+		Source: PingSourceSource("ping-ns", "ping-name"),
+	}}
+
 	tests := []struct {
 		name string
 		in   apis.Convertible
@@ -245,7 +250,8 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI:              sinkURI,
+					CloudEventAttributes: ceAttributes,
 				},
 			},
 		},
