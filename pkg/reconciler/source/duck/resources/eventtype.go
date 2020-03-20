@@ -17,9 +17,9 @@ limitations under the License.
 package resources
 
 import (
+	"crypto/md5"
 	"fmt"
 
-	"crypto/md5"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
