@@ -18,15 +18,12 @@ package crd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/source/duck"
@@ -44,8 +41,6 @@ import (
 const (
 	// Name of the corev1.Events emitted from the Source CRDs reconciliation process.
 	sourceCRDReconcileFailed = "SourceCRDReconcileFailed"
-
-	finalizerName = controllerAgentName
 )
 
 type runningController struct {
@@ -103,24 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Don't modify the informers copy.
 	crd := original.DeepCopy()
 
-	var reconcileErr error
-	if crd.GetDeletionTimestamp().IsZero() {
-		// add the finalizer
-		if crd, err = r.addFinalizer(ctx, crd); err != nil {
-			logging.FromContext(ctx).Warn("Failed to add finalizers", zap.Error(err))
-		}
-
-		// Reconcile this copy of the resource.
-		reconcileErr = r.reconcile(ctx, crd)
-	} else {
-		// If this crd is being marked for deletion and reconciled cleanly, remove the finalizer.
-		reconcileErr = r.finalize(ctx, crd)
-		if reconcileErr == nil {
-			if crd, err = r.removeFinalizer(ctx, crd); err != nil {
-				logging.FromContext(ctx).Warn("Failed to clear finalizers", zap.Error(err))
-			}
-		}
-	}
+	reconcileErr := r.reconcile(ctx, crd)
 	if reconcileErr != nil {
 		r.Recorder.Eventf(crd, corev1.EventTypeWarning, sourceCRDReconcileFailed, "Source CRD reconciliation failed: %v", reconcileErr)
 	}
@@ -140,36 +118,21 @@ func (r *Reconciler) reconcile(ctx context.Context, crd *v1beta1.CustomResourceD
 		return err
 	}
 
+	if !crd.DeletionTimestamp.IsZero() {
+		// We are intentionally not setting up a finalizer on the CRD.
+		// This might leave unnecessary dynamic controllers running.
+		// This is a best effort to try to clean them up.
+		// Note that without a finalizer there is no guarantee we will be called.
+		r.deleteController(ctx, gvr)
+		return nil
+	}
+
 	err = r.reconcileController(ctx, crd, gvr, gvk)
 	if err != nil {
 		logging.FromContext(ctx).Error("Error while reconciling controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()), zap.Error(err))
 		return err
 	}
 
-	return nil
-}
-
-func (r *Reconciler) finalize(ctx context.Context, crd *v1beta1.CustomResourceDefinition) error {
-	// The Source CRD is being deleted, we need to delete the dynamically created controller...
-	gvr, gvk, err := r.resolveGroupVersions(ctx, crd)
-	if err != nil {
-		logging.FromContext(ctx).Error("Error while resolving GVR", zap.String("CRD", crd.Name), zap.Error(err))
-		return err
-	}
-	r.lock.RLock()
-	rc, found := r.controllers[*gvr]
-	r.lock.RUnlock()
-	if found {
-		r.lock.Lock()
-		// Now that we grabbed the write lock, check that nobody deleted it already.
-		rc, found = r.controllers[*gvr]
-		if found {
-			logging.FromContext(ctx).Info("Stopping Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
-			rc.cancel()
-			delete(r.controllers, *gvr)
-		}
-		r.lock.Unlock()
-	}
 	return nil
 }
 
@@ -197,6 +160,23 @@ func (r *Reconciler) resolveGroupVersions(ctx context.Context, crd *v1beta1.Cust
 		return nil, nil, fmt.Errorf("unable to find GVR or GVK for %s", crd.Name)
 	}
 	return gvr, gvk, nil
+}
+
+func (r *Reconciler) deleteController(ctx context.Context, gvr *schema.GroupVersionResource) {
+	r.lock.RLock()
+	rc, found := r.controllers[*gvr]
+	r.lock.RUnlock()
+	if found {
+		r.lock.Lock()
+		// Now that we grabbed the write lock, check that nobody deleted it already.
+		rc, found = r.controllers[*gvr]
+		if found {
+			logging.FromContext(ctx).Info("Stopping Source Duck Controller", zap.String("GVR", gvr.String()))
+			rc.cancel()
+			delete(r.controllers, *gvr)
+		}
+		r.lock.Unlock()
+	}
 }
 
 func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.CustomResourceDefinition, gvr *schema.GroupVersionResource, gvk *schema.GroupVersionKind) error {
@@ -235,74 +215,4 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.Custo
 		}
 	}(rc.controller)
 	return nil
-}
-
-func (r *Reconciler) addFinalizer(ctx context.Context, crd *v1beta1.CustomResourceDefinition) (*v1beta1.CustomResourceDefinition, error) {
-	finalizers := sets.NewString(crd.Finalizers...)
-	// If this CRD is not being deleted, mark the finalizer.
-	if crd.GetDeletionTimestamp().IsZero() {
-		finalizers.Insert(finalizerName)
-	}
-	finalizers.Insert(finalizerName)
-	crd.Finalizers = finalizers.List()
-	return r.updateFinalizers(ctx, crd)
-}
-
-func (r *Reconciler) removeFinalizer(ctx context.Context, crd *v1beta1.CustomResourceDefinition) (*v1beta1.CustomResourceDefinition, error) {
-	if crd.GetDeletionTimestamp().IsZero() {
-		return crd, nil
-	}
-	finalizers := sets.NewString(crd.Finalizers...)
-	finalizers.Delete(finalizerName)
-	crd.Finalizers = finalizers.List()
-	return r.updateFinalizers(ctx, crd)
-}
-
-func (r *Reconciler) updateFinalizers(ctx context.Context, crd *v1beta1.CustomResourceDefinition) (*v1beta1.CustomResourceDefinition, error) {
-	actual, err := r.crdLister.Get(crd.Name)
-
-	if err != nil {
-		return crd, err
-	}
-
-	// Don't modify the informers copy.
-	existing := actual.DeepCopy()
-
-	var finalizers []string
-
-	// If there's nothing to update, just return.
-	existingFinalizers := sets.NewString(existing.Finalizers...)
-	desiredFinalizers := sets.NewString(crd.Finalizers...)
-
-	if desiredFinalizers.Has(finalizerName) {
-		if existingFinalizers.Has(finalizerName) {
-			// Nothing to do.
-			return crd, nil
-		}
-		// Add the finalizer.
-		finalizers = append(existing.Finalizers, finalizerName)
-	} else {
-		if !existingFinalizers.Has(finalizerName) {
-			// Nothing to do.
-			return crd, nil
-		}
-		// Remove the finalizer.
-		existingFinalizers.Delete(finalizerName)
-		finalizers = existingFinalizers.List()
-	}
-
-	mergePatch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"finalizers":      finalizers,
-			"resourceVersion": existing.ResourceVersion,
-		},
-	}
-
-	patch, err := json.Marshal(mergePatch)
-	if err != nil {
-		return crd, err
-	}
-
-	crd, err = r.apiExtensionsClientSet.ApiextensionsV1beta1().CustomResourceDefinitions().Patch(crd.Name, types.MergePatchType, patch)
-	return crd, err
 }
