@@ -28,8 +28,6 @@ import (
 
 	broker "knative.dev/eventing/cmd/mtbroker"
 	"knative.dev/eventing/pkg/mtbroker/filter"
-	cmpresources "knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
-	namespaceresources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
@@ -91,11 +89,7 @@ func main() {
 	ctx, _ = injection.Default.SetupInformers(ctx, cfg)
 	kubeClient := kubeclient.Get(ctx)
 
-	loggingConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, logging.ConfigMapName())
-	metricsConfigMapName := cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, metrics.ConfigMapName())
-
-	//	loggingConfig, err := broker.GetLoggingConfig(ctx, env.Namespace, loggingConfigMapName)
-	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), loggingConfigMapName)
+	loggingConfig, err := broker.GetLoggingConfig(ctx, system.Namespace(), logging.ConfigMapName())
 	if err != nil {
 		log.Fatal("Error loading/parsing logging configuration:", err)
 	}
@@ -120,17 +114,16 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create metrics exporter update function", zap.Error(err))
 	}
-	configMapWatcher.Watch(metricsConfigMapName, updateFunc)
+	configMapWatcher.Watch(metrics.ConfigMapName(), updateFunc)
 	// TODO change the component name to broker once Stackdriver metrics are approved.
 	// Watch the observability config map and dynamically update request logs.
-	configMapWatcher.Watch(loggingConfigMapName, logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
+	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
 	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
 		Namespace:  env.Namespace,
 		BrokerName: "cluster",
 	})
-	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin,
-		cmpresources.MakeCopyConfigMapName(namespaceresources.DefaultConfigMapPropagationName, tracingconfig.ConfigName)); err != nil {
+	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin, tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
