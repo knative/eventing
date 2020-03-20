@@ -311,7 +311,7 @@ function create_test_cluster_with_retries() {
       echo "$@"
 
       run_go_tool k8s.io/test-infra/kubetest \
-        kubetest "$*" --gcp-region=${cluster_creation_zone} 2>&1 | tee ${cluster_creation_log}
+        kubetest $* --gcp-region=${cluster_creation_zone} 2>&1 | tee ${cluster_creation_log}
 
       # Exit if test succeeded
       [[ "$(get_test_return_code)" == "0" ]] && return 0
