@@ -22,7 +22,9 @@ import (
 	"testing"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"knative.dev/eventing/test/lib"
@@ -150,4 +152,56 @@ func TestPingSourceV1Alpha2ResourceScope(t *testing.T) {
 	if err := client.CheckLog(loggerPodName, lib.CheckerContainsCount(data, 1)); err != nil {
 		t.Fatalf("String %q not found or found multiple times in logs of logger pod %q: %v", data, loggerPodName, err)
 	}
+}
+
+func TestPingSourceV1Alpha2EventTypes(t *testing.T) {
+	const (
+		sourceName = "e2e-ping-source-eventtype"
+	)
+
+	client := setup(t, true)
+	defer tearDown(client)
+
+	// Label namespace so that it creates the default broker.
+	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+		t.Fatalf("Error annotating namespace: %v", err)
+	}
+
+	// Wait for default broker ready.
+	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, lib.BrokerTypeMeta)
+
+	// Create ping source
+	data := fmt.Sprintf("TestPingSource %s", uuid.NewUUID())
+	source := eventingtesting.NewPingSourceV1Alpha2(
+		sourceName,
+		client.Namespace,
+		eventingtesting.WithPingSourceV1A2Spec(sourcesv1alpha2.PingSourceSpec{
+			JsonData: data,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
+					Ref: resources.KnativeRefForBroker(defaultBrokerName, client.Namespace),
+				},
+			},
+		}),
+	)
+	client.CreatePingSourceV1Alpha2OrFail(source)
+
+	// wait for all test resources to be ready
+	client.WaitForAllTestResourcesReadyOrFail()
+
+	// verify that an EventType was created.
+	eventTypes, err := client.Eventing.EventingV1alpha1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("Error retrieving EventTypes: %v", err)
+	}
+	if len(eventTypes.Items) != 1 {
+		t.Fatalf("Invalid number of EventTypes registered for PingSource: %s/%s, expected 1, got %d", client.Namespace, sourceName, len(eventTypes.Items))
+	}
+	et := eventTypes.Items[0]
+	if et.Spec.Type != sourcesv1alpha2.PingSourceEventType && et.Spec.Source != sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName) {
+		t.Fatalf("Invalid spec.type and/or spec.source for PingSource EventType, expected: type=%s source=%s, got: type=%s source=%s",
+			sourcesv1alpha2.PingSourceEventType, sourcesv1alpha2.PingSourceSource(client.Namespace, sourceName), et.Spec.Type, et.Spec.Source)
+	}
+
 }
