@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	pkgduckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 
@@ -68,9 +68,9 @@ func (testHelper) FalseSubscriptionStatus() *messagingv1alpha1.SubscriptionStatu
 
 func (t testHelper) ReadyBrokerStatus() *BrokerStatus {
 	bs := &BrokerStatus{}
-	bs.PropagateIngressDeploymentAvailability(t.AvailableDeployment())
+	bs.PropagateIngressAvailability(t.AvailableEndpoints())
 	bs.PropagateTriggerChannelReadiness(t.ReadyChannelStatus())
-	bs.PropagateFilterDeploymentAvailability(t.AvailableDeployment())
+	bs.PropagateFilterAvailability(t.AvailableEndpoints())
 	bs.SetAddress(&apis.URL{Scheme: "http", Host: "foo"})
 	return bs
 }
@@ -99,26 +99,24 @@ func (t testHelper) ReadyTriggerStatus() *TriggerStatus {
 	return ts
 }
 
-func (testHelper) UnavailableDeployment() *v1.Deployment {
-	d := &v1.Deployment{}
-	d.Name = "unavailable"
-	d.Status.Conditions = []v1.DeploymentCondition{
-		{
-			Type:   v1.DeploymentAvailable,
-			Status: "False",
-		},
-	}
-	return d
+func (t testHelper) UnavailableEndpoints() *corev1.Endpoints {
+	ep := &corev1.Endpoints{}
+	ep.Name = "unavailable"
+	ep.Subsets = []corev1.EndpointSubset{{
+		NotReadyAddresses: []corev1.EndpointAddress{{
+			IP: "127.0.0.1",
+		}},
+	}}
+	return ep
 }
 
-func (t testHelper) AvailableDeployment() *v1.Deployment {
-	d := t.UnavailableDeployment()
-	d.Name = "available"
-	d.Status.Conditions = []v1.DeploymentCondition{
-		{
-			Type:   v1.DeploymentAvailable,
-			Status: "True",
-		},
-	}
-	return d
+func (t testHelper) AvailableEndpoints() *corev1.Endpoints {
+	ep := &corev1.Endpoints{}
+	ep.Name = "available"
+	ep.Subsets = []corev1.EndpointSubset{{
+		Addresses: []corev1.EndpointAddress{{
+			IP: "127.0.0.1",
+		}},
+	}}
+	return ep
 }

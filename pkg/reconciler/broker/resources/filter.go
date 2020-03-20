@@ -62,77 +62,65 @@ func MakeFilterDeployment(args *FilterArgs) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: args.ServiceAccountName,
-					Containers: []corev1.Container{
-						{
-							Name:  filterContainerName,
-							Image: args.Image,
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       2,
-							},
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/readyz",
-										Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       2,
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  system.NamespaceEnvKey,
-									Value: system.Namespace(),
-								},
-								{
-									Name: "NAMESPACE",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
-								},
-								{
-									Name: "POD_NAME",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
-										},
-									},
-								},
-								{
-									Name:  "CONTAINER_NAME",
-									Value: filterContainerName,
-								},
-								{
-									Name:  "BROKER",
-									Value: args.Broker.Name,
-								},
-								// Used for StackDriver only.
-								{
-									Name:  "METRICS_DOMAIN",
-									Value: "knative.dev/internal/eventing",
+					Containers: []corev1.Container{{
+						Name:  filterContainerName,
+						Image: args.Image,
+						LivenessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/healthz",
+									Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 								},
 							},
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 8080,
-									Name:          "http",
-								},
-								{
-									ContainerPort: 9090,
-									Name:          "metrics",
-								},
-							},
+							InitialDelaySeconds: 5,
+							PeriodSeconds:       2,
 						},
-					},
+						ReadinessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/readyz",
+									Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+								},
+							},
+							InitialDelaySeconds: 5,
+							PeriodSeconds:       2,
+						},
+						Env: []corev1.EnvVar{{
+							Name:  system.NamespaceEnvKey,
+							Value: system.Namespace(),
+						}, {
+							Name: "NAMESPACE",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "metadata.namespace",
+								},
+							},
+						}, {
+							Name: "POD_NAME",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "metadata.name",
+								},
+							},
+						}, {
+							Name:  "CONTAINER_NAME",
+							Value: filterContainerName,
+						}, {
+							Name:  "BROKER",
+							Value: args.Broker.Name,
+						}, {
+							// Used for StackDriver only.
+							Name:  "METRICS_DOMAIN",
+							Value: "knative.dev/internal/eventing",
+						}},
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 8080,
+							Name:          "http",
+						}, {
+							ContainerPort: 9090,
+							Name:          "metrics",
+						}},
+					}},
 				},
 			},
 		},
@@ -152,17 +140,14 @@ func MakeFilterService(b *eventingv1alpha1.Broker) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: FilterLabels(b.Name),
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.FromInt(8080),
-				},
-				{
-					Name: "http-metrics",
-					Port: 9090,
-				},
-			},
+			Ports: []corev1.ServicePort{{
+				Name:       "http",
+				Port:       80,
+				TargetPort: intstr.FromInt(8080),
+			}, {
+				Name: "http-metrics",
+				Port: 9090,
+			}},
 		},
 	}
 }

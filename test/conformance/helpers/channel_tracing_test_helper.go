@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	ce "github.com/cloudevents/sdk-go/legacy"
+	ce "github.com/cloudevents/sdk-go/v1"
 	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"

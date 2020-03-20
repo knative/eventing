@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/kncloudevents"

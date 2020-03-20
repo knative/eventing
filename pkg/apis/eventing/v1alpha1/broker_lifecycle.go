@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	"knative.dev/pkg/apis"
 
+	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/pkg/apis/duck"
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 )
@@ -63,13 +63,11 @@ func (bs *BrokerStatus) MarkIngressFailed(reason, format string, args ...interfa
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionIngress, reason, format, args...)
 }
 
-func (bs *BrokerStatus) PropagateIngressDeploymentAvailability(d *appsv1.Deployment) {
-	if duck.DeploymentIsAvailable(&d.Status, true) {
+func (bs *BrokerStatus) PropagateIngressAvailability(ep *corev1.Endpoints) {
+	if duck.EndpointsAreAvailable(ep) {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionIngress)
 	} else {
-		// I don't know how to propagate the status well, so just give the name of the Deployment
-		// for now.
-		bs.MarkIngressFailed("DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+		bs.MarkIngressFailed("EndpointsUnavailable", "Endpoints %q are unavailable.", ep.Name)
 	}
 }
 
@@ -91,13 +89,11 @@ func (bs *BrokerStatus) MarkFilterFailed(reason, format string, args ...interfac
 	brokerCondSet.Manage(bs).MarkFalse(BrokerConditionFilter, reason, format, args...)
 }
 
-func (bs *BrokerStatus) PropagateFilterDeploymentAvailability(d *appsv1.Deployment) {
-	if duck.DeploymentIsAvailable(&d.Status, true) {
+func (bs *BrokerStatus) PropagateFilterAvailability(ep *corev1.Endpoints) {
+	if duck.EndpointsAreAvailable(ep) {
 		brokerCondSet.Manage(bs).MarkTrue(BrokerConditionFilter)
 	} else {
-		// I don't know how to propagate the status well, so just give the name of the Deployment
-		// for now.
-		bs.MarkFilterFailed("DeploymentUnavailable", "The Deployment '%s' is unavailable.", d.Name)
+		bs.MarkFilterFailed("EndpointsUnavailable", "Endpoints %q are unavailable.", ep.Name)
 	}
 }
 

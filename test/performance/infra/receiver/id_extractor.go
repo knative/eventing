@@ -16,7 +16,7 @@ limitations under the License.
 
 package receiver
 
-import cloudevents "github.com/cloudevents/sdk-go/legacy"
+import cloudevents "github.com/cloudevents/sdk-go/v1"
 
 // IdExtractor is used by the receiver to establish the id of the received event
 type IdExtractor func(event cloudevents.Event) string

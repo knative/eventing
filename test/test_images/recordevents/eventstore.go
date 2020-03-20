@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 
 	"knative.dev/eventing/test/lib"
 )

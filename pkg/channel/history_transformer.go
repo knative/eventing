@@ -17,9 +17,9 @@ limitations under the License.
 package channel
 
 import (
-	"github.com/cloudevents/sdk-go/pkg/binding"
-	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
-	"github.com/cloudevents/sdk-go/pkg/types"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	"github.com/cloudevents/sdk-go/v2/types"
 )
 
 func AddHistory(host string) []binding.TransformerFactory {

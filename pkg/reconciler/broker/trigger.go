@@ -37,6 +37,7 @@ import (
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 )
 
 const (
@@ -52,7 +53,7 @@ const (
 	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
-func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, filterSvc *corev1.Service) error {
+func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, filterSvc kmeta.Accessor) error {
 	t.Status.InitializeConditions()
 
 	if t.DeletionTimestamp != nil {
@@ -100,13 +101,13 @@ func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t
 }
 
 // subscribeToBrokerChannel subscribes service 'svc' to the Broker's channels.
-func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference, svc *corev1.Service) (*messagingv1alpha1.Subscription, error) {
+func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, brokerTrigger *corev1.ObjectReference, svc kmeta.Accessor) (*messagingv1alpha1.Subscription, error) {
 	if svc == nil {
 		return nil, fmt.Errorf("service for broker is nil")
 	}
 	uri := &apis.URL{
 		Scheme: "http",
-		Host:   names.ServiceHostName(svc.Name, svc.Namespace),
+		Host:   names.ServiceHostName(svc.GetName(), svc.GetNamespace()),
 		Path:   path.Generate(t),
 	}
 	// Note that we have to hard code the brokerGKV stuff as sometimes typemeta is not

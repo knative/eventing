@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cloudevents "github.com/cloudevents/sdk-go/legacy"
+	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"

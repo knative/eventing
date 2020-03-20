@@ -59,6 +59,9 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 	pod := resources.EventLoggerPod(subscriberName)
 	client.CreatePodOrFail(pod, lib.WithService(subscriberName))
 
+	// Wait for subscriber to become ready
+	client.WaitForAllTestResourcesReadyOrFail()
+
 	// Create triggers.
 	client.CreateTriggerOrFailV1Beta1(triggerName,
 		resources.WithSubscriberServiceRefForTriggerV1Beta1(subscriberName),

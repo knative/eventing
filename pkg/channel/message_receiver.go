@@ -22,10 +22,9 @@ import (
 	nethttp "net/http"
 	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/binding"
-	"github.com/cloudevents/sdk-go/pkg/binding/buffering"
-	"github.com/cloudevents/sdk-go/pkg/binding/transformer"
-	"github.com/cloudevents/sdk-go/pkg/protocol/http"
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
@@ -41,22 +40,24 @@ var defaultTransformers = []binding.TransformerFactory{
 // MessageReceiver starts a server to receive new events for the channel dispatcher. The new
 // event is emitted via the receiver function.
 type MessageReceiver struct {
-	messageBufferingCtx  context.Context
 	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
-	receiverFunc         MessageReceiverFunc
+	receiverFunc         UnbufferedMessageReceiverFunc
 	logger               *zap.Logger
 	hostToChannelFunc    ResolveChannelFromHostFunc
 }
 
-// ReceiverBindingFunc is the function to be called for handling the event.
-type MessageReceiverFunc func(context.Context, ChannelReference, binding.Message, nethttp.Header) error
+// UnbufferedMessageReceiverFunc is the function to be called for handling the message.
+// The provided message is not buffered, so it can't be safely read more times.
+// When you perform the write (or the buffering) of the Message, you must use the transformers provided as parameters.
+// This function is responsible for invoking Message.Finish().
+type UnbufferedMessageReceiverFunc func(context.Context, ChannelReference, binding.Message, []binding.TransformerFactory, nethttp.Header) error
 
-// ReceiverOptions provides functional options to EventReceiver function.
+// ReceiverOptions provides functional options to MessageReceiver function.
 type MessageReceiverOptions func(*MessageReceiver) error
 
-// ResolveChannelFromHostHeader is a ReceiverOption for NewEventReceiver which enables the caller to overwrite the
+// ResolveMessageChannelFromHostHeader is a ReceiverOption for NewMessageReceiver which enables the caller to overwrite the
 // default behaviour defined by ParseChannel function.
-func ResolveChannelFromHostHeaderBindings(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
+func ResolveMessageChannelFromHostHeader(hostToChannelFunc ResolveChannelFromHostFunc) MessageReceiverOptions {
 	return func(r *MessageReceiver) error {
 		r.hostToChannelFunc = hostToChannelFunc
 		return nil
@@ -65,10 +66,9 @@ func ResolveChannelFromHostHeaderBindings(hostToChannelFunc ResolveChannelFromHo
 
 // NewMessageReceiver creates an event receiver passing new events to the
 // receiverFunc.
-func NewMessageReceiver(messageBufferingCtx context.Context, receiverFunc MessageReceiverFunc, logger *zap.Logger, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
+func NewMessageReceiver(receiverFunc UnbufferedMessageReceiverFunc, logger *zap.Logger, opts ...MessageReceiverOptions) (*MessageReceiver, error) {
 	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
 	receiver := &MessageReceiver{
-		messageBufferingCtx:  messageBufferingCtx,
 		httpBindingsReceiver: bindingsReceiver,
 		receiverFunc:         receiverFunc,
 		hostToChannelFunc:    ResolveChannelFromHostFunc(ParseChannel),
@@ -156,13 +156,7 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 		transformers = append(transformers, tracing.AddTraceparent(span)...)
 	}
 
-	// TODO(slinkydeveloper) Why do i buffer the message if i don't need it (kafka channel use case)?
-	// CopyMessage generates a message that we can reuse several times
-	bufferedMessage, err := buffering.CopyMessage(r.messageBufferingCtx, message, transformers)
-	// We can forget the original message (in case of http, close the body)
-	_ = message.Finish(nil)
-
-	err = r.receiverFunc(request.Context(), channel, bufferedMessage, utils.PassThroughHeaders(request.Header))
+	err = r.receiverFunc(request.Context(), channel, message, transformers, utils.PassThroughHeaders(request.Header))
 	if err != nil {
 		if _, ok := err.(*UnknownChannelError); ok {
 			response.WriteHeader(nethttp.StatusNotFound)
