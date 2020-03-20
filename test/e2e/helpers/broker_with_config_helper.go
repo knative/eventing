@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/cloudevents"
@@ -30,6 +31,7 @@ import (
 
 // TestBrokerWithConfig is the helper function for broker_with_config_test
 func TestBrokerWithConfig(t *testing.T,
+	brokerClass string,
 	channelTestRunner lib.ChannelTestRunner,
 	options ...lib.SetupClientOption) {
 	const (
@@ -59,14 +61,16 @@ func TestBrokerWithConfig(t *testing.T,
 		client := lib.Setup(st, true, options...)
 		defer lib.TearDown(client)
 
-		// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
-		client.CreateRBACResourcesForBrokers()
+		if brokerClass == eventing.ChannelBrokerClassValue {
+			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+			client.CreateRBACResourcesForBrokers()
+		}
 
 		config := client.CreateBrokerConfigMapOrFail(brokerName, &channel)
 		//&channel
 
 		// create a new broker
-		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithChannelTemplateForBrokerV1Beta1(config))
+		client.CreateBrokerV1Beta1OrFail(brokerName, resources.WithBrokerClassForBrokerV1Beta1(brokerClass), resources.WithChannelTemplateForBrokerV1Beta1(config))
 		client.WaitForResourceReadyOrFail(brokerName, lib.BrokerTypeMeta)
 
 		// create the event we want to transform to
