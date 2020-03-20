@@ -261,8 +261,8 @@ func (e *Event) JsonDecodeV1(body []byte, raw map[string]json.RawMessage) error 
 	return nil
 }
 
-func marshalEvent(event interface{}, extensions map[string]interface{}) (map[string]json.RawMessage, error) {
-	b, err := json.Marshal(event)
+func marshalEvent(eventCtx EventContextReader, extensions map[string]interface{}) (map[string]json.RawMessage, error) {
+	b, err := json.Marshal(eventCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +271,13 @@ func marshalEvent(event interface{}, extensions map[string]interface{}) (map[str
 	if err := json.Unmarshal(b, &brm); err != nil {
 		return nil, err
 	}
+
+	sv, err := json.Marshal(eventCtx.GetSpecVersion())
+	if err != nil {
+		return nil, err
+	}
+
+	brm["specversion"] = sv
 
 	for k, v := range extensions {
 		k = strings.ToLower(k)

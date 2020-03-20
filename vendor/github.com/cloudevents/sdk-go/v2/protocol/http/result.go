@@ -29,8 +29,11 @@ var _ error = (*Result)(nil)
 
 // Is returns if the target error is a Result type checking target.
 func (e *Result) Is(target error) bool {
-	if _, ok := target.(*Result); ok {
-		return true
+	if o, ok := target.(*Result); ok {
+		if e.Status == o.Status {
+			return true
+		}
+		return false
 	}
 	// Allow for wrapped errors.
 	err := fmt.Errorf(e.Format, e.Args...)

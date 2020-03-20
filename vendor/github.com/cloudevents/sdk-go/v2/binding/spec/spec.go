@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/cloudevents/sdk-go/v2/types"
 )
 
 // Version provides meta-data for a single spec-version.
@@ -93,11 +92,8 @@ func (v *version) SetAttribute(c event.EventContextWriter, name string, value in
 	}
 	name = strings.ToLower(name)
 	var err error
-	if strings.HasPrefix(name, v.prefix) { // Extension attribute
-		value, err = types.Validate(value)
-		if err == nil {
-			err = c.SetExtension(strings.TrimPrefix(name, v.prefix), value)
-		}
+	if v.HasPrefix(name) { // Extension attribute
+		return c.SetExtension(strings.TrimPrefix(name, v.prefix), value)
 	}
 	return err
 }

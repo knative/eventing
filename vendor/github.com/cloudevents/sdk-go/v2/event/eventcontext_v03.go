@@ -17,8 +17,6 @@ const (
 // EventContextV03 represents the non-data attributes of a CloudEvents v0.3
 // event.
 type EventContextV03 struct {
-	// SpecVersion - The version of the CloudEvents specification used by the event.
-	SpecVersion string `json:"specversion"`
 	// Type - The type of the occurrence which has happened.
 	Type string `json:"type"`
 	// Source - A URI describing the event producer.
@@ -123,14 +121,12 @@ func (ec *EventContextV03) cloneExtensions() map[string]interface{} {
 
 // AsV03 implements EventContextConverter.AsV03
 func (ec EventContextV03) AsV03() *EventContextV03 {
-	ec.SpecVersion = CloudEventsVersionV03
 	return &ec
 }
 
 // AsV04 implements EventContextConverter.AsV04
 func (ec EventContextV03) AsV1() *EventContextV1 {
 	ret := EventContextV1{
-		SpecVersion:     CloudEventsVersionV1,
 		ID:              ec.ID,
 		Time:            ec.Time,
 		Type:            ec.Type,
@@ -177,16 +173,6 @@ func (ec EventContextV03) Validate() error {
 	eventType := strings.TrimSpace(ec.Type)
 	if eventType == "" {
 		errors = append(errors, "type: MUST be a non-empty string")
-	}
-
-	// specversion
-	// Type: String
-	// Constraints:
-	//  REQUIRED
-	//  MUST be a non-empty string
-	specVersion := strings.TrimSpace(ec.SpecVersion)
-	if specVersion == "" {
-		errors = append(errors, "specversion: MUST be a non-empty string")
 	}
 
 	// source
@@ -282,7 +268,7 @@ func (ec EventContextV03) String() string {
 
 	b.WriteString("Context Attributes,\n")
 
-	b.WriteString("  specversion: " + ec.SpecVersion + "\n")
+	b.WriteString("  specversion: " + CloudEventsVersionV03 + "\n")
 	b.WriteString("  type: " + ec.Type + "\n")
 	b.WriteString("  source: " + ec.Source.String() + "\n")
 	if ec.Subject != nil {

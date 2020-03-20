@@ -49,13 +49,19 @@ func NewMessage(header nethttp.Header, body io.ReadCloser) *Message {
 // NewMessageFromHttpRequest returns a binding.Message with header and data.
 // The returned binding.Message *cannot* be read several times. In order to read it more times, buffer it using binding/buffering methods
 func NewMessageFromHttpRequest(req *nethttp.Request) *Message {
+	if req == nil {
+		return nil
+	}
 	return NewMessage(req.Header, req.Body)
 }
 
 // NewMessageFromHttpResponse returns a binding.Message with header and data.
 // The returned binding.Message *cannot* be read several times. In order to read it more times, buffer it using binding/buffering methods
-func NewMessageFromHttpResponse(req *nethttp.Response) *Message {
-	return NewMessage(req.Header, req.Body)
+func NewMessageFromHttpResponse(resp *nethttp.Response) *Message {
+	if resp == nil {
+		return nil
+	}
+	return NewMessage(resp.Header, resp.Body)
 }
 
 func (m *Message) ReadEncoding() binding.Encoding {
