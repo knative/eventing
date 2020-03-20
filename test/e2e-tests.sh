@@ -32,12 +32,12 @@ initialize $@ --skip-istio-addon
 
 install_broker || fail_test "Could not install Channel Based Broker"
 
-#go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+#go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance -brokerclass=ChannelBasedBroker  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
 
 uninstall_broker || fail_test "Could not uninstall Channel Based Broker"
 
 install_mt_broker || fail_test "Could not uninstall MT Channel Based Broker"
 
-go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
 
 success
