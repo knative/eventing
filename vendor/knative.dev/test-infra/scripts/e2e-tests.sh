@@ -304,6 +304,12 @@ function create_test_cluster_with_retries() {
       # if teardown fails (for details, see success() below)
       set +o errexit
       export CLUSTER_API_VERSION=${E2E_CLUSTER_VERSION}
+
+      echo "@@@@@@@@@@@@@@@@@@@@@@@@"
+      echo "$1"
+      echo "@@@@@@@@@@@@@@@@@@@@@@@@"
+      echo "$@"
+
       run_go_tool k8s.io/test-infra/kubetest \
         kubetest "$@" --gcp-region=${cluster_creation_zone} 2>&1 | tee ${cluster_creation_log}
 
