@@ -485,6 +485,8 @@ function run_go_tool() {
     go ${action} $1
   fi
   shift 2
+  echo "!!!!!!!!!!!!!!!!!!!"
+  echo "$@"
   ${tool} "$@"
 }
 
