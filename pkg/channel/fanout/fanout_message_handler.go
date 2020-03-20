@@ -96,7 +96,7 @@ func (f *MessageHandler) dispatch(ctx context.Context, originalMessage binding.M
 	subs := len(f.config.Subscriptions)
 
 	// We buffer the message to send it several times
-	bufferedMessage, err := buffering.CopyMessage(ctx, originalMessage, transformers)
+	bufferedMessage, err := buffering.CopyMessage(ctx, originalMessage, transformers...)
 	if err != nil {
 		return err
 	}

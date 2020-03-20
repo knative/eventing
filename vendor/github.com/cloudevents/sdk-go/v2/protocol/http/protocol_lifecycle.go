@@ -53,11 +53,17 @@ func (e *Protocol) OpenInbound(ctx context.Context) error {
 		errChan <- e.server.Serve(e.listener)
 	}()
 
+	// nil check and default
+	shutdown := DefaultShutdownTimeout
+	if e.ShutdownTimeout != nil {
+		shutdown = *e.ShutdownTimeout
+	}
+
 	// wait for the server to return or ctx.Done().
 	select {
 	case <-ctx.Done():
 		// Try a gracefully shutdown.
-		timeout := *e.ShutdownTimeout
+		timeout := shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		err := e.server.Shutdown(ctx)
@@ -66,11 +72,6 @@ func (e *Protocol) OpenInbound(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	}
-}
-
-// HasTracePropagation implements Protocol.HasTracePropagation
-func (e *Protocol) HasTracePropagation() bool { // TODO: clean this all up.
-	return false
 }
 
 // GetPort returns the listening port.

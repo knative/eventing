@@ -57,8 +57,6 @@ type EventContextReader interface {
 // EventContextWriter are the methods required to be a writer of context
 // attributes.
 type EventContextWriter interface {
-	// SetSpecVersion sets the spec version of the context.
-	SetSpecVersion(string) error
 	// SetType sets the type of the context.
 	SetType(string) error
 	// SetSource sets the source of the context.

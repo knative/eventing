@@ -9,8 +9,8 @@ import (
 // BufferMessage works the same as CopyMessage and it also bounds the original Message
 // lifecycle to the newly created message: calling Finish() on the returned message calls m.Finish().
 // transformers can be nil and this function guarantees that they are invoked only once during the encoding process.
-func BufferMessage(ctx context.Context, m binding.Message, transformers binding.TransformerFactories) (binding.Message, error) {
-	result, err := CopyMessage(ctx, m, transformers)
+func BufferMessage(ctx context.Context, m binding.Message, transformers ...binding.TransformerFactory) (binding.Message, error) {
+	result, err := CopyMessage(ctx, m, transformers...)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func BufferMessage(ctx context.Context, m binding.Message, transformers binding.
 // The returned copy is not dependent on any transport and can be visited many times.
 // When the copy can be forgot, the copied message must be finished with Finish() message to release the memory.
 // transformers can be nil and this function guarantees that they are invoked only once during the encoding process.
-func CopyMessage(ctx context.Context, m binding.Message, transformers binding.TransformerFactories) (binding.Message, error) {
+func CopyMessage(ctx context.Context, m binding.Message, transformers ...binding.TransformerFactory) (binding.Message, error) {
 	originalMessageEncoding := m.ReadEncoding()
 
 	if originalMessageEncoding == binding.EncodingUnknown {
@@ -38,7 +38,7 @@ func CopyMessage(ctx context.Context, m binding.Message, transformers binding.Tr
 	sm := structBufferedMessage{}
 	bm := binaryBufferedMessage{}
 
-	encoding, err := binding.DirectWrite(ctx, m, &sm, &bm, transformers)
+	encoding, err := binding.DirectWrite(ctx, m, &sm, &bm, transformers...)
 	if encoding == binding.EncodingStructured {
 		return &sm, err
 	} else if encoding == binding.EncodingBinary {

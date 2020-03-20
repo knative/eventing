@@ -7,7 +7,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event/datacodec/json"
 	"github.com/cloudevents/sdk-go/v2/event/datacodec/text"
 	"github.com/cloudevents/sdk-go/v2/event/datacodec/xml"
-	"github.com/cloudevents/sdk-go/v2/observability"
 )
 
 // Decoder is the expected function signature for decoding `in` to `out`. What
@@ -57,17 +56,6 @@ func AddEncoder(contentType string, fn Encoder) {
 // type. An error is returned if no decoder is registered for the given
 // content type.
 func Decode(ctx context.Context, contentType string, in, out interface{}) error {
-	_, r := observability.NewReporter(ctx, reportDecode)
-	err := obsDecode(ctx, contentType, in, out)
-	if err != nil {
-		r.Error()
-	} else {
-		r.OK()
-	}
-	return err
-}
-
-func obsDecode(ctx context.Context, contentType string, in, out interface{}) error {
 	if fn, ok := decoder[contentType]; ok {
 		return fn(ctx, in, out)
 	}
@@ -78,17 +66,6 @@ func obsDecode(ctx context.Context, contentType string, in, out interface{}) err
 // type. An error is returned if no encoder is registered for the given
 // content type.
 func Encode(ctx context.Context, contentType string, in interface{}) ([]byte, error) {
-	_, r := observability.NewReporter(ctx, reportEncode)
-	b, err := obsEncode(ctx, contentType, in)
-	if err != nil {
-		r.Error()
-	} else {
-		r.OK()
-	}
-	return b, err
-}
-
-func obsEncode(ctx context.Context, contentType string, in interface{}) ([]byte, error) {
 	if fn, ok := encoder[contentType]; ok {
 		return fn(ctx, in)
 	}

@@ -6,25 +6,12 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-
-	"github.com/cloudevents/sdk-go/v2/observability"
 )
 
 // Decode takes `in` as []byte, or base64 string, normalizes in to unquoted and
 // base64 decoded []byte if required, and then attempts to use json.Unmarshal
 // to convert those bytes to `out`. Returns and error if this process fails.
 func Decode(ctx context.Context, in, out interface{}) error {
-	_, r := observability.NewReporter(ctx, reportDecode)
-	err := obsDecode(ctx, in, out)
-	if err != nil {
-		r.Error()
-	} else {
-		r.OK()
-	}
-	return err
-}
-
-func obsDecode(ctx context.Context, in, out interface{}) error {
 	if in == nil {
 		return nil
 	}
@@ -63,17 +50,6 @@ func obsDecode(ctx context.Context, in, out interface{}) error {
 // and returns `in` unmodified if it is detected that `in` is already a []byte;
 // Or json.Marshal errors.
 func Encode(ctx context.Context, in interface{}) ([]byte, error) {
-	_, r := observability.NewReporter(ctx, reportEncode)
-	b, err := obsEncode(ctx, in)
-	if err != nil {
-		r.Error()
-	} else {
-		r.OK()
-	}
-	return b, err
-}
-
-func obsEncode(ctx context.Context, in interface{}) ([]byte, error) {
 	if in == nil {
 		return nil, nil
 	}

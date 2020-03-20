@@ -110,20 +110,30 @@ func Validate(v interface{}) (interface{}, error) {
 		if v == nil {
 			break
 		}
-		return URI{*v}, nil
+		return URI{URL: *v}, nil
 	case url.URL:
-		return URI{v}, nil
+		return URI{URL: v}, nil
+	case *URIRef:
+		if v != nil {
+			return *v, nil
+		}
+		return nil, nil
 	case URIRef:
 		return v, nil
+	case *URI:
+		if v != nil {
+			return *v, nil
+		}
+		return nil, nil
 	case URI:
 		return v, nil
 	case time.Time:
-		return Timestamp{v}, nil
+		return Timestamp{Time: v}, nil
 	case *time.Time:
 		if v == nil {
 			break
 		}
-		return Timestamp{*v}, nil
+		return Timestamp{Time: *v}, nil
 	case Timestamp:
 		return v, nil
 	}
@@ -246,7 +256,11 @@ func ToURL(v interface{}) (*url.URL, error) {
 		return nil, err
 	}
 	switch v := v.(type) {
+	case *URI:
+		return &v.URL, nil
 	case URI:
+		return &v.URL, nil
+	case *URIRef:
 		return &v.URL, nil
 	case URIRef:
 		return &v.URL, nil
