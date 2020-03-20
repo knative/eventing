@@ -252,6 +252,9 @@ function create_test_cluster() {
   chmod +x ${test_wrapper}
   cd ${kubedir}
 
+  echo "################ Cluster creation args is: #############"
+  echo "${CLUSTER_CREATION_ARGS[@]}"
+  echo "########################################################"
   # Create cluster and run the tests
   create_test_cluster_with_retries "${CLUSTER_CREATION_ARGS[@]}" \
     --test-cmd "${test_wrapper}" \
