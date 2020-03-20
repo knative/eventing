@@ -26,7 +26,6 @@ import (
 	pkgreconciler "knative.dev/pkg/reconciler"
 
 	"k8s.io/client-go/tools/cache"
-	apiextensionsclient "knative.dev/pkg/client/injection/apiextensions/client"
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
 )
 
@@ -45,14 +44,12 @@ func NewController(
 ) *controller.Impl {
 
 	crdInformer := crdinfomer.Get(ctx)
-	apiExtensionsClient := apiextensionsclient.Get(ctx)
 
 	r := &Reconciler{
-		Base:                   reconciler.NewBase(ctx, controllerAgentName, cmw),
-		apiExtensionsClientSet: apiExtensionsClient,
-		crdLister:              crdInformer.Lister(),
-		ogctx:                  ctx,
-		ogcmw:                  cmw,
+		Base:      reconciler.NewBase(ctx, controllerAgentName, cmw),
+		crdLister: crdInformer.Lister(),
+		ogctx:     ctx,
+		ogcmw:     cmw,
 	}
 	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 

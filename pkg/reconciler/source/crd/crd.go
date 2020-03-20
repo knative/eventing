@@ -33,7 +33,6 @@ import (
 	"knative.dev/pkg/controller"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
 	"knative.dev/eventing/pkg/reconciler"
 )
@@ -54,8 +53,6 @@ type Reconciler struct {
 
 	// Listers index properties about resources
 	crdLister apiextensionsv1beta1.CustomResourceDefinitionLister
-	// apiExtensionsClientSet used to update finalizers on CRDs.
-	apiExtensionsClientSet clientset.Interface
 
 	ogctx context.Context
 	ogcmw configmap.Watcher
