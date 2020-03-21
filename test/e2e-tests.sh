@@ -28,8 +28,8 @@ source $(dirname $0)/e2e-common.sh
 
 # Script entry point.
 
-#initialize $@ --skip-istio-addon --cluster-creation-flag "--workload-pool=\${PROJECT}.svc.id.goog"
-initialize $@ --skip-istio-addon
+initialize $@ --skip-istio-addon --cluster-creation-flag "--workload-pool=\${PROJECT}.svc.id.goog"
+#initialize $@ --skip-istio-addon
 
 go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance  -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
 
