@@ -82,12 +82,14 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 			},
 			Spec: PingSourceSpec{},
 			Status: PingSourceStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
 				},
 			},
 		},
@@ -102,12 +104,14 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 				Sink: &sink,
 			},
 			Status: PingSourceStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "Unknown",
-					}},
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "Unknown",
+						}},
+					},
 				},
 			},
 		},
@@ -122,14 +126,16 @@ func TestPingSourceConversionRoundTripUp(t *testing.T) {
 				// TODO: full spec
 			},
 			Status: PingSourceStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 1,
-					Conditions: duckv1.Conditions{{
-						Type:   "Ready",
-						Status: "True",
-					}},
+				SourceStatus: duckv1.SourceStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 1,
+						Conditions: duckv1.Conditions{{
+							Type:   "Ready",
+							Status: "True",
+						}},
+					},
+					SinkURI: sinkUri,
 				},
-				SinkURI: sinkUri,
 			},
 		},
 	}}
@@ -176,6 +182,11 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 			"baz": "baf",
 		},
 	}
+
+	ceAttributes := []duckv1.CloudEventAttributes{{
+		Type:   PingSourceEventType,
+		Source: PingSourceSource("ping-ns", "ping-name"),
+	}}
 
 	tests := []struct {
 		name string
@@ -239,7 +250,8 @@ func TestPingSourceConversionRoundTripDown(t *testing.T) {
 							Status: "True",
 						}},
 					},
-					SinkURI: sinkURI,
+					SinkURI:              sinkURI,
+					CloudEventAttributes: ceAttributes,
 				},
 			},
 		},

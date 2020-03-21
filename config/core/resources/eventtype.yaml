@@ -56,6 +56,7 @@ spec:
     - name: Description
       type: string
       JSONPath: ".spec.description"
+    # TODO remove Status https://github.com/knative/eventing/issues/2750
     - name: Ready
       type: string
       JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"

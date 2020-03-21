@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/utils"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 // ApiServerSourceOption enables further configuration of a ApiServer.
@@ -81,8 +82,17 @@ func WithApiServerSourceDeployed(s *v1alpha1.ApiServerSource) {
 	s.Status.PropagateDeploymentAvailability(NewDeployment("any", "any", WithDeploymentAvailable()))
 }
 
-func WithApiServerSourceEventTypes(s *v1alpha1.ApiServerSource) {
-	s.Status.MarkEventTypes()
+func WithApiServerSourceEventTypes(source string) ApiServerSourceOption {
+	return func(s *v1alpha1.ApiServerSource) {
+		ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(v1alpha1.ApiServerSourceEventTypes))
+		for _, apiServerSourceType := range v1alpha1.ApiServerSourceEventTypes {
+			ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
+				Type:   apiServerSourceType,
+				Source: source,
+			})
+		}
+		s.Status.CloudEventAttributes = ceAttributes
+	}
 }
 
 func WithApiServerSourceSufficientPermissions(s *v1alpha1.ApiServerSource) {

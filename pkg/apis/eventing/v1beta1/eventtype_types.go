@@ -39,6 +39,7 @@ type EventType struct {
 	// Status represents the current state of the EventType.
 	// This data may be out of date.
 	// +optional
+	// TODO might be removed https://github.com/knative/eventing/issues/2750
 	Status EventTypeStatus `json:"status,omitempty"`
 }
 
@@ -60,7 +61,8 @@ type EventTypeSpec struct {
 	// Type represents the CloudEvents type. It is authoritative.
 	Type string `json:"type"`
 	// Source is a URI, it represents the CloudEvents source.
-	Source apis.URL `json:"source"`
+	// +optional
+	Source *apis.URL `json:"source,omitempty"`
 	// Schema is a URI, it represents the CloudEvents schemaurl extension attribute.
 	// It may be a JSON schema, a protobuf schema, etc. It is optional.
 	// +optional
@@ -70,8 +72,10 @@ type EventTypeSpec struct {
 	// The contents are not validated or manipulated by the system.
 	// +optional
 	SchemaData string `json:"schemaData,omitempty"`
+	// TODO remove https://github.com/knative/eventing/issues/2750
 	// Broker refers to the Broker that can provide the EventType.
-	Broker string `json:"broker"`
+	// +optional
+	Broker string `json:"broker,omitempty"`
 	// Description is an optional field used to describe the EventType, in any meaningful way.
 	// +optional
 	Description string `json:"description,omitempty"`

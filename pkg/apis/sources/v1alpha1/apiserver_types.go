@@ -46,6 +46,16 @@ var (
 	_ apis.HasSpec = (*ApiServerSource)(nil)
 )
 
+// ApiServerSourceEventTypes is the list of CloudEvent types the ApiServerSource emits.
+var ApiServerSourceEventTypes = []string{
+	ApiServerSourceAddEventType,
+	ApiServerSourceDeleteEventType,
+	ApiServerSourceUpdateEventType,
+	ApiServerSourceAddRefEventType,
+	ApiServerSourceDeleteRefEventType,
+	ApiServerSourceUpdateRefEventType,
+}
+
 const (
 	// ApiServerSourceAddEventType is the ApiServerSource CloudEvent type for adds.
 	ApiServerSourceAddEventType = "dev.knative.apiserver.resource.add"

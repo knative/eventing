@@ -25,6 +25,7 @@ import (
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -157,7 +158,10 @@ func WithPingSourceV1A2Deployed(s *v1alpha2.PingSource) {
 }
 
 func WithPingSourceEventType(s *v1alpha1.PingSource) {
-	s.Status.MarkEventType()
+	s.Status.CloudEventAttributes = []duckv1.CloudEventAttributes{{
+		Type:   v1alpha1.PingSourceEventType,
+		Source: v1alpha1.PingSourceSource(s.Namespace, s.Name),
+	}}
 }
 
 func WithPingSourceV1A2EventType(s *v1alpha2.PingSource) {

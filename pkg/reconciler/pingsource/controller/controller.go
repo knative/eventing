@@ -34,7 +34,6 @@ import (
 	"knative.dev/pkg/system"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -65,13 +64,11 @@ func NewController(
 
 	deploymentInformer := deploymentinformer.Get(ctx)
 	pingSourceInformer := pingsourceinformer.Get(ctx)
-	eventTypeInformer := eventtypeinformer.Get(ctx)
 
 	r := &Reconciler{
 		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
 		pingLister:       pingSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
-		eventTypeLister:  eventTypeInformer.Lister(),
 
 		loggingContext: ctx,
 	}
@@ -109,10 +106,6 @@ func NewController(
 			)),
 	})
 
-	eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controller.FilterGroupKind(v1alpha1.Kind("PingSource")),
-		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
-	})
 	cmw.Watch(logging.ConfigMapName(), r.UpdateFromLoggingConfigMap)
 	cmw.Watch(metrics.ConfigMapName(), r.UpdateFromMetricsConfigMap)
 

@@ -72,6 +72,15 @@ func KnativeRefForService(name, namespace string) *duckv1.KReference {
 	}
 }
 
+func KnativeRefForBroker(name, namespace string) *duckv1.KReference {
+	return &duckv1.KReference{
+		Kind:       "Broker",
+		APIVersion: "eventing.knative.dev/v1alpha1",
+		Name:       name,
+		Namespace:  namespace,
+	}
+}
+
 // WithSubscriberForSubscription returns an option that adds a Subscriber for the given Subscription.
 func WithSubscriberForSubscription(name string) SubscriptionOption {
 	return func(s *messagingv1alpha1.Subscription) {

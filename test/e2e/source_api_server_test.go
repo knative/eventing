@@ -25,8 +25,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
@@ -179,6 +181,79 @@ func TestApiServerSource(t *testing.T) {
 			if err := client.CheckLog(loggerPodName, lib.CheckerContains(tc.expected)); err != nil {
 				t.Fatalf("String %q does not appear in logs of logger pod %q: %v", tc.expected, loggerPodName, err)
 			}
+		}
+	}
+}
+
+func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
+	const (
+		sourceName         = "e2e-apiserver-source-eventtypes"
+		serviceAccountName = "event-watcher-sa"
+		roleName           = "event-watcher-r"
+	)
+
+	client := setup(t, true)
+	defer tearDown(client)
+
+	// creates ServiceAccount and RoleBinding with a role for reading pods and events
+	r := resources.Role(roleName,
+		resources.WithRuleForRole(&rbacv1.PolicyRule{
+			APIGroups: []string{""},
+			Resources: []string{"events", "pods"},
+			Verbs:     []string{"get", "list", "watch"}}))
+	client.CreateServiceAccountOrFail(serviceAccountName)
+	client.CreateRoleOrFail(r)
+	client.CreateRoleBindingOrFail(
+		serviceAccountName,
+		lib.RoleKind,
+		roleName,
+		fmt.Sprintf("%s-%s", serviceAccountName, roleName),
+		client.Namespace,
+	)
+
+	// Label namespace so that it creates the default broker.
+	if err := client.LabelNamespace(map[string]string{"knative-eventing-injection": "enabled"}); err != nil {
+		t.Fatalf("Error annotating namespace: %v", err)
+	}
+
+	// Wait for default broker ready.
+	client.WaitForResourceReadyOrFail(pkgResources.DefaultBrokerName, lib.BrokerTypeMeta)
+
+	// Create the api server source
+	apiServerSource := eventingtesting.NewApiServerSource(
+		sourceName,
+		client.Namespace,
+		eventingtesting.WithApiServerSourceSpec(
+			sourcesv1alpha1.ApiServerSourceSpec{
+				Resources: []sourcesv1alpha1.ApiServerResource{{
+					APIVersion: "v1",
+					Kind:       "Event",
+				}},
+				Mode:               "Ref",
+				ServiceAccountName: serviceAccountName,
+				// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
+				Sink: &duckv1beta1.Destination{Ref: &corev1.ObjectReference{APIVersion: "eventing.knative.dev/v1alpha1", Kind: "Broker", Name: pkgResources.DefaultBrokerName, Namespace: client.Namespace}},
+			}),
+	)
+
+	client.CreateApiServerSourceOrFail(apiServerSource)
+
+	// wait for all test resources to be ready
+	client.WaitForAllTestResourcesReadyOrFail()
+
+	// verify that EventTypes were created.
+	eventTypes, err := client.Eventing.EventingV1alpha1().EventTypes(client.Namespace).List(metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("Error retrieving EventTypes: %v", err)
+	}
+	if len(eventTypes.Items) != len(sourcesv1alpha1.ApiServerSourceEventTypes) {
+		t.Fatalf("Invalid number of EventTypes registered for ApiServerSource: %s/%s, expected: %d, got: %d", client.Namespace, sourceName, len(sourcesv1alpha1.ApiServerSourceEventTypes), len(eventTypes.Items))
+	}
+
+	expectedCeTypes := sets.NewString(sourcesv1alpha1.ApiServerSourceEventTypes...)
+	for _, et := range eventTypes.Items {
+		if !expectedCeTypes.Has(et.Spec.Type) {
+			t.Fatalf("Invalid spec.type for ApiServerSource EventType, expected one of: %v, got: %s", sourcesv1alpha1.ApiServerSourceEventTypes, et.Spec.Type)
 		}
 	}
 }
