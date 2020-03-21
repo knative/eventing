@@ -93,6 +93,16 @@ func TestGenerateFixedName(t *testing.T) {
 			prefix:   "default-text-extractor-",
 			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
 		},
+		"dot in prefix": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "default-text-extractor.",
+			expected: "default-text-extractor-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
+		"too long and dot in prefix": {
+			uid:      "2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+			prefix:   "this-is-an-extremely-long.prefix-and-it-will-be-cut-at-the-dot",
+			expected: "this-is-an-extremely-long-2d6c09e1-aa54-11e9-9d6a-42010a8a0062",
+		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
