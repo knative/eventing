@@ -24,11 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 
+	"knative.dev/eventing/pkg/apis/eventing"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	pkgResources "knative.dev/eventing/pkg/reconciler/namespace/resources"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
+	"knative.dev/pkg/apis"
 )
 
 // This test is for avoiding regressions on the trigger dependency annotation functionality.
@@ -76,12 +78,21 @@ func TestTriggerDependencyAnnotation(t *testing.T) {
 			Schedule: schedule,
 			JsonData: jsonData,
 			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{
-					Ref: resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace),
-				},
+				Sink: duckv1.Destination{},
 			},
 		}),
 	)
+	if brokerClass == eventing.ChannelBrokerClassValue {
+		pingSource.Spec.SourceSpec.Sink.Ref = resources.KnativeRefForService(defaultBrokerName+"-broker", client.Namespace)
+	}
+	if brokerClass == eventing.MTChannelBrokerClassValue {
+		pingSource.Spec.SourceSpec.Sink.URI = &apis.URL{
+			Scheme: "http",
+			Host:   "broker-ingress.knative-eventing.svc.cluster.local",
+			Path:   fmt.Sprintf("/%s/%s", client.Namespace, defaultBrokerName),
+		}
+	}
+
 	client.CreatePingSourceV1Alpha2OrFail(pingSource)
 
 	// Trigger should become ready after pingSource was created
