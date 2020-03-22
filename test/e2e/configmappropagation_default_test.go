@@ -23,9 +23,16 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"knative.dev/eventing/pkg/apis/eventing"
 )
 
 func TestDefaultConfigMapPropagation(t *testing.T) {
+	// Since MT Channel Based Broker does not use ConfigMap propagation, skip these tests.
+	if brokerClass == eventing.MTChannelBrokerClassValue {
+		t.Skip("Not double running tests for MT Broker")
+	}
+
 	const (
 		defaultCMP        = "eventing"
 		eventingNamespace = "knative-eventing"
