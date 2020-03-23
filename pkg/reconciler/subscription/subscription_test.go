@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +37,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelablecombined"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -1064,14 +1065,16 @@ func TestAllCases(t *testing.T) {
 		ctx = channelablecombined.WithDuck(ctx)
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			Base:                reconciler.NewBase(ctx, "subscription-unit-test", cmw),
+			dynamicClientSet:    dynamicclient.Get(ctx),
 			subscriptionLister:  listers.GetSubscriptionLister(),
 			channelLister:       listers.GetMessagingChannelLister(),
 			channelableTracker:  duck.NewListableTracker(ctx, channelablecombined.Get, func(types.NamespacedName) {}, 0),
 			destinationResolver: resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 			tracker:             &FakeTracker{},
 		}
-		return subscription.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetSubscriptionLister(), r.Recorder, r)
+		return subscription.NewReconciler(ctx, logger,
+			eventingclient.Get(ctx), listers.GetSubscriptionLister(),
+			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
 
