@@ -20,27 +20,27 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/reconciler/namespace/resources"
-	"knative.dev/eventing/pkg/utils"
-	"knative.dev/pkg/system"
-
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
-	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
+	"k8s.io/client-go/kubernetes"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/system"
+
+	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	configslisters "knative.dev/eventing/pkg/client/listers/configs/v1alpha1"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	"knative.dev/eventing/pkg/reconciler/namespace/resources"
+	"knative.dev/eventing/pkg/utils"
 )
 
 const (
@@ -56,17 +56,11 @@ const (
 	secretCopyFailure           = "SecretCopyFailure"
 )
 
-var (
-	serviceAccountGVK       = corev1.SchemeGroupVersion.WithKind("ServiceAccount")
-	roleBindingGVK          = rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
-	brokerGVK               = v1alpha1.SchemeGroupVersion.WithKind("Broker")
-	configMapPropagationGVK = configsv1alpha1.SchemeGroupVersion.WithKind("ConfigMapPropagation")
-)
-
 type Reconciler struct {
-	*reconciler.Base
-
 	brokerPullSecretName string
+
+	eventingClientSet clientset.Interface
+	kubeClientSet     kubernetes.Interface
 
 	// listers index properties about resources
 	namespaceLister            corev1listers.NamespaceLister
@@ -74,6 +68,8 @@ type Reconciler struct {
 	roleBindingLister          rbacv1listers.RoleBindingLister
 	brokerLister               eventinglisters.BrokerLister
 	configMapPropagationLister configslisters.ConfigMapPropagationLister
+
+	recorder record.EventRecorder
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -110,11 +106,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	// Reconcile this copy of the Namespace.
 	reconcileErr := r.reconcile(ctx, ns)
 	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
-		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
+		logging.FromContext(ctx).Errorw("Error reconciling Namespace", zap.Error(reconcileErr))
+		r.recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Namespace reconciled")
-		r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
+		r.recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
 	}
 
 	return reconcileErr
@@ -151,11 +147,11 @@ func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *core
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
 		cmp := resources.MakeConfigMapPropagation(ns)
-		cmp, err = r.EventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Create(cmp)
+		cmp, err = r.eventingClientSet.ConfigsV1alpha1().ConfigMapPropagations(ns.Name).Create(cmp)
 		if err != nil {
 			return nil, err
 		}
-		r.Recorder.Event(ns, corev1.EventTypeNormal, configMapPropagationCreated,
+		r.recorder.Event(ns, corev1.EventTypeNormal, configMapPropagationCreated,
 			"Default ConfigMapPropagation: "+cmp.Name+" created")
 		return cmp, nil
 	} else if err != nil {
@@ -190,13 +186,13 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 				return nil
 			}
 		}
-		_, err := utils.CopySecret(r.KubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
+		_, err := utils.CopySecret(r.kubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
-			r.Recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
+			r.recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
 				fmt.Sprintf("Error copying secret %s/%s => %s/%s : %v", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err))
 			return fmt.Errorf("Error copying secret %s/%s => %s/%s : %w", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err)
 		} else {
-			r.Recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+			r.recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Secret copied into namespace %s/%s => %s/%s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name))
 		}
 	}
@@ -210,11 +206,11 @@ func (r *Reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *core
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		sa, err = r.KubeClientSet.CoreV1().ServiceAccounts(ns.Name).Create(sa)
+		sa, err = r.kubeClientSet.CoreV1().ServiceAccounts(ns.Name).Create(sa)
 		if err != nil {
 			return nil, err
 		}
-		r.Recorder.Event(ns, corev1.EventTypeNormal, serviceAccountCreated,
+		r.recorder.Event(ns, corev1.EventTypeNormal, serviceAccountCreated,
 			fmt.Sprintf("ServiceAccount '%s' created for the Broker", sa.Name))
 		return sa, nil
 	} else if err != nil {
@@ -230,11 +226,11 @@ func (r *Reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespa
 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
-		rb, err = r.KubeClientSet.RbacV1().RoleBindings(rb.Namespace).Create(rb)
+		rb, err = r.kubeClientSet.RbacV1().RoleBindings(rb.Namespace).Create(rb)
 		if err != nil {
 			return nil, err
 		}
-		r.Recorder.Event(ns, corev1.EventTypeNormal, serviceAccountRBACCreated,
+		r.recorder.Event(ns, corev1.EventTypeNormal, serviceAccountRBACCreated,
 			fmt.Sprintf("RoleBinding '%s/%s' created for the Broker", rb.Namespace, rb.Name))
 		return rb, nil
 	} else if err != nil {
@@ -251,11 +247,11 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
 		b := resources.MakeBroker(ns)
-		b, err = r.EventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(b)
+		b, err = r.eventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(b)
 		if err != nil {
 			return nil, err
 		}
-		r.Recorder.Event(ns, corev1.EventTypeNormal, brokerCreated,
+		r.recorder.Event(ns, corev1.EventTypeNormal, brokerCreated,
 			"Default eventing.knative.dev Broker created.")
 		return b, nil
 	} else if err != nil {
