@@ -19,17 +19,20 @@ package sequence
 import (
 	"context"
 
+	"knative.dev/pkg/logging"
+
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/informers/flows/v1alpha1/sequence"
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	sequencereconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 const (
@@ -49,13 +52,14 @@ func NewController(
 	subscriptionInformer := subscription.Get(ctx)
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 		sequenceLister:     sequenceInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
+		dynamicClientSet:   dynamicclient.Get(ctx),
+		eventingClientSet:  eventingclient.Get(ctx),
 	}
 	impl := sequencereconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	sequenceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))

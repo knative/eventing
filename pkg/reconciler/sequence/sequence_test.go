@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -30,22 +28,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/sequence/resources"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
-	. "knative.dev/pkg/reconciler/testing"
 
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
@@ -556,11 +557,14 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
 		r := &Reconciler{
-			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
 			sequenceLister:     listers.GetFlowsSequenceLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			subscriptionLister: listers.GetSubscriptionLister(),
+			eventingClientSet:  fakeeventingclient.Get(ctx),
+			dynamicClientSet:   fakedynamicclient.Get(ctx),
 		}
-		return sequence.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetFlowsSequenceLister(), r.Recorder, r)
+		return sequence.NewReconciler(ctx, logging.FromContext(ctx),
+			fakeeventingclient.Get(ctx), listers.GetFlowsSequenceLister(),
+			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
