@@ -19,23 +19,31 @@ package mtbroker
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes/scheme"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
-
+	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	brokerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	triggerinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
+	client "knative.dev/pkg/client/injection/kube/client"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	endpointsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/endpoints"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
@@ -55,23 +63,45 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-
+	logger := logging.FromContext(ctx)
 	brokerInformer := brokerinformer.Get(ctx)
 	triggerInformer := triggerinformer.Get(ctx)
 	subscriptionInformer := subscriptioninformer.Get(ctx)
 	endpointsInformer := endpointsinformer.Get(ctx)
 
+	recorder := controller.GetEventRecorder(ctx)
+	if recorder == nil {
+		// Create event broadcaster
+		logger.Debug("Creating event broadcaster")
+		eventBroadcaster := record.NewBroadcaster()
+		watches := []watch.Interface{
+			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
+			eventBroadcaster.StartRecordingToSink(
+				&v1.EventSinkImpl{Interface: client.Get(ctx).CoreV1().Events("")}),
+		}
+		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
+		go func() {
+			<-ctx.Done()
+			for _, w := range watches {
+				w.Stop()
+			}
+		}()
+	}
+
 	r := &Reconciler{
-		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		eventingClientSet:  eventingclient.Get(ctx),
+		dynamicClientSet:   dynamicclient.Get(ctx),
+		kubeClientSet:      kubeclient.Get(ctx),
 		brokerLister:       brokerInformer.Lister(),
 		endpointsLister:    endpointsInformer.Lister(),
 		subscriptionLister: subscriptionInformer.Lister(),
 		triggerLister:      triggerInformer.Lister(),
 		brokerClass:        eventing.MTChannelBrokerClassValue,
+		recorder:           recorder,
 	}
 	impl := brokerreconciler.NewImpl(ctx, r, eventing.MTChannelBrokerClassValue)
 
-	r.Logger.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 
 	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
@@ -112,7 +142,7 @@ func NewController(
 	grCb := func(obj interface{}) {
 		// Since changes in the Filter/Ingress Service endpoints affect all the Broker objects,
 		// do a global resync.
-		r.Logger.Info("Doing a global resync due to endpoint changes in shared broker component")
+		logger.Info("Doing a global resync due to endpoint changes in shared broker component")
 		impl.FilteredGlobalResync(brokerFilter, brokerInformer.Informer())
 	}
 	// Resync for the filter.
