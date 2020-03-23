@@ -28,9 +28,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	pkgreconciler "knative.dev/pkg/reconciler"
@@ -43,12 +45,7 @@ import (
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/pingsource/controller/resources"
-)
-
-var (
-	deploymentGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 )
 
 const (
@@ -71,7 +68,7 @@ func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 }
 
 type Reconciler struct {
-	*reconciler.Base
+	kubeClientSet kubernetes.Interface
 
 	receiveAdapterImage string
 	jobRunnerImage      string
@@ -194,14 +191,14 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 	}
 	expected := resources.MakeReceiveAdapter(&adapterArgs)
 
-	ra, err := r.KubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
+	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
+		ra, err = r.kubeClientSet.AppsV1().Deployments(src.Namespace).Create(expected)
 		msg := "Deployment created"
 		if err != nil {
 			msg = fmt.Sprintf("Deployment created, error: %v", err)
 		}
-		r.Recorder.Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentCreated, "%s", msg)
+		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentCreated, "%s", msg)
 		return ra, err
 	} else if err != nil {
 		return nil, fmt.Errorf("error getting receive adapter: %v", err)
@@ -209,10 +206,10 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Pin
 		return nil, fmt.Errorf("deployment %q is not owned by PingSource %q", ra.Name, src.Name)
 	} else if podSpecChanged(ra.Spec.Template.Spec, expected.Spec.Template.Spec) {
 		ra.Spec.Template.Spec = expected.Spec.Template.Spec
-		if ra, err = r.KubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
+		if ra, err = r.kubeClientSet.AppsV1().Deployments(src.Namespace).Update(ra); err != nil {
 			return ra, err
 		}
-		r.Recorder.Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Deployment %q updated", ra.Name)
+		controller.GetEventRecorder(ctx).Eventf(src, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Deployment %q updated", ra.Name)
 		return ra, nil
 	} else {
 		logging.FromContext(ctx).Debug("Reusing existing receive adapter", zap.Any("receiveAdapter", ra))
@@ -236,21 +233,21 @@ func (r *Reconciler) reconcileJobRunner(ctx context.Context, source *v1alpha1.Pi
 	d, err := r.deploymentLister.Deployments(system.Namespace()).Get(jobRunnerName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			d, err := r.KubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
+			d, err := r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Create(expected)
 			if err != nil {
-				r.Recorder.Eventf(source, corev1.EventTypeWarning, pingSourceDeploymentCreated, "Cluster-scoped deployment not created (%v)", err)
+				controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeWarning, pingSourceDeploymentCreated, "Cluster-scoped deployment not created (%v)", err)
 				return nil, err
 			}
-			r.Recorder.Event(source, corev1.EventTypeNormal, pingSourceDeploymentCreated, "Cluster-scoped deployment created")
+			controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentCreated, "Cluster-scoped deployment created")
 			return d, nil
 		}
 		return nil, fmt.Errorf("error getting job runner deployment %v", err)
 	} else if podSpecChanged(d.Spec.Template.Spec, expected.Spec.Template.Spec) {
 		d.Spec.Template.Spec = expected.Spec.Template.Spec
-		if d, err = r.KubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
+		if d, err = r.kubeClientSet.AppsV1().Deployments(system.Namespace()).Update(d); err != nil {
 			return d, err
 		}
-		r.Recorder.Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Cluster-scoped deployment updated")
+		controller.GetEventRecorder(ctx).Event(source, corev1.EventTypeNormal, pingSourceDeploymentUpdated, "Cluster-scoped deployment updated")
 		return d, nil
 	} else {
 		logging.FromContext(ctx).Debug("Reusing existing cluster-scoped deployment", zap.Any("deployment", d))

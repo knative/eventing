@@ -18,58 +18,38 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"testing"
-
-	"knative.dev/pkg/tracker"
-
-	"knative.dev/pkg/system"
-
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
-
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/resolver"
-
-	"knative.dev/pkg/configmap"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
-
-	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
-	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
-	"knative.dev/pkg/controller"
-
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
 	"knative.dev/eventing/pkg/reconciler/pingsource/controller/resources"
 	"knative.dev/eventing/pkg/utils"
-
+	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
-	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/pkg/resolver"
+	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 var (
-	trueVal  = true
-	ownerRef = metav1.OwnerReference{
-		APIVersion:         "sources.knative.dev/v1alpha1",
-		Kind:               "PingSource",
-		Name:               sourceName,
-		UID:                sourceUID,
-		Controller:         &trueVal,
-		BlockOwnerDeletion: &trueVal,
-	}
-	eventTypeName = fmt.Sprintf("dev.knative.sources.ping-%s", sourceUID)
-
 	sinkDest = duckv1.Destination{
 		Ref: &duckv1.KReference{
 			Name:       sinkName,
@@ -80,14 +60,6 @@ var (
 	}
 	sinkDestURI = duckv1.Destination{
 		URI: apis.HTTP(sinkDNS),
-	}
-	brokerDest = duckv1.Destination{
-		Ref: &duckv1.KReference{
-			Name:       sinkName,
-			Namespace:  testNS,
-			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1alpha1",
-		},
 	}
 	sinkDNS    = "sink.mynamespace.svc." + utils.GetClusterDomainName()
 	sinkURI, _ = apis.ParseURL("http://" + sinkDNS)
@@ -476,7 +448,7 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
+			kubeClientSet:       fakekubeclient.Get(ctx),
 			pingLister:          listers.GetPingSourceLister(),
 			deploymentLister:    listers.GetDeploymentLister(),
 			tracker:             tracker.New(func(types.NamespacedName) {}, 0),
@@ -485,7 +457,9 @@ func TestAllCases(t *testing.T) {
 		}
 		r.sinkResolver = resolver.NewURIResolver(ctx, func(types.NamespacedName) {})
 
-		return pingsource.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetPingSourceLister(), r.Recorder, r)
+		return pingsource.NewReconciler(ctx, logging.FromContext(ctx),
+			fakeeventingclient.Get(ctx), listers.GetPingSourceLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		true,
 		logger,
