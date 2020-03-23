@@ -18,6 +18,7 @@ package mtnamespace
 
 import (
 	"context"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -49,8 +50,9 @@ func NewController(
 	brokerInformer := broker.Get(ctx)
 
 	r := &Reconciler{
-		namespaceLister: namespaceInformer.Lister(),
-		brokerLister:    brokerInformer.Lister(),
+		eventingClientSet: eventingclient.Get(ctx),
+		namespaceLister:   namespaceInformer.Lister(),
+		brokerLister:      brokerInformer.Lister(),
 	}
 
 	impl := controller.NewImpl(r, logging.FromContext(ctx), ReconcilerName)
