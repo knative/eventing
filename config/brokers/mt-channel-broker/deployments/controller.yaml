@@ -33,7 +33,7 @@ spec:
       serviceAccountName: eventing-controller
 
       containers:
-      - name: eventing-controller
+      - name: mt-broker-controller
         terminationMessagePolicy: FallbackToLogsOnError
         image: ko://knative.dev/eventing/cmd/mtchannel_broker
 

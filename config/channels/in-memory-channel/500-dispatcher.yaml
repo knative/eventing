@@ -31,7 +31,7 @@ spec:
     spec:
       serviceAccountName: imc-dispatcher
       containers:
-      - name: dispatcher
+      - name: imc-dispatcher
         image: ko://knative.dev/eventing/cmd/in_memory/channel_dispatcher
         env:
           - name: CONFIG_LOGGING_NAME
