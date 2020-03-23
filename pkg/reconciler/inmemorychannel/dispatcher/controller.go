@@ -18,9 +18,10 @@ package dispatcher
 
 import (
 	"context"
+	"time"
+
 	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/pkg/logging"
-	"time"
 
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"

@@ -19,9 +19,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"testing"
 
 	"knative.dev/eventing/pkg/apis/eventing"
 

@@ -18,10 +18,11 @@ package dispatcher
 
 import (
 	"context"
+	"testing"
+
 	"knative.dev/eventing/pkg/channel"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
-	"testing"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
