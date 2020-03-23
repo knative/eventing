@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
 	// TODO set read and write timeouts and port?
-	protocol, err := kncloudevents.NewHTTPClient()
+	protocol, err := kncloudevents.NewHTTPProtocol()
 	if err != nil {
 		args.Logger.Fatal("failed to create cloudevents client", zap.Error(err))
 	}
