@@ -78,7 +78,7 @@ func NewController(
 	}
 	impl := controller.NewImpl(r, logger, ReconcilerName)
 
-	logging.FromContext(ctx).Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckAnnotationKey, sources.SourceDuckAnnotationValue, false),
 		Handler:    controller.HandleAll(impl.Enqueue),
