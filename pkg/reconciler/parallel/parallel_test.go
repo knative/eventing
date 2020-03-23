@@ -19,9 +19,10 @@ package parallel
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
-	"testing"
 
 	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
 

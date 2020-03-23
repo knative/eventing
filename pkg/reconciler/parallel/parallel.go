@@ -19,6 +19,7 @@ package parallel
 import (
 	"context"
 	"fmt"
+
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -50,8 +51,6 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 }
 
 type Reconciler struct {
-	//*reconciler.Base
-
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
 	tracker            tracker.Interface
