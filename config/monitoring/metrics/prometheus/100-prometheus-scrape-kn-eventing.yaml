@@ -120,7 +120,7 @@
     # Scrape only the the targets matching the following metadata
     - source_labels: [ __meta_kubernetes_pod_label_eventing_knative_dev_source, __meta_kubernetes_pod_container_port_name]
       action: keep
-      regex: cronjob-source-controller;metrics
+      regex: ping-source-controller;metrics
     # Rename metadata labels to be reader friendly
     - source_labels: [__meta_kubernetes_namespace]
       target_label: namespace
