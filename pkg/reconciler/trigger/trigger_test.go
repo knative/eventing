@@ -21,24 +21,23 @@ import (
 	"fmt"
 	"testing"
 
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	. "knative.dev/eventing/pkg/reconciler/testing"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 

@@ -19,12 +19,10 @@ package trigger
 import (
 	"context"
 
-	"k8s.io/client-go/kubernetes"
-	"knative.dev/pkg/reconciler"
-
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
@@ -32,6 +30,7 @@ import (
 	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 )
 
 const (
