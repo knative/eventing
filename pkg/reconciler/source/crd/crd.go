@@ -19,18 +19,17 @@ package crd
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/tools/record"
 	"sync"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/source/duck"
 	"knative.dev/pkg/configmap"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/controller"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
