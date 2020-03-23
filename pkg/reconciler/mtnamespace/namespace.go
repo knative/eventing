@@ -20,21 +20,20 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
-
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
-
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/controller"
+
+	"knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
+	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
 )
 
 const (
@@ -45,16 +44,14 @@ const (
 	brokerCreated = "BrokerCreated"
 )
 
-var (
-	brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
-)
-
 type Reconciler struct {
-	*reconciler.Base
+	eventingClientSet clientset.Interface
 
 	// listers index properties about resources
 	namespaceLister corev1listers.NamespaceLister
 	brokerLister    eventinglisters.BrokerLister
+
+	recorder record.EventRecorder
 }
 
 // Check that our Reconciler implements controller.Reconciler
@@ -92,10 +89,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	reconcileErr := r.reconcile(ctx, ns)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling Namespace", zap.Error(reconcileErr))
-		r.Recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
+		r.recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
 	} else {
 		logging.FromContext(ctx).Debug("Namespace reconciled")
-		r.Recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
+		r.recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
 	}
 
 	return reconcileErr
@@ -120,11 +117,11 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 	// If the resource doesn't exist, we'll create it.
 	if k8serrors.IsNotFound(err) {
 		b := resources.MakeBroker(ns)
-		b, err = r.EventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(b)
+		b, err = r.eventingClientSet.EventingV1beta1().Brokers(ns.Name).Create(b)
 		if err != nil {
 			return nil, err
 		}
-		r.Recorder.Event(ns, corev1.EventTypeNormal, brokerCreated,
+		r.recorder.Event(ns, corev1.EventTypeNormal, brokerCreated,
 			"Default eventing.knative.dev Broker created.")
 		return b, nil
 	} else if err != nil {

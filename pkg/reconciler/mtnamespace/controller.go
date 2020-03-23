@@ -23,8 +23,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
-
-	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1beta1/broker"
 	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
@@ -50,15 +49,14 @@ func NewController(
 	brokerInformer := broker.Get(ctx)
 
 	r := &Reconciler{
-		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
 		namespaceLister: namespaceInformer.Lister(),
 		brokerLister:    brokerInformer.Lister(),
 	}
 
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := controller.NewImpl(r, logging.FromContext(ctx), ReconcilerName)
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	namespaceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	brokerInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
