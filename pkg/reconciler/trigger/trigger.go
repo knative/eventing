@@ -18,6 +18,7 @@ package trigger
 
 import (
 	"context"
+
 	"k8s.io/client-go/kubernetes"
 	"knative.dev/pkg/reconciler"
 

@@ -19,10 +19,11 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
