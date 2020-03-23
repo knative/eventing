@@ -47,7 +47,7 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 	return func(ctx context.Context,
 		cmw configmap.Watcher,
 	) *controller.Impl {
-
+		logger := logging.FromContext(ctx)
 		eventTypeInformer := eventtypeinformer.Get(ctx)
 		crdInformer := crdinfomer.Get(ctx)
 
@@ -61,7 +61,7 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 
 		sourceInformer, sourceLister, err := sourceinformer.Get(gvr)
 		if err != nil {
-			logging.FromContext(ctx).Desugar().Error("Error getting source informer", zap.String("GVR", gvr.String()), zap.Error(err))
+			logger.Errorw("Error getting source informer", zap.String("GVR", gvr.String()), zap.Error(err))
 			return nil
 		}
 
@@ -73,9 +73,9 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 			crdName:           crd,
 			eventingClientSet: eventingclient.Get(ctx),
 		}
-		impl := controller.NewImpl(r, logging.FromContext(ctx), ReconcilerName)
+		impl := controller.NewImpl(r, logger, ReconcilerName)
 
-		logging.FromContext(ctx).Info("Setting up event handlers")
+		logger.Info("Setting up event handlers")
 		sourceInformer.AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 		eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
