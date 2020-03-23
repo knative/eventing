@@ -38,5 +38,5 @@ EventSource ---> Broker ---> Trigger1 -------> Service(Transformation)
 Note: the number denotes the sequence of the event that flows in this test case.
 */
 func TestEventTransformationForTrigger(t *testing.T) {
-	helpers.EventTransformationForTriggerTestHelper(t, channelTestRunner)
+	helpers.EventTransformationForTriggerTestHelper(t, brokerClass, channelTestRunner)
 }

@@ -44,5 +44,5 @@ Trigger3 filters the transformed event and sends it to Channel.
 
 */
 func TestBrokerChannelFlow(t *testing.T) {
-	helpers.BrokerChannelFlowTestHelper(t, channelTestRunner)
+	helpers.BrokerChannelFlowTestHelper(t, brokerClass, channelTestRunner)
 }

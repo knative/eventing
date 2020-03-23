@@ -30,7 +30,8 @@ import (
 )
 
 // EventingFlags holds the command line flags specific to knative/eventing.
-var EventingFlags *EventingEnvironmentFlags
+//var EventingFlags *EventingEnvironmentFlags
+var EventingFlags EventingEnvironmentFlags
 
 // Channels holds the Channels we want to run test against.
 type Channels []metav1.TypeMeta
@@ -68,21 +69,27 @@ func isValid(channel string) bool {
 
 // EventingEnvironmentFlags holds the e2e flags needed only by the eventing repo.
 type EventingEnvironmentFlags struct {
+	BrokerClass string
 	Channels
 }
 
 // InitializeEventingFlags registers flags used by e2e tests, calling flag.Parse() here would fail in
 // go1.13+, see https://github.com/knative/test-infra/issues/1329 for details
 func InitializeEventingFlags() {
-	f := EventingEnvironmentFlags{}
-
-	flag.Var(&f.Channels, "channels", "The names of the channel type metas, separated by comma. Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\".")
+	flag.Var(&EventingFlags.Channels, "channels", "The names of the channel type metas, separated by comma. Example: \"messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.cloud.google.com/v1alpha1:Channel,messaging.knative.dev/v1alpha1:KafkaChannel\".")
+	flag.StringVar(&EventingFlags.BrokerClass, "brokerclass", "ChannelBasedBroker", "Which brokerclass to test, requires the proper Broker implementation to have been installed, and only one value. brokerclass can be one of 'ChannelBasedBroker' or 'MTChannelBasedBroker'.")
 	flag.Parse()
 
 	// If no channel is passed through the flag, initialize it as the DefaultChannel.
-	if f.Channels == nil || len(f.Channels) == 0 {
-		f.Channels = []metav1.TypeMeta{lib.DefaultChannel}
+	if EventingFlags.Channels == nil || len(EventingFlags.Channels) == 0 {
+		EventingFlags.Channels = []metav1.TypeMeta{lib.DefaultChannel}
 	}
 
-	EventingFlags = &f
+	if EventingFlags.BrokerClass == "" {
+		log.Fatalf("Brokerclass not specified")
+	}
+
+	if EventingFlags.BrokerClass != "ChannelBasedBroker" && EventingFlags.BrokerClass != "MTChannelBasedBroker" {
+		log.Fatalf("Invalid Brokerclass specified, got %q must be either %q or %q", EventingFlags.BrokerClass, "ChannelBasedBroker", "MTChannelBasedBroker")
+	}
 }

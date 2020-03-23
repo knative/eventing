@@ -164,6 +164,7 @@ func updateDefaultChannelCM(client *lib.Client, updateConfig func(config *config
 	// Wait for 1 minute to let the ConfigMap be synced up.
 	// TODO(chizhg): 1 minute is an empirical duration, and does not solve the problem from the root.
 	// To make it work reliably, we may need to manually restart the controller.
+	// https://github.com/knative/eventing/issues/2807
 	time.Sleep(1 * time.Minute)
 	return nil
 }

@@ -187,6 +187,19 @@ func WithChannelTemplateForBroker(channelTypeMeta *metav1.TypeMeta) BrokerOption
 	}
 }
 
+// WithBrokerClassForBrokerV1Beta1 returns a function that adds a brokerClass
+// annotation to the given Broker.
+func WithBrokerClassForBrokerV1Beta1(brokerClass string) BrokerV1Beta1Option {
+	return func(b *eventingv1beta1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations["eventing.knative.dev/broker.class"] = brokerClass
+		b.SetAnnotations(annotations)
+	}
+}
+
 // WithChannelTemplateForBrokerV1Beta1 returns a function that adds a Config to the given Broker.
 func WithChannelTemplateForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta1Option {
 	return func(b *eventingv1beta1.Broker) {
@@ -198,6 +211,19 @@ func WithChannelTemplateForBrokerV1Beta1(config *duckv1.KReference) BrokerV1Beta
 func WithDeliveryForBroker(delivery *eventingduckv1beta1.DeliverySpec) BrokerOption {
 	return func(b *eventingv1alpha1.Broker) {
 		b.Spec.Delivery = delivery
+	}
+}
+
+// WithBrokerClassForBroker returns a function that adds a brokerClass
+// annotation to the given Broker.
+func WithBrokerClassForBroker(brokerClass string) BrokerOption {
+	return func(b *eventingv1alpha1.Broker) {
+		annotations := b.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string, 1)
+		}
+		annotations["eventing.knative.dev/broker.class"] = brokerClass
+		b.SetAnnotations(annotations)
 	}
 }
 

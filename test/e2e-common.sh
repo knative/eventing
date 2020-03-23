@@ -33,16 +33,42 @@ readonly EVENTING_CONFIG="config/"
 # In-memory channel CRD config.
 readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 
-# Setup the Knative environment for running tests.
+# MT Channel Based Broker config.
+readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
+
+# Channel Based Broker Controller.
+readonly CHANNEL_BASED_BROKER_CONTROLLER="config/500-broker-controller.yaml"
+
+# Setup the Knative environment for running tests. This installs
+# Everything from the config dir but then removes the Channel Based Broker.
+# TODO: This should only install the core.
 function knative_setup() {
   # Install the latest Knative/eventing in the current cluster.
   echo ">> Starting Knative Eventing"
   echo "Installing Knative Eventing"
   ko apply --strict -f ${EVENTING_CONFIG} || return 1
+
+  # Remove the Channel Based Broker so it will not interfere with other tests later
+  echo "Uninstalling Channel Based Broker Controller"
+  uninstall_broker || fail_test "Could not uninstall Channel Based Broker"
+
   wait_until_pods_running knative-eventing || fail_test "Knative Eventing did not come up"
 
   echo "Installing Knative Monitoring"
   start_knative_monitoring "${KNATIVE_MONITORING_RELEASE}" || fail_test "Knative Monitoring did not come up"
+}
+
+function install_broker() {
+  ko apply --strict -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
+}
+
+function install_mt_broker() {
+  ko apply --strict -f ${MT_CHANNEL_BASED_BROKER_CONFIG_DIR} || return 1
+  wait_until_pods_running knative-eventing || fail_test "Knative Eventing with MT Broker did not come up"
+}
+
+function uninstall_broker() {
+  ko delete -f ${CHANNEL_BASED_BROKER_CONTROLLER} || return 1
 }
 
 # Teardown the Knative environment after tests finish.
