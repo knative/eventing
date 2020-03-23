@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"testing"
 
 	"knative.dev/eventing/pkg/apis/eventing"
@@ -34,7 +36,6 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/inmemorychannel/controller/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
@@ -56,13 +57,6 @@ const (
 	imageName             = "test-image"
 
 	imcGeneration = 7
-)
-
-var (
-	trueVal = true
-	// deletionTime is used when objects are marked as deleted. Rfc3339Copy()
-	// truncates to seconds to match the loss of precision during serialization.
-	deletionTime = metav1.Now().Rfc3339Copy()
 )
 
 func init() {
@@ -371,7 +365,7 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
+			kubeClientSet:         fakekubeclient.Get(ctx),
 			systemNamespace:       testNS,
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
 			// TODO: FIx
@@ -380,7 +374,9 @@ func TestAllCases(t *testing.T) {
 			serviceLister:           listers.GetServiceLister(),
 			endpointsLister:         listers.GetEndpointsLister(),
 		}
-		return inmemorychannel.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetInMemoryChannelLister(), r.Recorder, r)
+		return inmemorychannel.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		false,
 		logger,
@@ -459,7 +455,7 @@ func TestInNamespace(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
-			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
+			kubeClientSet:         fakekubeclient.Get(ctx),
 			dispatcherImage:       imageName,
 			systemNamespace:       systemNS,
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
@@ -471,7 +467,9 @@ func TestInNamespace(t *testing.T) {
 			serviceAccountLister:    listers.GetServiceAccountLister(),
 			roleBindingLister:       listers.GetRoleBindingLister(),
 		}
-		return inmemorychannel.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetInMemoryChannelLister(), r.Recorder, r)
+		return inmemorychannel.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		false,
 		logger,

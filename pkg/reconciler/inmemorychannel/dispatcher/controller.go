@@ -18,6 +18,8 @@ package dispatcher
 
 import (
 	"context"
+	inmemorychannelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
+	"knative.dev/pkg/logging"
 	"time"
 
 	"go.uber.org/zap"
@@ -33,18 +35,10 @@ import (
 	"knative.dev/eventing/pkg/channel/swappable"
 	inmemorychannelinformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/inmemorychannel"
 	"knative.dev/eventing/pkg/inmemorychannel"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/tracing"
 )
 
 const (
-	// ReconcilerName is the name of the reconciler.
-	ReconcilerName = "InMemoryChannels"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "in-memory-channel-dispatcher"
-
 	readTimeout  = 15 * time.Minute
 	writeTimeout = 15 * time.Minute
 	port         = 8080
@@ -56,17 +50,17 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-	base := reconciler.NewBase(ctx, controllerAgentName, cmw)
+	logger := logging.FromContext(ctx)
 
 	// Setup trace publishing.
 	iw := cmw.(*configmap.InformedWatcher)
-	if err := tracing.SetupDynamicPublishing(base.Logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
-		base.Logger.Fatalw("Error setting up trace publishing", zap.Error(err))
+	if err := tracing.SetupDynamicPublishing(logger, iw, "imc-dispatcher", tracingconfig.ConfigName); err != nil {
+		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
-	sh, err := swappable.NewEmptyHandler(base.Logger.Desugar())
+	sh, err := swappable.NewEmptyHandler(logger.Desugar())
 	if err != nil {
-		base.Logger.Fatal("Error creating swappable.Handler", zap.Error(err))
+		logger.Fatalw("Error creating swappable.Handler", zap.Error(err))
 	}
 
 	args := &inmemorychannel.InMemoryDispatcherArgs{
@@ -74,7 +68,7 @@ func NewController(
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		Handler:      sh,
-		Logger:       base.Logger.Desugar(),
+		Logger:       logger.Desugar(),
 	}
 	inMemoryDispatcher := inmemorychannel.NewDispatcher(args)
 
@@ -82,12 +76,12 @@ func NewController(
 	informer := inmemorychannelInformer.Informer()
 
 	r := &Reconciler{
-		Base:                    base,
 		dispatcher:              inMemoryDispatcher,
 		inmemorychannelLister:   inmemorychannelInformer.Lister(),
 		inmemorychannelInformer: informer,
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	//	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := inmemorychannelreconciler.NewImpl(ctx, r)
 
 	// Nothing to filer, enqueue all imcs if configmap updates.
 	noopFilter := func(interface{}) bool { return true }
@@ -95,11 +89,11 @@ func NewController(
 		impl.FilteredGlobalResync(noopFilter, informer)
 	})
 	// Watch for configmap changes and trigger imc reconciliation by enqueuing imcs.
-	configStore := channel.NewEventDispatcherConfigStore(base.Logger, resyncIMCs)
+	configStore := channel.NewEventDispatcherConfigStore(logging.FromContext(ctx), resyncIMCs)
 	configStore.WatchConfigs(cmw)
 	r.configStore = configStore
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	// Watch for inmemory channels.
 	r.inmemorychannelInformer.AddEventHandler(
@@ -112,7 +106,7 @@ func NewController(
 	go func() {
 		err := inMemoryDispatcher.Start(ctx)
 		if err != nil {
-			r.Logger.Error("Failed stopping inMemoryDispatcher.", zap.Error(err))
+			logging.FromContext(ctx).Errorw("Failed stopping inMemoryDispatcher.", zap.Error(err))
 		}
 	}()
 
