@@ -20,10 +20,9 @@ import (
 	"context"
 
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -31,6 +30,7 @@ import (
 	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
@@ -39,9 +39,6 @@ import (
 const (
 	// ReconcilerName is the name of the reconciler.
 	ReconcilerName = "SourceDucks"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "source-duck-controller"
 )
 
 // NewController returns a function that initializes the controller and
@@ -69,16 +66,16 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 		}
 
 		r := &Reconciler{
-			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-			eventTypeLister: eventTypeInformer.Lister(),
-			crdLister:       crdInformer.Lister(),
-			sourceLister:    sourceLister,
-			gvr:             gvr,
-			crdName:         crd,
+			eventTypeLister:   eventTypeInformer.Lister(),
+			crdLister:         crdInformer.Lister(),
+			sourceLister:      sourceLister,
+			gvr:               gvr,
+			crdName:           crd,
+			eventingClientSet: eventingclient.Get(ctx),
 		}
-		impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+		impl := controller.NewImpl(r, logging.FromContext(ctx), ReconcilerName)
 
-		r.Logger.Info("Setting up event handlers")
+		logging.FromContext(ctx).Info("Setting up event handlers")
 		sourceInformer.AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 		eventTypeInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{

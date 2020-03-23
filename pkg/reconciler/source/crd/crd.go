@@ -19,6 +19,7 @@ package crd
 import (
 	"context"
 	"fmt"
+	"k8s.io/client-go/tools/record"
 	"sync"
 
 	"go.uber.org/zap"
@@ -34,7 +35,6 @@ import (
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
-	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -49,8 +49,6 @@ type runningController struct {
 
 // Reconciler implements controller.Reconciler for Source CRDs resources.
 type Reconciler struct {
-	*reconciler.Base
-
 	// Listers index properties about resources
 	crdLister apiextensionsv1beta1.CustomResourceDefinitionLister
 
@@ -63,13 +61,14 @@ type Reconciler struct {
 	// Synchronization primitives
 	lock     sync.RWMutex
 	onlyOnce sync.Once
+
+	recorder record.EventRecorder
 }
 
 // Check that our Reconciler implements controller.Reconciler
 var _ controller.Reconciler = (*Reconciler)(nil)
 
 func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-
 	// Create controllers map only once.
 	r.onlyOnce.Do(func() {
 		r.controllers = make(map[schema.GroupVersionResource]runningController)
@@ -97,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 
 	reconcileErr := r.reconcile(ctx, crd)
 	if reconcileErr != nil {
-		r.Recorder.Eventf(crd, corev1.EventTypeWarning, sourceCRDReconcileFailed, "Source CRD reconciliation failed: %v", reconcileErr)
+		r.recorder.Eventf(crd, corev1.EventTypeWarning, sourceCRDReconcileFailed, "Source CRD reconciliation failed: %v", reconcileErr)
 	}
 	// Requeue if the reconcile failed.
 	return reconcileErr

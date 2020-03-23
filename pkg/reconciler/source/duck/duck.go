@@ -22,26 +22,25 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/labels"
-	"knative.dev/eventing/pkg/apis/eventing"
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/client/listers/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/reconciler"
-
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"knative.dev/eventing/pkg/apis/eventing"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
+	"knative.dev/eventing/pkg/reconciler/source/duck/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 type Reconciler struct {
-	*reconciler.Base
+	// eventingClientSet allows us to configure Eventing objects
+	eventingClientSet clientset.Interface
 
 	// listers index properties about resources
 	eventTypeLister listers.EventTypeLister
@@ -119,14 +118,14 @@ func (r *Reconciler) reconcileEventTypes(ctx context.Context, src *duckv1.Source
 	toCreate, toDelete := r.computeDiff(current, expected)
 
 	for _, eventType := range toDelete {
-		if err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
+		if err = r.eventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Delete(eventType.Name, &metav1.DeleteOptions{}); err != nil {
 			logging.FromContext(ctx).Error("Error deleting eventType", zap.Any("eventType", eventType))
 			return err
 		}
 	}
 
 	for _, eventType := range toCreate {
-		if _, err = r.EventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
+		if _, err = r.eventingClientSet.EventingV1alpha1().EventTypes(src.Namespace).Create(&eventType); err != nil {
 			logging.FromContext(ctx).Error("Error creating eventType", zap.Any("eventType", eventType))
 			return err
 		}
