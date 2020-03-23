@@ -19,12 +19,7 @@ package sequence
 import (
 	"context"
 	"fmt"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
-	"knative.dev/pkg/logging"
 	"testing"
-
-	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,21 +28,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
+	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	"knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/sequence"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/sequence/resources"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+	"knative.dev/pkg/logging"
 	logtesting "knative.dev/pkg/logging/testing"
-	. "knative.dev/pkg/reconciler/testing"
 
-	"knative.dev/eventing/pkg/apis/flows/v1alpha1"
-	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
-	"knative.dev/eventing/pkg/reconciler/sequence/resources"
 	. "knative.dev/eventing/pkg/reconciler/testing"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (

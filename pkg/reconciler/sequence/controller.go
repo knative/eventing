@@ -18,6 +18,7 @@ package sequence
 
 import (
 	"context"
+
 	"knative.dev/pkg/logging"
 
 	"k8s.io/client-go/tools/cache"
