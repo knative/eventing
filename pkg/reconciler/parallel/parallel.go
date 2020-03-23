@@ -35,11 +35,11 @@ import (
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	parallelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/flows/v1alpha1/parallel"
 	listers "knative.dev/eventing/pkg/client/listers/flows/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/parallel/resources"
 	pkgreconciler "knative.dev/pkg/reconciler"
 )
@@ -51,13 +51,17 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 }
 
 type Reconciler struct {
-	*reconciler.Base
-
 	// listers index properties about resources
 	parallelLister     listers.ParallelLister
 	tracker            tracker.Interface
 	channelableTracker duck.ListableTracker
 	subscriptionLister messaginglisters.SubscriptionLister
+
+	// eventingClientSet allows us to configure Eventing objects
+	eventingClientSet clientset.Interface
+
+	// dynamicClientSet allows us to configure pluggable Build objects
+	dynamicClientSet dynamic.Interface
 }
 
 // Check that our Reconciler implements parallelreconciler.Interface
@@ -80,7 +84,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, p *v1alpha1.Parallel) pk
 	}
 
 	gvr, _ := meta.UnsafeGuessKindToResource(p.Spec.ChannelTemplate.GetObjectKind().GroupVersionKind())
-	channelResourceInterface := r.DynamicClientSet.Resource(gvr).Namespace(p.Namespace)
+	channelResourceInterface := r.dynamicClientSet.Resource(gvr).Namespace(p.Namespace)
 	if channelResourceInterface == nil {
 		return fmt.Errorf("unable to create dynamic client for: %+v", p.Spec.ChannelTemplate)
 	}
@@ -210,7 +214,7 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 	if apierrs.IsNotFound(err) {
 		sub = expected
 		logging.FromContext(ctx).Info(fmt.Sprintf("Creating subscription: %+v", sub))
-		newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
+		newSub, err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(sub)
 		if err != nil {
 			// TODO: Send events here, or elsewhere?
 			//r.Recorder.Eventf(p, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Parallel's subscription failed: %v", err)
@@ -225,12 +229,12 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, branchNumber int
 	} else if !equality.Semantic.DeepDerivative(expected.Spec, sub.Spec) {
 		// Given that spec.channel is immutable, we cannot just update the subscription. We delete
 		// it instead, and re-create it.
-		err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
+		err = r.eventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Delete(sub.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
 			return nil, err
 		}
-		newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(expected)
+		newSub, err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(sub.Namespace).Create(expected)
 		if err != nil {
 			logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
 			return nil, err
