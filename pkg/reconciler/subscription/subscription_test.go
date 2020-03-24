@@ -20,9 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
