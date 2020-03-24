@@ -61,7 +61,7 @@ func NewController(
 
 	sh, err := swappable.NewEmptyMessageHandler(ctx, logger.Desugar())
 	if err != nil {
-		logger.Fatalw("Error creating swappable.Handler", zap.Error(err))
+		logger.Fatalw("Error creating swappable.MessageHandler", zap.Error(err))
 	}
 
 	args := &inmemorychannel.InMemoryMessageDispatcherArgs{
