@@ -18,14 +18,16 @@ package configmappropagation
 
 import (
 	"context"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 
 	corev1 "k8s.io/api/core/v1"
 	configmappropagationinformer "knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation"
+	"knative.dev/eventing/pkg/client/injection/reconciler/configs/v1alpha1/configmappropagation"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
 )
 
@@ -48,13 +50,14 @@ func NewController(
 	configMapInformer := configmapinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
+		kubeClientSet:              kubeclient.Get(ctx),
 		configMapPropagationLister: configMapPropagationInformer.Lister(),
 		configMapLister:            configMapInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
 
-	r.Logger.Info("Setting up event handlers")
+	impl := configmappropagation.NewImpl(ctx, r)
+
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	configMapPropagationInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Tracker is used to notify us that a ConfigMap has changed so that
