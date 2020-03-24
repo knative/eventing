@@ -37,7 +37,7 @@ import (
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
 	configStore             *channel.EventDispatcherConfigStore
-	dispatcher              inmemorychannel.Dispatcher
+	dispatcher              inmemorychannel.MessageDispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 }
