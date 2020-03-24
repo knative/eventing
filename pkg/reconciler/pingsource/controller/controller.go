@@ -19,23 +19,21 @@ package controller
 import (
 	"context"
 
-	appsv1 "k8s.io/api/apps/v1"
-
-	"knative.dev/pkg/tracker"
-
 	"github.com/kelseyhightower/envconfig"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/tools/cache"
-	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/system"
+	"knative.dev/pkg/tracker"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/pingsource"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
 )
 
@@ -66,7 +64,7 @@ func NewController(
 	pingSourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:             reconciler.NewBase(ctx, controllerAgentName, cmw),
+		kubeClientSet:    kubeclient.Get(ctx),
 		pingLister:       pingSourceInformer.Lister(),
 		deploymentLister: deploymentInformer.Lister(),
 
@@ -75,7 +73,7 @@ func NewController(
 
 	env := &envConfig{}
 	if err := envconfig.Process("", env); err != nil {
-		r.Logger.Panicf("unable to process PingSourceSource's required environment variables: %v", err)
+		logging.FromContext(ctx).Panicf("unable to process PingSourceSource's required environment variables: %v", err)
 	}
 	r.receiveAdapterImage = env.Image
 	r.jobRunnerImage = env.JobRunnerImage
@@ -84,7 +82,7 @@ func NewController(
 
 	r.sinkResolver = resolver.NewURIResolver(ctx, impl.EnqueueKey)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	pingSourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Watch for deployments owned by the source

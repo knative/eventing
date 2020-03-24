@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,22 +33,24 @@ import (
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/mtbroker/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	v1addr "knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	v1a1addr "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable"
 	v1b1addr "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	"knative.dev/pkg/resolver"
 
@@ -67,14 +67,6 @@ const (
 	testNS     = "test-namespace"
 	brokerName = "test-broker"
 
-	filterImage  = "filter-image"
-	filterSA     = "filter-SA"
-	ingressImage = "ingress-image"
-	ingressSA    = "ingress-SA"
-
-	filterContainerName  = "filter"
-	ingressContainerName = "ingress"
-
 	triggerName = "test-trigger"
 	triggerUID  = "test-trigger-uid"
 
@@ -83,8 +75,6 @@ const (
 	subscriberName    = "subscriber-name"
 	subscriberGroup   = "serving.knative.dev"
 	subscriberVersion = "v1"
-
-	brokerGeneration = 79
 
 	pingSourceName              = "test-ping-source"
 	testSchedule                = "*/2 * * * *"
@@ -97,7 +87,6 @@ const (
 	k8sServiceResolvedURI = "http://subscriber-name.test-namespace.svc.cluster.local/"
 	currentGeneration     = 1
 	outdatedGeneration    = 0
-	triggerGeneration     = 7
 
 	finalizerName = "brokers.eventing.knative.dev"
 )
@@ -105,34 +94,15 @@ const (
 var (
 	trueVal = true
 
-	testKey                 = fmt.Sprintf("%s/%s", testNS, brokerName)
-	channelGenerateName     = fmt.Sprintf("%s-broker-", brokerName)
-	subscriptionChannelName = fmt.Sprintf("%s-broker", brokerName)
+	testKey = fmt.Sprintf("%s/%s", testNS, brokerName)
 
 	triggerChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
 
 	filterServiceName  = "broker-filter"
 	ingressServiceName = "broker-ingress"
 
-	ingressSubscriptionGenerateName = fmt.Sprintf("internal-ingress-%s-", brokerName)
-	subscriptionName                = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
+	subscriptionName = fmt.Sprintf("%s-%s-%s", brokerName, triggerName, triggerUID)
 
-	channelGVK = metav1.GroupVersionKind{
-		Group:   "eventing.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "Channel",
-	}
-
-	imcGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "InMemoryChannel",
-	}
-
-	serviceGVK = metav1.GroupVersionKind{
-		Version: "v1",
-		Kind:    "Service",
-	}
 	subscriberAPIVersion = fmt.Sprintf("%s/%s", subscriberGroup, subscriberVersion)
 	subscriberGVK        = metav1.GroupVersionKind{
 		Group:   subscriberGroup,
@@ -143,13 +113,6 @@ var (
 		Group:   "",
 		Version: "v1",
 		Kind:    "Service",
-	}
-	brokerDest = duckv1beta1.Destination{
-		Ref: &corev1.ObjectReference{
-			Name:       sinkName,
-			Kind:       "Broker",
-			APIVersion: "eventing.knative.dev/v1alpha1",
-		},
 	}
 	brokerDestv1 = duckv1.Destination{
 		Ref: &duckv1.KReference{
@@ -851,7 +814,6 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -997,7 +959,7 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`)},
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1023,7 +985,9 @@ func TestReconcile(t *testing.T) {
 		ctx = v1addr.WithDuck(ctx)
 		ctx = conditions.WithDuck(ctx)
 		r := &Reconciler{
-			Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+			eventingClientSet:  fakeeventingclient.Get(ctx),
+			dynamicClientSet:   fakedynamicclient.Get(ctx),
+			kubeClientSet:      fakekubeclient.Get(ctx),
 			subscriptionLister: listers.GetSubscriptionLister(),
 			triggerLister:      listers.GetTriggerLister(),
 			brokerLister:       listers.GetBrokerLister(),
@@ -1033,8 +997,12 @@ func TestReconcile(t *testing.T) {
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 			addressableTracker: duck.NewListableTracker(ctx, v1a1addr.Get, func(types.NamespacedName) {}, 0),
 			uriResolver:        resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			recorder:           controller.GetEventRecorder(ctx),
 		}
-		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r, "MTChannelBasedBroker")
+		return broker.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetBrokerLister(),
+			controller.GetEventRecorder(ctx),
+			r, "MTChannelBasedBroker")
 
 	},
 		false,

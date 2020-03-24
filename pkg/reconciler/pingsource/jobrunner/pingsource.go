@@ -31,14 +31,11 @@ import (
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/controller"
 )
 
 // Reconciler reconciles PingSources
 type Reconciler struct {
-	*reconciler.Base
-
 	cronRunner       *cronJobsRunner
 	pingsourceLister sourceslisters.PingSourceLister
 
@@ -78,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return fmt.Errorf("PingSource is not ready. Cannot configure the cron jobs runner")
 	}
 
-	reconcileErr := r.reconcile(key, source)
+	reconcileErr := r.reconcile(ctx, key, source)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling PingSource", zap.Error(reconcileErr))
 	} else {
@@ -87,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *Reconciler) reconcile(key string, source *v1alpha2.PingSource) error {
+func (r *Reconciler) reconcile(ctx context.Context, key string, source *v1alpha2.PingSource) error {
 	if source.DeletionTimestamp != nil {
 		if id, ok := r.entryids[key]; ok {
 			r.cronRunner.RemoveSchedule(id)
@@ -98,7 +95,7 @@ func (r *Reconciler) reconcile(key string, source *v1alpha2.PingSource) error {
 		}
 		return nil
 	}
-	r.Logger.Info("synchronizing schedule")
+	logging.FromContext(ctx).Info("synchronizing schedule")
 
 	// Is the schedule already cached?
 	if id, ok := r.entryids[key]; ok {

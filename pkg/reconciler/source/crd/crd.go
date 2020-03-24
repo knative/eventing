@@ -192,6 +192,11 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.Custo
 
 	// Source Duck controller constructor
 	sdc := duck.NewController(crd.Name, *gvr, *gvk)
+	if sdc == nil {
+		logging.FromContext(ctx).Error("Source Duck Controller is nil.", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+		return nil
+	}
+
 	// Source Duck controller context
 	sdctx, cancel := context.WithCancel(r.ogctx)
 	// Source Duck controller instantiation
@@ -205,8 +210,10 @@ func (r *Reconciler) reconcileController(ctx context.Context, crd *v1beta1.Custo
 
 	logging.FromContext(ctx).Info("Starting Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
 	go func(c *controller.Impl) {
-		if err := c.Run(controller.DefaultThreadsPerController, sdctx.Done()); err != nil {
-			logging.FromContext(ctx).Error("Unable to start Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+		if c != nil {
+			if err := c.Run(controller.DefaultThreadsPerController, sdctx.Done()); err != nil {
+				logging.FromContext(ctx).Error("Unable to start Source Duck Controller", zap.String("GVR", gvr.String()), zap.String("GVK", gvk.String()))
+			}
 		}
 	}(rc.controller)
 	return nil

@@ -34,7 +34,6 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 )
 
@@ -105,8 +104,6 @@ func TestAllCases(t *testing.T) {
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base: reconciler.NewBase(ctx, controllerAgentName, cmw),
-
 			pingsourceLister: listers.GetPingSourceV1alpha2Lister(),
 			cronRunner:       NewCronJobsRunner(ce, reporter, logger),
 			entryidMu:        sync.Mutex{},
