@@ -240,6 +240,8 @@ func (tt TestSpanTree) MatchesSubtree(t *testing.T, actual *SpanTree) (matches [
 			// A matching root leaves no unmatched siblings.
 			matches = append(matches, nil)
 		}
+	} else if t != nil {
+		t.Logf("%v does not match span %v: %v", tt.Span, actual.Span, err)
 	}
 	// Recursively match children.
 	for i, child := range actual.Children {
