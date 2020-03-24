@@ -91,6 +91,7 @@ func NewController(
 		roleBindingLister:          roleBindingInformer.Lister(),
 		brokerLister:               brokerInformer.Lister(),
 		configMapPropagationLister: configMapPropagationInformer.Lister(),
+		recorder:                   recorder,
 	}
 
 	var env envConfig
