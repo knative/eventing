@@ -23,9 +23,12 @@ import (
 	"github.com/cloudevents/sdk-go/v1/cloudevents/client"
 	"github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 	cloudeventsV2 "github.com/cloudevents/sdk-go/v2"
 	http2 "github.com/cloudevents/sdk-go/v2/protocol/http"
+=======
+>>>>>>> update PR after sync with slinkydeveloper
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"knative.dev/pkg/tracing"

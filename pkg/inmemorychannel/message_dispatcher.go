@@ -20,7 +20,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
 
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
@@ -33,10 +32,10 @@ type MessageDispatcher interface {
 }
 
 type InMemoryMessageDispatcher struct {
-	handler      *swappable.MessageHandler
-	protocol     http.Protocol
-	writeTimeout time.Duration
-	logger       *zap.Logger
+	handler              *swappable.MessageHandler
+	httpBindingsReceiver *kncloudevents.HttpMessageReceiver
+	writeTimeout         time.Duration
+	logger               *zap.Logger
 }
 
 type InMemoryMessageDispatcherArgs struct {
@@ -57,11 +56,9 @@ func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// TODO: Fix this. This will panic as we have no way to modify d.protocol.handlerRegistered as its not public. However, I'm not sure how to set the handler for the new http protocol.
-	d.protocol.Handler.HandleFunc(d.protocol.GetPath(), d.handler.ServeHTTP)
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- d.protocol.OpenInbound(ctx)
+		errCh <- d.httpBindingsReceiver.StartListen(ctx, d.handler)
 	}()
 
 	// Stop either if the receiver stops (sending to errCh) or if the context Done channel is closed.
@@ -84,16 +81,13 @@ func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 }
 
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
-	// TODO set read and write timeouts and port?
-	protocol, err := kncloudevents.NewHTTPProtocol()
-	if err != nil {
-		args.Logger.Fatal("failed to create cloudevents client", zap.Error(err))
-	}
+	// TODO set read and write timeouts?
+	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
 
 	dispatcher := &InMemoryMessageDispatcher{
-		handler:  args.Handler,
-		protocol: *protocol,
-		logger:   args.Logger,
+		handler:              args.Handler,
+		httpBindingsReceiver: bindingsReceiver,
+		logger:               args.Logger,
 	}
 
 	return dispatcher
