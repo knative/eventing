@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 
 	broker "knative.dev/eventing/cmd/mtbroker"
 	"knative.dev/eventing/pkg/mtbroker/filter"
+	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
@@ -119,10 +121,7 @@ func main() {
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
-	bin := tracing.BrokerFilterName(tracing.BrokerFilterNameArgs{
-		Namespace:  env.Namespace,
-		BrokerName: "cluster",
-	})
+	bin := fmt.Sprintf("%s.%s", names.BrokerFilterName, system.Namespace())
 	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin, tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
