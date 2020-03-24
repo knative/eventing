@@ -57,7 +57,7 @@ type ContainerSourceSpec struct {
 	duckv1.SourceSpec `json:",inline"`
 
 	// Template describes the pods that will be created
-	Template corev1.PodTemplateSpec `json:"template,omitempty"`
+	Template corev1.PodTemplateSpec `json:"template"`
 }
 
 // GetGroupVersionKind returns the GroupVersionKind.
