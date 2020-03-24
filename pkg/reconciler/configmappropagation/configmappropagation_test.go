@@ -20,19 +20,18 @@ import (
 	"context"
 	"testing"
 
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	"knative.dev/eventing/pkg/client/injection/reconciler/configs/v1alpha1/configmappropagation"
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgotesting "k8s.io/client-go/testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/configs/v1alpha1"
 	"knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/configs/v1alpha1/configmappropagation"
 	"knative.dev/eventing/pkg/reconciler/configmappropagation/resources"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"

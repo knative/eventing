@@ -19,6 +19,7 @@ package configmappropagation
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
 	"knative.dev/pkg/configmap"
@@ -26,18 +27,9 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/tracker"
 
-	corev1 "k8s.io/api/core/v1"
 	configmappropagationinformer "knative.dev/eventing/pkg/client/injection/informers/configs/v1alpha1/configmappropagation"
 	"knative.dev/eventing/pkg/client/injection/reconciler/configs/v1alpha1/configmappropagation"
 	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler.
-	ReconcilerName = "ConfigMapPropagation"
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "configmappropagation-controller"
 )
 
 // NewController initializes the controller and is called by the generated code
