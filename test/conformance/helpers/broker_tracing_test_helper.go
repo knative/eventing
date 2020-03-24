@@ -98,7 +98,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.CreatePodOrFail(logPod, lib.WithService(loggerPodName))
 
 		// Create a Trigger that receives events (type=bar) and sends them to the logger Pod.
-		loggerTrigger := client.CreateTriggerOrFail(
+		client.CreateTriggerOrFail(
 			"logger",
 			resources.WithBroker(broker.Name),
 			resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etLogger, map[string]interface{}{}),
@@ -115,7 +115,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		client.CreatePodOrFail(eventTransformerPod, lib.WithService(eventTransformerPod.Name))
 
 		// Create a Trigger that receives events (type=foo) and sends them to the transformer Pod.
-		transformerTrigger := client.CreateTriggerOrFail(
+		client.CreateTriggerOrFail(
 			"transformer",
 			resources.WithBroker(broker.Name),
 			resources.WithAttributesTriggerFilter(v1alpha1.TriggerAnyFilter, etTransformer, map[string]interface{}{}),
@@ -149,113 +149,24 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		// We expect the following spans:
 		// 1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).
 		// 2. Broker Ingress receives the event from the sending pod.
-		// 3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).
-		// 4. Broker TrChannel receives the event from the Broker Ingress.
-		// 5. Broker TrChannel sends the event to the Broker Filter for the "logger" trigger.
-		//     6. Broker Filter for the "logger" trigger receives the event from the Broker TrChannel.
-		//        This does not pass the filter, so this 'branch' ends here.
-		// 7. Broker TrChannel sends the event to the Broker Filter for the "transformer" trigger.
-		// 8. Broker Filter for the "transformer" trigger receives the event from the Broker TrChannel.
-		// 9. Broker Filter for the "transformer" trigger sends the event to the transformer pod.
-		// 10. Transformer pod receives the event from the Broker Filter for the "transformer" trigger.
-		// 11. Broker Filter for the "transformer" sends the transformer pod's reply to the Broker
-		//     Ingress.
-		// 12. Broker Ingress receives the event from the Broker Filter for the "transformer" trigger.
-		// 13. Broker Ingress sends the event to the Broker's TrChannel.
-		// 14. Broker TrChannel receives the event from the Broker Ingress.
-		// 15. Broker TrChannel sends the event to the Broker Filter for the "transformer" trigger.
-		//     16. Broker Filter for the "transformer" trigger receives the event from the Broker
-		//        TrChannel. This does not pass the filter, so this 'branch' ends here.
-		// 17. Broker TrChannel sends the event to the Broker Filter for the "logger" trigger.
-		// 18. Broker Filter for the "logger" trigger receives the event from the Broker TrChannel.
-		// 19. Broker Filter for the "logger" trigger sends the event to the logger pod.
-		// 20. Logger pod receives the event from the Broker Filter for the "logger" trigger.
+		// 3. Broker Filter for the "transformer" trigger sends the event to the transformer pod.
+		// 4. Transformer pod receives the event from the Broker Filter for the "transformer" trigger.
+		// 5. Broker Filter for the "logger" trigger sends the event to the logger pod.
+		// 6. Logger pod receives the event from the Broker Filter for the "logger" trigger.
 
 		// Useful constants we will use below.
 		ingressHost := brokerIngressHost(domain, *broker)
-		triggerChanHost := brokerTriggerChannelHost(domain, *broker)
-		filterHost := brokerFilterHost(domain, *broker)
-		loggerTriggerPath := triggerPath(*loggerTrigger)
-		transformerTriggerPath := triggerPath(*transformerTrigger)
 		loggerSVCHost := k8sServiceHost(domain, client.Namespace, loggerPodName)
 		transformerSVCHost := k8sServiceHost(domain, client.Namespace, eventTransformerPod.Name)
 
-		// This is very hard to read when written directly, so we will build piece by piece.
-
-		// Steps 15-16: 'logger' event being sent to the 'transformer' Trigger.
-		loggerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
-			Note: "15. Broker TrChannel sends the event to the Broker Filter for the 'transformer' trigger.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, transformerTriggerPath),
-			Children: []tracinghelper.TestSpanTree{
-				{
-					Note: "16. Broker Filter for the 'transformer' trigger receives the event from the Broker TrChannel. This does not pass the filter, so this 'branch' ends here.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, transformerTriggerPath),
-				},
-			},
-		}
-
-		// Steps 17-20: 'logger' event being sent to the 'logger' Trigger.
-		loggerEventSentFromTrChannelToLogger := tracinghelper.TestSpanTree{
-			Note: "17. Broker TrChannel sends the event to the Broker Filter for the 'logger' trigger.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, loggerTriggerPath),
-			Children: []tracinghelper.TestSpanTree{
-				{
-					Note: "18. Broker Filter for the 'logger' trigger receives the event from the Broker TrChannel.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, loggerTriggerPath),
-					Children: []tracinghelper.TestSpanTree{
-						{
-							Note: "19. Broker Filter for the 'logger' trigger sends the event to the logger pod.",
-							Span: tracinghelper.MatchHTTPClientSpanNoReply(loggerSVCHost, "/"),
-							Children: []tracinghelper.TestSpanTree{
-								{
-									Note: "20. Logger pod receives the event from the Broker Filter for the 'logger' trigger.",
-									Span: tracinghelper.MatchHTTPServerSpanNoReply(loggerSVCHost, "/"),
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		// Steps 13-20. Directly steps 15-16. 17-20 are included as children.
-		loggerEventIngressToTrigger := tracinghelper.TestSpanTree{
-			Note: "13. Broker Ingress sends the event to the Broker's TrChannel.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(triggerChanHost, "/"),
-			Children: []tracinghelper.TestSpanTree{
-				{
-					Note: "14. Broker TrChannel receives the event from the Broker Ingress.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(triggerChanHost, "/"),
-					Children: []tracinghelper.TestSpanTree{
-						// Steps 15-16.
-						loggerEventSentFromTrChannelToTransformer,
-						// Steps 17-20.
-						loggerEventSentFromTrChannelToLogger,
-					},
-				},
-			},
-		}
-
 		// Steps 7-10: Event from TrChannel sent to transformer Trigger and its reply to the InChannel.
 		transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
-			Note: "7. Broker TrChannel sends the event to the Broker Filter for the 'transformer' trigger.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, transformerTriggerPath),
+			Note: "3. Broker Filter for the 'transformer' trigger sends the event to the transformer pod.",
+			Span: tracinghelper.MatchHTTPClientSpanWithReply(transformerSVCHost, "/"),
 			Children: []tracinghelper.TestSpanTree{
 				{
-					Note: "8. Broker Filter for the 'transformer' trigger receives the event from the Broker TrChannel.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, transformerTriggerPath),
-					Children: []tracinghelper.TestSpanTree{
-						{
-							Note: "9. Broker Filter for the 'transformer' trigger sends the event to the transformer pod.",
-							Span: tracinghelper.MatchHTTPClientSpanWithReply(transformerSVCHost, "/"),
-							Children: []tracinghelper.TestSpanTree{
-								{
-									Note: "10. Transformer pod receives the event from the Broker Filter for the 'transformer' trigger.",
-									Span: tracinghelper.MatchHTTPServerSpanWithReply(transformerSVCHost, "/"),
-								},
-							},
-						},
-					},
+					Note: "4. Transformer pod receives the event from the Broker Filter for the 'transformer' trigger.",
+					Span: tracinghelper.MatchHTTPServerSpanWithReply(transformerSVCHost, "/"),
 				},
 			},
 		}
@@ -264,28 +175,12 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		// Steps 11-12 Reply from the 'transformer' is sent by the Broker TrChannel to the Broker
 		// Ingress.
 		transformerEventResponseFromTrChannel := tracinghelper.TestSpanTree{
-			Note: "11. Broker TrChannel for the 'transformer' sends the transformer pod's reply to the Broker Ingress.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(ingressHost, ""),
+			Note: "5. Broker Filter for the 'logger' trigger sends the event to the logger pod.",
+			Span: tracinghelper.MatchHTTPClientSpanNoReply(loggerSVCHost, "/"),
 			Children: []tracinghelper.TestSpanTree{
 				{
-					Note: "12. Broker Ingress receives the event from the Broker Filter for the 'transformer' trigger.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
-					Children: []tracinghelper.TestSpanTree{
-						// Steps 13-20.
-						loggerEventIngressToTrigger,
-					},
-				},
-			},
-		}
-
-		// Steps 5-6: Event from TrChannel sent to logger Trigger.
-		transformerEventSentFromTrChannelToLogger := tracinghelper.TestSpanTree{
-			Note: "5. Broker TrChannel sends the event to the Broker Filter for the 'logger' trigger.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(filterHost, loggerTriggerPath),
-			Children: []tracinghelper.TestSpanTree{
-				{
-					Note: "6. Broker Filter for the 'logger' trigger receives the event from the Broker TrChannel. This does not pass the filter, so this 'branch' ends here.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(filterHost, loggerTriggerPath),
+					Note: "6. Logger pod receives the event from the Broker Filter for the 'logger' trigger.",
+					Span: tracinghelper.MatchHTTPServerSpanNoReply(loggerSVCHost, "/"),
 				},
 			},
 		}
@@ -297,24 +192,10 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 			Note: "2. Broker Ingress receives the event from the sending pod.",
 			Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
 			Children: []tracinghelper.TestSpanTree{
-				{
-					Note: "3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).",
-					Span: tracinghelper.MatchHTTPClientSpanNoReply(triggerChanHost, "/"),
-					Children: []tracinghelper.TestSpanTree{
-						{
-							Note: "4. Broker TrChannel receives the event from the Broker Ingress.",
-							Span: tracinghelper.MatchHTTPServerSpanNoReply(triggerChanHost, "/"),
-							Children: []tracinghelper.TestSpanTree{
-								// Steps 5-6.
-								transformerEventSentFromTrChannelToLogger,
-								// Steps 7-10.
-								transformerEventSentFromTrChannelToTransformer,
-								// Steps 11-22
-								transformerEventResponseFromTrChannel,
-							},
-						},
-					},
-				},
+				// Steps 7-10.
+				transformerEventSentFromTrChannelToTransformer,
+				// Steps 11-22
+				transformerEventResponseFromTrChannel,
 			},
 		}
 
