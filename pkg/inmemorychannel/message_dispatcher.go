@@ -28,7 +28,7 @@ import (
 )
 
 type MessageDispatcher interface {
-	UpdateConfig(config *multichannelfanout.Config) error
+	UpdateConfig(context context.Context, config *multichannelfanout.Config) error
 }
 
 type InMemoryMessageDispatcher struct {
@@ -46,8 +46,8 @@ type InMemoryMessageDispatcherArgs struct {
 	Logger       *zap.Logger
 }
 
-func (d *InMemoryMessageDispatcher) UpdateConfig(config *multichannelfanout.Config) error {
-	return d.handler.UpdateConfig(context.TODO(), config)
+func (d *InMemoryMessageDispatcher) UpdateConfig(context context.Context, config *multichannelfanout.Config) error {
+	return d.handler.UpdateConfig(context, config)
 }
 
 // Start starts the inmemory dispatcher's message processing.
