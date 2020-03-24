@@ -19,8 +19,9 @@ package configmappropagation
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"strings"
+
+	"k8s.io/client-go/kubernetes"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"

@@ -18,6 +18,7 @@ package configmappropagation
 
 import (
 	"context"
+
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 
 	"knative.dev/pkg/configmap"

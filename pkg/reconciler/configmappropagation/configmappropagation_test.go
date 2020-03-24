@@ -18,10 +18,11 @@ package configmappropagation
 
 import (
 	"context"
+	"testing"
+
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/configs/v1alpha1/configmappropagation"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
-	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
