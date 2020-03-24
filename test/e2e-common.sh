@@ -37,7 +37,7 @@ readonly IN_MEMORY_CHANNEL_CRD_CONFIG_DIR="config/channels/in-memory-channel"
 readonly MT_CHANNEL_BASED_BROKER_CONFIG_DIR="config/brokers/mt-channel-broker"
 
 # Channel Based Broker Controller.
-readonly CHANNEL_BASED_BROKER_CONTROLLER="config/500-broker-controller.yaml"
+readonly CHANNEL_BASED_BROKER_CONTROLLER="config/brokers/channel-broker"
 
 # Setup the Knative environment for running tests. This installs
 # Everything from the config dir but then removes the Channel Based Broker.
