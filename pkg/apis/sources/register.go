@@ -50,4 +50,10 @@ var (
 		Group:    GroupName,
 		Resource: "sinkbindings",
 	}
+
+	// ContainerSourceResource respresents a Knative Eventing Sources ContainerSource
+	ContainerSourceResource = schema.GroupResource{
+		Group:    GroupName,
+		Resource: "containersources",
+	}
 )

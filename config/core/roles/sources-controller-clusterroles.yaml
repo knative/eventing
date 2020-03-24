@@ -54,6 +54,9 @@ rules:
       - "pingsources"
       - "pingsources/status"
       - "pingsources/finalizers"
+      - "containersources"
+      - "containersources/status"
+      - "containersources/finalizers"
     verbs: *everything
 
   # Knative Services admin

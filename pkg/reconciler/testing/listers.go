@@ -157,6 +157,10 @@ func (l *Listers) GetPingSourceLister() sourcelisters.PingSourceLister {
 	return sourcelisters.NewPingSourceLister(l.indexerFor(&sourcesv1alpha1.PingSource{}))
 }
 
+func (l *Listers) GetContainerSourceLister() sourcelisters.ContainerSourceLister {
+	return sourcelisters.NewContainerSourceLister(l.indexerFor(&sourcesv1alpha1.ContainerSource{}))
+}
+
 func (l *Listers) GetPingSourceV1alpha2Lister() sourcev1alpha2listers.PingSourceLister {
 	return sourcev1alpha2listers.NewPingSourceLister(l.indexerFor(&sourcesv1alpha2.PingSource{}))
 }

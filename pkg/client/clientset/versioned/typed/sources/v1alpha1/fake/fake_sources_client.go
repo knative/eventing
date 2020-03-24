@@ -32,6 +32,10 @@ func (c *FakeSourcesV1alpha1) ApiServerSources(namespace string) v1alpha1.ApiSer
 	return &FakeApiServerSources{c, namespace}
 }
 
+func (c *FakeSourcesV1alpha1) ContainerSources(namespace string) v1alpha1.ContainerSourceInterface {
+	return &FakeContainerSources{c, namespace}
+}
+
 func (c *FakeSourcesV1alpha1) PingSources(namespace string) v1alpha1.PingSourceInterface {
 	return &FakePingSources{c, namespace}
 }
