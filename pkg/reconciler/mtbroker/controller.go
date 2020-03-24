@@ -35,6 +35,7 @@ import (
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
+	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	client "knative.dev/pkg/client/injection/kube/client"
@@ -149,14 +150,14 @@ func NewController(
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
-			pkgreconciler.NameFilterFunc(BrokerFilterName)),
+			pkgreconciler.NameFilterFunc(names.BrokerFilterName)),
 		Handler: controller.HandleAll(grCb),
 	})
 	// Resync for the ingress.
 	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.ChainFilterFuncs(
 			pkgreconciler.NamespaceFilterFunc(system.Namespace()),
-			pkgreconciler.NameFilterFunc(BrokerIngressName)),
+			pkgreconciler.NameFilterFunc(names.BrokerIngressName)),
 		Handler: controller.HandleAll(grCb),
 	})
 
