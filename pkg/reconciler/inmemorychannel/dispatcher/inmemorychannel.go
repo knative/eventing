@@ -18,10 +18,9 @@ package dispatcher
 
 import (
 	"context"
-	"fmt"
 
-	"go.uber.org/zap"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"knative.dev/pkg/reconciler"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -31,56 +30,17 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/inmemorychannel"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
-	"knative.dev/pkg/controller"
 )
 
 // Reconciler reconciles InMemory Channels.
 type Reconciler struct {
-	*reconciler.Base
-
 	configStore             *channel.EventDispatcherConfigStore
 	dispatcher              inmemorychannel.Dispatcher
 	inmemorychannelLister   listers.InMemoryChannelLister
 	inmemorychannelInformer cache.SharedIndexInformer
 }
 
-// Check that our Reconciler implements controller.Reconciler.
-var _ controller.Reconciler = (*Reconciler)(nil)
-
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name.
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the IMC resource with this namespace/name.
-	channel, err := r.inmemorychannelLister.InMemoryChannels(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("InMemoryChannel key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	if !channel.Status.IsReady() {
-		return fmt.Errorf("Channel is not ready. Cannot configure the dispatcher")
-	}
-
-	// Just update the dispatcher config
-	reconcileErr := r.reconcile(ctx, channel)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Error("Error reconciling InMemoryChannel", zap.Error(reconcileErr))
-	} else {
-		logging.FromContext(ctx).Debug("InMemoryChannel reconciled")
-	}
-	return nil
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChannel) error {
+func (r *Reconciler) ReconcileKind(ctx context.Context, imc *v1alpha1.InMemoryChannel) reconciler.Event {
 	// This is a special Reconciler that does the following:
 	// 1. Lists the inmemory channels.
 	// 2. Creates a multi-channel-fanout-config.
@@ -92,9 +52,9 @@ func (r *Reconciler) reconcile(ctx context.Context, imc *v1alpha1.InMemoryChanne
 	}
 
 	inmemoryChannels := make([]*v1alpha1.InMemoryChannel, 0)
-	for _, channel := range channels {
-		if channel.Status.IsReady() {
-			inmemoryChannels = append(inmemoryChannels, channel)
+	for _, imc := range channels {
+		if imc.Status.IsReady() {
+			inmemoryChannels = append(inmemoryChannels, imc)
 		}
 	}
 
