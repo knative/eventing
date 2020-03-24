@@ -18,6 +18,7 @@ package duck
 
 import (
 	"context"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
