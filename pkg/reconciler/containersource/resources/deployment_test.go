@@ -18,10 +18,10 @@ package resources
 
 import (
 	"fmt"
-	"knative.dev/pkg/apis"
 	"testing"
 
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/pkg/apis"
 
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
