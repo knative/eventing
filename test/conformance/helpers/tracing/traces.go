@@ -173,8 +173,8 @@ type TestSpanTree struct {
 	Children []TestSpanTree `json:"z_Children,omitempty"`
 }
 
-func (t TestSpanTree) String() string {
-	b, _ := json.MarshalIndent(t, "", "  ")
+func (tt TestSpanTree) String() string {
+	b, _ := json.MarshalIndent(tt, "", "  ")
 	return string(b)
 }
 
