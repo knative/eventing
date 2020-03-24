@@ -169,7 +169,6 @@ func MatchHTTPServerSpanWithReply(host string, path string, opts ...SpanMatcherO
 // prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type TestSpanTree struct {
 	Note     string         `json:"a_Note,omitempty"`
-	Root     bool           `json:"b_root"`
 	Span     *SpanMatcher   `json:"c_Span"`
 	Children []TestSpanTree `json:"z_Children,omitempty"`
 }
@@ -221,19 +220,6 @@ func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanMod
 	}
 
 	return children, nil
-}
-
-// SpanCount gets the count of spans in this tree.
-func (t TestSpanTree) SpanCount() int {
-	spans := 1
-	if t.Root {
-		// The root span is artificial. It exits solely so we can easily pass around the tree.
-		spans = 0
-	}
-	for _, child := range t.Children {
-		spans += child.SpanCount()
-	}
-	return spans
 }
 
 // MatchesSubtree checks to see if this TestSpanTree matches a subtree
