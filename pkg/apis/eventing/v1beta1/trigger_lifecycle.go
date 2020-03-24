@@ -31,7 +31,7 @@ const (
 
 	TriggerConditionBroker apis.ConditionType = "BrokerReady"
 
-	TriggerConditionSubscribed apis.ConditionType = "Subscribed"
+	TriggerConditionSubscribed apis.ConditionType = "SubscriptionReady"
 
 	TriggerConditionDependency apis.ConditionType = "DependencyReady"
 
