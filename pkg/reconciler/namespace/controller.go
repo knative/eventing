@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	client "knative.dev/pkg/client/injection/kube/client"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -86,6 +87,7 @@ func NewController(
 
 	r := &Reconciler{
 		eventingClientSet:          eventingclient.Get(ctx),
+		kubeClientSet:              kubeclient.Get(ctx),
 		namespaceLister:            namespaceInformer.Lister(),
 		serviceAccountLister:       serviceAccountInformer.Lister(),
 		roleBindingLister:          roleBindingInformer.Lister(),
