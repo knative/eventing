@@ -46,6 +46,7 @@ import (
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	sourcelisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	sourcev1alpha2listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/reconciler/testing"
 )
 
@@ -54,11 +55,17 @@ var subscriberAddToScheme = func(scheme *runtime.Scheme) error {
 	return nil
 }
 
+var sourceAddToScheme = func(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypeWithName(schema.GroupVersionKind{Group: "testing.sources.knative.dev", Version: "v1alpha1", Kind: "TestSource"}, &duckv1.Source{})
+	return nil
+}
+
 var clientSetSchemes = []func(*runtime.Scheme) error{
 	fakekubeclientset.AddToScheme,
 	fakeeventingclientset.AddToScheme,
 	fakeapiextensionsclientset.AddToScheme,
 	subscriberAddToScheme,
+	sourceAddToScheme,
 }
 
 type Listers struct {

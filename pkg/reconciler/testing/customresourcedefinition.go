@@ -43,3 +43,21 @@ func WithCustomResourceDefinitionLabels(labels map[string]string) CustomResource
 		crd.Labels = labels
 	}
 }
+
+func WithCustomResourceDefinitionVersions(versions []apiextensionsv1beta1.CustomResourceDefinitionVersion) CustomResourceDefinitionOption {
+	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+		crd.Spec.Versions = versions
+	}
+}
+
+func WithCustomResourceDefinitionGroup(group string) CustomResourceDefinitionOption {
+	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+		crd.Spec.Group = group
+	}
+}
+
+func WithCustomResourceDefinitionNames(names apiextensionsv1beta1.CustomResourceDefinitionNames) CustomResourceDefinitionOption {
+	return func(crd *apiextensionsv1beta1.CustomResourceDefinition) {
+		crd.Spec.Names = names
+	}
+}
