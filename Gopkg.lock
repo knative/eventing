@@ -649,6 +649,18 @@
   version = "v0.22.1"
 
 [[projects]]
+  digest = "1:9ccc2b2f5ddf08f7994d17a0c8509b9471e8654f36c34875f9e157d407a71e13"
+  name = "go.opentelemetry.io/otel"
+  packages = [
+    "api/core",
+    "api/propagation",
+    "api/trace",
+  ]
+  pruneopts = "NUT"
+  revision = "ffdbc05665a127624e7be0d1991f7914da3925c7"
+  version = "v0.2.3"
+
+[[projects]]
   digest = "1:cc9d86ec4e6e3bdf87e3a421273bfeed003cf8e21351c0302fe8b0eb7b10efe6"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -1547,10 +1559,12 @@
     "github.com/tsenart/vegeta/lib",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
+    "go.opencensus.io/plugin/ochttp/propagation/tracecontext",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
     "go.opencensus.io/trace",
+    "go.opentelemetry.io/otel/api/trace",
     "go.uber.org/atomic",
     "go.uber.org/zap",
     "google.golang.org/grpc",

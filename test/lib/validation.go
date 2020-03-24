@@ -36,9 +36,9 @@ const (
 	timeout  = 4 * time.Minute
 )
 
-// Used by logging pods to decide interesting HTTP headers to log
+// InterestingHeaders is used by logging pods to decide interesting HTTP headers to log
 func InterestingHeaders() []string {
-	return []string{"X-B3-Sampled", "X-B3-Traceid", "X-B3-Spanid", "X-B3-ParentSpanId", "X-Custom-Header"}
+	return []string{"Traceparent", "X-Custom-Header"}
 }
 
 // GetLog gets the logs from the given Pod in the namespace of this client. It will get the logs

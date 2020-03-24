@@ -17,13 +17,16 @@ limitations under the License.
 package helpers
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	ce "github.com/cloudevents/sdk-go/v1"
 	"github.com/openzipkin/zipkin-go/model"
+	"go.opentelemetry.io/otel/api/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"knative.dev/pkg/test/zipkin"
@@ -150,13 +153,9 @@ func assertEventMatch(t *testing.T, client *lib.Client, recorderPodName string,
 func getTraceIDHeader(t *testing.T, evInfos []lib.EventInfo) string {
 	for i := range evInfos {
 		if nil != evInfos[i].HTTPHeaders {
-			traceID, found := evInfos[i].HTTPHeaders["X-B3-Traceid"]
-			if found {
-				if len(traceID) != 1 {
-					t.Fatalf("Unexpected length %d for traceid list: %v",
-						len(traceID), traceID)
-				}
-				return strings.TrimSpace(traceID[0])
+			sc := trace.RemoteSpanContextFromContext(trace.DefaultHTTPPropagator().Extract(context.TODO(), http.Header(evInfos[i].HTTPHeaders)))
+			if sc.HasTraceID() {
+				return sc.TraceIDString()
 			}
 		}
 	}
