@@ -137,7 +137,6 @@ func setupBrokerTracing(
 	domain := "cluster.local"
 
 	// We expect the following spans:
-	// 0. Artificial root span.
 	// 1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).
 	// 2. Broker Ingress receives the event from the sending pod.
 	// 3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).
@@ -285,29 +284,23 @@ func setupBrokerTracing(
 	// Steps 0-4 (missing 1, which is optional and added below if present): Event sent to the Broker
 	// Ingress.
 	expected := tracinghelper.TestSpanTree{
-		Note: "0. Artificial root span.",
-		Root: true,
+		Note: "2. Broker Ingress receives the event from the sending pod.",
+		Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
 		Children: []tracinghelper.TestSpanTree{
 			{
-				Note: "2. Broker Ingress receives the event from the sending pod.",
-				Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
+				Note: "3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).",
+				Span: tracinghelper.MatchHTTPClientSpanNoReply(triggerChanHost, "/"),
 				Children: []tracinghelper.TestSpanTree{
 					{
-						Note: "3. Broker Ingress sends the event to the Broker's TrChannel (trigger channel).",
-						Span: tracinghelper.MatchHTTPClientSpanNoReply(triggerChanHost, "/"),
+						Note: "4. Broker TrChannel receives the event from the Broker Ingress.",
+						Span: tracinghelper.MatchHTTPServerSpanNoReply(triggerChanHost, "/"),
 						Children: []tracinghelper.TestSpanTree{
-							{
-								Note: "4. Broker TrChannel receives the event from the Broker Ingress.",
-								Span: tracinghelper.MatchHTTPServerSpanNoReply(triggerChanHost, "/"),
-								Children: []tracinghelper.TestSpanTree{
-									// Steps 5-6.
-									transformerEventSentFromTrChannelToLogger,
-									// Steps 7-10.
-									transformerEventSentFromTrChannelToTransformer,
-									// Steps 11-22
-									transformerEventResponseFromTrChannel,
-								},
-							},
+							// Steps 5-6.
+							transformerEventSentFromTrChannelToLogger,
+							// Steps 7-10.
+							transformerEventSentFromTrChannelToTransformer,
+							// Steps 11-22
+							transformerEventResponseFromTrChannel,
 						},
 					},
 				},
@@ -316,12 +309,10 @@ func setupBrokerTracing(
 	}
 
 	if tc.IncomingTraceId {
-		expected.Children = []tracinghelper.TestSpanTree{
-			{
-				Note:     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
-				Span:     tracinghelper.MatchHTTPClientSpanNoReply(ingressHost, ""),
-				Children: expected.Children,
-			},
+		expected = tracinghelper.TestSpanTree{
+			Note:     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
+			Span:     tracinghelper.MatchHTTPClientSpanNoReply(ingressHost, ""),
+			Children: []tracinghelper.TestSpanTree{expected},
 		}
 	}
 	matchFunc := func(ev ce.Event) bool {
