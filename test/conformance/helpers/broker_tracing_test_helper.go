@@ -39,12 +39,8 @@ func BrokerTracingTestHelperWithChannelTestRunner(
 	channelTestRunner lib.ChannelTestRunner,
 	setupClient lib.SetupClientOption,
 ) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
-		t := struct{}{}
-		_ = fmt.Sprintf("%s", t)
-
-		BrokerTracingTestHelper(st, channel, setupClient)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+		BrokerTracingTestHelper(t, channel, setupClient)
 	})
 }
 
