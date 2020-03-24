@@ -82,7 +82,7 @@ func (d *InMemoryMessageDispatcher) Start(ctx context.Context) error {
 
 func NewMessageDispatcher(args *InMemoryMessageDispatcherArgs) *InMemoryMessageDispatcher {
 	// TODO set read and write timeouts?
-	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(8080)
+	bindingsReceiver := kncloudevents.NewHttpMessageReceiver(args.Port)
 
 	dispatcher := &InMemoryMessageDispatcher{
 		handler:              args.Handler,
