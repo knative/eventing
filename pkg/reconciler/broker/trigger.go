@@ -21,13 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/controller"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1alpha1 "knative.dev/eventing/pkg/apis/messaging/v1alpha1"
@@ -43,14 +43,11 @@ import (
 const (
 	// Name of the corev1.Events emitted from the Trigger reconciliation process.
 	triggerReconciled         = "TriggerReconciled"
-	triggerReadinessChanged   = "TriggerReadinessChanged"
 	triggerReconcileFailed    = "TriggerReconcileFailed"
 	triggerUpdateStatusFailed = "TriggerUpdateStatusFailed"
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 	subscriptionGetFailed     = "SubscriptionGetFailed"
-	triggerChannelFailed      = "TriggerChannelFailed"
-	triggerServiceFailed      = "TriggerServiceFailed"
 )
 
 func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger, filterSvc kmeta.Accessor) error {
@@ -125,15 +122,15 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
 		logging.FromContext(ctx).Info("Creating subscription")
-		sub, err = r.EventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Create(expected)
+		sub, err = r.eventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {
-			r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+			controller.GetEventRecorder(ctx).Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 			return nil, err
 		}
 		return sub, nil
 	} else if err != nil {
 		logging.FromContext(ctx).Error("Failed to get subscription", zap.Error(err))
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionGetFailed, "Getting the Trigger's Subscription failed: %v", err)
+		controller.GetEventRecorder(ctx).Eventf(t, corev1.EventTypeWarning, subscriptionGetFailed, "Getting the Trigger's Subscription failed: %v", err)
 		return nil, err
 	} else if !metav1.IsControlledBy(sub, t) {
 		t.Status.MarkSubscriptionNotOwned(sub)
@@ -157,17 +154,17 @@ func (r *Reconciler) reconcileSubscription(ctx context.Context, t *v1alpha1.Trig
 	// Given that spec.channel is immutable, we cannot just update the Subscription. We delete
 	// it and re-create it instead.
 	logging.FromContext(ctx).Info("Deleting subscription", zap.String("namespace", actual.Namespace), zap.String("name", actual.Name))
-	err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
+	err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Delete(actual.Name, &metav1.DeleteOptions{})
 	if err != nil {
 		logging.FromContext(ctx).Info("Cannot delete subscription", zap.Error(err))
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
+		controller.GetEventRecorder(ctx).Eventf(t, corev1.EventTypeWarning, subscriptionDeleteFailed, "Delete Trigger's subscription failed: %v", err)
 		return nil, err
 	}
 	logging.FromContext(ctx).Info("Creating subscription")
-	newSub, err := r.EventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Create(expected)
+	newSub, err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Create(expected)
 	if err != nil {
 		logging.FromContext(ctx).Info("Cannot create subscription", zap.Error(err))
-		r.Recorder.Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
+		controller.GetEventRecorder(ctx).Eventf(t, corev1.EventTypeWarning, subscriptionCreateFailed, "Create Trigger's subscription failed: %v", err)
 		return nil, err
 	}
 	return newSub, nil
@@ -183,23 +180,11 @@ func (r *Reconciler) updateTriggerStatus(ctx context.Context, desired *v1alpha1.
 		return trigger, nil
 	}
 
-	becomesReady := desired.Status.IsReady() && !trigger.Status.IsReady()
-
 	// Don't modify the informers copy.
 	existing := trigger.DeepCopy()
 	existing.Status = desired.Status
 
-	trig, err := r.EventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
-	if err == nil && becomesReady {
-		duration := time.Since(trig.ObjectMeta.CreationTimestamp.Time)
-		r.Logger.Infof("Trigger %q became ready after %v", trigger.Name, duration)
-		r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReadinessChanged, fmt.Sprintf("Trigger %q became ready", trigger.Name))
-		if err := r.StatsReporter.ReportReady("Trigger", trigger.Namespace, trigger.Name, duration); err != nil {
-			logging.FromContext(ctx).Sugar().Infof("failed to record ready for Trigger, %v", err)
-		}
-	}
-
-	return trig, err
+	return r.eventingClientSet.EventingV1alpha1().Triggers(desired.Namespace).UpdateStatus(existing)
 }
 
 func (r *Reconciler) checkDependencyAnnotation(ctx context.Context, t *v1alpha1.Trigger, b *v1alpha1.Broker) error {

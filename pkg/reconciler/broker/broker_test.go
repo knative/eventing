@@ -21,6 +21,10 @@ import (
 	"fmt"
 	"testing"
 
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +43,6 @@ import (
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
@@ -1301,7 +1304,6 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
@@ -1447,7 +1449,7 @@ func TestReconcile(t *testing.T) {
 			WantErr: false,
 			WantEvents: []string{
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
-				Eventf(corev1.EventTypeNormal, "TriggerReadinessChanged", `Trigger "test-trigger" became ready`)},
+			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: NewTrigger(triggerName, testNS, brokerName,
 					WithTriggerUID(triggerUID),
@@ -1473,7 +1475,9 @@ func TestReconcile(t *testing.T) {
 		ctx = v1addr.WithDuck(ctx)
 		ctx = conditions.WithDuck(ctx)
 		r := &Reconciler{
-			Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
+			eventingClientSet:         fakeeventingclient.Get(ctx),
+			dynamicClientSet:          fakedynamicclient.Get(ctx),
+			kubeClientSet:             fakekubeclient.Get(ctx),
 			subscriptionLister:        listers.GetSubscriptionLister(),
 			triggerLister:             listers.GetTriggerLister(),
 			brokerLister:              listers.GetBrokerLister(),
@@ -1490,7 +1494,9 @@ func TestReconcile(t *testing.T) {
 			uriResolver:               resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 			brokerClass:               eventing.ChannelBrokerClassValue,
 		}
-		return broker.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetBrokerLister(), r.Recorder, r, eventing.ChannelBrokerClassValue)
+		return broker.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetBrokerLister(),
+			controller.GetEventRecorder(ctx), r, eventing.ChannelBrokerClassValue)
 
 	},
 		false,
