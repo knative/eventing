@@ -80,7 +80,7 @@ func NewController(
 
 	logger.Info("Setting up event handlers")
 	crdInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckAnnotationKey, sources.SourceDuckAnnotationValue, false),
+		FilterFunc: pkgreconciler.LabelFilterFunc(sources.SourceDuckLabelKey, sources.SourceDuckLabelValue, false),
 		Handler:    controller.HandleAll(impl.Enqueue),
 	})
 

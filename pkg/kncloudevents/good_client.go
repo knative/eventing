@@ -22,9 +22,6 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/cloudevents/sdk-go/v1/cloudevents/client"
 	"github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
-	"knative.dev/pkg/tracing"
 )
 
 // ConnectionArgs allow to configure connection parameters to the underlying
@@ -44,11 +41,15 @@ func (ca *ConnectionArgs) ConfigureTransport(transport *nethttp.Transport) {
 	transport.MaxIdleConnsPerHost = ca.MaxIdleConnsPerHost
 }
 
+func (ca *ConnectionArgs) NewDefaultHTTPTransport() *nethttp.Transport {
+	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
+	ca.ConfigureTransport(base)
+	return base
+}
+
 func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	tOpts := []http.Option{
 		cloudevents.WithBinaryEncoding(),
-		// Add input tracing.
-		http.WithMiddleware(tracing.HTTPSpanMiddleware),
 	}
 	if len(target) > 0 && target[0] != "" {
 		tOpts = append(tOpts, cloudevents.WithTarget(target[0]))
@@ -59,27 +60,36 @@ func NewDefaultClient(target ...string) (cloudevents.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewDefaultClientGivenHttpTransport(t, nil)
+	return NewDefaultHTTPClient(t)
 }
 
-// NewDefaultClientGivenHttpTransport creates a new CloudEvents client using the provided cloudevents HTTP
-// transport. Note that it does modify the provided cloudevents HTTP Transport by adding tracing to its Client
-// and different connection options, in case they are specified.
+// NewDefaultClientGivenHttpTransport is deprecated: use NewDefaultHTTPClient instead.
 func NewDefaultClientGivenHttpTransport(t *cloudevents.HTTPTransport, connectionArgs *ConnectionArgs, opts ...client.Option) (cloudevents.Client, error) {
 	// Add connection options to the default transport.
 	var base = nethttp.DefaultTransport.(*nethttp.Transport).Clone()
 	connectionArgs.ConfigureTransport(base)
-
-	// Add output tracing.
 	t.Client = &nethttp.Client{
-		Transport: &ochttp.Transport{
-			Base:        base,
-			Propagation: &b3.HTTPFormat{},
-		},
+		Transport: base,
 	}
 
 	if opts == nil {
 		opts = make([]client.Option, 0)
+	}
+	opts = append(opts, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
+
+	// Use the transport to make a new CloudEvents client.
+	c, err := cloudevents.NewClient(t, opts...)
+
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// NewDefaultHTTPClient creates a new client from an HTTP transport.
+func NewDefaultHTTPClient(t *cloudevents.HTTPTransport, opts ...client.Option) (cloudevents.Client, error) {
+	if opts == nil {
+		opts = make([]client.Option, 0, 2)
 	}
 	opts = append(opts, cloudevents.WithUUIDs(), cloudevents.WithTimeNow())
 

@@ -20,20 +20,19 @@ import (
 	"context"
 	"testing"
 
-	"knative.dev/pkg/configmap"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/reconciler/mtnamespace/resources"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -153,9 +152,10 @@ func TestAllCases(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		return &Reconciler{
-			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-			namespaceLister: listers.GetNamespaceLister(),
-			brokerLister:    listers.GetV1Beta1BrokerLister(),
+			eventingClientSet: fakeeventingclient.Get(ctx),
+			namespaceLister:   listers.GetNamespaceLister(),
+			brokerLister:      listers.GetV1Beta1BrokerLister(),
+			recorder:          controller.GetEventRecorder(ctx),
 		}
 	}, false, logger))
 }

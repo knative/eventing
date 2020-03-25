@@ -88,8 +88,8 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 			st.Fatalf("String %q not found in logs of logger pod %q: %v", body, loggerPodName, err)
 		}
 
-		// verify that required x-b3-spani and x-b3-traceid are set
-		requiredHeaderNameList := []string{"X-B3-Traceid", "X-B3-Spanid", "X-B3-Sampled"}
+		// verify that required traceparent header is set
+		requiredHeaderNameList := []string{"Traceparent"}
 		for _, headerName := range requiredHeaderNameList {
 			expectedHeaderLog := fmt.Sprintf("Got Header %s:", headerName)
 			if err := client.CheckLog(loggerPodName, lib.CheckerContains(expectedHeaderLog)); err != nil {
@@ -97,7 +97,6 @@ func SingleEventHelperForChannelTestHelper(t *testing.T, encoding string,
 			}
 		}
 
-		//TODO report on optional x-b3-parentspanid and x-b3-sampled if present?
 		//TODO report x-custom-header
 
 	})

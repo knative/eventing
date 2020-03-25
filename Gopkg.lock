@@ -159,8 +159,8 @@
     "v2/types",
   ]
   pruneopts = "NUT"
-  revision = "0331394117d40bbbe9448cb7008cf2566fa29a86"
-  version = "v2.0.0-preview6"
+  revision = "123def5bff3a506e15cc0bc581a72efd9bda4783"
+  version = "v2.0.0-preview7"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -647,6 +647,18 @@
   pruneopts = "NUT"
   revision = "59d1ce35d30f3c25ba762169da2a37eab6ffa041"
   version = "v0.22.1"
+
+[[projects]]
+  digest = "1:9ccc2b2f5ddf08f7994d17a0c8509b9471e8654f36c34875f9e157d407a71e13"
+  name = "go.opentelemetry.io/otel"
+  packages = [
+    "api/core",
+    "api/propagation",
+    "api/trace",
+  ]
+  pruneopts = "NUT"
+  revision = "ffdbc05665a127624e7be0d1991f7914da3925c7"
+  version = "v0.2.3"
 
 [[projects]]
   digest = "1:cc9d86ec4e6e3bdf87e3a421273bfeed003cf8e21351c0302fe8b0eb7b10efe6"
@@ -1396,13 +1408,18 @@
     "apis/duck/v1beta1",
     "changeset",
     "client/injection/apiextensions/client",
+    "client/injection/apiextensions/client/fake",
     "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
+    "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "client/injection/apiextensions/informers/factory",
+    "client/injection/apiextensions/informers/factory/fake",
     "client/injection/ducks/duck/v1/addressable",
     "client/injection/ducks/duck/v1/addressable/fake",
     "client/injection/ducks/duck/v1/conditions",
     "client/injection/ducks/duck/v1/conditions/fake",
     "client/injection/ducks/duck/v1/podspecable",
+    "client/injection/ducks/duck/v1/source",
+    "client/injection/ducks/duck/v1/source/fake",
     "client/injection/ducks/duck/v1alpha1/addressable",
     "client/injection/ducks/duck/v1alpha1/addressable/fake",
     "client/injection/ducks/duck/v1beta1/addressable",
@@ -1547,10 +1564,12 @@
     "github.com/tsenart/vegeta/lib",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
+    "go.opencensus.io/plugin/ochttp/propagation/tracecontext",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
     "go.opencensus.io/trace",
+    "go.opentelemetry.io/otel/api/trace",
     "go.uber.org/atomic",
     "go.uber.org/zap",
     "google.golang.org/grpc",
@@ -1617,11 +1636,14 @@
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
+    "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable",
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/podspecable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/source",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable",
