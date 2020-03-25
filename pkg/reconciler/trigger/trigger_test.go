@@ -26,16 +26,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
+	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
+	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 
-	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
-	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -75,17 +77,6 @@ func TestAllCases(t *testing.T) {
 			Name: "key not found",
 			// Make sure Reconcile handles good keys that don't exist.
 			Key: "foo/not-found",
-		}, { // TODO: there is a bug in the controller, it will query for ""
-			//			Name: "trigger key not found ",
-			//			Objects: []runtime.Object{
-			//				reconciletesting.NewTrigger(triggerName, testNS),
-			//					reconciletesting.WithTriggerUID(triggerUID),
-			//			},
-			//			Key:     "foo/incomplete",
-			//			WantErr: true,
-			//			WantEvents: []string{
-			//				Eventf(corev1.EventTypeWarning, "ChannelReferenceFetchFailed", "Failed to validate spec.channel exists: s \"\" not found"),
-			//			},
 		}, {
 			Name: "Trigger being deleted, nop",
 			Key:  triggerKey,
@@ -138,7 +129,7 @@ func TestAllCases(t *testing.T) {
 				InduceFailure("get", "namespaces"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: namespace \"test-namespace\" not found"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "namespace \"test-namespace\" not found"),
 			},
 		}, {
 			Name: "Default broker not found, with injection annotation enabled, namespace label fail",
@@ -157,7 +148,7 @@ func TestAllCases(t *testing.T) {
 				InduceFailure("update", "namespaces"),
 			},
 			WantEvents: []string{
-				Eventf(corev1.EventTypeWarning, "TriggerReconcileFailed", "Trigger reconciliation failed: inducing failure for update namespaces"),
+				Eventf(corev1.EventTypeWarning, "InternalError", "inducing failure for update namespaces"),
 			},
 			WantUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: reconciletesting.NewNamespace(testNS,
@@ -180,16 +171,16 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
-			Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-			triggerLister:   listers.GetTriggerLister(),
-			brokerLister:    listers.GetBrokerLister(),
-			namespaceLister: listers.GetNamespaceLister(),
+		r := &Reconciler{
+			eventingClientSet: fakeeventingclient.Get(ctx),
+			kubeClientSet:     fakekubeclient.Get(ctx),
+			brokerLister:      listers.GetBrokerLister(),
+			namespaceLister:   listers.GetNamespaceLister(),
 		}
-	},
-		false,
-		logger,
-	))
+		return trigger.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetTriggerLister(),
+			controller.GetEventRecorder(ctx), r)
+	}, false, logger))
 }
 
 func makeTrigger() *v1alpha1.Trigger {
