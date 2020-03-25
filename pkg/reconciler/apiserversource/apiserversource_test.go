@@ -20,6 +20,9 @@ import (
 	"context"
 	"testing"
 
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +33,6 @@ import (
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
@@ -585,13 +587,15 @@ func TestReconcile(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
-			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
+			kubeClientSet:         fakekubeclient.Get(ctx),
 			apiserversourceLister: listers.GetApiServerSourceLister(),
 			source:                source,
 			receiveAdapterImage:   image,
 			sinkResolver:          resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
 		}
-		return apiserversource.NewReconciler(ctx, r.Logger, r.EventingClientSet, listers.GetApiServerSourceLister(), r.Recorder, r)
+		return apiserversource.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetApiServerSourceLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		true,
 		logger,

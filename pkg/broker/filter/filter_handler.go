@@ -26,7 +26,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"go.uber.org/zap"
-	pkgtracing "knative.dev/pkg/tracing"
 
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	"knative.dev/eventing/pkg/broker"
@@ -85,16 +84,19 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerNamespaceLister, reporter StatsReporter) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)))
-	if err != nil {
-		return nil, err
-	}
-
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, &connectionArgs)
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		return nil, err
 	}

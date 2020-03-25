@@ -23,17 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 
-	"knative.dev/pkg/apis/duck"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/injection"
-	"knative.dev/pkg/injection/clients/dynamicclient"
 	"knative.dev/pkg/logging"
 
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	eventtypeinformer "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	crdinfomer "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition"
+	sourceinformer "knative.dev/pkg/client/injection/ducks/duck/v1/source"
 )
 
 const (
@@ -50,28 +48,21 @@ func NewController(crd string, gvr schema.GroupVersionResource, gvk schema.Group
 		logger := logging.FromContext(ctx)
 		eventTypeInformer := eventtypeinformer.Get(ctx)
 		crdInformer := crdinfomer.Get(ctx)
+		sourceduckInformer := sourceinformer.Get(ctx)
 
-		// Create a duck TypedInformer for duckv1.Source resources.
-		sourceinformer := &duck.TypedInformerFactory{
-			Client:       dynamicclient.Get(ctx),
-			Type:         &duckv1.Source{},
-			ResyncPeriod: controller.DefaultResyncPeriod,
-			StopChannel:  ctx.Done(),
-		}
-
-		sourceInformer, sourceLister, err := sourceinformer.Get(gvr)
+		sourceInformer, sourceLister, err := sourceduckInformer.Get(gvr)
 		if err != nil {
 			logger.Errorw("Error getting source informer", zap.String("GVR", gvr.String()), zap.Error(err))
 			return nil
 		}
 
 		r := &Reconciler{
+			eventingClientSet: eventingclient.Get(ctx),
 			eventTypeLister:   eventTypeInformer.Lister(),
 			crdLister:         crdInformer.Lister(),
 			sourceLister:      sourceLister,
 			gvr:               gvr,
 			crdName:           crd,
-			eventingClientSet: eventingclient.Get(ctx),
 		}
 		impl := controller.NewImpl(r, logger, ReconcilerName)
 

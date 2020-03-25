@@ -1,0 +1,104 @@
+/*
+Copyright 2020 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package crd
+
+import (
+	"context"
+	"testing"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/eventing/pkg/apis/sources"
+	"knative.dev/pkg/client/injection/ducks/duck/v1/source"
+	"knative.dev/pkg/configmap"
+	"knative.dev/pkg/controller"
+	logtesting "knative.dev/pkg/logging/testing"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
+	. "knative.dev/pkg/reconciler/testing"
+
+	// Fake injection informers
+	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
+	_ "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake"
+	_ "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake"
+)
+
+const (
+	crdName          = "test-crd"
+	crdGroup         = "testing.sources.knative.dev"
+	crdKind          = "TestSource"
+	crdPlural        = "testsources"
+	crdVersionServed = "v1alpha1"
+)
+
+func TestAllCases(t *testing.T) {
+	table := TableTest{{
+		Name: "bad workqueue key",
+		// Make sure Reconcile handles bad keys.
+		Key: "too/many/parts",
+	}, {
+		Name: "key not found",
+		// Make sure Reconcile handles good keys that don't exist.
+		Key: "not-found",
+	}, {
+		Name: "reconcile failed, cannot find GVR or GVK",
+		Objects: []runtime.Object{
+			NewCustomResourceDefinition(crdName,
+				WithCustomResourceDefinitionLabels(map[string]string{
+					sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+				})),
+		},
+		Key:     crdName,
+		WantErr: true,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeWarning, "SourceCRDReconcileFailed", "Source CRD reconciliation failed: unable to find GVR or GVK for %s", crdName),
+		},
+	},
+	//}, {
+	// TODO uncomment the following once we figure out why the eventtype informer is missing from the duck.controller.
+	//Name: "reconcile succeeded",
+	//Objects: []runtime.Object{
+	//	NewCustomResourceDefinition(crdName,
+	//		WithCustomResourceDefinitionLabels(map[string]string{
+	//			sources.SourceDuckLabelKey: sources.SourceDuckLabelValue,
+	//		}),
+	//		WithCustomResourceDefinitionGroup(crdGroup),
+	//		WithCustomResourceDefinitionNames(apiextensionsv1beta1.CustomResourceDefinitionNames{
+	//			Kind:   crdKind,
+	//			Plural: crdPlural,
+	//		}),
+	//		WithCustomResourceDefinitionVersions([]apiextensionsv1beta1.CustomResourceDefinitionVersion{{
+	//			Name:   crdVersionServed,
+	//			Served: true,
+	//		}})),
+	//},
+	//Key: crdName,
+	}
+
+	logger := logtesting.TestLogger(t)
+	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
+		ctx = source.WithDuck(ctx)
+		return &Reconciler{
+			crdLister: listers.GetCustomResourceDefinitionLister(),
+			ogctx:     ctx,
+			ogcmw:     cmw,
+			recorder:  controller.GetEventRecorder(ctx),
+		}
+	},
+		false, logger,
+	))
+}

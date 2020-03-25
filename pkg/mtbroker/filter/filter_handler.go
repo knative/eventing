@@ -33,7 +33,6 @@ import (
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
 	"knative.dev/eventing/pkg/utils"
-	pkgtracing "knative.dev/pkg/tracing"
 )
 
 const (
@@ -84,16 +83,20 @@ type FilterResult string
 // NewHandler creates a new Handler and its associated MessageReceiver. The caller is responsible for
 // Start()ing the returned Handler.
 func NewHandler(logger *zap.Logger, triggerLister eventinglisters.TriggerLister, reporter StatsReporter, port int) (*Handler, error) {
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanIgnoringPaths(readyz)), cloudevents.WithPort(port))
-	if err != nil {
-		return nil, err
-	}
-
 	connectionArgs := kncloudevents.ConnectionArgs{
 		MaxIdleConns:        defaultMaxIdleConnections,
 		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
 	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(httpTransport, &connectionArgs)
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithPort(port),
+		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		return nil, err
 	}

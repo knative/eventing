@@ -116,15 +116,20 @@ func ToDNS1123Subdomain(name string) string {
 // The name's length will be short enough to be valid for K8s Services.
 func GenerateFixedName(owner metav1.Object, prefix string) string {
 	uid := string(owner.GetUID())
-	// Make sure the UID is separated from the prefix by a leading dash.
-	if !strings.HasPrefix(uid, "-") {
-		uid = "-" + uid
-	}
-	// Trim any trailing dash from the prefix as the UID is now prepended with the dash.
-	prefix = strings.TrimSuffix(prefix, "-")
+
 	pl := validation.DNS1123LabelMaxLength - len(uid)
-	if pl > len(prefix) {
-		pl = len(prefix)
+	if pl < len(prefix) {
+		prefix = prefix[:pl]
 	}
-	return prefix[:pl] + uid
+
+	// Make sure the UID is separated from the prefix by a leading dash.
+	if !strings.HasSuffix(prefix, "-") && !strings.HasPrefix(uid, "-") {
+		uid = "-" + uid
+		if len(prefix) == pl {
+			prefix = prefix[:len(prefix)-1]
+		}
+	}
+
+	// A dot must be followed by [a-z0-9] to be DNS1123 compliant. Make sure we are not joining a dot and a dash.
+	return strings.TrimSuffix(prefix, ".") + uid
 }

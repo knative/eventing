@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 
 	"knative.dev/pkg/apis/duck"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -42,7 +43,6 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	eventingduck "knative.dev/eventing/pkg/duck"
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 )
 
 const (
@@ -69,7 +69,8 @@ func newChannelWarnEvent(messageFmt string, args ...interface{}) pkgreconciler.E
 }
 
 type Reconciler struct {
-	*reconciler.Base
+	// DynamicClientSet allows us to configure pluggable Build objects
+	dynamicClientSet dynamic.Interface
 
 	// listers index properties about resources
 	subscriptionLister  listers.SubscriptionLister
@@ -451,7 +452,7 @@ func (r *Reconciler) patchSubscription(ctx context.Context, namespace string, ch
 		return false, nil
 	}
 
-	resourceClient, err := eventingduck.ResourceInterface(r.DynamicClientSet, namespace, channel.GroupVersionKind())
+	resourceClient, err := eventingduck.ResourceInterface(r.dynamicClientSet, namespace, channel.GroupVersionKind())
 	if err != nil {
 		logging.FromContext(ctx).Warn("Failed to create dynamic resource client", zap.Error(err))
 		return false, err

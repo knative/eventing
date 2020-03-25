@@ -21,6 +21,7 @@ import (
 
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/resolver"
 	"knative.dev/pkg/tracker"
 
@@ -30,13 +31,7 @@ import (
 	"knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	subscriptionreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/subscription"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
-)
-
-const (
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "subscription-controller"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 )
 
 // NewController initializes the controller and is called by the generated code
@@ -50,13 +45,13 @@ func NewController(
 	channelInformer := channel.Get(ctx)
 
 	r := &Reconciler{
-		Base:               reconciler.NewBase(ctx, controllerAgentName, cmw),
+		dynamicClientSet:   dynamicclient.Get(ctx),
 		subscriptionLister: subscriptionInformer.Lister(),
 		channelLister:      channelInformer.Lister(),
 	}
 	impl := subscriptionreconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	subscriptionInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Trackers used to notify us when the resources Subscription depends on change, so that the

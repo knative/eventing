@@ -19,23 +19,16 @@ package trigger
 import (
 	"context"
 
-	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
+	"knative.dev/eventing/pkg/logging"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	"knative.dev/eventing/pkg/reconciler"
-
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/trigger"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "TriggersNamespaceLabeler"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "trigger-namespace-labeler-controller"
+	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/client/injection/kube/informers/core/v1/namespace"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -50,14 +43,14 @@ func NewController(
 	namespaceInformer := namespace.Get(ctx)
 
 	r := &Reconciler{
-		Base:            reconciler.NewBase(ctx, controllerAgentName, cmw),
-		triggerLister:   triggerInformer.Lister(),
-		brokerLister:    brokerInformer.Lister(),
-		namespaceLister: namespaceInformer.Lister(),
+		eventingClientSet: eventingclient.Get(ctx),
+		kubeClientSet:     kubeclient.Get(ctx),
+		brokerLister:      brokerInformer.Lister(),
+		namespaceLister:   namespaceInformer.Lister(),
 	}
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := triggerreconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 	triggerInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 	return impl
 }

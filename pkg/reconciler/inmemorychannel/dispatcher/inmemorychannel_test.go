@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"knative.dev/eventing/pkg/channel"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/inmemorychannel"
 
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
@@ -30,7 +32,6 @@ import (
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/channel/multichannelfanout"
-	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	reconciletesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/controller"
@@ -104,14 +105,16 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		return &Reconciler{
-			Base:                  reconciler.NewBase(ctx, controllerAgentName, cmw),
-			configStore:           channel.NewEventDispatcherConfigStore(logger),
+		r := &Reconciler{
 			inmemorychannelLister: listers.GetInMemoryChannelLister(),
-			// TODO fix
+			// TODO: FIx
 			inmemorychannelInformer: nil,
 			dispatcher:              &fakeDispatcher{},
+			configStore:             channel.NewEventDispatcherConfigStore(logger),
 		}
+		return inmemorychannel.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetInMemoryChannelLister(),
+			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
 

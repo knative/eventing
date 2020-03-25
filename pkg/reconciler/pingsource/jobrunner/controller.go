@@ -22,15 +22,16 @@ import (
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
-	tracingconfig "knative.dev/pkg/tracing/config"
 
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
-	"knative.dev/eventing/pkg/reconciler"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
+	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
 const (
@@ -48,27 +49,25 @@ func NewController(
 	ctx context.Context,
 	cmw configmap.Watcher,
 ) *controller.Impl {
-	base := reconciler.NewBase(ctx, controllerAgentName, cmw)
+	logger := logging.FromContext(ctx)
 
 	// Setup trace publishing.
 	iw := cmw.(*configmap.InformedWatcher)
-	if err := tracing.SetupDynamicPublishing(base.Logger, iw, "ping-source-dispatcher", tracingconfig.ConfigName); err != nil {
-		base.Logger.Fatalw("Error setting up trace publishing", zap.Error(err))
+	if err := tracing.SetupDynamicPublishing(logger, iw, "ping-source-dispatcher", tracingconfig.ConfigName); err != nil {
+		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
 	pingsourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base: base,
-
 		pingsourceLister: pingsourceInformer.Lister(),
 		entryidMu:        sync.Mutex{},
 		entryids:         make(map[string]cron.EntryID),
 	}
 
-	impl := controller.NewImpl(r, r.Logger, ReconcilerName)
+	impl := pingsourcereconciler.NewImpl(ctx, r)
 
-	r.Logger.Info("Setting up event handlers")
+	logger.Info("Setting up event handlers")
 
 	// Watch for pingsource objects
 	pingsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -76,21 +75,21 @@ func NewController(
 	// Create the cron job runner
 	ceClient, err := kncloudevents.NewDefaultClient()
 	if err != nil {
-		base.Logger.Fatalw("Error setting up trace publishing", zap.Error(err))
+		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
-		r.Logger.Error("error building statsreporter", zap.Error(err))
+		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
-	r.cronRunner = NewCronJobsRunner(ceClient, reporter, r.Logger)
+	r.cronRunner = NewCronJobsRunner(ceClient, reporter, logger)
 
 	// Start the cron job runner.
 	go func() {
 		err := r.cronRunner.Start(ctx.Done())
 		if err != nil {
-			r.Logger.Error("Failed stopping the cron jobs runner.", zap.Error(err))
+			logger.Error("Failed stopping the cron jobs runner.", zap.Error(err))
 		}
 	}()
 

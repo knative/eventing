@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -35,6 +36,7 @@ import (
 	"knative.dev/eventing/pkg/kncloudevents"
 	broker "knative.dev/eventing/pkg/mtbroker"
 	"knative.dev/eventing/pkg/mtbroker/ingress"
+	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/tracing"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/configmap"
@@ -46,7 +48,6 @@ import (
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
 	"knative.dev/pkg/system"
-	pkgtracing "knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
@@ -128,33 +129,30 @@ func main() {
 	// Watch the observability config map and dynamically update request logs.
 	configMapWatcher.Watch(logging.ConfigMapName(), logging.UpdateLevelFromConfigMap(sl, atomicLevel, component))
 
-	bin := tracing.BrokerIngressName(tracing.BrokerIngressNameArgs{
-		Namespace:  system.Namespace(),
-		BrokerName: "cluster",
-	})
+	bin := fmt.Sprintf("%s.%s", names.BrokerIngressName, system.Namespace())
 	if err = tracing.SetupDynamicPublishing(sl, configMapWatcher, bin, tracingconfig.ConfigName); err != nil {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithPort(env.Port),
+		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
+	)
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
 
 	// Liveness check.
 	httpTransport.Handler = http.NewServeMux()
-	httpTransport.Port = &env.Port
 	httpTransport.Handler.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})
-
-	connectionArgs := kncloudevents.ConnectionArgs{
-		MaxIdleConns:        defaultMaxIdleConnections,
-		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(
-		httpTransport,
-		&connectionArgs)
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}

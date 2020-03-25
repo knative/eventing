@@ -41,7 +41,6 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/signals"
-	pkgtracing "knative.dev/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 
 	cmdbroker "knative.dev/eventing/cmd/broker"
@@ -152,7 +151,14 @@ func main() {
 		logger.Fatal("Error setting up trace publishing", zap.Error(err))
 	}
 
-	httpTransport, err := cloudevents.NewHTTPTransport(cloudevents.WithBinaryEncoding(), cloudevents.WithMiddleware(pkgtracing.HTTPSpanMiddleware))
+	connectionArgs := kncloudevents.ConnectionArgs{
+		MaxIdleConns:        defaultMaxIdleConnections,
+		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
+	}
+	httpTransport, err := cloudevents.NewHTTPTransport(
+		cloudevents.WithBinaryEncoding(),
+		cloudevents.WithHTTPTransport(connectionArgs.NewDefaultHTTPTransport()),
+	)
 	if err != nil {
 		logger.Fatal("Unable to create CE transport", zap.Error(err))
 	}
@@ -163,13 +169,7 @@ func main() {
 		writer.WriteHeader(http.StatusOK)
 	})
 
-	connectionArgs := kncloudevents.ConnectionArgs{
-		MaxIdleConns:        defaultMaxIdleConnections,
-		MaxIdleConnsPerHost: defaultMaxIdleConnectionsPerHost,
-	}
-	ceClient, err := kncloudevents.NewDefaultClientGivenHttpTransport(
-		httpTransport,
-		&connectionArgs)
+	ceClient, err := kncloudevents.NewDefaultHTTPClient(httpTransport)
 	if err != nil {
 		logger.Fatal("Unable to create CE client", zap.Error(err))
 	}

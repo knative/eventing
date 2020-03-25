@@ -20,23 +20,23 @@ import (
 	"context"
 	"testing"
 
-	"knative.dev/pkg/configmap"
-	"knative.dev/pkg/system"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/reconciler/namespace/resources"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	eventingv1alpha1 "knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
-	. "knative.dev/eventing/pkg/reconciler/testing"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/reconciler/namespace/resources"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
+	"knative.dev/pkg/system"
+
+	. "knative.dev/eventing/pkg/reconciler/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
@@ -416,13 +416,15 @@ func TestAllCases(t *testing.T) {
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 
 		r := &Reconciler{
-			Base:                       reconciler.NewBase(ctx, controllerAgentName, cmw),
+			eventingClientSet:          fakeeventingclient.Get(ctx),
+			kubeClientSet:              fakekubeclient.Get(ctx),
 			namespaceLister:            listers.GetNamespaceLister(),
 			brokerLister:               listers.GetV1Beta1BrokerLister(),
 			serviceAccountLister:       listers.GetServiceAccountLister(),
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
 			brokerPullSecretName:       brokerImagePullSecretName,
+			recorder:                   controller.GetEventRecorder(ctx),
 		}
 
 		// only create secret in required tests
@@ -433,7 +435,7 @@ func TestAllCases(t *testing.T) {
 		for _, theTest := range createSecretTests {
 			if theTest == table[testNum].Name {
 				// create the required secret in knative-eventing to be copied into required namespaces
-				tgtNSSecrets := r.KubeClientSet.CoreV1().Secrets(system.Namespace())
+				tgtNSSecrets := fakekubeclient.Get(ctx).CoreV1().Secrets(system.Namespace())
 				tgtNSSecrets.Create(resources.MakeSecret(brokerImagePullSecretName))
 				break
 			}

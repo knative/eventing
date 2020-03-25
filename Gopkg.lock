@@ -159,8 +159,8 @@
     "v2/types",
   ]
   pruneopts = "NUT"
-  revision = "0331394117d40bbbe9448cb7008cf2566fa29a86"
-  version = "v2.0.0-preview6"
+  revision = "123def5bff3a506e15cc0bc581a72efd9bda4783"
+  version = "v2.0.0-preview7"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -250,7 +250,7 @@
   version = "v1.3.2"
 
 [[projects]]
-  digest = "1:010d46ea3c1e730897e53058d1013a963f3f987675dda87df64f891b945281db"
+  digest = "1:f0ae868d945753df81e797524bb7f3c577bcf751ce515c18162d259ca3ff8de7"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -261,7 +261,8 @@
     "cmp/internal/value",
   ]
   pruneopts = "NUT"
-  revision = "6f77996f0c42f7b84e5a2b252227263f93432e9b"
+  revision = "5a6f75716e1203a923a78c9efb94089d857df0f6"
+  version = "v0.4.0"
 
 [[projects]]
   digest = "1:91099c6f78b1e7bdf9ed06eb4cb7f017174293a3689d76b995a06f4c8d64a7f0"
@@ -648,6 +649,18 @@
   version = "v0.22.1"
 
 [[projects]]
+  digest = "1:9ccc2b2f5ddf08f7994d17a0c8509b9471e8654f36c34875f9e157d407a71e13"
+  name = "go.opentelemetry.io/otel"
+  packages = [
+    "api/core",
+    "api/propagation",
+    "api/trace",
+  ]
+  pruneopts = "NUT"
+  revision = "ffdbc05665a127624e7be0d1991f7914da3925c7"
+  version = "v0.2.3"
+
+[[projects]]
   digest = "1:cc9d86ec4e6e3bdf87e3a421273bfeed003cf8e21351c0302fe8b0eb7b10efe6"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -804,6 +817,17 @@
   ]
   pruneopts = "NUT"
   revision = "e96d959c4788a79af280868cc58158f544fa2fb2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:325a1b73817aa79fc85f10376ed41ea607f7dd7f6c6bfa46df6a28ef2857941f"
+  name = "golang.org/x/xerrors"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "NUT"
+  revision = "9bdfabe68543c54f90421aeb9a60ef8061b5b544"
 
 [[projects]]
   digest = "1:8392b5c29adedc5f85c66b48bb53b6c49dd91d8540f3cad5d43ef7277946718f"
@@ -1374,7 +1398,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e41775799602da16406d666dcc9dbe8926f1f0655c3a3aab518825ba2fd6e109"
+  digest = "1:9a3d6a5933182bb0ac923b36a7e581b19ea23edeb6684eabe14002758cd7b067"
   name = "knative.dev/pkg"
   packages = [
     "apis",
@@ -1384,13 +1408,18 @@
     "apis/duck/v1beta1",
     "changeset",
     "client/injection/apiextensions/client",
+    "client/injection/apiextensions/client/fake",
     "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
+    "client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "client/injection/apiextensions/informers/factory",
+    "client/injection/apiextensions/informers/factory/fake",
     "client/injection/ducks/duck/v1/addressable",
     "client/injection/ducks/duck/v1/addressable/fake",
     "client/injection/ducks/duck/v1/conditions",
     "client/injection/ducks/duck/v1/conditions/fake",
     "client/injection/ducks/duck/v1/podspecable",
+    "client/injection/ducks/duck/v1/source",
+    "client/injection/ducks/duck/v1/source/fake",
     "client/injection/ducks/duck/v1alpha1/addressable",
     "client/injection/ducks/duck/v1alpha1/addressable/fake",
     "client/injection/ducks/duck/v1beta1/addressable",
@@ -1479,18 +1508,18 @@
     "webhook/resourcesemantics/validation",
   ]
   pruneopts = "T"
-  revision = "381424b19753db69863563bd6b280d582e5b14db"
+  revision = "9f9f7bea94e15840f36f08b90a2c03203e886f91"
 
 [[projects]]
   branch = "master"
-  digest = "1:3f2366ce9a05503ac8da902b58e898c285cc9a972e0e89fda0b2a2fedcd4fb46"
+  digest = "1:2987a1db00b983af9e5d5281639a754fb6449eef01e6a375894829eaec17cb2a"
   name = "knative.dev/test-infra"
   packages = [
     "scripts",
     "tools/dep-collector",
   ]
   pruneopts = "UT"
-  revision = "0bc1e8bb1582a8738da1b5c485084a84bf76f17c"
+  revision = "9a501343b4dafbac1a1a5dcfe2cb46975a78abb5"
 
 [[projects]]
   digest = "1:8730e0150dfb2b7e173890c8b9868e7a273082ef8e39f4940e3506a481cf895c"
@@ -1535,10 +1564,12 @@
     "github.com/tsenart/vegeta/lib",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
+    "go.opencensus.io/plugin/ochttp/propagation/tracecontext",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
     "go.opencensus.io/trace",
+    "go.opentelemetry.io/otel/api/trace",
     "go.uber.org/atomic",
     "go.uber.org/zap",
     "google.golang.org/grpc",
@@ -1605,11 +1636,14 @@
     "knative.dev/pkg/apis/duck/v1alpha1",
     "knative.dev/pkg/apis/duck/v1beta1",
     "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition",
+    "knative.dev/pkg/client/injection/apiextensions/informers/apiextensions/v1beta1/customresourcedefinition/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable",
     "knative.dev/pkg/client/injection/ducks/duck/v1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions",
     "knative.dev/pkg/client/injection/ducks/duck/v1/conditions/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1/podspecable",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/source",
+    "knative.dev/pkg/client/injection/ducks/duck/v1/source/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable",
     "knative.dev/pkg/client/injection/ducks/duck/v1alpha1/addressable/fake",
     "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable",

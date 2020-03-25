@@ -22,14 +22,15 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
-	"knative.dev/pkg/controller"
 
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
+	triggerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/trigger"
 	listers "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
+	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 )
 
 const (
@@ -39,81 +40,34 @@ const (
 )
 
 type Reconciler struct {
-	*reconciler.Base
+	// eventingClientSet allows us to configure Eventing objects
+	eventingClientSet clientset.Interface
+	kubeClientSet     kubernetes.Interface
 
-	triggerLister   listers.TriggerLister
 	brokerLister    listers.BrokerLister
 	namespaceLister corev1listers.NamespaceLister
 }
 
-var brokerGVK = v1alpha1.SchemeGroupVersion.WithKind("Broker")
+// Check that our Reconciler implements triggerreconciler.Interface
+var _ triggerreconciler.Interface = (*Reconciler)(nil)
 
-// Check that our Reconciler implements controller.Reconciler.
-var _ controller.Reconciler = (*Reconciler)(nil)
-
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Trigger resource
-// with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name.
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the Trigger resource with this namespace/name.
-	original, err := r.triggerLister.Triggers(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("trigger key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// Don't modify the informers copy.
-	trigger := original.DeepCopy()
-
-	// Reconcile this copy of the Trigger and then write back any status updates regardless of
-	// whether the reconcile error out.
-	reconcileErr := r.reconcile(ctx, trigger)
-	if reconcileErr != nil {
-		r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconciliation failed: %v", reconcileErr)
-	}
-
-	// Requeue if the resource is not ready
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, t *v1alpha1.Trigger) error {
-	// Check a triggers annotations and if missing a broker, inject the namespace.
-
-	if t.DeletionTimestamp != nil {
-		// Everything is cleaned up by the garbage collector.
-		return nil
-	}
-
+func (r *Reconciler) ReconcileKind(ctx context.Context, t *v1alpha1.Trigger) reconciler.Event {
 	_, err := r.brokerLister.Brokers(t.Namespace).Get(t.Spec.Broker)
-	if err != nil {
-		logging.FromContext(ctx).Error("Unable to get the Broker", zap.Error(err))
-		if apierrs.IsNotFound(err) {
-			_, needDefaultBroker := t.GetAnnotations()[v1alpha1.InjectionAnnotation]
-			if t.Spec.Broker == "default" && needDefaultBroker {
-				if e := r.labelNamespace(ctx, t); e != nil {
-					logging.FromContext(ctx).Error("Unable to label the namespace", zap.Error(e))
-					return e
-				}
+	if err != nil && apierrs.IsNotFound(err) {
+		_, needDefaultBroker := t.GetAnnotations()[v1alpha1.InjectionAnnotation]
+		if t.Spec.Broker == "default" && needDefaultBroker {
+			if e := r.labelNamespace(ctx, t); e != nil {
+				logging.FromContext(ctx).Errorw("Unable to label the namespace", zap.Error(e))
+				return e
 			}
-			return nil
 		}
-		return err
+		return nil
 	}
-	return nil
+	return err
 }
 
 // labelNamespace will label namespace with knative-eventing-injection=enabled
-func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) error {
+func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) reconciler.Event {
 	current, err := r.namespaceLister.Get(t.Namespace)
 	if err != nil {
 		return err
@@ -123,11 +77,10 @@ func (r *Reconciler) labelNamespace(ctx context.Context, t *v1alpha1.Trigger) er
 		current.Labels = map[string]string{}
 	}
 	current.Labels["knative-eventing-injection"] = "enabled"
-	if _, err = r.KubeClientSet.CoreV1().Namespaces().Update(current); err != nil {
-		logging.FromContext(ctx).Error("Unable to update the namespace", zap.Error(err))
+	if _, err = r.kubeClientSet.CoreV1().Namespaces().Update(current); err != nil {
 		return err
 	}
-	logging.FromContext(ctx).Info("Labeled namespace", zap.String("namespace", t.Namespace))
-	r.Recorder.Eventf(t, corev1.EventTypeNormal, triggerNamespaceLabeled, "Trigger namespaced labeled for injection: %q", t.Namespace)
-	return nil
+	logging.FromContext(ctx).Infow("Labeled namespace", zap.String("namespace", t.Namespace))
+	return reconciler.NewEvent(corev1.EventTypeNormal, triggerNamespaceLabeled,
+		"Trigger namespaced labeled for injection: %q", t.Namespace)
 }
