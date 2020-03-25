@@ -88,6 +88,19 @@ func WithLocalEndpointServiceName(s string) SpanMatcherOption {
 	}
 }
 
+func WithHTTPHostAndPath(host, path string) SpanMatcherOption {
+	return func(m *SpanMatcher) {
+		if m.Kind != nil {
+			if *m.Kind == model.Client {
+				m.Tags["http.url"] = fmt.Sprintf("http://%s%s", host, path)
+			} else if *m.Kind == model.Server {
+				m.Tags["http.host"] = host
+				m.Tags["http.path"] = path
+			}
+		}
+	}
+}
+
 func (m *SpanMatcher) MatchesSpan(span *model.SpanModel) error {
 	if m == nil {
 		return nil
@@ -113,14 +126,12 @@ func (m *SpanMatcher) MatchesSpan(span *model.SpanModel) error {
 	return nil
 }
 
-func MatchHTTPClientSpanWithCode(host string, path string, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
-	kind := model.Client
+func MatchHTTPSpanWithCode(kind model.Kind, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
 	m := &SpanMatcher{
 		Kind: &kind,
 		Tags: map[string]string{
 			"http.method":      http.MethodPost,
 			"http.status_code": strconv.Itoa(statusCode),
-			"http.url":         fmt.Sprintf("http://%s%s", host, path),
 		},
 	}
 	for _, opt := range opts {
@@ -129,37 +140,12 @@ func MatchHTTPClientSpanWithCode(host string, path string, statusCode int, opts 
 	return m
 }
 
-func MatchHTTPServerSpanWithCode(host string, path string, statusCode int, opts ...SpanMatcherOption) *SpanMatcher {
-	kind := model.Server
-	m := &SpanMatcher{
-		Kind: &kind,
-		Tags: map[string]string{
-			"http.method":      http.MethodPost,
-			"http.status_code": strconv.Itoa(statusCode),
-			"http.host":        host,
-			"http.path":        path,
-		},
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
+func MatchHTTPSpanNoReply(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchHTTPSpanWithCode(kind, 202)
 }
 
-func MatchHTTPClientSpanNoReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
-	return MatchHTTPClientSpanWithCode(host, path, 202, opts...)
-}
-
-func MatchHTTPServerSpanNoReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
-	return MatchHTTPServerSpanWithCode(host, path, 202, opts...)
-}
-
-func MatchHTTPClientSpanWithReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
-	return MatchHTTPClientSpanWithCode(host, path, 200, opts...)
-}
-
-func MatchHTTPServerSpanWithReply(host string, path string, opts ...SpanMatcherOption) *SpanMatcher {
-	return MatchHTTPServerSpanWithCode(host, path, 200, opts...)
+func MatchHTTPSpanWithReply(kind model.Kind, opts ...SpanMatcherOption) *SpanMatcher {
+	return MatchHTTPSpanWithCode(kind, 200, opts...)
 }
 
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
@@ -169,13 +155,12 @@ func MatchHTTPServerSpanWithReply(host string, path string, opts ...SpanMatcherO
 // prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type TestSpanTree struct {
 	Note     string         `json:"a_Note,omitempty"`
-	Root     bool           `json:"b_root"`
 	Span     *SpanMatcher   `json:"c_Span"`
 	Children []TestSpanTree `json:"z_Children,omitempty"`
 }
 
-func (t TestSpanTree) String() string {
-	b, _ := json.MarshalIndent(t, "", "  ")
+func (tt TestSpanTree) String() string {
+	b, _ := json.MarshalIndent(tt, "", "  ")
 	return string(b)
 }
 
@@ -193,7 +178,7 @@ func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 
 	children, err := getChildren(parents, roots)
 	if err != nil {
-		return nil, fmt.Errorf("Could not create span tree for %v: %v", PrettyPrintTrace(trace), err)
+		return nil, fmt.Errorf("could not create span tree for %v: %v", PrettyPrintTrace(trace), err)
 	}
 
 	tree := SpanTree{
@@ -201,7 +186,7 @@ func GetTraceTree(trace []model.SpanModel) (*SpanTree, error) {
 		Children: children,
 	}
 	if len(parents) != 0 {
-		return nil, fmt.Errorf("Left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
+		return nil, fmt.Errorf("left over spans after generating the SpanTree: %v. Original: %v", parents, PrettyPrintTrace(trace))
 	}
 	return &tree, nil
 }
@@ -223,19 +208,6 @@ func getChildren(parents map[model.ID][]model.SpanModel, current []model.SpanMod
 	return children, nil
 }
 
-// SpanCount gets the count of spans in this tree.
-func (t TestSpanTree) SpanCount() int {
-	spans := 1
-	if t.Root {
-		// The root span is artificial. It exits solely so we can easily pass around the tree.
-		spans = 0
-	}
-	for _, child := range t.Children {
-		spans += child.SpanCount()
-	}
-	return spans
-}
-
 // MatchesSubtree checks to see if this TestSpanTree matches a subtree
 // of the actual SpanTree. It is intended to be used for assertions
 // while testing. Returns the set of possible subtree matches with the
@@ -254,6 +226,8 @@ func (tt TestSpanTree) MatchesSubtree(t *testing.T, actual *SpanTree) (matches [
 			// A matching root leaves no unmatched siblings.
 			matches = append(matches, nil)
 		}
+	} else if t != nil {
+		t.Logf("%v does not match span %v: %v", tt.Span, actual.Span, err)
 	}
 	// Recursively match children.
 	for i, child := range actual.Children {

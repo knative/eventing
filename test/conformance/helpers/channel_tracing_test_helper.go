@@ -64,12 +64,8 @@ func ChannelTracingTestHelperWithChannelTestRunner(
 	channelTestRunner lib.ChannelTestRunner,
 	setupClient lib.SetupClientOption,
 ) {
-	channelTestRunner.RunTests(t, lib.FeatureBasic, func(st *testing.T, channel metav1.TypeMeta) {
-		// Don't accidentally use t, use st instead. To ensure this, shadow 't' to a useless type.
-		t := struct{}{}
-		_ = fmt.Sprintf("%s", t)
-
-		ChannelTracingTestHelper(st, channel, setupClient)
+	channelTestRunner.RunTests(t, lib.FeatureBasic, func(t *testing.T, channel metav1.TypeMeta) {
+		ChannelTracingTestHelper(t, channel, setupClient)
 	})
 }
 
@@ -232,7 +228,6 @@ func setupChannelTracingWithReply(
 	sendEvent(senderName, channelName, channel, event)
 
 	// We expect the following spans:
-	// 0. Artificial root span.
 	// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
 	// 2. Channel receives event from sending pod.
 	// 3. Channel sends event to transformer pod.
@@ -242,53 +237,79 @@ func setupChannelTracingWithReply(
 	// 7. Reply Channel sends event to the logging Pod.
 	// 8. Logging pod receives event from Channel.
 	expected := tracinghelper.TestSpanTree{
-		// 0. Artificial root span.
-		Root: true,
 		// 1 is added below if it is needed.
+		// 2. Channel receives event from sending pod.
+		Span: tracinghelper.MatchHTTPSpanNoReply(
+			model.Server,
+			tracinghelper.WithHTTPHostAndPath(
+				fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
+				"/",
+			),
+		),
 		Children: []tracinghelper.TestSpanTree{
 			{
-				// 2. Channel receives event from sending pod.
-				Span: tracinghelper.MatchHTTPServerSpanNoReply(fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace), "/"),
+				// 3. Channel sends event to transformer pod.
+				Span: tracinghelper.MatchHTTPSpanWithReply(
+					model.Client,
+					tracinghelper.WithHTTPHostAndPath(
+						fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace),
+						"/",
+					),
+				),
 				Children: []tracinghelper.TestSpanTree{
 					{
-						// 3. Channel sends event to transformer pod.
-						Span: tracinghelper.MatchHTTPClientSpanWithReply(
-							fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace), "/"),
-						Children: []tracinghelper.TestSpanTree{
-							{
-								// 4. Transformer Pod receives event from Channel.
-								Span: tracinghelper.MatchHTTPServerSpanWithReply(
-									fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace),
-									"/",
-									tracinghelper.WithLocalEndpointServiceName(transformerPod.Name),
-								),
-							},
-						},
+						// 4. Transformer Pod receives event from Channel.
+						Span: tracinghelper.MatchHTTPSpanWithReply(
+							model.Server,
+							tracinghelper.WithHTTPHostAndPath(
+								fmt.Sprintf("%s.%s.svc.cluster.local", transformerPod.Name, client.Namespace),
+								"/",
+							),
+							tracinghelper.WithLocalEndpointServiceName(transformerPod.Name),
+						),
 					},
+				},
+			},
+			{
+				// 5. Channel sends reply from Transformer Pod to the reply Channel.
+				Span: tracinghelper.MatchHTTPSpanNoReply(
+					model.Client,
+					tracinghelper.WithHTTPHostAndPath(
+						fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace),
+						"",
+					),
+				),
+				Children: []tracinghelper.TestSpanTree{
+					// 6. Reply Channel receives event from the original Channel's reply.
 					{
-						// 5. Channel sends reply from Transformer Pod to the reply Channel.
-						Span: tracinghelper.MatchHTTPClientSpanNoReply(
-							fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace), ""),
+						Span: tracinghelper.MatchHTTPSpanNoReply(
+							model.Server,
+							tracinghelper.WithHTTPHostAndPath(
+								fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace),
+								"/",
+							),
+						),
 						Children: []tracinghelper.TestSpanTree{
-							// 6. Reply Channel receives event from the original Channel's reply.
 							{
-								Span: tracinghelper.MatchHTTPServerSpanNoReply(
-									fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", replyChannelName, client.Namespace), "/"),
+								// 7. Reply Channel sends event to the logging Pod.
+								Span: tracinghelper.MatchHTTPSpanNoReply(
+									model.Client,
+									tracinghelper.WithHTTPHostAndPath(
+										fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+										"/",
+									),
+								),
 								Children: []tracinghelper.TestSpanTree{
 									{
-										// 7. Reply Channel sends event to the logging Pod.
-										Span: tracinghelper.MatchHTTPClientSpanNoReply(
-											fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace), "/"),
-										Children: []tracinghelper.TestSpanTree{
-											{
-												// 8. Logging pod receives event from Channel.
-												Span: tracinghelper.MatchHTTPServerSpanNoReply(
-													fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
-													"/",
-													tracinghelper.WithLocalEndpointServiceName(loggerPod.Name),
-												),
-											},
-										},
+										// 8. Logging pod receives event from Channel.
+										Span: tracinghelper.MatchHTTPSpanNoReply(
+											model.Server,
+											tracinghelper.WithHTTPHostAndPath(
+												fmt.Sprintf("%s.%s.svc.cluster.local", loggerPod.Name, client.Namespace),
+												"/",
+											),
+											tracinghelper.WithLocalEndpointServiceName(loggerPod.Name),
+										),
 									},
 								},
 							},
@@ -300,16 +321,17 @@ func setupChannelTracingWithReply(
 	}
 
 	if tc.IncomingTraceId {
-		expected.Children = []tracinghelper.TestSpanTree{
-			{
-				// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
-				Span: tracinghelper.MatchHTTPClientSpanNoReply(
+		expected = tracinghelper.TestSpanTree{
+			// 1. Sending pod sends event to Channel (only if the sending pod generates a span).
+			Span: tracinghelper.MatchHTTPSpanNoReply(
+				model.Client,
+				tracinghelper.WithHTTPHostAndPath(
 					fmt.Sprintf("%s-kn-channel.%s.svc.cluster.local", channelName, client.Namespace),
 					"",
-					tracinghelper.WithLocalEndpointServiceName("sender"),
 				),
-				Children: expected.Children,
-			},
+				tracinghelper.WithLocalEndpointServiceName("sender"),
+			),
+			Children: []tracinghelper.TestSpanTree{expected},
 		}
 	}
 

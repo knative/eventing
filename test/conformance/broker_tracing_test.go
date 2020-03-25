@@ -26,5 +26,5 @@ import (
 )
 
 func TestBrokerTracing(t *testing.T) {
-	helpers.BrokerTracingTestHelperWithChannelTestRunner(t, channelTestRunner, lib.SetupClientOptionNoop)
+	helpers.BrokerTracingTestHelperWithChannelTestRunner(t, brokerClass, channelTestRunner, lib.SetupClientOptionNoop)
 }
