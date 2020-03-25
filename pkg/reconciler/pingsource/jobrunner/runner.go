@@ -20,11 +20,11 @@ import (
 	"context"
 	"encoding/json"
 
-	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/pkg/source"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
@@ -57,11 +57,11 @@ func NewCronJobsRunner(ceClient cloudevents.Client, reporter source.StatsReporte
 }
 
 func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string) (cron.EntryID, error) {
-	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event := cloudevents.NewEvent()
 	event.SetType(sourcesv1alpha2.PingSourceEventType)
 	event.SetSource(sourcesv1alpha2.PingSourceSource(namespace, name))
-	event.SetData(message(data))
-	event.SetDataContentType(cloudevents.ApplicationJSON)
+	event.SetData(cloudevents.ApplicationJSON, message(data))
+
 	reportArgs := source.ReportArgs{
 		Namespace:     namespace,
 		EventSource:   event.Source(),
@@ -92,10 +92,10 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) error {
 func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event, reportArgs source.ReportArgs) func() {
 	return func() {
 		// Send event (cannot be interrupted)
-		rctx, _, err := a.Client.Send(ctx, event)
-		rtctx := cloudevents.HTTPTransportContextFrom(rctx)
+
+		err := a.Client.Send(ctx, event)
 		if err != nil {
-			// TODO: retries, dls
+			// TODO: at least retries
 			a.Logger.Error("failed to send cloudevent", zap.Error(err))
 		}
 
