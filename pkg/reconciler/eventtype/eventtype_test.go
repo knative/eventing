@@ -19,6 +19,7 @@ package eventtype
 import (
 	"context"
 	"fmt"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"testing"
 
 	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
@@ -33,7 +34,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
-	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -49,8 +49,6 @@ const (
 )
 
 var (
-	trueVal = true
-
 	testKey = fmt.Sprintf("%s/%s", testNS, eventTypeName)
 )
 
@@ -182,13 +180,14 @@ func TestReconcile(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
-		b := reconciler.NewBase(ctx, controllerAgentName, cmw)
 		r := &Reconciler{
 			eventTypeLister: listers.GetEventTypeLister(),
 			brokerLister:    listers.GetBrokerLister(),
 			tracker:         tracker.New(func(types.NamespacedName) {}, 0),
 		}
-		return eventtype.NewReconciler(ctx, b.Logger, b.EventingClientSet, listers.GetEventTypeLister(), b.Recorder, r)
+		return eventtype.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetEventTypeLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		false,
 		logger,

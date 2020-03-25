@@ -19,6 +19,8 @@ package channel
 import (
 	"context"
 	"fmt"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	"testing"
 
 	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
@@ -34,7 +36,6 @@ import (
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
@@ -265,13 +266,14 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		base := reconciler.NewBase(ctx, controllerAgentName, cmw)
 		r := &Reconciler{
-			dynamicClientSet:   base.DynamicClientSet,
+			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 		}
-		return channelreconciler.NewReconciler(ctx, base.Logger, base.EventingClientSet, listers.GetMessagingChannelLister(), base.Recorder, r)
+		return channelreconciler.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		false,
 		logger,
