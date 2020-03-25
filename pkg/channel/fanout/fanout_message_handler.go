@@ -132,5 +132,5 @@ func (f *MessageHandler) dispatch(ctx context.Context, originalMessage binding.M
 // makeFanoutRequest sends the request to exactly one subscription. It handles both the `call` and
 // the `sink` portions of the subscription.
 func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.Message, additionalHeaders nethttp.Header, sub eventingduck.SubscriberSpec) error {
-	return f.dispatcher.DispatchMessageWithDelivery(ctx, message, additionalHeaders, sub.SubscriberURI.String(), sub.ReplyURI.String(), &channel.DeliveryOptions{DeadLetterSink: sub.DeadLetterSinkURI.String()})
+	return f.dispatcher.DispatchMessage(ctx, message, additionalHeaders, sub.SubscriberURI.URL(), sub.ReplyURI.URL(), sub.DeadLetterSinkURI.URL())
 }

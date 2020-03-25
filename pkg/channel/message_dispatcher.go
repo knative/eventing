@@ -36,12 +36,7 @@ type MessageDispatcher interface {
 	// DispatchMessage dispatches an event to a destination over HTTP.
 	//
 	// The destination and reply are URLs.
-	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination, reply string) error
-
-	// DispatchMessageWithDelivery dispatches an event to a destination over HTTP with delivery options
-	//
-	// The destination and reply are URLs.
-	DispatchMessageWithDelivery(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination, reply string, delivery *DeliveryOptions) error
+	DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error
 }
 
 // MessageDispatcherImpl is the 'real' MessageDispatcher used everywhere except unit tests.
@@ -75,73 +70,83 @@ func NewMessageDispatcherFromConfig(logger *zap.Logger, config EventDispatcherCo
 	}
 }
 
-// DispatchMessage dispatches an event to a destination over HTTP.
-//
-// The destination and reply are URLs.
-func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, message cloudevents.Message, additionalHeaders nethttp.Header, destination, reply string) error {
-	return d.DispatchMessageWithDelivery(ctx, message, additionalHeaders, destination, reply, nil)
-}
-
-// DispatchMessageWithDelivery dispatches an event to a destination over HTTP with delivery options
-//
-// The destination and reply are URLs.
-func (d *MessageDispatcherImpl) DispatchMessageWithDelivery(ctx context.Context, message cloudevents.Message, initialAdditionalHeaders nethttp.Header, destination, reply string, delivery *DeliveryOptions) error {
-	var err error
-
-	// Default to replying with the original event. If there is a destination, then replace it
-	// with the response from the call to the destination instead.
-	response := message
-	additionalHeaders := initialAdditionalHeaders
-	if destination != "" {
-		defer message.Finish(nil)
-
-		destinationURL := d.resolveURL(destination)
-		response, additionalHeaders, err = d.executeRequest(ctx, destinationURL, message, initialAdditionalHeaders)
-		if err != nil {
-			if delivery != nil && delivery.DeadLetterSink != "" {
-				deadLetterURL := d.resolveURL(delivery.DeadLetterSink)
-
-				// TODO: decorate event with deadletter attributes
-				_, _, err2 := d.executeRequest(ctx, deadLetterURL, message, initialAdditionalHeaders)
-				if err2 != nil {
-					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destinationURL, err, deadLetterURL, err2)
-				}
-
-				// Do not send event to reply
-				return nil
-			}
-			return fmt.Errorf("unable to complete request to %s: %v", destinationURL, err)
-		}
-	}
-
+func (d *MessageDispatcherImpl) DispatchMessage(ctx context.Context, initialMessage cloudevents.Message, initialAdditionalHeaders nethttp.Header, destination *url.URL, reply *url.URL, deadLetter *url.URL) error {
+	// All messages that should be finished at the end of this function
+	// are placed in this slice
+	var messagesToFinish []binding.Message
 	defer func() {
-		if response != nil {
-			_ = response.Finish(nil)
+		for _, msg := range messagesToFinish {
+			_ = msg.Finish(nil)
 		}
 	}()
 
-	if reply == "" && response != nil {
-		d.logger.Debug("cannot forward response as reply is empty", zap.Any("response", response))
+	// sanitize eventual host-only URLs
+	destination = d.sanitizeURL(destination)
+	reply = d.sanitizeURL(reply)
+	deadLetter = d.sanitizeURL(deadLetter)
+
+	// If there is a destination, variables response* are filled with the response of the destination
+	// Otherwise, they are filled with the original message
+	var responseMessage cloudevents.Message
+	var responseAdditionalHeaders nethttp.Header
+
+	if destination != nil {
+		var err error
+		// Try to send to destination
+		messagesToFinish = append(messagesToFinish, initialMessage)
+
+		responseMessage, responseAdditionalHeaders, err = d.executeRequest(ctx, destination, initialMessage, initialAdditionalHeaders)
+		if err != nil {
+			// DeadLetter is configured, send the message to it
+			if deadLetter != nil {
+				deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, initialAdditionalHeaders)
+				if deadLetterErr != nil {
+					return fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination, err, deadLetter, deadLetterErr)
+				}
+				messagesToFinish = append(messagesToFinish, deadLetterResponse)
+
+				return nil
+			}
+			// No DeadLetter, just fail
+			return fmt.Errorf("unable to complete request to %s: %v", destination, err)
+		}
+	} else {
+		// No destination url, try to send to reply if available
+		responseMessage = initialMessage
+		responseAdditionalHeaders = initialAdditionalHeaders
+	}
+
+	// No response, dispatch completed
+	if responseMessage == nil {
 		return nil
 	}
 
-	if reply != "" && response != nil {
-		replyURL := d.resolveURL(reply)
-		_, _, err = d.executeRequest(ctx, replyURL, response, additionalHeaders)
-		if err != nil {
-			if delivery != nil && delivery.DeadLetterSink != "" {
-				deadLetterURL := d.resolveURL(delivery.DeadLetterSink)
+	messagesToFinish = append(messagesToFinish, responseMessage)
 
-				// TODO: decorate event with deadletter attributes
-				_, _, err2 := d.executeRequest(ctx, deadLetterURL, message, additionalHeaders)
-				if err2 != nil {
-					return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", replyURL, err, deadLetterURL, err2)
-				}
-			} else {
-				return fmt.Errorf("failed to forward reply to %s: %v", replyURL, err)
-			}
-		}
+	if reply == nil {
+		d.logger.Debug("cannot forward response as reply is empty")
+		return nil
 	}
+
+	responseResponseMessage, _, err := d.executeRequest(ctx, reply, responseMessage, responseAdditionalHeaders)
+	if err != nil {
+		// DeadLetter is configured, send the message to it
+		if deadLetter != nil {
+			deadLetterResponse, _, deadLetterErr := d.executeRequest(ctx, deadLetter, initialMessage, responseAdditionalHeaders)
+			if deadLetterErr != nil {
+				return fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", reply, err, deadLetter, deadLetterErr)
+			}
+			messagesToFinish = append(messagesToFinish, deadLetterResponse)
+
+			return nil
+		}
+		// No DeadLetter, just fail
+		return fmt.Errorf("failed to forward reply to %s: %v", reply, err)
+	}
+	if responseResponseMessage != nil {
+		messagesToFinish = append(messagesToFinish, responseResponseMessage)
+	}
+
 	return nil
 }
 
@@ -174,14 +179,17 @@ func (d *MessageDispatcherImpl) executeRequest(ctx context.Context, url *url.URL
 	return responseMessage, utils.PassThroughHeaders(response.Header), nil
 }
 
-func (d *MessageDispatcherImpl) resolveURL(destination string) *url.URL {
-	if u, err := url.Parse(destination); err == nil && d.supportedSchemes.Has(u.Scheme) {
+func (d *MessageDispatcherImpl) sanitizeURL(u *url.URL) *url.URL {
+	if u == nil {
+		return nil
+	}
+	if d.supportedSchemes.Has(u.Scheme) {
 		// Already a URL with a known scheme.
 		return u
 	}
 	return &url.URL{
 		Scheme: "http",
-		Host:   destination,
+		Host:   u.Host,
 		Path:   "/",
 	}
 }
