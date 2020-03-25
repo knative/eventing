@@ -54,7 +54,7 @@ func setTracingConfigToZipkin(t *testing.T, client *lib.Client) {
 		if err != nil {
 			t.Fatalf("Unable to set the ConfigMap: %v", err)
 		}
-		// Wait for 1 minute to let the ConfigMap be synced up.
-		time.Sleep(1 * time.Minute)
+		// Wait for 10 seconds to let the ConfigMap be synced up.
+		time.Sleep(10 * time.Second)
 	})
 }
