@@ -83,9 +83,9 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		tc TracingTestCase,
 	) (tracinghelper.TestSpanTree, lib.EventMatchFunc) {
 		// Create the Broker.
-		client.CreateConfigMapPropagationOrFail(defaultCMPName)
 		if brokerClass == eventing.ChannelBrokerClassValue {
 			// create required RBAC resources including ServiceAccounts and ClusterRoleBindings for Brokers
+			client.CreateConfigMapPropagationOrFail(defaultCMPName)
 			client.CreateRBACResourcesForBrokers()
 		}
 		broker := client.CreateBrokerOrFail(
