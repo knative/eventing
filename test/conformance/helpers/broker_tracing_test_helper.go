@@ -172,6 +172,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 					Span: tracinghelper.MatchHTTPSpanWithReply(
 						model.Server,
 						tracinghelper.WithHTTPHostAndPath(transformerSVCHost, "/"),
+						tracinghelper.WithLocalEndpointServiceName(eventTransformerPod.Name),
 					),
 				},
 			},
@@ -192,6 +193,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 					Span: tracinghelper.MatchHTTPSpanNoReply(
 						model.Server,
 						tracinghelper.WithHTTPHostAndPath(loggerSVCHost, "/"),
+						tracinghelper.WithLocalEndpointServiceName(loggerPodName),
 					),
 				},
 			},
@@ -213,8 +215,11 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 
 		if tc.IncomingTraceId {
 			expected = tracinghelper.TestSpanTree{
-				Note:     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
-				Span:     tracinghelper.MatchHTTPSpanNoReply(model.Client),
+				Note: "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
+				Span: tracinghelper.MatchHTTPSpanNoReply(
+					model.Client,
+					tracinghelper.WithLocalEndpointServiceName(senderName),
+				),
 				Children: []tracinghelper.TestSpanTree{expected},
 			}
 		}
