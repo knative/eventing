@@ -161,11 +161,11 @@ func updateDefaultChannelCM(client *lib.Client, updateConfig func(config *config
 	// In cmd/webhook.go, configMapWatcher watches the configmap changes and set the config for channeldefaulter,
 	// the resync time is set to 0, which means the the resync will be delayed as long as possible (until the upstream
 	// source closes the watch or times out, or you stop the controller)
-	// Wait for 1 minute to let the ConfigMap be synced up.
-	// TODO(chizhg): 1 minute is an empirical duration, and does not solve the problem from the root.
+	// Wait for 5 seconds to let the ConfigMap be synced up.
+	// TODO(chizhg): 5 seconds is an empirical duration, and does not solve the problem from the root.
 	// To make it work reliably, we may need to manually restart the controller.
 	// https://github.com/knative/eventing/issues/2807
-	time.Sleep(1 * time.Minute)
+	time.Sleep(5 * time.Second)
 	return nil
 }
 
