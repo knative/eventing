@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	ce "github.com/cloudevents/sdk-go/v1"
+	"github.com/openzipkin/zipkin-go/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 
@@ -155,18 +156,23 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		// 6. Logger pod receives the event from the Broker Filter for the "logger" trigger.
 
 		// Useful constants we will use below.
-		ingressHost := brokerIngressHost(domain, *broker)
 		loggerSVCHost := k8sServiceHost(domain, client.Namespace, loggerPodName)
 		transformerSVCHost := k8sServiceHost(domain, client.Namespace, eventTransformerPod.Name)
 
 		// Steps 7-10: Event from TrChannel sent to transformer Trigger and its reply to the InChannel.
 		transformerEventSentFromTrChannelToTransformer := tracinghelper.TestSpanTree{
 			Note: "3. Broker Filter for the 'transformer' trigger sends the event to the transformer pod.",
-			Span: tracinghelper.MatchHTTPClientSpanWithReply(transformerSVCHost, "/"),
+			Span: tracinghelper.MatchHTTPSpanWithReply(
+				model.Client,
+				tracinghelper.WithHTTPHostAndPath(transformerSVCHost, "/"),
+			),
 			Children: []tracinghelper.TestSpanTree{
 				{
 					Note: "4. Transformer pod receives the event from the Broker Filter for the 'transformer' trigger.",
-					Span: tracinghelper.MatchHTTPServerSpanWithReply(transformerSVCHost, "/"),
+					Span: tracinghelper.MatchHTTPSpanWithReply(
+						model.Server,
+						tracinghelper.WithHTTPHostAndPath(transformerSVCHost, "/"),
+					),
 				},
 			},
 		}
@@ -176,11 +182,17 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		// Ingress.
 		transformerEventResponseFromTrChannel := tracinghelper.TestSpanTree{
 			Note: "5. Broker Filter for the 'logger' trigger sends the event to the logger pod.",
-			Span: tracinghelper.MatchHTTPClientSpanNoReply(loggerSVCHost, "/"),
+			Span: tracinghelper.MatchHTTPSpanNoReply(
+				model.Client,
+				tracinghelper.WithHTTPHostAndPath(loggerSVCHost, "/"),
+			),
 			Children: []tracinghelper.TestSpanTree{
 				{
 					Note: "6. Logger pod receives the event from the Broker Filter for the 'logger' trigger.",
-					Span: tracinghelper.MatchHTTPServerSpanNoReply(loggerSVCHost, "/"),
+					Span: tracinghelper.MatchHTTPSpanNoReply(
+						model.Server,
+						tracinghelper.WithHTTPHostAndPath(loggerSVCHost, "/"),
+					),
 				},
 			},
 		}
@@ -190,7 +202,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		// Ingress.
 		expected := tracinghelper.TestSpanTree{
 			Note: "2. Broker Ingress receives the event from the sending pod.",
-			Span: tracinghelper.MatchHTTPServerSpanNoReply(ingressHost, "/"),
+			Span: tracinghelper.MatchHTTPSpanNoReply(model.Server),
 			Children: []tracinghelper.TestSpanTree{
 				// Steps 7-10.
 				transformerEventSentFromTrChannelToTransformer,
@@ -202,7 +214,7 @@ func setupBrokerTracing(brokerClass string) SetupInfrastructureFunc {
 		if tc.IncomingTraceId {
 			expected = tracinghelper.TestSpanTree{
 				Note:     "1. Send pod sends event to the Broker Ingress (only if the sending pod generates a span).",
-				Span:     tracinghelper.MatchHTTPClientSpanNoReply(ingressHost, ""),
+				Span:     tracinghelper.MatchHTTPSpanNoReply(model.Client),
 				Children: []tracinghelper.TestSpanTree{expected},
 			}
 		}
