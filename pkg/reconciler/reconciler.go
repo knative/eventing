@@ -40,6 +40,7 @@ import (
 )
 
 // Base implements the core controller logic, given a Reconciler.
+// Deprecated: import is required directly.
 type Base struct {
 	// KubeClientSet allows us to talk to the k8s for core APIs
 	KubeClientSet kubernetes.Interface

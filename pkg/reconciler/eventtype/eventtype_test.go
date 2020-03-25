@@ -19,14 +19,7 @@ package eventtype
 import (
 	"context"
 	"fmt"
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"testing"
-
-	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
-
-	"knative.dev/pkg/configmap"
-
-	"knative.dev/pkg/tracker"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,10 +27,14 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/eventtype"
 	. "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
+	"knative.dev/pkg/tracker"
 )
 
 const (
