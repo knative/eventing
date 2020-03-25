@@ -18,10 +18,11 @@ package broker
 
 import (
 	"context"
+	"log"
+
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
 	"knative.dev/pkg/injection/clients/dynamicclient"
-	"log"
 
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
