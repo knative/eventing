@@ -22,13 +22,15 @@ import (
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
-	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
-	"knative.dev/eventing/pkg/kncloudevents"
-	"knative.dev/eventing/pkg/tracing"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
+
+	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
+	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 )
 
@@ -63,7 +65,7 @@ func NewController(
 		entryids:         make(map[string]cron.EntryID),
 	}
 
-	impl := controller.NewImpl(r, logger, ReconcilerName)
+	impl := pingsourcereconciler.NewImpl(ctx, r)
 
 	logger.Info("Setting up event handlers")
 
