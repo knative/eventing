@@ -21,19 +21,16 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/pkg/apis"
-	"knative.dev/pkg/logging"
-	"knative.dev/pkg/resolver"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	clientgotesting "k8s.io/client-go/testing"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
+	"knative.dev/pkg/apis"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	"knative.dev/pkg/logging"
 
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/containersource"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
@@ -323,9 +320,10 @@ func TestAllCases(t *testing.T) {
 		ctx = addressable.WithDuck(ctx)
 		r := &Reconciler{
 			kubeClientSet:         fakekubeclient.Get(ctx),
+			eventingClientSet:     fakeeventingclient.Get(ctx),
 			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
-			sinkResolver:          resolver.NewURIResolver(ctx, func(types.NamespacedName) {}),
+			sinkBindingLister:     listers.GetSinkBindingLister(),
 		}
 		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceLister(), controller.GetEventRecorder(ctx), r)
 	},

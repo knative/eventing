@@ -19,40 +19,37 @@ package resources
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/tracker"
 )
 
-func MakeDeployment(source *v1alpha1.ContainerSource) *appsv1.Deployment {
-	template := source.Spec.Template
-	if template.Labels == nil {
-		template.Labels = make(map[string]string)
-	}
-	labels := Labels(source.Name)
-	for k, v := range labels {
-		template.Labels[k] = v
-	}
+var subjectGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 
-	deploy := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
+func MakeSinkBinding(source *v1alpha1.ContainerSource) *v1alpha1.SinkBinding {
+	subjectAPIVersion, subjectKind := subjectGVK.ToAPIVersionAndKind()
+
+	sb := &v1alpha1.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kmeta.ChildName(source.Name, "-containersource" /*suffix*/),
-			Namespace: source.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
-			Labels: labels,
+			Name:      kmeta.ChildName(source.Name, "-containersource" /*suffix*/),
+			Namespace: source.Namespace,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+		Spec: v1alpha1.SinkBindingSpec{
+			SourceSpec: source.Spec.SourceSpec,
+			BindingSpec: duckv1alpha1.BindingSpec{
+				Subject: tracker.Reference{
+					APIVersion: subjectAPIVersion,
+					Kind:       subjectKind,
+					Selector: &metav1.LabelSelector{
+						MatchLabels: Labels(source.Name),
+					},
+				},
 			},
-			Template: template,
 		},
 	}
-	return deploy
+	return sb
 }
