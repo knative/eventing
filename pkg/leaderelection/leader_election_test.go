@@ -37,7 +37,7 @@ func okConfig() *kle.Config {
 		LeaseDuration:     15 * time.Second,
 		RenewDeadline:     10 * time.Second,
 		RetryPeriod:       2 * time.Second,
-		EnabledComponents: sets.NewString("controller", "inmemorychannel-dispatcher", "inmemorychannel-controller", "broker-controller"),
+		EnabledComponents: sets.NewString("controller", "inmemorychannel-dispatcher", "inmemorychannel-controller", "broker-controller", "pingsource-jobrunner-controller"),
 	}
 }
 
@@ -50,7 +50,7 @@ func okData() map[string]string {
 		"leaseDuration":     "15s",
 		"renewDeadline":     "10s",
 		"retryPeriod":       "2s",
-		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller,broker-controller",
+		"enabledComponents": "controller,inmemorychannel-dispatcher,inmemorychannel-controller,broker-controller,pingsource-jobrunner-controller",
 	}
 }
 
@@ -60,6 +60,7 @@ func TestValidateConfig(t *testing.T) {
 		data     map[string]string
 		expected *kle.Config
 		err      error
+<<<<<<< HEAD
 	}{{
 		name:     "OK",
 		data:     okData(),
@@ -77,6 +78,24 @@ func TestValidateConfig(t *testing.T) {
 		}),
 		err: errors.New(`leaseDuration: invalid duration: "this-is-the-end"`),
 	}}
+=======
+	}{
+		{
+			name:     "OK",
+			data:     okData(),
+			expected: okConfig(),
+		},
+		{
+			name: "invalid component",
+			data: func() map[string]string {
+				data := okData()
+				data["enabledComponents"] = "controller,frobulator"
+				return data
+			}(),
+			err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher" "pingsource-jobrunner-controller"]`),
+		},
+	}
+>>>>>>> fix unit tests
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
