@@ -20,8 +20,6 @@ import (
 	"context"
 	"testing"
 
-	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +31,7 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"

@@ -19,12 +19,11 @@ package namespace
 import (
 	"context"
 
-	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
-
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
