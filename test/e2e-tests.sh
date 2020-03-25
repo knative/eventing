@@ -43,10 +43,7 @@ uninstall_broker || fail_test "Could not uninstall Channel Based Broker"
 
 install_mt_broker || fail_test "Could not uninstall MT Channel Based Broker"
 
-# TODO: Fix the traces so that we can run conformance tests
-# https://github.com/knative/eventing/issues/2809
-# After that add ./test/conformance back to tests.
 echo "Running tests with Multi Tenant Channel Based Broker"
-go_test_e2e -timeout=20m -parallel=12 ./test/e2e -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
+go_test_e2e -timeout=20m -parallel=12 ./test/e2e ./test/conformance -brokerclass=MTChannelBasedBroker -channels=messaging.knative.dev/v1alpha1:InMemoryChannel,messaging.knative.dev/v1alpha1:Channel,messaging.knative.dev/v1beta1:InMemoryChannel || fail_test
 
 success
