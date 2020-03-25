@@ -22,16 +22,14 @@ import (
 	"sync"
 
 	"github.com/robfig/cron"
+	"go.uber.org/zap"
+	pkgreconciler "knative.dev/pkg/reconciler"
+
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-
-	"go.uber.org/zap"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
+	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
-
 	"knative.dev/eventing/pkg/logging"
-	"knative.dev/pkg/controller"
 )
 
 // Reconciler reconciles PingSources
@@ -43,31 +41,14 @@ type Reconciler struct {
 	entryids  map[string]cron.EntryID // key: resource namespace/name
 }
 
-// Check that our Reconciler implements controller.Reconciler.
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements ReconcileKind.
+var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name.
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the PingSource resource with this namespace/name.
-	source, err := r.pingsourceLister.PingSources(namespace).Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("PingSource key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
 	if ok && scope != eventing.ScopeCluster {
 		// Not our responsibility
-		logging.FromContext(ctx).Info("Skipping non-cluster-scoped PingSource", zap.Any("key", key))
+		logging.FromContext(ctx).Info("Skipping non-cluster-scoped PingSource", zap.Any("namespace", source.Namespace), zap.Any("name", source.Name))
 		return nil
 	}
 
@@ -75,7 +56,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 		return fmt.Errorf("PingSource is not ready. Cannot configure the cron jobs runner")
 	}
 
-	reconcileErr := r.reconcile(ctx, key, source)
+	reconcileErr := r.reconcile(ctx, source)
 	if reconcileErr != nil {
 		logging.FromContext(ctx).Error("Error reconciling PingSource", zap.Error(reconcileErr))
 	} else {
@@ -84,7 +65,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
 	return nil
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, key string, source *v1alpha2.PingSource) error {
+func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource) error {
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 	if source.DeletionTimestamp != nil {
 		if id, ok := r.entryids[key]; ok {
 			r.cronRunner.RemoveSchedule(id)
