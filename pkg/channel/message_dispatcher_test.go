@@ -528,11 +528,18 @@ func TestDispatchMessage(t *testing.T) {
 				t.Fatal(err)
 			}
 			message = binding.ToMessage(ev)
+			finishInvoked := 0
+			message = binding.WithFinish(message, func(err error) {
+				finishInvoked++
+			})
 
 			err = md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deadLetterSink)
 
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)
+			}
+			if finishInvoked != 1 {
+				t.Errorf("Finish should be invoked exactly one time. Actual: %d", finishInvoked)
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)
