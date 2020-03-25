@@ -18,6 +18,9 @@ package broker
 
 import (
 	"context"
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
+	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	"knative.dev/pkg/injection/clients/dynamicclient"
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
@@ -33,7 +36,6 @@ import (
 	subscriptioninformer "knative.dev/eventing/pkg/client/injection/informers/messaging/v1alpha1/subscription"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/conditions"
 	deploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment"
@@ -41,6 +43,7 @@ import (
 	serviceinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/service"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/resolver"
 )
@@ -82,7 +85,9 @@ func NewController(
 	endpointsInformer := endpointsinformer.Get(ctx)
 
 	r := &Reconciler{
-		Base:                      reconciler.NewBase(ctx, controllerAgentName, cmw),
+		eventingClientSet:         eventingclient.Get(ctx),
+		dynamicClientSet:          dynamicclient.Get(ctx),
+		kubeClientSet:             kubeclient.Get(ctx),
 		brokerLister:              brokerInformer.Lister(),
 		serviceLister:             serviceInformer.Lister(),
 		endpointsLister:           endpointsInformer.Lister(),
@@ -98,7 +103,7 @@ func NewController(
 
 	impl := brokerreconciler.NewImpl(ctx, r, env.BrokerClass)
 
-	r.Logger.Info("Setting up event handlers")
+	logging.FromContext(ctx).Info("Setting up event handlers")
 
 	r.kresourceTracker = duck.NewListableTracker(ctx, conditions.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))
 	r.channelableTracker = duck.NewListableTracker(ctx, channelable.Get, impl.EnqueueKey, controller.GetTrackerLease(ctx))

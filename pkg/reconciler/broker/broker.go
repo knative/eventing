@@ -31,21 +31,23 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"knative.dev/pkg/apis"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
+	"knative.dev/pkg/logging"
 
 	duckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/eventing/v1alpha1"
 	messagingv1beta1 "knative.dev/eventing/pkg/apis/messaging/v1beta1"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	brokerreconciler "knative.dev/eventing/pkg/client/injection/reconciler/eventing/v1alpha1/broker"
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1alpha1"
 	messaginglisters "knative.dev/eventing/pkg/client/listers/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/logging"
-	"knative.dev/eventing/pkg/reconciler"
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	duckapis "knative.dev/pkg/apis/duck"
@@ -60,7 +62,9 @@ const (
 )
 
 type Reconciler struct {
-	*reconciler.Base
+	eventingClientSet clientset.Interface
+	dynamicClientSet  dynamic.Interface
+	kubeClientSet     kubernetes.Interface
 
 	// listers index properties about resources
 	brokerLister       eventinglisters.BrokerLister
@@ -231,11 +235,11 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker)
 	if b.Spec.Config != nil {
 		if b.Spec.Config.Kind == "ConfigMap" && b.Spec.Config.APIVersion == "v1" {
 			if b.Spec.Config.Namespace == "" || b.Spec.Config.Name == "" {
-				r.Logger.Error("Broker.Spec.Config name and namespace are required",
+				logging.FromContext(ctx).Error("Broker.Spec.Config name and namespace are required",
 					zap.String("namespace", b.Namespace), zap.String("name", b.Name))
 				return nil, errors.New("Broker.Spec.Config name and namespace are required")
 			}
-			cm, err := r.KubeClientSet.CoreV1().ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name, metav1.GetOptions{})
+			cm, err := r.kubeClientSet.CoreV1().ConfigMaps(b.Spec.Config.Namespace).Get(b.Spec.Config.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -246,14 +250,14 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker)
 			} else if config != nil {
 				template = &config.DefaultChannelTemplate
 			}
-			r.Logger.Info("Using channel template = ", template)
+			logging.FromContext(ctx).Info("Using channel template = ", template)
 		} else {
 			return nil, errors.New("Broker.Spec.Config configuration not supported, only [kind: ConfigMap, apiVersion: v1]")
 		}
 	} else if b.Spec.ChannelTemplate != nil {
 		template = b.Spec.ChannelTemplate
 	} else {
-		r.Logger.Error("Broker.Spec.ChannelTemplate is nil",
+		logging.FromContext(ctx).Error("Broker.Spec.ChannelTemplate is nil",
 			zap.String("namespace", b.Namespace), zap.String("name", b.Name))
 		return nil, errors.New("Broker.Spec.ChannelTemplate is nil")
 	}
@@ -266,7 +270,7 @@ func (r *Reconciler) getChannelTemplate(ctx context.Context, b *v1alpha1.Broker)
 
 	gvr, _ := meta.UnsafeGuessKindToResource(template.GetObjectKind().GroupVersionKind())
 
-	inf := r.DynamicClientSet.Resource(gvr).Namespace(b.Namespace)
+	inf := r.dynamicClientSet.Resource(gvr).Namespace(b.Namespace)
 	if inf == nil {
 		return nil, fmt.Errorf("unable to create dynamic client for: %+v", template)
 	}
@@ -359,7 +363,7 @@ func TriggerChannelLabels(brokerName string) map[string]string {
 func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) error {
 	current, err := r.deploymentLister.Deployments(d.Namespace).Get(d.Name)
 	if apierrs.IsNotFound(err) {
-		current, err = r.KubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
+		current, err = r.kubeClientSet.AppsV1().Deployments(d.Namespace).Create(d)
 		if err != nil {
 			return err
 		}
@@ -371,7 +375,7 @@ func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 		// Don't modify the informers copy.
 		desired := current.DeepCopy()
 		desired.Spec = d.Spec
-		current, err = r.KubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
+		current, err = r.kubeClientSet.AppsV1().Deployments(current.Namespace).Update(desired)
 		if err != nil {
 			return err
 		}
@@ -383,7 +387,7 @@ func (r *Reconciler) reconcileDeployment(ctx context.Context, d *v1.Deployment) 
 func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) (*corev1.Endpoints, error) {
 	current, err := r.serviceLister.Services(svc.Namespace).Get(svc.Name)
 	if apierrs.IsNotFound(err) {
-		current, err = r.KubeClientSet.CoreV1().Services(svc.Namespace).Create(svc)
+		current, err = r.kubeClientSet.CoreV1().Services(svc.Namespace).Create(svc)
 		if err != nil {
 			return nil, err
 		}
@@ -398,7 +402,7 @@ func (r *Reconciler) reconcileService(ctx context.Context, svc *corev1.Service) 
 		// Don't modify the informers copy.
 		desired := current.DeepCopy()
 		desired.Spec = svc.Spec
-		current, err = r.KubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
+		current, err = r.kubeClientSet.CoreV1().Services(current.Namespace).Update(desired)
 		if err != nil {
 			return nil, err
 		}
@@ -441,15 +445,15 @@ func (r *Reconciler) reconcileTriggers(ctx context.Context, b *v1alpha1.Broker, 
 			trigger := t.DeepCopy()
 			tErr := r.reconcileTrigger(ctx, b, trigger, filterSvc)
 			if tErr != nil {
-				r.Logger.Error("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
-				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconcile failed: %v", tErr)
+				logging.FromContext(ctx).Error("Reconciling trigger failed:", zap.String("name", t.Name), zap.Error(err))
+				controller.GetEventRecorder(ctx).Eventf(trigger, corev1.EventTypeWarning, triggerReconcileFailed, "Trigger reconcile failed: %v", tErr)
 			} else {
-				r.Recorder.Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
+				controller.GetEventRecorder(ctx).Event(trigger, corev1.EventTypeNormal, triggerReconciled, "Trigger reconciled")
 			}
 			trigger.Status.ObservedGeneration = t.Generation
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
-				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				controller.GetEventRecorder(ctx).Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 			}
 		}
 	}
@@ -481,7 +485,7 @@ func (r *Reconciler) propagateBrokerStatusToTriggers(ctx context.Context, namesp
 			}
 			if _, updateStatusErr := r.updateTriggerStatus(ctx, trigger); updateStatusErr != nil {
 				logging.FromContext(ctx).Error("Failed to update Trigger status", zap.Error(updateStatusErr))
-				r.Recorder.Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
+				controller.GetEventRecorder(ctx).Eventf(trigger, corev1.EventTypeWarning, triggerUpdateStatusFailed, "Failed to update Trigger's status: %v", updateStatusErr)
 				return updateStatusErr
 			}
 		}
