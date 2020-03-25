@@ -18,6 +18,7 @@ package namespace
 
 import (
 	"context"
+
 	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 
 	"github.com/kelseyhightower/envconfig"
