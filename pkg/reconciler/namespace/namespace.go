@@ -20,18 +20,15 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
+	"knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
 
 	configsv1alpha1 "knative.dev/eventing/pkg/apis/configs/v1alpha1"
@@ -41,12 +38,10 @@ import (
 	eventinglisters "knative.dev/eventing/pkg/client/listers/eventing/v1beta1"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	"knative.dev/eventing/pkg/utils"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 )
 
 const (
-	namespaceReconciled       = "NamespaceReconciled"
-	namespaceReconcileFailure = "NamespaceReconcileFailure"
-
 	// Name of the corev1.Events emitted from the reconciliation process.
 	configMapPropagationCreated = "ConfigMapPropagationCreated"
 	brokerCreated               = "BrokerCreated"
@@ -68,56 +63,14 @@ type Reconciler struct {
 	roleBindingLister          rbacv1listers.RoleBindingLister
 	brokerLister               eventinglisters.BrokerLister
 	configMapPropagationLister configslisters.ConfigMapPropagationLister
-
-	recorder record.EventRecorder
 }
 
-// Check that our Reconciler implements controller.Reconciler
-var _ controller.Reconciler = (*Reconciler)(nil)
+// Check that our Reconciler implements namespacereconciler.Interface
+var _ namespacereconciler.Interface = (*Reconciler)(nil)
 
-// Reconcile compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the Namespace resource
-// with the current status of the resource.
-func (r *Reconciler) Reconcile(ctx context.Context, key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logging.FromContext(ctx).Error("invalid resource key")
-		return nil
-	}
-
-	// Get the namespace resource with this namespace/name
-	original, err := r.namespaceLister.Get(name)
-	if apierrs.IsNotFound(err) {
-		// The resource may no longer exist, in which case we stop processing.
-		logging.FromContext(ctx).Error("namespace key in work queue no longer exists")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	if original.Labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue {
+func (r *Reconciler) ReconcileKind(ctx context.Context, ns *corev1.Namespace) reconciler.Event {
+	if ns.Labels[resources.InjectionLabelKey] != resources.InjectionEnabledLabelValue {
 		logging.FromContext(ctx).Debug("Not reconciling Namespace")
-		return nil
-	}
-
-	// Don't modify the informers copy
-	ns := original.DeepCopy()
-
-	// Reconcile this copy of the Namespace.
-	reconcileErr := r.reconcile(ctx, ns)
-	if reconcileErr != nil {
-		logging.FromContext(ctx).Errorw("Error reconciling Namespace", zap.Error(reconcileErr))
-		r.recorder.Eventf(ns, corev1.EventTypeWarning, namespaceReconcileFailure, "Failed to reconcile Namespace: %v", reconcileErr)
-	} else {
-		logging.FromContext(ctx).Debug("Namespace reconciled")
-		r.recorder.Eventf(ns, corev1.EventTypeNormal, namespaceReconciled, "Namespace reconciled: %q", ns.Name)
-	}
-
-	return reconcileErr
-}
-
-func (r *Reconciler) reconcile(ctx context.Context, ns *corev1.Namespace) error {
-	if ns.DeletionTimestamp != nil {
 		return nil
 	}
 
@@ -151,7 +104,7 @@ func (r *Reconciler) reconcileConfigMapPropagation(ctx context.Context, ns *core
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns, corev1.EventTypeNormal, configMapPropagationCreated,
+		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, configMapPropagationCreated,
 			"Default ConfigMapPropagation: "+cmp.Name+" created")
 		return cmp, nil
 	} else if err != nil {
@@ -188,11 +141,11 @@ func (r *Reconciler) reconcileServiceAccountAndRoleBindings(ctx context.Context,
 		}
 		_, err := utils.CopySecret(r.kubeClientSet.CoreV1(), system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name)
 		if err != nil {
-			r.recorder.Event(ns, corev1.EventTypeWarning, secretCopyFailure,
+			controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeWarning, secretCopyFailure,
 				fmt.Sprintf("Error copying secret %s/%s => %s/%s : %v", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err))
 			return fmt.Errorf("Error copying secret %s/%s => %s/%s : %w", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name, err)
 		} else {
-			r.recorder.Event(ns, corev1.EventTypeNormal, secretCopied,
+			controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, secretCopied,
 				fmt.Sprintf("Secret copied into namespace %s/%s => %s/%s", system.Namespace(), r.brokerPullSecretName, ns.Name, sa.Name))
 		}
 	}
@@ -210,7 +163,7 @@ func (r *Reconciler) reconcileBrokerServiceAccount(ctx context.Context, ns *core
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns, corev1.EventTypeNormal, serviceAccountCreated,
+		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, serviceAccountCreated,
 			fmt.Sprintf("ServiceAccount '%s' created for the Broker", sa.Name))
 		return sa, nil
 	} else if err != nil {
@@ -230,7 +183,7 @@ func (r *Reconciler) reconcileBrokerRBAC(ctx context.Context, ns *corev1.Namespa
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns, corev1.EventTypeNormal, serviceAccountRBACCreated,
+		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, serviceAccountRBACCreated,
 			fmt.Sprintf("RoleBinding '%s/%s' created for the Broker", rb.Namespace, rb.Name))
 		return rb, nil
 	} else if err != nil {
@@ -251,7 +204,7 @@ func (r *Reconciler) reconcileBroker(ctx context.Context, ns *corev1.Namespace) 
 		if err != nil {
 			return nil, err
 		}
-		r.recorder.Event(ns, corev1.EventTypeNormal, brokerCreated,
+		controller.GetEventRecorder(ctx).Event(ns, corev1.EventTypeNormal, brokerCreated,
 			"Default eventing.knative.dev Broker created.")
 		return b, nil
 	} else if err != nil {

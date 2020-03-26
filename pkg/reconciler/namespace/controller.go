@@ -21,13 +21,9 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/scheme"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	client "knative.dev/pkg/client/injection/kube/client"
 	kubeclient "knative.dev/pkg/client/injection/kube/client"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
@@ -44,15 +40,6 @@ type envConfig struct {
 	BrokerPullSecretName string `envconfig:"BROKER_IMAGE_PULL_SECRET_NAME" required:"false"`
 }
 
-const (
-	// ReconcilerName is the name of the reconciler
-	ReconcilerName = "Namespace" // TODO: Namespace is not a very good name for this controller.
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "knative-eventing-namespace-controller"
-)
-
 // NewController initializes the controller and is called by the generated code
 // Registers event handlers to enqueue events
 func NewController(
@@ -66,25 +53,6 @@ func NewController(
 	brokerInformer := broker.Get(ctx)
 	configMapPropagationInformer := configmappropagation.Get(ctx)
 
-	recorder := controller.GetEventRecorder(ctx)
-	if recorder == nil {
-		// Create event broadcaster
-		logger.Debug("Creating event broadcaster")
-		eventBroadcaster := record.NewBroadcaster()
-		watches := []watch.Interface{
-			eventBroadcaster.StartLogging(logger.Named("event-broadcaster").Infof),
-			eventBroadcaster.StartRecordingToSink(
-				&v1.EventSinkImpl{Interface: client.Get(ctx).CoreV1().Events("")}),
-		}
-		recorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
-		go func() {
-			<-ctx.Done()
-			for _, w := range watches {
-				w.Stop()
-			}
-		}()
-	}
-
 	r := &Reconciler{
 		eventingClientSet:          eventingclient.Get(ctx),
 		kubeClientSet:              kubeclient.Get(ctx),
@@ -93,7 +61,6 @@ func NewController(
 		roleBindingLister:          roleBindingInformer.Lister(),
 		brokerLister:               brokerInformer.Lister(),
 		configMapPropagationLister: configMapPropagationInformer.Lister(),
-		recorder:                   recorder,
 	}
 
 	var env envConfig
@@ -102,7 +69,8 @@ func NewController(
 	}
 	r.brokerPullSecretName = env.BrokerPullSecretName
 
-	impl := controller.NewImpl(r, logger, ReconcilerName)
+	impl := namespacereconciler.NewImpl(ctx, r)
+
 	// TODO: filter label selector: on InjectionEnabledLabels()
 
 	logger.Info("Setting up event handlers")

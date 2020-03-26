@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -37,7 +38,7 @@ func TestDispatchMessage(t *testing.T) {
 	testCases := map[string]struct {
 		sendToDestination         bool
 		sendToReply               bool
-		hasDeliveryOptions        bool
+		hasDeadLetterSink         bool
 		eventExtensions           map[string]string
 		header                    http.Header
 		body                      string
@@ -310,8 +311,8 @@ func TestDispatchMessage(t *testing.T) {
 			},
 		},
 		"invalid destination and delivery option": {
-			sendToDestination:  true,
-			hasDeliveryOptions: true,
+			sendToDestination: true,
+			hasDeadLetterSink: true,
 			header: map[string][]string{
 				// do-not-forward should not get forwarded.
 				"do-not-forward": {"header"},
@@ -374,9 +375,9 @@ func TestDispatchMessage(t *testing.T) {
 			},
 		},
 		"destination and invalid reply and delivery option": {
-			sendToDestination:  true,
-			sendToReply:        true,
-			hasDeliveryOptions: true,
+			sendToDestination: true,
+			sendToReply:       true,
+			hasDeadLetterSink: true,
 			header: map[string][]string{
 				// do-not-forward should not get forwarded.
 				"do-not-forward": {"header"},
@@ -490,8 +491,8 @@ func TestDispatchMessage(t *testing.T) {
 
 			var deadLetterSinkHandler *fakeHandler
 			var deadLetterSinkServer *httptest.Server
-			var deliveryOptions *DeliveryOptions
-			if tc.hasDeliveryOptions {
+			var deadLetterSink *url.URL
+			if tc.hasDeadLetterSink {
 				deadLetterSinkHandler = &fakeHandler{
 					t:        t,
 					response: tc.fakeDeadLetterResponse,
@@ -500,8 +501,7 @@ func TestDispatchMessage(t *testing.T) {
 				deadLetterSinkServer = httptest.NewServer(deadLetterSinkHandler)
 				defer deadLetterSinkServer.Close()
 
-				dls := getDomain(t, true, deadLetterSinkServer.URL)
-				deliveryOptions = &DeliveryOptions{DeadLetterSink: dls}
+				deadLetterSink = getOnlyDomainURL(t, true, deadLetterSinkServer.URL)
 			}
 
 			event := cloudevents.NewEvent(cloudevents.VersionV1)
@@ -516,27 +516,30 @@ func TestDispatchMessage(t *testing.T) {
 			ctx := context.Background()
 
 			md := NewMessageDispatcher(zap.NewNop())
-			destination := getDomain(t, tc.sendToDestination, destServer.URL)
-			reply := getDomain(t, tc.sendToReply, replyServer.URL)
 
-			// We need this to eventually setup the default uuid and time now (as the event receiver would do)
+			destination := getOnlyDomainURL(t, tc.sendToDestination, destServer.URL)
+			reply := getOnlyDomainURL(t, tc.sendToReply, replyServer.URL)
+
+			// We need to do message -> event -> message to emulate the same transformers the event receiver would do
 			message := binding.ToMessage(&event)
 			var err error
 			ev, err := binding.ToEvent(ctx, message, binding.TransformerFactories{transformer.AddTimeNow})
 			if err != nil {
 				t.Fatal(err)
 			}
-
 			message = binding.ToMessage(ev)
+			finishInvoked := 0
+			message = binding.WithFinish(message, func(err error) {
+				finishInvoked++
+			})
 
-			if tc.hasDeliveryOptions {
-				err = md.DispatchMessageWithDelivery(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deliveryOptions)
-			} else {
-				err = md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply)
-			}
+			err = md.DispatchMessage(ctx, message, utils.PassThroughHeaders(tc.header), destination, reply, deadLetterSink)
 
 			if tc.expectedErr != (err != nil) {
 				t.Errorf("Unexpected error from DispatchMessage. Expected %v. Actual: %v", tc.expectedErr, err)
+			}
+			if finishInvoked != 1 {
+				t.Errorf("Finish should be invoked exactly one time. Actual: %d", finishInvoked)
 			}
 			if tc.expectedDestRequest != nil {
 				rv := destHandler.popRequest(t)
@@ -561,4 +564,17 @@ func TestDispatchMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func getOnlyDomainURL(t *testing.T, shouldSend bool, serverURL string) *url.URL {
+	if shouldSend {
+		server, err := url.Parse(serverURL)
+		if err != nil {
+			t.Errorf("Bad serverURL: %q", serverURL)
+		}
+		return &url.URL{
+			Host: server.Host,
+		}
+	}
+	return nil
 }

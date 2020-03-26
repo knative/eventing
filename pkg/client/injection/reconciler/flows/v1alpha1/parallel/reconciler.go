@@ -121,14 +121,20 @@ func (r *reconcilerImpl) Reconcile(ctx context.Context, key string) error {
 	ctx = controller.WithEventRecorder(ctx, r.Recorder)
 
 	// Convert the namespace/name string into a distinct namespace and name
+
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+
 	if err != nil {
 		logger.Errorf("invalid resource key: %s", key)
 		return nil
 	}
 
 	// Get the resource with this namespace/name.
-	original, err := r.Lister.Parallels(namespace).Get(name)
+
+	getter := r.Lister.Parallels(namespace)
+
+	original, err := getter.Get(name)
+
 	if errors.IsNotFound(err) {
 		// The resource may no longer exist, in which case we stop processing.
 		logger.Errorf("resource %q no longer exists", key)
@@ -200,7 +206,10 @@ func (r *reconcilerImpl) updateStatus(existing *v1alpha1.Parallel, desired *v1al
 	return reconciler.RetryUpdateConflicts(func(attempts int) (err error) {
 		// The first iteration tries to use the injectionInformer's state, subsequent attempts fetch the latest state via API.
 		if attempts > 0 {
-			existing, err = r.Client.FlowsV1alpha1().Parallels(desired.Namespace).Get(desired.Name, metav1.GetOptions{})
+
+			getter := r.Client.FlowsV1alpha1().Parallels(desired.Namespace)
+
+			existing, err = getter.Get(desired.Name, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -212,7 +221,10 @@ func (r *reconcilerImpl) updateStatus(existing *v1alpha1.Parallel, desired *v1al
 		}
 
 		existing.Status = desired.Status
-		_, err = r.Client.FlowsV1alpha1().Parallels(existing.Namespace).UpdateStatus(existing)
+
+		updater := r.Client.FlowsV1alpha1().Parallels(existing.Namespace)
+
+		_, err = updater.UpdateStatus(existing)
 		return err
 	})
 }
@@ -223,7 +235,9 @@ func (r *reconcilerImpl) updateStatus(existing *v1alpha1.Parallel, desired *v1al
 func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource *v1alpha1.Parallel) (*v1alpha1.Parallel, error) {
 	finalizerName := defaultFinalizerName
 
-	actual, err := r.Lister.Parallels(resource.Namespace).Get(resource.Name)
+	getter := r.Lister.Parallels(resource.Namespace)
+
+	actual, err := getter.Get(resource.Name)
 	if err != nil {
 		return resource, err
 	}
@@ -266,7 +280,9 @@ func (r *reconcilerImpl) updateFinalizersFiltered(ctx context.Context, resource 
 		return resource, err
 	}
 
-	resource, err = r.Client.FlowsV1alpha1().Parallels(resource.Namespace).Patch(resource.Name, types.MergePatchType, patch)
+	patcher := r.Client.FlowsV1alpha1().Parallels(resource.Namespace)
+
+	resource, err = patcher.Patch(resource.Name, types.MergePatchType, patch)
 	if err != nil {
 		r.Recorder.Eventf(resource, v1.EventTypeWarning, "FinalizerUpdateFailed",
 			"Failed to update finalizers for %q: %v", resource.Name, err)
