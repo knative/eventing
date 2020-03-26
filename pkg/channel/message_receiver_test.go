@@ -29,6 +29,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/test"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	"github.com/google/go-cmp/cmp"
+	"go.opencensus.io/trace"
 	_ "knative.dev/pkg/system/testing"
 
 	"knative.dev/eventing/pkg/utils"
@@ -94,6 +95,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 					return err
 				}
 
+				// Check payload
 				var payload string
 				err = e.DataAs(&payload)
 				if err != nil {
@@ -102,23 +104,31 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 				if payload != "event-body" {
 					return fmt.Errorf("test receiver func -- bad payload: %v", payload)
 				}
+
+				// Check headers
 				expectedHeaders := make(nethttp.Header)
 				expectedHeaders.Add("x-requEst-id", "1234")
 				expectedHeaders.Add("knatIve-will-pass-through", "true")
 				expectedHeaders.Add("knatIve-will-pass-through", "always")
-
 				if diff := cmp.Diff(expectedHeaders, additionalHeaders); diff != "" {
 					return fmt.Errorf("test receiver func -- bad headers (-want, +got): %s", diff)
 				}
-				var h interface{}
-				var ok bool
-				if h, ok = e.Extensions()[EventHistory]; !ok {
-					return fmt.Errorf("test receiver func -- history not added: %v", err)
+
+				// Check history
+				if h, ok := e.Extensions()[EventHistory]; !ok {
+					return fmt.Errorf("test receiver func -- history not added")
+				} else {
+					expectedHistory := "test-name.test-namespace.svc." + utils.GetClusterDomainName()
+					if h != expectedHistory {
+						return fmt.Errorf("test receiver func -- bad history: %v", h)
+					}
 				}
-				expectedHistory := "test-name.test-namespace.svc." + utils.GetClusterDomainName()
-				if h != expectedHistory {
-					return fmt.Errorf("test receiver func -- bad history: %v", h)
+
+				// Check traceparent
+				if tr, ok := e.Extensions()["traceparent"]; !ok || tr == "" {
+					return fmt.Errorf("test receiver func -- trace not added or empty: %s", tr)
 				}
+
 				return nil
 			},
 			expected: nethttp.StatusAccepted,
@@ -150,6 +160,8 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			req := httptest.NewRequest(tc.method, "http://"+tc.host+tc.path, nil)
+			reqCtx, _ := trace.StartSpan(context.TODO(), "bla")
+			req = req.WithContext(reqCtx)
 			req.Host = tc.host
 
 			err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req, binding.TransformerFactories{})
@@ -175,7 +187,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	}
 }
 
-func TestMessageReceiverWrongRequest(t *testing.T) {
+func TestMessageReceiver_WrongRequest(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
@@ -194,5 +206,40 @@ func TestMessageReceiverWrongRequest(t *testing.T) {
 	r.ServeHTTP(&res, req)
 	if res.Code != 400 {
 		t.Fatalf("Unexpected status code. Expected 400. Actual %v", res.Code)
+	}
+}
+
+func TestMessageReceiver_UnknownHost(t *testing.T) {
+	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
+
+	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
+		return errors.New("test induced receiver function error")
+	}
+	r, err := NewMessageReceiver(f, zap.NewNop(), ResolveMessageChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
+		return ChannelReference{}, UnknownHostError(s)
+	}))
+	if err != nil {
+		t.Fatalf("Error creating new event receiver. Error:%s", err)
+	}
+
+	event := test.FullEvent()
+	err = event.SetData("text/plain", []byte("event-body"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("POST", "http://localhost:8080/", nil)
+	req.Host = host
+
+	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req, binding.TransformerFactories{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res := httptest.ResponseRecorder{}
+
+	r.ServeHTTP(&res, req)
+	if res.Code != 404 {
+		t.Fatalf("Unexpected status code. Expected 404. Actual %v", res.Code)
 	}
 }
