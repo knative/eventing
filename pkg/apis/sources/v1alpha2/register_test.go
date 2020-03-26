@@ -66,6 +66,8 @@ func TestKnownTypes(t *testing.T) {
 		"SinkBindingList",
 		"PingSource",
 		"PingSourceList",
+		"ContainerSource",
+		"ContainerSourceList",
 	} {
 		if _, ok := types[name]; !ok {
 			t.Errorf("Did not find %q as registered type", name)

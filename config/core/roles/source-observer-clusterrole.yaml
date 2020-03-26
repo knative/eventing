@@ -41,7 +41,8 @@ rules:
     resources:
       - apiserversources
       - pingsources
-      - sinkbinding
+      - sinkbindings
+      - containersources
     verbs:
       - get
       - list

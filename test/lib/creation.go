@@ -301,6 +301,17 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
+// CreateContainerSourceV1Alpha2OrFail will create a ContainerSource.
+func (client *Client) CreateContainerSourceV1Alpha2OrFail(containerSource *sourcesv1alpha2.ContainerSource) {
+	client.T.Logf("Creating containersource %+v", containerSource)
+	containerInterface := client.Eventing.SourcesV1alpha2().ContainerSources(client.Namespace)
+	_, err := containerInterface.Create(containerSource)
+	if err != nil {
+		client.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
+	}
+	client.Tracker.AddObj(containerSource)
+}
+
 // CreatePingSourceV1Alpha1OrFail will create an PingSource
 func (client *Client) CreatePingSourceV1Alpha1OrFail(pingSource *sourcesv1alpha1.PingSource) {
 	client.T.Logf("Creating pingsource %+v", pingSource)

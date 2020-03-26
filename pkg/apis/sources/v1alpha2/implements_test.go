@@ -27,6 +27,9 @@ func TestTypesImplements(t *testing.T) {
 		// PingSource
 		{instance: &PingSource{}, iface: &duckv1.Conditions{}},
 		{instance: &PingSource{}, iface: &duckv1.Source{}},
+		// ContainerSource
+		{instance: &ContainerSource{}, iface: &duckv1.Conditions{}},
+		{instance: &ContainerSource{}, iface: &duckv1.Source{}},
 		// ApiServerSource
 		//{instance: &ApiServerSource{}, iface: &duckv1.Conditions{}},
 		//{instance: &ApiServerSource{}, iface: &duckv1.Source{}},
