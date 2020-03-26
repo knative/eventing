@@ -31,7 +31,7 @@ import (
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	eventingtesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
@@ -67,7 +67,7 @@ func TestContainerSource(t *testing.T) {
 	containerSource := eventingtesting.NewContainerSource(
 		containerSourceName,
 		client.Namespace,
-		eventingtesting.WithContainerSourceSpec(sourcesv1alpha1.ContainerSourceSpec{
+		eventingtesting.WithContainerSourceSpec(sourcesv1alpha2.ContainerSourceSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: templateName,
