@@ -35,7 +35,7 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/logging"
 
-	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/containersource"
+	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/containersource"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
@@ -44,7 +44,7 @@ import (
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 
-	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/utils"
 
 	logtesting "knative.dev/pkg/logging/testing"
@@ -260,7 +260,7 @@ func TestAllCases(t *testing.T) {
 			eventingClientSet:     fakeeventingclient.Get(ctx),
 			containerSourceLister: listers.GetContainerSourceLister(),
 			deploymentLister:      listers.GetDeploymentLister(),
-			sinkBindingLister:     listers.GetSinkBindingLister(),
+			sinkBindingLister:     listers.GetSinkBindingV1alpha2Lister(),
 		}
 		return containersource.NewReconciler(ctx, logging.FromContext(ctx), fakeeventingclient.Get(ctx), listers.GetContainerSourceLister(), controller.GetEventRecorder(ctx), r)
 	},
@@ -269,8 +269,8 @@ func TestAllCases(t *testing.T) {
 	))
 }
 
-func makeSinkBinding(source *sourcesv1alpha1.ContainerSource, ready *corev1.ConditionStatus) *sourcesv1alpha1.SinkBinding {
-	sb := &sourcesv1alpha1.SinkBinding{
+func makeSinkBinding(source *sourcesv1alpha2.ContainerSource, ready *corev1.ConditionStatus) *sourcesv1alpha2.SinkBinding {
+	sb := &sourcesv1alpha2.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
@@ -278,7 +278,7 @@ func makeSinkBinding(source *sourcesv1alpha1.ContainerSource, ready *corev1.Cond
 			Name:      sinkBindingName,
 			Namespace: source.Namespace,
 		},
-		Spec: sourcesv1alpha1.SinkBindingSpec{
+		Spec: sourcesv1alpha2.SinkBindingSpec{
 			SourceSpec: source.Spec.SourceSpec,
 			BindingSpec: duckv1alpha1.BindingSpec{
 				Subject: tracker.Reference{
@@ -296,7 +296,7 @@ func makeSinkBinding(source *sourcesv1alpha1.ContainerSource, ready *corev1.Cond
 	return sb
 }
 
-func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.ConditionStatus) *appsv1.Deployment {
+func makeDeployment(source *sourcesv1alpha2.ContainerSource, available *corev1.ConditionStatus) *appsv1.Deployment {
 	template := source.Spec.Template
 
 	if template.Labels == nil {
@@ -342,7 +342,7 @@ func makeDeployment(source *sourcesv1alpha1.ContainerSource, available *corev1.C
 
 func getOwnerReferences() []metav1.OwnerReference {
 	return []metav1.OwnerReference{{
-		APIVersion:         sourcesv1alpha1.SchemeGroupVersion.String(),
+		APIVersion:         sourcesv1alpha2.SchemeGroupVersion.String(),
 		Kind:               "ContainerSource",
 		Name:               sourceName,
 		Controller:         &trueVal,
@@ -351,8 +351,8 @@ func getOwnerReferences() []metav1.OwnerReference {
 	}}
 }
 
-func makeContainerSourceSpec(sink duckv1.Destination) sourcesv1alpha1.ContainerSourceSpec {
-	return sourcesv1alpha1.ContainerSourceSpec{
+func makeContainerSourceSpec(sink duckv1.Destination) sourcesv1alpha2.ContainerSourceSpec {
+	return sourcesv1alpha2.ContainerSourceSpec{
 		Template: corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -370,8 +370,8 @@ func makeContainerSourceSpec(sink duckv1.Destination) sourcesv1alpha1.ContainerS
 	}
 }
 
-func makeSinkBindingStatus(ready *corev1.ConditionStatus) *sourcesv1alpha1.SinkBindingStatus {
-	return &sourcesv1alpha1.SinkBindingStatus{
+func makeSinkBindingStatus(ready *corev1.ConditionStatus) *sourcesv1alpha2.SinkBindingStatus {
+	return &sourcesv1alpha2.SinkBindingStatus{
 		SourceStatus: duckv1.SourceStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{

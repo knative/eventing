@@ -19,7 +19,7 @@ package resources
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
 	"knative.dev/pkg/tracker"
@@ -27,10 +27,10 @@ import (
 
 var subjectGVK = appsv1.SchemeGroupVersion.WithKind("Deployment")
 
-func MakeSinkBinding(source *v1alpha1.ContainerSource) *v1alpha1.SinkBinding {
+func MakeSinkBinding(source *v1alpha2.ContainerSource) *v1alpha2.SinkBinding {
 	subjectAPIVersion, subjectKind := subjectGVK.ToAPIVersionAndKind()
 
-	sb := &v1alpha1.SinkBinding{
+	sb := &v1alpha2.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
@@ -38,7 +38,7 @@ func MakeSinkBinding(source *v1alpha1.ContainerSource) *v1alpha1.SinkBinding {
 			Name:      SinkBindingName(source),
 			Namespace: source.Namespace,
 		},
-		Spec: v1alpha1.SinkBindingSpec{
+		Spec: v1alpha2.SinkBindingSpec{
 			SourceSpec: source.Spec.SourceSpec,
 			BindingSpec: duckv1alpha1.BindingSpec{
 				Subject: tracker.Reference{
