@@ -24,14 +24,13 @@ import (
 
 	// Fake injection informers
 	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/containersource/fake"
-	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/sinkbinding/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )
 
 func TestNew(t *testing.T) {
 	ctx, _ := SetupFakeContext(t)
-	ctx = addressable.WithDuck(ctx)
 
 	c := NewController(ctx, configmap.NewStaticWatcher())
 

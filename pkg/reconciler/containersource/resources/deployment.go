@@ -40,7 +40,7 @@ func MakeDeployment(source *v1alpha1.ContainerSource) *appsv1.Deployment {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kmeta.ChildName(source.Name, "-containersource" /*suffix*/),
+			Name:      DeploymentName(source),
 			Namespace: source.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),

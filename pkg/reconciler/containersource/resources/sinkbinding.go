@@ -35,7 +35,7 @@ func MakeSinkBinding(source *v1alpha1.ContainerSource) *v1alpha1.SinkBinding {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
-			Name:      kmeta.ChildName(source.Name, "-containersource" /*suffix*/),
+			Name:      SinkBindingName(source),
 			Namespace: source.Namespace,
 		},
 		Spec: v1alpha1.SinkBindingSpec{
@@ -44,9 +44,8 @@ func MakeSinkBinding(source *v1alpha1.ContainerSource) *v1alpha1.SinkBinding {
 				Subject: tracker.Reference{
 					APIVersion: subjectAPIVersion,
 					Kind:       subjectKind,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: Labels(source.Name),
-					},
+					Namespace:  source.Namespace,
+					Name:       DeploymentName(source),
 				},
 			},
 		},

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -34,13 +35,23 @@ import (
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/containersource/resources"
+	"knative.dev/pkg/controller"
 	pkgreconciler "knative.dev/pkg/reconciler"
+)
+
+const (
+	// Name of the corev1.Events emitted from the reconciliation process
+	sourceReconciled   = "ContainerSourceReconciled"
+	deploymentCreated  = "ContainerSourceDeploymentCreated"
+	deploymentUpdated  = "ContainerSourceDeploymentUpdated"
+	sinkBindingCreated = "ContainerSourceSinkBindingCreated"
+	sinkBindingUpdated = "ContainerSourceSinkBindingUpdated"
 )
 
 // newReconciledNormal makes a new reconciler event with event type Normal, and
 // reason ContainerSourceReconciled.
 func newReconciledNormal(namespace, name string) pkgreconciler.Event {
-	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ContainerSourceReconciled", "ContainerSource reconciled: \"%s/%s\"", namespace, name)
+	return pkgreconciler.NewEvent(corev1.EventTypeNormal, sourceReconciled, "ContainerSource reconciled: \"%s/%s\"", namespace, name)
 }
 
 // Reconciler implements controller.Reconciler for ContainerSource resources.
@@ -87,7 +98,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alph
 		if err != nil {
 			return nil, fmt.Errorf("creating new Deployment: %v", err)
 		}
-		return ra, nil
+		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, deploymentCreated, "Deployment created %q", ra.Name)
 	} else if err != nil {
 		return nil, fmt.Errorf("getting Deployment: %v", err)
 	} else if !metav1.IsControlledBy(ra, source) {
@@ -98,7 +109,7 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alph
 		if err != nil {
 			return nil, fmt.Errorf("updating Deployment: %v", err)
 		}
-		return ra, nil
+		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, deploymentUpdated, "Deployment updated %q", ra.Name)
 	} else {
 		logging.FromContext(ctx).Debug("Reusing existing Deployment", zap.Any("Deployment", ra))
 	}
@@ -107,33 +118,33 @@ func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alph
 	return ra, nil
 }
 
-func (r *Reconciler) reconcileSinkBinding(ctx context.Context, src *v1alpha1.ContainerSource) (*v1alpha1.SinkBinding, error) {
+func (r *Reconciler) reconcileSinkBinding(ctx context.Context, source *v1alpha1.ContainerSource) (*v1alpha1.SinkBinding, error) {
 
-	expected := resources.MakeSinkBinding(src)
+	expected := resources.MakeSinkBinding(source)
 
-	sb, err := r.sinkBindingLister.SinkBindings(src.Namespace).Get(expected.Name)
+	sb, err := r.sinkBindingLister.SinkBindings(source.Namespace).Get(expected.Name)
 	if apierrors.IsNotFound(err) {
-		sb, err = r.eventingClientSet.SourcesV1alpha1().SinkBindings(src.Namespace).Create(expected)
+		sb, err = r.eventingClientSet.SourcesV1alpha1().SinkBindings(source.Namespace).Create(expected)
 		if err != nil {
 			return nil, fmt.Errorf("creating new SinkBinding: %v", err)
 		}
-		return sb, err
+		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, sinkBindingCreated, "SinkBinding created %q", sb.Name)
 	} else if err != nil {
 		return nil, fmt.Errorf("getting SinkBinding: %v", err)
-	} else if !metav1.IsControlledBy(sb, src) {
-		return nil, fmt.Errorf("SinkBinding %q is not owned by ContainerSource %q", sb.Name, src.Name)
+	} else if !metav1.IsControlledBy(sb, source) {
+		return nil, fmt.Errorf("SinkBinding %q is not owned by ContainerSource %q", sb.Name, source.Name)
 	} else if r.sinkBindingSpecChanged(&sb.Spec, &expected.Spec) {
 		sb.Spec = expected.Spec
-		sb, err = r.eventingClientSet.SourcesV1alpha1().SinkBindings(src.Namespace).Update(sb)
+		sb, err = r.eventingClientSet.SourcesV1alpha1().SinkBindings(source.Namespace).Update(sb)
 		if err != nil {
 			return nil, fmt.Errorf("updating SinkBinding: %v", err)
 		}
-		return sb, nil
+		controller.GetEventRecorder(ctx).Eventf(source, corev1.EventTypeNormal, sinkBindingUpdated, "SinkBinding updated %q", sb.Name)
 	} else {
 		logging.FromContext(ctx).Debug("Reusing existing SinkBinding", zap.Any("SinkBinding", sb))
 	}
 
-	src.Status.PropagateSinkBindingStatus(&sb.Status)
+	source.Status.PropagateSinkBindingStatus(&sb.Status)
 	return sb, nil
 }
 

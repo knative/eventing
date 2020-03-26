@@ -87,7 +87,7 @@ func TestMakeDeployment(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-containersource", name),
+					Name:      fmt.Sprintf("%s-deployment", name),
 					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.knative.dev/v1alpha1",
@@ -209,7 +209,7 @@ func TestMakeDeployment(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-containersource", name),
+					Name:      fmt.Sprintf("%s-deployment", name),
 					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.knative.dev/v1alpha1",

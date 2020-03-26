@@ -57,13 +57,17 @@ func (s *ContainerSourceStatus) InitializeConditions() {
 // PropagateSinkBindingStatus uses the availability of the provided Deployment to determine if
 // ContainerSourceConditionSinkBindingReady should be marked as true, false or unknown.
 func (s *ContainerSourceStatus) PropagateSinkBindingStatus(status *SinkBindingStatus) {
-	// Do not copy conditions.
+	// Do not copy conditions nor observedGeneration
 	conditions := s.Conditions
+	observedGeneration := s.ObservedGeneration
 	s.SourceStatus = status.SourceStatus
 	s.Conditions = conditions
+	s.ObservedGeneration = observedGeneration
 
 	cond := status.GetCondition(apis.ConditionReady)
 	switch {
+	case cond == nil:
+		containerCondSet.Manage(s).MarkUnknown(ContainerSourceConditionSinkBindingReady, "", "")
 	case cond.Status == corev1.ConditionTrue:
 		containerCondSet.Manage(s).MarkTrue(ContainerSourceConditionSinkBindingReady)
 	case cond.Status == corev1.ConditionFalse:

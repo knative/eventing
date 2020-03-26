@@ -81,7 +81,7 @@ func TestMakeSinkBinding(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
 			},
-			Name:      fmt.Sprintf("%s-containersource", source.Name),
+			Name:      fmt.Sprintf("%s-sinkbinding", source.Name),
 			Namespace: source.Namespace,
 		},
 		Spec: v1alpha1.SinkBindingSpec{
@@ -90,9 +90,8 @@ func TestMakeSinkBinding(t *testing.T) {
 				Subject: tracker.Reference{
 					APIVersion: subjectGVK.GroupVersion().String(),
 					Kind:       subjectGVK.Kind,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: Labels(source.Name),
-					},
+					Namespace:  source.Namespace,
+					Name:       DeploymentName(source),
 				},
 			},
 		},
