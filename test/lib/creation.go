@@ -301,10 +301,10 @@ func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alph
 	client.Tracker.AddObj(apiServerSource)
 }
 
-// CreateContainerSourceV1Alpha1OrFail will create a ContainerSource.
-func (client *Client) CreateContainerSourceV1Alpha1OrFail(containerSource *sourcesv1alpha1.ContainerSource) {
+// CreateContainerSourceV1Alpha2OrFail will create a ContainerSource.
+func (client *Client) CreateContainerSourceV1Alpha2OrFail(containerSource *sourcesv1alpha2.ContainerSource) {
 	client.T.Logf("Creating containersource %+v", containerSource)
-	containerInterface := client.Eventing.SourcesV1alpha1().ContainerSources(client.Namespace)
+	containerInterface := client.Eventing.SourcesV1alpha2().ContainerSources(client.Namespace)
 	_, err := containerInterface.Create(containerSource)
 	if err != nil {
 		client.T.Fatalf("Failed to create containersource %q: %v", containerSource.Name, err)
