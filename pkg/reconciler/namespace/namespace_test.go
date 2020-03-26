@@ -31,6 +31,7 @@ import (
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/reconciler/namespace/resources"
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
+	namespacereconciler "knative.dev/pkg/client/injection/kube/reconciler/core/v1/namespace"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	logtesting "knative.dev/pkg/logging/testing"
@@ -77,8 +78,7 @@ func TestAllCases(t *testing.T) {
 	saFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountCreated", "ServiceAccount 'eventing-broker-filter' created for the Broker")
 	rbFilterEvent := Eventf(corev1.EventTypeNormal, "BrokerServiceAccountRBACCreated", "RoleBinding 'test-namespace/eventing-broker-filter' created for the Broker")
 	brokerEvent := Eventf(corev1.EventTypeNormal, "BrokerCreated", "Default eventing.knative.dev Broker created.")
-	nsEvent := Eventf(corev1.EventTypeNormal, "NamespaceReconciled", "Namespace reconciled: \"test-namespace\"")
-	nsEventFailure := Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: broker ingress: Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
+	nsEventFailure := Eventf(corev1.EventTypeWarning, "InternalError", "broker ingress: Error copying secret knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress : secrets \"broker-image-pull-secret\" not found")
 
 	secretEventFilter := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-filter")
 	secretEventIngress := Eventf(corev1.EventTypeNormal, "SecretCopied", "Secret copied into namespace knative-testing/broker-image-pull-secret => test-namespace/eventing-broker-ingress")
@@ -130,9 +130,6 @@ func TestAllCases(t *testing.T) {
 			),
 		},
 		Key: testNS,
-		WantEvents: []string{
-			nsEvent,
-		},
 	}, {
 		Name: "Namespace enabled",
 		Objects: []runtime.Object{
@@ -152,7 +149,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -208,7 +204,7 @@ func TestAllCases(t *testing.T) {
 			InduceFailure("create", "configmappropagations"),
 		},
 		WantEvents: []string{
-			Eventf(corev1.EventTypeWarning, "NamespaceReconcileFailure", "Failed to reconcile Namespace: configMapPropagation: inducing failure for create configmappropagations"),
+			Eventf(corev1.EventTypeWarning, "InternalError", "configMapPropagation: inducing failure for create configmappropagations"),
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -234,7 +230,6 @@ func TestAllCases(t *testing.T) {
 			saFilterEvent,
 			rbFilterEvent,
 			secretEventFilter,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -285,7 +280,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -320,7 +314,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -355,7 +348,6 @@ func TestAllCases(t *testing.T) {
 			rbFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -390,7 +382,6 @@ func TestAllCases(t *testing.T) {
 			saFilterEvent,
 			secretEventFilter,
 			brokerEvent,
-			nsEvent,
 		},
 		WantCreates: []runtime.Object{
 			configMapPropagation,
@@ -424,7 +415,6 @@ func TestAllCases(t *testing.T) {
 			roleBindingLister:          listers.GetRoleBindingLister(),
 			configMapPropagationLister: listers.GetConfigMapPropagationLister(),
 			brokerPullSecretName:       brokerImagePullSecretName,
-			recorder:                   controller.GetEventRecorder(ctx),
 		}
 
 		// only create secret in required tests
@@ -441,7 +431,9 @@ func TestAllCases(t *testing.T) {
 			}
 		}
 		testNum++
-		return r
+		return namespacereconciler.NewReconciler(ctx, logger,
+			fakekubeclient.Get(ctx), listers.GetNamespaceLister(),
+			controller.GetEventRecorder(ctx), r)
 	}, false, logger))
 }
 
