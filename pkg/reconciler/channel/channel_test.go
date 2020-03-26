@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"testing"
 
-	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -32,42 +30,29 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 	eventingduckv1alpha1 "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/ducks/duck/v1alpha1/channelable"
+	channelreconciler "knative.dev/eventing/pkg/client/injection/reconciler/messaging/v1alpha1/channel"
 	"knative.dev/eventing/pkg/duck"
-	"knative.dev/eventing/pkg/reconciler"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 	logtesting "knative.dev/pkg/logging/testing"
 	. "knative.dev/pkg/reconciler/testing"
 )
 
 const (
-	testNS              = "test-namespace"
-	channelName         = "test-channel"
-	controllerAgentName = "ch-default-controller"
+	testNS      = "test-namespace"
+	channelName = "test-channel"
 )
 
 var (
-	trueVal = true
-
 	testKey = fmt.Sprintf("%s/%s", testNS, channelName)
 
 	backingChannelHostname = fmt.Sprintf("foo.bar.svc.%s", utils.GetClusterDomainName())
-
-	channelGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "Channel",
-	}
-
-	imcGVK = metav1.GroupVersionKind{
-		Group:   "messaging.knative.dev",
-		Version: "v1alpha1",
-		Kind:    "InMemoryChannel",
-	}
 )
 
 func init() {
@@ -265,13 +250,14 @@ func TestReconcile(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		ctx = channelable.WithDuck(ctx)
-		base := reconciler.NewBase(ctx, controllerAgentName, cmw)
 		r := &Reconciler{
-			dynamicClientSet:   base.DynamicClientSet,
+			dynamicClientSet:   fakedynamicclient.Get(ctx),
 			channelLister:      listers.GetMessagingChannelLister(),
 			channelableTracker: duck.NewListableTracker(ctx, channelable.Get, func(types.NamespacedName) {}, 0),
 		}
-		return channelreconciler.NewReconciler(ctx, base.Logger, base.EventingClientSet, listers.GetMessagingChannelLister(), base.Recorder, r)
+		return channelreconciler.NewReconciler(ctx, logger,
+			fakeeventingclient.Get(ctx), listers.GetMessagingChannelLister(),
+			controller.GetEventRecorder(ctx), r)
 	},
 		false,
 		logger,
@@ -312,7 +298,7 @@ func subscriberStatuses() []eventingduckv1alpha1.SubscriberStatus {
 }
 
 func createChannelCRD(namespace, name string, ready bool) *unstructured.Unstructured {
-	unstructured := &unstructured.Unstructured{
+	u := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "messaging.knative.dev/v1alpha1",
 			"kind":       "InMemoryChannel",
@@ -334,14 +320,14 @@ func createChannelCRD(namespace, name string, ready bool) *unstructured.Unstruct
 		},
 	}
 	if ready {
-		unstructured.Object["status"] = map[string]interface{}{
+		u.Object["status"] = map[string]interface{}{
 			"address": map[string]interface{}{
 				"hostname": backingChannelHostname,
 				"url":      fmt.Sprintf("http://%s", backingChannelHostname),
 			},
 		}
 	}
-	return unstructured
+	return u
 }
 
 func backingChannelObjRef() *corev1.ObjectReference {

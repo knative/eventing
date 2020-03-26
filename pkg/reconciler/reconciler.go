@@ -40,6 +40,7 @@ import (
 )
 
 // Base implements the core controller logic, given a Reconciler.
+// Deprecated: import is required directly.
 type Base struct {
 	// KubeClientSet allows us to talk to the k8s for core APIs
 	KubeClientSet kubernetes.Interface
@@ -70,6 +71,7 @@ type Base struct {
 
 // NewBase instantiates a new instance of Base implementing
 // the common & boilerplate code between our reconcilers.
+// Deprecated: import is required directly.
 func NewBase(ctx context.Context, controllerAgentName string, cmw configmap.Watcher) *Base {
 	// Enrich the logs with controller name
 	logger := logging.FromContext(ctx).
