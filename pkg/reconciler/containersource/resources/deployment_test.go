@@ -38,47 +38,45 @@ const (
 func TestMakeDeployment(t *testing.T) {
 	yes := true
 	tests := []struct {
-		name string
-		args ContainerSourceArgs
-		want *appsv1.Deployment
+		name   string
+		source *v1alpha1.ContainerSource
+		want   *appsv1.Deployment
 	}{
 		{
 			name: "valid container source with one container",
-			args: ContainerSourceArgs{
-				Source: &v1alpha1.ContainerSource{
-					ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
-					Spec: v1alpha1.ContainerSourceSpec{
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								ServiceAccountName: "test-service-account",
-								Containers: []corev1.Container{
-									{
-										Name:  "test-source",
-										Image: "test-image",
-										Args:  []string{"--test1=args1", "--test2=args2"},
-										Env: []corev1.EnvVar{
-											{
-												Name:  "test1",
-												Value: "arg1",
-											},
-											{
-												Name: "test2",
-												ValueFrom: &corev1.EnvVarSource{
-													SecretKeyRef: &corev1.SecretKeySelector{
-														Key: "test2-secret",
-													},
+			source: &v1alpha1.ContainerSource{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
+				Spec: v1alpha1.ContainerSourceSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							ServiceAccountName: "test-service-account",
+							Containers: []corev1.Container{
+								{
+									Name:  "test-source",
+									Image: "test-image",
+									Args:  []string{"--test1=args1", "--test2=args2"},
+									Env: []corev1.EnvVar{
+										{
+											Name:  "test1",
+											Value: "arg1",
+										},
+										{
+											Name: "test2",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													Key: "test2-secret",
 												},
 											},
 										},
-										ImagePullPolicy: corev1.PullIfNotPresent,
 									},
+									ImagePullPolicy: corev1.PullIfNotPresent,
 								},
 							},
 						},
-						SourceSpec: duckv1.SourceSpec{
-							Sink: duckv1.Destination{
-								URI: apis.HTTP("test-sink"),
-							},
+					},
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							URI: apis.HTTP("test-sink"),
 						},
 					},
 				},
@@ -89,7 +87,7 @@ func TestMakeDeployment(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+					Name:      fmt.Sprintf("%s-containersource", name),
 					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.knative.dev/v1alpha1",
@@ -139,13 +137,6 @@ func TestMakeDeployment(t *testing.T) {
 													Key: "test2-secret",
 												},
 											},
-										}, {
-											Name:  "K_SINK",
-											Value: "http://test-sink",
-										},
-										{
-											Name:  "K_CE_OVERRIDES",
-											Value: "",
 										}},
 									ImagePullPolicy: corev1.PullIfNotPresent,
 								},
@@ -158,47 +149,45 @@ func TestMakeDeployment(t *testing.T) {
 
 		{
 			name: "valid container source with two containers",
-			args: ContainerSourceArgs{
-				Source: &v1alpha1.ContainerSource{
-					ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
-					Spec: v1alpha1.ContainerSourceSpec{
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								ServiceAccountName: "test-service-account",
-								Containers: []corev1.Container{
-									{
-										Image: "test-image",
-										Args:  []string{"--test1=args1", "--test2=args2"},
-										Env: []corev1.EnvVar{
-											{
-												Name:  "test1",
-												Value: "arg1",
-											},
-											{
-												Name: "test2",
-												ValueFrom: &corev1.EnvVarSource{
-													SecretKeyRef: &corev1.SecretKeySelector{
-														Key: "test2-secret",
-													},
+			source: &v1alpha1.ContainerSource{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test-namespace", UID: uid},
+				Spec: v1alpha1.ContainerSourceSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							ServiceAccountName: "test-service-account",
+							Containers: []corev1.Container{
+								{
+									Image: "test-image",
+									Args:  []string{"--test1=args1", "--test2=args2"},
+									Env: []corev1.EnvVar{
+										{
+											Name:  "test1",
+											Value: "arg1",
+										},
+										{
+											Name: "test2",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													Key: "test2-secret",
 												},
 											},
 										},
-										ImagePullPolicy: corev1.PullIfNotPresent,
 									},
-									{
-										Image: "test-image2",
-										Args:  []string{"--test3=args3", "--test4=args4"},
-										Env: []corev1.EnvVar{
-											{
-												Name:  "test3",
-												Value: "arg3",
-											},
-											{
-												Name: "test4",
-												ValueFrom: &corev1.EnvVarSource{
-													SecretKeyRef: &corev1.SecretKeySelector{
-														Key: "test4-secret",
-													},
+									ImagePullPolicy: corev1.PullIfNotPresent,
+								},
+								{
+									Image: "test-image2",
+									Args:  []string{"--test3=args3", "--test4=args4"},
+									Env: []corev1.EnvVar{
+										{
+											Name:  "test3",
+											Value: "arg3",
+										},
+										{
+											Name: "test4",
+											ValueFrom: &corev1.EnvVarSource{
+												SecretKeyRef: &corev1.SecretKeySelector{
+													Key: "test4-secret",
 												},
 											},
 										},
@@ -206,10 +195,10 @@ func TestMakeDeployment(t *testing.T) {
 								},
 							},
 						},
-						SourceSpec: duckv1.SourceSpec{
-							Sink: duckv1.Destination{
-								URI: apis.HTTP("test-sink"),
-							},
+					},
+					SourceSpec: duckv1.SourceSpec{
+						Sink: duckv1.Destination{
+							URI: apis.HTTP("test-sink"),
 						},
 					},
 				},
@@ -220,7 +209,7 @@ func TestMakeDeployment(t *testing.T) {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("containersource-%s-%s", name, uid),
+					Name:      fmt.Sprintf("%s-containersource", name),
 					Namespace: "test-namespace",
 					OwnerReferences: []metav1.OwnerReference{{
 						APIVersion:         "sources.knative.dev/v1alpha1",
@@ -269,13 +258,6 @@ func TestMakeDeployment(t *testing.T) {
 													Key: "test2-secret",
 												},
 											},
-										}, {
-											Name:  "K_SINK",
-											Value: "http://test-sink",
-										},
-										{
-											Name:  "K_CE_OVERRIDES",
-											Value: "",
 										},
 									},
 									ImagePullPolicy: corev1.PullIfNotPresent,
@@ -299,14 +281,6 @@ func TestMakeDeployment(t *testing.T) {
 												},
 											},
 										},
-										{
-											Name:  "K_SINK",
-											Value: "http://test-sink",
-										},
-										{
-											Name:  "K_CE_OVERRIDES",
-											Value: "",
-										},
 									},
 								},
 							},
@@ -319,9 +293,8 @@ func TestMakeDeployment(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			test.args.Labels = Labels(name)
-			test.args.SinkURI = apis.HTTP("test-sink")
-			got := MakeDeployment(&test.args)
+			test.source.Labels = Labels(name)
+			got := MakeDeployment(test.source)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("unexpected deploy (-want, +got) = %v", diff)
 			}

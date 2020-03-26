@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (
@@ -53,6 +54,34 @@ var (
 			},
 		},
 	}
+
+	readySinkBinding = &SinkBinding{
+		Status: SinkBindingStatus{
+			SourceStatus: duckv1.SourceStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:   apis.ConditionReady,
+						Status: corev1.ConditionTrue,
+					}},
+				},
+			},
+		},
+	}
+
+	notReadySinkBinding = &SinkBinding{
+		Status: SinkBindingStatus{
+			SourceStatus: duckv1.SourceStatus{
+				Status: duckv1.Status{
+					Conditions: []apis.Condition{{
+						Type:    apis.ConditionReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  "Testing",
+						Message: "hi",
+					}},
+				},
+			},
+		},
+	}
 )
 
 func TestContainerSourceStatusIsReady(t *testing.T) {
@@ -73,83 +102,73 @@ func TestContainerSourceStatusIsReady(t *testing.T) {
 		}(),
 		want: false,
 	}, {
-		name: "mark deployed",
+		name: "mark ready ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(availDeployment)
+			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
 		want: false,
 	}, {
-		name: "mark sink",
+		name: "mark ready sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
 		want: false,
 	}, {
-		name: "mark sink and deployed",
+		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
-			s.PropagateDeploymentAvailability(availDeployment)
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
 		want: true,
 	}, {
-		name: "mark sink and deployed then no sink",
+		name: "mark ready sb and ra the no sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
-			s.PropagateDeploymentAvailability(availDeployment)
-			s.MarkNoSink("Testing", "")
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
+			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			return s
 		}(),
 		want: false,
 	}, {
-		name: "mark sink and deployed then not deployed",
+		name: "mark ready sb and ra then not ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
-			s.PropagateDeploymentAvailability(availDeployment)
-			s.PropagateDeploymentAvailability(unavailDeployment)
+			s.PropagateReceiveAdapterStatus(availDeployment)
+			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(unavailDeployment)
 			return s
 		}(),
 		want: false,
 	}, {
-		name: "mark sink nil and deployed",
+		name: "mark not ready sb and ready ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availDeployment)
+			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
 		want: false,
 	}, {
-		name: "mark sink empty and deployed",
+		name: "mark not ready sb and ra then ready sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(&apis.URL{})
-			s.PropagateDeploymentAvailability(availDeployment)
-			return s
-		}(),
-		want: false,
-	}, {
-		name: "mark sink nil and deployed then sink",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availDeployment)
-			s.MarkSink(apis.HTTP("example"))
+			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
 		want: true,
@@ -174,7 +193,7 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 	}{{
 		name:      "uninitialized",
 		s:         &ContainerSourceStatus{},
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want:      nil,
 	}, {
 		name: "initialized",
@@ -183,130 +202,98 @@ func TestContainerSourceStatusGetCondition(t *testing.T) {
 			s.InitializeConditions()
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:   ContainerConditionReady,
+			Type:   ContainerSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
-		name: "mark deployed",
+		name: "mark ready ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.PropagateDeploymentAvailability(availDeployment)
+			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:   ContainerConditionReady,
+			Type:   ContainerSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
-		name: "mark sink",
+		name: "mark ready sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:   ContainerConditionReady,
+			Type:   ContainerSourceConditionReady,
 			Status: corev1.ConditionUnknown,
 		},
 	}, {
-		name: "mark sink and deployed",
+		name: "mark ready sb and ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
-			s.PropagateDeploymentAvailability(availDeployment)
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:   ContainerConditionReady,
+			Type:   ContainerSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}, {
-		name: "mark sink and deployed then no sink",
+		name: "mark ready sb and ra then no sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
-			s.PropagateDeploymentAvailability(availDeployment)
-			s.MarkNoSink("Testing", "hi%s", "")
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
+			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:    ContainerConditionReady,
+			Type:    ContainerSourceConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Testing",
 			Message: "hi",
 		},
 	}, {
-		name: "mark sink and deployed then not deployed",
+		name: "mark ready sb and ra then no ra",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(apis.HTTP("example"))
-			s.PropagateDeploymentAvailability(availDeployment)
-			s.PropagateDeploymentAvailability(unavailDeployment)
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
+			s.PropagateReceiveAdapterStatus(unavailDeployment)
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:    ContainerConditionReady,
+			Type:    ContainerSourceConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "DeploymentUnavailable",
 			Message: "The Deployment 'test-name' is unavailable.",
 		},
 	}, {
-		name: "mark sink nil and deployed",
+		name: "mark not ready sb and ready ra then ready sb",
 		s: func() *ContainerSourceStatus {
 			s := &ContainerSourceStatus{}
 			s.InitializeConditions()
-			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availDeployment)
+			s.PropagateSinkBindingStatus(&notReadySinkBinding.Status)
+			s.PropagateReceiveAdapterStatus(availDeployment)
+			s.PropagateSinkBindingStatus(&readySinkBinding.Status)
 			return s
 		}(),
-		condQuery: ContainerConditionReady,
+		condQuery: ContainerSourceConditionReady,
 		want: &apis.Condition{
-			Type:    ContainerConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  "SinkEmpty",
-			Message: "Sink has resolved to empty.",
-		},
-	}, {
-		name: "mark sink empty and deployed",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.MarkSink(&apis.URL{})
-			s.PropagateDeploymentAvailability(availDeployment)
-			return s
-		}(),
-		condQuery: ContainerConditionReady,
-		want: &apis.Condition{
-			Type:    ContainerConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  "SinkEmpty",
-			Message: "Sink has resolved to empty.",
-		},
-	}, {
-		name: "mark sink nil and deployed then sink",
-		s: func() *ContainerSourceStatus {
-			s := &ContainerSourceStatus{}
-			s.InitializeConditions()
-			s.MarkSink(nil)
-			s.PropagateDeploymentAvailability(availDeployment)
-			s.MarkSink(apis.HTTP("example"))
-			return s
-		}(),
-		condQuery: ContainerConditionReady,
-		want: &apis.Condition{
-			Type:   ContainerConditionReady,
+			Type:   ContainerSourceConditionReady,
 			Status: corev1.ConditionTrue,
 		},
 	}}

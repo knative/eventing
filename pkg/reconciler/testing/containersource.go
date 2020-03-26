@@ -23,8 +23,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/apis"
-
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
@@ -57,33 +55,15 @@ func WithInitContainerSourceConditions(s *sourcesv1alpha1.ContainerSource) {
 	s.Status.InitializeConditions()
 }
 
-func WithContainerSourceSinkNotFound(msg string) ContainerSourceOption {
+func WithContainerSourcePropagateReceiveAdapterStatus(d *appsv1.Deployment) ContainerSourceOption {
 	return func(s *sourcesv1alpha1.ContainerSource) {
-		s.Status.MarkNoSink("SinkNotFound", msg)
+		s.Status.PropagateReceiveAdapterStatus(d)
 	}
 }
 
-func WithContainerSourceSinkMissing(msg string) ContainerSourceOption {
+func WithContainerSourcePropagateSinkbindingStatus(status *sourcesv1alpha1.SinkBindingStatus) ContainerSourceOption {
 	return func(s *sourcesv1alpha1.ContainerSource) {
-		s.Status.MarkNoSink("Missing", msg)
-	}
-}
-
-func WithContainerSourceSink(uri *apis.URL) ContainerSourceOption {
-	return func(s *sourcesv1alpha1.ContainerSource) {
-		s.Status.MarkSink(uri)
-	}
-}
-
-func WithContainerSourcePropagateDeploymentAvailability(d *appsv1.Deployment) ContainerSourceOption {
-	return func(s *sourcesv1alpha1.ContainerSource) {
-		s.Status.PropagateDeploymentAvailability(d)
-	}
-}
-
-func WithContainerSourceDeployFailed(msg string) ContainerSourceOption {
-	return func(s *sourcesv1alpha1.ContainerSource) {
-		s.Status.MarkNotDeployed("DeploymentReconcileFailed", msg)
+		s.Status.PropagateSinkBindingStatus(status)
 	}
 }
 
