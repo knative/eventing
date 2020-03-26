@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/kmeta"
@@ -38,9 +38,9 @@ const (
 )
 
 func TestMakeSinkBinding(t *testing.T) {
-	source := &v1alpha1.ContainerSource{
+	source := &v1alpha2.ContainerSource{
 		ObjectMeta: metav1.ObjectMeta{Name: containerSourceName, Namespace: "test-namespace", UID: containerSourceUID},
-		Spec: v1alpha1.ContainerSourceSpec{
+		Spec: v1alpha2.ContainerSourceSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					ServiceAccountName: "test-service-account",
@@ -76,7 +76,7 @@ func TestMakeSinkBinding(t *testing.T) {
 		},
 	}
 
-	want := &v1alpha1.SinkBinding{
+	want := &v1alpha2.SinkBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(source),
@@ -84,7 +84,7 @@ func TestMakeSinkBinding(t *testing.T) {
 			Name:      fmt.Sprintf("%s-sinkbinding", source.Name),
 			Namespace: source.Namespace,
 		},
-		Spec: v1alpha1.SinkBindingSpec{
+		Spec: v1alpha2.SinkBindingSpec{
 			SourceSpec: source.Spec.SourceSpec,
 			BindingSpec: duckv1alpha1.BindingSpec{
 				Subject: tracker.Reference{

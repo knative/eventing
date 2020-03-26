@@ -17,14 +17,14 @@ limitations under the License.
 package resources
 
 import (
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/kmeta"
 )
 
-func DeploymentName(source *v1alpha1.ContainerSource) string {
+func DeploymentName(source *v1alpha2.ContainerSource) string {
 	return kmeta.ChildName(source.Name, "-deployment")
 }
 
-func SinkBindingName(source *v1alpha1.ContainerSource) string {
+func SinkBindingName(source *v1alpha2.ContainerSource) string {
 	return kmeta.ChildName(source.Name, "-sinkbinding")
 }
