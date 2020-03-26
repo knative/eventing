@@ -27,6 +27,7 @@ import (
 
 	"knative.dev/eventing/pkg/apis/eventing"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	sourceslisters "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
@@ -34,8 +35,9 @@ import (
 
 // Reconciler reconciles PingSources
 type Reconciler struct {
-	cronRunner       *cronJobsRunner
-	pingsourceLister sourceslisters.PingSourceLister
+	cronRunner        *cronJobsRunner
+	eventingClientSet clientset.Interface
+	pingsourceLister  sourceslisters.PingSourceLister
 
 	entryidMu sync.Mutex
 	entryids  map[string]cron.EntryID // key: resource namespace/name
@@ -43,6 +45,9 @@ type Reconciler struct {
 
 // Check that our Reconciler implements ReconcileKind.
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
+
+// Check that our Reconciler implements FinalizeKind.
+var _ pingsourcereconciler.Finalizer = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
 	scope, ok := source.Annotations[eventing.ScopeAnnotationKey]
@@ -62,23 +67,13 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.PingSou
 	} else {
 		logging.FromContext(ctx).Debug("PingSource reconciled")
 	}
-	return nil
+	return reconcileErr
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource) error {
-	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
-	if source.DeletionTimestamp != nil {
-		if id, ok := r.entryids[key]; ok {
-			r.cronRunner.RemoveSchedule(id)
-
-			r.entryidMu.Lock()
-			delete(r.entryids, key)
-			r.entryidMu.Unlock()
-		}
-		return nil
-	}
 	logging.FromContext(ctx).Info("synchronizing schedule")
 
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
 	// Is the schedule already cached?
 	if id, ok := r.entryids[key]; ok {
 		r.cronRunner.RemoveSchedule(id)
@@ -90,6 +85,20 @@ func (r *Reconciler) reconcile(ctx context.Context, source *v1alpha2.PingSource)
 	r.entryidMu.Lock()
 	r.entryids[key] = id
 	r.entryidMu.Unlock()
+
+	return nil
+}
+
+func (r *Reconciler) FinalizeKind(ctx context.Context, source *v1alpha2.PingSource) pkgreconciler.Event {
+	key := fmt.Sprintf("%s/%s", source.Namespace, source.Name)
+
+	if id, ok := r.entryids[key]; ok {
+		r.cronRunner.RemoveSchedule(id)
+
+		r.entryidMu.Lock()
+		delete(r.entryids, key)
+		r.entryidMu.Unlock()
+	}
 
 	return nil
 }

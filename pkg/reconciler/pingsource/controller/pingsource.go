@@ -86,7 +86,7 @@ type Reconciler struct {
 	metricsConfig  *metrics.ExporterOptions
 }
 
-// Check that our Reconciler implements controller.Reconciler
+// Check that our Reconciler implements ReconcileKind
 var _ pingsourcereconciler.Interface = (*Reconciler)(nil)
 
 func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.PingSource) pkgreconciler.Event {

@@ -27,6 +27,7 @@ import (
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/source"
 
+	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
 	"knative.dev/eventing/pkg/kncloudevents"
@@ -40,7 +41,7 @@ const (
 
 	// controllerAgentName is the string used by this controller to identify
 	// itself when creating events.
-	controllerAgentName = "ping-source-dispatcher"
+	controllerAgentName = "ping-source-job-runner"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -60,9 +61,10 @@ func NewController(
 	pingsourceInformer := pingsourceinformer.Get(ctx)
 
 	r := &Reconciler{
-		pingsourceLister: pingsourceInformer.Lister(),
-		entryidMu:        sync.Mutex{},
-		entryids:         make(map[string]cron.EntryID),
+		eventingClientSet: eventingclient.Get(ctx),
+		pingsourceLister:  pingsourceInformer.Lister(),
+		entryidMu:         sync.Mutex{},
+		entryids:          make(map[string]cron.EntryID),
 	}
 
 	impl := pingsourcereconciler.NewImpl(ctx, r)

@@ -36,3 +36,17 @@ rules:
       - get
       - list
       - watch
+      - patch
+  - apiGroups:
+      - sources.knative.dev
+    resources:
+      - pingsources/finalizers
+    verbs:
+      - "patch"
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - "create"
+      - "patch"
