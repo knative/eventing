@@ -131,13 +131,17 @@ func (r *MessageReceiver) ServeHTTP(response nethttp.ResponseWriter, request *ne
 	//   202 - the event was sent to subscribers
 	//   404 - the request was for an unknown channel
 	//   500 - an error occurred processing the request
-
 	host := request.Host
 	r.logger.Debug("Received request", zap.String("host", host))
 	channel, err := r.hostToChannelFunc(host)
 	if err != nil {
-		r.logger.Info("Could not extract channel", zap.Error(err))
-		response.WriteHeader(nethttp.StatusInternalServerError)
+		if _, ok := err.(UnknownHostError); ok {
+			response.WriteHeader(nethttp.StatusNotFound)
+			r.logger.Info(err.Error())
+		} else {
+			r.logger.Info("Could not extract channel", zap.Error(err))
+			response.WriteHeader(nethttp.StatusInternalServerError)
+		}
 		return
 	}
 	r.logger.Debug("Request mapped to channel", zap.String("channel", channel.String()))

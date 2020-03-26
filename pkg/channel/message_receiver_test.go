@@ -175,7 +175,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 	}
 }
 
-func TestMessageReceiverWrongRequest(t *testing.T) {
+func TestMessageReceiver_WrongRequest(t *testing.T) {
 	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
 
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
@@ -194,5 +194,40 @@ func TestMessageReceiverWrongRequest(t *testing.T) {
 	r.ServeHTTP(&res, req)
 	if res.Code != 400 {
 		t.Fatalf("Unexpected status code. Expected 400. Actual %v", res.Code)
+	}
+}
+
+func TestMessageReceiver_UnknownHost(t *testing.T) {
+	host := "http://test-channel.test-namespace.svc." + utils.GetClusterDomainName() + "/"
+
+	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
+		return errors.New("test induced receiver function error")
+	}
+	r, err := NewMessageReceiver(f, zap.NewNop(), ResolveMessageChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
+		return ChannelReference{}, UnknownHostError(s)
+	}))
+	if err != nil {
+		t.Fatalf("Error creating new event receiver. Error:%s", err)
+	}
+
+	event := test.FullEvent()
+	err = event.SetData("text/plain", []byte("event-body"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("POST", "http://localhost:8080/", nil)
+	req.Host = host
+
+	err = http.WriteRequest(context.TODO(), binding.ToMessage(&event), req, binding.TransformerFactories{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res := httptest.ResponseRecorder{}
+
+	r.ServeHTTP(&res, req)
+	if res.Code != 404 {
+		t.Fatalf("Unexpected status code. Expected 404. Actual %v", res.Code)
 	}
 }
