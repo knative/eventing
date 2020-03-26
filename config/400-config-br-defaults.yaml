@@ -1,1 +1,1 @@
-core/configmaps/default-broker.yaml
+brokers/channel-broker/configmaps/default-broker.yaml
