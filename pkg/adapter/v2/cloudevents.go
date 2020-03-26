@@ -63,18 +63,14 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) error {
 	c.applyOverrides(ctx, &out)
 	err := c.ceClient.Send(ctx, out)
-	err = c.reportCount(ctx, out, err)
-
-	return err
+	return c.reportCount(ctx, out, err)
 }
 
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, error) {
 	c.applyOverrides(ctx, &out)
 	resp, err := c.ceClient.Request(ctx, out)
-	err = c.reportCount(ctx, out, err)
-
-	return resp, err
+	return resp, c.reportCount(ctx, out, err)
 }
 
 // StartReceiver implements client.StartReceiver
