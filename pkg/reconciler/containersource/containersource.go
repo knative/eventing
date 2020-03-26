@@ -19,6 +19,7 @@ package containersource
 import (
 	"context"
 	"fmt"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
 
 	"go.uber.org/zap"
 
@@ -29,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	appsv1listers "k8s.io/client-go/listers/apps/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	clientset "knative.dev/eventing/pkg/client/clientset/versioned"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/containersource"
 	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
@@ -69,7 +70,7 @@ type Reconciler struct {
 var _ containersource.Interface = (*Reconciler)(nil)
 
 // ReconcileKind implements Interface.ReconcileKind.
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ContainerSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.ContainerSource) pkgreconciler.Event {
 	source.Status.InitializeConditions()
 	source.Status.ObservedGeneration = source.Generation
 
@@ -88,7 +89,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.Contain
 	return newReconciledNormal(source.Namespace, source.Name)
 }
 
-func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alpha1.ContainerSource) (*appsv1.Deployment, error) {
+func (r *Reconciler) reconcileReceiveAdapter(ctx context.Context, source *v1alpha2.ContainerSource) (*appsv1.Deployment, error) {
 
 	expected := resources.MakeDeployment(source)
 
