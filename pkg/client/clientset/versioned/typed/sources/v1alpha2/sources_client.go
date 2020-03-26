@@ -27,6 +27,7 @@ import (
 type SourcesV1alpha2Interface interface {
 	RESTClient() rest.Interface
 	ApiServerSourcesGetter
+	ContainerSourcesGetter
 	PingSourcesGetter
 	SinkBindingsGetter
 }
@@ -38,6 +39,10 @@ type SourcesV1alpha2Client struct {
 
 func (c *SourcesV1alpha2Client) ApiServerSources(namespace string) ApiServerSourceInterface {
 	return newApiServerSources(c, namespace)
+}
+
+func (c *SourcesV1alpha2Client) ContainerSources(namespace string) ContainerSourceInterface {
+	return newContainerSources(c, namespace)
 }
 
 func (c *SourcesV1alpha2Client) PingSources(namespace string) PingSourceInterface {

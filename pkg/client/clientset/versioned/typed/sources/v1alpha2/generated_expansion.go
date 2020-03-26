@@ -20,6 +20,8 @@ package v1alpha2
 
 type ApiServerSourceExpansion interface{}
 
+type ContainerSourceExpansion interface{}
+
 type PingSourceExpansion interface{}
 
 type SinkBindingExpansion interface{}
