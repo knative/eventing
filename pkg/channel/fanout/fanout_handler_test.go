@@ -38,7 +38,7 @@ import (
 // servers.
 var (
 	replaceSubscriber = apis.HTTP("replaceSubscriber")
-	replaceChannel    = apis.HTTP("replaceChannel")
+	replaceReplier    = apis.HTTP("replaceReplier")
 )
 
 func makeCloudEvent() cloudevents.Event {
@@ -95,7 +95,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 		"reply fails": {
 			subs: []eventingduck.SubscriberSpec{
 				{
-					ReplyURI: replaceChannel,
+					ReplyURI: replaceReplier,
 				},
 			},
 			channel: func(writer http.ResponseWriter, _ *http.Request) {
@@ -118,7 +118,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -132,7 +132,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -146,11 +146,11 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 			},
 			subscriber:     callableSucceed,
@@ -162,15 +162,15 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -184,15 +184,15 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 			subs: []eventingduck.SubscriberSpec{
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 				{
 					SubscriberURI: replaceSubscriber,
-					ReplyURI:      replaceChannel,
+					ReplyURI:      replaceReplier,
 				},
 			},
 			subscriber: callableSucceed,
@@ -223,7 +223,7 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				if sub.SubscriberURI == replaceSubscriber {
 					sub.SubscriberURI = apis.HTTP(callableServer.URL[7:]) // strip the leading 'http://'
 				}
-				if sub.ReplyURI == replaceChannel {
+				if sub.ReplyURI == replaceReplier {
 					sub.ReplyURI = apis.HTTP(channelServer.URL[7:]) // strip the leading 'http://'
 				}
 				subs = append(subs, sub)

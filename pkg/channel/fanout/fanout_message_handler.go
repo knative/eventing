@@ -73,6 +73,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 	if f.config.AsyncHandler {
 		return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
 			if len(f.config.Subscriptions) == 0 {
+				// Nothing to do here, finish the message and return
 				_ = message.Finish(nil)
 				return nil
 			}
@@ -97,6 +98,7 @@ func createMessageReceiverFunction(f *MessageHandler) func(context.Context, chan
 	}
 	return func(ctx context.Context, _ channel.ChannelReference, message binding.Message, transformers []binding.TransformerFactory, additionalHeaders nethttp.Header) error {
 		if len(f.config.Subscriptions) == 0 {
+			// Nothing to do here, finish the message and return
 			_ = message.Finish(nil)
 			return nil
 		}
