@@ -87,7 +87,7 @@ func TestContainerSource(t *testing.T) {
 			},
 		}),
 	)
-	client.CreateContainerSourceV1Alpha1OrFail(containerSource)
+	client.CreateContainerSourceV1Alpha2OrFail(containerSource)
 
 	// wait for all test resources to be ready
 	client.WaitForAllTestResourcesReadyOrFail()
