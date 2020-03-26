@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/cloudevents/sdk-go/v2/event"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
 
@@ -14,19 +16,19 @@ type TestCloudEventsClient struct {
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
 
-func (c *TestCloudEventsClient) Send(ctx context.Context, event cloudevents.Event) error {
+func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
-	c.sent = append(c.sent, event)
+	c.sent = append(c.sent, out)
 	return nil
 }
 
-func (c *TestCloudEventsClient) Request(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
-	c.sent = append(c.sent, event)
+	c.sent = append(c.sent, out)
 	return nil, nil
 }
 
