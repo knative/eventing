@@ -91,8 +91,8 @@ reconciles:
 
 `Trigger`s are reconciled by the Broker that the triggers belong to. Each
 individual Trigger is reconciled using
-[Trigger Reconciler](../../pkg/reconciler/broker/trigger.go). For each `Trigger`, it
-reconciles:
+[Trigger Reconciler](../../pkg/reconciler/broker/trigger.go). For each
+`Trigger`, it reconciles:
 
 1. Check and propagate Broker status
 1. Get the Broker's:
@@ -130,9 +130,9 @@ kubectl delete -f config/brokers/mt-channel-broker/
 
 #### BrokerClass
 
-To indicate that Multi Tenant Channel Based Broker should be used to reconcile
-a Broker, you have to use an annotation specifying Multi Tenant Channel Based Broker
-as the Broker Class:
+To indicate that Multi Tenant Channel Based Broker should be used to reconcile a
+Broker, you have to use an annotation specifying Multi Tenant Channel Based
+Broker as the Broker Class:
 
 ```
     annotations:
@@ -143,23 +143,24 @@ as the Broker Class:
 
 Broker has 2 shared services that are shared between each Broker of this Broker Class.
 By default, they live in knative-eventing namespace and are named
-`broker-ingress` and `broker-filter`. The routing for incoming events to broker-ingress
-is based off the Path portion of the incoming request of the form /namespace/broker.
-More details are in the document under High level implementation details above.
+`broker-ingress` and `broker-filter`. The routing for incoming events to
+broker-ingress is based off the Path portion of the incoming request of the form
+/namespace/broker. More details are in the document under High level
+implementation details above.
 
 `Broker`s are reconciled by the
 [Broker Reconciler](../../pkg/reconciler/mtbroker). For each `Broker`, it
 reconciles:
 
-1. The 'trigger' `Channel`. This is a `Channel` that all events 
-received by broker-ingress targeting this broker are sent to.
+1. The 'trigger' `Channel`. This is a `Channel` that all events received by
+   broker-ingress targeting this broker are sent to.
 
 #### Trigger
 
 `Trigger`s are reconciled by the Broker that the triggers belong to. Each
 individual Trigger is reconciled using
-[Trigger Reconciler](../../pkg/reconciler/mtbroker/trigger.go). For each `Trigger`, it
-reconciles:
+[Trigger Reconciler](../../pkg/reconciler/mtbroker/trigger.go). For each
+`Trigger`, it reconciles:
 
 1. Check and propagate Broker status
 1. Determine the Subscriber's URI
@@ -168,4 +169,3 @@ reconciles:
 1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
    broker-filter service using the HTTP path `/triggers/{namespace}/{name}`.
    Replies are sent to the broker-ingress/namespace/broker
-
