@@ -114,8 +114,8 @@ reconciles:
 
 #### Installation
 
-To install a Channel Based Broker, you must first install the Knative Eventing
-core followed by the Broker Implementation:
+To install a Multi Tenant Channel Based Broker, you must first install the
+Knative Eventing core followed by the MT Broker Implementation:
 
 ```
 ko apply -f config/brokers/mt-channel-broker/
@@ -133,8 +133,8 @@ kubectl delete -f config/brokers/mt-channel-broker/
 #### BrokerClass
 
 To indicate that Multi Tenant Channel Based Broker should be used to reconcile
-a Broker, you have to use an annotation specifying Channel Based Broker as the
-Broker Class:
+a Broker, you have to use an annotation specifying Multi Tenant Channel Based Broker
+as the Broker Class:
 
 ```
     annotations:
@@ -170,3 +170,4 @@ reconciles:
 1. Creates a `Subscription` from the `Broker`'s 'trigger' `Channel` to the
    broker-filter service using the HTTP path `/triggers/{namespace}/{name}`.
    Replies are sent to the broker-ingress/namespace/broker
+
