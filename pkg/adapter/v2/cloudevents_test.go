@@ -18,11 +18,12 @@ package adapter
 
 import (
 	"context"
+	"testing"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"knative.dev/eventing/pkg/adapter/v2/test"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
-	"testing"
 )
 
 type mockReporter struct {
