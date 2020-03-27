@@ -23,6 +23,16 @@ metadata:
 spec:
   group: eventing.knative.dev
   preserveUnknownFields: false
+  validation:
+    openAPIV3Schema:
+      type: object
+      # this is a work around so we don't need to flush out the
+      # schema for each version at this time as well as ensure
+      # that different Broker Classes that might have different
+      # fields that are not in the Broker Spec will work.
+      #
+      # see issue: https://github.com/knative/serving/issues/912
+      x-kubernetes-preserve-unknown-fields: true
   names:
     kind: Broker
     plural: brokers
@@ -57,99 +67,6 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              config:
-                type: object
-                description: "Reference to the configuration for the Broker."
-                required:
-                  - apiVersion
-                  - kind
-                  - name
-                properties:
-                  apiVersion:
-                    type: string
-                    description: "API version of the configuration."
-                    minLength: 1
-                  kind:
-                    type: string
-                    description: "Kind of the configuration."
-                    minLength: 1
-                  name:
-                    type: string
-                    description: "Name of the configuration."
-                    minLength: 1
-                  namespace:
-                    type: string
-                    description: "Namespace of the configuration."
-                    minLength: 1
-              channelTemplateSpec:
-                type: object
-                description: "Channel implementation which dictates the durability guarantees of events to the Broker. If not specified then the default channel is used. More information: https://knative.dev/docs/eventing/channels/default-channels."
-                required:
-                  - apiVersion
-                  - kind
-                properties:
-                  apiVersion:
-                    type: string
-                    description: "API version of the channel implementation."
-                    minLength: 1
-                  kind:
-                    type: string
-                    description: "Kind of the channel implementation to use (InMemoryChannel, KafkaChannel, etc.)."
-                    minLength: 1
-                  spec:
-                    type: object
-              delivery:
-                description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
-                type: object
-                x-kubernetes-preserve-unknown-fields: true
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
   - name: v1beta1
     served: true
     storage: false
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              config:
-                type: object
-                description: "Reference to the configuration for the Broker."
-                required:
-                  - apiVersion
-                  - kind
-                  - name
-                properties:
-                  apiVersion:
-                    type: string
-                    description: "API version of the configuration."
-                    minLength: 1
-                  kind:
-                    type: string
-                    description: "Kind of the configuration."
-                    minLength: 1
-                  name:
-                    type: string
-                    description: "Name of the configuration."
-                    minLength: 1
-                  namespace:
-                    type: string
-                    description: "Namespace of the configuration."
-                    minLength: 1
-              delivery:
-                description: "Broker delivery options. More information: https://knative.dev/docs/eventing/event-delivery."
-                type: object
-                x-kubernetes-preserve-unknown-fields: true
-          status:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
