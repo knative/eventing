@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,19 +21,15 @@ import (
 	"os"
 	"testing"
 
-	// Uncomment the following line to load the gcp plugin
-	// (only required to authenticate against GKE clusters).
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	cloudevents "github.com/cloudevents/sdk-go/v1"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.opencensus.io/stats/view"
 	"knative.dev/pkg/metrics"
-	"knative.dev/pkg/source"
 )
 
 type myAdapter struct{}
 
 func TestMainWithContext(t *testing.T) {
-	os.Setenv("SINK_URI", "http://sink")
+	os.Setenv("K_SINK", "http://sink")
 	os.Setenv("NAMESPACE", "ns")
 	os.Setenv("K_METRICS_CONFIG", "metrics")
 	os.Setenv("K_LOGGING_CONFIG", "logging")
@@ -44,14 +40,14 @@ func TestMainWithContext(t *testing.T) {
 	MainWithContext(ctx,
 		"mycomponent",
 		func() EnvConfigAccessor { return &myEnvConfig{} },
-		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client, reporter source.StatsReporter) Adapter {
+		func(ctx context.Context, processed EnvConfigAccessor, client cloudevents.Client) Adapter {
 			env := processed.(*myEnvConfig)
 			if env.Mode != "mymode" {
 				t.Errorf("Expected mode mymode, got: %s", env.Mode)
 			}
 
-			if env.SinkURI != "http://sink" {
-				t.Errorf("Expected sinkURI http://sink, got: %s", env.SinkURI)
+			if env.Sink != "http://sink" {
+				t.Errorf("Expected sinkURI http://sink, got: %s", env.Sink)
 			}
 			return &myAdapter{}
 		})
