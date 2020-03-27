@@ -141,8 +141,8 @@ Broker as the Broker Class:
 
 #### Broker
 
-Broker has 2 shared services that are shared between each Broker of this Broker Class.
-By default, they live in knative-eventing namespace and are named
+Broker has 2 shared services that are shared between each Broker of this Broker
+Class. By default, they live in knative-eventing namespace and are named
 `broker-ingress` and `broker-filter`. The routing for incoming events to
 broker-ingress is based off the Path portion of the incoming request of the form
 /namespace/broker. More details are in the document under High level
