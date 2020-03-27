@@ -137,15 +137,9 @@ func (r *Reconciler) reconcileKind(ctx context.Context, b *v1alpha1.Broker) (kme
 
 	// 1. Trigger Channel is created for all events. Triggers will Subscribe to this Channel.
 	// 2. Filter Deployment.
-	// 3. Ingress Deployment.
-	// 4. K8s Services that point at the Deployments.
-	// 5. Ingress Channel is created to get events from Triggers back into this Broker via the
-	//    Ingress Deployment.
-	//   - Ideally this wouldn't exist and we would point the Trigger's reply directly to the K8s
-	//     Service. However, Subscriptions only allow us to send replies to Channels, so we need
-	//     this as an intermediary.
-	// 6. Subscription from the Ingress Channel to the Ingress Service.
-
+	// 3. K8s Service that points to the Filter Deployment.
+	// 4. Ingress Deployment.
+	// 5. K8s Service that points to the Ingress Deployment.
 	chanMan, err := r.getChannelTemplate(ctx, b)
 	if err != nil {
 		b.Status.MarkTriggerChannelFailed("ChannelTemplateFailed", "Error on setting up the ChannelTemplate: %s", err)
