@@ -22,10 +22,9 @@ core followed by the Broker Implementation:
 ko apply -f config/brokers/channel-broker/
 ```
 
-#### Unnstallation
+#### Uninstallation
 
-To install a Channel Based Broker, you must first install the Knative Eventing
-core followed by the Broker Implementation:
+To uninstall a Channel Based Broker.
 
 ```
 kubectl delete -f config/brokers/channel-broker/
@@ -121,10 +120,9 @@ Knative Eventing core followed by the MT Broker Implementation:
 ko apply -f config/brokers/mt-channel-broker/
 ```
 
-#### Unnstallation
+#### Uninstallation
 
-To install a Channel Based Broker, you must first install the Knative Eventing
-core followed by the Broker Implementation:
+To uninstall a Multi Tenant Channel Based Broker.
 
 ```
 kubectl delete -f config/brokers/mt-channel-broker/
