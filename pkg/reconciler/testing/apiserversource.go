@@ -23,8 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/utils"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/kmeta"
 )
 
 // ApiServerSourceOption enables further configuration of a ApiServer.
@@ -74,7 +74,7 @@ func WithApiServerSourceSinkDepRef(uri string) ApiServerSourceOption {
 
 func WithApiServerSourceDeploymentUnavailable(s *v1alpha1.ApiServerSource) {
 	// The Deployment uses GenerateName, so its name is empty.
-	name := utils.GenerateFixedName(s, fmt.Sprintf("apiserversource-%s", s.Name))
+	name := kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", s.Name), string(s.GetUID()))
 	s.Status.PropagateDeploymentAvailability(NewDeployment(name, "any"))
 }
 

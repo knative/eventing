@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
 )
 
@@ -81,7 +80,7 @@ func MakeReceiveAdapter(args *Args) *v1.Deployment {
 	return &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: args.Source.Namespace,
-			Name:      utils.GenerateFixedName(args.Source, fmt.Sprintf("pingsource-%s", name)),
+			Name:      kmeta.ChildName(fmt.Sprintf("pingsource-%s-", name), string(args.Source.GetUID())),
 			Labels:    args.Labels,
 			OwnerReferences: []metav1.OwnerReference{
 				*kmeta.NewControllerRef(args.Source),

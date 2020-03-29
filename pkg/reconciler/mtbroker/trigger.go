@@ -33,8 +33,10 @@ import (
 	"knative.dev/eventing/pkg/reconciler/broker/resources"
 	"knative.dev/eventing/pkg/reconciler/names"
 	"knative.dev/eventing/pkg/reconciler/trigger/path"
+	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/controller"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/system"
 )
@@ -47,6 +49,7 @@ const (
 	subscriptionDeleteFailed  = "SubscriptionDeleteFailed"
 	subscriptionCreateFailed  = "SubscriptionCreateFailed"
 	subscriptionGetFailed     = "SubscriptionGetFailed"
+	subscriptionDeleted       = "SubscriptionDeleted"
 )
 
 func (r *Reconciler) reconcileTrigger(ctx context.Context, b *v1alpha1.Broker, t *v1alpha1.Trigger) error {
@@ -117,6 +120,15 @@ func (r *Reconciler) subscribeToBrokerChannel(ctx context.Context, b *v1alpha1.B
 	sub, err := r.subscriptionLister.Subscriptions(t.Namespace).Get(expected.Name)
 	// If the resource doesn't exist, we'll create it.
 	if apierrs.IsNotFound(err) {
+		// Issue #2842: Subscription name uses kmeta.ChildName. If a subscription by the previous name pattern is found, it should
+		// be deleted. This might cause temporary downtime.
+		if deprecatedName := utils.GenerateFixedName(t, fmt.Sprintf("%s-%s", t.Spec.Broker, t.Name)); deprecatedName != expected.Name {
+			if err := r.eventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Delete(deprecatedName, &metav1.DeleteOptions{}); err != nil && !apierrs.IsNotFound(err) {
+				return nil, fmt.Errorf("error deleting deprecated named subscription: %v", err)
+			}
+			controller.GetEventRecorder(ctx).Eventf(t, corev1.EventTypeNormal, subscriptionDeleted, "Deprecated subscription removed: \"%s/%s\"", t.Namespace, deprecatedName)
+		}
+
 		logging.FromContext(ctx).Info("Creating subscription")
 		sub, err = r.eventingClientSet.MessagingV1alpha1().Subscriptions(t.Namespace).Create(expected)
 		if err != nil {

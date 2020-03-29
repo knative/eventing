@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -70,6 +71,7 @@ const (
 	jobRunnerImage = "job-runner-image"
 	sourceName     = "test-ping-source"
 	sourceUID      = "1234"
+	sourceNameLong = "test-pingserver-source-with-a-very-long-name"
 	testNS         = "testnamespace"
 	testSchedule   = "*/2 * * * *"
 	testData       = "data"
@@ -441,6 +443,54 @@ func TestAllCases(t *testing.T) {
 					WithPingSourceStatusObservedGeneration(generation),
 				),
 			}},
+		}, {
+			Name:                    "deprecated named adapter deployment found",
+			SkipNamespaceValidation: true,
+			Objects: []runtime.Object{
+				NewPingSourceV1Alpha1(sourceNameLong, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceClusterScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+				),
+				NewChannel(sinkName, testNS,
+					WithInitChannelConditions,
+					WithChannelAddress(sinkDNS),
+				),
+				makeAvailableReceiveAdapterDeprecatedName(sourceNameLong, sinkDest),
+			},
+			Key: testNS + "/" + sourceNameLong,
+			WantEvents: []string{
+				Eventf(corev1.EventTypeNormal, "PingSourceDeploymentCreated", `Cluster-scoped deployment created`),
+				Eventf(corev1.EventTypeNormal, "PingSourceReconciled", `PingSource reconciled: "%s/%s"`, testNS, sourceNameLong),
+			},
+			WantCreates: []runtime.Object{
+				makeJobRunner(),
+			},
+			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+				Object: NewPingSourceV1Alpha1(sourceNameLong, testNS,
+					WithPingSourceSpec(sourcesv1alpha1.PingSourceSpec{
+						Schedule: testSchedule,
+						Data:     testData,
+						Sink:     &sinkDest,
+					}),
+					WithPingSourceClusterScopeAnnotation,
+					WithPingSourceUID(sourceUID),
+					WithPingSourceObjectMetaGeneration(generation),
+					// Status Update:
+					WithPingSourceNotDeployed(jobRunnerName),
+					WithInitPingSourceConditions,
+					WithValidPingSourceSchedule,
+					WithValidPingSourceResources,
+					WithPingSourceEventType,
+					WithPingSourceSink(sinkURI),
+					WithPingSourceStatusObservedGeneration(generation),
+				),
+			}},
 		},
 	}
 
@@ -468,6 +518,16 @@ func TestAllCases(t *testing.T) {
 
 func makeAvailableReceiveAdapter(dest duckv1.Destination) *appsv1.Deployment {
 	ra := makeReceiveAdapterWithSink(dest)
+	WithDeploymentAvailable()(ra)
+	return ra
+}
+
+// makeAvailableReceiveAdapterDeprecatedName needed to simulate pre 0.14 adapter whose name was generated using utils.GenerateFixedName
+func makeAvailableReceiveAdapterDeprecatedName(sourceName string, dest duckv1.Destination) *appsv1.Deployment {
+	ra := makeReceiveAdapterWithSink(dest)
+	src := &sourcesv1alpha1.PingSource{}
+	src.UID = sourceUID
+	ra.Name = utils.GenerateFixedName(src, fmt.Sprintf("pingsource-%s", sourceName))
 	WithDeploymentAvailable()(ra)
 	return ra
 }
