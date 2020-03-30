@@ -17,99 +17,87 @@ limitations under the License.
 package apiserver
 
 import (
+	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	"testing"
 
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
 )
 
 func TestControllerAddEventWithNoController(t *testing.T) {
 	c, tc := makeController("v1", "Pod")
 	c.Add(simplePod("unit", "test"))
 	validateNotSent(t, tc, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 0)
 }
 
 func TestControllerAddEventWithWrongController(t *testing.T) {
 	c, tc := makeController("v1", "Pod")
 	c.Add(simpleOwnedPod("unit", "test"))
 	validateNotSent(t, tc, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 0)
 }
 
 func TestControllerAddEventWithGoodController(t *testing.T) {
 	c, tc := makeController("apps/v1", "ReplicaSet")
 	c.Add(simpleOwnedPod("unit", "test"))
 	validateSent(t, tc, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 1)
 }
 
 func TestControllerAddEventWithGoodControllerNoAPIVersion(t *testing.T) {
 	c, tc := makeController("", "ReplicaSet")
 	c.Add(simpleOwnedPod("unit", "test"))
 	validateSent(t, tc, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 1)
 }
 
 func TestControllerUpdateEventWithNoController(t *testing.T) {
 	c, tc := makeController("v1", "Pod")
 	c.Update(simplePod("unit", "test"))
 	validateNotSent(t, tc, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 0)
 }
 
 func TestControllerUpdateEventWithWrongController(t *testing.T) {
 	c, tc := makeController("v1", "Pod")
 	c.Update(simpleOwnedPod("unit", "test"))
 	validateNotSent(t, tc, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 0)
 }
 
 func TestControllerUpdateEventWithGoodController(t *testing.T) {
 	c, tc := makeController("apps/v1", "ReplicaSet")
 	c.Update(simpleOwnedPod("unit", "test"))
 	validateSent(t, tc, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 1)
 }
 
 func TestControllerUpdateEventWithGoodControllerNoAPIVersion(t *testing.T) {
 	c, tc := makeController("", "ReplicaSet")
 	c.Update(simpleOwnedPod("unit", "test"))
 	validateSent(t, tc, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 1)
 }
 
 func TestControllerDeleteEventWithNoController(t *testing.T) {
 	c, tc := makeController("v1", "Pod")
 	c.Delete(simplePod("unit", "test"))
 	validateNotSent(t, tc, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 0)
 }
 
 func TestControllerDeleteEventWithWrongController(t *testing.T) {
 	c, tc := makeController("v1", "Pod")
 	c.Delete(simpleOwnedPod("unit", "test"))
 	validateNotSent(t, tc, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 0)
 }
 
 func TestControllerDeleteEventWithGoodController(t *testing.T) {
 	c, tc := makeController("apps/v1", "ReplicaSet")
 	c.Delete(simpleOwnedPod("unit", "test"))
 	validateSent(t, tc, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 1)
 }
 
 func TestControllerDeleteEventWithGoodControllerNoAPIVersion(t *testing.T) {
 	c, tc := makeController("", "ReplicaSet")
 	c.Delete(simpleOwnedPod("unit", "test"))
 	validateSent(t, tc, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, c.delegate.(*ref).reporter, 1)
 }
 
-func makeController(apiVersion, kind string) (*controller, *kncetesting.TestCloudEventsClient) {
+func makeController(apiVersion, kind string) (*controllerFilter, *adaptertest.TestCloudEventsClient) {
 	delegate, tc := makeRefAndTestingClient()
-	return &controller{
+	return &controllerFilter{
 		apiVersion: apiVersion,
 		kind:       kind,
 		delegate:   delegate,

@@ -17,12 +17,14 @@ limitations under the License.
 package resources
 
 import (
+	"encoding/json"
 	"fmt"
+	"knative.dev/eventing/pkg/adapter/apiserver"
 
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"
 )
@@ -31,7 +33,7 @@ import (
 // Every field is required.
 type ReceiveAdapterArgs struct {
 	Image         string
-	Source        *v1alpha1.ApiServerSource
+	Source        *v1alpha2.ApiServerSource
 	Labels        map[string]string
 	SinkURI       string
 	MetricsConfig string
@@ -82,62 +84,26 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha1.ApiServerSourceSpec, name string) []corev1.EnvVar {
-	apiversions := ""
-	kinds := ""
-	controlled := ""
-	selectors := ""
-	ownerapiversions := ""
-	ownerkinds := ""
-	sep := ""
-	boolsep := ""
+func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha2.ApiServerSourceSpec, name string) []corev1.EnvVar {
 
-	for _, res := range spec.Resources {
-		apiversions += sep + res.APIVersion
-		kinds += sep + res.Kind
-		ownerapiversions += sep + res.ControllerSelector.APIVersion
-		ownerkinds += sep + res.ControllerSelector.Kind
+	cfg := &apiserver.Config{
+		Resources:     spec.Resources,
+		LabelSelector: spec.LabelSelector,
+		ResourceOwner: spec.ResourceOwner,
+		EventMode:     spec.EventMode,
+	}
 
-		if res.Controller {
-			controlled += boolsep + "true"
-		} else {
-			controlled += boolsep + "false"
-		}
-
-		// No need to check for error here.
-		selector, _ := metav1.LabelSelectorAsSelector(&res.LabelSelector)
-		labelSelector := selector.String()
-
-		selectors += sep + labelSelector
-
-		sep = ";"
-		boolsep = ","
+	config := "{}"
+	if b, err := json.Marshal(cfg); err == nil {
+		config = string(b)
 	}
 
 	return []corev1.EnvVar{{
-		Name:  "SINK_URI",
+		Name:  "K_SINK",
 		Value: sinkURI,
 	}, {
-		Name:  "MODE",
-		Value: spec.Mode,
-	}, {
-		Name:  "API_VERSION",
-		Value: apiversions,
-	}, {
-		Name:  "KIND",
-		Value: kinds,
-	}, {
-		Name:  "OWNER_API_VERSION",
-		Value: ownerapiversions,
-	}, {
-		Name:  "OWNER_KIND",
-		Value: ownerkinds,
-	}, {
-		Name:  "CONTROLLER",
-		Value: controlled,
-	}, {
-		Name:  "SELECTOR",
-		Value: selectors,
+		Name:  "K_SOURCE_CONFIG",
+		Value: config,
 	}, {
 		Name: "NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{
