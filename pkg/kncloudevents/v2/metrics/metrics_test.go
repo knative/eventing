@@ -23,8 +23,6 @@ import (
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 )
 
-const ()
-
 func TestStatsReporterAdapter(t *testing.T) {
 	stats := &rectesting.MockStatsReporter{}
 	reporter := NewStatsReporterAdapter(stats)
