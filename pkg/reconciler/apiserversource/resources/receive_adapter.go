@@ -19,6 +19,8 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/eventing/pkg/adapter/apiserver"
 
 	v1 "k8s.io/api/apps/v1"
@@ -71,7 +73,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 						{
 							Name:  "receive-adapter",
 							Image: args.Image,
-							Env:   makeEnv(args.SinkURI, args.LoggingConfig, args.MetricsConfig, &args.Source.Spec, args.Source.ObjectMeta.Name),
+							Env:   makeEnv(args),
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9090,
@@ -84,13 +86,33 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 	}
 }
 
-func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha2.ApiServerSourceSpec, name string) []corev1.EnvVar {
-
+func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 	cfg := &apiserver.Config{
-		Resources:     spec.Resources,
-		LabelSelector: spec.LabelSelector,
-		ResourceOwner: spec.ResourceOwner,
-		EventMode:     spec.EventMode,
+		Namespace:     args.Source.Namespace,
+		Resources:     make([]schema.GroupVersionResource, len(args.Source.Spec.Resources)),
+		ResourceOwner: args.Source.Spec.ResourceOwner,
+		EventMode:     args.Source.Spec.EventMode,
+	}
+
+	if args.Source.Spec.LabelSelector != nil {
+		cfg.LabelSelector = args.Source.Spec.LabelSelector.String()
+	}
+
+	for _, r := range args.Source.Spec.Resources {
+		if r.APIVersion == nil {
+			panic("nil api version") // TODO: not really do this.
+		}
+		gv, err := schema.ParseGroupVersion(*r.APIVersion)
+		if err != nil {
+			panic(err) // TODO: not really do this.
+		}
+
+		if r.Kind == nil {
+			panic("nil kind") // TODO: not really do this.
+		}
+		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(*r.Kind))
+
+		cfg.Resources = append(cfg.Resources, gvr)
 	}
 
 	config := "{}"
@@ -100,7 +122,7 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha2.ApiSer
 
 	return []corev1.EnvVar{{
 		Name:  "K_SINK",
-		Value: sinkURI,
+		Value: args.SinkURI,
 	}, {
 		Name:  "K_SOURCE_CONFIG",
 		Value: config,
@@ -113,15 +135,15 @@ func makeEnv(sinkURI, loggingConfig, metricsConfig string, spec *v1alpha2.ApiSer
 		},
 	}, {
 		Name:  "NAME",
-		Value: name,
+		Value: args.Source.Name,
 	}, {
 		Name:  "METRICS_DOMAIN",
 		Value: "knative.dev/eventing",
 	}, {
 		Name:  "K_METRICS_CONFIG",
-		Value: metricsConfig,
+		Value: args.MetricsConfig,
 	}, {
 		Name:  "K_LOGGING_CONFIG",
-		Value: loggingConfig,
+		Value: args.LoggingConfig,
 	}}
 }
