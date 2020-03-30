@@ -29,7 +29,7 @@ const (
 	SubscriptionConditionReady = apis.ConditionReady
 	// SubscriptionConditionReferencesResolved has status True when all the specified references have been successfully
 	// resolved.
-	SubscriptionConditionReferencesResolved apis.ConditionType = "Resolved"
+	SubscriptionConditionReferencesResolved apis.ConditionType = "ReferencesResolved"
 
 	// SubscriptionConditionAddedToChannel has status True when controller has successfully added a
 	// subscription to the spec.channel resource.
