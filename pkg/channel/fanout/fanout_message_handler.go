@@ -164,5 +164,8 @@ func (f *MessageHandler) makeFanoutRequest(ctx context.Context, message binding.
 	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
 		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
 	}
+	if sub.Delivery != nil && sub.Delivery.DeadLetterSink != nil && sub.Delivery.DeadLetterSink.URI != nil {
+		deadLetter = sub.Delivery.DeadLetterSink.URI.URL()
+	}
 	return f.dispatcher.DispatchMessage(ctx, message, additionalHeaders, destination, reply, deadLetter)
 }
