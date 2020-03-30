@@ -24,6 +24,19 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const (
+	traceparentAttribute = "Traceparent"
+)
+
+func traceparentAttributeValue(span *trace.Span) string {
+	flags := "00"
+	if span.SpanContext().IsSampled() {
+		flags = "01"
+	}
+	return "00-" + span.SpanContext().TraceID.String() + "-" +
+		span.SpanContext().SpanID.String() + "-" + flags
+}
+
 func TestTraceparentTransformer(t *testing.T) {
 	_, span := trace.StartSpan(context.Background(), "name", trace.WithSampler(trace.NeverSample()))
 	_, newSpan := trace.StartSpan(context.Background(), "name", trace.WithSampler(trace.NeverSample()))
