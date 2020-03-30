@@ -1478,7 +1478,7 @@ func TestReconcile(t *testing.T) {
 				)}...),
 			WantErr: false,
 			WantEvents: []string{
-				Eventf(corev1.EventTypeNormal, subscriptionDeleted, fmt.Sprintf("Deprecated subscription removed: \"%s/%s\"", testNS, makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name)),
+				Eventf(corev1.EventTypeNormal, subscriptionDeleted, `Deprecated subscription removed: "%s/%s"`, testNS, makeReadySubscriptionDeprecatedName(triggerNameLong, triggerUIDLong).Name),
 				Eventf(corev1.EventTypeNormal, "TriggerReconciled", "Trigger reconciled"),
 			},
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
