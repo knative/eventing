@@ -89,7 +89,7 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 	cfg := &apiserver.Config{
 		Namespace:     args.Source.Namespace,
-		Resources:     make([]schema.GroupVersionResource, len(args.Source.Spec.Resources)),
+		Resources:     make([]schema.GroupVersionResource, 0, len(args.Source.Spec.Resources)),
 		ResourceOwner: args.Source.Spec.ResourceOwner,
 		EventMode:     args.Source.Spec.EventMode,
 	}

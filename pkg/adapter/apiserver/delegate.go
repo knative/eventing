@@ -18,14 +18,12 @@ package apiserver
 
 import (
 	"context"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
-
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
 )
-
-type eventMode int
 
 type resourceDelegate struct {
 	ce     cloudevents.Client
@@ -40,11 +38,14 @@ var _ cache.Store = (*resourceDelegate)(nil)
 func (a *resourceDelegate) Add(obj interface{}) error {
 	event, err := events.MakeAddEvent(a.source, obj, a.ref)
 	if err != nil {
-		a.logger.Info("event creation failed", zap.Error(err))
+		a.logger.Infow("event creation failed", zap.Error(err))
 		return err
 	}
 
-	return a.ce.Send(context.Background(), event) // TODO: update this for Preview8
+	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
+		a.logger.Errorw("failed to send event", zap.Error(result))
+	}
+	return nil
 }
 
 func (a *resourceDelegate) Update(obj interface{}) error {
@@ -54,7 +55,10 @@ func (a *resourceDelegate) Update(obj interface{}) error {
 		return err
 	}
 
-	return a.ce.Send(context.Background(), event) // TODO: update this for Preview8
+	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
+		a.logger.Error("failed to send event", zap.Error(result))
+	}
+	return nil
 }
 
 func (a *resourceDelegate) Delete(obj interface{}) error {
@@ -64,7 +68,10 @@ func (a *resourceDelegate) Delete(obj interface{}) error {
 		return err
 	}
 
-	return a.ce.Send(context.Background(), event) // TODO: update this for Preview8
+	if result := a.ce.Send(context.Background(), event); !cloudevents.IsACK(result) {
+		a.logger.Error("failed to send event", zap.Error(result))
+	}
+	return nil
 }
 
 // Stub cache.Store impl

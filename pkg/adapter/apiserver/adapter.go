@@ -18,8 +18,9 @@ package apiserver
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"log"
 	"strings"
 	"time"
 
@@ -30,16 +31,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"knative.dev/pkg/logging"
-
 	"knative.dev/eventing/pkg/adapter/v2"
-)
-
-var (
-	masterURL  = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/pkg/logging"
 )
 
 type StringList []string
@@ -56,7 +53,7 @@ type envConfig struct {
 	adapter.EnvConfig
 	Name string `envconfig:"NAME" required:"true"`
 
-	Config Config `envconfig:"K_SOURCE_CONFIG" required:"true"`
+	ConfigJson string `envconfig:"K_SOURCE_CONFIG" required:"true"`
 }
 
 type apiServerAdapter struct {
@@ -75,30 +72,49 @@ func NewEnvConfig() adapter.EnvConfigAccessor {
 	return &envConfig{}
 }
 
+// ParseAndGetConfigOrDie parses the rest config flags and creates a client or
+// dies by calling log.Fatalf.
+func ParseAndGetConfigOrDie() *rest.Config {
+	var (
+		masterURL = flag.String("master", "",
+			"The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+		kubeconfig = flag.String("kubeconfig", "",
+			"Path to a kubeconfig. Only required if out-of-cluster.")
+	)
+	flag.Parse()
+
+	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
+	if err != nil {
+		log.Fatalf("Error building kubeconfig: %v", err)
+	}
+
+	return cfg
+}
+
 func NewAdapter(ctx context.Context, processed adapter.EnvConfigAccessor, ceClient cloudevents.Client) adapter.Adapter {
 	logger := logging.FromContext(ctx)
 	env := processed.(*envConfig)
 
-	cfg, err := clientcmd.BuildConfigFromFlags(*masterURL, *kubeconfig)
-	if err != nil {
-		logger.Fatal("error building kubeconfig", zap.Error(err))
-	}
-
+	cfg := ParseAndGetConfigOrDie()
 	client, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		logger.Fatal("error building dynamic client", zap.Error(err))
 	}
 
-	a := &apiServerAdapter{
+	config := Config{}
+	if err := json.Unmarshal([]byte(env.ConfigJson), &config); err != nil {
+		panic("failed to create config from json")
+	}
+
+	return &apiServerAdapter{
 		k8s:    client,
 		ce:     ceClient,
 		source: cfg.Host,
 		name:   env.Name,
-		config: env.Config,
+		config: config,
 
 		logger: logger,
 	}
-	return a
 }
 
 func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
@@ -116,6 +132,9 @@ func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 
 	if a.config.ResourceOwner != nil {
 		if a.config.ResourceOwner.APIVersion != nil && a.config.ResourceOwner.Kind != nil {
+			a.logger.Infow("will be filtered",
+				zap.String("APIVersion", *a.config.ResourceOwner.APIVersion),
+				zap.String("Kind", *a.config.ResourceOwner.Kind))
 			delegate = &controllerFilter{
 				apiVersion: *a.config.ResourceOwner.APIVersion,
 				kind:       *a.config.ResourceOwner.Kind,
@@ -123,6 +142,8 @@ func (a *apiServerAdapter) Start(stopCh <-chan struct{}) error {
 			}
 		}
 	}
+
+	a.logger.Infof("STARTING -- %#v", a.config)
 
 	for _, gvr := range a.config.Resources {
 		lw := &cache.ListWatch{
