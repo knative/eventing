@@ -24,9 +24,11 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+
 	"github.com/kelseyhightower/envconfig"
 	"go.opencensus.io/stats/view"
 	"go.uber.org/zap"
+	kncloudevents "knative.dev/eventing/pkg/kncloudevents/v2"
 	"knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
 	"knative.dev/pkg/profiling"
@@ -105,7 +107,7 @@ func MainWithContext(ctx context.Context, component string, ector EnvConfigConst
 		logger.Error("Error loading cloudevents overrides", zap.Error(err))
 	}
 
-	eventsClient, err := NewCloudEventsClient(env.GetSink(), ceOverrides, reporter)
+	eventsClient, err := kncloudevents.NewCloudEventsClient(env.GetSink(), ceOverrides, reporter)
 	if err != nil {
 		logger.Fatal("error building cloud event client", zap.Error(err))
 	}

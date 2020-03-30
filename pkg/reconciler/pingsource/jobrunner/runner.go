@@ -26,6 +26,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	"knative.dev/eventing/pkg/kncloudevents/v2/metrics"
 )
 
 type cronJobsRunner struct {
@@ -62,20 +63,17 @@ func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string) (
 	event.SetSource(sourcesv1alpha2.PingSourceSource(namespace, name))
 	event.SetData(cloudevents.ApplicationJSON, message(data))
 
-	reportArgs := source.ReportArgs{
-		Namespace:     namespace,
-		EventSource:   event.Source(),
-		EventType:     event.Type(),
-		Name:          name,
-		ResourceGroup: resourceGroup,
-	}
-
-	a.Logger.Infow("schedule added", zap.Any("schedule", spec), zap.Any("event", event))
-
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, sink)
 
-	return a.cron.AddFunc(spec, a.cronTick(ctx, event, reportArgs))
+	metricTag := &metrics.MetricTag{
+		Namespace:     namespace,
+		Name:          name,
+		ResourceGroup: resourceGroup,
+	}
+	ctx = metrics.ContextWithMetricTag(ctx, metricTag)
+
+	return a.cron.AddFunc(spec, a.cronTick(ctx, event))
 }
 
 func (a *cronJobsRunner) RemoveSchedule(id cron.EntryID) {
@@ -89,17 +87,12 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event, reportArgs source.ReportArgs) func() {
+func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
 	return func() {
-		// Send event (cannot be interrupted)
-
-		err := a.Client.Send(ctx, event)
-		if err != nil {
+		if err := a.Client.Send(ctx, event); err != nil {
 			// TODO: at least retries
 			a.Logger.Error("failed to send cloudevent", zap.Error(err))
 		}
-
-		a.Reporter.ReportEventCount(&reportArgs, rtctx.StatusCode)
 	}
 }
 

@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
+	adaptertest "knative.dev/eventing/pkg/kncloudevents/v2/test"
 )
 
 func TestStart_ServeHTTP(t *testing.T) {
@@ -47,7 +47,7 @@ func TestStart_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ce := adaptertest.NewTestClient()
+			ce := adaptertest.NewTestClient(nil)
 
 			a := &pingAdapter{
 				Schedule: tc.schedule,
@@ -108,7 +108,7 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 
-			ce := adaptertest.NewTestClient()
+			ce := adaptertest.NewTestClient(nil)
 
 			a := &pingAdapter{
 				Data:   "data",
