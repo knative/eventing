@@ -20,6 +20,8 @@ import (
 	"context"
 	"sync"
 
+	"knative.dev/eventing/pkg/adapter/v2"
+
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
@@ -30,7 +32,6 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	kncloudevents "knative.dev/eventing/pkg/kncloudevents/v2"
 	"knative.dev/eventing/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
 )
@@ -71,7 +72,7 @@ func NewController(
 		logger.Error("error building statsreporter", zap.Error(err))
 	}
 
-	ceClient, err := kncloudevents.NewCloudEventsClient("", nil, reporter)
+	ceClient, err := adapter.NewCloudEventsClient("", nil, reporter)
 	if err != nil {
 		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}

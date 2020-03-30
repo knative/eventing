@@ -25,8 +25,8 @@ import (
 	"knative.dev/pkg/source"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"knative.dev/eventing/pkg/adapter/v2/metrics"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	"knative.dev/eventing/pkg/kncloudevents/v2/metrics"
 )
 
 type cronJobsRunner struct {

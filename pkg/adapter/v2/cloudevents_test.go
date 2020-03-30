@@ -14,19 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2
+package adapter
 
 import (
 	"context"
 	"testing"
 
-	rectesting "knative.dev/eventing/pkg/reconciler/testing"
-
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-
 	"knative.dev/eventing/pkg/adapter/v2/test"
+	rectesting "knative.dev/eventing/pkg/reconciler/testing"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 
 var (

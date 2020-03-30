@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/v2/test"
+	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	logtesting "knative.dev/pkg/logging/testing"
 )
@@ -29,7 +29,7 @@ import (
 func TestAddRunRemoveSchedule(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	reporter := &rectesting.MockStatsReporter{}
-	ce := kncetesting.NewTestClient(reporter)
+	ce := adaptertesting.NewTestClient(reporter)
 
 	runner := NewCronJobsRunner(ce, reporter, logger)
 
@@ -62,7 +62,7 @@ func TestAddRunRemoveSchedule(t *testing.T) {
 func TestStartStopCron(t *testing.T) {
 	logger := logtesting.TestLogger(t)
 	reporter := &rectesting.MockStatsReporter{}
-	ce := kncetesting.NewTestClient(reporter)
+	ce := adaptertesting.NewTestClient(reporter)
 
 	runner := NewCronJobsRunner(ce, reporter, logger)
 
@@ -87,7 +87,7 @@ func TestStartStopCron(t *testing.T) {
 
 }
 
-func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, wantData string) {
+func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}

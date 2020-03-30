@@ -26,11 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgotesting "k8s.io/client-go/testing"
+	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/v2/test"
 	. "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -175,7 +175,7 @@ func TestAllCases(t *testing.T) {
 
 	logger := logtesting.TestLogger(t)
 	reporter := &MockStatsReporter{}
-	ce := kncetesting.NewTestClient(reporter)
+	ce := adaptertesting.NewTestClient(reporter)
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{

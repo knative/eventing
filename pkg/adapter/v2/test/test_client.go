@@ -19,14 +19,13 @@ import (
 	"context"
 	"sync"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
-	"knative.dev/eventing/pkg/kncloudevents/v2/metrics"
 	"knative.dev/pkg/source"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/event"
+	"knative.dev/eventing/pkg/adapter/v2/metrics"
 )
 
 type TestCloudEventsClient struct {

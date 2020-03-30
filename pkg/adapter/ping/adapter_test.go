@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	adaptertest "knative.dev/eventing/pkg/kncloudevents/v2/test"
+	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 )
 
 func TestStart_ServeHTTP(t *testing.T) {

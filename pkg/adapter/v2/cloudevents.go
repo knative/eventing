@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package v2
+package adapter
 
 import (
 	"context"
 	"errors"
 
-	"knative.dev/eventing/pkg/kncloudevents/v2/metrics"
+	"knative.dev/eventing/pkg/adapter/v2/metrics"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
