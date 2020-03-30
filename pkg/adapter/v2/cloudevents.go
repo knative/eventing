@@ -22,6 +22,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
@@ -60,17 +61,17 @@ type client struct {
 var _ cloudevents.Client = (*client)(nil)
 
 // Send implements client.Send
-func (c *client) Send(ctx context.Context, out event.Event) error {
+func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(ctx, &out)
-	err := c.ceClient.Send(ctx, out)
-	return c.reportCount(ctx, out, err)
+	res := c.ceClient.Send(ctx, out)
+	return c.reportCount(ctx, out, res)
 }
 
 // Request implements client.Request
-func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, error) {
+func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(ctx, &out)
-	resp, err := c.ceClient.Request(ctx, out)
-	return resp, c.reportCount(ctx, out, err)
+	resp, res := c.ceClient.Request(ctx, out)
+	return resp, c.reportCount(ctx, out, res)
 }
 
 // StartReceiver implements client.StartReceiver
@@ -86,7 +87,7 @@ func (c *client) applyOverrides(ctx context.Context, event *cloudevents.Event) {
 	}
 }
 
-func (c *client) reportCount(ctx context.Context, event cloudevents.Event, err error) error {
+func (c *client) reportCount(ctx context.Context, event cloudevents.Event, result protocol.Result) error {
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
@@ -95,22 +96,29 @@ func (c *client) reportCount(ctx context.Context, event cloudevents.Event, err e
 		Name:          tags.Name,
 		ResourceGroup: tags.ResourceGroup,
 	}
-	if rErr := c.reporter.ReportEventCount(reportArgs, statusCode(err)); rErr != nil {
-		// metrics is not important enough to return an error if it is setup wrong.
-		// So combine reporter error with ce error if not nil.
-		if err != nil {
-			err = fmt.Errorf("%w\nmetrics reporter errror: %s", err, rErr)
+
+	if cloudevents.IsACK(result) {
+		var res *http.Result
+		if !cloudevents.ResultAs(result, &res) {
+			return fmt.Errorf("protocol.Result is not http.Result")
+		}
+
+		_ = c.reporter.ReportEventCount(reportArgs, res.StatusCode)
+	} else {
+		var res *http.Result
+		if !cloudevents.ResultAs(result, &res) {
+			return result
+		}
+
+		if rErr := c.reporter.ReportEventCount(reportArgs, res.StatusCode); rErr != nil {
+			// metrics is not important enough to return an error if it is setup wrong.
+			// So combine reporter error with ce error if not nil.
+			if result != nil {
+				result = fmt.Errorf("%w\nmetrics reporter errror: %s", result, rErr)
+			}
 		}
 	}
-	return err
-}
-
-func statusCode(err error) int {
-	// TODO: there is talk to change this in the sdk, for now we do not have access to the real http code.
-	if err != nil {
-		return 400
-	}
-	return 200
+	return result
 }
 
 // Metric context
