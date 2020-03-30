@@ -20,6 +20,8 @@ import (
 	"sync"
 
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/protocol"
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 )
@@ -31,20 +33,20 @@ type TestCloudEventsClient struct {
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
 
-func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) error {
+func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
-	return nil
+	return http.NewResult(200, "%w", protocol.ResultACK)
 }
 
-func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, error) {
+func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
-	return nil, nil
+	return nil, http.NewResult(200, "%w", protocol.ResultACK)
 }
 
 func (c *TestCloudEventsClient) StartReceiver(ctx context.Context, fn interface{}) error {
