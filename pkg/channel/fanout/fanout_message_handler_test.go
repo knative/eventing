@@ -227,23 +227,21 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		subs = append(subs, sub)
 	}
 
-	// The test syncs using WaitGroups checking for subscriber/replier correctly invoked, but it doesn't sync on the async
-	// goroutine created by FanoutMessageHandler in async mode.
-	// So the test logger (zaptest) doesn't work, because it could log messages after the test is closed.
-	logger, _ := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+	logger, err := zap.NewDevelopment(zap.AddStacktrace(zap.DebugLevel))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	h, err := NewMessageHandler(
-		logger,
-		Config{
-			Subscriptions: subs,
-			AsyncHandler:  async,
-		})
+	h, err := NewMessageHandler(logger, Config{
+		Subscriptions: subs,
+		AsyncHandler:  async,
+	})
 	if err != nil {
 		t.Fatalf("NewHandler failed. Error:%s", err)
 	}
 
 	if receiverFunc != nil {
-		receiver, err := channel.NewMessageReceiver(receiverFunc, zap.NewNop())
+		receiver, err := channel.NewMessageReceiver(receiverFunc, logger)
 		if err != nil {
 			t.Fatalf("NewEventReceiver failed. Error:%s", err)
 		}
