@@ -1566,7 +1566,6 @@
     "github.com/rogpeppe/fastuuid",
     "github.com/tsenart/vegeta/lib",
     "go.opencensus.io/plugin/ochttp",
-    "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/plugin/ochttp/propagation/tracecontext",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
