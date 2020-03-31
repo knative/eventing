@@ -17,7 +17,6 @@ limitations under the License.
 package apiserver
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -29,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
-	"knative.dev/eventing/pkg/adapter/v2"
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/logging"
@@ -37,28 +35,28 @@ import (
 )
 
 func TestAdapter_StartRef(t *testing.T) {
-	t.Skipf("skip, no valid kube client in testing")
 	ce := adaptertest.NewTestClient()
 
-	b, _ := json.Marshal(Config{
+	config := Config{
 		Namespace: "default",
-		Resources: []schema.GroupVersionResource{{
-			Version:  "v1",
-			Resource: "pods",
+		Resources: []ResourceWatch{{
+			GVR: schema.GroupVersionResource{
+				Version:  "v1",
+				Resource: "pods",
+			},
 		}},
 		EventMode: "Resource",
-	})
-	config := string(b)
-
-	opt := envConfig{
-		EnvConfig: adapter.EnvConfig{
-			Namespace: "default",
-		},
-		Name:       "test-source",
-		ConfigJson: config,
 	}
 	ctx, _ := pkgtesting.SetupFakeContext(t)
-	a := NewAdapter(ctx, &opt, ce)
+
+	a := &apiServerAdapter{
+		ce:     ce,
+		logger: logging.FromContext(ctx),
+		config: config,
+		k8s:    makeDynamicClient(simplePod("foo", "default")),
+		source: "unit-test",
+		name:   "unittest",
+	}
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -86,22 +84,23 @@ func TestAdapter_StartResource(t *testing.T) {
 
 	config := Config{
 		Namespace: "default",
-		Resources: []schema.GroupVersionResource{{
-			Version:  "v1",
-			Resource: "pods",
+		Resources: []ResourceWatch{{
+			GVR: schema.GroupVersionResource{
+				Version:  "v1",
+				Resource: "pods",
+			},
 		}},
 		EventMode: "Resource",
 	}
 	ctx, _ := pkgtesting.SetupFakeContext(t)
 
 	a := &apiServerAdapter{
-		namespace: "default",
-		ce:        ce,
-		logger:    logging.FromContext(ctx),
-		config:    config,
-		k8s:       makeDynamicClient(simplePod("foo", "default")),
-		source:    "unit-test",
-		name:      "unittest",
+		ce:     ce,
+		logger: logging.FromContext(ctx),
+		config: config,
+		k8s:    makeDynamicClient(simplePod("foo", "default")),
+		source: "unit-test",
+		name:   "unittest",
 	}
 
 	err := errors.New("test never ran")
