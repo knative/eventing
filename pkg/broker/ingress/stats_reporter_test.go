@@ -30,9 +30,9 @@ func TestStatsReporter(t *testing.T) {
 	setup()
 
 	args := &ReportArgs{
-		ns:        "testns",
-		broker:    "testbroker",
-		eventType: "testeventtype",
+		Namespace: "testns",
+		Broker:    "testbroker",
+		EventType: "testeventtype",
 	}
 
 	r := NewStatsReporter("testcontainer", "testpod")

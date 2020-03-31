@@ -21,9 +21,10 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"knative.dev/eventing/pkg/adapter/v2/test"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter/v2/test"
 )
 
 type mockReporter struct {
@@ -82,8 +83,8 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 
 			if tc.event != nil {
 				err := got.Send(context.TODO(), *tc.event)
-				if err != nil {
-					t.Fail()
+				if !cloudevents.IsACK(err) {
+					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
 				validateMetric(t, got.reporter, 1)
@@ -137,8 +138,8 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 
 			if tc.event != nil {
 				_, err := got.Request(context.TODO(), *tc.event)
-				if err != nil {
-					t.Fail()
+				if !cloudevents.IsACK(err) {
+					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
 				validateMetric(t, got.reporter, 1)

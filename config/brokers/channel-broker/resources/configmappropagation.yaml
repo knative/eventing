@@ -30,7 +30,6 @@ spec:
     plural: configmappropagations
     singular: configmappropagation
     categories:
-      - all
       - knative
       - eventing
     shortNames:

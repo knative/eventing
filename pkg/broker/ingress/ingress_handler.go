@@ -90,9 +90,9 @@ func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cl
 	}
 
 	reporterArgs := &ReportArgs{
-		ns:        h.Namespace,
-		broker:    h.BrokerName,
-		eventType: event.Type(),
+		Namespace: h.Namespace,
+		Broker:    h.BrokerName,
+		EventType: event.Type(),
 	}
 
 	if h.Defaulter != nil {

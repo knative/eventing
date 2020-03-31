@@ -120,7 +120,7 @@ func (h *Handler) receive(ctx context.Context, event cloudevents.Event, resp *cl
 	// channels and look up from the channels Status
 	channelURI := &url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.cluster.local", brokerName, brokerNamespace),
+		Host:   fmt.Sprintf("%s-kne-trigger-kn-channel.%s.svc.%s", brokerName, brokerNamespace, utils.GetClusterDomainName()),
 		Path:   "/",
 	}
 	sendingCTX := utils.SendingContextFrom(ctx, tctx, channelURI)
