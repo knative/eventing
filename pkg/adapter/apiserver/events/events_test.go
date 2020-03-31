@@ -278,7 +278,7 @@ func validate(t *testing.T, got cloudevents.Event, err error, want *cloudevents.
 		return
 	}
 
-	if diff := cmp.Diff(want, &got, cmpopts.IgnoreFields(cloudevents.Event{}, "DataBinary", "DataEncoded")); diff != "" {
+	if diff := cmp.Diff(want, &got, cmpopts.IgnoreFields(cloudevents.Event{}, "DataBase64", "DataEncoded")); diff != "" {
 		t.Errorf("unexpected event diff (-want, +got) = %v", diff)
 	}
 
