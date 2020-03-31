@@ -19,13 +19,14 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"knative.dev/eventing/pkg/adapter/apiserver"
 
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/kmeta"

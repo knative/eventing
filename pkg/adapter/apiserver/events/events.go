@@ -18,13 +18,12 @@ package events
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 

@@ -19,13 +19,13 @@ package testing
 import (
 	"context"
 	"fmt"
-	"knative.dev/pkg/apis"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/eventing/pkg/utils"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
 

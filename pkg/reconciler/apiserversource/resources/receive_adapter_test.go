@@ -18,15 +18,15 @@ package resources
 
 import (
 	"fmt"
-	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
-	"knative.dev/pkg/ptr"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	_ "knative.dev/pkg/metrics/testing"
+	"knative.dev/pkg/ptr"
 )
 
 func TestMakeReceiveAdapter(t *testing.T) {

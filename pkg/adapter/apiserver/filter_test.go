@@ -17,9 +17,9 @@ limitations under the License.
 package apiserver
 
 import (
-	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	"testing"
 
+	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 

@@ -18,12 +18,7 @@ package apiserversource
 
 import (
 	"context"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/ptr"
 	"testing"
-
-	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
-	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -34,15 +29,19 @@ import (
 	clientgotesting "k8s.io/client-go/testing"
 
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
 	"knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/utils"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1alpha1 "knative.dev/pkg/apis/duck/v1alpha1"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/ducks/duck/v1beta1/addressable/fake"
+	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
+	"knative.dev/pkg/ptr"
 	"knative.dev/pkg/resolver"
 
 	. "knative.dev/eventing/pkg/reconciler/testing"
