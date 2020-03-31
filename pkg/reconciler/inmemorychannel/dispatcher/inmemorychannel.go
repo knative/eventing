@@ -23,6 +23,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+
+	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/apis/messaging/v1alpha1"
 	"knative.dev/eventing/pkg/channel"
 	"knative.dev/eventing/pkg/channel/fanout"
@@ -78,9 +80,14 @@ func (r *Reconciler) newConfigFromInMemoryChannels(channels []*v1alpha1.InMemory
 			HostName:  c.Status.Address.Hostname,
 		}
 		if c.Spec.Subscribable != nil {
+			// Translate subs from v1alpha1 to v1beta1
+			subs := make([]duckv1beta1.SubscriberSpec, len(c.Spec.Subscribable.Subscribers))
+			for i, s := range c.Spec.Subscribable.Subscribers {
+				s.ConvertTo(context.TODO(), &subs[i])
+			}
 			channelConfig.FanoutConfig = fanout.Config{
 				AsyncHandler:     true,
-				Subscriptions:    c.Spec.Subscribable.Subscribers,
+				Subscriptions:    subs,
 				DispatcherConfig: r.configStore.GetConfig(),
 			}
 		}
