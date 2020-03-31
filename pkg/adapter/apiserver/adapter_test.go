@@ -32,47 +32,9 @@ import (
 	"knative.dev/eventing/pkg/adapter/v2"
 	adaptertest "knative.dev/eventing/pkg/adapter/v2/test"
 	rectesting "knative.dev/eventing/pkg/reconciler/testing"
+	"knative.dev/pkg/logging"
 	pkgtesting "knative.dev/pkg/reconciler/testing"
-	"knative.dev/pkg/source"
 )
-
-type mockReporter struct {
-	eventCount int
-}
-
-func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
-	r.eventCount += 1
-	return nil
-}
-
-func TestNewAdaptor(t *testing.T) {
-	t.Skipf("skip, no valid kube client in testing")
-	ce := adaptertest.NewTestClient()
-
-	testCases := map[string]struct {
-		opt    envConfig
-		source string
-	}{
-		"empty": {
-			source: "test-source",
-			opt:    envConfig{},
-		},
-	}
-	for n, tc := range testCases {
-		t.Run(n, func(t *testing.T) {
-			ctx, _ := pkgtesting.SetupFakeContext(t)
-			a := NewAdapter(ctx, &tc.opt, ce)
-
-			got, ok := a.(*apiServerAdapter)
-			if !ok {
-				t.Errorf("expected NewAdapter to return a *adapter, but did not")
-			}
-			if got == nil {
-				t.Errorf("expected NewAdapter to return a *adapter, but got nil")
-			}
-		})
-	}
-}
 
 func TestAdapter_StartRef(t *testing.T) {
 	t.Skipf("skip, no valid kube client in testing")
@@ -109,7 +71,7 @@ func TestAdapter_StartRef(t *testing.T) {
 	// Wait for the reflector to be fully initialized.
 	// Ideally we want to check LastSyncResourceVersion is not empty but we
 	// don't have access to it.
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	stopCh <- struct{}{}
 	<-done
@@ -120,29 +82,27 @@ func TestAdapter_StartRef(t *testing.T) {
 }
 
 func TestAdapter_StartResource(t *testing.T) {
-	t.Skipf("skip, no valid kube client in testing")
 	ce := adaptertest.NewTestClient()
 
-	b, _ := json.Marshal(Config{
+	config := Config{
 		Namespace: "default",
 		Resources: []schema.GroupVersionResource{{
 			Version:  "v1",
 			Resource: "pods",
 		}},
 		EventMode: "Resource",
-	})
-	config := string(b)
-
-	opt := envConfig{
-		EnvConfig: adapter.EnvConfig{
-			Namespace: "default",
-		},
-		Name:       "test-source",
-		ConfigJson: config,
 	}
-
 	ctx, _ := pkgtesting.SetupFakeContext(t)
-	a := NewAdapter(ctx, &opt, ce)
+
+	a := &apiServerAdapter{
+		namespace: "default",
+		ce:        ce,
+		logger:    logging.FromContext(ctx),
+		config:    config,
+		k8s:       makeDynamicClient(simplePod("foo", "default")),
+		source:    "unit-test",
+		name:      "unittest",
+	}
 
 	err := errors.New("test never ran")
 	stopCh := make(chan struct{})
@@ -155,7 +115,7 @@ func TestAdapter_StartResource(t *testing.T) {
 	// Wait for the reflector to be fully initialized.
 	// Ideally we want to check LastSyncResourceVersion is not empty but we
 	// don't have access to it.
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	stopCh <- struct{}{}
 	<-done
@@ -168,7 +128,7 @@ func TestAdapter_StartResource(t *testing.T) {
 // Common methods:
 
 // GetDynamicClient returns the mockDynamicClient to use for this test case.
-func makeDynamicClient(objects []runtime.Object) dynamic.Interface {
+func makeDynamicClient(objects ...runtime.Object) dynamic.Interface {
 	sc := runtime.NewScheme()
 	_ = corev1.AddToScheme(sc)
 	dynamicMocks := rectesting.DynamicMocks{} // TODO: maybe we need to customize this.

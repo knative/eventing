@@ -21,7 +21,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	v1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	v1 "knative.dev/pkg/apis/duck/v1"
@@ -125,11 +124,6 @@ func (in *ApiServerSourceSpec) DeepCopyInto(out *ApiServerSourceSpec) {
 	if in.CloudEventOverrides != nil {
 		in, out := &in.CloudEventOverrides, &out.CloudEventOverrides
 		*out = new(v1.CloudEventOverrides)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.LabelSelector != nil {
-		in, out := &in.LabelSelector, &out.LabelSelector
-		*out = new(metav1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.ResourceOwner != nil {

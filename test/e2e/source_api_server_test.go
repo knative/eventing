@@ -70,10 +70,10 @@ func TestApiServerSource(t *testing.T) {
 			name: "event-ref-unmatch-label",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKind{{
-					APIVersion: ptr.String("v1"),
-					Kind:       ptr.String("Pod"),
+					APIVersion:    ptr.String("v1"),
+					Kind:          ptr.String("Pod"),
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 				}},
-				LabelSelector:      &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
@@ -84,10 +84,10 @@ func TestApiServerSource(t *testing.T) {
 			name: "event-ref-match-label",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKind{{
-					APIVersion: ptr.String("v1"),
-					Kind:       ptr.String("Pod"),
+					APIVersion:    ptr.String("v1"),
+					Kind:          ptr.String("Pod"),
+					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 				}},
-				LabelSelector:      &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},
@@ -102,11 +102,11 @@ func TestApiServerSource(t *testing.T) {
 				Resources: []sourcesv1alpha2.APIVersionKind{{
 					APIVersion: ptr.String("v1"),
 					Kind:       ptr.String("Pod"),
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels:      map[string]string{"e2e": "testing"},
+						MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "e2e", Operator: "Exists"}},
+					},
 				}},
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels:      map[string]string{"e2e": "testing"},
-					MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "e2e", Operator: "Exists"}},
-				},
 				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
 			},

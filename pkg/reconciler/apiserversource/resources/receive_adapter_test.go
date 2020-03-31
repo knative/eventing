@@ -47,10 +47,10 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			}, {
 				APIVersion: ptr.String(""),
 				Kind:       ptr.String("Pod"),
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"test-key1": "test-value1"},
+				},
 			}},
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"test-key1": "test-value1"},
-			},
 			ResourceOwner: &v1alpha2.APIVersionKind{
 				APIVersion: ptr.String("custom/v1"),
 				Kind:       ptr.String("Parent"),
@@ -126,7 +126,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Value: "sink-uri",
 								}, {
 									Name:  "K_SOURCE_CONFIG",
-									Value: `{"namespace":"source-namespace","resources":[{"Group":"","Version":"","Resource":"namespaces"},{"Group":"batch","Version":"v1","Resource":"jobs"},{"Group":"","Version":"","Resource":"pods"}],"selector":"test-key1=test-value1","owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
+									Value: ``,
 								}, {
 									Name: "NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
@@ -142,7 +142,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Value: "knative.dev/eventing",
 								}, {
 									Name:  "K_METRICS_CONFIG",
-									Value: "",
+									Value: `{"namespace":"source-namespace","resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
 								}, {
 									Name:  "K_LOGGING_CONFIG",
 									Value: "",

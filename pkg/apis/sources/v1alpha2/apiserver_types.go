@@ -87,12 +87,6 @@ type ApiServerSourceSpec struct {
 	// +required
 	Resources []APIVersionKind `json:"resources,omitempty"`
 
-	// LabelSelector filters this source to objects to those resources pass the
-	// label selector.
-	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
-	// +optional
-	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
-
 	// ResourceOwner is an additional filter to only track resources that are
 	// owned by a specific resource type. If ResourceOwner matches Resources[n]
 	// then Resources[n] is allowed to pass the ResourceOwner filter.
@@ -134,6 +128,12 @@ type APIVersionKind struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	// +optional
 	Kind *string `json:"kind"`
+
+	// LabelSelector filters this source to objects to those resources pass the
+	// label selector.
+	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

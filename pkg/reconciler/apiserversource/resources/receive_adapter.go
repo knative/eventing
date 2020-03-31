@@ -19,6 +19,7 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
+	"knative.dev/pkg/system"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -89,15 +90,9 @@ func MakeReceiveAdapter(args *ReceiveAdapterArgs) *v1.Deployment {
 
 func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 	cfg := &apiserver.Config{
-		Namespace:     args.Source.Namespace,
-		Resources:     make([]schema.GroupVersionResource, 0, len(args.Source.Spec.Resources)),
+		Resources:     make([]apiserver.ResourceWatch, 0, len(args.Source.Spec.Resources)),
 		ResourceOwner: args.Source.Spec.ResourceOwner,
 		EventMode:     args.Source.Spec.EventMode,
-	}
-
-	if args.Source.Spec.LabelSelector != nil {
-		selector, _ := metav1.LabelSelectorAsSelector(args.Source.Spec.LabelSelector)
-		cfg.LabelSelector = selector.String()
 	}
 
 	for _, r := range args.Source.Spec.Resources {
@@ -114,7 +109,14 @@ func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 		}
 		gvr, _ := meta.UnsafeGuessKindToResource(gv.WithKind(*r.Kind))
 
-		cfg.Resources = append(cfg.Resources, gvr)
+		rw := apiserver.ResourceWatch{GVR: gvr}
+
+		if r.LabelSelector != nil {
+			selector, _ := metav1.LabelSelectorAsSelector(r.LabelSelector)
+			rw.LabelSelector = selector.String()
+		}
+
+		cfg.Resources = append(cfg.Resources, rw)
 	}
 
 	config := "{}"
@@ -128,6 +130,9 @@ func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 	}, {
 		Name:  "K_SOURCE_CONFIG",
 		Value: config,
+	}, {
+		Name:  "SYSTEM_NAMESPACE",
+		Value: system.Namespace(),
 	}, {
 		Name: "NAMESPACE",
 		ValueFrom: &corev1.EnvVarSource{
