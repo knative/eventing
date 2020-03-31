@@ -41,8 +41,12 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
-	return http.NewResult(200, "%w", protocol.ResultACK)
+	result := http.NewResult(200, "%w", protocol.ResultACK)
+	if c.reporter != nil {
+		return c.reporter.ReportCount(ctx, out, result)
+	}
 
+	return result
 }
 
 func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
@@ -50,7 +54,11 @@ func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
-	return nil, http.NewResult(200, "%w", protocol.ResultACK)
+	result := http.NewResult(200, "%w", protocol.ResultACK)
+	if c.reporter != nil {
+		return nil, c.reporter.ReportCount(ctx, out, result)
+	}
+	return nil, result
 
 }
 

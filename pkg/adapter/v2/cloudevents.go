@@ -65,7 +65,7 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(ctx, &out)
 	res := c.ceClient.Send(ctx, out)
-	return c.reportCount(ctx, out, res)
+	return c.reporter.ReportCount(ctx, out, res)
 
 }
 
@@ -74,7 +74,7 @@ func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, pr
 	c.applyOverrides(ctx, &out)
 
 	resp, res := c.ceClient.Request(ctx, out)
-	return resp, c.reportCount(ctx, out, res)
+	return resp, c.reporter.ReportCount(ctx, out, res)
 
 }
 

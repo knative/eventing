@@ -38,8 +38,8 @@ func TestStatsReporterAdapter(t *testing.T) {
 		ResourceGroup: "test-rg",
 	})
 
-	if err := reporter.ReportCount(ctx, event, nil); err != nil {
-		t.Errorf("unexpected error %v", err)
+	if result := reporter.ReportCount(ctx, event, cloudevents.NewHTTPResult(200, "")); cloudevents.IsNACK(result) {
+		t.Errorf("unexpected result %v", result)
 	}
 
 	if err := stats.ValidateEventCount(1); err != nil {

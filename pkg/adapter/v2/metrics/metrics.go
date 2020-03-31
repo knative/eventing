@@ -19,12 +19,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cloudevents/sdk-go/v2/protocol/http"
+
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"knative.dev/pkg/source"
 )
 
 type StatsReporterAdapter interface {
-	ReportCount(ctx context.Context, event cloudevents.Event, err error) error
+	ReportCount(ctx context.Context, event cloudevents.Event, result cloudevents.Result) error
 }
 
 type statsReporterAdapter struct {
@@ -35,7 +37,7 @@ func NewStatsReporterAdapter(reporter source.StatsReporter) StatsReporterAdapter
 	return &statsReporterAdapter{StatsReporter: reporter}
 }
 
-func (c *statsReporterAdapter) ReportCount(ctx context.Context, event cloudevents.Event, err error) error {
+func (c *statsReporterAdapter) ReportCount(ctx context.Context, event cloudevents.Event, result cloudevents.Result) error {
 	tags := MetricTagFromContext(ctx)
 	reportArgs := &source.ReportArgs{
 		Namespace:     tags.Namespace,
@@ -44,22 +46,30 @@ func (c *statsReporterAdapter) ReportCount(ctx context.Context, event cloudevent
 		Name:          tags.Name,
 		ResourceGroup: tags.ResourceGroup,
 	}
-	if rErr := c.ReportEventCount(reportArgs, StatusCode(err)); rErr != nil {
-		// metrics is not important enough to return an error if it is setup wrong.
-		// So combine reporter error with ce error if not nil.
-		if err != nil {
-			err = fmt.Errorf("%w\nmetrics reporter errror: %s", err, rErr)
+
+	if cloudevents.IsACK(result) {
+		var res *http.Result
+		if !cloudevents.ResultAs(result, &res) {
+			return fmt.Errorf("protocol.Result is not http.Result")
+		}
+
+		_ = c.ReportEventCount(reportArgs, res.StatusCode)
+	} else {
+		var res *http.Result
+		if !cloudevents.ResultAs(result, &res) {
+			return result
+		}
+
+		if rErr := c.ReportEventCount(reportArgs, res.StatusCode); rErr != nil {
+			// metrics is not important enough to return an error if it is setup wrong.
+			// So combine reporter error with ce error if not nil.
+			if result != nil {
+				result = fmt.Errorf("%w\nmetrics reporter errror: %s", result, rErr)
+			}
 		}
 	}
-	return err
-}
 
-func StatusCode(err error) int {
-	// TODO: there is talk to change this in the sdk, for now we do not have access to the real http code.
-	if err != nil {
-		return 400
-	}
-	return 200
+	return result
 }
 
 // Metric context

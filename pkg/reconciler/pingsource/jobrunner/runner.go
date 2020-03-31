@@ -89,9 +89,9 @@ func (a *cronJobsRunner) Start(stopCh <-chan struct{}) error {
 
 func (a *cronJobsRunner) cronTick(ctx context.Context, event cloudevents.Event) func() {
 	return func() {
-		if err := a.Client.Send(ctx, event); err != nil {
+		if result := a.Client.Send(ctx, event); cloudevents.IsNACK(result) {
 			// TODO: at least retries
-			a.Logger.Error("failed to send cloudevent", zap.Error(err))
+			a.Logger.Error("failed to send cloudevent", zap.Any("result", result))
 		}
 	}
 }
