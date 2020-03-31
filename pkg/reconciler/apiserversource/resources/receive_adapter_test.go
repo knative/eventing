@@ -128,7 +128,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 									Value: "sink-uri",
 								}, {
 									Name:  "K_SOURCE_CONFIG",
-									Value: `{"namespace":"","resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
+									Value: `{"namespace":"source-namespace","resources":[{"gvr":{"Group":"","Version":"","Resource":"namespaces"}},{"gvr":{"Group":"batch","Version":"v1","Resource":"jobs"}},{"gvr":{"Group":"","Version":"","Resource":"pods"},"selector":"test-key1=test-value1"}],"owner":{"apiVersion":"custom/v1","kind":"Parent"},"mode":"Resource"}`,
 								}, {
 									Name:  "SYSTEM_NAMESPACE",
 									Value: "knative-testing",
