@@ -35,6 +35,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestMessageReceiver_ServeHTTP(t *testing.T) {
@@ -148,7 +149,7 @@ func TestMessageReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewMessageReceiver(f, zap.NewNop())
+			r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}
@@ -193,7 +194,7 @@ func TestMessageReceiver_WrongRequest(t *testing.T) {
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewMessageReceiver(f, zap.NewNop())
+	r, err := NewMessageReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}
@@ -215,9 +216,12 @@ func TestMessageReceiver_UnknownHost(t *testing.T) {
 	f := func(_ context.Context, _ ChannelReference, _ binding.Message, _ []binding.TransformerFactory, _ nethttp.Header) error {
 		return errors.New("test induced receiver function error")
 	}
-	r, err := NewMessageReceiver(f, zap.NewNop(), ResolveMessageChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
-		return ChannelReference{}, UnknownHostError(s)
-	}))
+	r, err := NewMessageReceiver(
+		f,
+		zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+		ResolveMessageChannelFromHostHeader(func(s string) (reference ChannelReference, err error) {
+			return ChannelReference{}, UnknownHostError(s)
+		}))
 	if err != nil {
 		t.Fatalf("Error creating new event receiver. Error:%s", err)
 	}

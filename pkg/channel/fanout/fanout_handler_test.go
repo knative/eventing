@@ -28,6 +28,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -229,7 +230,9 @@ func TestFanoutHandler_ServeHTTP(t *testing.T) {
 				subs = append(subs, sub)
 			}
 
-			h, err := NewHandler(zap.NewNop(), Config{Subscriptions: subs})
+			h, err := NewHandler(
+				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+				Config{Subscriptions: subs})
 			if err != nil {
 				t.Fatalf("NewHandler failed. Error:%s", err)
 			}

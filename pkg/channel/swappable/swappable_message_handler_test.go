@@ -26,6 +26,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
@@ -71,7 +72,7 @@ func TestMessageHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyMessageHandler(context.TODO(), zap.NewNop())
+			h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -117,7 +118,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyHandler(zap.NewNop())
+			h, err := NewEmptyHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -145,7 +146,7 @@ func TestMessageHandler_InvalidConfigChange(t *testing.T) {
 }
 
 func TestMessageHandler_NilConfigChange(t *testing.T) {
-	h, err := NewEmptyMessageHandler(context.TODO(), zap.NewNop())
+	h, err := NewEmptyMessageHandler(context.TODO(), zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 	if err != nil {
 		t.Errorf("Unexpected error creating handler: %v", err)
 	}

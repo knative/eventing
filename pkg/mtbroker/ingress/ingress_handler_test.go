@@ -27,6 +27,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v1"
 	"github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"knative.dev/eventing/pkg/broker"
 )
 
@@ -122,7 +123,7 @@ func TestIngressHandler_Receive_FAIL(t *testing.T) {
 			client, _ := cloudevents.NewDefaultClient()
 			reporter := &mockReporter{}
 			handler := Handler{
-				Logger:    zap.NewNop(),
+				Logger:    zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				CeClient:  client,
 				Reporter:  reporter,
 				Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
@@ -149,7 +150,7 @@ func TestIngressHandler_Receive_Succeed(t *testing.T) {
 	client := &fakeClient{}
 	reporter := &mockReporter{}
 	handler := Handler{
-		Logger:    zap.NewNop(),
+		Logger:    zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 		CeClient:  client,
 		Reporter:  reporter,
 		Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
@@ -176,7 +177,7 @@ func TestIngressHandler_Receive_NoTTL(t *testing.T) {
 	client := &fakeClient{}
 	reporter := &mockReporter{}
 	handler := Handler{
-		Logger:   zap.NewNop(),
+		Logger:   zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 		CeClient: client,
 		Reporter: reporter,
 	}
@@ -197,7 +198,7 @@ func TestIngressHandler_Start(t *testing.T) {
 	client := &fakeClient{}
 	reporter := &mockReporter{}
 	handler := Handler{
-		Logger:    zap.NewNop(),
+		Logger:    zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 		CeClient:  client,
 		Reporter:  reporter,
 		Defaulter: broker.TTLDefaulter(zap.NewNop(), 5),
