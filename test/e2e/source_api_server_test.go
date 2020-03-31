@@ -220,7 +220,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 					APIVersion: ptr.String("v1"),
 					Kind:       ptr.String("Event"),
 				}},
-				EventMode:          "Ref",
+				EventMode:          "Reference",
 				ServiceAccountName: serviceAccountName,
 				// TODO change sink to be a non-Broker one once we revisit EventType https://github.com/knative/eventing/issues/2750
 			}),
