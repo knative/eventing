@@ -29,6 +29,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
+
+	_ "knative.dev/pkg/system/testing"
 )
 
 const (
