@@ -60,8 +60,8 @@ func TestKnownTypes(t *testing.T) {
 	types := scheme.KnownTypes(SchemeGroupVersion)
 
 	for _, name := range []string{
-		//"ApiServerSource",
-		//"ApiServerSourceList",
+		"ApiServerSource",
+		"ApiServerSourceList",
 		"SinkBinding",
 		"SinkBindingList",
 		"PingSource",

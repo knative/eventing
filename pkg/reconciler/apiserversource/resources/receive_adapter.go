@@ -95,7 +95,8 @@ func makeEnv(args *ReceiveAdapterArgs) []corev1.EnvVar {
 	}
 
 	if args.Source.Spec.LabelSelector != nil {
-		cfg.LabelSelector = args.Source.Spec.LabelSelector.String()
+		selector, _ := metav1.LabelSelectorAsSelector(args.Source.Spec.LabelSelector)
+		cfg.LabelSelector = selector.String()
 	}
 
 	for _, r := range args.Source.Spec.Resources {

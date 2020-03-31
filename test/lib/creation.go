@@ -291,9 +291,9 @@ func (client *Client) CreateSinkBindingV1Alpha2OrFail(sb *sourcesv1alpha2.SinkBi
 }
 
 // CreateApiServerSourceOrFail will create an ApiServerSource
-func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha1.ApiServerSource) {
+func (client *Client) CreateApiServerSourceOrFail(apiServerSource *sourcesv1alpha2.ApiServerSource) {
 	client.T.Logf("Creating apiserversource %+v", apiServerSource)
-	apiServerInterface := client.Eventing.SourcesV1alpha1().ApiServerSources(client.Namespace)
+	apiServerInterface := client.Eventing.SourcesV1alpha2().ApiServerSources(client.Namespace)
 	_, err := apiServerInterface.Create(apiServerSource)
 	if err != nil {
 		client.T.Fatalf("Failed to create apiserversource %q: %v", apiServerSource.Name, err)
