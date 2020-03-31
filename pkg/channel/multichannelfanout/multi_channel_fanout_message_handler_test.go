@@ -17,9 +17,7 @@ limitations under the License.
 package multichannelfanout
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -292,18 +290,19 @@ func TestServeHTTPMessageHandler(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			res := httptest.ResponseRecorder{}
+			responseRecorder := httptest.ResponseRecorder{}
 
-			h.ServeHTTP(&res, req)
-			if res.Code != tc.expectedStatusCode {
-				t.Errorf("Unexpected status code. Expected %v, actual %v", tc.expectedStatusCode, res.Code)
+			h.ServeHTTP(&responseRecorder, req)
+			response := responseRecorder.Result()
+			if response.StatusCode != tc.expectedStatusCode {
+				t.Errorf("Unexpected status code. Expected %v, actual %v", tc.expectedStatusCode, response.StatusCode)
 			}
 
 			var message binding.Message
-			if res.Body != nil {
-				message = bindingshttp.NewMessage(res.Header(), ioutil.NopCloser(bytes.NewReader(res.Body.Bytes())))
+			if response.Body != nil {
+				message = bindingshttp.NewMessage(response.Header, response.Body)
 			} else {
-				message = bindingshttp.NewMessage(res.Header(), nil)
+				message = bindingshttp.NewMessage(response.Header, nil)
 			}
 			if message.ReadEncoding() != binding.EncodingUnknown {
 				t.Errorf("Expected EncodingUnkwnown. Actual: %v", message.ReadEncoding())
