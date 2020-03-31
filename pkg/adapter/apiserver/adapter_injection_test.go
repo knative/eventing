@@ -18,6 +18,8 @@ package apiserver
 
 import (
 	"context"
+	"testing"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -25,7 +27,6 @@ import (
 	reconcilertesting "knative.dev/eventing/pkg/reconciler/testing"
 	"knative.dev/pkg/injection"
 	logtesting "knative.dev/pkg/logging/testing"
-	"testing"
 
 	fakedynamicclient "knative.dev/pkg/injection/clients/dynamicclient/fake"
 )

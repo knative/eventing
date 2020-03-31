@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"knative.dev/eventing/pkg/adapter/apiserver"
 	"knative.dev/eventing/pkg/adapter/v2"
 	"knative.dev/pkg/controller"

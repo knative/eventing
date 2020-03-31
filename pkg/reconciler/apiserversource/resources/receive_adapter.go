@@ -19,6 +19,7 @@ package resources
 import (
 	"encoding/json"
 	"fmt"
+
 	"knative.dev/pkg/system"
 
 	"k8s.io/apimachinery/pkg/api/meta"

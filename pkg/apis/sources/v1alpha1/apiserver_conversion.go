@@ -19,9 +19,10 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
