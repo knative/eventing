@@ -31,6 +31,7 @@ import (
 	"knative.dev/eventing/pkg/utils"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestEventReceiver_ServeHTTP(t *testing.T) {
@@ -132,7 +133,7 @@ func TestEventReceiver_ServeHTTP(t *testing.T) {
 			}
 
 			f := tc.receiverFunc
-			r, err := NewEventReceiver(f, zap.NewNop())
+			r, err := NewEventReceiver(f, zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Fatalf("Error creating new event receiver. Error:%s", err)
 			}

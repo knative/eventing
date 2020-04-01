@@ -30,6 +30,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 
 	"knative.dev/eventing/pkg/utils"
 )
@@ -515,7 +516,7 @@ func TestDispatchMessage(t *testing.T) {
 
 			ctx := context.Background()
 
-			md := NewMessageDispatcher(zap.NewNop())
+			md := NewMessageDispatcher(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 
 			destination := getOnlyDomainURL(t, tc.sendToDestination, destServer.URL)
 			reply := getOnlyDomainURL(t, tc.sendToReply, replyServer.URL)

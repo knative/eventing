@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
 	"knative.dev/eventing/pkg/channel/fanout"
 	"knative.dev/eventing/pkg/utils"
@@ -132,7 +133,7 @@ func TestConfigMapData(t *testing.T) {
 			if tc.name != "valid" {
 				return
 			}
-			c, e := Parse(zap.NewNop(), formatData(tc.config))
+			c, e := Parse(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), formatData(tc.config))
 			if tc.expectedErr {
 				if e == nil {
 					t.Errorf("Expected an error, actual nil")

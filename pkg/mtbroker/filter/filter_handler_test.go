@@ -31,6 +31,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -336,7 +337,7 @@ func TestReceiver(t *testing.T) {
 			listers := reconcilertesting.NewListers(correctURI)
 			reporter := &mockReporter{}
 			r, err := NewHandler(
-				zap.NewNop(),
+				zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
 				listers.GetTriggerLister(),
 				reporter,
 				8080)

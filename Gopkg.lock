@@ -1575,6 +1575,7 @@
     "go.opentelemetry.io/otel/api/trace",
     "go.uber.org/atomic",
     "go.uber.org/zap",
+    "go.uber.org/zap/zaptest",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",

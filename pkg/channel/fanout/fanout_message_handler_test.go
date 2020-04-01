@@ -29,6 +29,7 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -227,10 +228,12 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		subs = append(subs, sub)
 	}
 
-	h, err := NewMessageHandler(zap.NewNop(), Config{
-		Subscriptions: subs,
-		AsyncHandler:  async,
-	})
+	h, err := NewMessageHandler(
+		zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+		Config{
+			Subscriptions: subs,
+			AsyncHandler:  async,
+		})
 	if err != nil {
 		t.Fatalf("NewHandler failed. Error:%s", err)
 	}

@@ -26,6 +26,7 @@ import (
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -61,7 +62,7 @@ func TestNewHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewHandler(zap.NewNop(), tc.config)
+			_, err := NewHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), tc.config)
 			if tc.createErr != "" {
 				if err == nil {
 					t.Errorf("Expected NewHandler error: '%v'. Actual nil", tc.createErr)
@@ -110,7 +111,7 @@ func TestCopyWithNewConfig(t *testing.T) {
 	if cmp.Equal(orig, updated) {
 		t.Errorf("Orig and updated must be different")
 	}
-	h, err := NewHandler(zap.NewNop(), orig)
+	h, err := NewHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), orig)
 	if err != nil {
 		t.Errorf("Unable to create handler, %v", err)
 	}
@@ -180,7 +181,7 @@ func TestConfigDiff(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h, err := NewHandler(zap.NewNop(), tc.orig)
+			h, err := NewHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), tc.orig)
 			if err != nil {
 				t.Errorf("Unable to create handler: %v", err)
 			}
@@ -275,7 +276,7 @@ func TestServeHTTP(t *testing.T) {
 			// Rewrite the replaceDomains to call the server we just created.
 			replaceDomains(tc.config, server.URL[7:])
 
-			h, err := NewHandler(zap.NewNop(), tc.config)
+			h, err := NewHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())), tc.config)
 			if err != nil {
 				t.Fatalf("Unexpected NewHandler error: '%v'", err)
 			}

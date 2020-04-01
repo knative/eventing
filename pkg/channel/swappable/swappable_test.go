@@ -25,6 +25,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v1"
 	cehttp "github.com/cloudevents/sdk-go/v1/cloudevents/transport/http"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
 	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
@@ -77,7 +78,7 @@ func TestHandler(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyHandler(zap.NewNop())
+			h, err := NewEmptyHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -123,7 +124,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			h, err := NewEmptyHandler(zap.NewNop())
+			h, err := NewEmptyHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 			if err != nil {
 				t.Errorf("Unexpected error creating handler: %v", err)
 			}
@@ -151,7 +152,7 @@ func TestHandler_InvalidConfigChange(t *testing.T) {
 }
 
 func TestHandler_NilConfigChange(t *testing.T) {
-	h, err := NewEmptyHandler(zap.NewNop())
+	h, err := NewEmptyHandler(zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())))
 	if err != nil {
 		t.Errorf("Unexpected error creating handler: %v", err)
 	}
