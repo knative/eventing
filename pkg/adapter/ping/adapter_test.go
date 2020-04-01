@@ -47,7 +47,7 @@ func TestStart_ServeHTTP(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			ce := adaptertest.NewTestClient(nil)
+			ce := adaptertest.NewTestClient()
 
 			a := &pingAdapter{
 				Schedule: tc.schedule,
@@ -108,7 +108,7 @@ func TestPostMessage_ServeHTTP(t *testing.T) {
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
 
-			ce := adaptertest.NewTestClient(nil)
+			ce := adaptertest.NewTestClient()
 
 			a := &pingAdapter{
 				Data:   "data",
