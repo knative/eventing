@@ -29,10 +29,9 @@ import (
 	"github.com/cloudevents/sdk-go/v2/binding"
 	bindingshttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
 	"knative.dev/pkg/apis"
 
-	eventingduck "knative.dev/eventing/pkg/apis/duck/v1alpha1"
+	eventingduck "knative.dev/eventing/pkg/apis/duck/v1beta1"
 	"knative.dev/eventing/pkg/channel"
 )
 
@@ -228,8 +227,13 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		subs = append(subs, sub)
 	}
 
+	// The test syncs using WaitGroups checking for subscriber/replier correctly invoked, but it doesn't sync on the async
+	// goroutine created by FanoutMessageHandler in async mode.
+	// So the test logger (zaptest) doesn't work, because it could log messages after the test is closed.
+	logger, _ := zap.NewDevelopment(zap.AddStacktrace(zap.WarnLevel))
+
 	h, err := NewMessageHandler(
-		zaptest.NewLogger(t, zaptest.WrapOptions(zap.AddCaller())),
+		logger,
 		Config{
 			Subscriptions: subs,
 			AsyncHandler:  async,
@@ -249,7 +253,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		h.timeout = timeout
 	} else {
 		// Reasonable timeout for the tests.
-		h.timeout = 100 * time.Millisecond
+		h.timeout = 10000 * time.Second
 	}
 
 	event := makeCloudEventNew()
