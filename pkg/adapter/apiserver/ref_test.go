@@ -1,9 +1,23 @@
+/*
+Copyright 2020 The Knative Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package apiserver
 
 import (
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	sourcesv1alpha1 "knative.dev/eventing/pkg/apis/sources/v1alpha1"
 )
 
@@ -11,78 +25,37 @@ func TestRefAddEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Add(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, d.reporter, 1)
 }
 
 func TestRefUpdateEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Update(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, d.reporter, 1)
 }
 
 func TestRefDeleteEvent(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Delete(simplePod("unit", "test"))
 	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, d.reporter, 1)
+
 }
 
 func TestRefAddEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Add(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, d.reporter, 0)
 }
 
 func TestRefUpdateEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Update(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, d.reporter, 0)
 }
 
 func TestRefDeleteEventNil(t *testing.T) {
 	d, ce := makeRefAndTestingClient()
 	d.Delete(nil)
 	validateNotSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, d.reporter, 0)
-}
-
-func TestRefAddEventAsController(t *testing.T) {
-	d, ce := makeRefAndTestingClient()
-	d.addControllerWatch(schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "pods",
-	})
-	d.Add(simpleOwnedPod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceAddRefEventType)
-	validateMetric(t, d.reporter, 1)
-}
-
-func TestRefUpdateEventAsController(t *testing.T) {
-	d, ce := makeRefAndTestingClient()
-	d.addControllerWatch(schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "pods",
-	})
-	d.Update(simpleOwnedPod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceUpdateRefEventType)
-	validateMetric(t, d.reporter, 1)
-}
-
-func TestRefDeleteEventAsController(t *testing.T) {
-	d, ce := makeRefAndTestingClient()
-	d.addControllerWatch(schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "pods",
-	})
-	d.Delete(simpleOwnedPod("unit", "test"))
-	validateSent(t, ce, sourcesv1alpha1.ApiServerSourceDeleteRefEventType)
-	validateMetric(t, d.reporter, 1)
 }
 
 // HACKHACKHACK For test coverage.

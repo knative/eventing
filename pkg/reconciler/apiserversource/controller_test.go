@@ -27,8 +27,7 @@ import (
 	. "knative.dev/pkg/reconciler/testing"
 
 	// Fake injection informers
-	_ "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventtype/fake"
-	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha1/apiserversource/fake"
+	_ "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/apiserversource/fake"
 	"knative.dev/pkg/client/injection/ducks/duck/v1/addressable"
 	_ "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 )

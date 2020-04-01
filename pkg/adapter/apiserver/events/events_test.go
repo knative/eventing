@@ -21,11 +21,10 @@ import (
 	"strings"
 	"testing"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	cloudevents "github.com/cloudevents/sdk-go/v1"
-	"github.com/google/go-cmp/cmp"
 
 	"knative.dev/eventing/pkg/adapter/apiserver/events"
 )
@@ -48,29 +47,6 @@ func simplePod(name, namespace string) *unstructured.Unstructured {
 func simpleSubject(name, namespace string) *string {
 	subject := fmt.Sprintf("/apis/v1/namespaces/%s/pods/%s", namespace, name)
 	return &subject
-}
-
-func simpleOwnedPod(name, namespace string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Pod",
-			"metadata": map[string]interface{}{
-				"namespace": namespace,
-				"name":      "owned",
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         "apps/v1",
-						"blockOwnerDeletion": true,
-						"controller":         true,
-						"kind":               "ReplicaSet",
-						"name":               name,
-						"uid":                "0c119059-7113-11e9-a6c5-42010a8a00ed",
-					},
-				},
-			},
-		},
-	}
 }
 
 func TestMakeAddEvent(t *testing.T) {
@@ -103,7 +79,7 @@ func TestMakeAddEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeAddEvent(tc.source, tc.obj)
+			got, err := events.MakeAddEvent(tc.source, tc.obj, false)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -139,7 +115,7 @@ func TestMakeUpdateEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeUpdateEvent(tc.source, tc.obj)
+			got, err := events.MakeUpdateEvent(tc.source, tc.obj, false)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -175,7 +151,7 @@ func TestMakeDeleteEvent(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeDeleteEvent(tc.source, tc.obj)
+			got, err := events.MakeDeleteEvent(tc.source, tc.obj, false)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -183,9 +159,8 @@ func TestMakeDeleteEvent(t *testing.T) {
 
 func TestMakeAddRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj          interface{}
-		source       string
-		asController bool
+		obj    interface{}
+		source string
 
 		want     *cloudevents.Event
 		wantData string
@@ -209,24 +184,10 @@ func TestMakeAddRefEvent(t *testing.T) {
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
 		},
-		"simple owned pod": {
-			source:       "unit-test",
-			obj:          simpleOwnedPod("unit", "test"),
-			asController: true,
-			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV1{
-					Type:            "dev.knative.apiserver.ref.add",
-					DataContentType: &contentType,
-					Source:          *cloudevents.ParseURIRef("unit-test"),
-					Subject:         simpleSubject("owned", "test"),
-				}.AsV1(),
-			},
-			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
-		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeAddRefEvent(tc.source, tc.asController, tc.obj)
+			got, err := events.MakeAddEvent(tc.source, tc.obj, true)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -234,9 +195,8 @@ func TestMakeAddRefEvent(t *testing.T) {
 
 func TestMakeUpdateRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj          interface{}
-		source       string
-		asController bool
+		obj    interface{}
+		source string
 
 		want     *cloudevents.Event
 		wantData string
@@ -260,24 +220,10 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
 		},
-		"simple owned pod": {
-			source:       "unit-test",
-			obj:          simpleOwnedPod("unit", "test"),
-			asController: true,
-			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV1{
-					Type:            "dev.knative.apiserver.ref.update",
-					Source:          *cloudevents.ParseURIRef("unit-test"),
-					Subject:         simpleSubject("owned", "test"),
-					DataContentType: &contentType,
-				}.AsV1(),
-			},
-			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
-		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeUpdateRefEvent(tc.source, tc.asController, tc.obj)
+			got, err := events.MakeUpdateEvent(tc.source, tc.obj, true)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
@@ -285,9 +231,8 @@ func TestMakeUpdateRefEvent(t *testing.T) {
 
 func TestMakeDeleteRefEvent(t *testing.T) {
 	testCases := map[string]struct {
-		obj          interface{}
-		source       string
-		asController bool
+		obj    interface{}
+		source string
 
 		want     *cloudevents.Event
 		wantData string
@@ -311,30 +256,16 @@ func TestMakeDeleteRefEvent(t *testing.T) {
 			},
 			wantData: `{"kind":"Pod","namespace":"test","name":"unit","apiVersion":"v1"}`,
 		},
-		"simple owned pod": {
-			source:       "unit-test",
-			obj:          simpleOwnedPod("unit", "test"),
-			asController: true,
-			want: &cloudevents.Event{
-				Context: cloudevents.EventContextV1{
-					Type:            "dev.knative.apiserver.ref.delete",
-					Source:          *cloudevents.ParseURIRef("unit-test"),
-					Subject:         simpleSubject("owned", "test"),
-					DataContentType: &contentType,
-				}.AsV1(),
-			},
-			wantData: `{"kind":"ReplicaSet","namespace":"test","name":"unit","apiVersion":"apps/v1"}`,
-		},
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			got, err := events.MakeDeleteRefEvent(tc.source, tc.asController, tc.obj)
+			got, err := events.MakeDeleteEvent(tc.source, tc.obj, true)
 			validate(t, got, err, tc.want, tc.wantData, tc.wantErr)
 		})
 	}
 }
 
-func validate(t *testing.T, got *cloudevents.Event, err error, want *cloudevents.Event, wantData, wantErr string) {
+func validate(t *testing.T, got cloudevents.Event, err error, want *cloudevents.Event, wantData, wantErr string) {
 	if wantErr != "" || err != nil {
 		var gotErr string
 		if err != nil {
@@ -347,11 +278,11 @@ func validate(t *testing.T, got *cloudevents.Event, err error, want *cloudevents
 		return
 	}
 
-	if diff := cmp.Diff(want, got, cmpopts.IgnoreFields(cloudevents.Event{}, "Data", "DataEncoded")); diff != "" {
+	if diff := cmp.Diff(want, &got, cmpopts.IgnoreFields(cloudevents.Event{}, "DataBase64", "DataEncoded")); diff != "" {
 		t.Errorf("unexpected event diff (-want, +got) = %v", diff)
 	}
 
-	gotData := string(got.Data.([]byte))
+	gotData := string(got.Data())
 	if diff := cmp.Diff(wantData, gotData); diff != "" {
 		t.Errorf("unexpected data diff (-want, +got) = %v", diff)
 	}

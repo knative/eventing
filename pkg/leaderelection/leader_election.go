@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+
 	kle "knative.dev/pkg/leaderelection"
 )
 
@@ -39,7 +40,7 @@ func ValidateConfig(configMap *corev1.ConfigMap) (*kle.Config, error) {
 		return nil, err
 	}
 
-	for _, component := range config.EnabledComponents.List() {
+	for component := range config.EnabledComponents {
 		if !validComponents.Has(component) {
 			return nil, fmt.Errorf("invalid enabledComponent %q: valid values are %q", component, validComponents.List())
 		}

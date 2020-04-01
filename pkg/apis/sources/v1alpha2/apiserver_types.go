@@ -25,6 +25,7 @@ import (
 )
 
 // +genclient
+// +genreconciler
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:defaulter-gen=true
 
@@ -62,6 +63,16 @@ const (
 	ApiServerSourceDeleteRefEventType = "dev.knative.apiserver.ref.delete"
 )
 
+// ApiServerSourceEventTypes is the list of CloudEvent types the ApiServerSource emits.
+var ApiServerSourceEventTypes = []string{
+	ApiServerSourceAddEventType,
+	ApiServerSourceDeleteEventType,
+	ApiServerSourceUpdateEventType,
+	ApiServerSourceAddRefEventType,
+	ApiServerSourceDeleteRefEventType,
+	ApiServerSourceUpdateRefEventType,
+}
+
 // ApiServerSourceSpec defines the desired state of ApiServerSource
 type ApiServerSourceSpec struct {
 	// inherits duck/v1 SourceSpec, which currently provides:
@@ -71,16 +82,11 @@ type ApiServerSourceSpec struct {
 	//   and modifications of the event sent to the sink.
 	duckv1.SourceSpec `json:",inline"`
 
-	// Resource is the resource this source will track and send related
-	// lifecycle events from the Kubernetes ApiServer.
+	// Resource are the resources this source will track and send related
+	// lifecycle events from the Kubernetes ApiServer, with an optional label
+	// selector to help filter.
 	// +required
-	Resources []APIVersionKind `json:"resources,omitempty"`
-
-	// LabelSelector filters this source to objects to those resources pass the
-	// label selector.
-	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
-	// +optional
-	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
+	Resources []APIVersionKindSelector `json:"resources,omitempty"`
 
 	// ResourceOwner is an additional filter to only track resources that are
 	// owned by a specific resource type. If ResourceOwner matches Resources[n]
@@ -123,6 +129,24 @@ type APIVersionKind struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 	// +optional
 	Kind *string `json:"kind"`
+}
+
+// APIVersionKindSelector is an APIVersion Kind tuple with a LabelSelector.
+type APIVersionKindSelector struct {
+	// APIVersion - the API version of the resource to watch.
+	// +optional
+	APIVersion *string `json:"apiVersion"`
+
+	// Kind of the resource to watch.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+	// +optional
+	Kind *string `json:"kind"`
+
+	// LabelSelector filters this source to objects to those resources pass the
+	// label selector.
+	// More info: http://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"selector,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

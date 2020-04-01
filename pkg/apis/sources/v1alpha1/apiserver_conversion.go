@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
 	"knative.dev/pkg/apis"
@@ -40,12 +43,17 @@ func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 		// Spec
 
 		if len(source.Spec.Resources) > 0 {
-			sink.Spec.Resources = make([]v1alpha2.APIVersionKind, len(source.Spec.Resources))
+			sink.Spec.Resources = make([]v1alpha2.APIVersionKindSelector, len(source.Spec.Resources))
 		}
 		for i, v := range source.Spec.Resources {
-			sink.Spec.Resources[i] = v1alpha2.APIVersionKind{
+			sink.Spec.Resources[i] = v1alpha2.APIVersionKindSelector{
 				APIVersion: ptr.String(v.APIVersion),
 				Kind:       ptr.String(v.Kind),
+			}
+
+			if !cmp.Equal(v.LabelSelector, metav1.LabelSelector{}) {
+				sink.Spec.Resources[i].LabelSelector = &metav1.LabelSelector{}
+				v.LabelSelector.DeepCopyInto(sink.Spec.Resources[i].LabelSelector)
 			}
 		}
 
@@ -57,10 +65,6 @@ func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 		}
 
 		// Optional Spec
-
-		if source.Spec.LabelSelector != nil {
-			sink.Spec.LabelSelector = source.Spec.LabelSelector
-		}
 
 		if source.Spec.ResourceOwner != nil {
 			sink.Spec.ResourceOwner = source.Spec.ResourceOwner
@@ -141,13 +145,12 @@ func (sink *ApiServerSource) ConvertFrom(ctx context.Context, obj apis.Convertib
 			if v.Kind != nil {
 				sink.Spec.Resources[i].Kind = *v.Kind
 			}
+			if v.LabelSelector != nil {
+				sink.Spec.Resources[i].LabelSelector = *v.LabelSelector
+			}
 		}
 
 		// Spec Optionals
-
-		if source.Spec.LabelSelector != nil {
-			sink.Spec.LabelSelector = source.Spec.LabelSelector
-		}
 
 		if source.Spec.ResourceOwner != nil {
 			sink.Spec.ResourceOwner = source.Spec.ResourceOwner

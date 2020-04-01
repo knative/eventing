@@ -32,14 +32,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
-	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
-	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha1/apiserversource"
-	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha1"
+	"knative.dev/eventing/pkg/apis/sources/v1alpha2"
+	apiserversourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/apiserversource"
+	listers "knative.dev/eventing/pkg/client/listers/sources/v1alpha2"
 	"knative.dev/eventing/pkg/logging"
 	"knative.dev/eventing/pkg/reconciler/apiserversource/resources"
 	"knative.dev/eventing/pkg/utils"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
 	"knative.dev/pkg/controller"
 	pkgLogging "knative.dev/pkg/logging"
 	"knative.dev/pkg/metrics"
@@ -62,7 +61,7 @@ func newReconciledNormal(namespace, name string) pkgreconciler.Event {
 	return pkgreconciler.NewEvent(corev1.EventTypeNormal, "ApiServerSourceReconciled", "ApiServerSource reconciled: \"%s/%s\"", namespace, name)
 }
 
-func newWarningSinkNotFound(sink *duckv1beta1.Destination) pkgreconciler.Event {
+func newWarningSinkNotFound(sink *duckv1.Destination) pkgreconciler.Event {
 	b, _ := json.Marshal(sink)
 	return pkgreconciler.NewEvent(corev1.EventTypeWarning, "SinkNotFound", "Sink not found: %s", string(b))
 }
@@ -85,7 +84,7 @@ type Reconciler struct {
 
 var _ apiserversourcereconciler.Interface = (*Reconciler)(nil)
 
-func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ApiServerSource) pkgreconciler.Event {
+func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha2.ApiServerSource) pkgreconciler.Event {
 	// This Source attempts to reconcile three things.
 	// 1. Determine the sink's URI.
 	//     - Nothing to delete.
@@ -106,25 +105,14 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ApiServ
 			//TODO how does this work with deprecated fields
 			dest.Ref.Namespace = source.GetNamespace()
 		}
-	} else if dest.DeprecatedName != "" && dest.DeprecatedNamespace == "" {
-		// If Ref is nil and the deprecated ref is present, we need to check for
-		// DeprecatedNamespace. This can be removed when DeprecatedNamespace is
-		// removed.
-		dest.DeprecatedNamespace = source.GetNamespace()
 	}
 
-	sinkURI, err := r.sinkResolver.URIFromDestination(*dest, source)
+	sinkURI, err := r.sinkResolver.URIFromDestinationV1(*dest, source)
 	if err != nil {
 		source.Status.MarkNoSink("NotFound", "")
 		return newWarningSinkNotFound(dest)
 	}
-	if source.Spec.Sink.DeprecatedAPIVersion != "" &&
-		source.Spec.Sink.DeprecatedKind != "" &&
-		source.Spec.Sink.DeprecatedName != "" {
-		source.Status.MarkSinkWarnRefDeprecated(sinkURI)
-	} else {
-		source.Status.MarkSink(sinkURI)
-	}
+	source.Status.MarkSink(sinkURI)
 
 	err = r.runAccessCheck(source)
 	if err != nil {
@@ -132,7 +120,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ApiServ
 		return err
 	}
 
-	ra, err := r.createReceiveAdapter(ctx, source, sinkURI)
+	ra, err := r.createReceiveAdapter(ctx, source, sinkURI.String())
 	if err != nil {
 		logging.FromContext(ctx).Error("Unable to create the receive adapter", zap.Error(err))
 		return err
@@ -144,7 +132,7 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, source *v1alpha1.ApiServ
 	return newReconciledNormal(source.Namespace, source.Name)
 }
 
-func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
+func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha2.ApiServerSource, sinkURI string) (*appsv1.Deployment, error) {
 	// TODO: missing.
 	// if err := checkResourcesStatus(src); err != nil {
 	// 	return nil, err
@@ -168,7 +156,10 @@ func (r *Reconciler) createReceiveAdapter(ctx context.Context, src *v1alpha1.Api
 		LoggingConfig: loggingConfig,
 		MetricsConfig: metricsConfig,
 	}
-	expected := resources.MakeReceiveAdapter(&adapterArgs)
+	expected, err := resources.MakeReceiveAdapter(&adapterArgs)
+	if err != nil {
+		return nil, err
+	}
 
 	ra, err := r.kubeClientSet.AppsV1().Deployments(src.Namespace).Get(expected.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -249,7 +240,7 @@ func (r *Reconciler) UpdateFromMetricsConfigMap(cfg *corev1.ConfigMap) {
 	logging.FromContext(r.loggingContext).Debug("Update from metrics ConfigMap", zap.Any("ConfigMap", cfg))
 }
 
-func (r *Reconciler) runAccessCheck(src *v1alpha1.ApiServerSource) error {
+func (r *Reconciler) runAccessCheck(src *v1alpha2.ApiServerSource) error {
 	if src.Spec.Resources == nil || len(src.Spec.Resources) == 0 {
 		src.Status.MarkSufficientPermissions()
 		return nil
@@ -263,19 +254,18 @@ func (r *Reconciler) runAccessCheck(src *v1alpha1.ApiServerSource) error {
 	}
 
 	verbs := []string{"get", "list", "watch"}
-	resources := src.Spec.Resources
 	lastReason := ""
 
 	// Collect all missing permissions.
 	missing := ""
 	sep := ""
 
-	for _, res := range resources {
-		gv, err := schema.ParseGroupVersion(res.APIVersion)
-		if err != nil { // shouldn't happened after #2134 is fixed
+	for _, res := range src.Spec.Resources {
+		gv, err := schema.ParseGroupVersion(*res.APIVersion) // TODO: Test for nil APIVersion.
+		if err != nil {                                      // shouldn't happened after #2134 is fixed
 			return err
 		}
-		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: res.Kind, Group: gv.Group, Version: gv.Version})
+		gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{Kind: *res.Kind, Group: gv.Group, Version: gv.Version}) // TODO: Test for nil Kind.
 		missingVerbs := ""
 		sep1 := ""
 		for _, verb := range verbs {
@@ -317,8 +307,8 @@ func (r *Reconciler) runAccessCheck(src *v1alpha1.ApiServerSource) error {
 }
 
 func (r *Reconciler) createCloudEventAttributes() []duckv1.CloudEventAttributes {
-	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(v1alpha1.ApiServerSourceEventTypes))
-	for _, apiServerSourceType := range v1alpha1.ApiServerSourceEventTypes {
+	ceAttributes := make([]duckv1.CloudEventAttributes, 0, len(v1alpha2.ApiServerSourceEventTypes))
+	for _, apiServerSourceType := range v1alpha2.ApiServerSourceEventTypes {
 		ceAttributes = append(ceAttributes, duckv1.CloudEventAttributes{
 			Type:   apiServerSourceType,
 			Source: r.source,

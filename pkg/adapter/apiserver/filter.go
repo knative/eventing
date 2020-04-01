@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Knative Authors
+Copyright 2020 The Knative Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,18 +22,18 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// filter controller by apiVersion and/or kind
-type controller struct {
+// controllerFilter by apiVersion and/or kind
+type controllerFilter struct {
 	apiVersion string
 	kind       string
 	delegate   cache.Store
 }
 
-var _ cache.Store = (*controller)(nil)
+var _ cache.Store = (*controllerFilter)(nil)
 
 // Implements Store
 
-func (c *controller) Add(obj interface{}) error {
+func (c *controllerFilter) Add(obj interface{}) error {
 	if c.filtered(obj) {
 		return nil
 	}
@@ -41,7 +41,7 @@ func (c *controller) Add(obj interface{}) error {
 	return c.delegate.Add(obj)
 }
 
-func (c *controller) Update(obj interface{}) error {
+func (c *controllerFilter) Update(obj interface{}) error {
 	if c.filtered(obj) {
 		return nil
 	}
@@ -49,7 +49,7 @@ func (c *controller) Update(obj interface{}) error {
 	return c.delegate.Update(obj)
 }
 
-func (c *controller) Delete(obj interface{}) error {
+func (c *controllerFilter) Delete(obj interface{}) error {
 	if c.filtered(obj) {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (c *controller) Delete(obj interface{}) error {
 	return c.delegate.Delete(obj)
 }
 
-func (c *controller) filtered(obj interface{}) bool {
+func (c *controllerFilter) filtered(obj interface{}) bool {
 	u := obj.(*unstructured.Unstructured)
 	controller := metav1.GetControllerOf(u)
 	return controller == nil || (c.apiVersion != "" && c.apiVersion != controller.APIVersion) ||
@@ -67,31 +67,31 @@ func (c *controller) filtered(obj interface{}) bool {
 // Stub cache.Store impl
 
 // Implements cache.Store
-func (c *controller) List() []interface{} {
+func (c *controllerFilter) List() []interface{} {
 	return nil
 }
 
 // Implements cache.Store
-func (c *controller) ListKeys() []string {
+func (c *controllerFilter) ListKeys() []string {
 	return nil
 }
 
 // Implements cache.Store
-func (c *controller) Get(obj interface{}) (item interface{}, exists bool, err error) {
+func (c *controllerFilter) Get(obj interface{}) (item interface{}, exists bool, err error) {
 	return nil, false, nil
 }
 
 // Implements cache.Store
-func (c *controller) GetByKey(key string) (item interface{}, exists bool, err error) {
+func (c *controllerFilter) GetByKey(key string) (item interface{}, exists bool, err error) {
 	return nil, false, nil
 }
 
 // Implements cache.Store
-func (c *controller) Replace([]interface{}, string) error {
+func (c *controllerFilter) Replace([]interface{}, string) error {
 	return nil
 }
 
 // Implements cache.Store
-func (c *controller) Resync() error {
+func (c *controllerFilter) Resync() error {
 	return nil
 }
