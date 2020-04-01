@@ -18,8 +18,9 @@ package v1alpha2
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"knative.dev/pkg/apis"
 )

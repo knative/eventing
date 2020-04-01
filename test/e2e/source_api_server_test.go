@@ -33,7 +33,6 @@ import (
 	"knative.dev/eventing/test/lib"
 	"knative.dev/eventing/test/lib/resources"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
-	"knative.dev/pkg/ptr"
 )
 
 func TestApiServerSource(t *testing.T) {
@@ -57,8 +56,8 @@ func TestApiServerSource(t *testing.T) {
 			name: "event-ref",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-					APIVersion: ptr.String("v1"),
-					Kind:       ptr.String("Event"),
+					APIVersion: "v1",
+					Kind:       "Event",
 				}},
 				EventMode:          mode,
 				ServiceAccountName: serviceAccountName,
@@ -70,8 +69,8 @@ func TestApiServerSource(t *testing.T) {
 			name: "event-ref-unmatch-label",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-					APIVersion:    ptr.String("v1"),
-					Kind:          ptr.String("Pod"),
+					APIVersion:    "v1",
+					Kind:          "Pod",
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 				}},
 				EventMode:          mode,
@@ -84,8 +83,8 @@ func TestApiServerSource(t *testing.T) {
 			name: "event-ref-match-label",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-					APIVersion:    ptr.String("v1"),
-					Kind:          ptr.String("Pod"),
+					APIVersion:    "v1",
+					Kind:          "Pod",
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
 				}},
 				EventMode:          mode,
@@ -100,8 +99,8 @@ func TestApiServerSource(t *testing.T) {
 			name: "event-ref-match-label-expr",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-					APIVersion: ptr.String("v1"),
-					Kind:       ptr.String("Pod"),
+					APIVersion: "v1",
+					Kind:       "Pod",
 					LabelSelector: &metav1.LabelSelector{
 						MatchLabels:      map[string]string{"e2e": "testing"},
 						MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "e2e", Operator: "Exists"}},
@@ -217,8 +216,8 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 		eventingtesting.WithApiServerSourceSpec(
 			sourcesv1alpha2.ApiServerSourceSpec{
 				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
-					APIVersion: ptr.String("v1"),
-					Kind:       ptr.String("Event"),
+					APIVersion: "v1",
+					Kind:       "Event",
 				}},
 				EventMode:          "Reference",
 				ServiceAccountName: serviceAccountName,
