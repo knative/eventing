@@ -56,7 +56,7 @@ func TestApiServerSource(t *testing.T) {
 		{
 			name: "event-ref",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKind{{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion: ptr.String("v1"),
 					Kind:       ptr.String("Event"),
 				}},
@@ -69,7 +69,7 @@ func TestApiServerSource(t *testing.T) {
 		{
 			name: "event-ref-unmatch-label",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKind{{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion:    ptr.String("v1"),
 					Kind:          ptr.String("Pod"),
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
@@ -83,7 +83,7 @@ func TestApiServerSource(t *testing.T) {
 		{
 			name: "event-ref-match-label",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKind{{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion:    ptr.String("v1"),
 					Kind:          ptr.String("Pod"),
 					LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"e2e": "testing"}},
@@ -99,7 +99,7 @@ func TestApiServerSource(t *testing.T) {
 		{
 			name: "event-ref-match-label-expr",
 			spec: sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKind{{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion: ptr.String("v1"),
 					Kind:       ptr.String("Pod"),
 					LabelSelector: &metav1.LabelSelector{
@@ -216,7 +216,7 @@ func TestApiServerSourceV1Alpha2EventTypes(t *testing.T) {
 		client.Namespace,
 		eventingtesting.WithApiServerSourceSpec(
 			sourcesv1alpha2.ApiServerSourceSpec{
-				Resources: []sourcesv1alpha2.APIVersionKind{{
+				Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 					APIVersion: ptr.String("v1"),
 					Kind:       ptr.String("Event"),
 				}},
