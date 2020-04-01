@@ -38,7 +38,7 @@ func TestStatsReporterAdapter(t *testing.T) {
 		ResourceGroup: "test-rg",
 	})
 
-	if result := reporter.ReportCount(ctx, event, cloudevents.NewHTTPResult(200, "")); cloudevents.IsNACK(result) {
+	if result := reporter.ReportCount(ctx, event, cloudevents.NewHTTPResult(200, "")); !cloudevents.IsACK(result) {
 		t.Errorf("unexpected result %v", result)
 	}
 
