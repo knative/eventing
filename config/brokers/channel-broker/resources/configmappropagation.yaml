@@ -30,8 +30,7 @@ spec:
     plural: configmappropagations
     singular: configmappropagation
     categories:
-      - knative
-      - eventing
+      - knative-internal
     shortNames:
       - kcmp
       - cmp
