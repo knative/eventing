@@ -20,6 +20,8 @@ import (
 	"context"
 	"sync"
 
+	"knative.dev/eventing/pkg/adapter/v2"
+
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"knative.dev/pkg/configmap"
@@ -30,18 +32,8 @@ import (
 	eventingclient "knative.dev/eventing/pkg/client/injection/client"
 	pingsourceinformer "knative.dev/eventing/pkg/client/injection/informers/sources/v1alpha2/pingsource"
 	pingsourcereconciler "knative.dev/eventing/pkg/client/injection/reconciler/sources/v1alpha2/pingsource"
-	"knative.dev/eventing/pkg/kncloudevents"
 	"knative.dev/eventing/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
-)
-
-const (
-	// ReconcilerName is the name of the reconciler.
-	ReconcilerName = "PingSources"
-
-	// controllerAgentName is the string used by this controller to identify
-	// itself when creating events.
-	controllerAgentName = "ping-source-job-runner"
 )
 
 // NewController initializes the controller and is called by the generated code.
@@ -75,14 +67,14 @@ func NewController(
 	pingsourceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
 
 	// Create the cron job runner
-	ceClient, err := kncloudevents.NewDefaultClient()
-	if err != nil {
-		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
-	}
-
 	reporter, err := source.NewStatsReporter()
 	if err != nil {
 		logger.Error("error building statsreporter", zap.Error(err))
+	}
+
+	ceClient, err := adapter.NewCloudEventsClient("", nil, reporter)
+	if err != nil {
+		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
 	r.cronRunner = NewCronJobsRunner(ceClient, reporter, logger)

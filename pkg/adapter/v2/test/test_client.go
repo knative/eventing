@@ -19,16 +19,19 @@ import (
 	"context"
 	"sync"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
 	"github.com/cloudevents/sdk-go/v2/protocol/http"
+	"knative.dev/pkg/source"
 
-	cloudevents "github.com/cloudevents/sdk-go/v2"
+	"knative.dev/eventing/pkg/adapter/v2/metrics"
 )
 
 type TestCloudEventsClient struct {
-	lock sync.Mutex
-	sent []cloudevents.Event
+	lock     sync.Mutex
+	sent     []cloudevents.Event
+	reporter metrics.StatsReporterAdapter
 }
 
 var _ cloudevents.Client = (*TestCloudEventsClient)(nil)
@@ -38,7 +41,12 @@ func (c *TestCloudEventsClient) Send(ctx context.Context, out event.Event) proto
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
-	return http.NewResult(200, "%w", protocol.ResultACK)
+	result := http.NewResult(200, "%w", protocol.ResultACK)
+	if c.reporter != nil {
+		return c.reporter.ReportCount(ctx, out, result)
+	}
+
+	return result
 }
 
 func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
@@ -46,7 +54,12 @@ func (c *TestCloudEventsClient) Request(ctx context.Context, out event.Event) (*
 	defer c.lock.Unlock()
 	// TODO: improve later.
 	c.sent = append(c.sent, out)
-	return nil, http.NewResult(200, "%w", protocol.ResultACK)
+	result := http.NewResult(200, "%w", protocol.ResultACK)
+	if c.reporter != nil {
+		return nil, c.reporter.ReportCount(ctx, out, result)
+	}
+	return nil, result
+
 }
 
 func (c *TestCloudEventsClient) StartReceiver(ctx context.Context, fn interface{}) error {
@@ -71,9 +84,12 @@ func (c *TestCloudEventsClient) Sent() []cloudevents.Event {
 	return r
 }
 
-func NewTestClient() *TestCloudEventsClient {
+func NewTestClient(reporter source.StatsReporter) *TestCloudEventsClient {
 	c := &TestCloudEventsClient{
 		sent: make([]cloudevents.Event, 0),
+	}
+	if reporter != nil {
+		c.reporter = metrics.NewStatsReporterAdapter(reporter)
 	}
 
 	return c

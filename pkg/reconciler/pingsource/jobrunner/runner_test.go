@@ -21,16 +21,15 @@ import (
 	"testing"
 	"time"
 
-	"knative.dev/pkg/source"
-
-	kncetesting "knative.dev/eventing/pkg/kncloudevents/testing"
+	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
+	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	logtesting "knative.dev/pkg/logging/testing"
 )
 
 func TestAddRunRemoveSchedule(t *testing.T) {
 	logger := logtesting.TestLogger(t)
-	reporter := &mockReporter{}
-	ce := kncetesting.NewTestClient()
+	reporter := &rectesting.MockStatsReporter{}
+	ce := adaptertesting.NewTestClient(reporter)
 
 	runner := NewCronJobsRunner(ce, reporter, logger)
 
@@ -48,7 +47,9 @@ func TestAddRunRemoveSchedule(t *testing.T) {
 	entry.Job.Run()
 
 	validateSent(t, ce, `{"body":"some data"}`)
-	validateMetric(t, reporter, 1)
+	if err := reporter.ValidateEventCount(1); err != nil {
+		t.Error(err)
+	}
 
 	runner.RemoveSchedule(entryId)
 
@@ -60,8 +61,8 @@ func TestAddRunRemoveSchedule(t *testing.T) {
 
 func TestStartStopCron(t *testing.T) {
 	logger := logtesting.TestLogger(t)
-	reporter := &mockReporter{}
-	ce := kncetesting.NewTestClient()
+	reporter := &rectesting.MockStatsReporter{}
+	ce := adaptertesting.NewTestClient(reporter)
 
 	runner := NewCronJobsRunner(ce, reporter, logger)
 
@@ -86,20 +87,12 @@ func TestStartStopCron(t *testing.T) {
 
 }
 
-func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
-	if mockReporter, ok := reporter.(*mockReporter); !ok {
-		t.Errorf("reporter is not a mockReporter")
-	} else if mockReporter.eventCount != want {
-		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
-	}
-}
-
-func validateSent(t *testing.T, ce *kncetesting.TestCloudEventsClient, wantData string) {
+func validateSent(t *testing.T, ce *adaptertesting.TestCloudEventsClient, wantData string) {
 	if got := len(ce.Sent()); got != 1 {
 		t.Errorf("Expected 1 event to be sent, got %d", got)
 	}
 
-	if got := ce.Sent()[0].Data; string(got.([]byte)) != wantData {
-		t.Errorf("Expected %q event to be sent, got %q", wantData, string(got.([]byte)))
+	if got := ce.Sent()[0].Data(); string(got) != wantData {
+		t.Errorf("Expected %q event to be sent, got %q", wantData, got)
 	}
 }

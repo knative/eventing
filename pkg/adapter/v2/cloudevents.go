@@ -18,7 +18,8 @@ package adapter
 import (
 	"context"
 	"errors"
-	"fmt"
+
+	"knative.dev/eventing/pkg/adapter/v2/metrics"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -48,14 +49,14 @@ func NewCloudEventsClient(target string, ceOverrides *duckv1.CloudEventOverrides
 	return &client{
 		ceClient:    ceClient,
 		ceOverrides: ceOverrides,
-		reporter:    reporter,
+		reporter:    metrics.NewStatsReporterAdapter(reporter),
 	}, nil
 }
 
 type client struct {
 	ceClient    cloudevents.Client
 	ceOverrides *duckv1.CloudEventOverrides
-	reporter    source.StatsReporter
+	reporter    metrics.StatsReporterAdapter
 }
 
 var _ cloudevents.Client = (*client)(nil)
@@ -64,14 +65,17 @@ var _ cloudevents.Client = (*client)(nil)
 func (c *client) Send(ctx context.Context, out event.Event) protocol.Result {
 	c.applyOverrides(ctx, &out)
 	res := c.ceClient.Send(ctx, out)
-	return c.reportCount(ctx, out, res)
+	return c.reporter.ReportCount(ctx, out, res)
+
 }
 
 // Request implements client.Request
 func (c *client) Request(ctx context.Context, out event.Event) (*event.Event, protocol.Result) {
 	c.applyOverrides(ctx, &out)
+
 	resp, res := c.ceClient.Request(ctx, out)
-	return resp, c.reportCount(ctx, out, res)
+	return resp, c.reporter.ReportCount(ctx, out, res)
+
 }
 
 // StartReceiver implements client.StartReceiver
@@ -84,69 +88,5 @@ func (c *client) applyOverrides(ctx context.Context, event *cloudevents.Event) {
 		for n, v := range c.ceOverrides.Extensions {
 			event.SetExtension(n, v)
 		}
-	}
-}
-
-func (c *client) reportCount(ctx context.Context, event cloudevents.Event, result protocol.Result) error {
-	tags := MetricTagFromContext(ctx)
-	reportArgs := &source.ReportArgs{
-		Namespace:     tags.Namespace,
-		EventSource:   event.Source(),
-		EventType:     event.Type(),
-		Name:          tags.Name,
-		ResourceGroup: tags.ResourceGroup,
-	}
-
-	if cloudevents.IsACK(result) {
-		var res *http.Result
-		if !cloudevents.ResultAs(result, &res) {
-			return fmt.Errorf("protocol.Result is not http.Result")
-		}
-
-		_ = c.reporter.ReportEventCount(reportArgs, res.StatusCode)
-	} else {
-		var res *http.Result
-		if !cloudevents.ResultAs(result, &res) {
-			return result
-		}
-
-		if rErr := c.reporter.ReportEventCount(reportArgs, res.StatusCode); rErr != nil {
-			// metrics is not important enough to return an error if it is setup wrong.
-			// So combine reporter error with ce error if not nil.
-			if result != nil {
-				result = fmt.Errorf("%w\nmetrics reporter errror: %s", result, rErr)
-			}
-		}
-	}
-	return result
-}
-
-// Metric context
-
-type MetricTag struct {
-	Name          string
-	Namespace     string
-	ResourceGroup string
-}
-
-type metricKey struct{}
-
-// ContextWithMetricTag returns a copy of parent context in which the
-// value associated with metric key is the supplied metric tag.
-func ContextWithMetricTag(ctx context.Context, metric *MetricTag) context.Context {
-	return context.WithValue(ctx, metricKey{}, metric)
-}
-
-// MetricTagFromContext returns the metric tag stored in context.
-// Returns nil if no metric tag is set in context, or if the stored value is
-// not of correct type.
-func MetricTagFromContext(ctx context.Context) *MetricTag {
-	if logger, ok := ctx.Value(metricKey{}).(*MetricTag); ok {
-		return logger
-	}
-	return &MetricTag{
-		Name:          "unknown",
-		Namespace:     "unknown",
-		ResourceGroup: "unknown",
 	}
 }
