@@ -21,14 +21,24 @@ import (
 	"testing"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"knative.dev/eventing/pkg/adapter/v2/test"
-	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/source"
+
+	"knative.dev/eventing/pkg/adapter/v2/test"
 )
+
+type mockReporter struct {
+	eventCount int
+}
 
 var (
 	fakeMasterURL = "test-source"
 )
+
+func (r *mockReporter) ReportEventCount(args *source.ReportArgs, responseCode int) error {
+	r.eventCount += 1
+	return nil
+}
 
 func TestNewCloudEventsClient_send(t *testing.T) {
 	testCases := map[string]struct {
@@ -60,8 +70,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			reporter := &rectesting.MockStatsReporter{}
-			ceClient, err := NewCloudEventsClient(fakeMasterURL, tc.ceOverrides, reporter)
+			ceClient, err := NewCloudEventsClient(fakeMasterURL, tc.ceOverrides, &mockReporter{})
 			if err != nil {
 				t.Fail()
 			}
@@ -78,7 +87,7 @@ func TestNewCloudEventsClient_send(t *testing.T) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, reporter, 1)
+				validateMetric(t, got.reporter, 1)
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -116,8 +125,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 	}
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			reporter := &rectesting.MockStatsReporter{}
-			ceClient, err := NewCloudEventsClient(fakeMasterURL, tc.ceOverrides, reporter)
+			ceClient, err := NewCloudEventsClient(fakeMasterURL, tc.ceOverrides, &mockReporter{})
 			if err != nil {
 				t.Fail()
 			}
@@ -134,7 +142,7 @@ func TestNewCloudEventsClient_request(t *testing.T) {
 					t.Fatal(err)
 				}
 				validateSent(t, innerClient, tc.event.Type())
-				validateMetric(t, reporter, 1)
+				validateMetric(t, got.reporter, 1)
 			} else {
 				validateNotSent(t, innerClient)
 			}
@@ -158,8 +166,10 @@ func validateNotSent(t *testing.T, ce *test.TestCloudEventsClient) {
 	}
 }
 
-func validateMetric(t *testing.T, reporter *rectesting.MockStatsReporter, want int) {
-	if err := reporter.ValidateEventCount(want); err != nil {
-		t.Error(err)
+func validateMetric(t *testing.T, reporter source.StatsReporter, want int) {
+	if mockReporter, ok := reporter.(*mockReporter); !ok {
+		t.Errorf("reporter is not a mockReporter")
+	} else if mockReporter.eventCount != want {
+		t.Errorf("Expected %d for metric, got %d", want, mockReporter.eventCount)
 	}
 }

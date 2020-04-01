@@ -22,10 +22,9 @@ import (
 
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
-	"knative.dev/pkg/source"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"knative.dev/eventing/pkg/adapter/v2/metrics"
+	kncloudevents "knative.dev/eventing/pkg/adapter/v2"
 	sourcesv1alpha2 "knative.dev/eventing/pkg/apis/sources/v1alpha2"
 )
 
@@ -36,9 +35,6 @@ type cronJobsRunner struct {
 	// client sends cloudevents.
 	Client cloudevents.Client
 
-	// Where to report stats
-	Reporter source.StatsReporter
-
 	// Where to send logs
 	Logger *zap.SugaredLogger
 }
@@ -47,13 +43,12 @@ const (
 	resourceGroup = "pingsources.sources.knative.dev"
 )
 
-func NewCronJobsRunner(ceClient cloudevents.Client, reporter source.StatsReporter, logger *zap.SugaredLogger) *cronJobsRunner {
+func NewCronJobsRunner(ceClient cloudevents.Client, logger *zap.SugaredLogger) *cronJobsRunner {
 	return &cronJobsRunner{
 		cron: *cron.New(),
 
-		Client:   ceClient,
-		Reporter: reporter,
-		Logger:   logger,
+		Client: ceClient,
+		Logger: logger,
 	}
 }
 
@@ -66,12 +61,12 @@ func (a *cronJobsRunner) AddSchedule(namespace, name, spec, data, sink string) (
 	ctx := context.Background()
 	ctx = cloudevents.ContextWithTarget(ctx, sink)
 
-	metricTag := &metrics.MetricTag{
+	metricTag := &kncloudevents.MetricTag{
 		Namespace:     namespace,
 		Name:          name,
 		ResourceGroup: resourceGroup,
 	}
-	ctx = metrics.ContextWithMetricTag(ctx, metricTag)
+	ctx = kncloudevents.ContextWithMetricTag(ctx, metricTag)
 
 	return a.cron.AddFunc(spec, a.cronTick(ctx, event))
 }
