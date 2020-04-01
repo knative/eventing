@@ -249,7 +249,7 @@ func testFanoutMessageHandler(t *testing.T, async bool, receiverFunc channel.Unb
 		h.timeout = timeout
 	} else {
 		// Reasonable timeout for the tests.
-		h.timeout = 100 * time.Millisecond
+		h.timeout = 1 * time.Second
 	}
 
 	event := makeCloudEventNew()
