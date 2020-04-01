@@ -122,25 +122,21 @@ type ApiServerSourceStatus struct {
 // APIVersionKind is an APIVersion and Kind tuple.
 type APIVersionKind struct {
 	// APIVersion - the API version of the resource to watch.
-	// +optional
-	APIVersion *string `json:"apiVersion"`
+	APIVersion string `json:"apiVersion"`
 
 	// Kind of the resource to watch.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-	// +optional
-	Kind *string `json:"kind"`
+	Kind string `json:"kind"`
 }
 
 // APIVersionKindSelector is an APIVersion Kind tuple with a LabelSelector.
 type APIVersionKindSelector struct {
 	// APIVersion - the API version of the resource to watch.
-	// +optional
-	APIVersion *string `json:"apiVersion"`
+	APIVersion string `json:"apiVersion"`
 
 	// Kind of the resource to watch.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-	// +optional
-	Kind *string `json:"kind"`
+	Kind string `json:"kind"`
 
 	// LabelSelector filters this source to objects to those resources pass the
 	// label selector.

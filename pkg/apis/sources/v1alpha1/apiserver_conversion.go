@@ -29,7 +29,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	duckv1beta1 "knative.dev/pkg/apis/duck/v1beta1"
-	"knative.dev/pkg/ptr"
 )
 
 // ConvertTo implements apis.Convertible.
@@ -47,8 +46,8 @@ func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 		}
 		for i, v := range source.Spec.Resources {
 			sink.Spec.Resources[i] = v1alpha2.APIVersionKindSelector{
-				APIVersion: ptr.String(v.APIVersion),
-				Kind:       ptr.String(v.Kind),
+				APIVersion: v.APIVersion,
+				Kind:       v.Kind,
 			}
 
 			if !cmp.Equal(v.LabelSelector, metav1.LabelSelector{}) {
@@ -139,12 +138,8 @@ func (sink *ApiServerSource) ConvertFrom(ctx context.Context, obj apis.Convertib
 		}
 		for i, v := range source.Spec.Resources {
 			sink.Spec.Resources[i] = ApiServerResource{}
-			if v.APIVersion != nil {
-				sink.Spec.Resources[i].APIVersion = *v.APIVersion
-			}
-			if v.Kind != nil {
-				sink.Spec.Resources[i].Kind = *v.Kind
-			}
+			sink.Spec.Resources[i].APIVersion = v.APIVersion
+			sink.Spec.Resources[i].Kind = v.Kind
 			if v.LabelSelector != nil {
 				sink.Spec.Resources[i].LabelSelector = *v.LabelSelector
 			}

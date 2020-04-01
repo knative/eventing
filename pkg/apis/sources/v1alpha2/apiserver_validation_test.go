@@ -18,6 +18,7 @@ package v1alpha2
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -30,12 +31,15 @@ func TestAPIServerValidation(t *testing.T) {
 	tests := []struct {
 		name string
 		spec ApiServerSourceSpec
-		want *apis.FieldError
+		want error
 	}{{
 		name: "valid spec",
 		spec: ApiServerSourceSpec{
 			EventMode: "Resource",
-			Resources: []APIVersionKindSelector{{}},
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Foo",
+			}},
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
@@ -51,7 +55,10 @@ func TestAPIServerValidation(t *testing.T) {
 		name: "empty sink",
 		spec: ApiServerSourceSpec{
 			EventMode: "Resource",
-			Resources: []APIVersionKindSelector{{}},
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Foo",
+			}},
 		},
 		want: func() *apis.FieldError {
 			var errs *apis.FieldError
@@ -62,7 +69,10 @@ func TestAPIServerValidation(t *testing.T) {
 		name: "invalid mode",
 		spec: ApiServerSourceSpec{
 			EventMode: "Test",
-			Resources: []APIVersionKindSelector{{}},
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Foo",
+			}},
 			SourceSpec: duckv1.SourceSpec{
 				Sink: duckv1.Destination{
 					Ref: &duckv1.KReference{
@@ -78,13 +88,99 @@ func TestAPIServerValidation(t *testing.T) {
 			errs = errs.Also(apis.ErrInvalidValue("Test", "mode"))
 			return errs
 		}(),
+	}, {
+		name: "invalid apiVersion",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1/v2/v3",
+				Kind:       "Foo",
+			}},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+		},
+		want: errors.New("invalid value: v1/v2/v3: resources[0].apiVersion"),
+	}, {
+		name: "missing kind",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+			}},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+		},
+		want: errors.New("missing field(s): resources[0].kind"),
+	}, {
+		name: "owner - invalid apiVersion",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Bar",
+			}},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+			ResourceOwner: &APIVersionKind{
+				APIVersion: "v1/v2/v3",
+				Kind:       "Foo",
+			},
+		},
+		want: errors.New("invalid value: v1/v2/v3: owner.apiVersion"),
+	}, {
+		name: "missing kind",
+		spec: ApiServerSourceSpec{
+			EventMode: "Resource",
+			Resources: []APIVersionKindSelector{{
+				APIVersion: "v1",
+				Kind:       "Bar",
+			}},
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						APIVersion: "v1alpha1",
+						Kind:       "broker",
+						Name:       "default",
+					},
+				},
+			},
+			ResourceOwner: &APIVersionKind{
+				APIVersion: "v1",
+			},
+		},
+		want: errors.New("missing field(s): owner.kind"),
 	}}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := test.spec.Validate(context.TODO())
-			if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
-				t.Errorf("APIServerSourceSpec.Validate (-want, +got) = %v", diff)
+			if test.want != nil {
+				if diff := cmp.Diff(test.want.Error(), got.Error()); diff != "" {
+					t.Errorf("APIServerSourceSpec.Validate (-want, +got) = %v", diff)
+				}
+			} else if got != nil {
+				t.Errorf("APIServerSourceSpec.Validate wanted nil, got = %v", got.Error())
 			}
 		})
 	}
