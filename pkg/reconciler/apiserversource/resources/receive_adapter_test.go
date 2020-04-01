@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/eventing/pkg/apis/sources/v1alpha1"
+	"knative.dev/pkg/kmeta"
 	_ "knative.dev/pkg/metrics/testing"
 )
 
@@ -100,7 +101,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 	want := &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "source-namespace",
-			Name:      fmt.Sprintf("apiserversource-%s-1234", name),
+			Name:      kmeta.ChildName(fmt.Sprintf("apiserversource-%s-", name), string(src.UID)),
 			Labels: map[string]string{
 				"test-key1": "test-value1",
 				"test-key2": "test-value2",

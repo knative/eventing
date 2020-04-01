@@ -18,6 +18,7 @@ package apiserversource
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	fakeeventingclient "knative.dev/eventing/pkg/client/injection/client/fake"
@@ -74,10 +75,11 @@ var (
 )
 
 const (
-	image      = "github.com/knative/test/image"
-	sourceName = "test-apiserver-source"
-	sourceUID  = "1234"
-	testNS     = "testnamespace"
+	image          = "github.com/knative/test/image"
+	sourceName     = "test-apiserver-source"
+	sourceNameLong = "test-apiserver-source-with-a-very-long-name"
+	sourceUID      = "1234"
+	testNS         = "testnamespace"
 
 	sinkName = "testsink"
 	source   = "apiserveraddr"
@@ -581,6 +583,63 @@ func TestReconcile(t *testing.T) {
 		},
 		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
 		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
+	}, {
+		Name: "deprecated named adapter deployment found",
+		Objects: []runtime.Object{
+			NewApiServerSource(sourceNameLong, testNS,
+				WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+					Resources: []sourcesv1alpha1.ApiServerResource{{
+						APIVersion: "",
+						Kind:       "Namespace",
+					}},
+					Sink: &sinkDest,
+				}),
+				WithApiServerSourceUID(sourceUID),
+				WithApiServerSourceObjectMetaGeneration(generation),
+			),
+			NewChannel(sinkName, testNS,
+				WithInitChannelConditions,
+				WithChannelAddress(sinkDNS),
+			),
+			makeAvailableReceiveAdapterDeprecatedName(sourceNameLong),
+		},
+		Key: testNS + "/" + sourceNameLong,
+		WantEvents: []string{
+			Eventf(corev1.EventTypeNormal, apiserversourceDeploymentDeleted, `Deprecated deployment removed: "%s/%s"`, testNS, makeAvailableReceiveAdapterDeprecatedName(sourceNameLong).Name),
+			Eventf(corev1.EventTypeNormal, apiserversourceDeploymentCreated, "Deployment created"),
+			Eventf(corev1.EventTypeNormal, "ApiServerSourceReconciled", `ApiServerSource reconciled: "%s/%s"`, testNS, sourceNameLong),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: NewApiServerSource(sourceNameLong, testNS,
+				WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
+					Resources: []sourcesv1alpha1.ApiServerResource{{
+						APIVersion: "",
+						Kind:       "Namespace",
+					}},
+					Sink: &sinkDest,
+				}),
+				WithApiServerSourceUID(sourceUID),
+				WithApiServerSourceObjectMetaGeneration(generation),
+				// Status Update:
+				WithInitApiServerSourceConditions,
+				WithApiServerSourceStatusObservedGeneration(generation),
+				WithApiServerSourceSink(sinkURI),
+				WithApiServerSourceSufficientPermissions,
+				WithApiServerSourceEventTypes(source),
+				WithApiServerSourceDeploymentUnavailable,
+			),
+		}},
+		WantDeletes: []clientgotesting.DeleteActionImpl{{
+			Name: makeAvailableReceiveAdapterDeprecatedName(sourceNameLong).Name,
+		}},
+		WantCreates: []runtime.Object{
+			makeSubjectAccessReview("namespaces", "get", "default"),
+			makeSubjectAccessReview("namespaces", "list", "default"),
+			makeSubjectAccessReview("namespaces", "watch", "default"),
+			makeReceiveAdapterWithName(sourceNameLong),
+		},
+		WithReactors:            []clientgotesting.ReactionFunc{subjectAccessReviewCreateReactor(true)},
+		SkipNamespaceValidation: true, // SubjectAccessReview objects are cluster-scoped.
 	}}
 
 	logger := logtesting.TestLogger(t)
@@ -603,6 +662,10 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeReceiveAdapter() *appsv1.Deployment {
+	return makeReceiveAdapterWithName(sourceName)
+}
+
+func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha1.ApiServerSourceSpec{
 			Resources: []sourcesv1alpha1.ApiServerResource{{
@@ -629,6 +692,16 @@ func makeReceiveAdapter() *appsv1.Deployment {
 
 func makeAvailableReceiveAdapter() *appsv1.Deployment {
 	ra := makeReceiveAdapter()
+	WithDeploymentAvailable()(ra)
+	return ra
+}
+
+// makeAvailableReceiveAdapterDeprecatedName needed to simulate pre 0.14 adapter whose name was generated using utils.GenerateFixedName
+func makeAvailableReceiveAdapterDeprecatedName(sourceName string) *appsv1.Deployment {
+	ra := makeReceiveAdapter()
+	src := &sourcesv1alpha1.ApiServerSource{}
+	src.UID = sourceUID
+	ra.Name = utils.GenerateFixedName(src, fmt.Sprintf("apiserversource-%s", sourceName))
 	WithDeploymentAvailable()(ra)
 	return ra
 }
