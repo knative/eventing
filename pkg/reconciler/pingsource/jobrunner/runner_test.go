@@ -22,16 +22,14 @@ import (
 	"time"
 
 	adaptertesting "knative.dev/eventing/pkg/adapter/v2/test"
-	rectesting "knative.dev/eventing/pkg/reconciler/testing"
 	logtesting "knative.dev/pkg/logging/testing"
 )
 
 func TestAddRunRemoveSchedule(t *testing.T) {
 	logger := logtesting.TestLogger(t)
-	reporter := &rectesting.MockStatsReporter{}
-	ce := adaptertesting.NewTestClient(reporter)
+	ce := adaptertesting.NewTestClient()
 
-	runner := NewCronJobsRunner(ce, reporter, logger)
+	runner := NewCronJobsRunner(ce, logger)
 
 	entryId, err := runner.AddSchedule("test-ns", "test-name", "* * * * ?", "some data", "a sink")
 
@@ -47,9 +45,6 @@ func TestAddRunRemoveSchedule(t *testing.T) {
 	entry.Job.Run()
 
 	validateSent(t, ce, `{"body":"some data"}`)
-	if err := reporter.ValidateEventCount(1); err != nil {
-		t.Error(err)
-	}
 
 	runner.RemoveSchedule(entryId)
 
@@ -61,10 +56,9 @@ func TestAddRunRemoveSchedule(t *testing.T) {
 
 func TestStartStopCron(t *testing.T) {
 	logger := logtesting.TestLogger(t)
-	reporter := &rectesting.MockStatsReporter{}
-	ce := adaptertesting.NewTestClient(reporter)
+	ce := adaptertesting.NewTestClient()
 
-	runner := NewCronJobsRunner(ce, reporter, logger)
+	runner := NewCronJobsRunner(ce, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wctx, wcancel := context.WithCancel(context.Background())

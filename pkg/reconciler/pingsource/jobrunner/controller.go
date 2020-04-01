@@ -77,7 +77,7 @@ func NewController(
 		logger.Fatalw("Error setting up trace publishing", zap.Error(err))
 	}
 
-	r.cronRunner = NewCronJobsRunner(ceClient, reporter, logger)
+	r.cronRunner = NewCronJobsRunner(ceClient, logger)
 
 	// Start the cron job runner.
 	go func() {

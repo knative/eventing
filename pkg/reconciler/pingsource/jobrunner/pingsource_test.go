@@ -174,14 +174,13 @@ func TestAllCases(t *testing.T) {
 	}
 
 	logger := logtesting.TestLogger(t)
-	reporter := &MockStatsReporter{}
-	ce := adaptertesting.NewTestClient(reporter)
+	ce := adaptertesting.NewTestClient()
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
 		r := &Reconciler{
 			eventingClientSet: eventingclient.Get(ctx),
 			pingsourceLister:  listers.GetPingSourceV1alpha2Lister(),
-			cronRunner:        NewCronJobsRunner(ce, reporter, logger),
+			cronRunner:        NewCronJobsRunner(ce, logger),
 			entryidMu:         sync.Mutex{},
 			entryids:          make(map[string]cron.EntryID),
 		}
