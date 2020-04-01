@@ -65,4 +65,4 @@ data:
     # - broker-controller
     # - inmemorychannel-dispatcher
     # - inmemorychannel-controller
-    enabledComponents: "controller"
+    enabledComponents: "controller,broker-controller,inmemorychannel-dispatcher,inmemorychannel-controller"

@@ -22,8 +22,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	. "knative.dev/pkg/configmap/testing"
+	"knative.dev/pkg/kmeta"
 	kle "knative.dev/pkg/leaderelection"
 )
 
@@ -56,35 +60,73 @@ func TestValidateConfig(t *testing.T) {
 		data     map[string]string
 		expected *kle.Config
 		err      error
-	}{
-		{
-			name:     "OK",
-			data:     okData(),
-			expected: okConfig(),
-		},
-		{
-			name: "invalid component",
-			data: func() map[string]string {
-				data := okData()
-				data["enabledComponents"] = "controller,frobulator"
-				return data
-			}(),
-			err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher"]`),
-		},
+	}{{
+		name:     "OK",
+		data:     okData(),
+		expected: okConfig(),
+	}, {
+		name: "invalid component",
+		data: kmeta.UnionMaps(okData(), map[string]string{
+			"enabledComponents": "controller,frobulator",
+		}),
+		err: errors.New(`invalid enabledComponent "frobulator": valid values are ["broker-controller" "controller" "inmemorychannel-controller" "inmemorychannel-dispatcher"]`),
+	}, {
+		name: "invalid config",
+		data: kmeta.UnionMaps(okData(), map[string]string{
+			"leaseDuration": "this-is-the-end",
+		}),
+		err: errors.New(`leaseDuration: invalid duration: "this-is-the-end"`),
+	}}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualConfig, actualErr := ValidateConfig(&corev1.ConfigMap{Data: tc.data})
+			if !reflect.DeepEqual(tc.err, actualErr) {
+				t.Fatalf("err = %v, want: %v", actualErr, tc.err)
+			}
+
+			if got, want := actualConfig, tc.expected; !cmp.Equal(got, want) {
+				t.Errorf("LEConfig mismatch, diff(-want,+got):\n%s", cmp.Diff(want, got))
+			}
+		})
 	}
+}
 
-	for i := range cases {
-		tc := cases[i]
-		actualConfig, actualErr := ValidateConfig(&corev1.ConfigMap{Data: tc.data})
-		if !reflect.DeepEqual(tc.err, actualErr) {
-			t.Errorf("%v: expected error\n%v\ngot:\n%v", tc.name, tc.err, actualErr)
-			continue
-		}
-
-		if !reflect.DeepEqual(tc.expected, actualConfig) {
-			t.Errorf("%v: expected config:\n%+v\ngot:\n%+v", tc.name, tc.expected, actualConfig)
-			continue
-		}
+func TestServingConfig(t *testing.T) {
+	actual, example := ConfigMapsFromTestFile(t, "config-leader-election",
+		"resourceLock", "leaseDuration", "renewDeadline", "retryPeriod")
+	for _, test := range []struct {
+		name string
+		data *corev1.ConfigMap
+		want *kle.Config
+	}{{
+		name: "Default config",
+		want: &kle.Config{
+			ResourceLock:  "leases",
+			LeaseDuration: 15 * time.Second,
+			RenewDeadline: 10 * time.Second,
+			RetryPeriod:   2 * time.Second,
+		},
+		data: actual,
+	}, {
+		name: "Example config",
+		want: &kle.Config{
+			ResourceLock:      "leases",
+			LeaseDuration:     15 * time.Second,
+			RenewDeadline:     10 * time.Second,
+			RetryPeriod:       2 * time.Second,
+			EnabledComponents: validComponents,
+		},
+		data: example,
+	}} {
+		t.Run(test.name, func(t *testing.T) {
+			cm, err := ValidateConfig(test.data)
+			if err != nil {
+				t.Fatalf("Error parsing config = %v", err)
+			}
+			if got, want := cm, test.want; !cmp.Equal(got, want) {
+				t.Errorf("Config mismatch: (-want,+got):\n%s", cmp.Diff(want, got))
+			}
+		})
 	}
-
 }
