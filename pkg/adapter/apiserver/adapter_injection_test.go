@@ -55,7 +55,7 @@ func SetupFakeContextWithCancel(t *testing.T, objects []runtime.Object) (context
 }
 
 func TestNewAdaptor(t *testing.T) {
-	ce := adaptertest.NewTestClient()
+	ce := adaptertest.NewTestClient(nil)
 
 	testCases := map[string]struct {
 		opt     envConfig
