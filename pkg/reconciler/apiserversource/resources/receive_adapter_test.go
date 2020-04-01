@@ -41,7 +41,7 @@ func TestMakeReceiveAdapter(t *testing.T) {
 			UID:       "1234",
 		},
 		Spec: v1alpha2.ApiServerSourceSpec{
-			Resources: []v1alpha2.APIVersionKind{{
+			Resources: []v1alpha2.APIVersionKindSelector{{
 				APIVersion: ptr.String(""),
 				Kind:       ptr.String("Namespace"),
 			}, {

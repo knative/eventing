@@ -98,7 +98,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -117,7 +117,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -148,7 +148,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -170,7 +170,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -199,7 +199,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -221,7 +221,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -250,7 +250,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -277,7 +277,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -311,7 +311,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -334,7 +334,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -366,7 +366,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -392,7 +392,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -427,7 +427,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -450,12 +450,10 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{
-						{
-							APIVersion: ptr.String("v1"),
-							Kind:       ptr.String("Namespace"),
-						},
-					},
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+						APIVersion: ptr.String("v1"),
+						Kind:       ptr.String("Namespace"),
+					}},
 					SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 				}),
 				WithApiServerSourceUID(sourceUID),
@@ -484,7 +482,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -506,7 +504,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: NewApiServerSource(sourceName, testNS,
 				WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-					Resources: []sourcesv1alpha2.APIVersionKind{{
+					Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 						APIVersion: ptr.String("v1"),
 						Kind:       ptr.String("Namespace"),
 					}},
@@ -558,7 +556,7 @@ func makeReceiveAdapter() *appsv1.Deployment {
 func makeReceiveAdapterWithName(sourceName string) *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-			Resources: []sourcesv1alpha2.APIVersionKind{{
+			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
 				APIVersion: ptr.String("v1"),
 				Kind:       ptr.String("Namespace"),
 			}},
@@ -599,12 +597,10 @@ func makeAvailableReceiveAdapterDeprecatedName(sourceName string) *appsv1.Deploy
 func makeAvailableReceiveAdapterWithTargetURI() *appsv1.Deployment {
 	src := NewApiServerSource(sourceName, testNS,
 		WithApiServerSourceSpec(sourcesv1alpha2.ApiServerSourceSpec{
-			Resources: []sourcesv1alpha2.APIVersionKind{
-				{
-					APIVersion: ptr.String("v1"),
-					Kind:       ptr.String("Namespace"),
-				},
-			},
+			Resources: []sourcesv1alpha2.APIVersionKindSelector{{
+				APIVersion: ptr.String("v1"),
+				Kind:       ptr.String("Namespace"),
+			}},
 			SourceSpec: duckv1.SourceSpec{Sink: sinkDest},
 		}),
 		WithApiServerSourceUID(sourceUID),

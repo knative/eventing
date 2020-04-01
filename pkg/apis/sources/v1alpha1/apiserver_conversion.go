@@ -43,10 +43,10 @@ func (source *ApiServerSource) ConvertTo(ctx context.Context, obj apis.Convertib
 		// Spec
 
 		if len(source.Spec.Resources) > 0 {
-			sink.Spec.Resources = make([]v1alpha2.APIVersionKind, len(source.Spec.Resources))
+			sink.Spec.Resources = make([]v1alpha2.APIVersionKindSelector, len(source.Spec.Resources))
 		}
 		for i, v := range source.Spec.Resources {
-			sink.Spec.Resources[i] = v1alpha2.APIVersionKind{
+			sink.Spec.Resources[i] = v1alpha2.APIVersionKindSelector{
 				APIVersion: ptr.String(v.APIVersion),
 				Kind:       ptr.String(v.Kind),
 			}
